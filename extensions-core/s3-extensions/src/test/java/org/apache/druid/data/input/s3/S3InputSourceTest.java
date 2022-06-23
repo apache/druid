@@ -263,7 +263,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     S3InputSourceConfig mockConfig = EasyMock.createMock(S3InputSourceConfig.class);
     EasyMock.reset(mockConfig);
     EasyMock.expect(mockConfig.getAssumeRoleArn()).andStubReturn(null);
-    EasyMock.expect(mockConfig.getRegion()).andStubReturn("us-west-1");
+    String newRegion = "us-west-1";
+    EasyMock.expect(mockConfig.getRegion()).andStubReturn(newRegion);
     EasyMock.expect(mockConfig.getEndpointUrl()).andStubReturn(null);
     EasyMock.expect(mockConfig.getEndpointSigningRegion()).andStubReturn(null);
     EasyMock.expect(mockConfig.isCredentialsConfigured())
@@ -275,6 +276,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
             .andReturn(SERVICE);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    String oldRegion = "us-west-2";
+    AMAZON_S3_CLIENT_BUILDER.setRegion(oldRegion);
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
@@ -287,6 +290,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     Assert.assertNotNull(withPrefixes);
     // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
     withPrefixes.createEntity(new CloudObjectLocation("bucket", "path"));
+    Assert.assertEquals(newRegion, AMAZON_S3_CLIENT_BUILDER.getRegion());
     EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     EasyMock.verify(mockConfig);
   }
@@ -298,7 +302,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.reset(mockConfig);
     EasyMock.expect(mockConfig.getAssumeRoleArn()).andStubReturn(null);
     EasyMock.expect(mockConfig.getRegion()).andStubReturn(null);
-    EasyMock.expect(mockConfig.getEndpointUrl()).andStubReturn("http://s3-us-east-1.amazonaws.com/");
+    String newEndpointUrl = "http://s3-us-east-1.amazonaws.com/";
+    EasyMock.expect(mockConfig.getEndpointUrl()).andStubReturn(newEndpointUrl);
     EasyMock.expect(mockConfig.getEndpointSigningRegion()).andStubReturn(null);
     EasyMock.expect(mockConfig.isCredentialsConfigured())
             .andStubReturn(false);
@@ -309,7 +314,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
             .andReturn(SERVICE);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    AMAZON_S3_CLIENT_BUILDER.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://s3-us-west-2.amazonaws.com/", "us-west-2");
+    String oldEndpointUrl = "http://s3-us-west-2.amazonaws.com/";
+    String oldEndpointSigningRegion = "us-west-2";
+
+    AMAZON_S3_CLIENT_BUILDER.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(oldEndpointUrl, oldEndpointSigningRegion));
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
@@ -322,6 +330,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     Assert.assertNotNull(withPrefixes);
     // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
     withPrefixes.createEntity(new CloudObjectLocation("bucket", "path"));
+    Assert.assertEquals(newEndpointUrl, AMAZON_S3_CLIENT_BUILDER.getEndpoint().getServiceEndpoint());
+    Assert.assertEquals(oldEndpointSigningRegion, AMAZON_S3_CLIENT_BUILDER.getEndpoint().getSigningRegion());
     EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     EasyMock.verify(mockConfig);
   }
@@ -333,8 +343,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.reset(mockConfig);
     EasyMock.expect(mockConfig.getAssumeRoleArn()).andStubReturn(null);
     EasyMock.expect(mockConfig.getRegion()).andStubReturn(null);
+    String newSigningRegion = "us-east-1";
     EasyMock.expect(mockConfig.getEndpointUrl()).andStubReturn(null);
-    EasyMock.expect(mockConfig.getEndpointSigningRegion()).andStubReturn("us-west-1");
+    EasyMock.expect(mockConfig.getEndpointSigningRegion()).andStubReturn(newSigningRegion);
     EasyMock.expect(mockConfig.isCredentialsConfigured())
             .andStubReturn(false);
     EasyMock.replay(mockConfig);
@@ -344,6 +355,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
             .andReturn(SERVICE);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    String oldEndpointUrl = "http://s3-us-west-2.amazonaws.com/";
+    String oldEndpointSigningRegion = "us-west-2";
+
+    AMAZON_S3_CLIENT_BUILDER.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(oldEndpointUrl, oldEndpointSigningRegion));
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
@@ -356,6 +371,50 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     Assert.assertNotNull(withPrefixes);
     // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
     withPrefixes.createEntity(new CloudObjectLocation("bucket", "path"));
+    Assert.assertEquals(oldEndpointUrl, AMAZON_S3_CLIENT_BUILDER.getEndpoint().getServiceEndpoint());
+    Assert.assertEquals(newSigningRegion, AMAZON_S3_CLIENT_BUILDER.getEndpoint().getSigningRegion());
+    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.verify(mockConfig);
+  }
+
+  @Test
+  public void testS3InputSourceUseUrlAndSigningRegionFromConfig()
+  {
+    S3InputSourceConfig mockConfig = EasyMock.createMock(S3InputSourceConfig.class);
+    EasyMock.reset(mockConfig);
+    EasyMock.expect(mockConfig.getAssumeRoleArn()).andStubReturn(null);
+    EasyMock.expect(mockConfig.getRegion()).andStubReturn(null);
+    String newEndpointUrl = "http://s3-us-east-1.amazonaws.com/";
+    EasyMock.expect(mockConfig.getEndpointUrl()).andStubReturn(newEndpointUrl);
+    String newEndpointSigningRegion = "us-east-1";
+    EasyMock.expect(mockConfig.getEndpointSigningRegion()).andStubReturn(newEndpointSigningRegion);
+    EasyMock.expect(mockConfig.isCredentialsConfigured())
+            .andStubReturn(false);
+    EasyMock.replay(mockConfig);
+    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAmazonS3ClientBuilder())
+            .andStubReturn(AMAZON_S3_CLIENT_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
+            .andReturn(SERVICE);
+    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    String oldEndpointUrl = "http://s3-us-west-2.amazonaws.com/";
+    String oldEndpointSigningRegion = "us-west-2";
+
+    AMAZON_S3_CLIENT_BUILDER.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(oldEndpointUrl, oldEndpointSigningRegion));
+    final S3InputSource withPrefixes = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        EXPECTED_LOCATION,
+        mockConfig
+    );
+    Assert.assertNotNull(withPrefixes);
+    // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
+    withPrefixes.createEntity(new CloudObjectLocation("bucket", "path"));
+    Assert.assertEquals(newEndpointUrl, AMAZON_S3_CLIENT_BUILDER.getEndpoint().getServiceEndpoint());
+    Assert.assertEquals(newEndpointSigningRegion, AMAZON_S3_CLIENT_BUILDER.getEndpoint().getSigningRegion());
     EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     EasyMock.verify(mockConfig);
   }
