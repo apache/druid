@@ -52,20 +52,21 @@ Optionally, you can also set `APACHE_ARCHIVE_MIRROR_HOST` to override `https://a
 export APACHE_ARCHIVE_MIRROR_HOST=https://example.com/remote-generic-repo
 ```
 
-## Running tests againt auto brought up Docker containers
+## Running tests against auto brought up Docker containers
 
 This section describes how to start integration tests against Docker containers which will be brought up automatically by following commands.
 If you want to build Docker images and run tests separately, see the next section.
 
 To run all tests from a test group using Docker and Maven run the following command:
 
-To run all tests from a test group using docker and mvn run the following command:
-(list of test groups can be found at `integration-tests/src/test/java/org/apache/druid/tests/TestNGGroup.java`)
 ```bash
 mvn verify -P integration-tests -Dgroups=<test_group>
 ```
 
-### Run a Single Test
+The list of test groups can be found at
+`integration-tests/src/test/java/org/apache/druid/tests/TestNGGroup.java`.
+
+### Run a single test
 
 To run only a single test using Maven:
 
@@ -75,12 +76,14 @@ mvn verify -P integration-tests -Dgroups=<test_group> -Dit.test=<test_name>
 
 Parameters:
 
-* Test Group: Required, as certain test setup and cleanup tasks are based on the test group. You can find
+* Test Group: Required, as certain test tasks for setup and cleanup are based on the test group. You can find
 the test group for a given test as an annotation in the respective test class. A list of test groups can be found at
 `integration-tests/src/test/java/org/apache/druid/tests/TestNGGroup.java`. The annotation uses a string
-constant defined in `TestNGGroup.java`, be sure to use the constant value, not name. For example, if your test has the the annotation: `@Test(groups = TestNGGroup.BATCH_INDEX)` then use the argument `-Dgroups=batch-index`.
+constant defined in `TestNGGroup.java`, be sure to use the constant value, not name. For example,
+if your test has the the annotation: `@Test(groups = TestNGGroup.BATCH_INDEX)` then use the argument
+`-Dgroups=batch-index`.
 
-* Test Name: Use the fully-qualified class name.
+* Test Name: Use the fully-qualified class name. For example, `org.apache.druid.tests.BATCH_INDEX`.
 
 * Add `-pl :druid-integration-tests` when running integration tests for the second time or later without changing
 the code of core modules in between to skip up-to-date checks for the whole module dependency tree.
@@ -93,12 +96,12 @@ The file must contain one property per line, the key must start with `druid_` an
 Note that when bringing up Docker containers through Maven and `-Doverride.config.path` is provided, additional
 Druid routers for security group integration test (permissive tls, no client auth tls, custom check tls) will not be started.
 
-### Debugging Test Runs
+### Debugging test runs
 
 The integration test process is fragile and can fail for many reasons when run on your machine.
 Here are some suggestions.
 
-#### Workround for Failed Builds
+#### Workround for failed builds
 
 Sometimes the command above may fail for reasons unrelated to the changes you wish to test.
 In such cases, a workaround is to build the code first, then use the next section to run
@@ -108,7 +111,7 @@ individual tests. To build:
 mvn clean package  -P integration-tests -Pskip-static-checks -Pskip-tests -Dmaven.javadoc.skip=true -T1.0C -nsu
 ```
 
-#### Keep the Local Maven Cache Fresh
+#### Keep the local Maven cache fresh
 
 As you work with issues, you may be tempted to reuse already-built jars. That only works for about 24 hours,
 after which Maven will helpfully start downloading snapshot jars from an upstream repository.
