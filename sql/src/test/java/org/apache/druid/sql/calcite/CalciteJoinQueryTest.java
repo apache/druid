@@ -105,7 +105,6 @@ import static org.apache.druid.query.QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KE
 @RunWith(JUnitParamsRunner.class)
 public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 {
-
   @Test
   public void testInnerJoinWithLimitAndAlias() throws Exception
   {

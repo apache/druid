@@ -343,6 +343,117 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
 === results
 [3]
 ==============================================================
+Converted from testCountStarWithTimeInIntervalFilter()
+=== case
+Count star with time in interval filter
+=== SQL
+SELECT COUNT(*) FROM druid.foo WHERE TIME_IN_INTERVAL(__time, '2000-01-01/P1Y') AND TIME_IN_INTERVAL(CURRENT_TIMESTAMP, '2000/3000') -- Optimized away: always true
+=== options
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+unavailable
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2000-01-01T00:00:00.000Z/2001-01-01T00:00:00.000Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "context" : {
+    "defaultTimeout" : 300000,
+    "maxScatterGatherBytes" : 9223372036854775807,
+    "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+    "sqlQueryId" : "dummy"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[3]
+==============================================================
+Converted from testCountStarWithTimeInIntervalFilterLosAngeles()
+=== case
+Count star with time in interval filter los angeles
+=== SQL
+SELECT COUNT(*) FROM druid.foo WHERE TIME_IN_INTERVAL(__time, '2000-01-01/P1Y')
+=== context
+sqlTimeZone=America/Los_Angeles
+=== options
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+unavailable
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2000-01-01T08:00:00.000Z/2001-01-01T08:00:00.000Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "context" : {
+    "defaultTimeout" : 300000,
+    "maxScatterGatherBytes" : 9223372036854775807,
+    "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+    "sqlQueryId" : "dummy",
+    "sqlTimeZone" : "America/Los_Angeles"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[3]
+==============================================================
+Converted from testCountStarWithTimeInIntervalFilterInvalidInterval()
+=== case
+Count star with time in interval filter invalid interval
+=== SQL
+SELECT COUNT(*) FROM druid.foo WHERE TIME_IN_INTERVAL(__time, '2000-01-01/X')
+=== options
+vectorize=true
+=== exception
+CalciteContextException
+=== error
+From line 1, column 38 to line 1, column 77: Function 'TIME_IN_INTERVAL' second argument is not a valid ISO8601 interval: Invalid format: "X"
+==============================================================
+Converted from testCountStarWithTimeInIntervalFilterNonLiteral()
+=== case
+Count star with time in interval filter non literal
+=== SQL
+SELECT COUNT(*) FROM druid.foo WHERE TIME_IN_INTERVAL(__time, dim1)
+=== options
+vectorize=true
+=== exception
+SqlPlanningException
+=== error
+org.apache.calcite.runtime.CalciteContextException: From line 1, column 38 to line 1, column 67: Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(<TIMESTAMP(3)>, <VARCHAR>)'. Supported form(s): TIME_IN_INTERVAL(<TIMESTAMP>, <LITERAL ISO8601 INTERVAL>)
+==============================================================
 Converted from testCountStarWithBetweenTimeFilterUsingMilliseconds()
 === case
 Count star with between time filter using milliseconds

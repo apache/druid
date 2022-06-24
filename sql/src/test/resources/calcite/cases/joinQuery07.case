@@ -95,6 +95,7 @@ LogicalProject(dim1=[$2])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -301,6 +302,7 @@ LogicalProject(dim3=[$6], dim30=[$24])
         } ],
         "resultFormat" : "compactedList",
         "columns" : [ "dim3", "v0" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -328,6 +330,7 @@ LogicalProject(dim3=[$6], dim30=[$24])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "dim3", "j0.dim3" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -411,6 +414,7 @@ LogicalProject(dim3=[$6], dim30=[$18])
               } ],
               "resultFormat" : "compactedList",
               "columns" : [ "v0" ],
+              "legacy" : false,
               "granularity" : {
                 "type" : "all"
               }
@@ -438,6 +442,7 @@ LogicalProject(dim3=[$6], dim30=[$18])
         } ],
         "resultFormat" : "compactedList",
         "columns" : [ "dim3", "v0" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -465,6 +470,7 @@ LogicalProject(dim3=[$6], dim30=[$18])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "dim3", "j0.dim3" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -520,6 +526,7 @@ LogicalProject(m1=[$5], m10=[$13])
         },
         "resultFormat" : "compactedList",
         "columns" : [ "m1" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -748,6 +755,7 @@ LogicalProject(m1=[$5], m10=[$13])
     } ]
   },
   "columns" : [ "j0.m1", "m1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -804,6 +812,7 @@ LogicalProject(m1=[$5], m10=[$13])
         },
         "resultFormat" : "compactedList",
         "columns" : [ "m1" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -1032,6 +1041,7 @@ LogicalProject(m1=[$5], m10=[$13])
     } ]
   },
   "columns" : [ "j0.m1", "m1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1084,6 +1094,7 @@ LogicalProject(l1=[$12])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "l1" ],
+  "legacy" : false,
   "context" : {
     "inSubQueryThreshold" : 3
   },

@@ -517,7 +517,8 @@ LogicalProject(EXPR$0=[/(*($0, 1.0:DECIMAL(2, 1)), $1)])
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "d0"
+          "dimension" : "d0",
+          "value" : null
         }
       }, {
         "type" : "selector",

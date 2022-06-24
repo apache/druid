@@ -396,6 +396,7 @@ LogicalProject(l1=[$12])
     "values" : [ "14905", "29064", "4842", "4844", "4845", "4853" ]
   },
   "columns" : [ "l1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }

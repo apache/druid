@@ -137,6 +137,7 @@ LogicalProject(dim1=[$0], dim2=[$1])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "cnt", "dim1", "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -214,6 +215,7 @@ LogicalAggregate(group=[{0}])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "dim1", "dim2" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -278,6 +280,7 @@ LogicalAggregate(group=[{}], cnt=[COUNT()])
       "resultFormat" : "compactedList",
       "limit" : 10,
       "columns" : [ "v0" ],
+      "legacy" : false,
       "granularity" : {
         "type" : "all"
       }
@@ -1222,6 +1225,7 @@ LogicalProject(dimX=[CONCAT($2, '-', $2, '_', $2)])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1263,6 +1267,7 @@ LogicalProject(dimX=[CONCAT($2, CONCAT($3, 'x'), $6, 9999, $2)])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1394,6 +1399,7 @@ LogicalProject(dimX=[textcat($2, $2)])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1438,6 +1444,7 @@ LogicalProject(dimX=[textcat($2, CAST($6):VARCHAR NOT NULL)])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }

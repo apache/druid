@@ -499,7 +499,8 @@ LogicalAggregate(group=[{}], EXPR$0=[ANY_VALUE($0, $1)], EXPR$1=[ANY_VALUE($2)],
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "dim3"
+        "dimension" : "dim3",
+        "value" : null
       }
     },
     "name" : "a7"
@@ -523,7 +524,8 @@ LogicalAggregate(group=[{}], EXPR$0=[ANY_VALUE($0, $1)], EXPR$1=[ANY_VALUE($2)],
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "l1"
+        "dimension" : "l1",
+        "value" : null
       }
     },
     "name" : "a8"
@@ -547,7 +549,8 @@ LogicalAggregate(group=[{}], EXPR$0=[ANY_VALUE($0, $1)], EXPR$1=[ANY_VALUE($2)],
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "l1"
+        "dimension" : "l1",
+        "value" : null
       }
     },
     "name" : "a9"
@@ -571,7 +574,8 @@ LogicalAggregate(group=[{}], EXPR$0=[ANY_VALUE($0, $1)], EXPR$1=[ANY_VALUE($2)],
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "l1"
+        "dimension" : "l1",
+        "value" : null
       }
     },
     "name" : "a10"
@@ -1525,7 +1529,8 @@ LogicalAggregate(group=[{0}], EXPR$1=[ANY_VALUE($1, $2) FILTER $3], EXPR$2=[ANY_
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "dim3"
+          "dimension" : "dim3",
+          "value" : null
         }
       }, {
         "type" : "selector",
@@ -1556,7 +1561,8 @@ LogicalAggregate(group=[{0}], EXPR$1=[ANY_VALUE($1, $2) FILTER $3], EXPR$2=[ANY_
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "l1"
+          "dimension" : "l1",
+          "value" : null
         }
       }, {
         "type" : "selector",
@@ -1587,7 +1593,8 @@ LogicalAggregate(group=[{0}], EXPR$1=[ANY_VALUE($1, $2) FILTER $3], EXPR$2=[ANY_
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "l1"
+          "dimension" : "l1",
+          "value" : null
         }
       }, {
         "type" : "selector",
@@ -1618,7 +1625,8 @@ LogicalAggregate(group=[{0}], EXPR$1=[ANY_VALUE($1, $2) FILTER $3], EXPR$2=[ANY_
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "l1"
+          "dimension" : "l1",
+          "value" : null
         }
       }, {
         "type" : "selector",

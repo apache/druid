@@ -175,10 +175,12 @@ LogicalProject(dim2=[$0], v=[$3], cnt=[$1])
       }
     }, {
       "type" : "selector",
-      "dimension" : "j0.v"
+      "dimension" : "j0.v",
+      "value" : null
     } ]
   },
   "columns" : [ "a0", "d0", "j0.v" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -303,6 +305,7 @@ LogicalProject(dim2=[$3], k=[$8], v=[$9])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "dim2", "j0.k", "j0.v" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -368,6 +371,7 @@ LogicalProject(dim1=[$2], dim2=[$3], v=[$9], v0=[$11])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "_j0.v", "dim1", "dim2", "j0.v" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -457,6 +461,7 @@ LogicalSort(fetch=[100])
     "value" : "xa"
   },
   "columns" : [ "dim1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -526,6 +531,7 @@ LogicalProject(dim1=[$2])
     "value" : "xa"
   },
   "columns" : [ "dim1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -605,6 +611,7 @@ LogicalSort(fetch=[100])
     "value" : "xa"
   },
   "columns" : [ "__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -681,6 +688,7 @@ LogicalProject(__time=[$0], cnt=[$1], dim1=[$2], dim2=[$3], dim3=[$4], m1=[$5], 
     "value" : "xa"
   },
   "columns" : [ "__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -971,6 +979,7 @@ LogicalProject(dim1=[$2])
     "value" : "xa"
   },
   "columns" : [ "dim1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1069,6 +1078,7 @@ LogicalProject(dim1=[$2], dim2=[$3], v=[$9], v0=[$9])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "dim1", "dim2", "j0.a0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1134,6 +1144,7 @@ LogicalProject(dim1=[$2], dim2=[$3], sk=[$9])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "dim1", "dim2", "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1201,6 +1212,7 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
           } ],
           "resultFormat" : "compactedList",
           "columns" : [ "k", "v0" ],
+          "legacy" : false,
           "granularity" : {
             "type" : "all"
           }
@@ -1292,6 +1304,7 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
         },
         "resultFormat" : "compactedList",
         "columns" : [ "m1" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -1371,6 +1384,7 @@ LogicalSort(sort0=[$1], dir0=[ASC])
           },
           "resultFormat" : "compactedList",
           "columns" : [ "dim1", "m1" ],
+          "legacy" : false,
           "granularity" : {
             "type" : "all"
           }
@@ -1394,6 +1408,7 @@ LogicalSort(sort0=[$1], dir0=[ASC])
         },
         "resultFormat" : "compactedList",
         "columns" : [ "dim1", "m1" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -1498,6 +1513,7 @@ LogicalSort(sort0=[$1], dir0=[ASC])
           },
           "resultFormat" : "compactedList",
           "columns" : [ "dim1", "m1" ],
+          "legacy" : false,
           "granularity" : {
             "type" : "all"
           }
@@ -1521,6 +1537,7 @@ LogicalSort(sort0=[$1], dir0=[ASC])
         },
         "resultFormat" : "compactedList",
         "columns" : [ "dim1", "m1" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }

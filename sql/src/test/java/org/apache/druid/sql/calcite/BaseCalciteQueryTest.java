@@ -287,7 +287,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
    * enable capture.
    */
   protected static CalciteTestRecorder recorder =
-      CalciteTestRecorder.create(CalciteTestRecorder.Option.OFF);
+      CalciteTestRecorder.create(CalciteTestRecorder.Option.PLAN_AND_RUN);
 
   // Generate timestamps for expected results
   public static long timestamp(final String timeString)

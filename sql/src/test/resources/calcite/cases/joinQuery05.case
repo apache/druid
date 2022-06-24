@@ -80,6 +80,7 @@ LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
           }
         },
         "columns" : [ "dim2" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -296,10 +297,12 @@ LogicalProject(dim1=[$2], k=[$8])
     "type" : "not",
     "field" : {
       "type" : "selector",
-      "dimension" : "j0.d0"
+      "dimension" : "j0.d0",
+      "value" : null
     }
   },
   "columns" : [ "dim1", "j0.d0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -498,6 +501,7 @@ LogicalProject(dim1=[$2], k=[$8])
     "value" : "abc"
   },
   "columns" : [ "dim1", "j0.d0" ],
+  "legacy" : false,
   "context" : {
     "computeInnerJoinCostAsFilter" : "false"
   },
@@ -550,6 +554,7 @@ LogicalProject(dim1=[$2], dim10=[$10])
         },
         "resultFormat" : "compactedList",
         "columns" : [ "dim1" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -565,6 +570,7 @@ LogicalProject(dim1=[$2], dim10=[$10])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "dim1", "j0.dim1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -654,6 +660,7 @@ LogicalProject(dim1=[$2], k=[$8])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "dim1", "j0.d0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -744,10 +751,12 @@ LogicalProject(dim2=[$3])
     "type" : "not",
     "field" : {
       "type" : "selector",
-      "dimension" : "dim1"
+      "dimension" : "dim1",
+      "value" : null
     }
   },
   "columns" : [ "dim1", "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1163,7 +1172,8 @@ LogicalAggregate(group=[{}], EXPR$0=[MIN($0)])
         "type" : "and",
         "fields" : [ {
           "type" : "selector",
-          "dimension" : "__j0.p0"
+          "dimension" : "__j0.p0",
+          "value" : null
         }, {
           "type" : "expression",
           "expression" : "(\"_j0._a1\" >= \"_j0._a0\")"
@@ -1513,7 +1523,8 @@ LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
       "values" : [ "abc", "def" ]
     }, {
       "type" : "selector",
-      "dimension" : "_j0.a0"
+      "dimension" : "_j0.a0",
+      "value" : null
     } ]
   },
   "granularity" : {

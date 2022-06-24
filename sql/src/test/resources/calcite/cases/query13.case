@@ -215,7 +215,8 @@ LogicalProject(EXPR$0=[SUBSTRING($2, 1, 1)])
           "type" : "not",
           "field" : {
             "type" : "selector",
-            "dimension" : "dim1"
+            "dimension" : "dim1",
+            "value" : null
           }
         },
         "granularity" : {
@@ -285,6 +286,7 @@ LogicalProject(a=[+(2, 2)])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "a" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -383,6 +385,7 @@ LogicalSort(fetch=[1])
     "value" : "0.1"
   },
   "columns" : [ "dim1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -424,6 +427,7 @@ LogicalSort(fetch=[1])
     "value" : "1.7"
   },
   "columns" : [ "dim1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -465,6 +469,7 @@ LogicalSort(fetch=[1])
     "value" : "7"
   },
   "columns" : [ "dim1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -605,6 +610,7 @@ LogicalProject(EXPR$0=[/(RADIANS(*($14, 15)), DEGREES($15))])
     "value" : "1"
   },
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -705,6 +711,7 @@ LogicalSort(fetch=[2])
   "resultFormat" : "compactedList",
   "limit" : 2,
   "columns" : [ "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -756,6 +763,7 @@ LogicalSort(fetch=[1])
   "resultFormat" : "compactedList",
   "limit" : 1,
   "columns" : [ "v0", "v1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }

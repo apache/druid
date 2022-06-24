@@ -48,6 +48,7 @@ LogicalProject(EXPR$0=[+(1, 1)])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "EXPR$0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -95,6 +96,7 @@ LogicalSort(fetch=[1])
   "resultFormat" : "compactedList",
   "limit" : 1,
   "columns" : [ "dim1", "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -388,6 +390,7 @@ LogicalSort(fetch=[2])
   "resultFormat" : "compactedList",
   "limit" : 2,
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }

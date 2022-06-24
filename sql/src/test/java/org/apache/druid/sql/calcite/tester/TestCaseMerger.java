@@ -96,7 +96,7 @@ public class TestCaseMerger
   @SuppressWarnings("unused")
   private static void buildJoinTest()
   {
-    List<QueryTestCase> existing = TestCaseLoader.loadResource("/calcite/cases/joinQuery.case");
+    List<QueryTestCase> existing = loadSet("joinQuery", 7);
     rewrite(existing, "org.apache.druid.sql.calcite.CalciteJoinQueryTest");
   }
 

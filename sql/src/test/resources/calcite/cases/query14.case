@@ -47,6 +47,7 @@ LogicalProject(EXPR$0=[+($0, *(86400000:INTERVAL DAY, 0))])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -91,6 +92,7 @@ LogicalProject(EXPR$0=[+($0, *(1:INTERVAL MONTH, 0))])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -135,6 +137,7 @@ LogicalProject(EXPR$0=[+($0, *(12:INTERVAL YEAR, 0))])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -184,6 +187,7 @@ LogicalProject(EXPR$0=[+($0, *(1:INTERVAL MONTH, 1))])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -225,6 +229,7 @@ LogicalProject(EXPR$0=[+($0, *(1:INTERVAL MONTH, $1))])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -493,9 +498,11 @@ LogicalProject(dim2=[$3], EXPR$1=[LOOKUP($3, 'lookyloo')])
   "resultFormat" : "compactedList",
   "filter" : {
     "type" : "selector",
-    "dimension" : "dim2"
+    "dimension" : "dim2",
+    "value" : null
   },
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -546,6 +553,7 @@ LogicalProject(f1=[$10], EXPR$1=[ROUND($10)])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "f1", "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -648,7 +656,8 @@ LogicalAggregate(group=[{0}], EXPR$1=[COUNT($1)], EXPR$2=[AVG($2)])
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "v0"
+        "dimension" : "v0",
+        "value" : null
       }
     },
     "name" : "a0"
@@ -886,6 +895,7 @@ LogicalSort(fetch=[10])
   "resultFormat" : "compactedList",
   "limit" : 10,
   "columns" : [ "a0", "j0.a0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -929,6 +939,7 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
         },
         "resultFormat" : "compactedList",
         "columns" : [ "__time" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -1012,7 +1023,8 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT($0)], EXPR$1=[COUNT($1)], EXPR$2=[COU
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "v0"
+        "dimension" : "v0",
+        "value" : null
       }
     },
     "name" : "a0"
@@ -1026,7 +1038,8 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT($0)], EXPR$1=[COUNT($1)], EXPR$2=[COU
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "v1"
+        "dimension" : "v1",
+        "value" : null
       }
     },
     "name" : "a1"
@@ -1040,7 +1053,8 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT($0)], EXPR$1=[COUNT($1)], EXPR$2=[COU
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "v2"
+        "dimension" : "v2",
+        "value" : null
       }
     },
     "name" : "a2"
@@ -1111,7 +1125,8 @@ LogicalAggregate(group=[{}], EXPR$0=[BIT_AND($0)], EXPR$1=[BIT_OR($0)], EXPR$2=[
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "l1"
+        "dimension" : "l1",
+        "value" : null
       }
     },
     "name" : "a0"
@@ -1135,7 +1150,8 @@ LogicalAggregate(group=[{}], EXPR$0=[BIT_AND($0)], EXPR$1=[BIT_OR($0)], EXPR$2=[
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "l1"
+        "dimension" : "l1",
+        "value" : null
       }
     },
     "name" : "a1"
@@ -1159,7 +1175,8 @@ LogicalAggregate(group=[{}], EXPR$0=[BIT_AND($0)], EXPR$1=[BIT_OR($0)], EXPR$2=[
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "l1"
+        "dimension" : "l1",
+        "value" : null
       }
     },
     "name" : "a2"
@@ -1338,7 +1355,8 @@ LogicalSort(sort0=[$3], dir0=[ASC])
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "l1"
+        "dimension" : "l1",
+        "value" : null
       }
     },
     "name" : "a0"
@@ -1362,7 +1380,8 @@ LogicalSort(sort0=[$3], dir0=[ASC])
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "l1"
+        "dimension" : "l1",
+        "value" : null
       }
     },
     "name" : "a1"
@@ -1386,7 +1405,8 @@ LogicalSort(sort0=[$3], dir0=[ASC])
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "l1"
+        "dimension" : "l1",
+        "value" : null
       }
     },
     "name" : "a2"
@@ -1568,7 +1588,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG($0, $1)], EXPR$1=[STRING_AGG(DIS
     "type" : "not",
     "field" : {
       "type" : "selector",
-      "dimension" : "dim1"
+      "dimension" : "dim1",
+      "value" : null
     }
   },
   "granularity" : {
@@ -1595,7 +1616,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG($0, $1)], EXPR$1=[STRING_AGG(DIS
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "dim1"
+        "dimension" : "dim1",
+        "value" : null
       }
     },
     "name" : "a0"
@@ -1620,7 +1642,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG($0, $1)], EXPR$1=[STRING_AGG(DIS
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "dim1"
+        "dimension" : "dim1",
+        "value" : null
       }
     },
     "name" : "a1"
@@ -1647,7 +1670,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG($0, $1)], EXPR$1=[STRING_AGG(DIS
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "dim1"
+          "dimension" : "dim1",
+          "value" : null
         }
       }, {
         "type" : "selector",
@@ -1719,7 +1743,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG($0, $1)], EXPR$1=[STRING_AGG(DIS
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "dim3"
+        "dimension" : "dim3",
+        "value" : null
       }
     },
     "name" : "a0"
@@ -1744,7 +1769,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG($0, $1)], EXPR$1=[STRING_AGG(DIS
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "dim3"
+        "dimension" : "dim3",
+        "value" : null
       }
     },
     "name" : "a1"
@@ -1814,7 +1840,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG($0, $1)], EXPR$1=[STRING_AGG(DIS
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "l1"
+        "dimension" : "l1",
+        "value" : null
       }
     },
     "name" : "a0"
@@ -1839,7 +1866,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG($0, $1)], EXPR$1=[STRING_AGG(DIS
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "l1"
+        "dimension" : "l1",
+        "value" : null
       }
     },
     "name" : "a1"
@@ -1864,7 +1892,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG($0, $1)], EXPR$1=[STRING_AGG(DIS
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "d1"
+        "dimension" : "d1",
+        "value" : null
       }
     },
     "name" : "a2"
@@ -1889,7 +1918,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG($0, $1)], EXPR$1=[STRING_AGG(DIS
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "d1"
+        "dimension" : "d1",
+        "value" : null
       }
     },
     "name" : "a3"
@@ -1914,7 +1944,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG($0, $1)], EXPR$1=[STRING_AGG(DIS
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "f1"
+        "dimension" : "f1",
+        "value" : null
       }
     },
     "name" : "a4"
@@ -1939,7 +1970,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG($0, $1)], EXPR$1=[STRING_AGG(DIS
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "f1"
+        "dimension" : "f1",
+        "value" : null
       }
     },
     "name" : "a5"
@@ -2011,7 +2043,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG(DISTINCT $0, $1)], EXPR$1=[STRIN
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "v0"
+        "dimension" : "v0",
+        "value" : null
       }
     },
     "name" : "a0"
@@ -2036,7 +2069,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG(DISTINCT $0, $1)], EXPR$1=[STRIN
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "v0"
+        "dimension" : "v0",
+        "value" : null
       }
     },
     "name" : "a1"
@@ -2112,7 +2146,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG($0, $1, $2)], EXPR$1=[STRING_AGG
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "l1"
+        "dimension" : "l1",
+        "value" : null
       }
     },
     "name" : "a0"
@@ -2137,7 +2172,8 @@ LogicalAggregate(group=[{}], EXPR$0=[STRING_AGG($0, $1, $2)], EXPR$1=[STRING_AGG
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "l1"
+        "dimension" : "l1",
+        "value" : null
       }
     },
     "name" : "a1"
@@ -2259,6 +2295,7 @@ LogicalSort(fetch=[1])
     "value" : "1"
   },
   "columns" : [ "m1", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }

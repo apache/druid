@@ -55,6 +55,7 @@ LogicalInsert(target=[dst], granularity=[AllGranularity])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1" ],
+  "legacy" : false,
   "context" : {
     "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}"
   },
@@ -105,6 +106,7 @@ LogicalInsert(target=[dst], granularity=[AllGranularity])
     "value" : "a"
   },
   "columns" : [ "v0" ],
+  "legacy" : false,
   "context" : {
     "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}"
   },
@@ -150,6 +152,7 @@ LogicalInsert(target=[foo], granularity=[AllGranularity])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1" ],
+  "legacy" : false,
   "context" : {
     "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}"
   },
@@ -195,6 +198,7 @@ LogicalInsert(target=[druid.dst], granularity=[AllGranularity])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1" ],
+  "legacy" : false,
   "context" : {
     "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}"
   },
@@ -338,6 +342,7 @@ LogicalInsert(target=[dst], granularity=[AllGranularity])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "x", "y", "z" ],
+  "legacy" : false,
   "context" : {
     "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}"
   },
@@ -389,6 +394,7 @@ LogicalInsert(target=[druid.dst], granularity=[{type=period, period=PT1H, timeZo
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "dim1", "v0" ],
+  "legacy" : false,
   "context" : {
     "sqlInsertSegmentGranularity" : "\"HOUR\""
   },
@@ -463,6 +469,7 @@ LogicalInsert(target=[druid.dst], granularity=[{type=period, period=P1D, timeZon
     "order" : "ascending"
   } ],
   "columns" : [ "__time", "dim1", "v0", "v1" ],
+  "legacy" : false,
   "context" : {
     "sqlInsertSegmentGranularity" : "\"DAY\""
   },
@@ -523,6 +530,7 @@ LogicalInsert(target=[druid.dst], granularity=[{type=period, period=P1D, timeZon
     "order" : "ascending"
   } ],
   "columns" : [ "__time", "dim1", "v0" ],
+  "legacy" : false,
   "context" : {
     "sqlInsertSegmentGranularity" : "\"DAY\""
   },
@@ -579,6 +587,7 @@ LogicalInsert(target=[druid.dst], granularity=[{type=period, period=P1D, timeZon
   "offset" : 20,
   "limit" : 10,
   "columns" : [ "__time", "dim1", "v0" ],
+  "legacy" : false,
   "context" : {
     "sqlInsertSegmentGranularity" : "\"DAY\""
   },
@@ -750,6 +759,7 @@ DruidQueryRel(query=[(
   },
   "resultFormat" : "compactedList",
   "columns" : [ "x", "y", "z" ],
+  "legacy" : false,
   "context" : {
     "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}",
 !    "sqlQueryId" : ".*"
@@ -855,6 +865,7 @@ LogicalInsert(target=[dst], granularity=[AllGranularity])
     "order" : "ascending"
   } ],
   "columns" : [ "v0", "z" ],
+  "legacy" : false,
   "context" : {
     "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}"
   },

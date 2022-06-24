@@ -108,7 +108,8 @@ LogicalProject(dim2=[$3])
     "type" : "not",
     "field" : {
       "type" : "selector",
-      "dimension" : "dim1"
+      "dimension" : "dim1",
+      "value" : null
     }
   },
   "granularity" : {
@@ -296,6 +297,7 @@ LogicalProject(dim3=[$4], v=[$9])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "dim3", "j0.v" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -914,7 +916,8 @@ LogicalProject(dim1=[$2])
           "type" : "not",
           "field" : {
             "type" : "selector",
-            "dimension" : "dim1"
+            "dimension" : "dim1",
+            "value" : null
           }
         },
         "granularity" : {
@@ -1025,7 +1028,8 @@ LogicalProject(dim1=[$2])
           "type" : "not",
           "field" : {
             "type" : "selector",
-            "dimension" : "dim1"
+            "dimension" : "dim1",
+            "value" : null
           }
         },
         "granularity" : {
@@ -1333,13 +1337,15 @@ LogicalProject(dim1=[$2])
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "_j0.d1"
+          "dimension" : "_j0.d1",
+          "value" : null
         }
       }, {
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "dim2"
+          "dimension" : "dim2",
+          "value" : null
         }
       } ]
     } ]
@@ -1437,6 +1443,7 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
             },
             "resultFormat" : "compactedList",
             "columns" : [ "dim1" ],
+            "legacy" : false,
             "granularity" : {
               "type" : "all"
             }
@@ -1456,6 +1463,7 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
             },
             "resultFormat" : "compactedList",
             "columns" : [ "dim1", "m2" ],
+            "legacy" : false,
             "granularity" : {
               "type" : "all"
             }

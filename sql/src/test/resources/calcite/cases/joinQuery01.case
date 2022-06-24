@@ -125,6 +125,7 @@ LogicalProject(b1=[$0])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "_d0" ],
+  "legacy" : false,
   "context" : {
     "useApproximateTopN" : false
   },
@@ -318,6 +319,7 @@ LogicalAggregate(group=[{0}], EXPR$1=[AVG($1)])
             },
             "resultFormat" : "compactedList",
             "columns" : [ "m1" ],
+            "legacy" : false,
             "granularity" : {
               "type" : "all"
             }
@@ -334,6 +336,7 @@ LogicalAggregate(group=[{0}], EXPR$1=[AVG($1)])
       "resultFormat" : "compactedList",
       "limit" : 10,
       "columns" : [ "dim2", "m2" ],
+      "legacy" : false,
       "granularity" : {
         "type" : "all"
       }
@@ -542,6 +545,7 @@ LogicalAggregate(group=[{0}], EXPR$1=[AVG($1)])
         },
         "resultFormat" : "compactedList",
         "columns" : [ "m1" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -740,6 +744,7 @@ LogicalAggregate(group=[{0}], EXPR$1=[AVG($1)])
         "resultFormat" : "compactedList",
         "limit" : 10,
         "columns" : [ "dim2", "m1", "m2" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -759,6 +764,7 @@ LogicalAggregate(group=[{0}], EXPR$1=[AVG($1)])
         },
         "resultFormat" : "compactedList",
         "columns" : [ "m1" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -1296,7 +1302,8 @@ LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
       }
     }, {
       "type" : "selector",
-      "dimension" : "j0.v"
+      "dimension" : "j0.v",
+      "value" : null
     } ]
   },
   "granularity" : {
@@ -1381,6 +1388,7 @@ LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
         },
         "resultFormat" : "compactedList",
         "columns" : [ "dim2" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }

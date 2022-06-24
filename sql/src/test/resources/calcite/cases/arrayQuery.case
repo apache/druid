@@ -56,6 +56,7 @@ LogicalSort(fetch=[1])
   "resultFormat" : "compactedList",
   "limit" : 1,
   "columns" : [ "dim1", "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -166,6 +167,7 @@ LogicalSort(fetch=[5])
   "resultFormat" : "compactedList",
   "limit" : 5,
   "columns" : [ "dim1", "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -225,6 +227,7 @@ LogicalSort(fetch=[5])
   "resultFormat" : "compactedList",
   "limit" : 5,
   "columns" : [ "dim1", "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -424,6 +427,7 @@ LogicalSort(fetch=[1])
   "resultFormat" : "compactedList",
   "limit" : 1,
   "columns" : [ "d1", "d2", "dim1", "dim2", "dim3", "l1", "l2", "v0", "v1", "v10", "v11", "v12", "v13", "v14", "v15", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -568,6 +572,7 @@ LogicalSort(fetch=[1])
   "resultFormat" : "compactedList",
   "limit" : 1,
   "columns" : [ "dim1", "dim2", "dim3", "v0", "v1", "v10", "v11", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9" ],
+  "legacy" : false,
   "context" : {
     "sqlStringifyArrays" : false
   },
@@ -623,6 +628,7 @@ LogicalSort(fetch=[5])
     "values" : [ "a", "b" ]
   },
   "columns" : [ "dim3" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -667,6 +673,7 @@ LogicalSort(fetch=[5])
     "expression" : "array_overlap(\"dim3\",array(\"dim2\"))"
   },
   "columns" : [ "dim3" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -718,6 +725,7 @@ LogicalSort(fetch=[5])
     } ]
   },
   "columns" : [ "dim3" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -762,6 +770,7 @@ LogicalSort(fetch=[5])
     "value" : "a"
   },
   "columns" : [ "dim3" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -807,6 +816,7 @@ LogicalSort(fetch=[5])
     "expression" : "array_contains(\"dim3\",array(\"dim2\"))"
   },
   "columns" : [ "dim3" ],
+  "legacy" : false,
   "context" : {
     "sqlStringifyArrays" : false
   },
@@ -850,6 +860,7 @@ LogicalProject(EXPR$0=[ARRAY_SLICE($6, 1)])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "context" : {
     "sqlStringifyArrays" : false
   },
@@ -2195,7 +2206,8 @@ LogicalAggregate(group=[{}], EXPR$0=[ARRAY_AGG($0)], EXPR$1=[ARRAY_AGG(DISTINCT 
     "type" : "not",
     "field" : {
       "type" : "selector",
-      "dimension" : "dim1"
+      "dimension" : "dim1",
+      "value" : null
     }
   },
   "granularity" : {
@@ -2729,7 +2741,8 @@ LogicalProject(EXPR$0=[ARRAY_TO_STRING($0, ',')])
     "type" : "not",
     "field" : {
       "type" : "selector",
-      "dimension" : "dim1"
+      "dimension" : "dim1",
+      "value" : null
     }
   },
   "granularity" : {
@@ -2958,7 +2971,8 @@ LogicalProject(dim4=[$7], arr=[$18], EXPR$2=[ARRAY_TO_STRING($18, ',')])
           "type" : "not",
           "field" : {
             "type" : "selector",
-            "dimension" : "dim1"
+            "dimension" : "dim1",
+            "value" : null
           }
         },
         "granularity" : {
@@ -3005,6 +3019,7 @@ LogicalProject(dim4=[$7], arr=[$18], EXPR$2=[ARRAY_TO_STRING($18, ',')])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "dim4", "j0.a0", "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -3094,7 +3109,8 @@ LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT()])
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "dim1"
+          "dimension" : "dim1",
+          "value" : null
         }
       },
       "granularity" : {
@@ -3164,6 +3180,456 @@ sqlCompatibleNulls=true
 ["a",["","1"],1]
 ["abc",["def"],1]
 ==============================================================
+Converted from testArrayAggGroupByArrayAggOfLongsFromSubquery()
+=== case
+Array agg group by array agg of longs from subquery
+=== SQL
+select cntarray, count(*)
+from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray
+       from ( select dim1, dim2, dim3, count(*) as cnt
+              from foo
+              group by 1, 2, 3
+             )
+       group by 1, 2
+     )
+group by 1
+=== context
+sqlStringifyArrays=false
+=== options
+mergeBufferCount=3
+vectorize=false
+=== schema
+cntarray BIGINT ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalProject(cntarray=[$2])
+    LogicalAggregate(group=[{0, 1}], cntarray=[ARRAY_AGG($2)])
+      LogicalProject(dim1=[$0], dim2=[$1], cnt=[$3])
+        LogicalAggregate(group=[{0, 1, 2}], cnt=[COUNT()])
+          LogicalProject(dim1=[$2], dim2=[$3], dim3=[$4])
+            LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "groupBy",
+          "dataSource" : {
+            "type" : "table",
+            "name" : "foo"
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "granularity" : {
+            "type" : "all"
+          },
+          "dimensions" : [ {
+            "type" : "default",
+            "dimension" : "dim1",
+            "outputName" : "d0",
+            "outputType" : "STRING"
+          }, {
+            "type" : "default",
+            "dimension" : "dim2",
+            "outputName" : "d1",
+            "outputType" : "STRING"
+          }, {
+            "type" : "default",
+            "dimension" : "dim3",
+            "outputName" : "d2",
+            "outputType" : "STRING"
+          } ],
+          "aggregations" : [ {
+            "type" : "count",
+            "name" : "a0"
+          } ],
+          "limitSpec" : {
+            "type" : "NoopLimitSpec"
+          },
+          "context" : {
+            "sqlStringifyArrays" : false
+          }
+        }
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "d0",
+        "outputName" : "_d0",
+        "outputType" : "STRING"
+      }, {
+        "type" : "default",
+        "dimension" : "d1",
+        "outputName" : "_d1",
+        "outputType" : "STRING"
+      } ],
+      "aggregations" : [ {
+        "type" : "expression",
+        "name" : "_a0",
+        "fields" : [ "a0" ],
+        "accumulatorIdentifier" : "__acc",
+        "initialValue" : "ARRAY<LONG>[]",
+        "initialCombineValue" : "ARRAY<LONG>[]",
+        "isNullUnlessAggregated" : true,
+        "shouldAggregateNullInputs" : true,
+        "shouldCombineAggregateNullInputs" : false,
+        "fold" : "array_append(\"__acc\", \"a0\")",
+        "combine" : "array_concat(\"__acc\", \"_a0\")",
+        "maxSizeBytes" : 1024
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      },
+      "context" : {
+        "sqlStringifyArrays" : false
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "_a0",
+    "outputName" : "d0",
+    "outputType" : "ARRAY<LONG>"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[[1],4]
+[[1,1],2]
+==============================================================
+Converted from testArrayAggGroupByArrayAggOfStringsFromSubquery()
+=== case
+Array agg group by array agg of strings from subquery
+=== SQL
+select cntarray, count(*)
+from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray
+       from ( select dim1, dim2, dim3, cast( count(*) as VARCHAR ) as cnt
+              from foo
+              group by 1, 2, 3
+            )
+       group by 1, 2
+     )
+group by 1
+=== context
+sqlStringifyArrays=false
+=== options
+mergeBufferCount=3
+vectorize=false
+=== schema
+cntarray VARCHAR ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalProject(cntarray=[$2])
+    LogicalAggregate(group=[{0, 1}], cntarray=[ARRAY_AGG($2)])
+      LogicalProject(dim1=[$0], dim2=[$1], cnt=[CAST($3):VARCHAR NOT NULL])
+        LogicalAggregate(group=[{0, 1, 2}], agg#0=[COUNT()])
+          LogicalProject(dim1=[$2], dim2=[$3], dim3=[$4])
+            LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "groupBy",
+          "dataSource" : {
+            "type" : "table",
+            "name" : "foo"
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "granularity" : {
+            "type" : "all"
+          },
+          "dimensions" : [ {
+            "type" : "default",
+            "dimension" : "dim1",
+            "outputName" : "d0",
+            "outputType" : "STRING"
+          }, {
+            "type" : "default",
+            "dimension" : "dim2",
+            "outputName" : "d1",
+            "outputType" : "STRING"
+          }, {
+            "type" : "default",
+            "dimension" : "dim3",
+            "outputName" : "d2",
+            "outputType" : "STRING"
+          } ],
+          "aggregations" : [ {
+            "type" : "count",
+            "name" : "a0"
+          } ],
+          "limitSpec" : {
+            "type" : "NoopLimitSpec"
+          },
+          "context" : {
+            "sqlStringifyArrays" : false
+          }
+        }
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "d0",
+        "outputName" : "_d0",
+        "outputType" : "STRING"
+      }, {
+        "type" : "default",
+        "dimension" : "d1",
+        "outputName" : "_d1",
+        "outputType" : "STRING"
+      } ],
+      "aggregations" : [ {
+        "type" : "expression",
+        "name" : "_a0",
+        "fields" : [ "a0" ],
+        "accumulatorIdentifier" : "__acc",
+        "initialValue" : "ARRAY<STRING>[]",
+        "initialCombineValue" : "ARRAY<STRING>[]",
+        "isNullUnlessAggregated" : true,
+        "shouldAggregateNullInputs" : true,
+        "shouldCombineAggregateNullInputs" : false,
+        "fold" : "array_append(\"__acc\", \"a0\")",
+        "combine" : "array_concat(\"__acc\", \"_a0\")",
+        "maxSizeBytes" : 1024
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      },
+      "context" : {
+        "sqlStringifyArrays" : false
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "_a0",
+    "outputName" : "d0",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[["1"],4]
+[["1","1"],2]
+==============================================================
+Converted from testArrayAggGroupByArrayAggOfDoubleFromSubquery()
+=== case
+Array agg group by array agg of double from subquery
+=== SQL
+select cntarray, count(*)
+from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray
+       from ( select dim1, dim2, dim3, cast( count(*) as DOUBLE ) as cnt
+              from foo
+              group by 1, 2, 3
+            )
+       group by 1, 2
+     )
+group by 1
+=== context
+sqlStringifyArrays=false
+=== options
+mergeBufferCount=3
+vectorize=false
+=== schema
+cntarray DOUBLE ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalProject(cntarray=[$2])
+    LogicalAggregate(group=[{0, 1}], cntarray=[ARRAY_AGG($2)])
+      LogicalProject(dim1=[$0], dim2=[$1], cnt=[CAST($3):DOUBLE NOT NULL])
+        LogicalAggregate(group=[{0, 1, 2}], agg#0=[COUNT()])
+          LogicalProject(dim1=[$2], dim2=[$3], dim3=[$4])
+            LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "groupBy",
+          "dataSource" : {
+            "type" : "table",
+            "name" : "foo"
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "granularity" : {
+            "type" : "all"
+          },
+          "dimensions" : [ {
+            "type" : "default",
+            "dimension" : "dim1",
+            "outputName" : "d0",
+            "outputType" : "STRING"
+          }, {
+            "type" : "default",
+            "dimension" : "dim2",
+            "outputName" : "d1",
+            "outputType" : "STRING"
+          }, {
+            "type" : "default",
+            "dimension" : "dim3",
+            "outputName" : "d2",
+            "outputType" : "STRING"
+          } ],
+          "aggregations" : [ {
+            "type" : "count",
+            "name" : "a0"
+          } ],
+          "limitSpec" : {
+            "type" : "NoopLimitSpec"
+          },
+          "context" : {
+            "sqlStringifyArrays" : false
+          }
+        }
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "d0",
+        "outputName" : "_d0",
+        "outputType" : "STRING"
+      }, {
+        "type" : "default",
+        "dimension" : "d1",
+        "outputName" : "_d1",
+        "outputType" : "STRING"
+      } ],
+      "aggregations" : [ {
+        "type" : "expression",
+        "name" : "_a0",
+        "fields" : [ "a0" ],
+        "accumulatorIdentifier" : "__acc",
+        "initialValue" : "ARRAY<DOUBLE>[]",
+        "initialCombineValue" : "ARRAY<DOUBLE>[]",
+        "isNullUnlessAggregated" : true,
+        "shouldAggregateNullInputs" : true,
+        "shouldCombineAggregateNullInputs" : false,
+        "fold" : "array_append(\"__acc\", \"a0\")",
+        "combine" : "array_concat(\"__acc\", \"_a0\")",
+        "maxSizeBytes" : 1024
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      },
+      "context" : {
+        "sqlStringifyArrays" : false
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "_a0",
+    "outputName" : "d0",
+    "outputType" : "ARRAY<DOUBLE>"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[[1.0],4]
+[[1.0,1.0],2]
+==============================================================
 Converted from testArrayAggArrayContainsSubquery()
 === case
 foo
@@ -3216,7 +3682,8 @@ LogicalAggregate(group=[{}], EXPR$0=[ARRAY_AGG(DISTINCT $0)])
           "type" : "not",
           "field" : {
             "type" : "selector",
-            "dimension" : "dim1"
+            "dimension" : "dim1",
+            "value" : null
           }
         },
         "granularity" : {
@@ -3252,6 +3719,7 @@ LogicalAggregate(group=[{}], EXPR$0=[ARRAY_AGG(DISTINCT $0)])
     "expression" : "array_contains(\"j0.a0\",\"dim1\")"
   },
   "columns" : [ "dim1", "dim2" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -3329,7 +3797,8 @@ LogicalAggregate(group=[{}], EXPR$0=[ARRAY_AGG(DISTINCT $0)])
           "type" : "not",
           "field" : {
             "type" : "selector",
-            "dimension" : "dim1"
+            "dimension" : "dim1",
+            "value" : null
           }
         },
         "granularity" : {

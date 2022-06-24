@@ -77,6 +77,64 @@ sqlCompatibleNulls=true
 ["a",4.0]
 ["abc",5.0]
 ==============================================================
+Converted from testStringLatestGroupBy()
+=== case
+String latest group by
+=== SQL
+SELECT dim2, LATEST(dim4,10) AS val1 FROM druid.numfoo GROUP BY dim2
+=== options
+vectorize=true
+=== schema
+dim2 VARCHAR
+val1 VARCHAR
+=== plan
+unavailable
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "stringLast",
+    "name" : "a0",
+    "fieldName" : "dim4",
+    "timeColumn" : "__time",
+    "maxStringBytes" : 10
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "defaultTimeout" : 300000,
+    "maxScatterGatherBytes" : 9223372036854775807,
+    "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+    "sqlQueryId" : "dummy"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,"b"]
+["","a"]
+["a","b"]
+["abc","b"]
+==============================================================
 Converted from testPrimitiveEarliestInSubquery()
 This test the off-heap (buffer) version of the EarliestAggregator
 (Double/Float/Long)
@@ -782,7 +840,8 @@ LogicalAggregate(group=[{}], EXPR$0=[EARLIEST($0, $1)], EXPR$1=[LATEST($2)], EXP
     "type" : "not",
     "field" : {
       "type" : "selector",
-      "dimension" : "dim1"
+      "dimension" : "dim1",
+      "value" : null
     }
   },
   "granularity" : {
@@ -999,7 +1058,8 @@ LogicalAggregate(group=[{}], EXPR$0=[ANY_VALUE($0, $1)], EXPR$1=[ANY_VALUE($2)],
     "type" : "not",
     "field" : {
       "type" : "selector",
-      "dimension" : "dim1"
+      "dimension" : "dim1",
+      "value" : null
     }
   },
   "granularity" : {

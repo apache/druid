@@ -68,7 +68,8 @@ LogicalProject(EXPR$0=[SUBSTRING($2, 1, 1)])
           "type" : "not",
           "field" : {
             "type" : "selector",
-            "dimension" : "dim1"
+            "dimension" : "dim1",
+            "value" : null
           }
         },
         "granularity" : {
@@ -250,9 +251,11 @@ LogicalProject(dim1=[$2], v=[$9])
   "resultFormat" : "compactedList",
   "filter" : {
     "type" : "selector",
-    "dimension" : "dim2"
+    "dimension" : "dim2",
+    "value" : null
   },
   "columns" : [ "dim1", "j0.v" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -327,6 +330,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "__time", "v0" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -357,6 +361,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "v0" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -383,6 +388,7 @@ LogicalProject(dim1=[$0], __time=[$1])
     "value" : "10.1"
   },
   "columns" : [ "__time", "_v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -459,6 +465,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "v0" ],
+        "legacy" : false,
         "context" : {
           "enableJoinLeftTableScanDirect" : true
         },
@@ -488,6 +495,7 @@ LogicalProject(dim1=[$0], __time=[$1])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "v0" ],
+  "legacy" : false,
   "context" : {
     "enableJoinLeftTableScanDirect" : true
   },
@@ -558,6 +566,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "__time", "v0" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -582,6 +591,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "dim1" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -608,6 +618,7 @@ LogicalProject(dim1=[$0], __time=[$1])
     "value" : "10.1"
   },
   "columns" : [ "__time", "_v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -675,6 +686,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "dim1" ],
+        "legacy" : false,
         "context" : {
           "enableJoinLeftTableScanDirect" : true
         },
@@ -704,6 +716,7 @@ LogicalProject(dim1=[$0], __time=[$1])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "v0" ],
+  "legacy" : false,
   "context" : {
     "enableJoinLeftTableScanDirect" : true
   },
@@ -772,6 +785,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "__time", "v0" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -796,6 +810,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "dim1" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -817,6 +832,7 @@ LogicalProject(dim1=[$0], __time=[$1])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "_v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -881,6 +897,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "dim1" ],
+        "legacy" : false,
         "context" : {
           "enableJoinLeftTableScanDirect" : true
         },
@@ -910,6 +927,7 @@ LogicalProject(dim1=[$0], __time=[$1])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "v0" ],
+  "legacy" : false,
   "context" : {
     "enableJoinLeftTableScanDirect" : true
   },
@@ -980,6 +998,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "__time", "v0" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -1004,6 +1023,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "dim1" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -1028,10 +1048,12 @@ LogicalProject(dim1=[$0], __time=[$1])
     "type" : "not",
     "field" : {
       "type" : "selector",
-      "dimension" : "v0"
+      "dimension" : "v0",
+      "value" : null
     }
   },
   "columns" : [ "__time", "_v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1191,6 +1213,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "dim1" ],
+        "legacy" : false,
         "context" : {
           "enableJoinLeftTableScanDirect" : true
         },
@@ -1220,6 +1243,7 @@ LogicalProject(dim1=[$0], __time=[$1])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "v0" ],
+  "legacy" : false,
   "context" : {
     "enableJoinLeftTableScanDirect" : true
   },
@@ -1288,6 +1312,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "__time", "v0" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -1312,6 +1337,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "dim1" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -1333,6 +1359,7 @@ LogicalProject(dim1=[$0], __time=[$1])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "_v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1398,6 +1425,7 @@ LogicalProject(dim1=[$0], __time=[$1])
           "value" : "10.1"
         },
         "columns" : [ "dim1" ],
+        "legacy" : false,
         "context" : {
           "enableJoinLeftTableScanDirect" : true
         },
@@ -1427,6 +1455,7 @@ LogicalProject(dim1=[$0], __time=[$1])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "v0" ],
+  "legacy" : false,
   "context" : {
     "enableJoinLeftTableScanDirect" : true
   },

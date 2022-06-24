@@ -558,7 +558,8 @@ LogicalProject(EXPR$0=[$0], EXPR$1=[$0], EXPR$2=[$1], EXPR$3=[$2], EXPR$4=[$3], 
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "dim1"
+        "dimension" : "dim1",
+        "value" : null
       }
     },
     "name" : "a1"
@@ -591,7 +592,8 @@ LogicalProject(EXPR$0=[$0], EXPR$1=[$0], EXPR$2=[$1], EXPR$3=[$2], EXPR$4=[$3], 
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "dim2"
+        "dimension" : "dim2",
+        "value" : null
       }
     },
     "name" : "a6"
@@ -1123,7 +1125,8 @@ LogicalAggregate(group=[{}], EXPR$0=[SUM($0)], EXPR$1=[SUM($1)], EXPR$2=[SUM($2)
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "dim2"
+          "dimension" : "dim2",
+          "value" : null
         }
       }, {
         "type" : "not",
@@ -1419,7 +1422,8 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], EXPR$1=[COUNT($1) FILTE
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "dim2"
+          "dimension" : "dim2",
+          "value" : null
         }
       }, {
         "type" : "not",

@@ -103,6 +103,7 @@ LogicalProject(EXPR$0=[null:VARCHAR])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "cnt", "dim2", "dim3", "m1", "m2", "unique_dim1", "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -153,6 +154,7 @@ LogicalProject(dim1=[$2], dim2=[$3], k=[$8], v=[$9])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "dim1", "dim2", "j0.k", "j0.v" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -224,6 +226,7 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
         },
         "resultFormat" : "compactedList",
         "columns" : [ "cnt" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -313,6 +316,7 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
           } ],
           "resultFormat" : "compactedList",
           "columns" : [ "k", "v0" ],
+          "legacy" : false,
           "granularity" : {
             "type" : "all"
           }
@@ -336,6 +340,7 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
         },
         "resultFormat" : "compactedList",
         "columns" : [ "cnt" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -406,6 +411,7 @@ LogicalProject(m1=[$5], k=[$9], v=[$10])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "j0.k", "j0.v", "m1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -462,6 +468,7 @@ LogicalProject(m1=[$5], k=[$8], v=[$9])
         } ],
         "resultFormat" : "compactedList",
         "columns" : [ "k", "v", "v0" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -477,6 +484,7 @@ LogicalProject(m1=[$5], k=[$8], v=[$9])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "j0.k", "j0.v", "m1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -537,6 +545,7 @@ LogicalProject(m1=[$5], k=[$8], v=[$9])
         } ],
         "resultFormat" : "compactedList",
         "columns" : [ "k", "v", "v0" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -552,6 +561,7 @@ LogicalProject(m1=[$5], k=[$8], v=[$9])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "j0.k", "j0.v", "m1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -605,6 +615,7 @@ LogicalProject(dim1=[$2], dim2=[$3], k=[$9], v=[$10])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "dim1", "dim2", "j0.k", "j0.v" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -666,6 +677,7 @@ LogicalProject(dim1=[$2], dim2=[$3], k=[$8], v=[$9])
         } ],
         "resultFormat" : "compactedList",
         "columns" : [ "k", "v", "v0" ],
+        "legacy" : false,
         "granularity" : {
           "type" : "all"
         }
@@ -681,6 +693,7 @@ LogicalProject(dim1=[$2], dim2=[$3], k=[$8], v=[$9])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "dim1", "dim2", "j0.k", "j0.v" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -744,6 +757,7 @@ LogicalProject(dim2=[$3], v=[$9], v0=[$11])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "_j0.v", "dim2", "j0.v" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -825,10 +839,12 @@ LogicalProject(dim1=[$2], k=[$8], v=[$9])
       }
     }, {
       "type" : "selector",
-      "dimension" : "j0.v"
+      "dimension" : "j0.v",
+      "value" : null
     } ]
   },
   "columns" : [ "dim1", "j0.k", "j0.v" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -924,6 +940,7 @@ LogicalProject(dim1=[$2], dim2=[$3], v=[$9], v0=[$11], v1=[$13])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "__j0.v", "_j0.v", "dim1", "dim2", "j0.v" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1005,10 +1022,12 @@ LogicalProject(dim1=[$2], k=[$8], v=[$9])
       }
     }, {
       "type" : "selector",
-      "dimension" : "j0.v"
+      "dimension" : "j0.v",
+      "value" : null
     } ]
   },
   "columns" : [ "dim1", "j0.k", "j0.v" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1090,10 +1109,12 @@ LogicalProject(dim1=[$2], k=[$8], v=[$9])
       }
     }, {
       "type" : "selector",
-      "dimension" : "j0.v"
+      "dimension" : "j0.v",
+      "value" : null
     } ]
   },
   "columns" : [ "dim1", "j0.k", "j0.v" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1173,10 +1194,12 @@ LogicalProject(dim1=[$2], m1=[$5], cnt=[$1], k=[$8], v=[$9])
       }
     }, {
       "type" : "selector",
-      "dimension" : "j0.v"
+      "dimension" : "j0.v",
+      "value" : null
     } ]
   },
   "columns" : [ "cnt", "dim1", "j0.k", "j0.v", "m1" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1435,7 +1458,8 @@ LogicalAggregate(group=[{}], EXPR$0=[MAX($0)])
       "type" : "and",
       "fields" : [ {
         "type" : "selector",
-        "dimension" : "_j0.p0"
+        "dimension" : "_j0.p0",
+        "value" : null
       }, {
         "type" : "expression",
         "expression" : "(\"j0._a1\" >= \"j0._a0\")"

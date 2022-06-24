@@ -547,7 +547,8 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT(DISTINCT $0)])
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "d0"
+        "dimension" : "d0",
+        "value" : null
       }
     },
     "name" : "a0"
@@ -743,7 +744,8 @@ LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)], EXPR$2=[COUNT(DISTINCT $2)])
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "d0"
+        "dimension" : "d0",
+        "value" : null
       }
     },
     "name" : "_a1"
@@ -873,7 +875,8 @@ LogicalAggregate(group=[{0}], EXPR$1=[COUNT(DISTINCT $1)], EXPR$2=[COUNT(DISTINC
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "d1"
+          "dimension" : "d1",
+          "value" : null
         }
       }, {
         "type" : "selector",
@@ -894,7 +897,8 @@ LogicalAggregate(group=[{0}], EXPR$1=[COUNT(DISTINCT $1)], EXPR$2=[COUNT(DISTINC
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "d2"
+          "dimension" : "d2",
+          "value" : null
         }
       }, {
         "type" : "selector",
@@ -997,7 +1001,8 @@ LogicalAggregate(group=[{}], EXPR$0=[SUM($0)], EXPR$1=[APPROX_COUNT_DISTINCT($1)
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "dim2"
+        "dimension" : "dim2",
+        "value" : null
       }
     },
     "name" : "a2"
@@ -2220,7 +2225,8 @@ LogicalProject(EXPR$0=[SUBSTRING($2, 1, 1)])
               "type" : "not",
               "field" : {
                 "type" : "selector",
-                "dimension" : "dim1"
+                "dimension" : "dim1",
+                "value" : null
               }
             },
             "granularity" : {
@@ -2476,99 +2482,3 @@ planner.maxNumericInFilters=100
 UOE
 === error
 The number of values in the IN clause for [dim6] in query exceeds configured maxNumericFilter limit of [2] for INs. Cast [3] values of IN clause to String
-==============================================================
-Converted from testExplainExactCountDistinctOfSemiJoinResult()
-
-No vectorize for EXPLAIN tests so that the explain context
-is constant. (The context contains the vectorize option.)
-=== case
-Explain exact count distinct of semi join result
-=== SQL
-EXPLAIN PLAN FOR SELECT COUNT(*)
-FROM (
-  SELECT DISTINCT dim2
-  FROM druid.foo
-  WHERE SUBSTRING(dim2, 1, 1) IN (
-    SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 IS NOT NULL
-  )
-)
-=== options
-sqlCompatibleNulls=both
-vectorize=false
-=== schema
-PLAN VARCHAR
-RESOURCES VARCHAR
-=== plan
-LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
-  LogicalProject($f0=[0])
-    LogicalAggregate(group=[{0}])
-      LogicalProject(dim2=[$3])
-        LogicalFilter(condition=[IN(SUBSTRING($3, 1, 1), {
-LogicalProject(EXPR$0=[SUBSTRING($2, 1, 1)])
-  LogicalFilter(condition=[IS NOT NULL($2)])
-    LogicalTableScan(table=[[druid, foo]])
-})])
-          LogicalTableScan(table=[[druid, foo]])
-=== explain
-!\QDruidOuterQueryRel(query=[{"queryType":"groupBy","dataSource":{"type":"query","query":{"queryType":"scan","dataSource":{"type":"table","name":"__subquery__"},"intervals":{"type":"intervals","intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]},"resultFormat":"list","granularity":{"type":"all"}}},"intervals":{"type":"intervals","intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]},"granularity":{"type":"all"},"dimensions":[],"aggregations":[{"type":"count","name":"a0"}],"limitSpec":{"type":"NoopLimitSpec"},"context":{"sqlQueryId":"\E.*\Q"}}], signature=[{a0:LONG}])\E
-!  \QDruidJoinQueryRel(condition=[=(SUBSTRING($3, 1, 1), $8)], joinType=[inner], query=[{"queryType":"groupBy","dataSource":{"type":"table","name":"__join__"},"intervals":{"type":"intervals","intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]},"granularity":{"type":"all"},"dimensions":[{"type":"default","dimension":"dim2","outputName":"d0","outputType":"STRING"}],"limitSpec":{"type":"NoopLimitSpec"},"context":{"sqlQueryId":"\E.*\Q"}}], signature=[{d0:STRING}])\E
-!    \QDruidQueryRel(query=[{"queryType":"scan","dataSource":{"type":"table","name":"foo"},"intervals":{"type":"intervals","intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]},"resultFormat":"compactedList","columns":["__time","cnt","dim1","dim2","dim3","m1","m2","unique_dim1"],"context":{"sqlQueryId":"\E.*\Q"},"granularity":{"type":"all"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\E
-!    \QDruidQueryRel(query=[{"queryType":"groupBy","dataSource":{"type":"table","name":"foo"},"intervals":{"type":"intervals","intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]},"filter":{"type":"not","field":{"type":"selector","dimension":"dim1"}},"granularity":{"type":"all"},"dimensions":[{"type":"extraction","dimension":"dim1","outputName":"d0","outputType":"STRING","extractionFn":{"type":"substring","index":0,"length":1}}],"limitSpec":{"type":"NoopLimitSpec"},"context":{"sqlQueryId":"\E.*\Q"}}], signature=[{d0:STRING}])\E
----
-[ {
-  "name" : "foo",
-  "type" : "DATASOURCE"
-} ]
-=== results
-["DruidOuterQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"query\",\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"__subquery__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"list\",\"granularity\":{\"type\":\"all\"}}},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"granularity\":{\"type\":\"all\"},\"dimensions\":[],\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"FALSE\",\"vectorizeVirtualColumns\":\"FALSE\"}}], signature=[{a0:LONG}])\n  DruidJoinQueryRel(condition=[=(SUBSTRING($3, 1, 1), $8)], joinType=[inner], query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"__join__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim2\",\"outputName\":\"d0\",\"outputType\":\"STRING\"}],\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"FALSE\",\"vectorizeVirtualColumns\":\"FALSE\"}}], signature=[{d0:STRING}])\n    DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"FALSE\",\"vectorizeVirtualColumns\":\"FALSE\"},\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n    DruidQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"filter\":{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\"}},\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"extraction\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\",\"extractionFn\":{\"type\":\"substring\",\"index\":0,\"length\":1}}],\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"FALSE\",\"vectorizeVirtualColumns\":\"FALSE\"}}], signature=[{d0:STRING}])\n","[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]"]
-==============================================================
-Converted from testExplainSelectStarWithOverrides()
-
-This testcase has been added here and not in
-CalciteSelectQueryTests since this checks if the overrides are
-working properly when displaying the output of
-"EXPLAIN PLAN FOR ..." queries
-
-No vectorize for EXPLAIN tests so that the explain context
-is constant. (The context contains the vectorize option.)
-=== case
-Explain select star with overrides
-=== SQL
-EXPLAIN PLAN FOR SELECT * FROM druid.foo
-=== options
-sqlCompatibleNulls=both
-vectorize=false
-=== schema
-PLAN VARCHAR
-RESOURCES VARCHAR
-=== explain
-DruidQueryRel(query=[(
-{
-  "queryType" : "scan",
-  "dataSource" : {
-    "type" : "table",
-    "name" : "foo"
-  },
-  "intervals" : {
-    "type" : "intervals",
-    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-  },
-  "resultFormat" : "compactedList",
-  "columns" : [ "__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1" ],
-  "context" : {
-!    "sqlQueryId" : ".*"
-  },
-  "granularity" : {
-    "type" : "all"
-  }
-},
-signature=[(
-  {__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}
-])
----
-[ {
-  "name" : "foo",
-  "type" : "DATASOURCE"
-} ]
-=== results
-["DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"FALSE\",\"vectorizeVirtualColumns\":\"FALSE\"},\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n","[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]"]

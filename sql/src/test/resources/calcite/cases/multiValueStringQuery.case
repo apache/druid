@@ -236,6 +236,7 @@ LogicalProject(EXPR$0=[CONCAT($6, 'foo')])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -292,6 +293,7 @@ LogicalProject(EXPR$0=[CONCAT($6, '-lol-', $6)])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -357,6 +359,7 @@ LogicalProject(EXPR$0=[CONCAT($6, 'foo')])
     "value" : "bfoo"
   },
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -404,6 +407,7 @@ LogicalSort(fetch=[5])
     "values" : [ "a", "b" ]
   },
   "columns" : [ "dim3" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -448,6 +452,7 @@ LogicalSort(fetch=[5])
     "expression" : "array_overlap(\"dim3\",array(\"dim2\"))"
   },
   "columns" : [ "dim3" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -499,6 +504,7 @@ LogicalSort(fetch=[5])
     } ]
   },
   "columns" : [ "dim3" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -543,6 +549,7 @@ LogicalSort(fetch=[5])
     "value" : "a"
   },
   "columns" : [ "dim3" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -586,6 +593,7 @@ LogicalSort(fetch=[5])
     "expression" : "array_contains(\"dim3\",array(\"dim2\"))"
   },
   "columns" : [ "dim3" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -625,6 +633,7 @@ LogicalProject(EXPR$0=[MV_SLICE($6, 1)])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }

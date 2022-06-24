@@ -15,48 +15,6 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ==============================================================
-Converted from testExplainMultipleTopLevelUnionAllQueries()
-
-No vectorize for EXPLAIN tests so that the explain context
-is constant. (The context contains the vectorize option.)
-=== case
-Explain multiple top level union all queries
-=== SQL
-EXPLAIN PLAN FOR
-SELECT dim1 FROM druid.foo
-UNION ALL (SELECT dim1 FROM druid.foo WHERE dim1 = '42'
-UNION ALL SELECT dim1 FROM druid.foo WHERE dim1 = '44')
-=== options
-sqlCompatibleNulls=both
-vectorize=false
-=== schema
-PLAN VARCHAR
-RESOURCES VARCHAR
-=== plan
-LogicalUnion(all=[true])
-  LogicalProject(dim1=[$2])
-    LogicalTableScan(table=[[druid, foo]])
-  LogicalUnion(all=[true])
-    LogicalProject(dim1=[$2])
-      LogicalFilter(condition=[=($2, '42')])
-        LogicalTableScan(table=[[druid, foo]])
-    LogicalProject(dim1=[$2])
-      LogicalFilter(condition=[=($2, '44')])
-        LogicalTableScan(table=[[druid, foo]])
-=== explain
-DruidUnionRel(limit=[-1])
-!  \QDruidQueryRel(query=[{"queryType":"scan","dataSource":{"type":"table","name":"foo"},"intervals":{"type":"intervals","intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]},"resultFormat":"compactedList","columns":["dim1"],"context":{"sqlQueryId":"\E.*\Q"},"granularity":{"type":"all"}}], signature=[{dim1:STRING}])\E
-  DruidUnionRel(limit=[-1])
-!    \QDruidQueryRel(query=[{"queryType":"scan","dataSource":{"type":"table","name":"foo"},"intervals":{"type":"intervals","intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]},"resultFormat":"compactedList","filter":{"type":"selector","dimension":"dim1","value":"42"},"columns":["dim1"],"context":{"sqlQueryId":"\E.*\Q"},"granularity":{"type":"all"}}], signature=[{dim1:STRING}])\E
-!    \QDruidQueryRel(query=[{"queryType":"scan","dataSource":{"type":"table","name":"foo"},"intervals":{"type":"intervals","intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]},"resultFormat":"compactedList","filter":{"type":"selector","dimension":"dim1","value":"44"},"columns":["dim1"],"context":{"sqlQueryId":"\E.*\Q"},"granularity":{"type":"all"}}], signature=[{dim1:STRING}])\E
----
-[ {
-  "name" : "foo",
-  "type" : "DATASOURCE"
-} ]
-=== results
-["DruidUnionRel(limit=[-1])\n  DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"dim1\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"FALSE\",\"vectorizeVirtualColumns\":\"FALSE\"},\"granularity\":{\"type\":\"all\"}}], signature=[{dim1:STRING}])\n  DruidUnionRel(limit=[-1])\n    DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"filter\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"42\"},\"columns\":[\"dim1\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"FALSE\",\"vectorizeVirtualColumns\":\"FALSE\"},\"granularity\":{\"type\":\"all\"}}], signature=[{dim1:STRING}])\n    DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"filter\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"44\"},\"columns\":[\"dim1\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"FALSE\",\"vectorizeVirtualColumns\":\"FALSE\"},\"granularity\":{\"type\":\"all\"}}], signature=[{dim1:STRING}])\n","[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]"]
-==============================================================
 Converted from testExactCountDistinctUsingSubqueryWithWherePushDown()
 === case
 Exact count distinct using subquery with where push down
@@ -102,7 +60,8 @@ LogicalAggregate(group=[{}], EXPR$0=[SUM($0)], EXPR$1=[COUNT()])
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "dim2"
+          "dimension" : "dim2",
+          "value" : null
         }
       },
       "granularity" : {
@@ -275,7 +234,8 @@ LogicalAggregate(group=[{}], EXPR$0=[SUM($0)], EXPR$1=[COUNT()])
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "dim2"
+          "dimension" : "dim2",
+          "value" : null
         }
       },
       "granularity" : {
@@ -467,7 +427,8 @@ LogicalProject(exact_count=[$0], approx_count=[$1], error_pct=[*(-(1:FLOAT, /($1
         "type" : "not",
         "field" : {
           "type" : "selector",
-          "dimension" : "dim1"
+          "dimension" : "dim1",
+          "value" : null
         }
       },
       "granularity" : {
@@ -914,7 +875,8 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT(DISTINCT $0)])
     "type" : "not",
     "field" : {
       "type" : "selector",
-      "dimension" : "dim1"
+      "dimension" : "dim1",
+      "value" : null
     }
   },
   "granularity" : {
@@ -1039,7 +1001,8 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT(DISTINCT $0)])
     "type" : "not",
     "field" : {
       "type" : "selector",
-      "dimension" : "v0"
+      "dimension" : "v0",
+      "value" : null
     }
   },
   "granularity" : {
@@ -1317,6 +1280,7 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
       "field" : {
         "type" : "selector",
         "dimension" : "dim1",
+        "value" : null,
         "extractionFn" : {
           "type" : "regex",
           "expr" : "^1",
@@ -1329,7 +1293,8 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
       "type" : "not",
       "field" : {
         "type" : "selector",
-        "dimension" : "v0"
+        "dimension" : "v0",
+        "value" : null
       }
     } ]
   },

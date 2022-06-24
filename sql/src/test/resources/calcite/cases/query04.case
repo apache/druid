@@ -800,7 +800,8 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
       "type" : "and",
       "fields" : [ {
         "type" : "selector",
-        "dimension" : "dim2"
+        "dimension" : "dim2",
+        "value" : null
       }, {
         "type" : "not",
         "field" : {
@@ -862,6 +863,7 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "EXPR$0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -942,6 +944,7 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "EXPR$0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1022,6 +1025,7 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "EXPR$0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
@@ -1313,6 +1317,7 @@ LogicalProject(EXPR$0=[false])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
+  "legacy" : false,
   "granularity" : {
     "type" : "all"
   }
