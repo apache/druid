@@ -32,7 +32,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -45,13 +44,13 @@ public class FutureUtilsTest
   private ExecutorService exec;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     exec = Execs.singleThreaded(StringUtils.encodeForFormat(getClass().getName()) + "-%d");
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     if (exec != null) {
       exec.shutdownNow();
