@@ -89,7 +89,8 @@ public class FutureUtilsTest
 
       try {
         FutureUtils.getUnchecked(neverGoingToResolve, true);
-      } catch (Throwable t) {
+      }
+      catch (Throwable t) {
         exceptionFromOtherThread.set(t);
       }
     });
@@ -120,7 +121,8 @@ public class FutureUtilsTest
 
       try {
         FutureUtils.getUnchecked(neverGoingToResolve, false);
-      } catch (Throwable t) {
+      }
+      catch (Throwable t) {
         exceptionFromOtherThread.set(t);
       }
     });
