@@ -2567,7 +2567,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "sequence0",
             new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 0L), ImmutableSet.of()),
 
-            // End offset 13 is one after 12 real messages + 2 txn control messages (last seen message: offset 13).
+            // End offset is one after 12 real messages + 2 txn control messages (last seen message: offset 13).
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 14L)),
             kafkaServer.consumerProperties(),
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
@@ -3172,7 +3172,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
       //multiple objects in one Kafka record but some objects are in ill-formed format
       //as a result, the whole ProducerRecord will be discarded
-      String illformed =
+      String malformed =
           "{\"timestamp\":2049, \"dim1\": \"d4\", \"dim2\":\"x\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":\"2.0\" }"
           +
           "{\"timestamp\":2049, \"dim1\": \"d5\", \"dim2\":\"y\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":invalidFormat }"
@@ -3185,7 +3185,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
           //well-formed
           new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(wellformed)),
           //ill-formed
-          new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(illformed)),
+          new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(malformed)),
           //a well-formed record after ill-formed to demonstrate that the ill-formed can be successfully skipped
           new ProducerRecord<>(topic, 0, null, jbb(true, "2049", "d7", "y", "10", "20.0", "1.0"))
       };
