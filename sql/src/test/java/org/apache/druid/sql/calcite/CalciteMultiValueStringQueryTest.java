@@ -1568,7 +1568,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueToArrayGroupAsArrayWithMultiValueDimension() throws Exception
   {
-    // Cannot vectorize as we do not have support in native query subsystem for grouping on arrays as keys
+    // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
     cannotVectorize();
     testQuery(
         "SELECT MV_TO_ARRAY(dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",

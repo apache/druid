@@ -23,8 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.query.QueryContexts.EntryType;
-import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -222,22 +220,6 @@ public class QueryContextsTest
     );
     Assert.assertTrue(QueryContexts.isDebug(query));
     Assert.assertTrue(QueryContexts.isDebug(query.getContext()));
-  }
-
-  @Test
-  public void testMetadata()
-  {
-    Assert.assertEquals(EntryType.BOOLEAN, QueryContexts.definition(QueryContexts.FINALIZE_KEY));
-    Assert.assertEquals(EntryType.STRING, QueryContexts.definition("unknown"));
-
-    Assert.assertNull(EntryType.STRING.parse(null));
-    Assert.assertNull(EntryType.INT.parse(""));
-    Assert.assertNull(EntryType.INT.parse(" "));
-    Assert.assertEquals(true, EntryType.BOOLEAN.parse(" true "));
-    Assert.assertEquals(10, EntryType.INT.parse(" 10 "));
-    Assert.assertEquals(20L, EntryType.LONG.parse(" 20 "));
-    Assert.assertEquals(Vectorize.FORCE, EntryType.VECTORIZE.parse(" force "));
-    Assert.assertEquals("foo", EntryType.OBJECT.parse(" foo "));
   }
 
   @Test

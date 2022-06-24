@@ -30,8 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * View manager that stores all views in-process. Not meant for serious usage,
- * since views are not saved nor are they shared across processes.
+ * View manager that stores all views in-process. Not meant for serious usage, since views are not saved nor
+ * are they shared across processes.
  */
 public class InProcessViewManager implements ViewManager
 {
@@ -51,7 +51,7 @@ public class InProcessViewManager implements ViewManager
   {
     final TableMacro oldValue = views.putIfAbsent(viewName, druidViewMacroFactory.create(plannerFactory, viewSql));
     if (oldValue != null) {
-      throw new ISE("View [%s] already exists", viewName);
+      throw new ISE("View[%s] already exists", viewName);
     }
   }
 
@@ -60,7 +60,7 @@ public class InProcessViewManager implements ViewManager
   {
     final TableMacro oldValue = views.replace(viewName, druidViewMacroFactory.create(plannerFactory, viewSql));
     if (oldValue != null) {
-      throw new ISE("View [%s] does not exist", viewName);
+      throw new ISE("View[%s] does not exist", viewName);
     }
   }
 
@@ -69,7 +69,7 @@ public class InProcessViewManager implements ViewManager
   {
     final TableMacro oldValue = views.remove(viewName);
     if (oldValue == null) {
-      throw new ISE("View [%s] does not exist", viewName);
+      throw new ISE("View[%s] does not exist", viewName);
     }
   }
 

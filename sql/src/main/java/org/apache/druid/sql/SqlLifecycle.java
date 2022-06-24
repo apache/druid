@@ -232,11 +232,11 @@ public class SqlLifecycle
   {
     try (DruidPlanner planner = plannerFactory.createPlanner(sql, queryContext)) {
       // set planner context for logs/metrics in case something explodes early
-      plannerContext = planner.getPlannerContext();
-      plannerContext.setAuthenticationResult(authenticationResult);
+      this.plannerContext = planner.getPlannerContext();
+      this.plannerContext.setAuthenticationResult(authenticationResult);
       // set parameters on planner context, if parameters have already been set
-      plannerContext.setParameters(parameters);
-      validationResult = planner.validate(authConfig.authorizeQueryContextParams());
+      this.plannerContext.setParameters(parameters);
+      this.validationResult = planner.validate(authConfig.authorizeQueryContextParams());
       return validationResult;
     }
     // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
@@ -276,7 +276,7 @@ public class SqlLifecycle
   {
     synchronized (stateLock) {
       if (state != State.AUTHORIZED) {
-        throw new ISE("Cannot prepare because current state [%s] is not [%s].", state, State.AUTHORIZED);
+        throw new ISE("Cannot prepare because current state[%s] is not [%s].", state, State.AUTHORIZED);
       }
     }
     Preconditions.checkNotNull(plannerContext, "Cannot prepare, plannerContext is null");

@@ -100,7 +100,7 @@ public class SqlParameter
   public String toString()
   {
     return "SqlParameter{" +
-           "value={" + type.name() + ',' + value + '}' +
+           ", value={" + type.name() + ',' + value + '}' +
            '}';
   }
 

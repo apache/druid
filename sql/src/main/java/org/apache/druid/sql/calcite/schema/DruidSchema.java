@@ -193,17 +193,17 @@ public class DruidSchema extends AbstractSchema
   private final BrokerInternalQueryConfig brokerInternalQueryConfig;
 
   @GuardedBy("lock")
-  private boolean refreshImmediately;
+  private boolean refreshImmediately = false;
 
   @GuardedBy("lock")
-  private boolean isServerViewInitialized;
+  private boolean isServerViewInitialized = false;
 
   /**
    * Counts the total number of known segments. This variable is used only for the segments table in the system schema
    * to initialize a map with a more proper size when it creates a snapshot. As a result, it doesn't have to be exact,
    * and thus there is no concurrency control for this variable.
    */
-  private int totalSegments;
+  private int totalSegments = 0;
 
   @Inject
   public DruidSchema(
@@ -486,7 +486,7 @@ public class DruidSchema extends AbstractSchema
                         // If a segment shows up on a replicatable (historical) server at any point, then it must be immutable,
                         // even if it's also available on non-replicatable (realtime) servers.
                         unmarkSegmentAsMutable(segment.getId());
-                        log.debug("Segment [%s] has become immutable.", segment.getId());
+                        log.debug("Segment[%s] has become immutable.", segment.getId());
                       }
                     }
                     assert segmentMetadata != null;
@@ -511,7 +511,7 @@ public class DruidSchema extends AbstractSchema
   {
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
-      log.debug("Segment [%s] is gone.", segment.getId());
+      log.debug("Segment[%s] is gone.", segment.getId());
 
       segmentsNeedingRefresh.remove(segment.getId());
       unmarkSegmentAsMutable(segment.getId());
@@ -520,17 +520,17 @@ public class DruidSchema extends AbstractSchema
           segment.getDataSource(),
           (dataSource, segmentsMap) -> {
             if (segmentsMap == null) {
-              log.warn("Unknown segment [%s] was removed from the cluster. Ignoring this event.", segment.getId());
+              log.warn("Unknown segment[%s] was removed from the cluster. Ignoring this event.", segment.getId());
               return null;
             } else {
               if (segmentsMap.remove(segment.getId()) == null) {
-                log.warn("Unknown segment [%s] was removed from the cluster. Ignoring this event.", segment.getId());
+                log.warn("Unknown segment[%s] was removed from the cluster. Ignoring this event.", segment.getId());
               } else {
                 totalSegments--;
               }
               if (segmentsMap.isEmpty()) {
                 tables.remove(segment.getDataSource());
-                log.info("dataSource [%s] no longer exists, all metadata removed.", segment.getDataSource());
+                log.info("dataSource[%s] no longer exists, all metadata removed.", segment.getDataSource());
                 return null;
               } else {
                 markDataSourceAsNeedRebuild(segment.getDataSource());
@@ -549,13 +549,13 @@ public class DruidSchema extends AbstractSchema
   {
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
-      log.debug("Segment [%s] is gone from server [%s]", segment.getId(), server.getName());
+      log.debug("Segment[%s] is gone from server[%s]", segment.getId(), server.getName());
       segmentMetadataInfo.compute(
           segment.getDataSource(),
           (datasource, knownSegments) -> {
             if (knownSegments == null) {
               log.warn(
-                  "Unknown segment [%s] is removed from server [%s]. Ignoring this event",
+                  "Unknown segment[%s] is removed from server[%s]. Ignoring this event",
                   segment.getId(),
                   server.getHost()
               );
@@ -575,7 +575,7 @@ public class DruidSchema extends AbstractSchema
                   (segmentId, segmentMetadata) -> {
                     if (segmentMetadata == null) {
                       log.warn(
-                          "Unknown segment [%s] is removed from server [%s]. Ignoring this event",
+                          "Unknown segment[%s] is removed from server[%s]. Ignoring this event",
                           segment.getId(),
                           server.getHost()
                       );
@@ -690,7 +690,7 @@ public class DruidSchema extends AbstractSchema
       throw new ISE("'segments' must all match 'dataSource'!");
     }
 
-    log.debug("Refreshing metadata for dataSource [%s].", dataSource);
+    log.debug("Refreshing metadata for dataSource[%s].", dataSource);
 
     final long startTime = System.currentTimeMillis();
 
@@ -710,17 +710,17 @@ public class DruidSchema extends AbstractSchema
         final SegmentId segmentId = segmentIdMap.get(analysis.getId());
 
         if (segmentId == null) {
-          log.warn("Got analysis for segment [%s] we didn't ask for, ignoring.", analysis.getId());
+          log.warn("Got analysis for segment[%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
           final RowSignature rowSignature = analysisToRowSignature(analysis);
-          log.debug("Segment [%s] has signature[%s].", segmentId, rowSignature);
+          log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
           segmentMetadataInfo.compute(
               dataSource,
               (datasourceKey, dataSourceSegments) -> {
                 if (dataSourceSegments == null) {
                   // Datasource may have been removed or become unavailable while this refresh was ongoing.
                   log.warn(
-                      "No segment map found with datasource [%s], skipping refresh of segment [%s]",
+                      "No segment map found with datasource[%s], skipping refresh of segment[%s]",
                       datasourceKey,
                       segmentId
                   );
@@ -730,7 +730,7 @@ public class DruidSchema extends AbstractSchema
                       segmentId,
                       (segmentIdKey, segmentMetadata) -> {
                         if (segmentMetadata == null) {
-                          log.warn("No segment [%s] found, skipping refresh", segmentId);
+                          log.warn("No segment[%s] found, skipping refresh", segmentId);
                           return null;
                         } else {
                           final AvailableSegmentMetadata updatedSegmentMetadata = AvailableSegmentMetadata
@@ -762,7 +762,7 @@ public class DruidSchema extends AbstractSchema
     }
 
     log.debug(
-        "Refreshed metadata for dataSource [%s] in %,d ms (%d segments queried, %d segments left).",
+        "Refreshed metadata for dataSource[%s] in %,d ms (%d segments queried, %d segments left).",
         dataSource,
         System.currentTimeMillis() - startTime,
         retVal.size(),
@@ -913,7 +913,7 @@ public class DruidSchema extends AbstractSchema
       // flavor of COMPLEX.
       if (valueType == null) {
         // at some point in the future this can be simplified to the contents of the catch clause here, once the
-        // likelihood of upgrading from some version lower than 0.23 is low
+        // likelyhood of upgrading from some version lower than 0.23 is low
         try {
           valueType = ColumnType.fromString(entry.getValue().getType());
         }

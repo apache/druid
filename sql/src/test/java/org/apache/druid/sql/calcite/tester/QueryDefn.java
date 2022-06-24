@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite;
+package org.apache.druid.sql.calcite.tester;
 
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.server.security.AuthenticationResult;

@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.run;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -34,17 +33,6 @@ public interface QueryMaker extends QueryFeatureInspector
    * Returns the SQL row type for this query.
    */
   RelDataType getResultType();
-
-  /**
-   * Do everything that would be done to run a query, don't actually run.
-   * Instead return what would have been sent to the execution engine.
-   * The result is a Jackson-serializable query plan.
-   */
-  default Object explain(DruidQuery druidQuery)
-  {
-    // Temporary to ensure extensions don't break.
-    return ImmutableMap.of("type", "unsupported");
-  }
 
   /**
    * Executes a given Druid query, which is expected to correspond to the SQL query that this QueryMaker was originally

@@ -54,8 +54,8 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Like {@link PlannerConfig}, but that has static configuration and this class
- * contains dynamic, per-query configuration.
+ * Like {@link PlannerConfig}, but that has static configuration and this class contains dynamic, per-query
+ * configuration.
  */
 public class PlannerContext
 {
@@ -65,9 +65,8 @@ public class PlannerContext
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
-  // This context parameter is an undocumented parameter, used internally,
-  // to allow the web console to apply a limit without having to rewrite
-  // the SQL query.
+  // This context parameter is an undocumented parameter, used internally, to allow the web console to
+  // apply a limit without having to rewrite the SQL query.
   public static final String CTX_SQL_OUTER_LIMIT = "sqlOuterLimit";
 
   // DataContext keys
@@ -86,12 +85,10 @@ public class PlannerContext
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   // bindings for dynamic parameters to bind during planning
   private List<TypedValue> parameters = Collections.emptyList();
-  // result of authentication, providing identity to authorize set of resources
-  // produced by validation
+  // result of authentication, providing identity to authorize set of resources produced by validation
   private AuthenticationResult authenticationResult;
-  // set of datasources and views which must be authorized, initialized to null
-  // so we can detect if it has been set.
-  private Set<ResourceAction> resourceActions;
+  // set of datasources and views which must be authorized, initialized to null so we can detect if it has been set.
+  private Set<ResourceAction> resourceActions = null;
   // result of authorizing set of resources against authentication identity
   private Access authorizationResult;
   // error messages encountered while planning the query

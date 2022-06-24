@@ -28,7 +28,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import javax.annotation.Nullable;
 import java.util.Set;
 
-public abstract class DruidRel<T extends DruidRel<?>> extends AbstractRelNode
+public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
 {
   private final PlannerContext plannerContext;
 
@@ -52,11 +52,6 @@ public abstract class DruidRel<T extends DruidRel<?>> extends AbstractRelNode
     // finalize aggregations for the outermost query even if we don't explicitly ask it to.
 
     return getPlannerContext().getQueryMaker().runQuery(toDruidQuery(false));
-  }
-
-  public Object dryRun()
-  {
-    return getPlannerContext().getQueryMaker().explain(toDruidQuery(false));
   }
 
   public abstract T withPartialQuery(PartialDruidQuery newQueryBuilder);

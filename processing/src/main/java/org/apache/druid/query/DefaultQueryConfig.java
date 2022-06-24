@@ -29,21 +29,21 @@ import java.util.Map;
 /**
  * A user configuration holder for all query types.
  * Any query-specific configurations should go to their own configuration.
- *
  * @see org.apache.druid.query.groupby.GroupByQueryConfig
  * @see org.apache.druid.query.search.SearchQueryConfig
  * @see org.apache.druid.query.topn.TopNQueryConfig
  * @see org.apache.druid.query.metadata.SegmentMetadataQueryConfig
  * @see org.apache.druid.query.scan.ScanQueryConfig
+ *
  */
 public class DefaultQueryConfig
 {
   /**
    * Note that context values should not be directly retrieved from this field but instead should
    * be read through {@link QueryContexts}. This field contains context configs from runtime property
-   * which are then merged with configs passed in query context. The result of the merge is subsequently stored in
+   * which is then merged with configs passed in query context. The result of the merge is subsequently stored in
    * the query context.  The order of precedence in merging of the configs is as follow:
-   * runtime property values (stored in this class) are overriden by query context parameter passed in with the query.
+   * runtime property values (store in this class) override by query context parameter passed in with the query
    */
   @JsonProperty
   private final Map<String, Object> context;

@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.sql.calcite.tester.LinesSection.CaseSection;
 import org.apache.druid.sql.calcite.tester.LinesSection.CommentsSection;
@@ -477,7 +476,7 @@ public class TestCaseLoader
           String key = entry.getKey().toString();
           context.put(
               key,
-              QueryContexts.definition(key).parse(
+              QueryTestCases.definition(key).parse(
                   entry.getValue().toString()));
         }
         contextSection = new ContextSection(context);

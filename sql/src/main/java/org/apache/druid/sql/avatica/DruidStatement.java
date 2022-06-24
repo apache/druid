@@ -54,7 +54,6 @@ import java.util.concurrent.ExecutorService;
 public class DruidStatement implements Closeable
 {
   public static final long START_OFFSET = 0;
-
   private final String connectionId;
   private final int statementId;
   private final QueryContext queryContext;
@@ -83,7 +82,7 @@ public class DruidStatement implements Closeable
   private long maxRowCount;
   private Meta.Signature signature;
   private Yielder<Object[]> yielder;
-  private int offset;
+  private int offset = 0;
   private Throwable throwable;
   private AuthenticationResult authenticationResult;
 
@@ -207,6 +206,7 @@ public class DruidStatement implements Closeable
       return this;
     }
   }
+
 
   public DruidStatement execute(List<TypedValue> parameters)
   {
@@ -384,6 +384,7 @@ public class DruidStatement implements Closeable
         field.getName()
     );
   }
+
 
   private DruidStatement closeAndPropagateThrowable(Throwable t)
   {

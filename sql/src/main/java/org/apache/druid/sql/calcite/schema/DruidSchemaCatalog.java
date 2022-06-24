@@ -56,7 +56,7 @@ public class DruidSchemaCatalog
   }
 
   /**
-   * Root Calcite schema, used to plan and execute queries
+   * Root calcite schema, used to plan and execute queries
    */
   public SchemaPlus getRootSchema()
   {

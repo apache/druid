@@ -37,7 +37,6 @@ import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest.QueryContextForJoinProvider;
-import org.apache.druid.sql.calcite.QueryDefn;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;

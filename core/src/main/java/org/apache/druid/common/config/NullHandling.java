@@ -68,12 +68,11 @@ public class NullHandling
   }
 
   /**
-   * Whether nulls should be replaced with default value.
+   * whether nulls should be replaced with default value.
    */
   public static boolean replaceWithDefault()
   {
-    // This should only be null in a unit test context, in production this will
-    // be injected by the null handling module.
+    // this should only be null in a unit test context, in production this will be injected by the null handling module
     if (INSTANCE == null) {
       throw new IllegalStateException("NullHandling module not initialized, call NullHandling.initializeForTests()");
     }
@@ -81,12 +80,11 @@ public class NullHandling
   }
 
   /**
-   * Whether nulls should be counted during String cardinality
+   * whether nulls should be counted during String cardinality
    */
   public static boolean ignoreNullsForStringCardinality()
   {
-    // This should only be null in a unit test context, in production this will
-    // be injected by the null handling module.
+    // this should only be null in a unit test context, in production this will be injected by the null handling module
     if (INSTANCE == null) {
       throw new IllegalStateException("NullHandling module not initialized, call NullHandling.initializeForTests()");
     }

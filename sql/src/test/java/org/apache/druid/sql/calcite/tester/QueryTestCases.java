@@ -26,8 +26,12 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContexts.Vectorize;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -37,6 +41,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -251,5 +256,112 @@ public class QueryTestCases
       builder.sqlTimeZone(DateTimes.inferTzFromString(timeZone));
     }
     return builder.build();
+  }
+  public enum EntryType
+  {
+    STRING,
+    BOOLEAN,
+    INT,
+    LONG,
+    VECTORIZE,
+    OBJECT;
+
+    public Object parse(String value)
+    {
+      if (value == null) {
+        return null;
+      }
+      if (this != STRING) {
+        value = value.trim();
+        if (value.length() == 0) {
+          return null;
+        }
+      }
+      switch (this) {
+        case BOOLEAN:
+          return Numbers.parseBoolean(value);
+        case LONG:
+          return Numbers.parseLong(value);
+        case INT:
+          return Numbers.parseInt(value);
+        case VECTORIZE:
+          return Vectorize.valueOf(StringUtils.toUpperCase(value));
+        default:
+          return value;
+      }
+    }
+  }
+
+  /**
+   * Definition of non-String context variables. At present, provides only the
+   * type. This can be expanded to provide other attributes when useful: whether
+   * the item is internal or external, whether it is only for the SQL planner, and
+   * can be stripped out of the query before execution, the default value, etc.
+   */
+  public static final ConcurrentHashMap<String, EntryType> ENTRY_DEFNS = new ConcurrentHashMap<>();
+
+  // List of known context keys with type and default value (where known).
+  // Some of these are probably internal: add the flag where that is true.
+
+  static {
+    ENTRY_DEFNS.put(QueryContexts.BROKER_PARALLEL_MERGE_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY, EntryType.INT);
+    ENTRY_DEFNS.put(QueryContexts.BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY, EntryType.INT);
+    ENTRY_DEFNS.put(QueryContexts.BROKER_PARALLELISM, EntryType.INT);
+    ENTRY_DEFNS.put(QueryContexts.BY_SEGMENT_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.DEFAULT_TIMEOUT_KEY, EntryType.INT);
+    ENTRY_DEFNS.put(QueryContexts.ENABLE_DEBUG, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.FINALIZE_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.IN_SUB_QUERY_THRESHOLD_KEY, EntryType.INT);
+    ENTRY_DEFNS.put(QueryContexts.JOIN_FILTER_PUSH_DOWN_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.JOIN_FILTER_REWRITE_MAX_SIZE_KEY, EntryType.LONG);
+    ENTRY_DEFNS.put(
+        QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY,
+          EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.MAX_NUMERIC_IN_FILTERS, EntryType.INT);
+    ENTRY_DEFNS.put(QueryContexts.MAX_QUEUED_BYTES_KEY, EntryType.LONG);
+    ENTRY_DEFNS.put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, EntryType.INT);
+    ENTRY_DEFNS.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, EntryType.INT);
+    ENTRY_DEFNS.put(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, EntryType.INT);
+    ENTRY_DEFNS.put(QueryContexts.POPULATE_CACHE_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.POPULATE_RESULT_LEVEL_CACHE_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.PRIORITY_KEY, EntryType.INT);
+    ENTRY_DEFNS.put(QueryContexts.RETURN_PARTIAL_RESULTS_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.SECONDARY_PARTITION_PRUNING_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.SERIALIZE_DATE_TIME_AS_LONG_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.TIMEOUT_KEY, EntryType.INT);
+    ENTRY_DEFNS.put(QueryContexts.UNCOVERED_INTERVALS_LIMIT_KEY, EntryType.INT);
+    ENTRY_DEFNS.put(QueryContexts.USE_CACHE_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.USE_FILTER_CNF_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.USE_RESULT_LEVEL_CACHE_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.VECTOR_SIZE_KEY, EntryType.INT);
+    ENTRY_DEFNS.put(QueryContexts.VECTORIZE_KEY, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, EntryType.BOOLEAN);
+
+    ENTRY_DEFNS.put(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, EntryType.BOOLEAN);
+    ENTRY_DEFNS.put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, EntryType.BOOLEAN);
+
+    // From PlannerContext: constants not visible here.
+    ENTRY_DEFNS.put("sqlOuterLimit", EntryType.INT);
+    ENTRY_DEFNS.put("sqlStringifyArrays", EntryType.BOOLEAN);
+    ENTRY_DEFNS.put("useApproximateTopN", EntryType.BOOLEAN);
+
+    // From TimeseriesQuery
+    ENTRY_DEFNS.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, EntryType.BOOLEAN);
+  }
+
+  /**
+   * Get the definition (currently, only the type) of the context key.
+   * Defaults to STRING unless a different type is explicitly registered.
+   */
+  public static EntryType definition(String key)
+  {
+    EntryType defn = ENTRY_DEFNS.get(key);
+    return defn == null ? EntryType.STRING : defn;
   }
 }

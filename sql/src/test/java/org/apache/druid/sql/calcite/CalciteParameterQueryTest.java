@@ -369,6 +369,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
     );
   }
 
+
   @Test
   public void testTimestamp() throws Exception
   {
@@ -502,6 +503,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             new SqlParameter(SqlType.FLOAT, 100000001.0)
         )
     );
+
 
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt = ? or cnt = ?",
@@ -666,9 +668,8 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   public void testNullParameter() throws Exception
   {
     cannotVectorize();
-    // contrived example of using null as an SQL parameter to at least test the code path
-    // because lots of things don't actually work as null and things like 'IS NULL' fail to
-    // parse in Calcite if expressed as 'IS ?'
+    // contrived example of using null as an sql parameter to at least test the codepath because lots of things dont
+    // actually work as null and things like 'IS NULL' fail to parse in calcite if expressed as 'IS ?'
 
     // this will optimize out the 3rd argument because 2nd argument will be constant and not null
     testQuery(

@@ -185,7 +185,7 @@ public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
       filterPushed = true;
     }
 
-    // once the filters are pushed to join from top, try to remove redundant 'IS NOT NULL' filters
+    // once the filters are pushed to join from top, try to remove redudant 'IS NOT NULL' filters
     removeRedundantIsNotNullFilters(joinFilters, joinType, NullHandling.sqlCompatible());
 
     // if nothing actually got pushed and there is nothing leftover,

@@ -769,7 +769,7 @@ public class CalciteTests
 
   private static final Set<String> KEY_COLUMNS = ImmutableSet.of("dim4");
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   private static final RowBasedIndexedTable JOINABLE_TABLE = new RowBasedIndexedTable(
       JOINABLE_BACKING_DATA.getRowsAsList(),
       JOINABLE_BACKING_DATA.rowAdapter(),

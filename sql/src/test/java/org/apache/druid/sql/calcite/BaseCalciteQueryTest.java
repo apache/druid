@@ -91,8 +91,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
-import org.apache.druid.sql.calcite.tester.CalciteTestCapture;
-import org.apache.druid.sql.calcite.tester.CalciteTestRecorder;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -262,12 +260,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
 
-  public boolean cannotVectorize;
-  public boolean skipVectorize;
-  public int numMergeBuffers;
+  public boolean cannotVectorize = false;
+  public boolean skipVectorize = false;
 
   public ObjectMapper queryJsonMapper;
-  public SpecificSegmentsQuerySegmentWalker walker;
+  public SpecificSegmentsQuerySegmentWalker walker = null;
   public QueryLogHook queryLogHook;
 
   static {
@@ -280,14 +277,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     OUTER_LIMIT_CONTEXT.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 2);
   }
-
-  /**
-   * Allows recording of the planning details of a test. Enable it to convert a Java test
-   * into the planner test framework ".case" file format. Change OFF to PLAN_AND_RUN to
-   * enable capture.
-   */
-  protected static CalciteTestRecorder recorder =
-      CalciteTestRecorder.create(CalciteTestRecorder.Option.PLAN_AND_RUN);
 
   // Generate timestamps for expected results
   public static long timestamp(final String timeString)
@@ -491,7 +480,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @After
   public void tearDown() throws Exception
   {
-    recorder.emit();
     walker.close();
     walker = null;
   }
@@ -616,9 +604,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
+
   public void testQuery(
       final String sql,
-      final List<Query<?>> expectedQueries,
+      final List<Query> expectedQueries,
       final List<Object[]> expectedResults
   ) throws Exception
   {
@@ -636,7 +625,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void testQuery(
       final String sql,
       final Map<String, Object> context,
-      final List<Query<?>> expectedQueries,
+      final List<Query> expectedQueries,
       final List<Object[]> expectedResults
   ) throws Exception
   {
@@ -653,7 +642,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void testQuery(
       final String sql,
-      final List<Query<?>> expectedQueries,
+      final List<Query> expectedQueries,
       final List<Object[]> expectedResults,
       final List<SqlParameter> parameters
   ) throws Exception
@@ -673,7 +662,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final PlannerConfig plannerConfig,
       final String sql,
       final AuthenticationResult authenticationResult,
-      final List<Query<?>> expectedQueries,
+      final List<Query> expectedQueries,
       final List<Object[]> expectedResults
   ) throws Exception
   {
@@ -691,7 +680,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void testQuery(
       final String sql,
       final Map<String, Object> context,
-      final List<Query<?>> expectedQueries,
+      final List<Query> expectedQueries,
       final ResultsVerifier expectedResultsVerifier
   ) throws Exception
   {
@@ -712,56 +701,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final Map<String, Object> queryContext,
       final String sql,
       final AuthenticationResult authenticationResult,
-      final List<Query<?>> expectedQueries,
+      final List<Query> expectedQueries,
       final List<Object[]> expectedResults
   ) throws Exception
   {
-    testQuery(
-        plannerConfig,
-        QueryDefn.builder(sql)
-          .context(queryContext)
-          .authResult(authenticationResult)
-          .build(),
-        expectedQueries,
-        expectedResults
-    );
-  }
-
-  public void testQuery(
-      final PlannerConfig plannerConfig,
-      QueryDefn queryDefn,
-      final List<Query<?>> expectedQueries,
-      final List<Object[]> expectedResults
-  ) throws Exception
-  {
-    log.info("SQL: %s", queryDefn.sql());
-    final CalciteTestCapture capture;
-    if (recorder.isLive()) {
-      capture = new CalciteTestCapture(
-          plannerConfig,
-          queryDefn,
-          expectedQueries,
-          null,
-          null
-          );
-      capture.options(cannotVectorize, numMergeBuffers);
-      capture.results(expectedResults);
-      recorder.record(capture);
-    } else {
-      capture = null;
-    }
+    log.info("SQL: %s", sql);
     queryLogHook.clearRecordedQueries();
-    try {
-      final List<Object[]> plannerResults =
-          getResults(plannerConfig, queryDefn, null);
-      verifyResults(queryDefn.sql(), expectedQueries, expectedResults, plannerResults);
-    }
-    catch (Exception e) {
-      if (capture != null) {
-        capture.exception(e);
-      }
-      throw e;
-    }
+    final List<Object[]> plannerResults =
+        getResults(plannerConfig, queryContext, DEFAULT_PARAMETERS, sql, authenticationResult);
+    verifyResults(sql, expectedQueries, expectedResults, plannerResults);
   }
 
   public void testQuery(
@@ -770,7 +718,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final List<SqlParameter> parameters,
       final String sql,
       final AuthenticationResult authenticationResult,
-      final List<Query<?>> expectedQueries,
+      final List<Query> expectedQueries,
       final List<Object[]> expectedResults
   ) throws Exception
   {
@@ -792,33 +740,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final List<SqlParameter> parameters,
       final String sql,
       final AuthenticationResult authenticationResult,
-      final List<Query<?>> expectedQueries,
+      final List<Query> expectedQueries,
       final ResultsVerifier expectedResultsVerifier,
       @Nullable final Consumer<ExpectedException> expectedExceptionInitializer
   ) throws Exception
   {
-    testQuery(
-        plannerConfig,
-        QueryDefn.builder(sql)
-            .context(queryContext)
-            .parameters(parameters)
-            .authResult(authenticationResult)
-            .build(),
-        expectedQueries,
-        expectedResultsVerifier,
-        expectedExceptionInitializer
-    );
-  }
-
-  public void testQuery(
-      final PlannerConfig plannerConfig,
-      QueryDefn queryDefn,
-      final List<Query<?>> expectedQueries,
-      final ResultsVerifier expectedResultsVerifier,
-      @Nullable final Consumer<ExpectedException> expectedExceptionInitializer
-  ) throws Exception
-  {
-    log.info("SQL: %s", queryDefn.sql());
+    log.info("SQL: %s", sql);
 
     final List<String> vectorizeValues = new ArrayList<>();
 
@@ -828,66 +755,31 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       vectorizeValues.add("force");
     }
 
-    boolean captured = false;
     for (final String vectorize : vectorizeValues) {
       queryLogHook.clearRecordedQueries();
 
-      final Map<String, Object> theQueryContext = new HashMap<>();
+      final Map<String, Object> theQueryContext = new HashMap<>(queryContext);
       theQueryContext.put(QueryContexts.VECTORIZE_KEY, vectorize);
       theQueryContext.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize);
 
       if (!"false".equals(vectorize)) {
         theQueryContext.put(QueryContexts.VECTOR_SIZE_KEY, 2); // Small vector size to ensure we use more than one.
       }
-      QueryDefn specificDefn = queryDefn.withOverrides(theQueryContext);
 
-      final List<Query<?>> theQueries = new ArrayList<>();
-      for (Query<?> query : expectedQueries) {
-        theQueries.add(recursivelyOverrideContext(query, specificDefn.context()));
+      final List<Query> theQueries = new ArrayList<>();
+      for (Query query : expectedQueries) {
+        theQueries.add(recursivelyOverrideContext(query, theQueryContext));
       }
 
-      boolean skipCapture = !recorder.isLive();
       if (cannotVectorize && "force".equals(vectorize)) {
         expectedException.expect(RuntimeException.class);
         expectedException.expectMessage("Cannot vectorize");
-        // Don't bother capturing vectorization failures.
-        skipCapture = true;
       } else if (expectedExceptionInitializer != null) {
         expectedExceptionInitializer.accept(expectedException);
       }
 
-      final CalciteTestCapture capture;
-      if (skipCapture || captured) {
-        capture = null;
-      } else {
-        captured = true;
-        capture = new CalciteTestCapture(
-              plannerConfig,
-              queryDefn,
-              expectedQueries,
-              expectedResultsVerifier,
-              expectedExceptionInitializer
-              );
-        capture.options(cannotVectorize, numMergeBuffers);
-        recorder.record(capture);
-      }
-
-      try {
-        final List<Object[]> plannerResults = getResults(
-            plannerConfig,
-            specificDefn,
-            capture);
-        if (capture != null) {
-          capture.results(plannerResults);
-        }
-        verifyResults(queryDefn.sql(), theQueries, plannerResults, expectedResultsVerifier);
-      }
-      catch (Exception e) {
-        if (capture != null) {
-          capture.exception(e);
-        }
-        throw e;
-      }
+      final List<Object[]> plannerResults = getResults(plannerConfig, theQueryContext, parameters, sql, authenticationResult);
+      verifyResults(sql, theQueries, plannerResults, expectedResultsVerifier);
     }
   }
 
@@ -896,45 +788,32 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final Map<String, Object> queryContext,
       final List<SqlParameter> parameters,
       final String sql,
-      final AuthenticationResult authenticationResult,
-      final CalciteTestCapture capture
+      final AuthenticationResult authenticationResult
   ) throws Exception
   {
     return getResults(
         plannerConfig,
-        new QueryDefn(
-            sql,
-            queryContext,
-            parameters,
-            authenticationResult),
-        capture);
-  }
-
-  public List<Object[]> getResults(
-      final PlannerConfig plannerConfig,
-      final QueryDefn queryDefn,
-      final CalciteTestCapture capture
-  ) throws Exception
-  {
-    return getResults(
-        plannerConfig,
-        queryDefn,
+        queryContext,
+        parameters,
+        sql,
+        authenticationResult,
         createOperatorTable(),
         createMacroTable(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        queryJsonMapper,
-        capture
+        queryJsonMapper
     );
   }
 
   public List<Object[]> getResults(
       final PlannerConfig plannerConfig,
-      final QueryDefn queryDefn,
+      final Map<String, Object> queryContext,
+      final List<SqlParameter> parameters,
+      final String sql,
+      final AuthenticationResult authenticationResult,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final AuthorizerMapper authorizerMapper,
-      final ObjectMapper objectMapper,
-      final CalciteTestCapture capture
+      final ObjectMapper objectMapper
   ) throws Exception
   {
     final SqlLifecycleFactory sqlLifecycleFactory = getSqlLifecycleFactory(
@@ -946,21 +825,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         objectMapper
     );
 
-    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
-    List<Object[]> results = lifecycle.runSimple(
-        queryDefn.sql(),
-        queryDefn.context(),
-        queryDefn.parameters(),
-        queryDefn.authResult()).toList();
-    if (capture != null) {
-      capture.plannerResult(lifecycle.plannerResult());
-    }
-    return results;
+    return sqlLifecycleFactory.factorize().runSimple(sql, queryContext, parameters, authenticationResult).toList();
   }
 
   public void verifyResults(
       final String sql,
-      final List<Query<?>> expectedQueries,
+      final List<Query> expectedQueries,
       final List<Object[]> expectedResults,
       final List<Object[]> results
   )
@@ -970,7 +840,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void verifyResults(
       final String sql,
-      final List<Query<?>> expectedQueries,
+      final List<Query> expectedQueries,
       final List<Object[]> results,
       final ResultsVerifier expectedResultsVerifier
   )
@@ -986,11 +856,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   private void verifyQueries(
       final String sql,
-      @Nullable final List<Query<?>> expectedQueries
+      @Nullable final List<Query> expectedQueries
   )
   {
     if (expectedQueries != null) {
-      final List<Query<?>> recordedQueries = queryLogHook.getRecordedQueries();
+      final List<Query> recordedQueries = queryLogHook.getRecordedQueries();
 
       Assert.assertEquals(
           StringUtils.format("query count: %s", sql),
@@ -1041,7 +911,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void testQueryThrows(
       final String sql,
       final Map<String, Object> queryContext,
-      final List<Query<?>> expectedQueries,
+      final List<Query> expectedQueries,
       final Consumer<ExpectedException> expectedExceptionInitializer
   ) throws Exception
   {
@@ -1201,7 +1071,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   private static DataSource recursivelyOverrideContext(final DataSource dataSource, final Map<String, Object> context)
   {
     if (dataSource instanceof QueryDataSource) {
-      final Query<?> subquery = ((QueryDataSource) dataSource).getQuery();
+      final Query subquery = ((QueryDataSource) dataSource).getQuery();
       return new QueryDataSource(recursivelyOverrideContext(subquery, context));
     } else {
       return dataSource.withChildren(
@@ -1293,7 +1163,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
    */
   protected void requireMergeBuffers(int numMergeBuffers) throws IOException
   {
-    this.numMergeBuffers = numMergeBuffers;
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
         resourceCloser,
         QueryStackTests.getProcessingConfig(true, numMergeBuffers)
@@ -1335,11 +1204,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     {
       Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
       assertResultsEquals(sql, expectedResults, results);
-    }
-
-    public List<Object[]> expectedResults()
-    {
-      return expectedResults;
     }
   }
 }

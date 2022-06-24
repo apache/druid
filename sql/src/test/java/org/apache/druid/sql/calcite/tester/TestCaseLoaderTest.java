@@ -22,8 +22,11 @@ package org.apache.druid.sql.calcite.tester;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.sql.calcite.tester.QueryTestCases.EntryType;
 import org.apache.druid.sql.http.SqlParameter;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
@@ -41,6 +44,22 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestCaseLoaderTest
 {
+  @Test
+  public void testMetadata()
+  {
+    Assert.assertEquals(EntryType.BOOLEAN, QueryTestCases.definition(QueryContexts.FINALIZE_KEY));
+    Assert.assertEquals(EntryType.STRING, QueryTestCases.definition("unknown"));
+
+    Assert.assertNull(EntryType.STRING.parse(null));
+    Assert.assertNull(EntryType.INT.parse(""));
+    Assert.assertNull(EntryType.INT.parse(" "));
+    Assert.assertEquals(true, EntryType.BOOLEAN.parse(" true "));
+    Assert.assertEquals(10, EntryType.INT.parse(" 10 "));
+    Assert.assertEquals(20L, EntryType.LONG.parse(" 20 "));
+    Assert.assertEquals(Vectorize.FORCE, EntryType.VECTORIZE.parse(" force "));
+    Assert.assertEquals("foo", EntryType.OBJECT.parse(" foo "));
+  }
+
   @Test
   public void testEmpty()
   {

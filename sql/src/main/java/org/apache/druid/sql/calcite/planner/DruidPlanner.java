@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -111,12 +110,6 @@ public class DruidPlanner implements Closeable
 {
   private static final EmittingLogger log = new EmittingLogger(DruidPlanner.class);
   private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
-  @VisibleForTesting
-  public static final String UNNAMED_INGESTION_COLUMN_ERROR =
-      "Cannot ingest expressions that do not have an alias "
-          + "or columns with names like EXPR$[digit].\n"
-          + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
-          + "\"func(X) as myColumn\"";
 
   private final FrameworkConfig frameworkConfig;
   private final Planner planner;
@@ -767,7 +760,10 @@ public class DruidPlanner implements Closeable
     // Check that there are no unnamed columns in the insert.
     for (Pair<Integer, String> field : rootQueryRel.fields) {
       if (UNNAMED_COLUMN_PATTERN.matcher(field.right).matches()) {
-        throw new ValidationException(UNNAMED_INGESTION_COLUMN_ERROR);
+        throw new ValidationException("Cannot ingest expressions that do not have an alias "
+                                      + "or columns with names like EXPR$[digit]."
+                                      + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
+                                      + "\"func(X) as myColumn\"");
       }
     }
   }

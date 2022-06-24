@@ -101,7 +101,7 @@ public class RowSignatures
       } else {
         final ColumnType columnType =
             rowSignature.getColumnType(columnName)
-                        .orElseThrow(() -> new ISE("Encountered null type for column [%s]", columnName));
+                        .orElseThrow(() -> new ISE("Encountered null type for column[%s]", columnName));
 
         switch (columnType.getType()) {
           case STRING:
@@ -129,7 +129,7 @@ public class RowSignatures
                 type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, nullNumeric);
                 break;
               default:
-                throw new ISE("valueType [%s] not translatable", columnType);
+                throw new ISE("valueType[%s] not translatable", columnType);
             }
             break;
           case COMPLEX:
@@ -139,7 +139,7 @@ public class RowSignatures
             );
             break;
           default:
-            throw new ISE("valueType [%s] not translatable", columnType);
+            throw new ISE("valueType[%s] not translatable", columnType);
         }
       }
 

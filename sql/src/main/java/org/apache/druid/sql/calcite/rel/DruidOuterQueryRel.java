@@ -102,7 +102,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
     // Must finalize aggregations on subqueries.
-    final DruidQuery subQuery = ((DruidRel<?>) sourceRel).toDruidQuery(true);
+    final DruidQuery subQuery = ((DruidRel) sourceRel).toDruidQuery(true);
     final RowSignature sourceRowSignature = subQuery.getOutputRowSignature();
     return partialQuery.build(
         new QueryDataSource(subQuery.getQuery()),
@@ -150,7 +150,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   public void replaceInput(int ordinalInParent, RelNode p)
   {
     if (ordinalInParent != 0) {
-      throw new IndexOutOfBoundsException(StringUtils.format("Invalid ordinalInParent [%s]", ordinalInParent));
+      throw new IndexOutOfBoundsException(StringUtils.format("Invalid ordinalInParent[%s]", ordinalInParent));
     }
     this.sourceRel = p;
   }

@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.rel;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -114,18 +113,6 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
 
       return limit > 0 ? baseSequence.limit(limit) : baseSequence;
     }
-  }
-
-  @Override
-  public Object dryRun()
-  {
-    List<Object> plans = new ArrayList<>();
-    if (limit > 0) {
-      for (RelNode rel : rels) {
-        plans.add(((DruidRel) rel).dryRun());
-      }
-    }
-    return ImmutableMap.of("type", "union", "inputs", plans);
   }
 
   @Override

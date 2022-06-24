@@ -19,8 +19,6 @@
 
 package org.apache.druid.sql.calcite.run;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
@@ -123,74 +121,10 @@ public class NativeQueryMaker implements QueryMaker
   }
 
   @Override
-  public Object explain(DruidQuery druidQuery)
-  {
-    final Query<?> query = druidQuery.getQuery();
-    return prepare(druidQuery, query);
-  }
-
-  /**
-   * Execution plan: primarily for testing. Captures the final form
-   * of the query used by the execution engine. Jackson-serializable,
-   * but only for serialization: never deserialized.
-   */
-  @JsonPropertyOrder({"query", "rowOrder", "newFields", "newTypes"})
-  public static class ExecutionPlan
-  {
-    final Query<?> query;
-    final List<String> rowOrder;
-    final List<String> newFields;
-    final List<SqlTypeName> newTypes;
-
-    public ExecutionPlan(
-        final Query<?> query,
-        final List<String> rowOrder,
-        final List<String> newFields,
-        final List<SqlTypeName> newTypes)
-    {
-      super();
-      this.query = query;
-      this.rowOrder = rowOrder;
-      this.newFields = newFields;
-      this.newTypes = newTypes;
-    }
-
-    @JsonProperty
-    public Query<?> getQuery()
-    {
-      return query;
-    }
-
-    @JsonProperty
-    public List<String> getRowOrder()
-    {
-      return rowOrder;
-    }
-
-    @JsonProperty
-    public List<String> getNewFields()
-    {
-      return newFields;
-    }
-
-    @JsonProperty
-    public List<SqlTypeName> getNewTypes()
-    {
-      return newTypes;
-    }
-  }
-
-  @Override
   public Sequence<Object[]> runQuery(final DruidQuery druidQuery)
   {
     final Query<?> query = druidQuery.getQuery();
-    ExecutionPlan plan = prepare(druidQuery, query);
-    return execute(query, plan);
-  }
 
-  private ExecutionPlan prepare(final DruidQuery druidQuery, Query<?> query)
-  {
-    // TODO: Move this check to plan time, not run time.
     if (plannerContext.getPlannerConfig().isRequireTimeCondition()
         && !(druidQuery.getDataSource() instanceof InlineDataSource)) {
       if (Intervals.ONLY_ETERNITY.equals(findBaseDataSourceIntervals(query))) {
@@ -206,7 +140,7 @@ public class NativeQueryMaker implements QueryMaker
     // a BoundFilter is created internally for each of the values
     // whereas when Vi s are String the Filters are converted as BoundFilter to SelectorFilter to InFilter
     // which takes lesser processing for bitmaps
-    // So in a case where user executes a query with multiple numeric INs, flame graph shows BoundFilter.getBitmapResult
+    // So in a case where user executes a query with multiple numeric INs, flame graph shows BoundFilter.getBitmapColumnIndex
     // and BoundFilter.match predicate eating up processing time which stalls a historical for a query with large number
     // of numeric INs (> 10K). In such cases user should change the query to specify the IN clauses as String
     // Instead of IN(v1,v2,v3) user should specify IN('v1','v2','v3')
@@ -251,17 +185,8 @@ public class NativeQueryMaker implements QueryMaker
                   .map(f -> f.getType().getSqlTypeName())
                   .collect(Collectors.toList());
 
-    if (query.getId() == null) {
-      final String queryId = UUID.randomUUID().toString();
-      plannerContext.addNativeQueryId(queryId);
-      query = query.withId(queryId);
-    }
-
-    query = query.withSqlQueryId(plannerContext.getSqlQueryId());
-
-    return new ExecutionPlan(
+    return execute(
         query,
-        rowOrder,
         mapColumnList(rowOrder, fieldMapping),
         mapColumnList(columnTypes, fieldMapping)
     );
@@ -275,11 +200,17 @@ public class NativeQueryMaker implements QueryMaker
                              .orElseGet(query::getIntervals);
   }
 
-  private <T> Sequence<Object[]> execute(final Query<T> originalQuery, final ExecutionPlan plan)
+  private <T> Sequence<Object[]> execute(Query<T> query, final List<String> newFields, final List<SqlTypeName> newTypes)
   {
-    @SuppressWarnings("unchecked")
-    Query<T> query = (Query<T>) plan.query;
-    Hook.QUERY_PLAN.run(originalQuery);
+    Hook.QUERY_PLAN.run(query);
+
+    if (query.getId() == null) {
+      final String queryId = UUID.randomUUID().toString();
+      plannerContext.addNativeQueryId(queryId);
+      query = query.withId(queryId);
+    }
+
+    query = query.withSqlQueryId(plannerContext.getSqlQueryId());
 
     final AuthenticationResult authenticationResult = plannerContext.getAuthenticationResult();
     final Access authorizationResult = plannerContext.getAuthorizationResult();
@@ -292,12 +223,11 @@ public class NativeQueryMaker implements QueryMaker
     final Sequence<T> results = queryLifecycle.runSimple(query, authenticationResult, authorizationResult);
 
     //noinspection unchecked
-    @SuppressWarnings("unchecked")
     final QueryToolChest<T, Query<T>> toolChest = queryLifecycle.getToolChest();
     final List<String> resultArrayFields = toolChest.resultArraySignature(query).getColumnNames();
     final Sequence<Object[]> resultArrays = toolChest.resultsAsArrays(query, results);
 
-    return mapResultSequence(resultArrays, resultArrayFields, plan.newFields, plan.newTypes);
+    return mapResultSequence(resultArrays, resultArrayFields, newFields, newTypes);
   }
 
   private Sequence<Object[]> mapResultSequence(

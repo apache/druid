@@ -30,7 +30,6 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.sql.calcite.QueryDefn;
 import org.apache.druid.sql.calcite.planner.CapturedState;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerContext;

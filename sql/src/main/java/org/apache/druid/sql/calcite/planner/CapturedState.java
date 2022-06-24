@@ -76,7 +76,7 @@ public class CapturedState implements PlannerStateCapture
   public void captureDruidRel(DruidRel<?> druidRel)
   {
     this.druidRel = druidRel;
-    this.execPlan = druidRel.dryRun();
+    this.execPlan = null;
   }
 
   @Override
