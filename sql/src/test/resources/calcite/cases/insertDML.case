@@ -1080,8 +1080,7 @@ PARTITIONED BY ALL
 === exception
 ValidationException
 === error
-Cannot ingest expressions that do not have an alias or columns with names like EXPR$[digit].
-E.g. if you are ingesting "func(X)", then you can rewrite it as "func(X) as myColumn"
+!Cannot ingest expressions that do not have an alias.*
 ==============================================================
 Converted from testInsertWithInvalidColumnNameInIngest()
 === case
@@ -1094,8 +1093,7 @@ PARTITIONED BY ALL
 === exception
 ValidationException
 === error
-Cannot ingest expressions that do not have an alias or columns with names like EXPR$[digit].
-E.g. if you are ingesting "func(X)", then you can rewrite it as "func(X) as myColumn"
+!Cannot ingest expressions that do not have an alias.*
 ==============================================================
 Converted from testInsertWithUnnamedColumnInNestedSelectStatement()
 === case
@@ -1109,5 +1107,4 @@ PARTITIONED BY ALL TIME
 === exception
 ValidationException
 === error
-Cannot ingest expressions that do not have an alias or columns with names like EXPR$[digit].
-E.g. if you are ingesting "func(X)", then you can rewrite it as "func(X) as myColumn"
+!Cannot ingest expressions that do not have an alias.*
