@@ -66,6 +66,7 @@ public class FutureUtils
       return FutureUtils.get(future, cancelIfInterrupted);
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
     catch (ExecutionException e) {

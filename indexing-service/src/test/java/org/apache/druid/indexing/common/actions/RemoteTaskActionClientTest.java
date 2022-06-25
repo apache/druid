@@ -28,16 +28,21 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
-import org.apache.druid.rpc.handler.JsonHttpResponseHandler;
 import org.easymock.EasyMock;
 import org.jboss.netty.buffer.BigEndianHeapChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -80,10 +85,10 @@ public class RemoteTaskActionClientTest
         0
     ));
     expectedResponse.put("result", expectedLocks);
-    final Map<String, Object> expectedResponseMap = objectMapper.readValue(
-        objectMapper.writeValueAsString(expectedResponse),
-        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-    );
+
+    final DefaultHttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    final BytesFullResponseHolder responseHolder = new BytesFullResponseHolder(httpResponse);
+    responseHolder.addChunk(objectMapper.writeValueAsBytes(expectedResponse));
 
     final Task task = NoopTask.create("id", 0);
     final LockListAction action = new LockListAction();
@@ -93,10 +98,10 @@ public class RemoteTaskActionClientTest
                     EasyMock.eq(
                         new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/action")
                             .jsonContent(objectMapper, new TaskActionHolder(task, action))),
-                    EasyMock.anyObject(JsonHttpResponseHandler.class)
+                    EasyMock.anyObject(BytesFullResponseHandler.class)
                 )
             )
-            .andReturn(expectedResponseMap);
+            .andReturn(responseHolder);
 
     EasyMock.replay(directOverlordClient);
 
@@ -129,7 +134,7 @@ public class RemoteTaskActionClientTest
                         new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/action")
                             .jsonContent(objectMapper, new TaskActionHolder(task, action))
                     ),
-                    EasyMock.anyObject(JsonHttpResponseHandler.class)
+                    EasyMock.anyObject(BytesFullResponseHandler.class)
                 )
             )
             .andThrow(new ExecutionException(new HttpResponseException(responseHolder)));

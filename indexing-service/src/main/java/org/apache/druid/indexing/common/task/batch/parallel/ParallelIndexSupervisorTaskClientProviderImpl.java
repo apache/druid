@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.StandardRetryPolicy;
@@ -33,17 +34,20 @@ public class ParallelIndexSupervisorTaskClientProviderImpl implements ParallelIn
 {
   private final ServiceClientFactory serviceClientFactory;
   private final OverlordClient overlordClient;
+  private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
 
   @Inject
   public ParallelIndexSupervisorTaskClientProviderImpl(
       @EscalatedGlobal ServiceClientFactory serviceClientFactory,
       OverlordClient overlordClient,
+      @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper
   )
   {
     this.serviceClientFactory = serviceClientFactory;
     this.overlordClient = overlordClient;
+    this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
   }
 
@@ -61,6 +65,7 @@ public class ParallelIndexSupervisorTaskClientProviderImpl implements ParallelIn
             serviceClientFactory,
             overlordClient
         ),
+        jsonMapper,
         smileMapper,
         httpTimeout
     );

@@ -20,45 +20,55 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
-import org.apache.druid.rpc.handler.IgnoreHttpResponseHandler;
-import org.apache.druid.rpc.handler.SmileHttpResponseHandler;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
-import java.util.concurrent.ExecutionException;
+import java.io.IOException;
 
 public class ParallelIndexSupervisorTaskClientImpl implements ParallelIndexSupervisorTaskClient
 {
   private final ServiceClient client;
+  private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final Duration httpTimeout;
 
-  public ParallelIndexSupervisorTaskClientImpl(ServiceClient client, ObjectMapper smileMapper, Duration httpTimeout)
+  public ParallelIndexSupervisorTaskClientImpl(
+      ServiceClient client,
+      ObjectMapper jsonMapper,
+      ObjectMapper smileMapper,
+      Duration httpTimeout
+  )
   {
     this.client = client;
+    this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.httpTimeout = httpTimeout;
   }
 
   @Override
-  public SegmentIdWithShardSpec allocateSegment(DateTime timestamp)
+  public SegmentIdWithShardSpec allocateSegment(DateTime timestamp) throws IOException
   {
-    try {
-      return client.request(
-          new RequestBuilder(HttpMethod.POST, "/segment/allocate")
-              .smileContent(smileMapper, timestamp)
-              .timeout(httpTimeout),
-          SmileHttpResponseHandler.create(smileMapper, SegmentIdWithShardSpec.class)
-      );
-    }
-    catch (InterruptedException | ExecutionException e) {
-      throw new RuntimeException(e);
-    }
+    // API accepts Smile requests and sends JSON responses.
+    return jsonMapper.readValue(
+        FutureUtils.getUnchecked(
+            client.asyncRequest(
+                new RequestBuilder(HttpMethod.POST, "/segment/allocate")
+                    .smileContent(smileMapper, timestamp)
+                    .timeout(httpTimeout),
+                new BytesFullResponseHandler()
+            ),
+            true
+        ).getContent(),
+        SegmentIdWithShardSpec.class
+    );
   }
 
   @Override
@@ -66,34 +76,34 @@ public class ParallelIndexSupervisorTaskClientImpl implements ParallelIndexSuper
       DateTime timestamp,
       String sequenceName,
       @Nullable String prevSegmentId
-  )
+  ) throws IOException
   {
-    try {
-      return client.request(
-          new RequestBuilder(HttpMethod.POST, "/segment/allocate")
-              .smileContent(smileMapper, new SegmentAllocationRequest(timestamp, sequenceName, prevSegmentId))
-              .timeout(httpTimeout),
-          SmileHttpResponseHandler.create(smileMapper, SegmentIdWithShardSpec.class)
-      );
-    }
-    catch (InterruptedException | ExecutionException e) {
-      throw new RuntimeException(e);
-    }
+    // API accepts Smile requests and sends JSON responses.
+    return jsonMapper.readValue(
+        FutureUtils.getUnchecked(
+            client.asyncRequest(
+                new RequestBuilder(HttpMethod.POST, "/segment/allocate")
+                    .smileContent(smileMapper, new SegmentAllocationRequest(timestamp, sequenceName, prevSegmentId))
+                    .timeout(httpTimeout),
+                new BytesFullResponseHandler()
+            ),
+            true
+        ).getContent(),
+        SegmentIdWithShardSpec.class
+    );
   }
 
   @Override
   public void report(SubTaskReport report)
   {
-    try {
-      client.request(
-          new RequestBuilder(HttpMethod.POST, "/report")
-              .smileContent(smileMapper, report)
-              .timeout(httpTimeout),
-          IgnoreHttpResponseHandler.INSTANCE
-      );
-    }
-    catch (InterruptedException | ExecutionException e) {
-      throw new RuntimeException(e);
-    }
+    FutureUtils.getUnchecked(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, "/report")
+                .smileContent(smileMapper, report)
+                .timeout(httpTimeout),
+            IgnoreHttpResponseHandler.INSTANCE
+        ),
+        true
+    );
   }
 }

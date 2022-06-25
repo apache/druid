@@ -24,11 +24,11 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
-import org.apache.druid.rpc.handler.JsonHttpResponseHandler;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.io.IOException;
@@ -63,10 +63,13 @@ public class RemoteTaskActionClient implements TaskActionClient
       // We're using a ServiceClient directly here instead of OverlordClient, because OverlordClient does
       // not have access to the TaskAction class. (OverlordClient is in the druid-server package, and TaskAction
       // is in the druid-indexing-service package.)
-      final Map<String, Object> response = client.request(
-          new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/action")
-              .jsonContent(jsonMapper, new TaskActionHolder(task, taskAction)),
-          JsonHttpResponseHandler.create(jsonMapper, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
+      final Map<String, Object> response = jsonMapper.readValue(
+          client.request(
+              new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/action")
+                  .jsonContent(jsonMapper, new TaskActionHolder(task, taskAction)),
+              new BytesFullResponseHandler()
+          ).getContent(),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
 
       return jsonMapper.convertValue(

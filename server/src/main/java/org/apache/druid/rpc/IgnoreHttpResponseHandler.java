@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.rpc.handler;
+package org.apache.druid.rpc;
 
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;

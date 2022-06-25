@@ -28,13 +28,15 @@ import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
+import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.rpc.handler.IgnoreHttpResponseHandler;
-import org.apache.druid.rpc.handler.JsonHttpResponseHandler;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
@@ -55,16 +57,15 @@ public class OverlordClientImpl implements OverlordClient
   @Override
   public ListenableFuture<Void> runTask(final String taskId, final Object taskObject)
   {
-    final ListenableFuture<Map<String, Object>> response = client.asyncRequest(
-        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/task")
-            .jsonContent(jsonMapper, taskObject),
-        JsonHttpResponseHandler.create(jsonMapper, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
-    );
-
     return FutureUtils.transform(
-        response,
-        input -> {
-          final String returnedTaskId = (String) input.get("task");
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/task")
+                .jsonContent(jsonMapper, taskObject),
+            new BytesFullResponseHandler()
+        ),
+        holder -> {
+          final Map<String, Object> map = deserialize(holder, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+          final String returnedTaskId = (String) map.get("task");
 
           Preconditions.checkState(
               taskId.equals(returnedTaskId),
@@ -92,10 +93,13 @@ public class OverlordClientImpl implements OverlordClient
   @Override
   public ListenableFuture<Map<String, TaskStatus>> taskStatuses(final Set<String> taskIds)
   {
-    return client.asyncRequest(
-        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/taskStatus")
-            .jsonContent(jsonMapper, taskIds),
-        JsonHttpResponseHandler.create(jsonMapper, new TypeReference<Map<String, TaskStatus>>() {})
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/taskStatus")
+                .jsonContent(jsonMapper, taskIds),
+            new BytesFullResponseHandler()
+        ),
+        holder -> deserialize(holder, new TypeReference<Map<String, TaskStatus>>() {})
     );
   }
 
@@ -104,9 +108,12 @@ public class OverlordClientImpl implements OverlordClient
   {
     final String path = StringUtils.format("/druid/indexer/v1/task/%s/status", StringUtils.urlEncode(taskId));
 
-    return client.asyncRequest(
-        new RequestBuilder(HttpMethod.GET, path),
-        JsonHttpResponseHandler.create(jsonMapper, TaskStatusResponse.class)
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> deserialize(holder, TaskStatusResponse.class)
     );
   }
 
@@ -115,9 +122,12 @@ public class OverlordClientImpl implements OverlordClient
   {
     final String path = StringUtils.format("/druid/indexer/v1/task/%s/reports", StringUtils.urlEncode(taskId));
 
-    return client.asyncRequest(
-        new RequestBuilder(HttpMethod.GET, path),
-        JsonHttpResponseHandler.create(jsonMapper, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> deserialize(holder, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
     );
   }
 
@@ -125,5 +135,25 @@ public class OverlordClientImpl implements OverlordClient
   public OverlordClientImpl withRetryPolicy(ServiceRetryPolicy retryPolicy)
   {
     return new OverlordClientImpl(client.withRetryPolicy(retryPolicy), jsonMapper);
+  }
+
+  private <T> T deserialize(final BytesFullResponseHolder bytesHolder, final Class<T> clazz)
+  {
+    try {
+      return jsonMapper.readValue(bytesHolder.getContent(), clazz);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private <T> T deserialize(final BytesFullResponseHolder bytesHolder, final TypeReference<T> typeReference)
+  {
+    try {
+      return jsonMapper.readValue(bytesHolder.getContent(), typeReference);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }
