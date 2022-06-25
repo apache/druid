@@ -29,6 +29,7 @@ import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
@@ -296,7 +297,17 @@ public class GroupByQueryRunnerFailureTest
           }
         }
     );
-    QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    QueryRunner<ResultRow> mockRunner = (queryPlus, responseContext) -> {
+      try {
+        Thread.sleep(100);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      return Sequences.empty();
+    };
+
+    QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner, mockRunner));
     GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query);
   }
 }
