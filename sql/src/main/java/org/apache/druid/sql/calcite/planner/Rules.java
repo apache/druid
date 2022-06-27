@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.interpreter.Bindables;
 import org.apache.calcite.plan.RelOptLattice;
@@ -74,6 +75,7 @@ import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
+import org.apache.druid.sql.calcite.rule.DruidExtensionCalciteRuleManager;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
@@ -203,7 +205,10 @@ public class Rules
     // No instantiation.
   }
 
-  public static List<Program> programs(final PlannerContext plannerContext)
+  public static List<Program> programs(
+      final PlannerContext plannerContext,
+      final DruidExtensionCalciteRuleManager druidExtensionCalciteRuleManager
+  )
   {
 
 
@@ -216,7 +221,10 @@ public class Rules
         );
 
     return ImmutableList.of(
-        Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext))),
+        Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(
+            plannerContext,
+            druidExtensionCalciteRuleManager
+        ))),
         Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext)))
     );
   }
@@ -234,7 +242,11 @@ public class Rules
     return Programs.of(builder.build(), noDag, metadataProvider);
   }
 
-  private static List<RelOptRule> druidConventionRuleSet(final PlannerContext plannerContext)
+  @VisibleForTesting
+  public static List<RelOptRule> druidConventionRuleSet(
+      final PlannerContext plannerContext,
+      final DruidExtensionCalciteRuleManager druidExtensionCalciteRuleManager
+  )
   {
     final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
         .<RelOptRule>builder()
@@ -244,6 +256,9 @@ public class Rules
         .add(new DruidLogicalValuesRule(plannerContext))
         .add(new ExternalTableScanRule(plannerContext))
         .addAll(DruidRules.rules(plannerContext));
+    druidExtensionCalciteRuleManager.getDruidExtensionCalciteRuleProviderSet().forEach(
+        druidExtensionCalciteRuleProvider -> retVal.add(druidExtensionCalciteRuleProvider.getRule(plannerContext))
+    );
 
     return retVal.build();
   }
