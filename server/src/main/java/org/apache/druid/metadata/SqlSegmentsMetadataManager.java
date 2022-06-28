@@ -986,7 +986,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       final String dataSource,
       final DateTime maxEndTime,
       final int limit,
-      DateTime maxLastUsedTime
+      DateTime maxUsedFlagLastUpdatedTime
   )
   {
     // Note that we handle the case where used_flag_last_updated IS NULL here to allow smooth transition to Druid version that uses used_flag_last_updated column
@@ -1009,7 +1009,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 .setMaxRows(limit)
                 .bind("dataSource", dataSource)
                 .bind("end", maxEndTime.toString())
-                .bind("used_flag_last_updated", maxLastUsedTime.toString())
+                .bind("used_flag_last_updated", maxUsedFlagLastUpdatedTime.toString())
                 .map(
                     new BaseResultSetMapper<Interval>()
                     {
