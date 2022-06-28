@@ -112,7 +112,7 @@ public class SQLMetadataConnectorTest
   }
 
   /**
-   * This is a test for the upgrade path where a cluster is upgrading from a version that did not have last_used
+   * This is a test for the upgrade path where a cluster is upgrading from a version that did not have used_flag_last_updated
    * in the segments table.
    */
   @Test
@@ -120,7 +120,7 @@ public class SQLMetadataConnectorTest
   {
     connector.createSegmentTable();
 
-    // Drop column last_used to bring us in line with pre-upgrade state
+    // Drop column used_flag_last_updated to bring us in line with pre-upgrade state
     derbyConnectorRule.getConnector().retryWithHandle(
         new HandleCallback<Void>()
         {
@@ -130,7 +130,7 @@ public class SQLMetadataConnectorTest
             final Batch batch = handle.createBatch();
             batch.add(
                 StringUtils.format(
-                    "ALTER TABLE %1$s DROP COLUMN LAST_USED",
+                    "ALTER TABLE %1$s DROP COLUMN USED_FLAG_LAST_UPDATED",
                     derbyConnectorRule.metadataTablesConfigSupplier()
                                       .get()
                                       .getSegmentsTable()
@@ -143,10 +143,10 @@ public class SQLMetadataConnectorTest
         }
     );
 
-    connector.alterSegmentTableAddLastUsed();
+    connector.alterSegmentTableAddUsedFlagLastUpdated();
     connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
-        "LAST_USED"
+        "USED_FLAG_LAST_UPDATED"
     );
   }
 
@@ -154,7 +154,7 @@ public class SQLMetadataConnectorTest
   public void testUpdateSegmentTablePopulateLastUsed()
   {
     connector.createSegmentTable();
-    derbyConnectorRule.allowLastUsedToBeNullable();
+    derbyConnectorRule.allowUsedFlagLastUpdatedToBeNullable();
 
     connector.getDBI().withHandle(
         (Handle handle) -> handle.createStatement(StringUtils.format(
@@ -179,7 +179,7 @@ public class SQLMetadataConnectorTest
     );
 
     Assert.assertEquals(1, getCountOfRowsWithLastUsedNull());
-    connector.updateSegmentTablePopulateLastUsed();
+    connector.updateSegmentTablePopulateUsedFlagLastUpdated();
     Assert.assertEquals(0, getCountOfRowsWithLastUsedNull());
   }
 
@@ -193,7 +193,7 @@ public class SQLMetadataConnectorTest
           {
             List<Map<String, Object>> lst = handle.select(
                 StringUtils.format(
-                    "SELECT * FROM %1$s WHERE LAST_USED IS NULL",
+                    "SELECT * FROM %1$s WHERE USED_FLAG_LAST_UPDATED IS NULL",
                     derbyConnectorRule.metadataTablesConfigSupplier()
                                       .get()
                                       .getSegmentsTable()

@@ -92,18 +92,18 @@ public interface MetadataStorageConnector
   /**
    * Upgrade Compatability Method.
    *
-   * A new column, last_used, is added to druid_segmens table. This method alters the table to add the column to make
+   * A new column, used_flag_last_updated, is added to druid_segmens table. This method alters the table to add the column to make
    * a cluster's metastore tables compatible with the updated Druid codebase in 0.24.x+
    */
-  void alterSegmentTableAddLastUsed();
+  void alterSegmentTableAddUsedFlagLastUpdated();
 
   /**
    * Upgrade Compatability Method.
    *
-   * Updates the druid_segments table and populates the new last_used column for unused segments. This makes unused
+   * Updates the druid_segments table and populates the new used_flag_last_updated column for unused segments. This makes unused
    * segments compatible with the new 0.24.x+ code for allowing a minimum buffer period between a segment becoming
    * unused and being deleted
    */
-  void updateSegmentTablePopulateLastUsed();
+  void updateSegmentTablePopulateUsedFlagLastUpdated();
 
 }

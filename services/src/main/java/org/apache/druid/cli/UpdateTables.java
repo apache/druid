@@ -46,8 +46,8 @@ import java.util.List;
 
 public class UpdateTables extends GuiceRunnable
 {
-  private static final String SEGMENTS_TABLE_ADD_LAST_USED = "add-last-used-to-segments";
-  private static final String SEGMENTS_TABLE_POPULATE_LAST_USED = "populate-last-used-column-in-segments";
+  private static final String SEGMENTS_TABLE_ADD_USED_FLAG_LAST_UPDATED = "add-used-flag-last-updated-to-segments";
+  private static final String SEGMENTS_TABLE_POPULATE_USED_FLAG_LAST_UPDATED = "populate-used-flag-last-updated-column-in-segments";
 
   @Option(name = "--connectURI", description = "Database JDBC connection string")
   @Required
@@ -128,10 +128,10 @@ public class UpdateTables extends GuiceRunnable
   {
     final Injector injector = makeInjector();
     MetadataStorageConnector dbConnector = injector.getInstance(MetadataStorageConnector.class);
-    if (SEGMENTS_TABLE_ADD_LAST_USED.equals(action_name)) {
-      dbConnector.alterSegmentTableAddLastUsed();
-    } else if (SEGMENTS_TABLE_POPULATE_LAST_USED.equals(action_name)) {
-      dbConnector.updateSegmentTablePopulateLastUsed();
+    if (SEGMENTS_TABLE_ADD_USED_FLAG_LAST_UPDATED.equals(action_name)) {
+      dbConnector.alterSegmentTableAddUsedFlagLastUpdated();
+    } else if (SEGMENTS_TABLE_POPULATE_USED_FLAG_LAST_UPDATED.equals(action_name)) {
+      dbConnector.updateSegmentTablePopulateUsedFlagLastUpdated();
     }
   }
 }

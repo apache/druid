@@ -99,7 +99,7 @@ system. The table has two main functional columns, the other columns are for ind
 Value 1 in the `used` column means that the segment should be "used" by the cluster (i.e., it should be loaded and
 available for requests). Value 0 means that the segment should not be loaded into the cluster. We do this as a means of
 unloading segments from the cluster without actually removing their metadata (which allows for simpler rolling back if
-that is ever an issue). The `used` column has a corresponding `last_used` column that indicates the date at the instant
+that is ever an issue). The `used` column has a corresponding `used_flag_last_updated` column that indicates the date at the instant
 that the `used` status of the segment was last updated. This information can be used by the coordinator to determine if
 a segment is a candidate for deletion (if automated segment killing is enabled).
 

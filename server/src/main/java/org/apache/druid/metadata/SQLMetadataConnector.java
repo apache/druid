@@ -317,7 +317,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  version VARCHAR(255) NOT NULL,\n"
                 + "  used BOOLEAN NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
-                + "  last_used VARCHAR(255) NOT NULL,\n"
+                + "  used_flag_last_updated VARCHAR(255) NOT NULL,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
                 tableName, getPayloadType(), getQuoteString(), getCollation()
@@ -502,46 +502,46 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * Adds the last_used column to the Druid segment table.
+   * Adds the used_flag_last_updated column to the Druid segment table.
    *
    * This is public due to allow the UpdateTables cli tool to use for upgrade prep.
    */
   @Override
-  public void alterSegmentTableAddLastUsed()
+  public void alterSegmentTableAddUsedFlagLastUpdated()
   {
     String tableName = tablesConfigSupplier.get().getSegmentsTable();
-    if (!tableHasColumn(tableName, "last_used")) {
-      log.info("Adding last_used column to %s", tableName);
+    if (!tableHasColumn(tableName, "used_flag_last_updated")) {
+      log.info("Adding used_flag_last_updated column to %s", tableName);
       alterTable(
           tableName,
           ImmutableList.of(
               StringUtils.format(
                   "ALTER TABLE %1$s \n"
-                  + "ADD last_used varchar(255)",
+                  + "ADD used_flag_last_updated varchar(255)",
                   tableName
               )
           )
       );
     } else {
-      log.info("%s already has last_used column", tableName);
+      log.info("%s already has used_flag_last_updated column", tableName);
     }
   }
 
   /**
-   * Populates the last_used column for all unused segments in the Druid segment table.
+   * Populates the used_flag_last_updated column for all unused segments in the Druid segment table.
    *
    * The current UTC timestamp string is used for the content of each column.
    * This is public due to allow the UpdateTables cli tool to use in a optional post-upgrade action.
    */
   @Override
-  public void updateSegmentTablePopulateLastUsed()
+  public void updateSegmentTablePopulateUsedFlagLastUpdated()
   {
     String tableName = tablesConfigSupplier.get().getSegmentsTable();
-    if (tableHasColumn(tableName, "last_used")) {
+    if (tableHasColumn(tableName, "used_flag_last_updated")) {
       getDBI().withHandle(
           (Handle handle) -> handle
-              .createStatement(StringUtils.format("UPDATE %s SET last_used = :last_used WHERE used = false", tableName))
-              .bind("last_used", DateTimes.nowUtc().toString())
+              .createStatement(StringUtils.format("UPDATE %s SET used_flag_last_updated = :used_flag_last_updated WHERE used = false", tableName))
+              .bind("used_flag_last_updated", DateTimes.nowUtc().toString())
               .execute()
       );
     }
@@ -692,7 +692,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     if (config.get().isCreateTables()) {
       createSegmentTable(tablesConfigSupplier.get().getSegmentsTable());
-      alterSegmentTableAddLastUsed();
+      alterSegmentTableAddUsedFlagLastUpdated();
     }
     // Called outside of the above conditional because we want to validate the table
     // regardless of cluster configuration for creating tables.
@@ -960,10 +960,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    */
   private void validateSegmentTable()
   {
-    if (tableHasColumn(tablesConfigSupplier.get().getSegmentsTable(), "last_used")) {
+    if (tableHasColumn(tablesConfigSupplier.get().getSegmentsTable(), "used_flag_last_updated")) {
       return;
     } else {
-      throw new RuntimeException("Invalid Segment Table Schema! No last_used column!");
+      throw new RuntimeException("Invalid Segment Table Schema! No used_flag_last_updated column!");
     }
   }
 }

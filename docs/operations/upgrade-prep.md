@@ -30,7 +30,7 @@ title: "Upgrade Prep"
 
 **The coordinator and overlord services will fail if you do not execute this change prior to the upgrade**
 
-A new column, `last_used`, is needed in the segments table to support new
+A new column, `used_flag_last_updated`, is needed in the segments table to support new
 segment killing functionality. You can manually alter the table, or you can use
 a pre-written tool to perform the update. 
 
@@ -52,14 +52,14 @@ In the example commands below:
 
 ```bash
 cd ${DRUID_ROOT}
-java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"mysql-metadata-storage\"] -Ddruid.metadata.storage.type=mysql org.apache.druid.cli.Main tools metadata-update --connectURI="<mysql-uri>" --user <user> --password <pass> --base druid --action add-last-used-to-segments
+java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"mysql-metadata-storage\"] -Ddruid.metadata.storage.type=mysql org.apache.druid.cli.Main tools metadata-update --connectURI="<mysql-uri>" --user <user> --password <pass> --base druid --action add-used-flag-last-updated-to-segments
 ```
 
 ##### PostgreSQL
 
 ```bash
 cd ${DRUID_ROOT}
-java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"postgresql-metadata-storage\"] -Ddruid.metadata.storage.type=postgresql org.apache.druid.cli.Main tools metadata-update --connectURI="<postgresql-uri>" --user <user> --password <pass> --base druid --action add-last-used-to-segments
+java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"postgresql-metadata-storage\"] -Ddruid.metadata.storage.type=postgresql org.apache.druid.cli.Main tools metadata-update --connectURI="<postgresql-uri>" --user <user> --password <pass> --base druid --action add-used-flag-last-updated-to-segments
 ```
 
 
@@ -67,16 +67,16 @@ java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log
 
 ```SQL
 ALTER TABLE druid_segments
-ADD last_used varchar(255);
+ADD used_flag_last_updated varchar(255);
 ```
 
-### Populating `last_used` column of the segments table after upgrade (Optional)
+### Populating `used_flag_last_updated` column of the segments table after upgrade (Optional)
 
-This is an optional step to take **after** you upgrade the Overlord and Coordinator to `0.24+` (from `0.23` and earlier). If you do not take this action and are also using `druid.coordinator.kill.on=true`, the logic to identify segments that can be killed will not honor `druid.coordinator.kill.bufferPeriod` for the rows in the segments table where `last_used == null`.
+This is an optional step to take **after** you upgrade the Overlord and Coordinator to `0.24+` (from `0.23` and earlier). If you do not take this action and are also using `druid.coordinator.kill.on=true`, the logic to identify segments that can be killed will not honor `druid.coordinator.kill.bufferPeriod` for the rows in the segments table where `used_flag_last_updated == null`.
 
 #### Pre-written tool
 
-Druid provides a `metadata-update` tool for updating Druid's metadata tables. Note that this tool will update `last_used` for all rows that match `used = false` in one transaction.
+Druid provides a `metadata-update` tool for updating Druid's metadata tables. Note that this tool will update `used_flag_last_updated` for all rows that match `used = false` in one transaction.
 
 In the example commands below:
 
@@ -92,14 +92,14 @@ In the example commands below:
 
 ```bash
 cd ${DRUID_ROOT}
-java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"mysql-metadata-storage\"] -Ddruid.metadata.storage.type=mysql org.apache.druid.cli.Main tools metadata-update --connectURI="<mysql-uri>" --user <user> --password <pass> --base druid --action populate-last-used-column-in-segments
+java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"mysql-metadata-storage\"] -Ddruid.metadata.storage.type=mysql org.apache.druid.cli.Main tools metadata-update --connectURI="<mysql-uri>" --user <user> --password <pass> --base druid --action populate-used-flag-last-updated-column-in-segments
 ```
 
 ##### PostgreSQL
 
 ```bash
 cd ${DRUID_ROOT}
-java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"postgresql-metadata-storage\"] -Ddruid.metadata.storage.type=postgresql org.apache.druid.cli.Main tools metadata-update --connectURI="<postgresql-uri>" --user <user> --password <pass> --base druid --action populate-last-used-column-in-segments
+java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"postgresql-metadata-storage\"] -Ddruid.metadata.storage.type=postgresql org.apache.druid.cli.Main tools metadata-update --connectURI="<postgresql-uri>" --user <user> --password <pass> --base druid --action populate-used-flag-last-updated-column-in-segments
 ```
 
 
@@ -109,6 +109,6 @@ Note that we choose a random date string for this example. We reccommend using t
 
 ```SQL
 UPDATE druid_segment
-SET last_used = '2022-01-01T00:00:00.000Z'
+SET used_flag_last_updated = '2022-01-01T00:00:00.000Z'
 where used = false;
 ```

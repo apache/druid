@@ -328,10 +328,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 public Integer withHandle(Handle handle)
                 {
                   String request = StringUtils.format(
-                      "UPDATE %s SET used = false, last_used = :last_used WHERE id = :id",
+                      "UPDATE %s SET used = false, used_flag_last_updated = :used_flag_last_updated WHERE id = :id",
                       derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()
                   );
-                  return handle.createStatement(request).bind("id", segment.getId().toString()).bind("last_used", DateTimes.nowUtc().toString()).execute();
+                  return handle.createStatement(request).bind("id", segment.getId().toString()).bind("used_flag_last_updated", DateTimes.nowUtc().toString()).execute();
                 }
               }
           )
@@ -351,10 +351,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 public Integer withHandle(Handle handle)
                 {
                   String request = StringUtils.format(
-                      "UPDATE %s SET used = true, last_used = :last_used WHERE id = :id",
+                      "UPDATE %s SET used = true, used_flag_last_updated = :used_flag_last_updated WHERE id = :id",
                       derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()
                   );
-                  return handle.createStatement(request).bind("id", segment.getId().toString()).bind("last_used", DateTimes.nowUtc().toString()).execute();
+                  return handle.createStatement(request).bind("id", segment.getId().toString()).bind("used_flag_last_updated", DateTimes.nowUtc().toString()).execute();
                 }
               }
           )
@@ -424,8 +424,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           {
             PreparedBatch preparedBatch = handle.prepareBatch(
                 StringUtils.format(
-                    "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, last_used) "
-                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :last_used)",
+                    "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_flag_last_updated) "
+                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_flag_last_updated)",
                     table,
                     derbyConnector.getQuoteString()
                 )
@@ -441,7 +441,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                            .bind("version", segment.getVersion())
                            .bind("used", true)
                            .bind("payload", mapper.writeValueAsBytes(segment))
-                           .bind("last_used", DateTimes.nowUtc().toString());
+                           .bind("used_flag_last_updated", DateTimes.nowUtc().toString());
             }
 
             final int[] affectedRows = preparedBatch.execute();
