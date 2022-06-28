@@ -241,7 +241,7 @@ public class StupidPool<T> implements NonBlockingPool<T>
     );
   }
 
-  private class ObjectResourceHolder implements ResourceHolder<T>
+  class ObjectResourceHolder implements ResourceHolder<T>
   {
     private final AtomicReference<T> objectRef;
     private ObjectId objectId;
@@ -293,6 +293,10 @@ public class StupidPool<T> implements NonBlockingPool<T>
         }
       }
     }
+
+    void forceClean() {
+      cleanable.clean();
+    }
   }
 
   private static class ObjectLeakNotifier implements Runnable
@@ -323,8 +327,8 @@ public class StupidPool<T> implements NonBlockingPool<T>
           final StupidPool<?> pool = poolReference.get();
           log.warn("Not closed! Object leaked from %s. Allowing gc to prevent leak.", pool);
           if (except != null && pool != null) {
-            log.error(except, "notifier[%s], dumping stack trace from object checkout and poisoning pool", this);
             pool.capturedException.set(except);
+            log.error(except, "notifier[%s], dumping stack trace from object checkout and poisoning pool", this);
           }
         }
       }
