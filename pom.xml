@@ -127,6 +127,13 @@
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
+
+        <!-- Using -DskipTests or -P skip-tests will skip both the unit tests and
+             the "new" integration tests. To skip just the unit tests (but run the
+             new integration tests by setting the required profile), use -DskipUTs=true.
+             -->
+        <skipUTs>false</skipUTs>
+        <skipITs>false</skipITs>
     </properties>
 
     <modules>
@@ -1169,6 +1176,7 @@
                     <excludes>
                         <!-- Ignore initialization classes, these are tested by the integration tests. -->
                         <exclude>org/apache/druid/cli/Cli*</exclude>
+                        <exclude>org/apache/druid/cli/GuiceRunnable.class</exclude>
                         <exclude>org/apache/druid/cli/*JettyServerInitializer*</exclude>
                         <exclude>org/apache/druid/server/initialization/*Module*</exclude>
                         <exclude>org/apache/druid/server/initialization/jetty/*Module*</exclude>
@@ -1183,6 +1191,13 @@
                         <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
+                        <!-- The ITs has test code sprinkled through the module tree. Remove the following
+                             once the old version is retired. -->
+                        <exclude>org/apache/druid/server/coordination/ServerManagerForQueryErrorTest.class</exclude>
+                        <exclude>org/apache/druid/guice/SleepModule.class</exclude>
+                        <exclude>org/apache/druid/guice/CustomNodeRoleClientModule.class</exclude>
+                        <exclude>org/apache/druid/cli/CustomNodeRoleCommandCreator.class</exclude>
+                        <exclude>org/apache/druid/cli/QueryRetryTestCommandCreator.class</exclude>
 
                         <!-- Exceptions -->
                         <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
@@ -1513,6 +1528,9 @@
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                         </argLine>
+                        <!-- Skip the tests which Surefire runs. Surefire runs the unit tests,
+                             while its sister plugin, Failsafe, runs the "new" ITs. -->
+                        <skipTests>${skipUTs}</skipTests>
                         <trimStackTrace>false</trimStackTrace>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
@@ -1829,7 +1847,7 @@
                                 <exclude>docker/service-supervisords/*.conf</exclude>
                                 <exclude>target/**</exclude>
                                 <exclude>licenses/**</exclude>
-                                <exclude>**/test/resources/**</exclude>
+                                <exclude>**/test/resources/**</exclude> <!-- test data for "old" ITs. -->
                                 <exclude>**/derby.log</exclude>
                                 <exclude>**/jvm.config</exclude>
                                 <exclude>**/*.avsc</exclude>
@@ -1837,6 +1855,8 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>**/*.pmd</exclude> <!-- Artifact of maven-pmd-plugin -->
+                                <exclude>**/*.pmdruleset.xml</exclude> <!-- Artifact of maven-pmd-plugin -->
                                 <exclude>**/docker/schema-registry/*</exclude>
                                 <exclude>LICENSE</exclude>
                                 <exclude>LICENSE.BINARY</exclude>
@@ -1911,8 +1931,12 @@
         </profile>
         <profile>
           <id>skip-tests</id>
+          <activation>
+            <activeByDefault>false</activeByDefault>
+          </activation>
           <properties>
-            <skipTests>true</skipTests>
+            <skipUTs>true</skipUTs> <!-- Skip only UTs -->
+            <skipITs>true</skipITs> <!-- ITs are also behind a profile -->
             <jacoco.skip>true</jacoco.skip>
           </properties>
         </profile>

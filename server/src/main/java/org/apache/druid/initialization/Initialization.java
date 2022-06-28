@@ -449,7 +449,7 @@ public class Initialization
     return Guice.createInjector(Modules.override(intermediateModules).with(extensionModules.getModules()));
   }
 
-  private static class ModuleList
+  public static class ModuleList
   {
     private final Injector baseInjector;
     private final Set<NodeRole> nodeRoles;
@@ -468,7 +468,7 @@ public class Initialization
       this.modules = new ArrayList<>();
     }
 
-    private List<Module> getModules()
+    public List<Module> getModules()
     {
       return Collections.unmodifiableList(modules);
     }
