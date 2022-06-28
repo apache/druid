@@ -46,6 +46,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
@@ -1599,6 +1600,30 @@ public class SqlResourceTest extends CalciteTestBase
     execLatch.countDown();
     response = future.get();
     Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+  }
+
+  @Test
+  public void testQueryContextException() throws Exception
+  {
+    final String sqlQueryId = "badQueryContextTimeout";
+    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, "2000'", BaseQuery.SQL_QUERY_ID, sqlQueryId);
+    final QueryException queryContextException = doPost(
+        new SqlQuery(
+            "SELECT 1337",
+            ResultFormat.OBJECT,
+            false,
+            false,
+            false,
+            queryContext,
+            null
+        )
+    ).lhs;
+    Assert.assertNotNull(queryContextException);
+    Assert.assertEquals(BadQueryContextException.ERROR_CODE, queryContextException.getErrorCode());
+    Assert.assertEquals(BadQueryContextException.ERROR_CLASS, queryContextException.getErrorClass());
+    Assert.assertTrue(queryContextException.getMessage().contains("For input string: \"2000'\""));
+    checkSqlRequestLog(false);
+    Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
   }
 
   @SuppressWarnings("unchecked")

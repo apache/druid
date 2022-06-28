@@ -30,6 +30,8 @@ import java.util.List;
  */
 public class ExhibitorConfig
 {
+  static final String CONFIG_PREFIX = "druid.exhibitor.service";
+
   @JsonProperty
   private List<String> hosts = new ArrayList<>();
 
@@ -47,6 +49,15 @@ public class ExhibitorConfig
   @JsonProperty
   @Min(0)
   private int pollingMs = 10000;
+
+  public static ExhibitorConfig create(List<String> hosts)
+  {
+    ExhibitorConfig config = new ExhibitorConfig();
+    if (hosts != null) {
+      config.hosts = hosts;
+    }
+    return config;
+  }
 
   public List<String> getHosts()
   {
@@ -72,5 +83,4 @@ public class ExhibitorConfig
   {
     return pollingMs;
   }
-
 }
