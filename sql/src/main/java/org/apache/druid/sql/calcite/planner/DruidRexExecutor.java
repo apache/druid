@@ -172,7 +172,8 @@ public class DruidRexExecutor implements RexExecutor
           // complex constant is not reducible, so just leave it as an expression
           literal = constExp;
         } else {
-          if (exprResult.isArray()) {
+          if (!exprResult.type().isPrimitive()) {
+            // just leave complex expresions alone
             // just leave array expressions on multi-value strings alone, we're going to push them down into a virtual
             // column selector anyway
             literal = constExp;

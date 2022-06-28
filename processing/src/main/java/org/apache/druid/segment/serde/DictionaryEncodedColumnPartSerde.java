@@ -56,10 +56,10 @@ import java.nio.channels.WritableByteChannel;
 
 public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 {
-  private static final int NO_FLAGS = 0;
-  private static final int STARTING_FLAGS = Feature.NO_BITMAP_INDEX.getMask();
+  public static final int NO_FLAGS = 0;
+  public static final int STARTING_FLAGS = Feature.NO_BITMAP_INDEX.getMask();
 
-  enum Feature
+  public enum Feature
   {
     MULTI_VALUE,
     MULTI_VALUE_V3,
@@ -76,7 +76,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     }
   }
 
-  enum VERSION
+  public enum VERSION
   {
     UNCOMPRESSED_SINGLE_VALUE,  // 0x0
     UNCOMPRESSED_MULTI_VALUE,   // 0x1

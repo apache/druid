@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.rel;
 
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
@@ -125,6 +126,13 @@ public class VirtualColumnRegistry
       RelDataType typeHint
   )
   {
+    if (typeHint.getSqlTypeName() == SqlTypeName.OTHER && expression.getDruidType() != null) {
+      // fall back to druid type if sql type isn't very helpful
+      return getOrCreateVirtualColumnForExpression(
+          expression,
+          expression.getDruidType()
+      );
+    }
     return getOrCreateVirtualColumnForExpression(
         expression,
         Calcites.getColumnTypeForRelDataType(typeHint)
