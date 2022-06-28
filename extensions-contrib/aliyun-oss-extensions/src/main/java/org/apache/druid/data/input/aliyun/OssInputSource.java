@@ -27,6 +27,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.Iterators;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
@@ -74,10 +77,11 @@ public class OssInputSource extends CloudObjectInputSource
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
+      @JsonProperty("filter") @Nullable String filter,
       @JsonProperty("properties") @Nullable OssClientConfig inputSourceConfig
   )
   {
-    super(OssStorageDruidModule.SCHEME, uris, prefixes, objects);
+    super(OssStorageDruidModule.SCHEME, uris, prefixes, objects, filter);
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "inputDataConfig");
     Preconditions.checkNotNull(client, "client");
     this.inputSourceConfig = inputSourceConfig;
@@ -130,6 +134,7 @@ public class OssInputSource extends CloudObjectInputSource
         null,
         null,
         split.get(),
+        getFilter(),
         getOssInputSourceConfig()
     );
   }
@@ -163,16 +168,29 @@ public class OssInputSource extends CloudObjectInputSource
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
+           ", filter=" + getFilter() +
            ", ossInputSourceConfig=" + getOssInputSourceConfig() +
            '}';
   }
 
   private Iterable<OSSObjectSummary> getIterableObjectsFromPrefixes()
   {
-    return () -> OssUtils.objectSummaryIterator(
-        clientSupplier.get(),
-        getPrefixes(),
-        inputDataConfig.getMaxListingLength()
-    );
+    return () -> {
+      Iterator<OSSObjectSummary> iterator = OssUtils.objectSummaryIterator(
+          clientSupplier.get(),
+          getPrefixes(),
+          inputDataConfig.getMaxListingLength()
+      );
+
+      // Skip files that didn't match filter.
+      if (StringUtils.isNotBlank(getFilter())) {
+        iterator = Iterators.filter(
+            iterator,
+            object -> FilenameUtils.wildcardMatch(object.getKey(), getFilter())
+        );
+      }
+
+      return iterator;
+    };
   }
 }

@@ -29,7 +29,7 @@ For general information on native batch indexing and parallel task indexing, see
 
 ## S3 input source
 
-> You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source. 
+> You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source.
 
 The S3 input source reads objects directly from S3. You can specify either:
 - a list of S3 URI strings
@@ -46,6 +46,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
+        "filter": "*.json",
         "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"]
       },
       "inputFormat": {
@@ -62,6 +63,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
+        "filter": "*.parquet",
         "prefixes": ["s3://foo/bar/", "s3://bar/foo/"]
       },
       "inputFormat": {
@@ -79,6 +81,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
+        "filter": "*.json",
         "objects": [
           { "bucket": "foo", "path": "bar/file1.json"},
           { "bucket": "bar", "path": "foo/file2.json"}
@@ -98,6 +101,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
+        "filter": "*.json",
         "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
         "properties": {
           "accessKeyId": "KLJ78979SDFdS2",
@@ -118,6 +122,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
+        "filter": "*.json",
         "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
         "properties": {
           "accessKeyId": "KLJ78979SDFdS2",
@@ -139,6 +144,7 @@ Sample specs:
 |uris|JSON array of URIs where S3 objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of S3 objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of S3 Objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
+|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
 |properties|Properties Object for overriding the default S3 configuration. See below for more information.|None|No (defaults will be used if not given)
 
 Note that the S3 input source will skip all empty objects only when `prefixes` is specified.
@@ -179,6 +185,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
+        "filter": "*.json",
         "uris": ["gs://foo/bar/file.json", "gs://bar/foo/file2.json"]
       },
       "inputFormat": {
@@ -195,6 +202,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
+        "filter": "*.parquet",
         "prefixes": ["gs://foo/bar/", "gs://bar/foo/"]
       },
       "inputFormat": {
@@ -212,6 +220,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
+        "filter": "*.json",
         "objects": [
           { "bucket": "foo", "path": "bar/file1.json"},
           { "bucket": "bar", "path": "foo/file2.json"}
@@ -231,6 +240,7 @@ Sample specs:
 |uris|JSON array of URIs where Google Cloud Storage objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Google Cloud Storage objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Google Cloud Storage objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
+|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
 
 Note that the Google Cloud Storage input source will skip all empty objects only when `prefixes` is specified.
 
@@ -256,6 +266,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
+        "filter": "*.json",
         "uris": ["azure://container/prefix1/file.json", "azure://container/prefix2/file2.json"]
       },
       "inputFormat": {
@@ -272,6 +283,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
+        "filter": "*.parquet",
         "prefixes": ["azure://container/prefix1/", "azure://container/prefix2/"]
       },
       "inputFormat": {
@@ -289,6 +301,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
+        "filter": "*.json",
         "objects": [
           { "bucket": "container", "path": "prefix1/file1.json"},
           { "bucket": "container", "path": "prefix2/file2.json"}
@@ -308,6 +321,7 @@ Sample specs:
 |uris|JSON array of URIs where the Azure objects to be ingested are located, in the form "azure://\<container>/\<path-to-file\>"|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form "azure://\<container>/\<prefix\>". Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Azure objects to ingest.|None|`uris` or `prefixes` or `objects` must be set|
+|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
 
 Note that the Azure input source skips all empty objects only when `prefixes` is specified.
 
@@ -546,7 +560,7 @@ Sample spec:
 |property|description|required?|
 |--------|-----------|---------|
 |type|This should be "local".|yes|
-|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information.|yes if `baseDir` is specified|
+|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|yes if `baseDir` is specified|
 |baseDir|Directory to search recursively for files to be ingested. Empty files under the `baseDir` will be skipped.|At least one of `baseDir` or `files` should be specified|
 |files|File paths to ingest. Some files can be ignored to avoid ingesting duplicate files if they are located under the specified `baseDir`. Empty files will be skipped.|At least one of `baseDir` or `files` should be specified|
 

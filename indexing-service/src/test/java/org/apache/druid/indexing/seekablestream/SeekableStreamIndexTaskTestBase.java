@@ -348,7 +348,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
       List<SegmentDescriptor> actualDescriptors
   ) throws IOException
   {
-    Assert.assertEquals(expectedDescriptors.size(), actualDescriptors.size());
+    Assert.assertEquals("number of segments", expectedDescriptors.size(), actualDescriptors.size());
     final Comparator<SegmentDescriptor> comparator = (s1, s2) -> {
       final int intervalCompare = Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval());
       if (intervalCompare == 0) {
@@ -379,7 +379,9 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
       if (expectedDesc.expectedDim1Values.isEmpty()) {
         continue; // Treating empty expectedDim1Values as a signal that checking the dim1 column value is not needed.
       }
-      Assertions.assertThat(readSegmentColumn("dim1", actualDesc)).isIn(expectedDesc.expectedDim1Values);
+      Assertions.assertThat(readSegmentColumn("dim1", actualDesc))
+                .describedAs("dim1 values")
+                .isIn(expectedDesc.expectedDim1Values);
     }
   }
 
@@ -447,7 +449,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
                                           new LongSumAggregatorFactory("rows", "rows")
                                       )
                                   ).granularity(Granularities.ALL)
-                                  .intervals("0000/3000")
+                                  .intervals(Intervals.ONLY_ETERNITY)
                                   .build();
 
     List<Result<TimeseriesResultValue>> results = task.getQueryRunner(query).run(QueryPlus.wrap(query)).toList();
