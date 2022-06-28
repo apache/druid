@@ -91,7 +91,7 @@ import java.util.stream.Collectors;
 public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 {
   // Timeout to allow (rapid) debugging, while not blocking tests with errors.
-  private static final int WAIT_TIMEOUT_SECS = 60;
+  private static final int WAIT_TIMEOUT_SECS = 6;
 
   private SpecificSegmentsQuerySegmentWalker walker;
   private TestServerInventoryView serverView;
