@@ -1936,8 +1936,7 @@
             <activeByDefault>false</activeByDefault>
           </activation>
           <properties>
-            <skipUTs>true</skipUTs> <!-- Skip only UTs -->
-            <skipITs>true</skipITs> <!-- ITs are also behind a profile -->
+            <skipTests>true</skipTests> <!-- skips both UTs and ITs -->
             <jacoco.skip>true</jacoco.skip>
           </properties>
         </profile>
