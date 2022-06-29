@@ -132,8 +132,9 @@
              the "new" integration tests. To skip just the unit tests (but run the
              new integration tests by setting the required profile), use -DskipUTs=true.
              -->
-        <skipUTs>false</skipUTs>
-        <skipITs>false</skipITs>
+        <skipTests>false</skipTests>
+        <skipUTs>${skipTests}</skipUTs>
+        <skipITs>${skipTests}</skipITs>
     </properties>
 
     <modules>
