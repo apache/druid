@@ -120,10 +120,16 @@ public class ResourcePool<K, V> implements Closeable
       }
 
       @Override
+      public boolean isPresent()
+      {
+        return !returned.get();
+      }
+
+      @Override
       public void returnResource()
       {
         if (returned.getAndSet(true)) {
-          log.warn(StringUtils.format("Resource at key[%s] was returned multiple times?", key));
+          log.warn("Resource at key[%s] was returned multiple times?", key);
         } else {
           holder.giveBack(value);
         }

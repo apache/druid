@@ -27,7 +27,7 @@ sidebar_label: "JDBC driver API"
 > This document describes the SQL language.
 
 
-You can make Druid SQL queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/). We recommend using Avatica JDBC driver version 1.17.0 or later. Note that as of the time of this writing, Avatica 1.17.0, the latest version, does not support passing connection string parameters from the URL to Druid, so you must pass them using a `Properties` object. Once you've downloaded the Avatica client jar, add it to your classpath and use the connect string `jdbc:avatica:remote:url=http://BROKER:8082/druid/v2/sql/avatica/`.
+You can make [Druid SQL](./sql.md) queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/). We recommend using Avatica JDBC driver version 1.17.0 or later. Note that as of the time of this writing, Avatica 1.17.0, the latest version, does not support passing connection string parameters from the URL to Druid, so you must pass them using a `Properties` object. Once you've downloaded the Avatica client jar, add it to your classpath and use the connect string `jdbc:avatica:remote:url=http://BROKER:8082/druid/v2/sql/avatica/`.
 
 Example code:
 
@@ -74,7 +74,7 @@ Note that the non-JDBC [JSON over HTTP](sql-api.md#submit-a-query) API is statel
 
 ## Dynamic parameters
 
-You can use [parameterized queries](sql-syntax.md#dynamic-parameters) in JDBC code, as in this example:
+You can use [parameterized queries](sql.md#dynamic-parameters) in JDBC code, as in this example:
 
 ```java
 PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ? OR dim1 = ?");

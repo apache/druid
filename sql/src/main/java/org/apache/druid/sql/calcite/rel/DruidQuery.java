@@ -167,7 +167,11 @@ public class DruidQuery
   {
     final RelDataType outputRowType = partialQuery.leafRel().getRowType();
     if (virtualColumnRegistry == null) {
-      virtualColumnRegistry = VirtualColumnRegistry.create(sourceRowSignature, plannerContext.getExprMacroTable());
+      virtualColumnRegistry = VirtualColumnRegistry.create(
+          sourceRowSignature,
+          plannerContext.getExprMacroTable(),
+          plannerContext.getPlannerConfig().isForceExpressionVirtualColumns()
+      );
     }
 
     // Now the fun begins.
@@ -634,23 +638,24 @@ public class DruidQuery
     // implementation can be used instead of being composed as part of some expression tree in an expresson virtual
     // column
     Set<String> specialized = new HashSet<>();
+    final boolean forceExpressionVirtualColumns =
+        plannerContext.getPlannerConfig().isForceExpressionVirtualColumns();
     virtualColumnRegistry.visitAllSubExpressions((expression) -> {
-      switch (expression.getType()) {
-        case SPECIALIZED:
-          // add the expression to the top level of the registry as a standalone virtual column
-          final String name = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-              expression,
-              expression.getDruidType()
-          );
-          specialized.add(name);
-          // replace with an identifier expression of the new virtual column name
-          return DruidExpression.ofColumn(expression.getDruidType(), name);
-        default:
-          // do nothing
-          return expression;
+      if (!forceExpressionVirtualColumns
+          && expression.getType() == DruidExpression.NodeType.SPECIALIZED) {
+        // add the expression to the top level of the registry as a standalone virtual column
+        final String name = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+            expression,
+            expression.getDruidType()
+        );
+        specialized.add(name);
+        // replace with an identifier expression of the new virtual column name
+        return DruidExpression.ofColumn(expression.getDruidType(), name);
+      } else {
+        // do nothing
+        return expression;
       }
     });
-
 
     // we always want to add any virtual columns used by the query level DimFilter
     if (filter != null) {
@@ -804,7 +809,7 @@ public class DruidQuery
       }
     }
 
-    final TimeBoundaryQuery timeBoundaryQuery = toTimeBoundaryQuery();
+    final TimeBoundaryQuery timeBoundaryQuery = toTimeBoundaryQuery(queryFeatureInspector);
     if (timeBoundaryQuery != null) {
       return timeBoundaryQuery;
     }
@@ -838,9 +843,10 @@ public class DruidQuery
    * @return a TimeBoundaryQuery if possible. null if it is not possible to construct one.
    */
   @Nullable
-  private TimeBoundaryQuery toTimeBoundaryQuery()
+  private TimeBoundaryQuery toTimeBoundaryQuery(QueryFeatureInspector queryFeatureInspector)
   {
-    if (grouping == null
+    if (!queryFeatureInspector.feature(QueryFeature.CAN_RUN_TIME_BOUNDARY)
+        || grouping == null
         || grouping.getSubtotals().hasEffect(grouping.getDimensionSpecs())
         || grouping.getHavingFilter() != null
         || selectProjection != null) {

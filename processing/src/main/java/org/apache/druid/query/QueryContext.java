@@ -19,10 +19,8 @@
 
 package org.apache.druid.query;
 
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Numbers;
-
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -162,16 +160,7 @@ public class QueryContext
       final boolean defaultValue
   )
   {
-    final Object value = get(parameter);
-    if (value == null) {
-      return defaultValue;
-    } else if (value instanceof String) {
-      return Boolean.parseBoolean((String) value);
-    } else if (value instanceof Boolean) {
-      return (Boolean) value;
-    } else {
-      throw new IAE("Expected parameter[%s] to be boolean", parameter);
-    }
+    return QueryContexts.getAsBoolean(parameter, get(parameter), defaultValue);
   }
 
   public int getAsInt(
@@ -179,30 +168,12 @@ public class QueryContext
       final int defaultValue
   )
   {
-    final Object value = get(parameter);
-    if (value == null) {
-      return defaultValue;
-    } else if (value instanceof String) {
-      return Numbers.parseInt(value);
-    } else if (value instanceof Number) {
-      return ((Number) value).intValue();
-    } else {
-      throw new IAE("Expected parameter[%s] to be integer", parameter);
-    }
+    return QueryContexts.getAsInt(parameter, get(parameter), defaultValue);
   }
 
   public long getAsLong(final String parameter, final long defaultValue)
   {
-    final Object value = get(parameter);
-    if (value == null) {
-      return defaultValue;
-    } else if (value instanceof String) {
-      return Numbers.parseLong(value);
-    } else if (value instanceof Number) {
-      return ((Number) value).longValue();
-    } else {
-      throw new IAE("Expected parameter[%s] to be long", parameter);
-    }
+    return QueryContexts.getAsLong(parameter, get(parameter), defaultValue);
   }
 
   public Map<String, Object> getMergedParams()

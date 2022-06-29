@@ -65,7 +65,7 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
       Map<String, Object> context
   )
   {
-    super(id, dataSource, context);
+    super(id, dataSource, context, IngestionMode.HADOOP);
     this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;
   }
 

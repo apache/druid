@@ -65,18 +65,10 @@ public class PathChildrenCacheFactory
   {
     private static final ThreadFactory DEFAULT_THREAD_FACTORY = ThreadUtils.newThreadFactory("PathChildrenCache");
 
-    private boolean cacheData;
-    private boolean compressed;
+    private boolean cacheData = true;
+    private boolean compressed = false;
     private ExecutorService exec;
-    private boolean shutdownExecutorOnClose;
-
-    public Builder()
-    {
-      cacheData = true;
-      compressed = false;
-      exec = null;
-      shutdownExecutorOnClose = true;
-    }
+    private boolean shutdownExecutorOnClose = true;
 
     public Builder withCacheData(boolean cacheData)
     {

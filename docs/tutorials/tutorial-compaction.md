@@ -47,7 +47,7 @@ bin/post-index-task --file quickstart/tutorial/compaction-init-index.json --url 
 > Please note that `maxRowsPerSegment` in the ingestion spec is set to 1000. This is to generate multiple segments per hour and _NOT_ recommended in production.
 > It's 5000000 by default and may need to be adjusted to make your segments optimized.
 
-After the ingestion completes, go to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to see the new datasource in the Druid Console.
+After the ingestion completes, go to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to see the new datasource in the Druid console.
 
 ![compaction-tutorial datasource](../assets/tutorial-compaction-01.png "compaction-tutorial datasource")
 
@@ -104,13 +104,13 @@ After the task finishes, refresh the [segments view](http://localhost:8888/unifi
 
 The original 51 segments will eventually be marked as "unused" by the Coordinator and removed, with the new compacted segments remaining.
 
-By default, the Druid Coordinator will not mark segments as unused until the Coordinator process has been up for at least 15 minutes, so you may see the old segment set and the new compacted set at the same time in the Druid Console, with 75 total segments:
+By default, the Druid Coordinator will not mark segments as unused until the Coordinator process has been up for at least 15 minutes, so you may see the old segment set and the new compacted set at the same time in the Druid console, with 75 total segments:
 
 ![Compacted segments intermediate state 1](../assets/tutorial-compaction-03.png "Compacted segments intermediate state 1")
 
 ![Compacted segments intermediate state 2](../assets/tutorial-compaction-04.png "Compacted segments intermediate state 2")
 
-The new compacted segments have a more recent version than the original segments, so even when both sets of segments are shown in the Druid Console, queries will only read from the new compacted segments.
+The new compacted segments have a more recent version than the original segments, so even when both sets of segments are shown in the Druid console, queries will only read from the new compacted segments.
 
 Let's try running a COUNT(*) on `compaction-tutorial` again, where the row count should still be 39,244:
 

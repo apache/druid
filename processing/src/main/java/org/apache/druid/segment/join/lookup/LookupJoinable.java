@@ -96,7 +96,7 @@ public class LookupJoinable implements Joinable
   }
 
   @Override
-  public Optional<Set<String>> getNonNullColumnValuesIfAllUnique(String columnName, int maxNumValues)
+  public ColumnValuesWithUniqueFlag getNonNullColumnValues(String columnName, int maxNumValues)
   {
     if (LookupColumnSelectorFactory.KEY_COLUMN.equals(columnName) && extractor.canGetKeySet()) {
       final Set<String> keys = extractor.keySet();
@@ -117,14 +117,14 @@ public class LookupJoinable implements Joinable
       }
 
       if (nonNullKeys > maxNumValues) {
-        return Optional.empty();
+        return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
       } else if (nonNullKeys == keys.size()) {
-        return Optional.of(keys);
+        return new ColumnValuesWithUniqueFlag(keys, true);
       } else {
-        return Optional.of(Sets.difference(keys, nullEquivalentValues));
+        return new ColumnValuesWithUniqueFlag(Sets.difference(keys, nullEquivalentValues), true);
       }
     } else {
-      return Optional.empty();
+      return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
     }
   }
 

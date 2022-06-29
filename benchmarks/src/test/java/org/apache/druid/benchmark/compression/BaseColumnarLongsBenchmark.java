@@ -61,7 +61,9 @@ public class BaseColumnarLongsBenchmark
    * encoding of values within the block.
    */
   @Param({
+      "zstd-longs",
       "lz4-longs",
+      "zstd-auto",
       "lz4-auto"
   })
   String encoding;
@@ -271,6 +273,26 @@ public class BaseColumnarLongsBenchmark
             CompressionStrategy.NONE
         );
         break;
+      case "zstd-longs":
+        serializer = CompressionFactory.getLongSerializer(
+                encoding,
+                writeOutMedium,
+                "zstd-longs",
+                ByteOrder.LITTLE_ENDIAN,
+                CompressionFactory.LongEncodingStrategy.LONGS,
+                CompressionStrategy.ZSTD
+        );
+        break;
+      case "zstd-auto":
+        serializer = CompressionFactory.getLongSerializer(
+                encoding,
+                writeOutMedium,
+                "zstd-auto",
+                ByteOrder.LITTLE_ENDIAN,
+                CompressionFactory.LongEncodingStrategy.AUTO,
+                CompressionStrategy.ZSTD
+        );
+        break;
       default:
         throw new RuntimeException("unknown encoding");
     }
@@ -290,6 +312,8 @@ public class BaseColumnarLongsBenchmark
       case "lz4-auto":
       case "none-auto":
       case "none-longs":
+      case "zstd-auto":
+      case "zstd-longs":
         return CompressedColumnarLongsSupplier.fromByteBuffer(buffer, ByteOrder.LITTLE_ENDIAN).get();
     }
 

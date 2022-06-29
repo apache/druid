@@ -35,7 +35,7 @@
 
   <properties>
     <opentelemetry.version>1.7.0</opentelemetry.version>
-    <opentelemetry.instrumentation.version>1.7.0-alpha</opentelemetry.instrumentation.version>
+    <opentelemetry.instrumentation.version>1.14.0-alpha</opentelemetry.instrumentation.version>
     <!-- These guava and grpc versions are used only in the opentelemetry-extension.
       Look at build section for more details about shading. -->
     <shade.guava.version>30.1.1-jre</shade.guava.version>

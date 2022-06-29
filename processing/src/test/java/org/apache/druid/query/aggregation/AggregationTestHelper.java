@@ -38,7 +38,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -59,6 +58,7 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
@@ -152,13 +152,14 @@ public class AggregationTestHelper implements Closeable
       TemporaryFolder tempFolder
   )
   {
+    final Closer closer = Closer.create();
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+    final TestGroupByBuffers groupByBuffers = closer.register(TestGroupByBuffers.createDefault());
+    final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         mapper,
-        config
+        config,
+        groupByBuffers
     );
-    final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
-    final Closer closer = factoryAndCloser.rhs;
 
     IndexIO indexIO = new IndexIO(
         mapper,

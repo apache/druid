@@ -210,7 +210,7 @@ public class Druids
     {
       final Set<String> filterValues = Sets.newHashSet(values);
       filterValues.add(value);
-      dimFilter = new InDimFilter(dimensionName, filterValues, null, null);
+      dimFilter = new InDimFilter(dimensionName, filterValues);
       return this;
     }
 

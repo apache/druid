@@ -38,7 +38,6 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
-import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -196,7 +195,7 @@ public class SqlResource
       endLifecycle(sqlQueryId, lifecycle, timeout, remoteAddr, -1);
       return buildNonOkResponse(QueryTimeoutException.STATUS_CODE, timeout, sqlQueryId);
     }
-    catch (SqlPlanningException | ResourceLimitExceededException e) {
+    catch (BadQueryException e) {
       endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
       return buildNonOkResponse(BadQueryException.STATUS_CODE, e, sqlQueryId);
     }

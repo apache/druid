@@ -2388,11 +2388,13 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
       cannotVectorize();
     }
 
+    Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
+    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
     maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
         "SELECT DISTINCT __time FROM druid.foo WHERE __time IN (SELECT MAX(__time) FROM druid.foo)",
-        queryContext,
+        updatedQueryContext,
         ImmutableList.of(
             GroupByQuery.builder()
                 .setDataSource(
@@ -2434,11 +2436,13 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     // Cannot vectorize JOIN operator.
     cannotVectorize();
 
+    Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
+    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
     maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
         "SELECT DISTINCT __time FROM druid.foo WHERE __time NOT IN (SELECT MAX(__time) FROM druid.foo)",
-        queryContext,
+        updatedQueryContext,
         ImmutableList.of(
             GroupByQuery.builder()
                 .setDataSource(
@@ -3568,6 +3572,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
       cannotVectorize();
     }
 
+    Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
+    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
     maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
@@ -3576,7 +3582,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             + "AND __time IN (SELECT MAX(__time) FROM foo WHERE cnt = 1)\n"
             + "AND __time IN (SELECT MAX(__time) FROM foo WHERE cnt <> 2)\n"
             + "GROUP BY 1",
-        queryContext,
+        updatedQueryContext,
         ImmutableList.of(
             GroupByQuery.builder()
                 .setDataSource(
@@ -3628,6 +3634,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
 
+    Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
+    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     Map<String, Object> minTimeQueryContext = new HashMap<>(queryContext);
     minTimeQueryContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
@@ -3638,7 +3646,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             + "AND __time IN (SELECT MAX(__time) FROM foo)\n"
             + "AND __time NOT IN (SELECT MIN(__time) FROM foo)\n"
             + "GROUP BY 1",
-        queryContext,
+        updatedQueryContext,
         ImmutableList.of(
             GroupByQuery.builder()
                 .setDataSource(
@@ -3732,6 +3740,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
 
+    Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
+    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     Map<String, Object> minTimeQueryContext = new HashMap<>(queryContext);
     minTimeQueryContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
@@ -3743,7 +3753,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             + "LEFT JOIN (SELECT MIN(__time) t FROM foo) t1 on t1.t = foo.__time\n"
             + "WHERE dim1 IN ('abc', 'def') AND t1.t is null\n"
             + "GROUP BY 1",
-        queryContext,
+        updatedQueryContext,
         ImmutableList.of(
             GroupByQuery.builder()
                 .setDataSource(

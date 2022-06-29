@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -38,15 +39,18 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMaxTimeQuery() throws Exception
   {
-    HashMap<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    context.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
+    HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
+    HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    expectedContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
         "SELECT MAX(__time) AS maxTime FROM foo",
+        queryContext,
         ImmutableList.of(
             Druids.newTimeBoundaryQueryBuilder()
                   .dataSource("foo")
                   .bound(TimeBoundaryQuery.MAX_TIME)
-                  .context(context)
+                  .context(expectedContext)
                   .build()
         ),
         ImmutableList.of(new Object[]{DateTimes.of("2001-01-03").getMillis()})
@@ -56,15 +60,18 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMinTimeQuery() throws Exception
   {
-    HashMap<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    context.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
+    HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    expectedContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
         "SELECT MIN(__time) AS minTime FROM foo",
+        queryContext,
         ImmutableList.of(
             Druids.newTimeBoundaryQueryBuilder()
                   .dataSource("foo")
                   .bound(TimeBoundaryQuery.MIN_TIME)
-                  .context(context)
+                  .context(expectedContext)
                   .build()
         ),
         ImmutableList.of(new Object[]{DateTimes.of("2000-01-01").getMillis()})
@@ -74,10 +81,13 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMinTimeQueryWithFilters() throws Exception
   {
-    HashMap<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    context.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
+    HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    expectedContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
         "SELECT MIN(__time) AS minTime FROM foo where __time >= '2001-01-01' and __time < '2003-01-01'",
+        queryContext,
         ImmutableList.of(
             Druids.newTimeBoundaryQueryBuilder()
                   .dataSource("foo")
@@ -87,7 +97,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .bound(TimeBoundaryQuery.MIN_TIME)
-                  .context(context)
+                  .context(expectedContext)
                   .build()
         ),
         ImmutableList.of(new Object[]{DateTimes.of("2001-01-01").getMillis()})
@@ -99,8 +109,11 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMinMaxTimeQuery() throws Exception
   {
+    HashMap<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    context.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     testQuery(
         "SELECT MIN(__time) AS minTime, MAX(__time) as maxTime FROM foo",
+        context,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource("foo")
@@ -109,7 +122,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
                       new LongMinAggregatorFactory("a0", "__time"),
                       new LongMaxAggregatorFactory("a1", "__time")
                   )
-                  .context(QUERY_CONTEXT_DEFAULT)
+                  .context(context)
                   .build()
         ),
         ImmutableList.of(new Object[]{

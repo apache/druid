@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
+import org.apache.druid.collections.ResourceHolder;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -125,12 +126,14 @@ public class StringUtilsTest
   @Test
   public void fromUtf8ByteBufferDirect()
   {
-    ByteBuffer bytes = ByteBuffer.allocateDirect(4);
-    bytes.put(new byte[]{'a', 'b', 'c', 'd'});
-    bytes.rewind();
-    Assert.assertEquals("abcd", StringUtils.fromUtf8(bytes, 4));
-    bytes.rewind();
-    Assert.assertEquals("abcd", StringUtils.fromUtf8(bytes));
+    try (final ResourceHolder<ByteBuffer> bufferHolder = ByteBufferUtils.allocateDirect(4)) {
+      final ByteBuffer bytes = bufferHolder.get();
+      bytes.put(new byte[]{'a', 'b', 'c', 'd'});
+      bytes.rewind();
+      Assert.assertEquals("abcd", StringUtils.fromUtf8(bytes, 4));
+      bytes.rewind();
+      Assert.assertEquals("abcd", StringUtils.fromUtf8(bytes));
+    }
   }
 
   @SuppressWarnings("MalformedFormatString")

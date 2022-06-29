@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -79,6 +78,12 @@ public final class SegmentId implements Comparable<SegmentId>
    * segment identifiers.
    */
   private static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
+
+  /**
+   * Store Intervals since creating them each time before returning is an expensive operation
+   * To decrease the memory required for storing intervals, intern them, since the number of distinct values is "low"
+   */
+  private static final Interner<Interval> INTERVAL_INTERNER = Interners.newWeakInterner();
 
   private static final char DELIMITER = '_';
   private static final Splitter DELIMITER_SPLITTER = Splitter.on(DELIMITER);
@@ -258,14 +263,7 @@ public final class SegmentId implements Comparable<SegmentId>
   }
 
   private final String dataSource;
-  /**
-   * {@code intervalStartMillis}, {@link #intervalEndMillis} and {@link #intervalChronology} are the three fields of
-   * an {@link Interval}. Storing them directly to flatten the structure and reduce the heap space consumption.
-   */
-  private final long intervalStartMillis;
-  private final long intervalEndMillis;
-  @Nullable
-  private final Chronology intervalChronology;
+  private final Interval interval;
   private final String version;
   private final int partitionNum;
 
@@ -278,9 +276,7 @@ public final class SegmentId implements Comparable<SegmentId>
   private SegmentId(String dataSource, Interval interval, String version, int partitionNum)
   {
     this.dataSource = STRING_INTERNER.intern(Objects.requireNonNull(dataSource));
-    this.intervalStartMillis = interval.getStartMillis();
-    this.intervalEndMillis = interval.getEndMillis();
-    this.intervalChronology = interval.getChronology();
+    this.interval = INTERVAL_INTERNER.intern(Objects.requireNonNull(interval));
     // Versions are timestamp-based Strings, interning of them doesn't make sense. If this is not the case, interning
     // could be conditionally allowed via a system property.
     this.version = Objects.requireNonNull(version);
@@ -297,9 +293,7 @@ public final class SegmentId implements Comparable<SegmentId>
     hashCode = hashCode * 1000003 + version.hashCode();
 
     hashCode = hashCode * 1000003 + dataSource.hashCode();
-    hashCode = hashCode * 1000003 + Long.hashCode(intervalStartMillis);
-    hashCode = hashCode * 1000003 + Long.hashCode(intervalEndMillis);
-    hashCode = hashCode * 1000003 + Objects.hashCode(intervalChronology);
+    hashCode = hashCode * 1000003 + interval.hashCode();
     return hashCode;
   }
 
@@ -310,17 +304,17 @@ public final class SegmentId implements Comparable<SegmentId>
 
   public DateTime getIntervalStart()
   {
-    return new DateTime(intervalStartMillis, intervalChronology);
+    return new DateTime(interval.getStartMillis(), interval.getChronology());
   }
 
   public DateTime getIntervalEnd()
   {
-    return new DateTime(intervalEndMillis, intervalChronology);
+    return new DateTime(interval.getEndMillis(), interval.getChronology());
   }
 
   public Interval getInterval()
   {
-    return new Interval(intervalStartMillis, intervalEndMillis, intervalChronology);
+    return interval;
   }
 
   public String getVersion()
@@ -340,7 +334,7 @@ public final class SegmentId implements Comparable<SegmentId>
 
   public SegmentDescriptor toDescriptor()
   {
-    return new SegmentDescriptor(Intervals.utc(intervalStartMillis, intervalEndMillis), version, partitionNum);
+    return new SegmentDescriptor(Intervals.utc(interval.getStartMillis(), interval.getEndMillis()), version, partitionNum);
   }
 
   @Override
@@ -357,9 +351,7 @@ public final class SegmentId implements Comparable<SegmentId>
     // are equal as well as all other fields used to compute them, the partitionNums are also guaranteed to be equal.
     return hashCode == that.hashCode &&
            dataSource.equals(that.dataSource) &&
-           intervalStartMillis == that.intervalStartMillis &&
-           intervalEndMillis == that.intervalEndMillis &&
-           Objects.equals(intervalChronology, that.intervalChronology) &&
+           interval.equals(that.interval) &&
            version.equals(that.version);
   }
 
@@ -376,11 +368,11 @@ public final class SegmentId implements Comparable<SegmentId>
     if (result != 0) {
       return result;
     }
-    result = Long.compare(intervalStartMillis, o.intervalStartMillis);
+    result = Long.compare(interval.getStartMillis(), o.interval.getStartMillis());
     if (result != 0) {
       return result;
     }
-    result = Long.compare(intervalEndMillis, o.intervalEndMillis);
+    result = Long.compare(interval.getEndMillis(), o.interval.getEndMillis());
     if (result != 0) {
       return result;
     }

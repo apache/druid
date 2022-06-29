@@ -16,24 +16,15 @@
  * limitations under the License.
  */
 
-import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
+import { Intent } from '@blueprintjs/core';
 import copy from 'copy-to-clipboard';
-import { SqlExpression, SqlFunction, SqlLiteral, SqlRef } from 'druid-query-toolkit';
 import FileSaver from 'file-saver';
 import hasOwnProp from 'has-own-prop';
 import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
 import React from 'react';
-import { Filter, FilterRender } from 'react-table';
 
 import { AppToaster } from '../singletons';
-
-export const STANDARD_TABLE_PAGE_SIZE = 50;
-export const STANDARD_TABLE_PAGE_SIZE_OPTIONS = [50, 100, 200];
-
-export const SMALL_TABLE_PAGE_SIZE = 25;
-export const SMALL_TABLE_PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 // These constants are used to make sure that they are not constantly recreated thrashing the pure components
 export const EMPTY_OBJECT: any = {};
@@ -45,108 +36,31 @@ export function isNumberLikeNaN(x: NumberLike): boolean {
   return isNaN(Number(x));
 }
 
+export function nonEmptyArray(a: any): a is unknown[] {
+  return Array.isArray(a) && Boolean(a.length);
+}
+
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
   });
 }
 
-export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
-  return addFilterRaw(filters, id, `"${value}"`);
-}
-
-export function addFilterRaw(filters: Filter[], id: string, value: string): Filter[] {
-  const currentFilter = filters.find(f => f.id === id);
-  if (currentFilter) {
-    filters = filters.filter(f => f.id !== id);
-    if (currentFilter.value !== value) {
-      filters = filters.concat({ id, value });
+export function addOrUpdate<T>(xs: readonly T[], x: T, keyFn: (x: T) => string | number): T[] {
+  const keyX = keyFn(x);
+  let added = false;
+  const newXs = xs.map(currentX => {
+    if (keyFn(currentX) === keyX) {
+      added = true;
+      return x;
+    } else {
+      return currentX;
     }
-  } else {
-    filters = filters.concat({ id, value });
+  });
+  if (!added) {
+    newXs.push(x);
   }
-  return filters;
-}
-
-export function makeTextFilter(placeholder = ''): FilterRender {
-  return function TextFilter({ filter, onChange, key }) {
-    const filterValue = filter ? filter.value : '';
-    return (
-      <InputGroup
-        key={key}
-        onChange={(e: any) => onChange(e.target.value)}
-        value={filterValue}
-        rightElement={
-          filterValue && <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} />
-        }
-        placeholder={placeholder}
-      />
-    );
-  };
-}
-
-export function makeBooleanFilter(): FilterRender {
-  return function BooleanFilter({ filter, onChange, key }) {
-    const filterValue = filter ? filter.value : '';
-    return (
-      <HTMLSelect
-        key={key}
-        style={{ width: '100%' }}
-        onChange={(event: any) => onChange(event.target.value)}
-        value={filterValue || 'all'}
-        fill
-      >
-        <option value="all">Show all</option>
-        <option value="true">true</option>
-        <option value="false">false</option>
-      </HTMLSelect>
-    );
-  };
-}
-
-// ----------------------------
-
-interface NeedleAndMode {
-  needle: string;
-  mode: 'exact' | 'includes';
-}
-
-export function getNeedleAndMode(filter: Filter): NeedleAndMode {
-  const input = filter.value;
-  if (input.startsWith(`"`) && input.endsWith(`"`)) {
-    return {
-      needle: input.slice(1, -1),
-      mode: 'exact',
-    };
-  } else {
-    return {
-      needle: input.replace(/^"/, '').toLowerCase(),
-      mode: 'includes',
-    };
-  }
-}
-
-export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
-  if (value == null) return false;
-  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
-  const needle = needleAndMode.needle;
-  if (needleAndMode.mode === 'exact') {
-    return needle === String(value);
-  } else {
-    return String(value).toLowerCase().includes(needle);
-  }
-}
-
-export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression {
-  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
-  const needle = needleAndMode.needle;
-  if (needleAndMode.mode === 'exact') {
-    return SqlRef.columnWithQuotes(filter.id).equal(SqlLiteral.create(needle));
-  } else {
-    return SqlFunction.simple('LOWER', [SqlRef.columnWithQuotes(filter.id)]).like(
-      SqlLiteral.create(`%${needle}%`),
-    );
-  }
+  return newXs;
 }
 
 // ----------------------------

@@ -96,8 +96,9 @@
             <artifactId>commons-math3</artifactId>
         </dependency>
         <dependency>
-            <groupId>commons-net</groupId>
-            <artifactId>commons-net</artifactId>
+            <groupId>com.github.seancfoley</groupId>
+            <artifactId>ipaddress</artifactId>
+            <version>5.3.4</version>
         </dependency>
         <dependency>
             <groupId>com.google.errorprone</groupId>
@@ -167,6 +168,10 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.luben</groupId>
+            <artifactId>zstd-jni</artifactId>
         </dependency>
 
         <!-- Tests -->
@@ -286,6 +291,8 @@
                         @{jacocoArgLine}
                         -Xmx512m
                         -XX:MaxDirectMemorySize=2500m
+                        -XX:+ExitOnOutOfMemoryError
+                        -XX:+HeapDumpOnOutOfMemoryError
                         -Duser.language=en
                         -Duser.GroupByQueryRunnerTest.javacountry=US
                         -Dfile.encoding=UTF-8
@@ -312,6 +319,8 @@
                         <configuration>
                             <argLine>
                                 -server -Xms3G -Xmx3G -Djub.consumers=CONSOLE,H2 -Djub.db.file=benchmarks/benchmarks
+                                -XX:+ExitOnOutOfMemoryError
+                                -XX:+HeapDumpOnOutOfMemoryError
                             </argLine>
                             <groups>org.apache.druid.collections.test.annotation.Benchmark</groups>
                             <excludedGroups>org.apache.druid.collections.test.annotation.Dummy</excludedGroups>
