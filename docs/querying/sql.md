@@ -168,7 +168,7 @@ There are two important factors that can affect the performance of queries that 
 
 ## UNION ALL
 
-The UNION ALL operator fuses multiple queries together. Druid SQL supports the UNION ALL operator in two situations: top-level and table-level, as described below. Queries that use UNION ALL in any other way will not execute.
+The UNION ALL operator fuses multiple queries together. Druid SQL supports the UNION ALL operator in two situations: top-level and table-level, as described below. Queries that use UNION ALL in any other way will fail.
 
 ### Top-level
 
