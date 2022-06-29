@@ -214,7 +214,9 @@ public enum GranularityType
       case 3:
         return GranularityType.DAY;
       case 4:
-        if (vals[index] == 6) {
+        if (vals[index] == 8) {
+          return GranularityType.EIGHT_HOUR;
+        } else if (vals[index] == 6) {
           return GranularityType.SIX_HOUR;
         } else if (vals[index] == 1) {
           return GranularityType.HOUR;
