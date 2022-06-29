@@ -172,7 +172,7 @@ The UNION ALL operator fuses multiple queries together. Druid SQL supports the U
 
 ### Top-level
 
-You can use UNION ALL at the very top outer layer of a SQL query - not in a subquery, and not in the FROM clause. The underlying queries run sequentially. Druid concatenates their results so that they appear one after the other.
+In top-level queries, you can use UNION ALL at the very top outer layer of the query - not in a subquery, and not in the FROM clause. The underlying queries run sequentially. Druid concatenates their results so that they appear one after the other.
 
 For example:
 
@@ -186,13 +186,11 @@ SELECT COUNT(*) FROM tbl WHERE my_column = 'value2'
 
 ### Table-level
 
-You can use UNION ALL to query multiple tables at the same time.
-
-You must use UNION ALL in a subquery in the FROM clause, and create the lower-level subqueries that are inputs to the UNION ALL operator as simple table SELECTs. You can't use features like expressions, column aliasing, JOIN, GROUP BY, or ORDER BY.
+In table-level queries, you must use UNION ALL in a subquery in the FROM clause, and create the lower-level subqueries that are inputs to the UNION ALL operator as simple table SELECTs. You can't use features like expressions, column aliasing, JOIN, GROUP BY, or ORDER BY.
 
 The query runs natively using a [union datasource](datasource.md#union).
 
-You must select the same columns from each table in the same order, and those columns must either have the same types, or types that can be implicitly cast to each other (such as different numeric types). For this reason, it is generally more robust to write your queries to select specific columns. If you use `SELECT *`, you must modify your queries if a new column is added to one table but not to the others.
+At table-level queries, you must select the same columns from each table in the same order, and those columns must either have the same types, or types that can be implicitly cast to each other (such as different numeric types). For this reason, it is generally more robust to write your queries to select specific columns. If you use `SELECT *`, you must modify your queries if a new column is added to one table but not to the others.
 
 For example:
 
