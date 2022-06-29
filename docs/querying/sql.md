@@ -172,7 +172,7 @@ The UNION ALL operator fuses multiple queries together. Druid SQL supports the U
 
 ### Top-level
 
-You can use UNION ALL at the very top outer layer of a SQL query - not in a subquery, and not in the FROM clause. The underlying queries run separately, back to back. Their results are concatenated together and appear one after the other.
+You can use UNION ALL at the very top outer layer of a SQL query - not in a subquery, and not in the FROM clause. The underlying queries run sequentially. Druid concatenates their results so that they appear one after the other.
 
 For example:
 
