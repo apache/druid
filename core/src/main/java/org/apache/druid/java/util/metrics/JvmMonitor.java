@@ -143,34 +143,35 @@ public class JvmMonitor extends FeedDefiningMonitor
 
   private void emitGcMetrics(ServiceEmitter emitter)
   {
-    if (gcCollectors != null) {
-      gcCollectors.emit(emitter, dimensions);
-    }
+    gcCollectors.emit(emitter, dimensions);
   }
 
   private class GcCollectors
   {
-    private final List<GcCollector> collectors = new ArrayList<>();
+    private final List<GcGenerationCollector> generationCollectors = new ArrayList<>();
     private final List<GcSpaceCollector> spaceCollectors = new ArrayList<>();
 
     GcCollectors()
     {
       List<GarbageCollectorMXBean> collectorMxBeans = ManagementFactory.getGarbageCollectorMXBeans();
       for (GarbageCollectorMXBean collectorMxBean : collectorMxBeans) {
-        collectors.add(new GcCollector(collectorMxBean));
+        generationCollectors.add(new GcGenerationCollector(collectorMxBean));
       }
 
-      List<MemoryPoolMXBean> memoryPoolMXBeans = ManagementFactory.getMemoryPoolMXBeans();
-      for (MemoryPoolMXBean memoryPoolMXBean : memoryPoolMXBeans) {
-        spaceCollectors.add(new GcSpaceCollector(memoryPoolMXBean));
+      List<MemoryPoolMXBean> memoryPoolMxBeans = ManagementFactory.getMemoryPoolMXBeans();
+      for (MemoryPoolMXBean memoryPoolMxBean : memoryPoolMxBeans) {
+        MemoryUsage collectionUsage = memoryPoolMxBean.getCollectionUsage();
+        if (collectionUsage != null) {
+          spaceCollectors.add(new GcSpaceCollector(collectionUsage, memoryPoolMxBean.getName()));
+        }
       }
 
     }
 
     void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
-      for (GcCollector collector : collectors) {
-        collector.emit(emitter, dimensions);
+      for (GcGenerationCollector generationCollector : generationCollectors) {
+        generationCollector.emit(emitter, dimensions);
       }
 
       for (GcSpaceCollector spaceCollector : spaceCollectors) {
@@ -179,11 +180,14 @@ public class JvmMonitor extends FeedDefiningMonitor
     }
   }
 
-  private class GcCollector
+  private class GcGenerationCollector
   {
     private final String generation;
     private final String collectorName;
-    private final GcGenerationCollector collector;
+    private final GarbageCollectorMXBean gcBean;
+
+    private long lastInvocations = 0;
+    private long lastCpuNanos = 0;
 
     private static final String GC_YOUNG_GENERATION_NAME = "young";
     private static final String GC_OLD_GENERATION_NAME = "old";
@@ -196,13 +200,12 @@ public class JvmMonitor extends FeedDefiningMonitor
     private static final String ZGC_COLLECTOR_NAME = "zgc";
     private static final String SHENANDOAN_COLLECTOR_NAME = "shenandoah";
 
-    GcCollector(GarbageCollectorMXBean gcBean)
+    GcGenerationCollector(GarbageCollectorMXBean gcBean)
     {
       Pair<String, String> gcNamePair = getReadableName(gcBean.getName());
       this.generation = gcNamePair.lhs;
       this.collectorName = gcNamePair.rhs;
-
-      collector = new GcGenerationCollector(gcBean);
+      this.gcBean = gcBean;
     }
 
     private Pair<String, String> getReadableName(String name)
@@ -258,28 +261,8 @@ public class JvmMonitor extends FeedDefiningMonitor
 
       Map<String, String[]> dimensionsCopy = dimensionsCopyBuilder.build();
 
-      if (collector != null) {
-        collector.emit(emitter, dimensionsCopy);
-      }
-
-    }
-  }
-
-  private class GcGenerationCollector
-  {
-    private long lastInvocations = 0;
-    private long lastCpuNanos = 0;
-    private final GarbageCollectorMXBean gcBean;
-
-    GcGenerationCollector(GarbageCollectorMXBean gcBean)
-    {
-      this.gcBean = gcBean;
-    }
-
-    void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
-    {
       final ServiceMetricEvent.Builder builder = builder();
-      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+      MonitorUtils.addDimensionsToBuilder(builder, dimensionsCopy);
 
       long newInvocations = gcBean.getCollectionCount();
       emitter.emit(builder.build("jvm/gc/count", newInvocations - lastInvocations));
@@ -288,6 +271,7 @@ public class JvmMonitor extends FeedDefiningMonitor
       long newCpuNanos = gcBean.getCollectionTime();
       emitter.emit(builder.build("jvm/gc/cpu", newCpuNanos - lastCpuNanos));
       lastCpuNanos = newCpuNanos;
+
     }
   }
 
@@ -296,12 +280,9 @@ public class JvmMonitor extends FeedDefiningMonitor
 
     private final List<GcGenerationSpace> spaces = new ArrayList<>();
 
-    public GcSpaceCollector(MemoryPoolMXBean memoryPoolMxBean)
+    public GcSpaceCollector(MemoryUsage collectionUsage, String name)
     {
-      MemoryUsage collectionUsage = memoryPoolMxBean.getCollectionUsage();
-      if (collectionUsage != null) {
-        spaces.add(new GcGenerationSpace(collectionUsage, memoryPoolMxBean.getName()));
-      }
+      spaces.add(new GcGenerationSpace(collectionUsage, name));
     }
 
     void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
