@@ -186,7 +186,7 @@ SELECT COUNT(*) FROM tbl WHERE my_column = 'value2'
 
 ### Table-level
 
-In table-level queries, you must use UNION ALL in a subquery in the FROM clause, and create the lower-level subqueries that are inputs to the UNION ALL operator as simple table SELECTs. You can't use features like expressions, column aliasing, JOIN, GROUP BY, or ORDER BY.
+In table-level queries, you must use UNION ALL in a subquery in the FROM clause, and create the lower-level subqueries that are inputs to the UNION ALL operator as simple table SELECTs. You can't use features like expressions, column aliasing, JOIN, GROUP BY, or ORDER BY in table-level queries.
 
 The query runs natively using a [union datasource](datasource.md#union).
 
