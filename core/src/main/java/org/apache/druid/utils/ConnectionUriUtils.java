@@ -99,7 +99,7 @@ public final class ConnectionUriUtils
         }
         catch (ClassNotFoundException notFoundMaria2x) {
           throw new RuntimeException(
-              "Failed to find MySQL driver class. Please check the MySQL connector version 5.1.48 is in the classpath",
+              "Failed to find MySQL driver class. Please check the MySQL connector version 5.1.49 is in the classpath",
               notFoundMysql
           );
         }
