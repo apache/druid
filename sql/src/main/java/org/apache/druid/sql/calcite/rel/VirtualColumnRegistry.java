@@ -29,9 +29,9 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
+import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -200,8 +200,8 @@ public class VirtualColumnRegistry
 
   public void visitAllSubExpressions(DruidExpression.DruidExpressionShuttle shuttle)
   {
-    final Queue<Map.Entry<String, ExpressionAndTypeHint>> toVisit = new LinkedList<>(virtualColumnsByName.entrySet());
-    while(!toVisit.isEmpty()) {
+    final Queue<Map.Entry<String, ExpressionAndTypeHint>> toVisit = new ArrayDeque<>(virtualColumnsByName.entrySet());
+    while (!toVisit.isEmpty()) {
       final Map.Entry<String, ExpressionAndTypeHint> entry = toVisit.poll();
       final String key = entry.getKey();
       final ExpressionAndTypeHint wrapped = entry.getValue();
