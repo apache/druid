@@ -971,8 +971,8 @@ public class GranularityTest
     Assert.assertEquals(
         ImmutableList.of(
             Granularities.DAY,
-            Granularities.SIX_HOUR,
             Granularities.EIGHT_HOUR,
+            Granularities.SIX_HOUR,
             Granularities.HOUR,
             Granularities.THIRTY_MINUTE,
             Granularities.FIFTEEN_MINUTE,
