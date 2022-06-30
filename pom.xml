@@ -132,8 +132,9 @@
              the "new" integration tests. To skip just the unit tests (but run the
              new integration tests by setting the required profile), use -DskipUTs=true.
              -->
-        <skipUTs>false</skipUTs>
-        <skipITs>false</skipITs>
+        <skipTests>false</skipTests>
+        <skipUTs>${skipTests}</skipUTs>
+        <skipITs>${skipTests}</skipITs>
     </properties>
 
     <modules>
@@ -1935,8 +1936,7 @@
             <activeByDefault>false</activeByDefault>
           </activation>
           <properties>
-            <skipUTs>true</skipUTs> <!-- Skip only UTs -->
-            <skipITs>true</skipITs> <!-- ITs are also behind a profile -->
+            <skipTests>true</skipTests> <!-- skips both UTs and ITs -->
             <jacoco.skip>true</jacoco.skip>
           </properties>
         </profile>
