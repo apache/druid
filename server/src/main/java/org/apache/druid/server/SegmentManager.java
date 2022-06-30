@@ -35,6 +35,7 @@ import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.server.metrics.SegmentRowCountBuckets;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -74,17 +75,23 @@ public class SegmentManager
     private final ConcurrentHashMap<SegmentId, ReferenceCountingIndexedTable> tablesLookup = new ConcurrentHashMap<>();
     private long totalSegmentSize;
     private long numSegments;
+    private long rowCount;
+    private final SegmentRowCountBuckets rowCountBuckets = new SegmentRowCountBuckets();
 
-    private void addSegment(DataSegment segment)
+    private void addSegment(DataSegment segment, long numOfRows)
     {
       totalSegmentSize += segment.getSize();
       numSegments++;
-    }
+      rowCount += (numOfRows);
+      rowCountBuckets.addRowCountToBucket(numOfRows);
+     }
 
-    private void removeSegment(DataSegment segment)
+    private void removeSegment(DataSegment segment, long numOfRows)
     {
       totalSegmentSize -= segment.getSize();
       numSegments--;
+      rowCount -= numOfRows;
+      rowCountBuckets.removeRowCountfromBucket(numOfRows);
     }
 
     public VersionedIntervalTimeline<String, ReferenceCountingSegment> getTimeline()
@@ -95,6 +102,10 @@ public class SegmentManager
     public ConcurrentHashMap<SegmentId, ReferenceCountingIndexedTable> getTablesLookup()
     {
       return tablesLookup;
+    }
+
+    public long getAverageRowCount() {
+      return  numSegments == 0 ? 0 : rowCount/numSegments;
     }
 
     public long getTotalSegmentSize()
@@ -111,7 +122,13 @@ public class SegmentManager
     {
       return numSegments == 0;
     }
+
+    private SegmentRowCountBuckets getRowCountBucket()
+    {
+      return rowCountBuckets;
+    }
   }
+
 
   @Inject
   public SegmentManager(
@@ -136,6 +153,14 @@ public class SegmentManager
   public Map<String, Long> getDataSourceSizes()
   {
     return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getTotalSegmentSize);
+  }
+
+  public Map<String, Long> getAverageRowCountForDatasource() {
+    return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getAverageRowCount);
+  }
+
+  public Map<String, SegmentRowCountBuckets> getRowCountBuckets() {
+    return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getRowCountBucket);
   }
 
   public Set<String> getDataSourceNames()
@@ -265,7 +290,8 @@ public class SegmentManager
                 segment.getVersion(),
                 segment.getShardSpec().createChunk(adapter)
             );
-            dataSourceState.addSegment(segment);
+            long numOfRows = lazy ?  0 : adapter.asStorageAdapter().getNumRows();
+            dataSourceState.addSegment(segment, numOfRows);
             // Asyncly load segment index files into page cache in a thread pool
             segmentLoader.loadSegmentIntoPageCache(segment, loadSegmentIntoPageCacheExec);
             resultSupplier.set(true);
@@ -321,9 +347,10 @@ public class SegmentManager
             );
             final ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
 
+
             if (oldQueryable != null) {
               try (final Closer closer = Closer.create()) {
-                dataSourceState.removeSegment(segment);
+                dataSourceState.removeSegment(segment, oldQueryable.asStorageAdapter().getNumRows());
                 closer.register(oldQueryable);
                 log.info("Attempting to close segment %s", segment.getId());
                 final ReferenceCountingIndexedTable oldTable = dataSourceState.tablesLookup.remove(segment.getId());

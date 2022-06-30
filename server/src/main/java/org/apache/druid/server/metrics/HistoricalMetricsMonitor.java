@@ -104,6 +104,32 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
       emitter.emit(builder.build("segment/count", count));
     }
 
+    for (Map.Entry<String, Long> entry : segmentLoadDropMgr.getAverageNumOfRowsPerSegmentForDatasource().entrySet()) {
+      String dataSource = entry.getKey();
+      long averageSize = entry.getValue();
+      final ServiceMetricEvent.Builder builder =
+          new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                          .setDimension("tier", serverConfig.getTier())
+                                          .setDimension("priority", String.valueOf(serverConfig.getPriority()));
+
+      emitter.emit(builder.build("segment/averageRowCount", averageSize));
+    }
+
+    for (Map.Entry<String, SegmentRowCountBuckets> entry : segmentLoadDropMgr.getRowCountBucketsPerDatasource().entrySet()) {
+      String dataSource = entry.getKey();
+      SegmentRowCountBuckets rowCountBucket = entry.getValue();
+      final ServiceMetricEvent.Builder builder =
+          new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                          .setDimension("tier", serverConfig.getTier())
+                                          .setDimension("priority", String.valueOf(serverConfig.getPriority()));
+
+      rowCountBucket.forEachDimension((final String bucketDimension, final int count) -> {
+        builder.setDimension("rowCountBucket", bucketDimension);
+        emitter.emit(builder.build("segment/numOfSegmentsInBucket", count));
+      });
+
+    }
+
     return true;
   }
 }
