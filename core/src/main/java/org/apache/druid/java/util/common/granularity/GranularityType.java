@@ -57,6 +57,7 @@ public enum GranularityType
       "PT1H"
   ),
   SIX_HOUR(HOUR, "PT6H"),
+  EIGHT_HOUR(HOUR, "PT8H"),
   DAY(
       "'dt'=yyyy-MM-dd",
       "'y'=yyyy/'m'=MM/'d'=dd",
