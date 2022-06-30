@@ -130,7 +130,7 @@ public class UseIndexesStrategy extends SearchStrategy
       StorageAdapter adapter,
       VirtualColumns virtualColumns,
       List<DimensionSpec> dimensions
-      )
+  )
   {
     final List<DimensionSpec> bitmapDims = new ArrayList<>();
     final List<DimensionSpec> nonBitmapDims = new ArrayList<>();
