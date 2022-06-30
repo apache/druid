@@ -25,7 +25,6 @@ import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.ColumnSelectorColumnIndexSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
@@ -56,7 +55,7 @@ public class AutoStrategy extends SearchStrategy
     if (index != null) {
       final ColumnIndexSelector selector = new ColumnSelectorColumnIndexSelector(
           index.getBitmapFactoryForDimensions(),
-          VirtualColumns.EMPTY,
+          query.getVirtualColumns(),
           index
       );
 
