@@ -82,7 +82,8 @@ public class StupidPoolTest
     boolean exceptionThrown = false;
     try {
       poolOfString.take();
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       exceptionThrown = true;
     }
     Assert.assertTrue("Expect the pool to throw an exception as it should be poisoned", exceptionThrown);
