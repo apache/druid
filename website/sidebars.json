@@ -13,6 +13,7 @@
       "tutorials/tutorial-batch-hadoop",
       "tutorials/tutorial-query",
       "tutorials/tutorial-rollup",
+      "tutorials/tutorial-sketches-theta",
       "tutorials/tutorial-retention",
       "tutorials/tutorial-update-data",
       "tutorials/tutorial-compaction",
