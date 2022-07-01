@@ -182,6 +182,21 @@ public class QueryContextsTest
   }
 
   @Test
+  public void testGetTimeout_withNonNumericValue()
+  {
+    Map<String, Object> queryContext = new HashMap<>();
+    queryContext.put(QueryContexts.TIMEOUT_KEY, "2000'");
+
+    exception.expect(BadQueryContextException.class);
+    QueryContexts.getTimeout(new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        queryContext
+    ));
+  }
+
+  @Test
   public void testDefaultEnableQueryDebugging()
   {
     Query<?> query = new TestQuery(

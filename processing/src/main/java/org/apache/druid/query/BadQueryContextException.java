@@ -17,37 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.curator;
+package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.StringUtils;
 
-import java.util.Properties;
-
-public class ZkEnablementConfig
+public class BadQueryContextException extends BadQueryException
 {
-  private static final String PROP_KEY_ENABLED = StringUtils.format("%s.enabled", CuratorConfig.CONFIG_PREFIX);
+  public static final String ERROR_CODE = "Query context parse failed";
+  public static final String ERROR_CLASS = BadQueryContextException.class.getName();
 
-  public static final ZkEnablementConfig ENABLED = new ZkEnablementConfig(true);
-
-  @JsonProperty
-  private final boolean enabled;
+  public BadQueryContextException(Exception e)
+  {
+    this(ERROR_CODE, e.getMessage(), ERROR_CLASS);
+  }
 
   @JsonCreator
-  public ZkEnablementConfig(@JsonProperty("enabled") Boolean enabled)
+  private BadQueryContextException(
+      @JsonProperty("error") String errorCode,
+      @JsonProperty("errorMessage") String errorMessage,
+      @JsonProperty("errorClass") String errorClass
+  )
   {
-    this.enabled = enabled == null ? true : enabled.booleanValue();
-  }
-
-  public boolean isEnabled()
-  {
-    return enabled;
-  }
-
-  public static boolean isEnabled(Properties properties)
-  {
-    String value = properties.getProperty(PROP_KEY_ENABLED);
-    return value == null ? true : Boolean.parseBoolean(value);
+    super(errorCode, errorMessage, errorClass);
   }
 }

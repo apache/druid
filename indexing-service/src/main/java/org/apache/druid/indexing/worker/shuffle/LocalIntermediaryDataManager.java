@@ -152,7 +152,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
     supervisorTaskChecker.scheduleAtFixedRate(
         () -> {
           try {
-            deleteExpiredSuprevisorTaskPartitionsIfNotRunning();
+            deleteExpiredSupervisorTaskPartitionsIfNotRunning();
           }
           catch (Exception e) {
             LOG.warn(e, "Error while cleaning up partitions for expired supervisors");
@@ -234,14 +234,13 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
    * Note that the overlord sends a cleanup request when a supervisorTask is finished. The below check is to trigger
    * the self-cleanup for when the cleanup request is missing.
    */
-  private void deleteExpiredSuprevisorTaskPartitionsIfNotRunning()
+  private void deleteExpiredSupervisorTaskPartitionsIfNotRunning()
   {
-    final DateTime now = DateTimes.nowUtc();
     final Set<String> expiredSupervisorTasks = new HashSet<>();
     for (Entry<String, DateTime> entry : supervisorTaskCheckTimes.entrySet()) {
       final String supervisorTaskId = entry.getKey();
       final DateTime checkTime = entry.getValue();
-      if (checkTime.isAfter(now)) {
+      if (checkTime.isBeforeNow()) {
         expiredSupervisorTasks.add(supervisorTaskId);
       }
     }
@@ -317,7 +316,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
     try (final Closer resourceCloser = closer) {
       FileUtils.mkdirp(taskTempDir);
 
-      // Tempary compressed file. Will be removed when taskTempDir is deleted.
+      // Temporary compressed file. Will be removed when taskTempDir is deleted.
       final File tempZippedFile = new File(taskTempDir, segment.getId().toString());
       final long unzippedSizeBytes = CompressionUtils.zip(segmentDir, tempZippedFile);
       if (unzippedSizeBytes == 0) {

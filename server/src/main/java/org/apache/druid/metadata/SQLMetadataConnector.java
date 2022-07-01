@@ -193,14 +193,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             public Void withHandle(Handle handle)
             {
               if (!tableExists(handle, tableName)) {
-                log.info("Creating table[%s]", tableName);
+                log.info("Creating table [%s]", tableName);
                 final Batch batch = handle.createBatch();
                 for (String s : sql) {
                   batch.add(s);
                 }
                 batch.execute();
               } else {
-                log.info("Table[%s] already exists", tableName);
+                log.info("Table [%s] already exists", tableName);
               }
               return null;
             }
@@ -702,10 +702,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return config.get();
   }
 
-  protected BasicDataSource getDatasource()
+  protected static BasicDataSource makeDatasource(MetadataStorageConnectorConfig connectorConfig, String validationQuery)
   {
-    MetadataStorageConnectorConfig connectorConfig = getConfig();
-
     BasicDataSource dataSource;
 
     try {
@@ -725,10 +723,15 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     String uri = connectorConfig.getConnectURI();
     dataSource.setUrl(uri);
 
-    dataSource.setValidationQuery(getValidationQuery());
+    dataSource.setValidationQuery(validationQuery);
     dataSource.setTestOnBorrow(true);
 
     return dataSource;
+  }
+
+  protected BasicDataSource getDatasource()
+  {
+    return makeDatasource(getConfig(), getValidationQuery());
   }
 
   protected final <T> T inReadOnlyTransaction(
