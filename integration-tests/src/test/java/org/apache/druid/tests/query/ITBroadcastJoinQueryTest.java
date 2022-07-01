@@ -39,6 +39,8 @@ import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import java.util.concurrent.Callable;
+
 @Test(groups = TestNGGroup.QUERY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
@@ -84,7 +86,8 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
               ImmutableList.of()
           );
         }
-        catch (Exception ignored) {
+        catch (Exception e) {
+          LOG.error(e, "Failed to post load rules");
         }
       });
 
@@ -127,8 +130,21 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
           replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_QUERIES_RESOURCE), BROADCAST_JOIN_DATASOURCE)
       );
     }
+
     finally {
       closer.close();
+
+      coordinator.unloadSegmentsForDataSource(BROADCAST_JOIN_DATASOURCE);
+      ITRetryUtil.retryUntilFalse(
+          new Callable<Boolean>()
+          {
+            @Override
+            public Boolean call()
+            {
+              return coordinator.areSegmentsLoaded(BROADCAST_JOIN_DATASOURCE);
+            }
+          }, "Segment Unloading"
+      );
 
       // query metadata until druid schema is refreshed and datasource is no longer available
       ITRetryUtil.retryUntilTrue(
