@@ -187,7 +187,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
           dimConversions.set(i, dictionaryMergeIterator.conversions[i]);
         }
       }
-      cardinality = dictionaryMergeIterator.counter;
+      cardinality = dictionaryMergeIterator.getCardinality();
     } else if (numMergeIndex == 1) {
       writeDictionary(dimValueLookup);
       cardinality = dimValueLookup.size();

@@ -190,7 +190,7 @@ public enum CompressionStrategy
      * <p>
      * If the allocated buffer is a direct buffer, it should be registered to be freed with the given Closer.
      */
-    ByteBuffer allocateInBuffer(int inputSize, Closer closer)
+    public ByteBuffer allocateInBuffer(int inputSize, Closer closer)
     {
       return ByteBuffer.allocate(inputSize);
     }
@@ -203,7 +203,7 @@ public enum CompressionStrategy
      * <p>
      * If the allocated buffer is a direct buffer, it should be registered to be freed with the given Closer.
      */
-    abstract ByteBuffer allocateOutBuffer(int inputSize, Closer closer);
+    public abstract ByteBuffer allocateOutBuffer(int inputSize, Closer closer);
 
     /**
      * Returns a ByteBuffer with compressed contents of in between it's position and limit. It may be the provided out
@@ -221,7 +221,7 @@ public enum CompressionStrategy
     private static final UncompressedCompressor DEFAULT_COMPRESSOR = new UncompressedCompressor();
 
     @Override
-    ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
+    public ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
     {
       return ByteBuffer.allocate(inputSize);
     }
@@ -333,7 +333,7 @@ public enum CompressionStrategy
     }
 
     @Override
-    ByteBuffer allocateInBuffer(int inputSize, Closer closer)
+    public ByteBuffer allocateInBuffer(int inputSize, Closer closer)
     {
       ByteBuffer inBuffer = ByteBuffer.allocateDirect(inputSize);
       closer.register(() -> ByteBufferUtils.free(inBuffer));
@@ -341,7 +341,7 @@ public enum CompressionStrategy
     }
 
     @Override
-    ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
+    public ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
     {
       ByteBuffer outBuffer = ByteBuffer.allocateDirect(LZ4_HIGH.maxCompressedLength(inputSize));
       closer.register(() -> ByteBufferUtils.free(outBuffer));
@@ -365,7 +365,7 @@ public enum CompressionStrategy
     private static final ZstdCompressor DEFAULT_COMPRESSOR = new ZstdCompressor();
 
     @Override
-    ByteBuffer allocateInBuffer(int inputSize, Closer closer)
+    public ByteBuffer allocateInBuffer(int inputSize, Closer closer)
     {
       ByteBuffer inBuffer = ByteBuffer.allocateDirect(inputSize);
       closer.register(() -> ByteBufferUtils.free(inBuffer));
@@ -373,7 +373,7 @@ public enum CompressionStrategy
     }
 
     @Override
-    ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
+    public ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
     {
       ByteBuffer outBuffer = ByteBuffer.allocateDirect((int) Zstd.compressBound(inputSize));
       closer.register(() -> ByteBufferUtils.free(outBuffer));
