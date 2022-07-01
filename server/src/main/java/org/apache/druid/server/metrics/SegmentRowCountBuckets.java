@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.server.metrics;
 
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -15,6 +34,7 @@ public class SegmentRowCountBuckets
 
   /**
    * Increments the count for a particular bucket held in this class
+   *
    * @param rowCount the number of rows to figure out which bucket to increment
    */
   public void addRowCountToBucket(long rowCount)
@@ -25,6 +45,7 @@ public class SegmentRowCountBuckets
 
   /**
    * Decrements the count for a particular bucket held in this class
+   *
    * @param rowCount the count which determines which bucket to decrement
    */
   public void removeRowCountfromBucket(long rowCount)
@@ -40,6 +61,7 @@ public class SegmentRowCountBuckets
 
   /**
    * Determines the name of the dimension used for a bucket
+   *
    * @param index the index of the bucket
    * @return the dimension which the bucket index refers to
    */
@@ -70,6 +92,7 @@ public class SegmentRowCountBuckets
 
   /**
    * Figures out which bucket the specified rowCount belongs to
+   *
    * @param rowCount the number of rows in a segment
    * @return the bucket index
    */
@@ -101,9 +124,9 @@ public class SegmentRowCountBuckets
 
   public void forEachDimension(final ObjIntConsumer<String> consumer)
   {
-      for (int ii =0; ii < buckets.length; ii++ ) {
-        consumer.accept(getBucketDimensionFromIndex(ii), buckets[ii]);
-      }
+    for (int ii = 0; ii < buckets.length; ii++) {
+      consumer.accept(getBucketDimensionFromIndex(ii), buckets[ii]);
+    }
   }
 
 }

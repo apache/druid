@@ -307,11 +307,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
-  public Map<String, Long> getAverageNumOfRowsPerSegmentForDatasource() {
+  public Map<String, Long> getAverageNumOfRowsPerSegmentForDatasource()
+  {
     return segmentManager.getAverageRowCountForDatasource();
   }
 
-  public Map<String, SegmentRowCountBuckets> getRowCountBucketsPerDatasource() {
+  public Map<String, SegmentRowCountBuckets> getRowCountBucketsPerDatasource()
+  {
     return segmentManager.getRowCountBuckets();
   }
 

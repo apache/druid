@@ -84,7 +84,7 @@ public class SegmentManager
       numSegments++;
       rowCount += (numOfRows);
       rowCountBuckets.addRowCountToBucket(numOfRows);
-     }
+    }
 
     private void removeSegment(DataSegment segment, long numOfRows)
     {
@@ -104,8 +104,9 @@ public class SegmentManager
       return tablesLookup;
     }
 
-    public long getAverageRowCount() {
-      return  numSegments == 0 ? 0 : rowCount/numSegments;
+    public long getAverageRowCount()
+    {
+      return numSegments == 0 ? 0 : rowCount / numSegments;
     }
 
     public long getTotalSegmentSize()
@@ -155,11 +156,13 @@ public class SegmentManager
     return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getTotalSegmentSize);
   }
 
-  public Map<String, Long> getAverageRowCountForDatasource() {
+  public Map<String, Long> getAverageRowCountForDatasource()
+  {
     return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getAverageRowCount);
   }
 
-  public Map<String, SegmentRowCountBuckets> getRowCountBuckets() {
+  public Map<String, SegmentRowCountBuckets> getRowCountBuckets()
+  {
     return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getRowCountBucket);
   }
 
@@ -290,7 +293,7 @@ public class SegmentManager
                 segment.getVersion(),
                 segment.getShardSpec().createChunk(adapter)
             );
-            long numOfRows = lazy ?  0 : adapter.asStorageAdapter().getNumRows();
+            long numOfRows = lazy ? 0 : adapter.asStorageAdapter().getNumRows();
             dataSourceState.addSegment(segment, numOfRows);
             // Asyncly load segment index files into page cache in a thread pool
             segmentLoader.loadSegmentIntoPageCache(segment, loadSegmentIntoPageCacheExec);
