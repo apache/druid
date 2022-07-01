@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.interpreter.Bindables;
 import org.apache.calcite.plan.RelOptLattice;
@@ -242,7 +241,6 @@ public class Rules
     return Programs.of(builder.build(), noDag, metadataProvider);
   }
 
-  @VisibleForTesting
   public static List<RelOptRule> druidConventionRuleSet(
       final PlannerContext plannerContext,
       final DruidExtensionCalciteRuleManager druidExtensionCalciteRuleManager
@@ -256,11 +254,11 @@ public class Rules
         .add(new DruidLogicalValuesRule(plannerContext))
         .add(new ExternalTableScanRule(plannerContext))
         .addAll(DruidRules.rules(plannerContext));
-    druidExtensionCalciteRuleManager.getDruidExtensionCalciteRuleProviderSet().forEach(
-        druidExtensionCalciteRuleProvider -> retVal.add(druidExtensionCalciteRuleProvider.getRule(plannerContext))
-    );
 
-    return retVal.build();
+    return druidExtensionCalciteRuleManager.updateDruidConventionRuleSet(
+        plannerContext,
+        retVal.build()
+    );
   }
 
   private static List<RelOptRule> bindableConventionRuleSet(final PlannerContext plannerContext)

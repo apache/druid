@@ -19,8 +19,12 @@
 
 package org.apache.druid.sql.calcite.rule;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import org.apache.calcite.plan.RelOptRule;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -32,14 +36,19 @@ public class DruidExtensionCalciteRuleManager
 
   @Inject
   public DruidExtensionCalciteRuleManager(
-      @ExtensionCalciteRuleProvider Set<DruidExtensionCalciteRuleProvider> druidExtensionCalciteRuleProviderSet
+      Set<DruidExtensionCalciteRuleProvider> druidExtensionCalciteRuleProviderSet
   )
   {
     this.druidExtensionCalciteRuleProviderSet = druidExtensionCalciteRuleProviderSet;
   }
 
-  public Set<DruidExtensionCalciteRuleProvider> getDruidExtensionCalciteRuleProviderSet()
+  public List<RelOptRule> updateDruidConventionRuleSet(PlannerContext plannerContext, List<RelOptRule> coreRules)
   {
-    return druidExtensionCalciteRuleProviderSet;
+    ImmutableList.Builder<RelOptRule> updatedRulesBuilder = ImmutableList.builder();
+    updatedRulesBuilder.addAll(coreRules);
+    for (DruidExtensionCalciteRuleProvider druidExtensionCalciteRuleProvider : druidExtensionCalciteRuleProviderSet) {
+      updatedRulesBuilder.add(druidExtensionCalciteRuleProvider.getRule(plannerContext));
+    }
+    return updatedRulesBuilder.build();
   }
 }

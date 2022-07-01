@@ -42,7 +42,6 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.rule.DruidExtensionCalciteRuleManager;
 import org.apache.druid.sql.calcite.rule.DruidExtensionCalciteRuleProvider;
-import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
@@ -129,7 +128,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         },
         target,
         binder -> {
-          Multibinder.newSetBinder(binder, DruidExtensionCalciteRuleProvider.class, ExtensionCalciteRuleProvider.class)
+          Multibinder.newSetBinder(binder, DruidExtensionCalciteRuleProvider.class)
                      .addBinding()
                      .toInstance(plannerContext -> customRule);
         }
