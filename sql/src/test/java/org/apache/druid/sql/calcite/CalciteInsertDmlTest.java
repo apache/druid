@@ -750,7 +750,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                     "The granularity specified in PARTITIONED BY is not supported. "
                     + "Please use an equivalent of these granularities: second, minute, five_minute, ten_minute, "
-                    + "fifteen_minute, thirty_minute, hour, six_hour, day, week, month, quarter, year, all."))
+                    + "fifteen_minute, thirty_minute, hour, six_hour, eight_hour, day, week, month, quarter, year, all."))
             )
         )
         .verify();
