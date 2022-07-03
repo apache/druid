@@ -68,6 +68,7 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -402,6 +403,11 @@ public class DruidSchema extends AbstractSchema
     // Rebuild the dataSources.
     for (String dataSource : dataSourcesToRebuild) {
       final DruidTable druidTable = buildDruidTable(dataSource);
+      if (druidTable == null) {
+        log.info("dataSource[%s] no longer exists, all metadata removed.", dataSource);
+        tables.remove(dataSource);
+        continue;
+      }
       final DruidTable oldTable = tables.put(dataSource, druidTable);
       final String description = druidTable.getDataSource().isGlobal() ? "global dataSource" : "dataSource";
       if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
@@ -773,12 +779,13 @@ public class DruidSchema extends AbstractSchema
   }
 
   @VisibleForTesting
+  @Nullable
   DruidTable buildDruidTable(final String dataSource)
   {
     ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> segmentsMap = segmentMetadataInfo.get(dataSource);
     final Map<String, ColumnType> columnTypes = new TreeMap<>();
 
-    if (segmentsMap != null) {
+    if (segmentsMap != null && !segmentsMap.isEmpty()) {
       for (AvailableSegmentMetadata availableSegmentMetadata : segmentsMap.values()) {
         final RowSignature rowSignature = availableSegmentMetadata.getRowSignature();
         if (rowSignature != null) {
@@ -792,6 +799,9 @@ public class DruidSchema extends AbstractSchema
           }
         }
       }
+    } else {
+      // table has no segments
+      return null;
     }
 
     final RowSignature.Builder builder = RowSignature.builder();

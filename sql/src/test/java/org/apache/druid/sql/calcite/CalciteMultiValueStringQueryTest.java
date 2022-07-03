@@ -1429,6 +1429,67 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testMultiValueListFilterComposedMultipleExpressions() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT MV_LENGTH(MV_FILTER_ONLY(dim3, ARRAY['b'])), MV_LENGTH(dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1,2 ORDER BY 3 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "array_length(\"v2\")",
+                                ColumnType.LONG
+                            ),
+                            expressionVirtualColumn(
+                                "v1",
+                                "array_length(\"dim3\")",
+                                ColumnType.LONG
+                            ),
+                            new ListFilteredVirtualColumn(
+                                "v2",
+                                DefaultDimensionSpec.of("dim3"),
+                                ImmutableSet.of("b"),
+                                true
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.LONG),
+                                new DefaultDimensionSpec("v1", "_d1", ColumnType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        useDefault ? ImmutableList.of(
+            new Object[]{0, 0, 3L},
+            new Object[]{1, 2, 2L},
+            new Object[]{0, 1, 1L}
+        ) : ImmutableList.of(
+            new Object[]{null, null, 2L},
+            new Object[]{null, 1, 2L},
+            new Object[]{1, 2, 2L}
+        )
+    );
+  }
+
+  @Test
   public void testFilterOnMultiValueListFilterNoMatch() throws Exception
   {
     // Cannot vectorize due to usage of expressions.

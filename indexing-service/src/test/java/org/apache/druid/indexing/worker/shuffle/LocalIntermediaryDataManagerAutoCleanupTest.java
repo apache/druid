@@ -37,7 +37,6 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecLookup;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -57,33 +56,13 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   @Rule
   public TemporaryFolder tempDir = new TemporaryFolder();
 
-  private LocalIntermediaryDataManager intermediaryDataManager;
+  private TaskConfig taskConfig;
+  private IndexingServiceClient indexingServiceClient;
 
   @Before
   public void setup() throws IOException
   {
-    final WorkerConfig workerConfig = new WorkerConfig()
-    {
-      @Override
-      public long getIntermediaryPartitionDiscoveryPeriodSec()
-      {
-        return 1;
-      }
-
-      @Override
-      public long getIntermediaryPartitionCleanupPeriodSec()
-      {
-        return 2;
-      }
-
-      @Override
-      public Period getIntermediaryPartitionTimeout()
-      {
-        return new Period("PT2S");
-      }
-
-    };
-    final TaskConfig taskConfig = new TaskConfig(
+    this.taskConfig = new TaskConfig(
         null,
         null,
         null,
@@ -98,40 +77,79 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null
     );
-    final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient()
+    this.indexingServiceClient = new NoopIndexingServiceClient()
     {
       @Override
       public Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds)
       {
         final Map<String, TaskStatus> result = new HashMap<>();
         for (String taskId : taskIds) {
-          result.put(taskId, new TaskStatus(taskId, TaskState.SUCCESS, 10));
+          TaskState state = taskId.startsWith("running_") ? TaskState.RUNNING : TaskState.SUCCESS;
+          result.put(taskId, new TaskStatus(taskId, state, 10));
         }
         return result;
       }
     };
-    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
-    intermediaryDataManager.start();
-  }
-
-  @After
-  public void teardown()
-  {
-    intermediaryDataManager.stop();
   }
 
   @Test
-  public void testCleanup() throws IOException, InterruptedException
+  public void testCompletedExpiredSupervisor() throws IOException, InterruptedException
   {
-    final String supervisorTaskId = "supervisorTaskId";
+    Assert.assertTrue(
+        isCleanedUpAfter2s("supervisor_1", new Period("PT1S"))
+    );
+  }
+
+  @Test
+  public void testCompletedNotExpiredSupervisor() throws IOException, InterruptedException
+  {
+    Assert.assertFalse(
+        isCleanedUpAfter2s("supervisor_2", new Period("PT10S"))
+    );
+  }
+
+  @Test
+  public void testRunningSupervisor() throws IOException, InterruptedException
+  {
+    Assert.assertFalse(
+        isCleanedUpAfter2s("running_supervisor_1", new Period("PT1S"))
+    );
+  }
+
+  /**
+   * Creates a LocalIntermediaryDataManager and adds a segment to it.
+   * Also checks the cleanup status after 2s.
+   *
+   * @return true if the cleanup has happened after 2s, false otherwise.
+   */
+  private boolean isCleanedUpAfter2s(String supervisorTaskId, Period timeoutPeriod)
+      throws IOException, InterruptedException
+  {
     final String subTaskId = "subTaskId";
     final Interval interval = Intervals.of("2018/2019");
     final File segmentFile = generateSegmentDir("test");
     final DataSegment segment = newSegment(interval);
+
+    // Setup data manager with expiry timeout 1s
+    WorkerConfig workerConfig = new TestWorkerConfig(1, 1, timeoutPeriod);
+    LocalIntermediaryDataManager intermediaryDataManager =
+        new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
     intermediaryDataManager.addSegment(supervisorTaskId, subTaskId, segment, segmentFile);
 
-    Thread.sleep(3000);
-    Assert.assertFalse(intermediaryDataManager.findPartitionFile(supervisorTaskId, subTaskId, interval, 0).isPresent());
+    intermediaryDataManager
+        .findPartitionFile(supervisorTaskId, subTaskId, interval, 0);
+
+    // Start the data manager and the cleanup cycle
+    intermediaryDataManager.start();
+
+    // Check the state of the partition after 2s
+    Thread.sleep(2000);
+    boolean partitionFileExists = intermediaryDataManager
+        .findPartitionFile(supervisorTaskId, subTaskId, interval, 0)
+        .isPresent();
+
+    intermediaryDataManager.stop();
+    return !partitionFileExists;
   }
 
   private File generateSegmentDir(String fileName) throws IOException
@@ -176,6 +194,38 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
     public ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
     {
       throw new UnsupportedOperationException();
+    }
+  }
+
+  private static class TestWorkerConfig extends WorkerConfig
+  {
+    private final long cleanupPeriodSeconds;
+    private final long discoveryPeriodSeconds;
+    private final Period timeoutPeriod;
+
+    private TestWorkerConfig(long cleanupPeriodSeconds, long discoveryPeriodSeconds, Period timeoutPeriod)
+    {
+      this.cleanupPeriodSeconds = cleanupPeriodSeconds;
+      this.discoveryPeriodSeconds = discoveryPeriodSeconds;
+      this.timeoutPeriod = timeoutPeriod;
+    }
+
+    @Override
+    public long getIntermediaryPartitionCleanupPeriodSec()
+    {
+      return cleanupPeriodSeconds;
+    }
+
+    @Override
+    public long getIntermediaryPartitionDiscoveryPeriodSec()
+    {
+      return discoveryPeriodSeconds;
+    }
+
+    @Override
+    public Period getIntermediaryPartitionTimeout()
+    {
+      return timeoutPeriod;
     }
   }
 }

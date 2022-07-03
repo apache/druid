@@ -1516,8 +1516,9 @@
                         <!-- set default options -->
                         <argLine>
                             @{jacocoArgLine}
+                            ${jdk.surefire.argLine}
                             -Xmx1500m
-                            -XX:MaxDirectMemorySize=512m
+                            -XX:MaxDirectMemorySize=2500m
                             -XX:+ExitOnOutOfMemoryError
                             -XX:+HeapDumpOnOutOfMemoryError
                             -Duser.language=en
@@ -1526,6 +1527,7 @@
                             -Duser.timezone=UTC
                             -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                             -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
+                            -Ddruid.test.stupidPool.poison=true
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                         </argLine>
@@ -1668,6 +1670,7 @@
                     <!-- required for JvmMonitor tests on Java 11+ -->
                     --add-exports=java.base/jdk.internal.perf=ALL-UNNAMED
                     --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+                    --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
                 </jdk.surefire.argLine>
             </properties>
             <build>
@@ -1760,6 +1763,7 @@
                                 -XX:+HeapDumpOnOutOfMemoryError
                                 -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                                 -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
+                                -Ddruid.test.stupidPool.poison=true
                                 <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                                 -Ddruid.indexing.doubleStorage=double
                             </argLine>

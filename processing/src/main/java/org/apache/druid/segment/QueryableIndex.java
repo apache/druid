@@ -20,12 +20,15 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -35,7 +38,7 @@ import java.util.Map;
  * @see QueryableIndexStorageAdapter for query path adapter
  * @see QueryableIndexIndexableAdapter for indexing path adapter
  */
-public interface QueryableIndex extends ColumnSelector, Closeable
+public interface QueryableIndex extends Closeable
 {
   Interval getDataInterval();
   int getNumRows();
@@ -43,6 +46,21 @@ public interface QueryableIndex extends ColumnSelector, Closeable
   BitmapFactory getBitmapFactoryForDimensions();
   @Nullable Metadata getMetadata();
   Map<String, DimensionHandler> getDimensionHandlers();
+
+  List<String> getColumnNames();
+
+  @Nullable
+  ColumnHolder getColumnHolder(String columnName);
+
+  @Nullable
+  default ColumnCapabilities getColumnCapabilities(String column)
+  {
+    final ColumnHolder columnHolder = getColumnHolder(column);
+    if (columnHolder == null) {
+      return null;
+    }
+    return columnHolder.getCapabilities();
+  }
 
   /**
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.
