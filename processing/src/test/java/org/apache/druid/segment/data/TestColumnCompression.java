@@ -107,9 +107,10 @@ public class TestColumnCompression
   }
 
   @After
-  public void tearDown() 
+  public void tearDown() throws IOException
   {
     ByteBufferUtils.free(buffer);
+    compressed.close();
   }
 
   private static ByteBuffer serialize(WritableSupplier<ColumnarMultiInts> writableSupplier) throws IOException

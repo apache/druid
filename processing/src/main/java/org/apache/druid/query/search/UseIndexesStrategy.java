@@ -34,6 +34,7 @@ import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.search.CursorOnlyStrategy.CursorBasedExecutor;
 import org.apache.druid.segment.ColumnSelectorColumnIndexSelector;
+import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
@@ -84,7 +85,7 @@ public class UseIndexesStrategy extends SearchStrategy
         final ColumnIndexSelector selector = new ColumnSelectorColumnIndexSelector(
             index.getBitmapFactoryForDimensions(),
             VirtualColumns.EMPTY,
-            index
+            new DeprecatedQueryableIndexColumnSelector(index)
         );
 
         // Index-only plan is used only when any filter is not specified or the filter supports bitmap indexes.
@@ -158,7 +159,7 @@ public class UseIndexesStrategy extends SearchStrategy
       final ColumnIndexSelector selector = new ColumnSelectorColumnIndexSelector(
           index.getBitmapFactoryForDimensions(),
           VirtualColumns.EMPTY,
-          index
+          new DeprecatedQueryableIndexColumnSelector(index)
       );
       final BitmapColumnIndex columnIndex = filter.getBitmapColumnIndex(selector);
       Preconditions.checkNotNull(
