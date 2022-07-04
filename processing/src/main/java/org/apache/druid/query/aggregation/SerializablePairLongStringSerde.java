@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -34,6 +33,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 
 /**
  * The SerializablePairLongStringSerde serializes a Long-String pair (SerializablePairLongString).
@@ -46,6 +46,42 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
 {
 
   private static final String TYPE_NAME = "serializablePairLongString";
+  private static final Comparator<SerializablePairLongString> COMPARATOR = (o1, o2) -> {
+    int comparation;
+
+    // First we check if the objects are null
+    if (o1 == null && o2 == null) {
+      comparation = 0;
+    } else if (o1 == null) {
+      comparation = -1;
+    } else if (o2 == null) {
+      comparation = 1;
+    } else {
+
+      // If the objects are not null, we will try to compare using timestamp
+      comparation = o1.lhs.compareTo(o2.lhs);
+
+      // If both timestamp are the same, we try to compare the Strings
+      if (comparation == 0) {
+
+        // First we check if the strings are null
+        if (o1.rhs == null && o2.rhs == null) {
+          comparation = 0;
+        } else if (o1.rhs == null) {
+          comparation = -1;
+        } else if (o2.rhs == null) {
+          comparation = 1;
+        } else {
+
+          // If the strings are not null, we will compare them
+          // Note: This comparation maybe doesn't make sense to first/last aggregators
+          comparation = o1.rhs.compareTo(o2.rhs);
+        }
+      }
+    }
+
+    return comparation;
+  };
 
   @Override
   public String getTypeName()
@@ -87,7 +123,7 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
       @Override
       public int compare(@Nullable SerializablePairLongString o1, @Nullable SerializablePairLongString o2)
       {
-        return StringFirstAggregatorFactory.VALUE_COMPARATOR.compare(o1, o2);
+        return COMPARATOR.compare(o1, o2);
       }
 
       @Override

@@ -87,6 +87,8 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
       ((SerializablePairLongString) o2).lhs
   );
 
+  // used in comparing aggregation results amongst distinct groups. hence the comparison is done on the finalized
+  // result which is string/value part of the result pair.
   public static final Comparator<SerializablePairLongString> VALUE_COMPARATOR = (o1, o2) -> {
     int comparation;
 
@@ -98,26 +100,18 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     } else if (o2 == null) {
       comparation = 1;
     } else {
+      // First we check if the strings are null
+      if (o1.rhs == null && o2.rhs == null) {
+        comparation = 0;
+      } else if (o1.rhs == null) {
+        comparation = -1;
+      } else if (o2.rhs == null) {
+        comparation = 1;
+      } else {
 
-      // If the objects are not null, we will try to compare using timestamp
-      comparation = o1.lhs.compareTo(o2.lhs);
-
-      // If both timestamp are the same, we try to compare the Strings
-      if (comparation == 0) {
-
-        // First we check if the strings are null
-        if (o1.rhs == null && o2.rhs == null) {
-          comparation = 0;
-        } else if (o1.rhs == null) {
-          comparation = -1;
-        } else if (o2.rhs == null) {
-          comparation = 1;
-        } else {
-
-          // If the strings are not null, we will compare them
-          // Note: This comparation maybe doesn't make sense to first/last aggregators
-          comparation = o1.rhs.compareTo(o2.rhs);
-        }
+        // If the strings are not null, we will compare them
+        // Note: This comparation maybe doesn't make sense to first/last aggregators
+        comparation = o1.rhs.compareTo(o2.rhs);
       }
     }
 
