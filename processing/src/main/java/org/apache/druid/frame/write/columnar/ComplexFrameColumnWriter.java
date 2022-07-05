@@ -20,12 +20,12 @@
 package org.apache.druid.frame.write.columnar;
 
 import com.google.common.primitives.Ints;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
+import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryRange;
 import org.apache.druid.frame.read.columnar.ComplexFrameColumnReader;
-import it.unimi.dsi.fastutil.bytes.ByteArrays;
-import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;

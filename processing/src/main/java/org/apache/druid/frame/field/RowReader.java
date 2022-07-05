@@ -19,8 +19,8 @@
 
 package org.apache.druid.frame.field;
 
-import org.apache.druid.frame.segment.row.ConstantFrameRowPointer;
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.frame.segment.row.ConstantFrameRowPointer;
 
 import java.util.ArrayList;
 import java.util.List;

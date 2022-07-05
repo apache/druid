@@ -19,10 +19,10 @@
 
 package org.apache.druid.frame.write.columnar;
 
+import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryRange;
-import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 
 public class DoubleFrameColumnWriter implements FrameColumnWriter

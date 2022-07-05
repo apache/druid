@@ -62,8 +62,8 @@ public class ColumnarFrameWriterFactory implements FrameWriterFactory
     this.signature = signature;
     this.sortColumns = Preconditions.checkNotNull(sortColumns, "sortColumns");
 
-    if (!FrameWriterUtils.areSortColumnsPrefixOfSignature(signature, sortColumns)) {
-      throw new IAE("Sort columns must be a prefix of the signature");
+    if (!sortColumns.isEmpty()) {
+      throw new IAE("Columnar frames cannot be sorted");
     }
 
     // Check for disallowed field names.

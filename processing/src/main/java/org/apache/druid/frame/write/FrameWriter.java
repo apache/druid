@@ -21,13 +21,9 @@ package org.apache.druid.frame.write;
 
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.MemoryAllocator;
-import org.apache.druid.segment.column.RowSignature;
 
 import java.io.Closeable;
 import java.nio.ByteOrder;
-import java.util.List;
 
 /**
  * Writer for {@link org.apache.druid.frame.Frame}. See that class for format information.

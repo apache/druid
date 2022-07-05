@@ -21,9 +21,9 @@ package org.apache.druid.frame.write;
 
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.key.KeyTestUtils;

@@ -21,9 +21,9 @@ package org.apache.druid.frame.file;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
-import org.apache.druid.frame.Frame;
 import org.apache.datasketches.memory.MapHandle;
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.frame.Frame;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
@@ -140,7 +140,7 @@ public class FrameFile implements Closeable
         throw new IOE("File [%s] is not a frame file", file);
       }
 
-      final int numFrames = memory.getInt(memory.getCapacity() - Integer.BYTES * 2);
+      final int numFrames = memory.getInt(memory.getCapacity() - Integer.BYTES * 2L);
       final int numPartitions = memory.getInt(memory.getCapacity() - Integer.BYTES);
 
       // Verify last frame is followed by MARKER_NO_MORE_FRAMES.
@@ -153,7 +153,7 @@ public class FrameFile implements Closeable
       }
 
       if (endMarkerPosition >= memory.getCapacity()) {
-        throw new IOE("File [%s] end marker location out of range");
+        throw new IOE("File [%s] end marker location out of range", file);
       }
 
       if (memory.getByte(endMarkerPosition) != FrameFileWriter.MARKER_NO_MORE_FRAMES) {

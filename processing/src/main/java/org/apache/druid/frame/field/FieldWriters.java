@@ -49,34 +49,34 @@ public class FieldWriters
    */
   public static FieldWriter create(
       final ColumnSelectorFactory columnSelectorFactory,
-      final String column,
-      final ColumnType type
+      final String columnName,
+      final ColumnType columnType
   )
   {
-    if (type == null) {
-      throw new UnsupportedColumnTypeException(column, null);
+    if (columnType == null) {
+      throw new UnsupportedColumnTypeException(columnName, null);
     }
 
-    switch (type.getType()) {
+    switch (columnType.getType()) {
       case LONG:
-        return makeLongWriter(columnSelectorFactory, column);
+        return makeLongWriter(columnSelectorFactory, columnName);
       case FLOAT:
-        return makeFloatWriter(columnSelectorFactory, column);
+        return makeFloatWriter(columnSelectorFactory, columnName);
       case DOUBLE:
-        return makeDoubleWriter(columnSelectorFactory, column);
+        return makeDoubleWriter(columnSelectorFactory, columnName);
       case STRING:
-        return makeStringWriter(columnSelectorFactory, column);
+        return makeStringWriter(columnSelectorFactory, columnName);
       case ARRAY:
-        switch (type.getElementType().getType()) {
+        switch (columnType.getElementType().getType()) {
           case STRING:
-            return makeStringArrayWriter(columnSelectorFactory, column);
+            return makeStringArrayWriter(columnSelectorFactory, columnName);
           default:
-            throw new UnsupportedColumnTypeException(column, type);
+            throw new UnsupportedColumnTypeException(columnName, columnType);
         }
       case COMPLEX:
-        return makeComplexWriter(columnSelectorFactory, column, type.getComplexTypeName());
+        return makeComplexWriter(columnSelectorFactory, columnName, columnType.getComplexTypeName());
       default:
-        throw new UnsupportedColumnTypeException(column, type);
+        throw new UnsupportedColumnTypeException(columnName, columnType);
     }
   }
 

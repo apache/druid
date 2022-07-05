@@ -31,7 +31,6 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
@@ -45,7 +44,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
   private Frame frame;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     final StorageAdapter rowBasedAdapter = new RowBasedSegment<>(
         SegmentId.dummy("test"),

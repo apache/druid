@@ -19,15 +19,18 @@
 
 package org.apache.druid.frame.write;
 
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.key.SortColumn;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.field.FieldReaders;
+import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.data.IndexedInts;
@@ -170,26 +173,33 @@ public class FrameWriterUtils
   }
 
   /**
-   * Returns whether the provided sortColumns are a prefix of the signature. This is required by frame writers
-   * and readers. It's especially important for row-based frames, because it allows us to treat the sort key
-   * as a chunk of bytes.
+   * Verifies whether the provided sortColumns are all sortable, and are a prefix of the signature. This is required
+   * because it allows us to treat the sort key as a chunk of bytes.
+   *
+   * Exits quietly if the sort columns are OK. Throws an exception if there is a problem.
+   *
+   * @throws IllegalArgumentException if there is a problem
    */
-  public static boolean areSortColumnsPrefixOfSignature(
-      final RowSignature signature,
-      final List<SortColumn> sortColumns
+  public static void verifySortColumns(
+      final List<SortColumn> sortColumns,
+      final RowSignature signature
   )
   {
-    if (sortColumns.size() > signature.size()) {
-      return false;
+    if (!areSortColumnsPrefixOfSignature(sortColumns, signature)) {
+      throw new IAE(
+          "Sort column [%s] must be a prefix of the signature",
+          sortColumns.stream().map(SortColumn::columnName).collect(Collectors.joining(", "))
+      );
     }
 
-    for (int i = 0; i < sortColumns.size(); i++) {
-      if (!sortColumns.get(i).columnName().equals(signature.getColumnName(i))) {
-        return false;
+    // Verify that all sort columns are comparable.
+    for (final SortColumn sortColumn : sortColumns) {
+      final ColumnType columnType = signature.getColumnType(sortColumn.columnName()).orElse(null);
+
+      if (columnType == null || !FieldReaders.create(sortColumn.columnName(), columnType).isComparable()) {
+        throw new IAE("Sort column [%s] is not comparable (type = %s)", sortColumn.columnName(), columnType);
       }
     }
-
-    return true;
   }
 
   /**
@@ -259,5 +269,26 @@ public class FrameWriterUtils
     } else {
       return ByteBuffer.wrap(StringUtils.toUtf8(data));
     }
+  }
+
+  /**
+   * Returns whether the provided sortColumns are all a prefix of the signature.
+   */
+  private static boolean areSortColumnsPrefixOfSignature(
+      final List<SortColumn> sortColumns,
+      final RowSignature signature
+  )
+  {
+    if (sortColumns.size() > signature.size()) {
+      return false;
+    }
+
+    for (int i = 0; i < sortColumns.size(); i++) {
+      if (!sortColumns.get(i).columnName().equals(signature.getColumnName(i))) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }

@@ -20,6 +20,8 @@
 package org.apache.druid.frame.field;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.frame.write.UnsupportedColumnTypeException;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
@@ -34,7 +36,7 @@ public class FieldReaders
   /**
    * Helper used by {@link org.apache.druid.frame.read.FrameReader}.
    */
-  public static FieldReader create(final ColumnType columnType)
+  public static FieldReader create(final String columnName, final ColumnType columnType)
   {
     switch (Preconditions.checkNotNull(columnType, "columnType").getType()) {
       case LONG:
@@ -59,7 +61,7 @@ public class FieldReaders
         // Fall through to error for other array types
 
       default:
-        throw new UOE("Unsupported column type [%s]", columnType);
+        throw new UnsupportedColumnTypeException(columnName, columnType);
     }
   }
 }

@@ -62,11 +62,6 @@ public class FrameStorageAdapter implements StorageAdapter
     this.cursorFactory = frameReader.makeCursorFactory(frame);
   }
 
-  public Frame frame()
-  {
-    return frame;
-  }
-
   @Override
   public Interval getInterval()
   {

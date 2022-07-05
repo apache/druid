@@ -33,9 +33,6 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.segment.FrameSegment;
-import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
@@ -69,7 +66,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- *
  */
 public class TestIndex
 {
@@ -214,14 +210,6 @@ public class TestIndex
       throw new RuntimeException(e);
     }
   });
-  public static Supplier<FrameSegment> frameSegmentRowBased = Suppliers.memoize(() -> FrameTestUtil.adapterToFrameSegment(
-      new QueryableIndexStorageAdapter(mmappedIndex.get()),
-      FrameType.ROW_BASED)
-  );
-  public static Supplier<FrameSegment> frameSegmentColumnar = Suppliers.memoize(() -> FrameTestUtil.adapterToFrameSegment(
-      new QueryableIndexStorageAdapter(mmappedIndex.get()),
-      FrameType.COLUMNAR)
-  );
 
   public static IncrementalIndex getIncrementalTestIndex()
   {
@@ -256,16 +244,6 @@ public class TestIndex
   public static QueryableIndex mergedRealtimeIndex()
   {
     return mergedRealtime.get();
-  }
-
-  public static FrameSegment getRowBasedFrameSegment()
-  {
-    return frameSegmentRowBased.get();
-  }
-
-  public static FrameSegment getColumnarFrameSegment()
-  {
-    return frameSegmentColumnar.get();
   }
 
   public static IncrementalIndex makeRealtimeIndex(final String resourceFilename)

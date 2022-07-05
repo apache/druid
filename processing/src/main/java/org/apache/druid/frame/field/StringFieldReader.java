@@ -21,8 +21,8 @@ package org.apache.druid.frame.field;
 
 import com.google.common.base.Predicate;
 import com.google.common.primitives.Ints;
-import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;

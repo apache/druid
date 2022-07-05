@@ -19,9 +19,9 @@
 
 package org.apache.druid.frame.write.columnar;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;

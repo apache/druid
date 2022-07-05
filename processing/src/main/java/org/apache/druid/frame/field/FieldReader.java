@@ -19,8 +19,8 @@
 
 package org.apache.druid.frame.field;
 
-import org.apache.druid.frame.key.RowKey;
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.ColumnValueSelector;

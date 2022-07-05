@@ -28,7 +28,6 @@ import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.hyperic.sigar.Mem;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -155,11 +154,7 @@ public class Frame
     for (int regionNumber = 0; regionNumber < numRegions; regionNumber++) {
       regionEnd = memory.getLong(HEADER_SIZE + rowOrderSize + (long) regionNumber * Long.BYTES);
 
-      if (regionEnd < regionStart) {
-        throw new ISE("Region [%d] invalid: end [%,d] before start [%,d]", regionNumber, regionEnd, regionStart);
-      }
-
-      if (regionEnd < expectedSizeForPreamble || regionEnd > numBytes) {
+      if (regionEnd < regionStart || regionEnd > numBytes) {
         throw new ISE(
             "Region [%d] invalid: end [%,d] out of range [%,d -> %,d]",
             regionNumber,
@@ -332,7 +327,7 @@ public class Frame
       final int rowPosition = memory.getInt(HEADER_SIZE + (long) Integer.BYTES * logicalRow);
 
       if (rowPosition < 0 || rowPosition >= numRows) {
-        throw new ISE("Invalid physical row position. Corrupt frame?", logicalRow);
+        throw new ISE("Invalid physical row position for logical row [%,d]. Corrupt frame?", logicalRow);
       }
 
       return rowPosition;

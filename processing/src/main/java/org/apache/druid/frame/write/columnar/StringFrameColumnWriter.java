@@ -21,11 +21,11 @@ package org.apache.druid.frame.write.columnar;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
+import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryRange;
 import org.apache.druid.frame.write.FrameWriterUtils;
-import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -129,6 +129,7 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
       final int len = utf8Datum.remaining();
 
       if (len > 0) {
+        assert stringDataCursor != null; // Won't be null when len > 0, since utf8DataByteLength would be > 0.
         FrameWriterUtils.copyByteBufferToMemory(
             utf8Datum,
             stringDataCursor.memory(),
@@ -140,6 +141,8 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
 
       lastStringLength += len;
       lastCumulativeStringLength += len;
+
+      assert stringLengthsCursor != null; // Won't be null when utf8Data.size() > 0
       stringLengthsCursor.memory()
                          .putInt(stringLengthsCursor.start() + (long) Integer.BYTES * i, lastCumulativeStringLength);
     }

@@ -20,9 +20,9 @@
 package org.apache.druid.frame.key;
 
 import com.google.common.primitives.Ints;
-import org.apache.druid.frame.read.FrameReaderUtils;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.frame.read.FrameReaderUtils;
 
 import java.util.Comparator;
 import java.util.List;

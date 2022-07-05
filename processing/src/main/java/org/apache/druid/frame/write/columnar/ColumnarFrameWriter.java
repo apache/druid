@@ -19,16 +19,16 @@
 
 package org.apache.druid.frame.write.columnar;
 
-import org.apache.druid.frame.allocation.AppendableMemory;
+import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryRange;
 import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameSort;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterUtils;
-import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.RowSignature;
 

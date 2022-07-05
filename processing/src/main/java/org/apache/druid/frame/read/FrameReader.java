@@ -21,11 +21,11 @@ package org.apache.druid.frame.read;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.field.FieldReader;
+import org.apache.druid.frame.field.FieldReaders;
 import org.apache.druid.frame.key.FrameComparisonWidget;
 import org.apache.druid.frame.key.FrameComparisonWidgetImpl;
 import org.apache.druid.frame.key.SortColumn;
-import org.apache.druid.frame.field.FieldReader;
-import org.apache.druid.frame.field.FieldReaders;
 import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
 import org.apache.druid.frame.segment.row.FrameCursorFactory;
@@ -93,7 +93,7 @@ public class FrameReader
           );
 
       columnReaders.add(FrameColumnReaders.create(columnNumber, columnType));
-      fieldReaders.add(FieldReaders.create(columnType));
+      fieldReaders.add(FieldReaders.create(signature.getColumnName(columnNumber), columnType));
     }
 
     return new FrameReader(signature, columnReaders, fieldReaders);
@@ -153,9 +153,7 @@ public class FrameReader
    */
   public FrameComparisonWidget makeComparisonWidget(final Frame frame, final List<SortColumn> sortColumns)
   {
-    if (!FrameWriterUtils.areSortColumnsPrefixOfSignature(signature, sortColumns)) {
-      throw new IAE("Sort columns must be a prefix of the signature");
-    }
+    FrameWriterUtils.verifySortColumns(sortColumns, signature);
 
     // Verify that all sort columns are comparable.
     for (final SortColumn sortColumn : sortColumns) {

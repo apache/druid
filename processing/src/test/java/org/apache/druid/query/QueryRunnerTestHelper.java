@@ -371,9 +371,7 @@ public class QueryRunnerTestHelper
             new QueryableIndexSegment(noRollupMMappedTestIndex, SEGMENT_ID),
             "noRollupMMappedTestIndex"
         ),
-        makeQueryRunner(factory, new QueryableIndexSegment(mergedRealtimeIndex, SEGMENT_ID), "mergedRealtimeIndex"),
-        makeQueryRunner(factory, TestIndex.getRowBasedFrameSegment(), "frame (row-based)"),
-        makeQueryRunner(factory, TestIndex.getColumnarFrameSegment(), "frame (columnar)")
+        makeQueryRunner(factory, new QueryableIndexSegment(mergedRealtimeIndex, SEGMENT_ID), "mergedRealtimeIndex")
     );
   }
 

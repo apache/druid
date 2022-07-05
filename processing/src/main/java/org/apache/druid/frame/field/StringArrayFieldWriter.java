@@ -19,8 +19,8 @@
 
 package org.apache.druid.frame.field;
 
-import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.util.List;

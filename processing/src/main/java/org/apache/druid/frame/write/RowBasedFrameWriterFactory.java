@@ -21,9 +21,9 @@ package org.apache.druid.frame.write;
 
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryAllocator;
-import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.frame.field.FieldWriter;
 import org.apache.druid.frame.field.FieldWriters;
+import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnType;
@@ -48,6 +48,8 @@ public class RowBasedFrameWriterFactory implements FrameWriterFactory
     this.allocator = allocator;
     this.signature = signature;
     this.sortColumns = sortColumns;
+
+    FrameWriterUtils.verifySortColumns(sortColumns, signature);
   }
 
   @Override

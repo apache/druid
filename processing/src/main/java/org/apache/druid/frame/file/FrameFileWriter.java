@@ -20,11 +20,11 @@
 package org.apache.druid.frame.file;
 
 import com.google.common.primitives.Ints;
-import org.apache.druid.frame.allocation.AppendableMemory;
+import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryRange;
-import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.ISE;
 

@@ -20,9 +20,9 @@
 package org.apache.druid.frame.read.columnar;
 
 import com.google.common.primitives.Ints;
+import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.write.columnar.ComplexFrameColumnWriter;
-import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;

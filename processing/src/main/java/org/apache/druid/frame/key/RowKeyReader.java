@@ -21,14 +21,13 @@ package org.apache.druid.frame.key;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
+import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.field.FieldReader;
 import org.apache.druid.frame.field.FieldReaders;
 import org.apache.druid.frame.field.RowMemoryFieldPointer;
 import org.apache.druid.frame.field.RowReader;
 import org.apache.druid.frame.segment.row.ConstantFrameRowPointer;
-import org.apache.datasketches.memory.Memory;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -40,7 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Embeds the logic to read {@link RowKey} with a given list of {@link SortColumn} sort columns.
+ * Embeds the logic to read {@link RowKey} from a particular signature of row-based frame.
  *
  * Stateless and immutable.
  */
@@ -67,7 +66,7 @@ public class RowKeyReader
       final ColumnType columnType =
           Preconditions.checkNotNull(capabilities, "Type for column [%s]", columnName).toColumnType();
 
-      fieldReaders.add(FieldReaders.create(columnType));
+      fieldReaders.add(FieldReaders.create(columnName, columnType));
     }
 
     return new RowKeyReader(signature, new RowReader(fieldReaders));

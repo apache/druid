@@ -22,9 +22,9 @@ package org.apache.druid.frame.write;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryRange;
 import org.apache.druid.frame.field.FieldWriter;
 import org.apache.druid.frame.key.SortColumn;
@@ -90,9 +90,7 @@ public class RowBasedFrameWriter implements FrameWriter
     this.rowOffsetMemory = rowOffsetMemory;
     this.dataMemory = dataMemory;
 
-    if (!FrameWriterUtils.areSortColumnsPrefixOfSignature(signature, sortColumns)) {
-      throw new IAE("Sort columns must be a prefix of the signature");
-    }
+    FrameWriterUtils.verifySortColumns(sortColumns, signature);
 
     // Check for disallowed field names.
     final Set<String> disallowedFieldNames = FrameWriterUtils.findDisallowedFieldNames(signature);
@@ -149,7 +147,7 @@ public class RowBasedFrameWriter implements FrameWriter
   {
     return Frame.HEADER_SIZE
            + computeRowOrderSize()
-           + NUM_REGIONS * Long.BYTES
+           + ((long) NUM_REGIONS * Long.BYTES)
            + rowOffsetMemory.size()
            + dataMemory.size();
   }
@@ -179,10 +177,10 @@ public class RowBasedFrameWriter implements FrameWriter
     }
 
     // Write region ending positions.
-    long regionsStart = Frame.HEADER_SIZE + computeRowOrderSize() + NUM_REGIONS * Long.BYTES;
+    long regionsStart = Frame.HEADER_SIZE + computeRowOrderSize() + ((long) NUM_REGIONS * Long.BYTES);
     memory.putLong(currentPosition, regionsStart + rowOffsetMemory.size());
     memory.putLong(currentPosition + Long.BYTES, regionsStart + rowOffsetMemory.size() + dataMemory.size());
-    currentPosition += NUM_REGIONS * Long.BYTES;
+    currentPosition += ((long) NUM_REGIONS * Long.BYTES);
 
     // Write regions.
     currentPosition += rowOffsetMemory.writeTo(memory, currentPosition);

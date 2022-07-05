@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.segment.row;
 
+import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryRange;
@@ -26,7 +27,6 @@ import org.apache.druid.frame.field.FieldReader;
 import org.apache.druid.frame.field.RowMemoryFieldPointer;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
-import org.apache.datasketches.memory.Memory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;

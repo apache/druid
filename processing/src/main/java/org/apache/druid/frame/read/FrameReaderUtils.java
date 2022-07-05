@@ -20,9 +20,9 @@
 package org.apache.druid.frame.read;
 
 import com.google.common.primitives.Ints;
+import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.allocation.MemoryRange;
 import org.apache.druid.frame.segment.row.FrameColumnSelectorFactory;
-import org.apache.datasketches.memory.Memory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;

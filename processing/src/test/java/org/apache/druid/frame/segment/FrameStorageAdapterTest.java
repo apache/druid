@@ -98,7 +98,7 @@ public class FrameStorageAdapterTest
     }
 
     @Before
-    public void setUp() throws Exception
+    public void setUp()
     {
       queryableAdapter = new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex());
       frameSegment = FrameTestUtil.adapterToFrameSegment(queryableAdapter, frameType);
@@ -106,7 +106,7 @@ public class FrameStorageAdapterTest
     }
 
     @After
-    public void tearDown() throws Exception
+    public void tearDown()
     {
       if (frameSegment != null) {
         frameSegment.close();
@@ -330,7 +330,7 @@ public class FrameStorageAdapterTest
     }
 
     @Before
-    public void setUp() throws Exception
+    public void setUp()
     {
       queryableAdapter = new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex());
       frameSegment = FrameTestUtil.adapterToFrameSegment(queryableAdapter, frameType);
@@ -338,7 +338,7 @@ public class FrameStorageAdapterTest
     }
 
     @After
-    public void tearDown() throws Exception
+    public void tearDown()
     {
       if (frameSegment != null) {
         frameSegment.close();

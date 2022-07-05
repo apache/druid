@@ -19,11 +19,11 @@
 
 package org.apache.druid.frame.read.columnar;
 
+import org.apache.datasketches.memory.Memory;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
 import org.apache.druid.frame.write.columnar.LongFrameColumnWriter;
-import org.apache.datasketches.memory.Memory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;

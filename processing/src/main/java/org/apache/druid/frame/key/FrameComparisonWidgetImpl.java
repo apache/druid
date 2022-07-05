@@ -20,13 +20,13 @@
 package org.apache.druid.frame.key;
 
 import com.google.common.primitives.Ints;
+import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
-import org.apache.datasketches.memory.Memory;
 import org.apache.druid.java.util.common.IAE;
 
 import java.util.List;
@@ -82,9 +82,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
       final List<SortColumn> sortColumns
   )
   {
-    if (!FrameWriterUtils.areSortColumnsPrefixOfSignature(frameReader.signature(), sortColumns)) {
-      throw new IAE("Sort columns must be a prefix of the signature");
-    }
+    FrameWriterUtils.verifySortColumns(sortColumns, frameReader.signature());
 
     return new FrameComparisonWidgetImpl(
         FrameType.ROW_BASED.ensureType(frame),

@@ -24,7 +24,6 @@ import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.columnar.FrameColumnReader;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
