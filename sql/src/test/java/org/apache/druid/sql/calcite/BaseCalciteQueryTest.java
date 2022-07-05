@@ -85,12 +85,12 @@ import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
+import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.rule.DruidExtensionCalciteRuleManager;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -1023,7 +1023,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         authorizerMapper,
         objectMapper,
         CalciteTests.DRUID_SCHEMA_NAME,
-        new DruidExtensionCalciteRuleManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of())
     );
     final SqlLifecycleFactory sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory, authConfig);
 

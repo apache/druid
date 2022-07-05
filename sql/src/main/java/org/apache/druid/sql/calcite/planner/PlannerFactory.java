@@ -45,7 +45,6 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserImplFactory;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
-import org.apache.druid.sql.calcite.rule.DruidExtensionCalciteRuleManager;
 import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
@@ -73,7 +72,7 @@ public class PlannerFactory
   private final ObjectMapper jsonMapper;
   private final AuthorizerMapper authorizerMapper;
   private final String druidSchemaName;
-  private final DruidExtensionCalciteRuleManager druidExtensionCalciteRuleManager;
+  private final CalciteRulesManager calciteRuleManager;
 
   @Inject
   public PlannerFactory(
@@ -85,7 +84,7 @@ public class PlannerFactory
       final AuthorizerMapper authorizerMapper,
       final @Json ObjectMapper jsonMapper,
       final @DruidSchemaName String druidSchemaName,
-      final DruidExtensionCalciteRuleManager druidExtensionCalciteRuleManager
+      final CalciteRulesManager calciteRuleManager
   )
   {
     this.rootSchema = rootSchema;
@@ -96,7 +95,7 @@ public class PlannerFactory
     this.authorizerMapper = authorizerMapper;
     this.jsonMapper = jsonMapper;
     this.druidSchemaName = druidSchemaName;
-    this.druidExtensionCalciteRuleManager = druidExtensionCalciteRuleManager;
+    this.calciteRuleManager = calciteRuleManager;
   }
 
   /**
@@ -167,7 +166,7 @@ public class PlannerFactory
         .traitDefs(ConventionTraitDef.INSTANCE, RelCollationTraitDef.INSTANCE)
         .convertletTable(new DruidConvertletTable(plannerContext))
         .operatorTable(operatorTable)
-        .programs(Rules.programs(plannerContext, druidExtensionCalciteRuleManager))
+        .programs(calciteRuleManager.programs(plannerContext))
         .executor(new DruidRexExecutor(plannerContext))
         .typeSystem(DruidTypeSystem.INSTANCE)
         .defaultSchema(rootSchema.getSubSchema(druidSchemaName))

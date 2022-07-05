@@ -26,7 +26,7 @@ import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
-import org.apache.druid.sql.calcite.rule.DruidExtensionCalciteRuleProvider;
+import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
 import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 
@@ -56,6 +56,6 @@ public class CalcitePlannerModule implements Module
 
     binder.bind(PlannerFactory.class).in(LazySingleton.class);
     binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
-    Multibinder.newSetBinder(binder, DruidExtensionCalciteRuleProvider.class);
+    Multibinder.newSetBinder(binder, ExtensionCalciteRuleProvider.class);
   }
 }

@@ -74,12 +74,12 @@ import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlPlanningException.PlanningError;
+import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
-import org.apache.druid.sql.calcite.rule.DruidExtensionCalciteRuleManager;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -245,7 +245,7 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
-        new DruidExtensionCalciteRuleManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of())
     );
 
     lifecycleManager = new SqlLifecycleManager()

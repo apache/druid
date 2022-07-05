@@ -25,11 +25,11 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 /**
  * This interface provides a way to supply custom calcite planning rules from extensions. All the custom rules are
- * collected and supplied to the planner which invokes {@link DruidExtensionCalciteRuleProvider#getRule(PlannerContext)}
+ * collected and supplied to the planner which invokes {@link ExtensionCalciteRuleProvider#getRule(PlannerContext)}
  * for each of the rule provider per query.
  */
 @UnstableApi
-public interface DruidExtensionCalciteRuleProvider
+public interface ExtensionCalciteRuleProvider
 {
   RelOptRule getRule(PlannerContext plannerContext);
 }

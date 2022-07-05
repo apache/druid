@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import org.apache.calcite.interpreter.Bindables;
 import org.apache.calcite.plan.RelOptLattice;
 import org.apache.calcite.plan.RelOptMaterialization;
@@ -74,18 +75,19 @@ import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
-import org.apache.druid.sql.calcite.rule.DruidExtensionCalciteRuleManager;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
 import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
+import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 
 import java.util.List;
+import java.util.Set;
 
-public class Rules
+public class CalciteRulesManager
 {
   public static final int DRUID_CONVENTION_RULES = 0;
   public static final int BINDABLE_CONVENTION_RULES = 1;
@@ -95,8 +97,8 @@ public class Rules
   // reduced. Hence, this resulted in an infinite loop of Calcite trying to reducing the same expression over and over.
   // Calcite 1.23.0 fixes this issue by not consider expression as reduced if this case happens. However, while
   // we are still using Calcite 1.21.0, a workaround is to limit the number of pattern matches to avoid infinite loop.
-  private static final String HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING = "druid.sql.planner.hepMatchLimit";
-  private static final int HEP_DEFAULT_MATCH_LIMIT = Integer.valueOf(
+  private final String HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING = "druid.sql.planner.hepMatchLimit";
+  private final int HEP_DEFAULT_MATCH_LIMIT = Integer.valueOf(
       System.getProperty(HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING, "1200")
   );
 
@@ -108,7 +110,7 @@ public class Rules
   //    functions).
   // 3) JoinCommuteRule (we don't support reordering joins yet).
   // 4) JoinPushThroughJoinRule (we don't support reordering joins yet).
-  private static final List<RelOptRule> BASE_RULES =
+  private final List<RelOptRule> BASE_RULES =
       ImmutableList.of(
           AggregateStarTableRule.INSTANCE,
           AggregateStarTableRule.INSTANCE2,
@@ -131,7 +133,7 @@ public class Rules
       );
 
   // Rules for scanning via Bindable, embedded directly in RelOptUtil's registerDefaultRules.
-  private static final List<RelOptRule> DEFAULT_BINDABLE_RULES =
+  private final List<RelOptRule> DEFAULT_BINDABLE_RULES =
       ImmutableList.of(
           Bindables.BINDABLE_TABLE_SCAN_RULE,
           ProjectTableScanRule.INSTANCE,
@@ -143,7 +145,7 @@ public class Rules
   // 1) ReduceExpressionsRule.JOIN_INSTANCE
   //    Removed by https://github.com/apache/druid/pull/9941 due to issue in https://github.com/apache/druid/issues/9942
   //    TODO: Re-enable when https://github.com/apache/druid/issues/9942 is fixed
-  private static final List<RelOptRule> REDUCTION_RULES =
+  private final List<RelOptRule> REDUCTION_RULES =
       ImmutableList.of(
           ReduceExpressionsRule.PROJECT_INSTANCE,
           ReduceExpressionsRule.FILTER_INSTANCE,
@@ -159,7 +161,7 @@ public class Rules
   // Omit DateRangeRules due to https://issues.apache.org/jira/browse/CALCITE-1601
   // Omit UnionMergeRule since it isn't very effective given how Druid unions currently operate and is potentially
   // expensive in terms of planning time.
-  private static final List<RelOptRule> ABSTRACT_RULES =
+  private final List<RelOptRule> ABSTRACT_RULES =
       ImmutableList.of(
           AggregateProjectPullUpConstantsRule.INSTANCE2,
           UnionPullUpConstantsRule.INSTANCE,
@@ -187,7 +189,7 @@ public class Rules
   // 4) FilterJoinRule.FILTER_ON_JOIN and FilterJoinRule.JOIN
   //    Removed by https://github.com/apache/druid/pull/9773 due to issue in https://github.com/apache/druid/issues/9843
   //    TODO: Re-enable when https://github.com/apache/druid/issues/9843 is fixed
-  private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
+  private final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
       ImmutableList.of(
           AbstractConverter.ExpandConversionRule.INSTANCE,
           AggregateRemoveRule.INSTANCE,
@@ -199,18 +201,21 @@ public class Rules
           SortRemoveRule.INSTANCE
       );
 
-  private Rules()
+  private final Set<ExtensionCalciteRuleProvider> extensionCalciteRuleProviderSet;
+
+  /**
+   * Manages the rules for planning of SQL queries via Calcite. Also provides methods for extensions to provide custom
+   * rules for planning.
+   * @param extensionCalciteRuleProviderSet the set of custom rules coming from extensions
+   */
+  @Inject
+  public CalciteRulesManager(final Set<ExtensionCalciteRuleProvider> extensionCalciteRuleProviderSet)
   {
-    // No instantiation.
+    this.extensionCalciteRuleProviderSet = extensionCalciteRuleProviderSet;
   }
 
-  public static List<Program> programs(
-      final PlannerContext plannerContext,
-      final DruidExtensionCalciteRuleManager druidExtensionCalciteRuleManager
-  )
+  public List<Program> programs(final PlannerContext plannerContext)
   {
-
-
     // Program that pre-processes the tree before letting the full-on VolcanoPlanner loose.
     final Program preProgram =
         Programs.sequence(
@@ -220,18 +225,17 @@ public class Rules
         );
 
     return ImmutableList.of(
-        Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(
-            plannerContext,
-            druidExtensionCalciteRuleManager
-        ))),
+        Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext))),
         Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext)))
     );
   }
 
-  private static Program buildHepProgram(Iterable<? extends RelOptRule> rules,
-                                         boolean noDag,
-                                         RelMetadataProvider metadataProvider,
-                                         int matchLimit)
+  public Program buildHepProgram(
+      final Iterable<? extends RelOptRule> rules,
+      final boolean noDag,
+      final RelMetadataProvider metadataProvider,
+      final int matchLimit
+  )
   {
     final HepProgramBuilder builder = HepProgram.builder();
     builder.addMatchLimit(matchLimit);
@@ -241,10 +245,7 @@ public class Rules
     return Programs.of(builder.build(), noDag, metadataProvider);
   }
 
-  public static List<RelOptRule> druidConventionRuleSet(
-      final PlannerContext plannerContext,
-      final DruidExtensionCalciteRuleManager druidExtensionCalciteRuleManager
-  )
+  public List<RelOptRule> druidConventionRuleSet(final PlannerContext plannerContext)
   {
     final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
         .<RelOptRule>builder()
@@ -255,13 +256,13 @@ public class Rules
         .add(new ExternalTableScanRule(plannerContext))
         .addAll(DruidRules.rules(plannerContext));
 
-    return druidExtensionCalciteRuleManager.updateDruidConventionRuleSet(
-        plannerContext,
-        retVal.build()
-    );
+    for (ExtensionCalciteRuleProvider extensionCalciteRuleProvider : extensionCalciteRuleProviderSet) {
+      retVal.add(extensionCalciteRuleProvider.getRule(plannerContext));
+    }
+    return retVal.build();
   }
 
-  private static List<RelOptRule> bindableConventionRuleSet(final PlannerContext plannerContext)
+  public List<RelOptRule> bindableConventionRuleSet(final PlannerContext plannerContext)
   {
     return ImmutableList.<RelOptRule>builder()
         .addAll(baseRuleSet(plannerContext))
@@ -271,7 +272,7 @@ public class Rules
         .build();
   }
 
-  private static List<RelOptRule> baseRuleSet(final PlannerContext plannerContext)
+  public List<RelOptRule> baseRuleSet(final PlannerContext plannerContext)
   {
     final PlannerConfig plannerConfig = plannerContext.getPlannerConfig();
     final ImmutableList.Builder<RelOptRule> rules = ImmutableList.builder();

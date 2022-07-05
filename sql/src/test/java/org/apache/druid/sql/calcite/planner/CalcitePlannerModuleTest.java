@@ -40,8 +40,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.rule.DruidExtensionCalciteRuleManager;
-import org.apache.druid.sql.calcite.rule.DruidExtensionCalciteRuleProvider;
+import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
@@ -128,7 +127,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         },
         target,
         binder -> {
-          Multibinder.newSetBinder(binder, DruidExtensionCalciteRuleProvider.class)
+          Multibinder.newSetBinder(binder, ExtensionCalciteRuleProvider.class)
                      .addBinding()
                      .toInstance(plannerContext -> customRule);
         }
@@ -176,10 +175,9 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         rootSchema,
         new QueryContext()
     );
-    boolean containsCustomRule = Rules.druidConventionRuleSet(
-        context,
-        injector.getInstance(DruidExtensionCalciteRuleManager.class)
-    ).contains(customRule);
+    boolean containsCustomRule = injector.getInstance(CalciteRulesManager.class)
+                                         .druidConventionRuleSet(context)
+                                         .contains(customRule);
     Assert.assertTrue(containsCustomRule);
   }
 }
