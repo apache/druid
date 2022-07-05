@@ -96,7 +96,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
     try (BaseColumn col = columnHolder.getColumn()) {
       if (!(col instanceof DictionaryEncodedColumn)) {
-        return Integer.MAX_VALUE;
+        return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
       }
       return ((DictionaryEncodedColumn) col).getCardinality();
     }

@@ -1669,8 +1669,10 @@
                 <jdk.surefire.argLine>
                     <!-- required for JvmMonitor tests on Java 11+ -->
                     --add-exports=java.base/jdk.internal.perf=ALL-UNNAMED
+                    <!-- required for DataSketches Memory mmapping on Java 11+ -->
+                    --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
+                    --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
                     --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
-                    --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
                 </jdk.surefire.argLine>
             </properties>
             <build>

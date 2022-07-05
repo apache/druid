@@ -149,7 +149,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public int getDimensionCardinality(String dimension)
   {
     if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-      return Integer.MAX_VALUE;
+      return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
     }
 
     IncrementalIndex.DimensionDesc desc = index.getDimension(dimension);
@@ -157,9 +157,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       return 0;
     }
 
-    DimensionIndexer indexer = desc.getIndexer();
-    int cardinality = indexer.getCardinality();
-    return cardinality != DimensionDictionarySelector.CARDINALITY_UNKNOWN ? cardinality : Integer.MAX_VALUE;
+    return desc.getIndexer().getCardinality();
   }
 
   @Override
