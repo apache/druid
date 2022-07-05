@@ -26,15 +26,15 @@ title: "Upgrade Prep"
 
 ### Altering segments table
 
-**If you have set `druid.metadata.storage.connector.createTables` to `true` (which is the default), and your metadata connect user has DDL priviliges, you can disregard this section. You are urged to still evaluate the optional section below**
+**If you have set `druid.metadata.storage.connector.createTables` to `true` (which is the default), and your metadata connect user has DDL privileges, you can disregard this section. You are urged to still evaluate the optional section below**
 
 **The coordinator and overlord services will fail if you do not execute this change prior to the upgrade**
 
 A new column, `used_flag_last_updated`, is needed in the segments table to support new
 segment killing functionality. You can manually alter the table, or you can use
-a pre-written tool to perform the update. 
+a CLI tool to perform the update.
 
-#### Pre-written tool
+#### CLI tool
 
 Druid provides a `metadata-update` tool for updating Druid's metadata tables.
 
@@ -74,7 +74,7 @@ ADD used_flag_last_updated varchar(255);
 
 This is an optional step to take **after** you upgrade the Overlord and Coordinator to `0.24+` (from `0.23` and earlier). If you do not take this action and are also using `druid.coordinator.kill.on=true`, the logic to identify segments that can be killed will not honor `druid.coordinator.kill.bufferPeriod` for the rows in the segments table where `used_flag_last_updated == null`.
 
-#### Pre-written tool
+#### CLI tool
 
 Druid provides a `metadata-update` tool for updating Druid's metadata tables. Note that this tool will update `used_flag_last_updated` for all rows that match `used = false` in one transaction.
 
@@ -105,7 +105,7 @@ java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log
 
 #### Manual UPDATE
 
-Note that we choose a random date string for this example. We reccommend using the current UTC time when you invoke the command. If you have lots of rows that match the conditional `used = false`, you may want to incrementlly update the table using a limit clause.
+Note that we choose a random date string for this example. We recommend using the current UTC time when you invoke the command. If you have lots of rows that match the conditional `used = false`, you may want to incrementally update the table using a limit clause.
 
 ```SQL
 UPDATE druid_segment
