@@ -364,12 +364,11 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
     final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
 
-    toolbox.addMonitor(
-        new RealtimeMetricsMonitor(
-            Collections.singletonList(fireDepartmentForMetrics),
-            Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
-        )
+    RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
+        Collections.singletonList(fireDepartmentForMetrics),
+        Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
     );
+    toolbox.addMonitor(metricsMonitor);
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
@@ -486,6 +485,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       } else {
         appenderator.close();
       }
+      toolbox.removeMonitor(metricsMonitor);
     }
   }
 

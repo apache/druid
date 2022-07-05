@@ -850,12 +850,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
     FireDepartmentMetrics buildSegmentsFireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
 
+    final TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
+        this,
+        fireDepartmentForMetrics,
+        buildSegmentsMeters
+    );
     if (toolbox.getMonitorScheduler() != null) {
-      final TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
-          this,
-          fireDepartmentForMetrics,
-          buildSegmentsMeters
-      );
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
     }
 
@@ -1045,6 +1045,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         appenderator.closeNow();
       } else {
         appenderator.close();
+      }
+      if (toolbox.getMonitorScheduler() != null) {
+        toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
       }
     }
   }

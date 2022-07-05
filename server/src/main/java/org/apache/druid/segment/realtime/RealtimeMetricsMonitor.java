@@ -46,6 +46,8 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
   private final List<FireDepartment> fireDepartments;
   private final Map<String, String[]> dimensions;
 
+  private volatile boolean lastRoundMetricsToBePushed = true;
+
   @Inject
   public RealtimeMetricsMonitor(List<FireDepartment> fireDepartments)
   {
@@ -57,6 +59,19 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
     this.fireDepartments = fireDepartments;
     this.previousValues = new HashMap<>();
     this.dimensions = ImmutableMap.copyOf(dimensions);
+  }
+
+  @Override
+  public boolean monitor(ServiceEmitter emitter)
+  {
+    if (started) {
+      return doMonitor(emitter);
+    } else if (lastRoundMetricsToBePushed) {
+      lastRoundMetricsToBePushed = false;
+      return doMonitor(emitter);
+    }
+
+    return false;
   }
 
   @Override

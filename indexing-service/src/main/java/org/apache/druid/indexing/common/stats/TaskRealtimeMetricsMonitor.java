@@ -50,6 +50,8 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
   private FireDepartmentMetrics previousFireDepartmentMetrics;
   private RowIngestionMetersTotals previousRowIngestionMetersTotals;
 
+  private volatile boolean lastRoundMetricsToBePushed = true;
+
   public TaskRealtimeMetricsMonitor(
       FireDepartment fireDepartment,
       RowIngestionMeters rowIngestionMeters,
@@ -61,6 +63,19 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     this.dimensions = ImmutableMap.copyOf(dimensions);
     previousFireDepartmentMetrics = new FireDepartmentMetrics();
     previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0);
+  }
+
+  @Override
+  public boolean monitor(ServiceEmitter emitter)
+  {
+    if (started) {
+      return doMonitor(emitter);
+    } else if (lastRoundMetricsToBePushed) {
+      lastRoundMetricsToBePushed = false;
+      return doMonitor(emitter);
+    }
+
+    return false;
   }
 
   @Override
