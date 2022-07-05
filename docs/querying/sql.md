@@ -168,14 +168,11 @@ There are two important factors that can affect the performance of queries that 
 
 ## UNION ALL
 
-The "UNION ALL" operator fuses multiple queries together. Druid SQL supports the UNION ALL operator in two situations:
-top-level and table-level. Queries that use UNION ALL in any other way will not be able to execute.
+The UNION ALL operator fuses multiple queries together. Druid SQL supports the UNION ALL operator in two situations: top-level and table-level, as described below. Queries that use UNION ALL in any other way will fail.
 
 ### Top-level
 
-UNION ALL can be used at the very top outer layer of a SQL query (not in a subquery, and not in the FROM clause). In
-this case, the underlying queries will be run separately, back to back. Their results will be concatenated together
-and appear one after the other.
+In top-level queries, you can use UNION ALL at the very top outer layer of the query - not in a subquery, and not in the FROM clause. The underlying queries run sequentially. Druid concatenates their results so that they appear one after the other.
 
 For example:
 
@@ -185,20 +182,15 @@ UNION ALL
 SELECT COUNT(*) FROM tbl WHERE my_column = 'value2'
 ```
 
-With top-level UNION ALL, no further processing can be done after the UNION ALL. For example, the results of the
-UNION ALL cannot have GROUP BY, ORDER BY, or any other operators applied to them.
+> With top-level queries, you can't apply GROUP BY, ORDER BY, or any other operator to the results of a UNION ALL.
 
 ### Table-level
 
-UNION ALL can be used to query multiple tables at the same time. In this case, it must appear in a subquery in the
-FROM clause, and the lower-level subqueries that are inputs to the UNION ALL operator must be simple table SELECTs.
-Features like expressions, column aliasing, JOIN, GROUP BY, ORDER BY, and so on cannot be used. The query will run
-natively using a [union datasource](datasource.md#union).
+In table-level queries, you must use UNION ALL in a subquery in the FROM clause, and create the lower-level subqueries that are inputs to the UNION ALL operator as simple table SELECTs. You can't use features like expressions, column aliasing, JOIN, GROUP BY, or ORDER BY in table-level queries.
 
-The same columns must be selected from each table in the same order, and those columns must either have the same types,
-or types that can be implicitly cast to each other (such as different numeric types). For this reason, it is generally
-more robust to write your queries to select specific columns. If you use `SELECT *`, you will need to modify your
-queries if a new column is added to one of the tables but not to the others.
+The query runs natively using a [union datasource](datasource.md#union).
+
+At table-level queries, you must select the same columns from each table in the same order, and those columns must either have the same types, or types that can be implicitly cast to each other (such as different numeric types). For this reason, it is generally more robust to write your queries to select specific columns. If you use `SELECT *`, you must modify your queries if a new column is added to one table but not to the others.
 
 For example:
 
@@ -212,9 +204,7 @@ FROM (
 GROUP BY col1
 ```
 
-With table-level UNION ALL, the rows from the unioned tables are not guaranteed to be processed in
-any particular order. They may be processed in an interleaved fashion. If you need a particular result ordering,
-use [ORDER BY](#order-by) on the outer query.
+With table-level UNION ALL, the rows from the unioned tables are not guaranteed to process in any particular order. They may process in an interleaved fashion. If you need a particular result ordering, use [ORDER BY](#order-by) on the outer query.
 
 ## EXPLAIN PLAN
 
