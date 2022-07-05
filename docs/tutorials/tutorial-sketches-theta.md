@@ -54,6 +54,7 @@ There is a lot of advanced math behind Theta sketches[^2], but Druid handles the
 
 This tutorial shows you how to create Theta sketches from your input data at ingestion time and how to run distinct count and set operation queries on the Theta sketches.
 
+## Prerequisites
 For this tutorial, we'll assume you've already downloaded Druid as described in
 the [single-machine quickstart](index.md) and have it running on your local machine.
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
@@ -105,13 +106,13 @@ In the **Configure schema** stage, enable rollup and confirm your choice in the 
 
 ![Configure schema for rollup and query granularity](../assets/tutorial-theta-03.png)
 
-You also add the Theta sketch during this stage. Select **Add metric**.
+Add the Theta sketch during this stage. Select **Add metric**.
 Define the new metric as a Theta sketch with the following details:
 * **Name**: `theta_uid`
 * **Type**: `thetaSketch`
 * **Field name**: `uid`
-* **Size**: Leave at the default value, `16384`.
-* **Is input theta sketch**: Leave at the default value, `False`.
+* **Size**: Accept the default value, `16384`.
+* **Is input theta sketch**: Accept the default value, `False`.
 
 ![Create Theta sketch metric](../assets/tutorial-theta-04.png)
 

@@ -102,8 +102,8 @@ see [partitioning and sorting](./partitioning.md) below for details).
 - Create other dimensions for attributes attached to your data points. These are often called "tags" in timeseries
 database systems.
 - Create [metrics](../querying/aggregations.md) corresponding to the types of aggregations that you want to be able
-to query. Typically this includes "sum", "min", and "max" (in one of the long, float, or double flavors). If you want to
-be able to compute percentiles or quantiles, use Druid's [approximate aggregators](../querying/aggregations.md#approximate-aggregations).
+to query. Typically this includes "sum", "min", and "max" (in one of the long, float, or double flavors). If you want the ability
+to compute percentiles or quantiles, use Druid's [approximate aggregators](../querying/aggregations.md#approximate-aggregations).
 - Consider enabling [rollup](./rollup.md), which will allow Druid to potentially combine multiple points into one
 row in your Druid datasource. This can be useful if you want to store data at a different time granularity than it is
 naturally emitted. It is also useful if you want to combine timeseries and non-timeseries data in the same datasource.
