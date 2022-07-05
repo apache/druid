@@ -38,6 +38,8 @@ def generate_report(module_path, report_orig_path, report_out_path):
         command = "cp -r {} {}".format(report_orig_path, report_out_path)
         subprocess.check_output(command, cwd=module_path, shell=True)
         print("Generated report for {} in {}".format(module_path, report_out_path))
+    except subprocess.CalledProcessError as e:
+        print("Encountered error [{}] with output [{}] when generating report for {}".format(e, e.output, module_path))
     except Exception as e:
         print("Encountered error [{}] when generating report for {}".format(e, module_path))
 
