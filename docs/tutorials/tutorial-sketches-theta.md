@@ -124,8 +124,8 @@ Click on the `uid` column in the data model and delete it using the trashcan ico
 
 ![Delete uid column](../assets/tutorial-theta-05.png)
 
-For the rest of the **Load data** wizard, set the following options:
-* **Partition** stage: Set **Segment granularity** to `day`.
+For the remaining stages of the **Load data** wizard, set the following options:
+* **Partition**: Set **Segment granularity** to `day`.
 * **Tune**: Leave the default options.
 * **Publish**: Set the datasource name to `ts_tutorial`.
 
@@ -154,7 +154,7 @@ On the **Edit spec** page, your final input spec should look like the following 
       "forceGuaranteedRollup": true
     },
     "dataSchema": {
-      "dataSource": "inline_data",
+      "dataSource": "ts_tutorial",
       "timestampSpec": {
         "column": "date",
         "format": "auto"
