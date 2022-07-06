@@ -154,7 +154,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
     final List<FrameFile.Flag> openModes = new ArrayList<>();
     openModes.add(FrameFile.Flag.BB_MEMORY_MAP);
 
-    if (majorJavaVersion() < 14) {
+    if (FrameTestUtil.jdkCanDataSketchesMemoryMap()) {
       // datasketches-memory mapping only works up through JDK 13. Higher JDK versions are unable to load 2GB+ files.
       // Skip these tests on higher JDK versions, since we test with JDK 15 in CI even though we don't officially
       // support it yet.
@@ -398,11 +398,5 @@ public class FrameFileTest extends InitializedNullHandlingTest
     // Not using adapter.getNumRows(), because RowBasedStorageAdapter doesn't support it.
     return FrameTestUtil.readRowsFromAdapter(adapter, RowSignature.empty(), false)
                         .accumulate(0, (i, in) -> i + 1);
-  }
-
-  private static int majorJavaVersion()
-  {
-    final StringTokenizer st = new StringTokenizer(System.getProperty("java.specification.version"), ".");
-    return Integer.parseInt(st.nextToken());
   }
 }

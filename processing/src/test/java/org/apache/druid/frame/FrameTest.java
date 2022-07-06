@@ -28,6 +28,7 @@ import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
+import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
@@ -58,7 +59,9 @@ import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RunWith(Enclosed.class)
 public class FrameTest
@@ -348,7 +351,10 @@ public class FrameTest
     {
       final List<Object[]> constructors = new ArrayList<>();
 
-      for (MemType memType : MemType.values()) {
+      for (MemType memType :
+          Arrays.stream(MemType.values())
+                .filter(m -> FrameTestUtil.jdkCanDataSketchesMemoryMap() || m != MemType.MEMORY_FILE)
+                .collect(Collectors.toList())) {
         for (boolean compressed : new boolean[]{true, false}) {
           constructors.add(new Object[]{memType, compressed});
         }
@@ -444,9 +450,9 @@ public class FrameTest
     {
       final StorageAdapter adapter = new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex());
       return Iterables.getOnlyElement(FrameSequenceBuilder.fromAdapter(adapter)
-                                                      .frameType(FrameType.COLUMNAR)
-                                                      .frames()
-                                                      .toList());
+                                                          .frameType(FrameType.COLUMNAR)
+                                                          .frames()
+                                                          .toList());
     }
   }
 

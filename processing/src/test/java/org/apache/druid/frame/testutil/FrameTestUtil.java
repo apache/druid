@@ -58,6 +58,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.StringTokenizer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -286,6 +287,16 @@ public class FrameTestUtil
     finally {
       cursor.close();
     }
+  }
+
+  /**
+   * Whether the current JDK supports {@link org.apache.datasketches.memory.Memory#map}. This is needed to read
+   * frame files 2GB+ in size.
+   */
+  public static boolean jdkCanDataSketchesMemoryMap()
+  {
+    final StringTokenizer st = new StringTokenizer(System.getProperty("java.specification.version"), ".");
+    return Integer.parseInt(st.nextToken()) < 14;
   }
 
   private static Supplier<Object> dimensionSelectorReader(final DimensionSelector selector)
