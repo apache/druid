@@ -855,10 +855,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         fireDepartmentForMetrics,
         buildSegmentsMeters
     );
-    final boolean hasMonitorScheduler = toolbox.getMonitorScheduler() != null;
-    if (hasMonitorScheduler) {
-      toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
-    }
+    toolbox.addMonitor(metricsMonitor);
 
     final PartitionsSpec partitionsSpec = partitionAnalysis.getPartitionsSpec();
     final IndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
@@ -1047,9 +1044,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       } else {
         appenderator.close();
       }
-      if (hasMonitorScheduler) {
-        toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
-      }
+      toolbox.removeMonitor(metricsMonitor);
     }
   }
 
