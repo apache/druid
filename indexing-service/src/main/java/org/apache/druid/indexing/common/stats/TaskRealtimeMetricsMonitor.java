@@ -68,7 +68,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
   @Override
   public void start()
   {
-    started = true;
+    super.start();
     lastRoundMetricsToBePushed = true;
   }
 
