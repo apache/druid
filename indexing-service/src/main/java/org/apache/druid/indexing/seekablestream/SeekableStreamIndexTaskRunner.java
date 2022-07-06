@@ -622,6 +622,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
           SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToCheckpoint = null;
           for (OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType> record : records) {
+            // sdas: update this
+            // the buffer's capacity is the array length of the bytes in the ByteEntity
+            final long processedBytes = record.getData().parallelStream().mapToLong(value -> value.getBuffer().capacity()).reduce(0, Long::sum);
+            getInputStats().incrementProcessedBytes(processedBytes);
             final boolean shouldProcess = verifyRecordInRange(record.getPartitionId(), record.getSequenceNumber());
 
             log.trace(
@@ -920,6 +924,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
     return TaskStatus.success(task.getId());
+  }
+
+  public InputStats getInputStats()
+  {
+    return inputStats;
   }
 
   private void checkPublishAndHandoffFailure() throws ExecutionException, InterruptedException

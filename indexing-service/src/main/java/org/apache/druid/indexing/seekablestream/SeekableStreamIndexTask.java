@@ -43,6 +43,7 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.metrics.InputStatsMonitor;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
@@ -153,6 +154,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public TaskStatus run(final TaskToolbox toolbox)
   {
     emitMetric(toolbox.getEmitter(), "ingest/count", 1);
+    toolbox.addMonitor(new InputStatsMonitor(inputStats, getMetricsDimensions()));
     return getRunner().run(toolbox);
   }
 
