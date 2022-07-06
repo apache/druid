@@ -27,7 +27,6 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
-import org.apache.druid.java.util.common.IAE;
 
 import java.util.List;
 

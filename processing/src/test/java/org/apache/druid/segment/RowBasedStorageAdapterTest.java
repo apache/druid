@@ -391,9 +391,11 @@ public class RowBasedStorageAdapterTest
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.COMPLEX.name());
 
-    // Note: unlike numeric types, COMPLEX-typed columns report that they are incomplete.
+    // Note: unlike numeric types, COMPLEX-typed columns report that they are incomplete for everything
+    // except hasMultipleValues.
     Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, capabilities.toColumnType());
-    Assert.assertTrue(capabilities.hasMultipleValues().isUnknown());
+    Assert.assertFalse(capabilities.hasMultipleValues().isTrue());
+    Assert.assertTrue(capabilities.isDictionaryEncoded().isUnknown());
   }
 
   @Test
