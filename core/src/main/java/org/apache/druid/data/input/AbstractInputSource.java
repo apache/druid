@@ -35,30 +35,37 @@ public abstract class AbstractInputSource implements InputSource
   public InputSourceReader reader(
       InputRowSchema inputRowSchema,
       @Nullable InputFormat inputFormat,
-      File temporaryDirectory
+      File temporaryDirectory,
+      InputStats inputStats
   )
   {
     if (needsFormat()) {
       return formattableReader(
           inputRowSchema,
           Preconditions.checkNotNull(inputFormat, "inputFormat"),
-          temporaryDirectory
+          temporaryDirectory,
+          inputStats
       );
     } else {
-      return fixedFormatReader(inputRowSchema, temporaryDirectory);
+      return fixedFormatReader(inputRowSchema, temporaryDirectory, inputStats);
     }
   }
 
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      File temporaryDirectory
+      File temporaryDirectory,
+      InputStats inputStats
   )
   {
     throw new UnsupportedOperationException("Implement this method properly if needsFormat() = true");
   }
 
-  protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, File temporaryDirectory)
+  protected InputSourceReader fixedFormatReader(
+      InputRowSchema inputRowSchema,
+      File temporaryDirectory,
+      InputStats inputStats
+  )
   {
     throw new UnsupportedOperationException("Implement this method properly if needsFormat() = false");
   }

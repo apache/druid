@@ -31,6 +31,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
@@ -1318,7 +1319,8 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
       public InputSourceReader reader(
           InputRowSchema inputRowSchema,
           @Nullable InputFormat inputFormat,
-          File temporaryDirectory
+          File temporaryDirectory,
+          InputStats inputStats
       )
       {
         throw new RuntimeException();

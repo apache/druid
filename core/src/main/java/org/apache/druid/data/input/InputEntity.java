@@ -137,4 +137,9 @@ public interface InputEntity
     return Predicates.alwaysFalse();
   }
 
+  default InputEntity getBaseInputEntity()
+  {
+    return this;
+  }
+
 }

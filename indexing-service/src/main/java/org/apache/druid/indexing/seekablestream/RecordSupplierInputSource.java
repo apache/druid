@@ -20,10 +20,12 @@
 package org.apache.druid.indexing.seekablestream;
 
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.CountableInputEntity;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -100,14 +102,15 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      @Nullable File temporaryDirectory,
+      InputStats inputStats
   )
   {
     InputFormat format = inputFormat instanceof JsonInputFormat ? ((JsonInputFormat) inputFormat).withLineSplittable(false) : inputFormat;
     return new InputEntityIteratingReader(
         inputRowSchema,
         format,
-        createEntityIterator(),
+        createEntityIterator(inputStats),
         temporaryDirectory
     );
   }
@@ -116,7 +119,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
    * Returns an iterator converting a RecordSupplier into an iterator of ByteEntity. Note that the
    * returned iterator will be blocked until the RecordSupplier gives any data.
    */
-  CloseableIterator<InputEntity> createEntityIterator()
+  CloseableIterator<InputEntity> createEntityIterator(InputStats inputStats)
   {
     return new CloseableIterator<InputEntity>()
     {
@@ -146,7 +149,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
       @Override
       public InputEntity next()
       {
-        return bytesIterator.next();
+        return new CountableInputEntity(bytesIterator.next(), inputStats);
       }
 
       @Override

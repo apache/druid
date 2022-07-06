@@ -26,11 +26,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.CountableInputEntity;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -421,13 +423,14 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
     public InputSourceReader reader(
         InputRowSchema inputRowSchema,
         @Nullable InputFormat inputFormat,
-        File temporaryDirectory
+        File temporaryDirectory,
+        InputStats inputStats
     )
     {
       return new InputEntityIteratingReader(
           inputRowSchema,
           inputFormat,
-          data.stream().map(str -> new ByteEntity(StringUtils.toUtf8(str))).iterator(),
+          data.stream().map(str -> new CountableInputEntity( new ByteEntity(StringUtils.toUtf8(str)), inputStats)).iterator(),
           temporaryDirectory
       );
     }

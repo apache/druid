@@ -31,6 +31,7 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -318,7 +319,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     @Test
     public void readsSplitsCorrectly() throws IOException
     {
-      InputSourceReader reader = target.formattableReader(INPUT_ROW_SCHEMA, INPUT_FORMAT, null);
+      InputSourceReader reader = target.formattableReader(INPUT_ROW_SCHEMA, INPUT_FORMAT, null, new InputStats());
 
       Map<Long, String> actualTimestampToValue = new HashMap<>();
       try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -394,7 +395,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     @Test
     public void readsSplitsCorrectly() throws IOException
     {
-      InputSourceReader reader = target.formattableReader(INPUT_ROW_SCHEMA, INPUT_FORMAT, null);
+      InputSourceReader reader = target.formattableReader(INPUT_ROW_SCHEMA, INPUT_FORMAT, null, new InputStats());
 
       try (CloseableIterator<InputRow> iterator = reader.read()) {
         Assert.assertFalse(iterator.hasNext());

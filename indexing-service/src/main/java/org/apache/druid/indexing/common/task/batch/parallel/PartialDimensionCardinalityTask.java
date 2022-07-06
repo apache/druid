@@ -179,7 +179,8 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
             inputFormat,
             determineIntervals ? Objects::nonNull : AbstractBatchIndexTask.defaultRowFilter(granularitySpec),
             buildSegmentsMeters,
-            parseExceptionHandler
+            parseExceptionHandler,
+            getInputStats()
         );
     ) {
       Map<Interval, byte[]> cardinalities = determineCardinalities(

@@ -40,6 +40,7 @@ import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -231,6 +232,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   protected volatile boolean pauseRequested = false;
   private volatile long nextCheckpointTime;
+  private final InputStats inputStats;
 
   private volatile CopyOnWriteArrayList<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequences;
   private volatile Throwable backgroundThreadException;
@@ -239,7 +241,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
       @Nullable final InputRowParser<ByteBuffer> parser,
       final AuthorizerMapper authorizerMapper,
-      final LockGranularity lockGranularityToUse
+      final LockGranularity lockGranularityToUse,
+      InputStats inputStats
   )
   {
     Preconditions.checkNotNull(task);
@@ -255,7 +258,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
     this.lockGranularityToUse = lockGranularityToUse;
-
+    this.inputStats = inputStats;
     resetNextCheckpointTime();
   }
 

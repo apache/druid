@@ -35,6 +35,7 @@ public class DruidMetrics
   public static final String TASK_ID = "taskId";
   public static final String STATUS = "status";
   public static final String TASK_INGESTION_MODE = "taskIngestionMode";
+  public static final String SUPERVISOR_ID = "supervisorId";
 
   public static final String PARTITIONING_TYPE = "partitioningType";
 

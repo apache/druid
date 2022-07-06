@@ -226,7 +226,8 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
             inputFormat,
             determineIntervals ? Objects::nonNull : AbstractBatchIndexTask.defaultRowFilter(granularitySpec),
             buildSegmentsMeters,
-            parseExceptionHandler
+            parseExceptionHandler,
+            getInputStats()
         );
         HandlingInputRowIterator iterator =
             new RangePartitionIndexTaskInputRowIteratorBuilder(partitionDimensions, SKIP_NULL)

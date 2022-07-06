@@ -27,11 +27,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.CountableInputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
@@ -173,7 +175,8 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      @Nullable File temporaryDirectory,
+      InputStats inputStats
   )
   {
     try {
@@ -185,7 +188,10 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        Iterators.transform(cachedPaths.iterator(), path -> new HdfsInputEntity(configuration, path)),
+        Iterators.transform(
+            cachedPaths.iterator(),
+            path -> new CountableInputEntity(new HdfsInputEntity(configuration, path), inputStats)
+        ),
         temporaryDirectory
     );
   }

@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimedShutoffInputSourceReader;
@@ -216,7 +217,7 @@ public class InputSourceSampler
   {
     final InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(dataSchema);
 
-    InputSourceReader reader = inputSource.reader(inputRowSchema, inputFormat, tempDir);
+    InputSourceReader reader = inputSource.reader(inputRowSchema, inputFormat, tempDir, new InputStats());
 
     if (samplerConfig.getTimeoutMs() > 0) {
       reader = new TimedShutoffInputSourceReader(reader, DateTimes.nowUtc().plusMillis(samplerConfig.getTimeoutMs()));

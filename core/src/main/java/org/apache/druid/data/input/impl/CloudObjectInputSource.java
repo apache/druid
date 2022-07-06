@@ -24,11 +24,13 @@ import com.google.common.primitives.Ints;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.CountableInputEntity;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -178,13 +180,15 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      @Nullable File temporaryDirectory,
+      InputStats inputStats
   )
   {
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, null).flatMap(split -> split.get().stream()).map(this::createEntity).iterator(),
+        createSplits(inputFormat, null).flatMap(split -> split.get().stream()).map(
+            cloudObjectLocation -> new CountableInputEntity(createEntity(cloudObjectLocation), inputStats)).iterator(),
         temporaryDirectory
     );
   }

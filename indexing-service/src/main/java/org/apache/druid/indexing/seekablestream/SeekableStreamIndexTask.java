@@ -24,7 +24,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
@@ -41,6 +43,7 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -76,6 +79,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   // See https://github.com/apache/druid/issues/7724 for issues that can cause.
   // By the way, lazily init is synchronized because the runner may be needed in multiple threads.
   private final Supplier<SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?>> runnerSupplier;
+  private final InputStats inputStats;
 
   @MonotonicNonNull
   protected AuthorizerMapper authorizerMapper;
@@ -107,6 +111,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
                                 ? LockGranularity.TIME_CHUNK
                                 : LockGranularity.SEGMENT;
     this.lockTypeToUse = getContextValue(Tasks.USE_SHARED_LOCK, false) ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
+    this.inputStats = new InputStats();
   }
 
   protected static String getFormattedGroupId(String dataSource, String type)
@@ -280,5 +285,19 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> getRunner()
   {
     return runnerSupplier.get();
+  }
+
+  public InputStats getInputStats()
+  {
+    return inputStats;
+  }
+
+  public Map<String, String[]> getMetricsDimensions()
+  {
+    return ImmutableMap.of(
+        DruidMetrics.TASK_ID, new String[] {getId()},
+        DruidMetrics.TASK_TYPE, new String[] {getType()},
+        DruidMetrics.DATASOURCE, new String[] {getDataSource()}
+    );
   }
 }
