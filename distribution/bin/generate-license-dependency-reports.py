@@ -34,12 +34,13 @@ def generate_report(module_path, report_orig_path, report_out_path):
         print("Generating report for {}".format(module_path))
         # This command prints lots of false errors. Here, we redirect stdout and stderr to avoid them.
         command = "mvn -Ddependency.locations.enabled=false -Ddependency.details.enabled=false project-info-reports:dependencies"
-        subprocess.check_output(command, cwd=module_path, shell=True)
+        subprocess.check_output(command, cwd=module_path, shell=True, encoding="utf8")
         command = "cp -r {} {}".format(report_orig_path, report_out_path)
-        subprocess.check_output(command, cwd=module_path, shell=True)
+        subprocess.check_output(command, cwd=module_path, shell=True, encoding="utf8")
         print("Generated report for {} in {}".format(module_path, report_out_path))
     except subprocess.CalledProcessError as e:
-        print("Encountered error [{}] with output [{}] when generating report for {}".format(e, e.output, module_path))
+        print("Encountered error [{}] with the following output when generating report for {}".format(e, module_path))
+        print(e.output)
     except Exception as e:
         print("Encountered error [{}] when generating report for {}".format(e, module_path))
 
