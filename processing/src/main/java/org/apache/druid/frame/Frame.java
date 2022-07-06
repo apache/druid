@@ -44,6 +44,10 @@ import java.nio.channels.WritableByteChannel;
  *
  * This object is lightweight. It has constant overhead regardless of the number of rows or regions.
  *
+ * Frames wrap some {@link Memory}. If the memory is backed by a resource that requires explicit releasing, such as
+ * direct off-heap memory or a memory-mapped file, the creator of the Memory is responsible for releasing that resource
+ * when the frame is no longer needed.
+ *
  * Frames are written with {@link org.apache.druid.frame.write.FrameWriter} and read with
  * {@link org.apache.druid.frame.read.FrameReader}.
  *
