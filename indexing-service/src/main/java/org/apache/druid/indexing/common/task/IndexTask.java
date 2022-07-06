@@ -855,7 +855,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         fireDepartmentForMetrics,
         buildSegmentsMeters
     );
-    if (toolbox.getMonitorScheduler() != null) {
+    final boolean hasMonitorScheduler = toolbox.getMonitorScheduler() != null;
+    if (hasMonitorScheduler) {
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
     }
 
@@ -1046,7 +1047,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       } else {
         appenderator.close();
       }
-      if (toolbox.getMonitorScheduler() != null) {
+      if (hasMonitorScheduler) {
         toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
       }
     }
