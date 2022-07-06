@@ -26,15 +26,15 @@ import org.junit.Test;
 import java.util.function.ObjIntConsumer;
 
 
-public class SegmentRowCountBucketsTest
+public class SegmentRowCountDistributionTest
 {
 
-  private SegmentRowCountBuckets rowCountBucket;
+  private SegmentRowCountDistribution rowCountBucket;
 
   @Before
   public void setUp()
   {
-    rowCountBucket = new SegmentRowCountBuckets();
+    rowCountBucket = new SegmentRowCountDistribution();
   }
 
   @Test
@@ -48,116 +48,117 @@ public class SegmentRowCountBucketsTest
 
     // test bounds of 1st bucket
     // with addition
-    rowCountBucket.addRowCountToBucket(0);
+    rowCountBucket.addRowCountToDistribution(0);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 0));
-    rowCountBucket.addRowCountToBucket(100_000);
+    rowCountBucket.addRowCountToDistribution(0);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(2, 0));
     // with removal
-    rowCountBucket.removeRowCountfromBucket(0);
+    rowCountBucket.removeRowCountFromDistribution(0);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 0));
-    rowCountBucket.removeRowCountfromBucket(100_000);
+    rowCountBucket.removeRowCountFromDistribution(0);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(0, 0));
 
     // test bounds of 2nd bucket
     // with addition
-    rowCountBucket.addRowCountToBucket(100_001);
+    rowCountBucket.addRowCountToDistribution(1);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 1));
-    rowCountBucket.addRowCountToBucket(1_000_000);
+    rowCountBucket.addRowCountToDistribution(10_000);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(2, 1));
     // with removal
-    rowCountBucket.removeRowCountfromBucket(100_001);
+    rowCountBucket.removeRowCountFromDistribution(1);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 1));
-    rowCountBucket.removeRowCountfromBucket(1_000_000);
+    rowCountBucket.removeRowCountFromDistribution(10_000);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(0, 1));
 
     // test bounds of 3rd bucket
     // with addition
-    rowCountBucket.addRowCountToBucket(1_000_001);
+    rowCountBucket.addRowCountToDistribution(10_001);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 2));
-    rowCountBucket.addRowCountToBucket(2_000_000);
+    rowCountBucket.addRowCountToDistribution(2_000_000);
     // with removal
-    rowCountBucket.removeRowCountfromBucket(1_000_001);
+    rowCountBucket.removeRowCountFromDistribution(10_001);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 2));
-    rowCountBucket.removeRowCountfromBucket(2_000_000);
+    rowCountBucket.removeRowCountFromDistribution(2_000_000);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(0, 2));
 
     // test bounds of 4th bucket
     // with addition
-    rowCountBucket.addRowCountToBucket(2_000_001);
+    rowCountBucket.addRowCountToDistribution(2_000_001);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 3));
 
-    rowCountBucket.addRowCountToBucket(3_000_000);
+    rowCountBucket.addRowCountToDistribution(4_000_000);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(2, 3));
 
     // with removal
-    rowCountBucket.removeRowCountfromBucket(2_000_001);
+    rowCountBucket.removeRowCountFromDistribution(2_000_001);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 3));
 
-    rowCountBucket.removeRowCountfromBucket(3_000_000);
+    rowCountBucket.removeRowCountFromDistribution(4_000_000);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(0, 3));
 
 
     // test bounds of 5th bucket
     // with addition
-    rowCountBucket.addRowCountToBucket(3_000_001);
+    rowCountBucket.addRowCountToDistribution(4_000_001);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 4));
-    rowCountBucket.addRowCountToBucket(4_000_000);
+    rowCountBucket.addRowCountToDistribution(6_000_000);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(2, 4));
     // with removal
-    rowCountBucket.removeRowCountfromBucket(3_000_001);
+    rowCountBucket.removeRowCountFromDistribution(4_000_001);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 4));
-    rowCountBucket.removeRowCountfromBucket(4_000_000);
+    rowCountBucket.removeRowCountFromDistribution(6_000_000);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(0, 4));
 
     // test bounds of 6th bucket
     // with addition
-    rowCountBucket.addRowCountToBucket(4_000_001);
+    rowCountBucket.addRowCountToDistribution(6_000_001);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 5));
-    rowCountBucket.addRowCountToBucket(6_000_000);
+    rowCountBucket.addRowCountToDistribution(8_000_000);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(2, 5));
     // with removal
-    rowCountBucket.removeRowCountfromBucket(4_000_001);
+    rowCountBucket.removeRowCountFromDistribution(6_000_001);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 5));
-    rowCountBucket.removeRowCountfromBucket(6_000_000);
+    rowCountBucket.removeRowCountFromDistribution(8_000_000);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(0, 5));
 
     // test bounds of 7th bucket
     // with addition
-    rowCountBucket.addRowCountToBucket(6_000_001);
+    rowCountBucket.addRowCountToDistribution(8_000_001);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 6));
-    rowCountBucket.addRowCountToBucket(7_000_000);
+    rowCountBucket.addRowCountToDistribution(10_000_000);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(2, 6));
     // with removal
-    rowCountBucket.removeRowCountfromBucket(6_000_001);
+    rowCountBucket.removeRowCountFromDistribution(8_000_001);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 6));
-    rowCountBucket.removeRowCountfromBucket(7_000_000);
+    rowCountBucket.removeRowCountFromDistribution(10_000_000);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(0, 6));
 
     // test bounds of 8th bucket
     // with addition
-    rowCountBucket.addRowCountToBucket(7_000_001);
+    rowCountBucket.addRowCountToDistribution(10_000_001);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 7));
-    rowCountBucket.addRowCountToBucket(Long.MAX_VALUE);
+    rowCountBucket.addRowCountToDistribution(Long.MAX_VALUE);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(2, 7));
     // with removal
-    rowCountBucket.removeRowCountfromBucket(7_000_001);
+    rowCountBucket.removeRowCountFromDistribution(10_000_001);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(1, 7));
-    rowCountBucket.removeRowCountfromBucket(Long.MAX_VALUE);
+    rowCountBucket.removeRowCountFromDistribution(Long.MAX_VALUE);
     rowCountBucket.forEachDimension(AssertBucketHasValue.assertExpected(0, 7));
   }
 
+  // this is used to test part of the functionality in AssertBucketHasValue.assertExpected
   @Test
   public void test_bucketDimensionFromIndex()
   {
-    Assert.assertEquals("0-100k", SegmentRowCountBuckets.getBucketDimensionFromIndex(0));
-    Assert.assertEquals("100k-1M", SegmentRowCountBuckets.getBucketDimensionFromIndex(1));
-    Assert.assertEquals("1M-2M", SegmentRowCountBuckets.getBucketDimensionFromIndex(2));
-    Assert.assertEquals("2M-3M", SegmentRowCountBuckets.getBucketDimensionFromIndex(3));
-    Assert.assertEquals("3M-4M", SegmentRowCountBuckets.getBucketDimensionFromIndex(4));
-    Assert.assertEquals("4M-6M", SegmentRowCountBuckets.getBucketDimensionFromIndex(5));
-    Assert.assertEquals("6M-7M", SegmentRowCountBuckets.getBucketDimensionFromIndex(6));
-    Assert.assertEquals("7M+", SegmentRowCountBuckets.getBucketDimensionFromIndex(7));
-    Assert.assertEquals("NA", SegmentRowCountBuckets.getBucketDimensionFromIndex(8));
+    Assert.assertEquals("0", getBucketDimensionFromIndex(0));
+    Assert.assertEquals("1-10k", getBucketDimensionFromIndex(1));
+    Assert.assertEquals("10k-2M", getBucketDimensionFromIndex(2));
+    Assert.assertEquals("2M-4M", getBucketDimensionFromIndex(3));
+    Assert.assertEquals("4M-6M", getBucketDimensionFromIndex(4));
+    Assert.assertEquals("6M-8M", getBucketDimensionFromIndex(5));
+    Assert.assertEquals("8M-10M", getBucketDimensionFromIndex(6));
+    Assert.assertEquals("10M+", getBucketDimensionFromIndex(7));
+    Assert.assertEquals("NA", getBucketDimensionFromIndex(8));
   }
 
   private static class AssertBucketHasValue implements ObjIntConsumer<String>
@@ -180,7 +181,7 @@ public class SegmentRowCountBucketsTest
     @Override
     public void accept(String s, int value)
     {
-      if (s.equals(SegmentRowCountBuckets.getBucketDimensionFromIndex(expectedBucket))) {
+      if (s.equals(getBucketDimensionFromIndex(expectedBucket))) {
         Assert.assertEquals(expectedValue, value);
       } else {
         // assert all other values are empty
@@ -188,5 +189,31 @@ public class SegmentRowCountBucketsTest
       }
     }
   }
+
+  private static String getBucketDimensionFromIndex(int index)
+  {
+    switch (index) {
+      case 0:
+        return "0";
+      case 1:
+        return "1-10k";
+      case 2:
+        return "10k-2M";
+      case 3:
+        return "2M-4M";
+      case 4:
+        return "4M-6M";
+      case 5:
+        return "6M-8M";
+      case 6:
+        return "8M-10M";
+      case 7:
+        return "10M+";
+      // should never get to default
+      default:
+        return "NA";
+    }
+  }
+
 
 }

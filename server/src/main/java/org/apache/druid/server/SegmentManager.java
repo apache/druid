@@ -31,11 +31,12 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.server.metrics.SegmentRowCountBuckets;
+import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -76,14 +77,14 @@ public class SegmentManager
     private long totalSegmentSize;
     private long numSegments;
     private long rowCount;
-    private final SegmentRowCountBuckets rowCountBuckets = new SegmentRowCountBuckets();
+    private final SegmentRowCountDistribution rowCountBuckets = new SegmentRowCountDistribution();
 
     private void addSegment(DataSegment segment, long numOfRows)
     {
       totalSegmentSize += segment.getSize();
       numSegments++;
       rowCount += (numOfRows);
-      rowCountBuckets.addRowCountToBucket(numOfRows);
+      rowCountBuckets.addRowCountToDistribution(numOfRows);
     }
 
     private void removeSegment(DataSegment segment, long numOfRows)
@@ -91,7 +92,7 @@ public class SegmentManager
       totalSegmentSize -= segment.getSize();
       numSegments--;
       rowCount -= numOfRows;
-      rowCountBuckets.removeRowCountfromBucket(numOfRows);
+      rowCountBuckets.removeRowCountFromDistribution(numOfRows);
     }
 
     public VersionedIntervalTimeline<String, ReferenceCountingSegment> getTimeline()
@@ -124,7 +125,7 @@ public class SegmentManager
       return numSegments == 0;
     }
 
-    private SegmentRowCountBuckets getRowCountBucket()
+    private SegmentRowCountDistribution getRowCountBucket()
     {
       return rowCountBuckets;
     }
@@ -161,7 +162,7 @@ public class SegmentManager
     return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getAverageRowCount);
   }
 
-  public Map<String, SegmentRowCountBuckets> getRowCountBuckets()
+  public Map<String, SegmentRowCountDistribution> getRowCountBuckets()
   {
     return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getRowCountBucket);
   }
@@ -293,7 +294,13 @@ public class SegmentManager
                 segment.getVersion(),
                 segment.getShardSpec().createChunk(adapter)
             );
-            long numOfRows = lazy ? 0 : adapter.asStorageAdapter().getNumRows();
+            long numOfRows;
+            StorageAdapter storageAdapter = adapter.asStorageAdapter();
+            if (lazy || storageAdapter == null) {
+              numOfRows = 0;
+            } else {
+              numOfRows = storageAdapter.getNumRows();
+            }
             dataSourceState.addSegment(segment, numOfRows);
             // Asyncly load segment index files into page cache in a thread pool
             segmentLoader.loadSegmentIntoPageCache(segment, loadSegmentIntoPageCacheExec);

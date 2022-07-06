@@ -26,9 +26,9 @@ import java.util.function.ObjIntConsumer;
 /**
  * Class that creates a count of segments that have row counts in certain buckets
  */
-public class SegmentRowCountBuckets
+public class SegmentRowCountDistribution
 {
-  private static final EmittingLogger log = new EmittingLogger(SegmentRowCountBuckets.class);
+  private static final EmittingLogger log = new EmittingLogger(SegmentRowCountDistribution.class);
 
   private final int[] buckets = new int[8];
 
@@ -37,7 +37,7 @@ public class SegmentRowCountBuckets
    *
    * @param rowCount the number of rows to figure out which bucket to increment
    */
-  public void addRowCountToBucket(long rowCount)
+  public void addRowCountToDistribution(long rowCount)
   {
     int bucketIndex = determineBucket(rowCount);
     buckets[bucketIndex]++;
@@ -48,7 +48,7 @@ public class SegmentRowCountBuckets
    *
    * @param rowCount the count which determines which bucket to decrement
    */
-  public void removeRowCountfromBucket(long rowCount)
+  public void removeRowCountFromDistribution(long rowCount)
   {
     int bucketIndex = determineBucket(rowCount);
     buckets[bucketIndex]--;
@@ -60,30 +60,31 @@ public class SegmentRowCountBuckets
   }
 
   /**
-   * Determines the name of the dimension used for a bucket
+   * Determines the name of the dimension used for a bucket. Should never return NA as this isn't public and this
+   * method is private to this class
    *
    * @param index the index of the bucket
    * @return the dimension which the bucket index refers to
    */
-  static String getBucketDimensionFromIndex(int index)
+  private static String getBucketDimensionFromIndex(int index)
   {
     switch (index) {
       case 0:
-        return "0-100k";
+        return "0";
       case 1:
-        return "100k-1M";
+        return "1-10k";
       case 2:
-        return "1M-2M";
+        return "10k-2M";
       case 3:
-        return "2M-3M";
+        return "2M-4M";
       case 4:
-        return "3M-4M";
-      case 5:
         return "4M-6M";
+      case 5:
+        return "6M-8M";
       case 6:
-        return "6M-7M";
+        return "8M-10M";
       case 7:
-        return "7M+";
+        return "10M+";
       // should never get to default
       default:
         return "NA";
@@ -98,34 +99,41 @@ public class SegmentRowCountBuckets
    */
   private static int determineBucket(long rowCount)
   {
-    if (rowCount <= 100_000L) {
+    if (rowCount <= 0L) {
       return 0;
     }
-    if (rowCount <= 1_000_000L) {
+    if (rowCount <= 10_000L) {
       return 1;
     }
     if (rowCount <= 2_000_000L) {
       return 2;
     }
-    if (rowCount <= 3_000_000L) {
+    if (rowCount <= 4_000_000L) {
       return 3;
     }
-    if (rowCount <= 4_000_000L) {
+    if (rowCount <= 6_000_000L) {
       return 4;
     }
-    if (rowCount <= 6_000_000L) {
+    if (rowCount <= 8_000_000L) {
       return 5;
     }
-    if (rowCount <= 7_000_000L) {
+    if (rowCount <= 10_000_000L) {
       return 6;
     }
     return 7;
   }
 
+  /**
+   * Gives the consumer the range dimension and the associated count. Will not give zero range unless there is a count there.
+   * @param consumer
+   */
   public void forEachDimension(final ObjIntConsumer<String> consumer)
   {
     for (int ii = 0; ii < buckets.length; ii++) {
-      consumer.accept(getBucketDimensionFromIndex(ii), buckets[ii]);
+      // only report 0 bucket if it has nonzero value
+      if (ii != 0 || buckets[ii] != 0) {
+        consumer.accept(getBucketDimensionFromIndex(ii), buckets[ii]);
+      }
     }
   }
 
