@@ -21,6 +21,7 @@ package org.apache.druid.frame.file;
 
 import com.google.common.math.IntMath;
 import it.unimi.dsi.fastutil.ints.IntObjectPair;
+import org.apache.commons.lang3.JavaVersion;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.TestArrayStorageAdapter;
@@ -41,6 +42,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.JvmUtils;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -57,6 +59,7 @@ import java.io.IOException;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringTokenizer;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -148,10 +151,15 @@ public class FrameFileTest extends InitializedNullHandlingTest
   public static Iterable<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
-    final FrameFile.Flag[] openModes = {
-        FrameFile.Flag.BB_MEMORY_MAP,
-        FrameFile.Flag.DS_MEMORY_MAP
-    };
+    final List<FrameFile.Flag> openModes = new ArrayList<>();
+    openModes.add(FrameFile.Flag.BB_MEMORY_MAP);
+
+    if (majorJavaVersion() < 14) {
+      // datasketches-memory mapping only works up through JDK 13. Higher JDK versions are unable to load 2GB+ files.
+      // Skip these tests on higher JDK versions, since we test with JDK 15 in CI even though we don't officially
+      // support it yet.
+      openModes.add(FrameFile.Flag.DS_MEMORY_MAP);
+    }
 
     for (FrameType frameType : FrameType.values()) {
       for (int maxRowsPerFrame : new int[]{1, 17, 50, PARTITION_SIZE, Integer.MAX_VALUE}) {
@@ -390,5 +398,11 @@ public class FrameFileTest extends InitializedNullHandlingTest
     // Not using adapter.getNumRows(), because RowBasedStorageAdapter doesn't support it.
     return FrameTestUtil.readRowsFromAdapter(adapter, RowSignature.empty(), false)
                         .accumulate(0, (i, in) -> i + 1);
+  }
+
+  private static int majorJavaVersion()
+  {
+    final StringTokenizer st = new StringTokenizer(System.getProperty("java.specification.version"), ".");
+    return Integer.parseInt(st.nextToken());
   }
 }
