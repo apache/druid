@@ -42,18 +42,19 @@ Is there a way to avoid crunching the detail data every single time, and maybe e
 
 Theta sketches are a probabilistic data structure to enable fast approximate analysis of big data. Druid's implementation relies on the [Apache DataSketches](https://datasketches.apache.org/) library.
 
-Theta sketches have a few nice properties:
+Theta sketches have a few useful properties:
 
 - They give you a **fast approximate estimate** for the distinct count of items that you put into them.
 - They are **mergeable**. This means we can work with rolled up data and merge the sketches over various time intervals. Thus, we can take advantage of Druid's rollup feature.
-- Theta sketches support **set operations**. Given two Theta sketches over subsets of the data, we can compute the union, intersection, or set difference of these two. This gives us the ability to answer the questions above about the number of visitors that watched a specific combination of episodes.
+- Theta sketches support **set operations**. Given two Theta sketches over subsets of data, you can compute the union, intersection, or set difference of the two subsets. This enables you to answer questions like the number of visitors that watched a specific combination of episodes from the example.
 
-There is a lot of advanced math behind Theta sketches[^2]. But with Druid, you do not need to bother about the complex algorithms - Theta sketches just work!
+There is a lot of advanced math behind Theta sketches[^2], but Druid handles the complex algorithms for you.
 
 [^2]: Specifically, the accuracy of the result is governed by the size _k_ of the Theta sketch, and by the operations you perform. See more details in the [Apache DataSketches documentation](https://datasketches.apache.org/docs/Theta/ThetaAccuracy.html). There's also a version of the sketch estimator `THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS` which takes an additional integer parameter and returns the error boundaries for the result in a JSON object.
 
 This tutorial shows you how to create Theta sketches from your input data at ingestion time and how to run distinct count and set operation queries on the Theta sketches.
 
+## Prerequisites
 For this tutorial, we'll assume you've already downloaded Druid as described in
 the [single-machine quickstart](index.md) and have it running on your local machine.
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
@@ -105,13 +106,13 @@ In the **Configure schema** stage, enable rollup and confirm your choice in the 
 
 ![Configure schema for rollup and query granularity](../assets/tutorial-theta-03.png)
 
-You also add the Theta sketch during this stage. Select **Add metric**.
+Add the Theta sketch during this stage. Select **Add metric**.
 Define the new metric as a Theta sketch with the following details:
 * **Name**: `theta_uid`
 * **Type**: `thetaSketch`
 * **Field name**: `uid`
-* **Size**: Leave at the default value, `16384`.
-* **Is input theta sketch**: Leave at the default value, `False`.
+* **Size**: Accept the default value, `16384`.
+* **Is input theta sketch**: Accept the default value, `False`.
 
 ![Create Theta sketch metric](../assets/tutorial-theta-04.png)
 
@@ -129,7 +130,7 @@ For the remaining stages of the **Load data** wizard, set the following options:
 * **Tune**: Leave the default options.
 * **Publish**: Set the datasource name to `ts_tutorial`.
 
-On the **Edit spec** page, your final input spec should look like the following JSON: 
+On the **Edit spec** page, your final input spec should match the following:
 
 ```json
 {
@@ -186,18 +187,18 @@ On the **Edit spec** page, your final input spec should look like the following 
 }
 ```
 
-Notice the `theta_uid` object in the `metricsSpec` list, which directs Druid to apply the `thetaSketch` aggregator on the `uid` column during ingestion.
+Notice the `theta_uid` object in the `metricsSpec` list, that defines the `thetaSketch` aggregator on the `uid` column during ingestion.
 
 Click **Submit** to start the ingestion.
 
 ## Query the Theta sketch column
 
-Getting a unique count estimate out of a Theta sketch column involves two steps:
+Calculating a unique count estimate from a Theta sketch column involves the following steps:
 
-1. merging the Theta sketches in the column by means of an [aggregator function](../querying/sql-aggregations.md#theta-sketch-functions), which in Druid SQL is called `DS_THETA`
-2. getting the estimate out of the merged sketch using [`THETA_SKETCH_ESTIMATE`](../querying/sql-scalar.md#theta-sketch-functions).
+1. Merge the Theta sketches in the column by means of the `DS_THETA` [aggregator function](../querying/sql-aggregations.md#theta-sketch-functions) in Druid SQL.
+2. Retrieve the estimate from the merged sketch with the [`THETA_SKETCH_ESTIMATE`](../querying/sql-scalar.md#theta-sketch-functions) function.
 
-Between steps 1 and 2, you can apply set functions. We will come to that in a moment.
+Between steps 1 and 2, you can apply set functions as demonstrated later in [Set operations](#set-operations).
 
 ### Basic counting 
 
@@ -210,7 +211,7 @@ SELECT * FROM ts_tutorial
 
 The Theta sketch column `theta_uid` appears as a Base64-encoded string; behind it is a bitmap.
 
-A simple query to compute distinct counts of user IDs uses `APPROX_COUNT_DISTINCT_DS_THETA` and groups by the other dimensions:
+The following query to compute the distinct counts of user IDs uses `APPROX_COUNT_DISTINCT_DS_THETA` and groups by the other dimensions:
 ```sql
 SELECT __time,
        "show",
@@ -222,7 +223,7 @@ GROUP  BY 1, 2, 3
 
 ![Count distinct with Theta sketches](../assets/tutorial-theta-07.png)
 
-In the query above, `APPROX_COUNT_DISTINCT_DS_THETA` is equivalent to calling `DS_THETA` and `THETA_SKETCH_ESIMATE` as follows:
+In the preceding query, `APPROX_COUNT_DISTINCT_DS_THETA` is equivalent to calling `DS_THETA` and `THETA_SKETCH_ESIMATE` as follows:
 
 ```sql
 SELECT __time,
