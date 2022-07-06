@@ -56,12 +56,14 @@ public class RealtimeMetricsMonitorTest
     EasyMock.replay(fireDepartment);
 
     RealtimeMetricsMonitor monitor = new RealtimeMetricsMonitor(ImmutableList.of(fireDepartment));
+    boolean zerothRound = monitor.monitor(emitter);
     monitor.start();
     boolean firstRound = monitor.monitor(emitter);
     monitor.stop();
     boolean secondRound = monitor.monitor(emitter);
     boolean thirdRound = monitor.monitor(emitter);
 
+    Assert.assertFalse(zerothRound);
     Assert.assertTrue(firstRound && secondRound);
     Assert.assertFalse(thirdRound);
     EasyMock.verify(fireDepartment);
