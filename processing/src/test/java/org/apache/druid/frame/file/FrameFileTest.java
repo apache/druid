@@ -21,7 +21,6 @@ package org.apache.druid.frame.file;
 
 import com.google.common.math.IntMath;
 import it.unimi.dsi.fastutil.ints.IntObjectPair;
-import org.apache.commons.lang3.JavaVersion;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.TestArrayStorageAdapter;
@@ -42,7 +41,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.utils.JvmUtils;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -59,7 +57,6 @@ import java.io.IOException;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.StringTokenizer;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
