@@ -1,0 +1,33 @@
+{
+  "type": "string",
+  "parseSpec": {
+    "format": "json",
+    "timestampSpec": {
+      "column": "timestamp",
+      "format": "auto"
+    },
+    "dimensionsSpec": {
+      "dimensions": [
+        "dim",
+        {
+          "type": "nestedData",
+          "name": "nest"
+        },
+        {
+          "type": "nestedData",
+          "name": "nester"
+        },
+        {
+          "type": "nestedData",
+          "name": "variant"
+        },
+        {
+          "type": "nestedData",
+          "name": "list"
+        }
+      ],
+      "dimensionExclusions": [],
+      "spatialDimensions": []
+    }
+  }
+}
