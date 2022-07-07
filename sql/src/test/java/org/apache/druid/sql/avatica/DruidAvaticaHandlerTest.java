@@ -67,6 +67,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
+import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -219,6 +220,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                       .in(LazySingleton.class);
                 binder.bind(QueryMakerFactory.class).to(NativeQueryMakerFactory.class);
                 binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
+                binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
               }
             }
         )
@@ -906,7 +908,8 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
               plannerConfig,
               AuthTestUtils.TEST_AUTHORIZER_MAPPER,
               CalciteTests.getJsonMapper(),
-              CalciteTests.DRUID_SCHEMA_NAME
+              CalciteTests.DRUID_SCHEMA_NAME,
+              new CalciteRulesManager(ImmutableSet.of())
           )
         ),
         smallFrameConfig,
@@ -996,7 +999,8 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                 plannerConfig,
                 AuthTestUtils.TEST_AUTHORIZER_MAPPER,
                 CalciteTests.getJsonMapper(),
-                CalciteTests.DRUID_SCHEMA_NAME
+                CalciteTests.DRUID_SCHEMA_NAME,
+                new CalciteRulesManager(ImmutableSet.of())
             )
         ),
         smallFrameConfig,

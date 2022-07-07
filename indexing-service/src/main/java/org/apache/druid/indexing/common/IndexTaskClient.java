@@ -140,11 +140,6 @@ public abstract class IndexTaskClient implements AutoCloseable
     );
   }
 
-  protected HttpClient getHttpClient()
-  {
-    return httpClient;
-  }
-
   protected RetryPolicy newRetryPolicy()
   {
     return retryPolicyFactory.makeRetryPolicy();
