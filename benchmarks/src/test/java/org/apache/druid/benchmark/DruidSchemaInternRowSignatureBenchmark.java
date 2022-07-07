@@ -57,9 +57,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
