@@ -33,7 +33,7 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -696,7 +696,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new NoopChatHandlerProvider(),
         TEST_UTILS.getRowIngestionMetersFactory(),
         appenderatorsManager,
-        new NoopIndexingServiceClient(),
+        new NoopOverlordClient(),
         null,
         null,
         null

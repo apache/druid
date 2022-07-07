@@ -25,8 +25,8 @@ import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatus;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.timeline.DataSegment;
@@ -91,7 +92,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
   private final Period intermediaryPartitionTimeout;
   private final TaskConfig taskConfig;
   private final List<StorageLocation> shuffleDataLocations;
-  private final IndexingServiceClient indexingServiceClient;
+  private final OverlordClient overlordClient;
 
   // supervisorTaskId -> time to check supervisorTask status
   // This time is initialized when a new supervisorTask is found and updated whenever a partition is accessed for
@@ -112,7 +113,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
   public LocalIntermediaryDataManager(
       WorkerConfig workerConfig,
       TaskConfig taskConfig,
-      IndexingServiceClient indexingServiceClient
+      OverlordClient overlordClient
   )
   {
     this.intermediaryPartitionDiscoveryPeriodSec = workerConfig.getIntermediaryPartitionDiscoveryPeriodSec();
@@ -124,7 +125,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
         .stream()
         .map(config -> new StorageLocation(config.getPath(), config.getMaxSize(), config.getFreeSpacePercent()))
         .collect(Collectors.toList());
-    this.indexingServiceClient = indexingServiceClient;
+    this.overlordClient = overlordClient;
   }
 
   @Override
@@ -152,9 +153,6 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
         () -> {
           try {
             deleteExpiredSupervisorTaskPartitionsIfNotRunning();
-          }
-          catch (InterruptedException e) {
-            LOG.error(e, "Error while cleaning up partitions for expired supervisors");
           }
           catch (Exception e) {
             LOG.warn(e, "Error while cleaning up partitions for expired supervisors");
@@ -236,7 +234,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
    * Note that the overlord sends a cleanup request when a supervisorTask is finished. The below check is to trigger
    * the self-cleanup for when the cleanup request is missing.
    */
-  private void deleteExpiredSupervisorTaskPartitionsIfNotRunning() throws InterruptedException
+  private void deleteExpiredSupervisorTaskPartitionsIfNotRunning()
   {
     final Set<String> expiredSupervisorTasks = new HashSet<>();
     for (Entry<String, DateTime> entry : supervisorTaskCheckTimes.entrySet()) {
@@ -252,7 +250,8 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
     }
 
     if (!expiredSupervisorTasks.isEmpty()) {
-      final Map<String, TaskStatus> taskStatuses = indexingServiceClient.getTaskStatuses(expiredSupervisorTasks);
+      final Map<String, TaskStatus> taskStatuses =
+          FutureUtils.getUnchecked(overlordClient.taskStatuses(expiredSupervisorTasks), true);
       for (Entry<String, TaskStatus> entry : taskStatuses.entrySet()) {
         final String supervisorTaskId = entry.getKey();
         final TaskStatus status = entry.getValue();

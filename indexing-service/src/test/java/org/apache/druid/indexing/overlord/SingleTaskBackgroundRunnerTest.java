@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -135,7 +135,7 @@ public class SingleTaskBackgroundRunnerTest
         new NoopChatHandlerProvider(),
         utils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
-        new NoopIndexingServiceClient(),
+        new NoopOverlordClient(),
         null,
         null,
         null

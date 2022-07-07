@@ -41,7 +41,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
-import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
@@ -252,10 +251,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           ingestionSchema.getDataSchema().getParser()
       );
 
-      final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
-          new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
-          getId(),
-          1, // always use a single http thread
+      final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
+          supervisorTaskId,
           ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
           ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
       );
@@ -277,7 +274,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
                                                          .toSet();
 
       Map<String, TaskReport> taskReport = getTaskCompletionReports();
-      taskClient.report(supervisorTaskId, new PushedSegmentsReport(getId(), oldSegments, pushedSegments, taskReport));
+      taskClient.report(new PushedSegmentsReport(getId(), oldSegments, pushedSegments, taskReport));
 
       toolbox.getTaskReportFileWriter().write(getId(), taskReport);
 

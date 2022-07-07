@@ -30,7 +30,6 @@ import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
-import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.InputSourceProcessor;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
@@ -114,10 +113,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         ingestionSchema.getDataSchema().getParser()
     );
 
-    final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
-        new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
-        getId(),
-        1, // always use a single http thread
+    final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
+        supervisorTaskId,
         ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
         ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
     );
@@ -131,7 +128,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
 
     Map<String, TaskReport> taskReport = getTaskCompletionReports();
 
-    taskClient.report(supervisorTaskId, createGeneratedPartitionsReport(toolbox, segments, taskReport));
+    taskClient.report(createGeneratedPartitionsReport(toolbox, segments, taskReport));
 
     return TaskStatus.success(getId());
   }

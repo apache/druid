@@ -26,7 +26,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskState;
@@ -209,7 +209,7 @@ public class WorkerTaskMonitorTest
                 new NoopChatHandlerProvider(),
                 testUtils.getRowIngestionMetersFactory(),
                 new TestAppenderatorsManager(),
-                new NoopIndexingServiceClient(),
+                new NoopOverlordClient(),
                 null,
                 null,
                 null

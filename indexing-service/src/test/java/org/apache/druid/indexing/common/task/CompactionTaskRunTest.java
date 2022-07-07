@@ -28,8 +28,7 @@ import com.google.common.io.Files;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
-import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
@@ -65,6 +64,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
@@ -164,7 +164,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
   private static final String DATA_SOURCE = "test";
   private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
-  private final IndexingServiceClient indexingServiceClient;
+  private final OverlordClient overlordClient;
   private final CoordinatorClient coordinatorClient;
   private final SegmentCacheManagerFactory segmentCacheManagerFactory;
   private final LockGranularity lockGranularity;
@@ -176,7 +176,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
   public CompactionTaskRunTest(LockGranularity lockGranularity)
   {
     testUtils = new TestUtils();
-    indexingServiceClient = new NoopIndexingServiceClient();
+    overlordClient = new NoopOverlordClient();
     coordinatorClient = new CoordinatorClient(null, null)
     {
       @Override
@@ -1713,7 +1713,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .chatHandlerProvider(new NoopChatHandlerProvider())
         .rowIngestionMetersFactory(testUtils.getRowIngestionMetersFactory())
         .appenderatorsManager(new TestAppenderatorsManager())
-        .indexingServiceClient(indexingServiceClient)
+        .overlordClient(overlordClient)
         .coordinatorClient(coordinatorClient)
         .build();
   }
