@@ -26,6 +26,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.junit.Assert;
 import org.junit.Before;
@@ -41,7 +42,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class HistoricalAdvancedSegmentMonitorTest
+public class SegmentStatsMonitorTest
 {
   private static final String DATA_SOURCE = "dataSource";
   private static final int PRIORITY = 111;
@@ -50,7 +51,8 @@ public class HistoricalAdvancedSegmentMonitorTest
   private DruidServerConfig druidServerConfig;
   private SegmentLoadDropHandler segmentLoadDropMgr;
   private ServiceEmitter serviceEmitter;
-  private HistoricalAdvancedSegmentMonitor monitor;
+  private SegmentStatsMonitor monitor;
+  private final SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig();
 
   @Before
   public void setUp()
@@ -58,12 +60,23 @@ public class HistoricalAdvancedSegmentMonitorTest
     druidServerConfig = Mockito.mock(DruidServerConfig.class);
     segmentLoadDropMgr = Mockito.mock(SegmentLoadDropHandler.class);
     serviceEmitter = Mockito.mock(ServiceEmitter.class);
-    monitor = new HistoricalAdvancedSegmentMonitor(
+    monitor = new SegmentStatsMonitor(
         druidServerConfig,
-        segmentLoadDropMgr
+        segmentLoadDropMgr,
+        segmentLoaderConfig
     );
     Mockito.when(druidServerConfig.getTier()).thenReturn(TIER);
     Mockito.when(druidServerConfig.getPriority()).thenReturn(PRIORITY);
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testLazyLoadOnStartThrowsException()
+  {
+    SegmentLoaderConfig segmentLoaderConfig = Mockito.mock(SegmentLoaderConfig.class);
+    Mockito.when(segmentLoaderConfig.isLazyLoadOnStart()).thenReturn(true);
+
+    //should throw an exception here
+    new SegmentStatsMonitor(druidServerConfig, segmentLoadDropMgr, segmentLoaderConfig);
   }
 
   @Test
@@ -184,7 +197,7 @@ public class HistoricalAdvancedSegmentMonitorTest
     return new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, DATA_SOURCE)
                                            .setDimension("tier", TIER)
                                            .setDimension("priority", String.valueOf(PRIORITY))
-                                           .build("segment/rowCount/average", value);
+                                           .build("segment/rowCount/avg", value);
   }
 
   private ServiceEventBuilder<ServiceMetricEvent> rowCountRangeEvent(String range, Number value)

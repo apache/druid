@@ -360,7 +360,10 @@ public class SegmentManager
 
             if (oldQueryable != null) {
               try (final Closer closer = Closer.create()) {
-                dataSourceState.removeSegment(segment, oldQueryable.asStorageAdapter().getNumRows());
+                StorageAdapter storageAdapter = oldQueryable.asStorageAdapter();
+                if (storageAdapter != null) {
+                  dataSourceState.removeSegment(segment, storageAdapter.getNumRows());
+                }
                 closer.register(oldQueryable);
                 log.info("Attempting to close segment %s", segment.getId());
                 final ReferenceCountingIndexedTable oldTable = dataSourceState.tablesLookup.remove(segment.getId());

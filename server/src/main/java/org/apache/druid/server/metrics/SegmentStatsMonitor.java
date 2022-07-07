@@ -28,20 +28,41 @@ import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 
 import java.util.Map;
 
-public class HistoricalAdvancedSegmentMonitor extends AbstractMonitor
+/**
+ * An experimental monitor used to keep track of segment stats. Can only be used on a historical and cannot be used with lazy loading.
+ *
+ * It keeps track of the average number of rows in a segment and the distribution of segments according to rowCount.
+ */
+public class SegmentStatsMonitor extends AbstractMonitor
 {
   private final DruidServerConfig serverConfig;
   private final SegmentLoadDropHandler segmentLoadDropMgr;
 
+  /**
+   * Constructor for this monitor. Will throw IllegalStateException if lazy load on start is set to true.
+   *
+   * @param serverConfig
+   * @param segmentLoadDropMgr
+   * @param segmentLoaderConfig
+   */
   @Inject
-  public HistoricalAdvancedSegmentMonitor(DruidServerConfig serverConfig, SegmentLoadDropHandler segmentLoadDropMgr)
+  public SegmentStatsMonitor(
+      DruidServerConfig serverConfig,
+      SegmentLoadDropHandler segmentLoadDropMgr,
+      SegmentLoaderConfig segmentLoaderConfig
+  )
   {
+    if (segmentLoaderConfig.isLazyLoadOnStart()) {
+      throw new IllegalStateException("Monitor doesn't support working with lazy loading on start");
+    }
     this.serverConfig = serverConfig;
     this.segmentLoadDropMgr = segmentLoadDropMgr;
+
   }
 
 
@@ -55,7 +76,7 @@ public class HistoricalAdvancedSegmentMonitor extends AbstractMonitor
           .setDimension(DruidMetrics.DATASOURCE, dataSource)
           .setDimension("tier", serverConfig.getTier())
           .setDimension("priority", String.valueOf(serverConfig.getPriority()));
-      emitter.emit(builder.build("segment/rowCount/average", averageSize));
+      emitter.emit(builder.build("segment/rowCount/avg", averageSize));
     }
 
     for (Map.Entry<String, SegmentRowCountDistribution> entry : segmentLoadDropMgr.getRowCountDistributionPerDatasource()

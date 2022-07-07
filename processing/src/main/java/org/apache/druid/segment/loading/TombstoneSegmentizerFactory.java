@@ -73,7 +73,7 @@ public class TombstoneSegmentizerFactory implements SegmentizerFactory
           @Override
           public int getNumRows()
           {
-            throw new UnsupportedOperationException();
+            return 0;
           }
 
           @Override
