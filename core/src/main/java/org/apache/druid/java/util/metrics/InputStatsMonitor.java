@@ -20,9 +20,11 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+
 
 import java.util.Map;
 
@@ -31,6 +33,12 @@ public class InputStatsMonitor extends AbstractMonitor
   private final InputStats inputStats;
   private long lastReportedValue;
   private final Map<String, String[]> dimensions;
+
+  @Inject
+  public InputStatsMonitor(InputStats inputStats)
+  {
+    this(inputStats, ImmutableMap.of());
+  }
 
   public InputStatsMonitor(InputStats inputStats, Map<String, String[]> dimensions)
   {
