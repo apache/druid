@@ -430,12 +430,6 @@
         <configuration>
           <!-- use normal classpath instead of manifest jar for JvmUtilsTest.testSystemClassPath -->
           <useManifestOnlyJar>false</useManifestOnlyJar>
-          <argLine>
-            @{jacocoArgLine}
-            ${jdk.surefire.argLine}
-            -Djava.library.path=${project.build.directory}/hyperic-sigar-${sigar.base.version}/sigar-bin/lib/
-            -Duser.language=en
-          </argLine>
         </configuration>
       </plugin>
     </plugins>

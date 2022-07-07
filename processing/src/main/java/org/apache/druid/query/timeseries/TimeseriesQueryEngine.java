@@ -161,7 +161,7 @@ public class TimeseriesQueryEngine
       );
 
       if (granularizer == null) {
-        return Sequences.empty();
+        return Sequences.withBaggage(Sequences.empty(), closer);
       }
 
       final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();

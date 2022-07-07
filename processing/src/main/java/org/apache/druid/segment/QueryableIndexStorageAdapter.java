@@ -21,19 +21,15 @@ package org.apache.druid.segment;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -41,8 +37,6 @@ import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.filter.AndFilter;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -50,10 +44,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -227,21 +218,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     if (actualInterval == null) {
       return null;
     }
-
-    final ColumnSelectorColumnIndexSelector bitmapIndexSelector = makeBitmapIndexSelector(virtualColumns);
-
-    final FilterAnalysis filterAnalysis = analyzeFilter(filter, bitmapIndexSelector, queryMetrics);
-
     return new QueryableIndexCursorSequenceBuilder(
         index,
         actualInterval,
         virtualColumns,
-        filterAnalysis.getPreFilterBitmap(),
+        filter,
+        queryMetrics,
         getMinTime().getMillis(),
         getMaxTime().getMillis(),
-        descending,
-        filterAnalysis.getPostFilter(),
-        bitmapIndexSelector
+        descending
     ).buildVectorized(vectorSize > 0 ? vectorSize : DEFAULT_VECTOR_SIZE);
   }
 
@@ -265,21 +250,16 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return Sequences.empty();
     }
 
-    final ColumnSelectorColumnIndexSelector bitmapIndexSelector = makeBitmapIndexSelector(virtualColumns);
-
-    final FilterAnalysis filterAnalysis = analyzeFilter(filter, bitmapIndexSelector, queryMetrics);
-
     return Sequences.filter(
         new QueryableIndexCursorSequenceBuilder(
             index,
             actualInterval,
             virtualColumns,
-            filterAnalysis.getPreFilterBitmap(),
+            filter,
+            queryMetrics,
             getMinTime().getMillis(),
             getMaxTime().getMillis(),
-            descending,
-            filterAnalysis.getPostFilter(),
-            bitmapIndexSelector
+            descending
         ).build(gran),
         Objects::nonNull
     );
@@ -295,7 +275,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     // Compute and cache minTime, maxTime.
     final ColumnHolder columnHolder = index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
-    try (final NumericColumn column = (NumericColumn) columnHolder.getColumn()) {
+    try (NumericColumn column = (NumericColumn) columnHolder.getColumn()) {
       this.minTime = DateTimes.utc(column.getLongSingleValueRow(0));
       this.maxTime = DateTimes.utc(column.getLongSingleValueRow(column.length() - 1));
     }
@@ -316,128 +296,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @VisibleForTesting
-  public ColumnSelectorColumnIndexSelector makeBitmapIndexSelector(final VirtualColumns virtualColumns)
+  public ColumnSelectorColumnIndexSelector makeBitmapIndexSelector(
+      final VirtualColumns virtualColumns
+  )
   {
     return new ColumnSelectorColumnIndexSelector(
         index.getBitmapFactoryForDimensions(),
         virtualColumns,
-        index
+        new DeprecatedQueryableIndexColumnSelector(index)
     );
-  }
-
-  @VisibleForTesting
-  public FilterAnalysis analyzeFilter(
-      @Nullable final Filter filter,
-      ColumnSelectorColumnIndexSelector indexSelector,
-      @Nullable QueryMetrics queryMetrics
-  )
-  {
-    final int totalRows = index.getNumRows();
-
-    /*
-     * Filters can be applied in two stages:
-     * pre-filtering: Use bitmap indexes to prune the set of rows to be scanned.
-     * post-filtering: Iterate through rows and apply the filter to the row values
-     *
-     * The pre-filter and post-filter step have an implicit AND relationship. (i.e., final rows are those that
-     * were not pruned AND those that matched the filter during row scanning)
-     *
-     * An AND filter can have its subfilters partitioned across the two steps. The subfilters that can be
-     * processed entirely with bitmap indexes (subfilter returns non-null value for getBitmapColumnIndex)
-     * will be moved to the pre-filtering stage.
-     *
-     * Any subfilters that cannot be processed entirely with bitmap indexes will be moved to the post-filtering stage.
-     */
-    final List<Filter> preFilters;
-    final List<Filter> postFilters = new ArrayList<>();
-    int preFilteredRows = totalRows;
-    if (filter == null) {
-      preFilters = Collections.emptyList();
-    } else {
-      preFilters = new ArrayList<>();
-
-      if (filter instanceof AndFilter) {
-        // If we get an AndFilter, we can split the subfilters across both filtering stages
-        for (Filter subfilter : ((AndFilter) filter).getFilters()) {
-
-          final BitmapColumnIndex columnIndex = subfilter.getBitmapColumnIndex(indexSelector);
-
-          if (columnIndex == null) {
-            postFilters.add(subfilter);
-          } else {
-            preFilters.add(subfilter);
-            if (!columnIndex.getIndexCapabilities().isExact()) {
-              postFilters.add(subfilter);
-            }
-          }
-        }
-      } else {
-        // If we get an OrFilter or a single filter, handle the filter in one stage
-        final BitmapColumnIndex columnIndex = filter.getBitmapColumnIndex(indexSelector);
-        if (columnIndex == null) {
-          postFilters.add(filter);
-        } else {
-          preFilters.add(filter);
-          if (!columnIndex.getIndexCapabilities().isExact()) {
-            postFilters.add(filter);
-          }
-        }
-      }
-    }
-
-    final ImmutableBitmap preFilterBitmap;
-    if (preFilters.isEmpty()) {
-      preFilterBitmap = null;
-    } else {
-      if (queryMetrics != null) {
-        BitmapResultFactory<?> bitmapResultFactory =
-            queryMetrics.makeBitmapResultFactory(indexSelector.getBitmapFactory());
-        long bitmapConstructionStartNs = System.nanoTime();
-        // Use AndFilter.getBitmapIndex to intersect the preFilters to get its short-circuiting behavior.
-        preFilterBitmap = AndFilter.getBitmapIndex(indexSelector, bitmapResultFactory, preFilters);
-        preFilteredRows = preFilterBitmap.size();
-        queryMetrics.reportBitmapConstructionTime(System.nanoTime() - bitmapConstructionStartNs);
-      } else {
-        BitmapResultFactory<?> bitmapResultFactory = new DefaultBitmapResultFactory(indexSelector.getBitmapFactory());
-        preFilterBitmap = AndFilter.getBitmapIndex(indexSelector, bitmapResultFactory, preFilters);
-      }
-    }
-
-    if (queryMetrics != null) {
-      queryMetrics.preFilters(new ArrayList<>(preFilters));
-      queryMetrics.postFilters(postFilters);
-      queryMetrics.reportSegmentRows(totalRows);
-      queryMetrics.reportPreFilteredRows(preFilteredRows);
-    }
-
-    return new FilterAnalysis(preFilterBitmap, Filters.maybeAnd(postFilters).orElse(null));
-  }
-
-  @VisibleForTesting
-  public static class FilterAnalysis
-  {
-    private final Filter postFilter;
-    private final ImmutableBitmap preFilterBitmap;
-
-    public FilterAnalysis(
-        @Nullable final ImmutableBitmap preFilterBitmap,
-        @Nullable final Filter postFilter
-    )
-    {
-      this.preFilterBitmap = preFilterBitmap;
-      this.postFilter = postFilter;
-    }
-
-    @Nullable
-    public ImmutableBitmap getPreFilterBitmap()
-    {
-      return preFilterBitmap;
-    }
-
-    @Nullable
-    public Filter getPostFilter()
-    {
-      return postFilter;
-    }
   }
 }

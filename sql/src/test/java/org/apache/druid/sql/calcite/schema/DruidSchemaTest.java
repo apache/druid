@@ -77,6 +77,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1197,6 +1198,17 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         RowSignature.builder().add("a", ColumnType.STRING).add("count", ColumnType.LONG).build(),
         signature
     );
+  }
+
+  @Test
+  public void testStaleDatasourceRefresh() throws IOException
+  {
+    Set<SegmentId> segments = new HashSet<>();
+    Set<String> datasources = new HashSet<>();
+    datasources.add("wat");
+    Assert.assertNull(schema.getTable("wat"));
+    schema.refresh(segments, datasources);
+    Assert.assertNull(schema.getTable("wat"));
   }
 
   private static DataSegment newSegment(String datasource, int partitionId)

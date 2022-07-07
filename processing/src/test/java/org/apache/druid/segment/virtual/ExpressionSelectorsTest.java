@@ -129,7 +129,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   @AfterClass
   public static void teardown()
   {
-    CloseableUtils.closeAndSuppressExceptions(CLOSER, throwable -> {});
+    CloseableUtils.closeAndSuppressExceptions(CLOSER, throwable -> {
+    });
   }
 
   @Test
@@ -146,9 +147,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
           null
       );
 
-      List<Cursor> flatten = cursorSequence.toList();
 
-      for (Cursor cursor : flatten) {
+      cursorSequence.accumulate(null, (accumulated, cursor) -> {
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         ExpressionPlan plan = ExpressionPlanner.plan(
             adapter,
@@ -202,7 +202,9 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
 
           cursor.advance();
         }
-      }
+
+        return null;
+      });
     }
   }
 
@@ -220,9 +222,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
           null
       );
 
-      List<Cursor> flatten = cursorSequence.toList();
-
-      for (Cursor cursor : flatten) {
+      cursorSequence.accumulate(null, (ignored, cursor) -> {
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
         // identifier, uses dimension selector supplier supplier, no null coercion
@@ -289,7 +289,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
 
           cursor.advance();
         }
-      }
+        return ignored;
+      });
     }
   }
 
@@ -307,9 +308,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
           null
       );
 
-      List<Cursor> flatten = cursorSequence.toList();
-
-      for (Cursor cursor : flatten) {
+      cursorSequence.accumulate(null, (accumulated, cursor) -> {
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         // an assortment of plans
         ExpressionPlan plan = ExpressionPlanner.plan(
@@ -344,7 +343,9 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
           }
           cursor.advance();
         }
-      }
+
+        return null;
+      });
     }
   }
 
@@ -362,9 +363,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
           null
       );
 
-      List<Cursor> flatten = cursorSequence.toList();
 
-      for (Cursor cursor : flatten) {
+      cursorSequence.accumulate(null, (accumulated, cursor) -> {
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         // an assortment of plans
         ExpressionPlan plan = ExpressionPlanner.plan(
@@ -399,7 +399,9 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
           }
           cursor.advance();
         }
-      }
+
+        return null;
+      });
     }
   }
 

@@ -31,15 +31,13 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.FileUtils;
@@ -48,6 +46,7 @@ import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
@@ -120,12 +119,12 @@ public class TaskToolbox
   private final ChatHandlerProvider chatHandlerProvider;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
   private final AppenderatorsManager appenderatorsManager;
-  private final IndexingServiceClient indexingServiceClient;
+  private final OverlordClient overlordClient;
   private final CoordinatorClient coordinatorClient;
 
   // Used by only native parallel tasks
   private final IntermediaryDataManager intermediaryDataManager;
-  private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> supervisorTaskClientFactory;
+  private final ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider;
   private final ShuffleClient shuffleClient;
 
   public TaskToolbox(
@@ -162,9 +161,9 @@ public class TaskToolbox
       ChatHandlerProvider chatHandlerProvider,
       RowIngestionMetersFactory rowIngestionMetersFactory,
       AppenderatorsManager appenderatorsManager,
-      IndexingServiceClient indexingServiceClient,
+      OverlordClient overlordClient,
       CoordinatorClient coordinatorClient,
-      IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> supervisorTaskClientFactory,
+      ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
       ShuffleClient shuffleClient
   )
   {
@@ -202,9 +201,9 @@ public class TaskToolbox
     this.chatHandlerProvider = chatHandlerProvider;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
     this.appenderatorsManager = appenderatorsManager;
-    this.indexingServiceClient = indexingServiceClient;
+    this.overlordClient = overlordClient;
     this.coordinatorClient = coordinatorClient;
-    this.supervisorTaskClientFactory = supervisorTaskClientFactory;
+    this.supervisorTaskClientProvider = supervisorTaskClientProvider;
     this.shuffleClient = shuffleClient;
   }
 
@@ -442,9 +441,9 @@ public class TaskToolbox
     return appenderatorsManager;
   }
 
-  public IndexingServiceClient getIndexingServiceClient()
+  public OverlordClient getOverlordClient()
   {
-    return indexingServiceClient;
+    return overlordClient;
   }
 
   public CoordinatorClient getCoordinatorClient()
@@ -452,9 +451,9 @@ public class TaskToolbox
     return coordinatorClient;
   }
 
-  public IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> getSupervisorTaskClientFactory()
+  public ParallelIndexSupervisorTaskClientProvider getSupervisorTaskClientProvider()
   {
-    return supervisorTaskClientFactory;
+    return supervisorTaskClientProvider;
   }
 
   public ShuffleClient getShuffleClient()
@@ -496,10 +495,10 @@ public class TaskToolbox
     private ChatHandlerProvider chatHandlerProvider;
     private RowIngestionMetersFactory rowIngestionMetersFactory;
     private AppenderatorsManager appenderatorsManager;
-    private IndexingServiceClient indexingServiceClient;
+    private OverlordClient overlordClient;
     private CoordinatorClient coordinatorClient;
     private IntermediaryDataManager intermediaryDataManager;
-    private IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> supervisorTaskClientFactory;
+    private ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider;
     private ShuffleClient shuffleClient;
 
     public Builder()
@@ -698,9 +697,9 @@ public class TaskToolbox
       return this;
     }
 
-    public Builder indexingServiceClient(final IndexingServiceClient indexingServiceClient)
+    public Builder overlordClient(final OverlordClient overlordClient)
     {
-      this.indexingServiceClient = indexingServiceClient;
+      this.overlordClient = overlordClient;
       return this;
     }
 
@@ -716,9 +715,9 @@ public class TaskToolbox
       return this;
     }
 
-    public Builder supervisorTaskClientFactory(final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> supervisorTaskClientFactory)
+    public Builder supervisorTaskClientProvider(final ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider)
     {
-      this.supervisorTaskClientFactory = supervisorTaskClientFactory;
+      this.supervisorTaskClientProvider = supervisorTaskClientProvider;
       return this;
     }
 
@@ -764,9 +763,9 @@ public class TaskToolbox
           chatHandlerProvider,
           rowIngestionMetersFactory,
           appenderatorsManager,
-          indexingServiceClient,
+          overlordClient,
           coordinatorClient,
-          supervisorTaskClientFactory,
+          supervisorTaskClientProvider,
           shuffleClient
       );
     }
