@@ -58,6 +58,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -98,7 +99,8 @@ public class SegmentAnalyzer
     // get length and column names from storageAdapter
     final int length = storageAdapter.getNumRows();
 
-    Map<String, ColumnAnalysis> columns = new TreeMap<>();
+    // Use LinkedHashMap to preserve column order.
+    final Map<String, ColumnAnalysis> columns = new LinkedHashMap<>();
 
     final RowSignature rowSignature = storageAdapter.getRowSignature();
     for (String columnName : rowSignature.getColumnNames()) {

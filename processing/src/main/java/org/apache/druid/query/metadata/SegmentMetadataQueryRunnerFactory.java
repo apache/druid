@@ -52,6 +52,7 @@ import org.joda.time.Interval;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -98,7 +99,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           totalSize = analyzedColumns.size() * numRows;
         }
 
-        Map<String, ColumnAnalysis> columns = new TreeMap<>();
+        LinkedHashMap<String, ColumnAnalysis> columns = new LinkedHashMap<>();
         ColumnIncluderator includerator = updatedQuery.getToInclude();
         for (Map.Entry<String, ColumnAnalysis> entry : analyzedColumns.entrySet()) {
           final String columnName = entry.getKey();

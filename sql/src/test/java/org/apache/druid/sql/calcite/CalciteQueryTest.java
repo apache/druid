@@ -282,10 +282,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"__time", "TIMESTAMP", "NO"},
-            new Object[]{"cnt", "BIGINT", useDefault ? "NO" : "YES"},
             new Object[]{"dim1", "VARCHAR", "YES"},
             new Object[]{"dim2", "VARCHAR", "YES"},
             new Object[]{"dim3", "VARCHAR", "YES"},
+            new Object[]{"cnt", "BIGINT", useDefault ? "NO" : "YES"},
             new Object[]{"m1", "FLOAT", useDefault ? "NO" : "YES"},
             new Object[]{"m2", "DOUBLE", useDefault ? "NO" : "YES"},
             new Object[]{"unique_dim1", "COMPLEX<hyperUnique>", "YES"}
@@ -313,9 +313,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"__time", "TIMESTAMP", "NO"},
-            new Object[]{"cnt", "BIGINT", useDefault ? "NO" : "YES"},
             new Object[]{"dim1", "VARCHAR", "YES"},
             new Object[]{"dim2", "VARCHAR", "YES"},
+            new Object[]{"cnt", "BIGINT", useDefault ? "NO" : "YES"},
             new Object[]{"m1", "FLOAT", useDefault ? "NO" : "YES"},
             new Object[]{"m2", "DOUBLE", useDefault ? "NO" : "YES"},
             new Object[]{"unique_dim1", "COMPLEX<hyperUnique>", "YES"}
