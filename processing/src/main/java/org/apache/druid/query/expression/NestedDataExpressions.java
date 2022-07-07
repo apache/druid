@@ -522,7 +522,7 @@ public class NestedDataExpressions
         {
           ExprEval input = args.get(0).eval(bindings);
           checkArg0NestedType(name, args, input);
-          // todo (clint): in the future ProcessResults should deal in PathFinder.PathPart instead of strings for fields
+          // maybe in the future ProcessResults should deal in PathFinder.PathPart instead of strings for fields
           StructuredDataProcessor.ProcessResults info = processor.processFields(maybeUnwrapStructuredData(input));
           List<String> transformed = info.getLiteralFields()
                                         .stream()
@@ -635,7 +635,7 @@ public class NestedDataExpressions
   {
     if (!(args.get(1).isLiteral() && args.get(1).getLiteralValue() instanceof String)) {
       throw new IAE(
-          "Function[%s] second argument [%s] must be a literal [%s] value, got [%s] instead",
+          "Function[%s] second argument [%s] must be a literal [%s] value",
           fnName,
           args.get(1).stringify(),
           ExpressionType.STRING
@@ -656,7 +656,7 @@ public class NestedDataExpressions
   {
     if (!(args.get(1).isLiteral() && args.get(1).getLiteralValue() instanceof String)) {
       throw new IAE(
-          "Function[%s] second argument [%s] must be a literal [%s] value, got [%s] instead",
+          "Function[%s] second argument [%s] must be a literal [%s] value",
           fnName,
           args.get(1).stringify(),
           ExpressionType.STRING

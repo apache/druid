@@ -107,26 +107,29 @@ public abstract class StructuredDataProcessor
     return results;
   }
 
-  interface Field
-  {
-    String getName();
-  }
-
-  static class ListField implements Field
+  static abstract class Field
   {
     private final String name;
+
+    protected Field(String name)
+    {
+      this.name = name;
+    }
+
+    public String getName()
+    {
+      return name;
+    }
+  }
+
+  static class ListField extends Field
+  {
     private final List<?> list;
 
     ListField(String name, List<?> list)
     {
-      this.name = name;
+      super(name);
       this.list = list;
-    }
-
-    @Override
-    public String getName()
-    {
-      return name;
     }
 
     public List<?> getList()
@@ -135,21 +138,14 @@ public abstract class StructuredDataProcessor
     }
   }
 
-  static class MapField implements Field
+  static class MapField extends Field
   {
-    private final String name;
     private final Map<String, ?> map;
 
     MapField(String name, Map<String, ?> map)
     {
-      this.name = name;
+      super(name);
       this.map = map;
-    }
-
-    @Override
-    public String getName()
-    {
-      return name;
     }
 
     public Map<String, ?> getMap()

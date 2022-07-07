@@ -69,6 +69,7 @@ public class ComparatorDimensionDictionary<T>
     return valueToId.getInt(value);
   }
 
+  @SuppressWarnings("unused")
   @Nullable
   public T getValue(int id)
   {
@@ -119,16 +120,19 @@ public class ComparatorDimensionDictionary<T>
     return index;
   }
 
+  @SuppressWarnings("unused")
   public T getMinValue()
   {
     return minValue;
   }
 
+  @SuppressWarnings("unused")
   public T getMaxValue()
   {
     return maxValue;
   }
 
+  @SuppressWarnings("unused")
   public int getIdForNull()
   {
     return idForNull;

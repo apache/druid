@@ -376,14 +376,6 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
       @Override
       public int getValueCardinality()
       {
-        /*
-         This is technically wrong if
-         extractionFn != null && (extractionFn.getExtractionType() != ExtractionFn.ExtractionType.ONE_TO_ONE ||
-                                    !extractionFn.preservesOrdering())
-         However current behavior allows some GroupBy-V1 queries to work that wouldn't work otherwise and doesn't
-         cause any problems due to special handling of extractionFn everywhere.
-         See https://github.com/apache/druid/pull/8433
-         */
         return getCardinality();
       }
 
@@ -425,8 +417,8 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
   {
     if (singleType != null) {
 
-      // todo (clint): this null handling stuff is copied from upstream, and also copied in basically all of the
-      //               numerical column selectors, there is probably some base structure that can be extracted...
+      // this null handling stuff is copied from elsewhere, and also copied in basically all of the
+      // numerical column selectors, there is probably some base structure that can be extracted...
       if (Types.is(singleType, ValueType.LONG)) {
         return new LongColumnSelector()
         {

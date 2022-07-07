@@ -47,6 +47,7 @@ public final class CompressedVariableSizedBlobColumn implements Closeable
     closer.register(compressedBlocks);
   }
 
+  @SuppressWarnings("unused")
   public int size()
   {
     return numElements;

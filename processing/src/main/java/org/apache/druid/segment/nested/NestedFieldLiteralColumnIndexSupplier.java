@@ -41,7 +41,6 @@ import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;
@@ -57,7 +56,10 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
 
-// todo: break this up, is a beast
+/**
+ * Supplies indexes for nested field columns {@link NestedFieldLiteralDictionaryEncodedColumn} of
+ * {@link NestedDataComplexColumn}.
+ */
 public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplier
 {
   private final NestedLiteralTypeInfo.TypeSet types;
@@ -68,8 +70,6 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
   private final FixedIndexed<Long> globalLongDictionary;
   private final FixedIndexed<Double> globalDoubleDictionary;
 
-  @Nullable
-  private final ColumnType singleType;
   private final int adjustLongId;
   private final int adjustDoubleId;
 
@@ -90,7 +90,6 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
     this.globalDictionary = globalDictionary;
     this.globalLongDictionary = globalLongDictionary;
     this.globalDoubleDictionary = globalDoubleDictionary;
-    this.singleType = types.getSingleType();
     this.adjustLongId = globalDictionary.size();
     this.adjustDoubleId = adjustLongId + globalLongDictionary.size();
   }
@@ -104,8 +103,8 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
       return (T) (NullValueIndex) () -> new SimpleImmutableBitmapIndex(bitmaps.get(0));
     }
 
-    if (singleType != null) {
-      switch (singleType.getType()) {
+    if (types.getSingleType() != null) {
+      switch (types.getSingleType().getType()) {
         case STRING:
           if (clazz.equals(StringValueSetIndex.class)) {
             return (T) new NestedStringLiteralValueSetIndex();
@@ -439,7 +438,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
           {
             final Predicate<String> stringPredicate = matcherFactory.makeStringPredicate();
 
-            // todo: int iterator
+            // in the future, this could use an int iterator
             final Iterator<Integer> iterator = dictionary.iterator();
             int next;
             int index = 0;
@@ -584,7 +583,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
           {
             final DruidLongPredicate longPredicate = matcherFactory.makeLongPredicate();
 
-            // todo: int iterator
+            // in the future, this could use an int iterator
             final Iterator<Integer> iterator = dictionary.iterator();
             int next;
             int index = 0;
@@ -733,7 +732,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
           {
             final DruidDoublePredicate doublePredicate = matcherFactory.makeDoublePredicate();
 
-            // todo: int iterator
+            // in the future, this could use an int iterator
             final Iterator<Integer> iterator = dictionary.iterator();
             int next;
             int index = 0;
@@ -918,7 +917,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
             final DruidLongPredicate longPredicate = matcherFactory.makeLongPredicate();
             final DruidDoublePredicate doublePredicate = matcherFactory.makeDoublePredicate();
 
-            // todo: int iterator
+            // in the future, this could use an int iterator
             final Iterator<Integer> iterator = dictionary.iterator();
             int next;
             int index;

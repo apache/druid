@@ -86,6 +86,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   private final String name;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final IndexSpec indexSpec;
+  @SuppressWarnings("unused")
   private final Closer closer;
 
   private byte[] metadataBytes;
@@ -130,7 +131,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       String name,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
-      ProgressIndicator progressIndicator,
+      @SuppressWarnings("unused") ProgressIndicator progressIndicator,
       Closer closer
   )
   {

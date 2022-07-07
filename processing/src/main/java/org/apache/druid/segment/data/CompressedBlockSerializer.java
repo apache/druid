@@ -47,6 +47,7 @@ public class CompressedBlockSerializer implements Serializer
 
   private final ByteBuffer offsetValueConverter = ByteBuffer.allocate(Integer.BYTES).order(ByteOrder.nativeOrder());
 
+  @Nullable
   private ByteBuffer uncompressedDataBuffer;
   private ByteBuffer compressedDataBuffer;
   private int numBlocks;
@@ -138,7 +139,7 @@ public class CompressedBlockSerializer implements Serializer
     valuesOut.writeTo(channel);
   }
 
-  public void flushIfNeeded() throws IOException
+  private void flushIfNeeded() throws IOException
   {
     if (!uncompressedDataBuffer.hasRemaining()) {
       flushBuffer();

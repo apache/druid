@@ -224,12 +224,7 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
     throw new UnsupportedOperationException("Not supported");
   }
 
-  interface FieldIndexer
-  {
-    int processValue(@Nullable Object value);
-  }
-
-  static class LiteralFieldIndexer implements FieldIndexer
+  static class LiteralFieldIndexer
   {
     private final GlobalDimensionDictionary globalDimensionDictionary;
     private final NestedLiteralTypeInfo.MutableTypeSet typeSet;
@@ -240,8 +235,7 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
       this.typeSet = new NestedLiteralTypeInfo.MutableTypeSet();
     }
 
-    @Override
-    public int processValue(@Nullable Object value)
+    private int processValue(@Nullable Object value)
     {
       // null value is always added to the global dictionary as id 0, so we can ignore them here
       if (value != null) {

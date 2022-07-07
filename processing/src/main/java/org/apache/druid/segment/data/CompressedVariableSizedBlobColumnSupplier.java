@@ -58,7 +58,6 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
 
   private final Supplier<CompressedLongsReader> offsetReaderSupplier;
   private final Supplier<CompressedBlockReader> blockDataReaderSupplier;
-  final ByteOrder order;
 
   public CompressedVariableSizedBlobColumnSupplier(
       ByteBuffer offsetsBuffer,
@@ -67,7 +66,6 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
       int numElements
   )
   {
-    this.order = order;
     this.numElements = numElements;
     this.offsetReaderSupplier = CompressedLongsReader.fromByteBuffer(offsetsBuffer, order);
     this.blockDataReaderSupplier = CompressedBlockReader.fromByteBuffer(dataBuffer, order);

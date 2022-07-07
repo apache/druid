@@ -60,6 +60,7 @@ public class ComparatorSortedDimensionDictionary<T>
     }
   }
 
+  @SuppressWarnings("unused")
   public int getUnsortedIdFromSortedId(int index)
   {
     return indexToId[index];

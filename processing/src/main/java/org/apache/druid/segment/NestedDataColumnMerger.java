@@ -20,11 +20,11 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.PeekingIterator;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
@@ -58,8 +58,6 @@ public class NestedDataColumnMerger implements DimensionMergerV9
 
   private final String name;
   private final Closer closer;
-  @Nullable
-  protected List<IndexableAdapter> adapters;
 
   private NestedDataColumnSerializer serializer;
 
@@ -67,7 +65,6 @@ public class NestedDataColumnMerger implements DimensionMergerV9
       String name,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
-      ColumnCapabilities capabilites,
       ProgressIndicator progressIndicator,
       Closer closer
   )
@@ -83,8 +80,6 @@ public class NestedDataColumnMerger implements DimensionMergerV9
   {
 
     long dimStartTime = System.currentTimeMillis();
-
-    this.adapters = adapters;
 
     int numMergeIndex = 0;
     GlobalDictionarySortedCollector sortedLookup = null;
@@ -102,14 +97,14 @@ public class NestedDataColumnMerger implements DimensionMergerV9
       } else if (adapter instanceof QueryableIndexIndexableAdapter) {
         dimValues = getSortedIndexesFromQueryableAdapter((QueryableIndexIndexableAdapter) adapter, mergedFields);
       } else {
-        dimValues = null;
+        throw new ISE("Unable to merge columns of unsupported adapter %s", adapter.getClass());
       }
 
       boolean allNulls = allNull(dimValues.getSortedStrings()) &&
                          allNull(dimValues.getSortedLongs()) &&
                          allNull(dimValues.getSortedDoubles());
       sortedLookup = dimValues;
-      if (dimValues != null && !allNulls) {
+      if (!allNulls) {
         sortedLookups[i] = dimValues.getSortedStrings();
         sortedLongLookups[i] = dimValues.getSortedLongs();
         sortedDoubleLookups[i] = dimValues.getSortedDoubles();

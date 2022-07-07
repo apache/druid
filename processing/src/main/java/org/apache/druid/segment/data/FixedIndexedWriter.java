@@ -134,6 +134,7 @@ public class FixedIndexedWriter<T> implements Serializer
     valuesOut.writeTo(channel);
   }
 
+  @SuppressWarnings("unused")
   @Nullable
   public T get(int index) throws IOException
   {
@@ -147,6 +148,7 @@ public class FixedIndexedWriter<T> implements Serializer
     return typeStrategy.read(readBuffer);
   }
 
+  @SuppressWarnings("unused")
   public Iterator<T> getIterator()
   {
     final ByteBuffer iteratorBuffer = ByteBuffer.allocate(width * PAGE_SIZE).order(readBuffer.order());

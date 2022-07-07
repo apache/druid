@@ -142,6 +142,7 @@ public final class CompressedBlockReader implements Closeable
   /**
    * Get current block number of data loaded in {@link #decompressedDataBuffer}
    */
+  @SuppressWarnings("unused")
   public int getCurrentBlockNumber()
   {
     return currentBlockNumber;

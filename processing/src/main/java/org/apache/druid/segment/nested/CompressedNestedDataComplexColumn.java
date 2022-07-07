@@ -70,7 +70,6 @@ import java.nio.ByteBuffer;
 
 public final class CompressedNestedDataComplexColumn extends NestedDataComplexColumn
 {
-  private final ColumnConfig columnConfig;
   private final NestedDataColumnMetadata metadata;
   private final Closer closer;
   private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
@@ -101,7 +100,6 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
   )
   {
     this.metadata = metadata;
-    this.columnConfig = columnConfig;
     this.nullValues = nullValues;
     this.fields = fields;
     this.fieldInfo = fieldInfo;
@@ -231,7 +229,7 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
       private Object getForOffset(int offset)
       {
         if (nullValues.get(offset)) {
-          // todo (clint): maybe can use bitmap batch operations for nulls?
+          // maybe someday can use bitmap batch operations for nulls?
           return null;
         }
         final ByteBuffer valueBuffer = compressedRawColumn.get(offset);

@@ -105,9 +105,8 @@ public class NestedPathFinder
         partMark = i + 1;
       } else if (current == ']' && arrayMark >= 0 && quoteMark < 0) {
         String maybeNumber = getPathSubstring(path, partMark, i);
-        Integer index;
         try {
-          index = Integer.parseInt(maybeNumber);
+          int index = Integer.parseInt(maybeNumber);
           parts.add(new ArrayElement(index));
           dotMark = -1;
           arrayMark = -1;
@@ -228,9 +227,8 @@ public class NestedPathFinder
         partMark = i + 1;
       } else if (current == ']' && arrayMark >= 0 && quoteMark < 0) {
         String maybeNumber = getPathSubstring(path, partMark, i);
-        Integer index;
         try {
-          index = Integer.parseInt(maybeNumber);
+          int index = Integer.parseInt(maybeNumber);
           parts.add(new ArrayElement(index));
           dotMark = -1;
           arrayMark = -1;
