@@ -20,8 +20,8 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Longs;
 import it.unimi.dsi.fastutil.doubles.DoubleArraySet;
 import it.unimi.dsi.fastutil.doubles.DoubleIterator;
 import it.unimi.dsi.fastutil.doubles.DoubleSet;
@@ -35,6 +35,7 @@ import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
@@ -203,13 +204,19 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
         @Override
         public double estimateSelectivity(int totalRows)
         {
-          return (double) getBitmap(dictionary.indexOf(globalDictionary.indexOf(value))).size() / totalRows;
+          return (double) getBitmap(
+              dictionary.indexOf(globalDictionary.indexOf(value))
+          ).size() / totalRows;
         }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
-          return bitmapResultFactory.wrapDimensionValue(getBitmap(dictionary.indexOf(globalDictionary.indexOf(value))));
+          return bitmapResultFactory.wrapDimensionValue(
+              getBitmap(
+                  dictionary.indexOf(globalDictionary.indexOf(value))
+              )
+          );
         }
       };
     }
@@ -490,7 +497,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
     {
-      final Long longValue = Longs.tryParse(value);
+      final Long longValue = GuavaUtils.tryParseLong(value);
       return new SimpleBitmapColumnIndex()
       {
         @Override
@@ -522,20 +529,30 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
           LongSet longs = new LongArraySet(values.size());
+          boolean needNullCheck = false;
           for (String value : values) {
-            Long theValue = Longs.tryParse(value);
-            if (theValue != null) {
-              longs.add(theValue.longValue());
+            if (value == null) {
+              needNullCheck = true;
+            } else {
+              Long theValue = GuavaUtils.tryParseLong(value);
+              if (theValue != null) {
+                longs.add(theValue.longValue());
+              }
             }
           }
+          final boolean doNullCheck = needNullCheck;
           return () -> new Iterator<ImmutableBitmap>()
           {
             final LongIterator iterator = longs.iterator();
             int next = -1;
+            boolean nullChecked = false;
 
             @Override
             public boolean hasNext()
             {
+              if (doNullCheck && !nullChecked) {
+                return true;
+              }
               if (next < 0) {
                 findNext();
               }
@@ -545,6 +562,10 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
             @Override
             public ImmutableBitmap next()
             {
+              if (doNullCheck && !nullChecked) {
+                nullChecked = true;
+                return getBitmap(0);
+              }
               if (next < 0) {
                 findNext();
                 if (next < 0) {
@@ -639,7 +660,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
     {
-      final Double doubleValue = Doubles.tryParse(value);
+      final Double doubleValue = Strings.isNullOrEmpty(value) ? null : Doubles.tryParse(value);
       return new SimpleBitmapColumnIndex()
       {
         @Override
@@ -671,20 +692,30 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
           DoubleSet doubles = new DoubleArraySet(values.size());
+          boolean needNullCheck = false;
           for (String value : values) {
-            Double theValue = Doubles.tryParse(value);
-            if (theValue != null) {
-              doubles.add(theValue.doubleValue());
+            if (value == null) {
+              needNullCheck = true;
+            } else {
+              Double theValue = Doubles.tryParse(value);
+              if (theValue != null) {
+                doubles.add(theValue.doubleValue());
+              }
             }
           }
+          final boolean doNullCheck = needNullCheck;
           return () -> new Iterator<ImmutableBitmap>()
           {
             final DoubleIterator iterator = doubles.iterator();
             int next = -1;
+            boolean nullChecked = false;
 
             @Override
             public boolean hasNext()
             {
+              if (doNullCheck && !nullChecked) {
+                return true;
+              }
               if (next < 0) {
                 findNext();
               }
@@ -694,6 +725,10 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
             @Override
             public ImmutableBitmap next()
             {
+              if (doNullCheck && !nullChecked) {
+                nullChecked = true;
+                return getBitmap(0);
+              }
               if (next < 0) {
                 findNext();
                 if (next < 0) {
@@ -797,7 +832,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
       if (localId >= 0) {
         intList.add(localId);
       }
-      Long someLong = Longs.tryParse(value);
+      Long someLong = GuavaUtils.tryParseLong(value);
       if (someLong != null) {
         globalId = globalLongDictionary.indexOf(someLong);
         localId = dictionary.indexOf(globalId + adjustLongId);

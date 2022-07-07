@@ -10,19 +10,19 @@
       "dimensions": [
         "dim",
         {
-          "type": "nestedData",
+          "type": "json",
           "name": "nest"
         },
         {
-          "type": "nestedData",
+          "type": "json",
           "name": "nester"
         },
         {
-          "type": "nestedData",
+          "type": "json",
           "name": "variant"
         },
         {
-          "type": "nestedData",
+          "type": "json",
           "name": "list"
         }
       ],

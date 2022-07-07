@@ -9,7 +9,7 @@
     "dimensionsSpec": {
       "dimensions": [
         {
-          "type": "nestedData",
+          "type": "json",
           "name": "nest"
         }
       ],

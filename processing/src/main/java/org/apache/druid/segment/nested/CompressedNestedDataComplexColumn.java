@@ -88,7 +88,7 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
 
   public CompressedNestedDataComplexColumn(
       NestedDataColumnMetadata metadata,
-      ColumnConfig columnConfig,
+      @SuppressWarnings("unused") ColumnConfig columnConfig,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
       GenericIndexed<String> fields,

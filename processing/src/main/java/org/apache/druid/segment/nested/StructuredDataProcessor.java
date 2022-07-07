@@ -107,7 +107,7 @@ public abstract class StructuredDataProcessor
     return results;
   }
 
-  static abstract class Field
+  abstract static class Field
   {
     private final String name;
 

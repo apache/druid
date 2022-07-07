@@ -21,6 +21,7 @@ package org.apache.druid.query.groupby;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -33,6 +34,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.RowSignature;
@@ -145,6 +147,54 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
                                           .setVirtualColumns(new NestedFieldVirtualColumn("nest", ".x", "v0"))
                                           .setAggregatorSpecs(new CountAggregatorFactory("count"))
                                           .setContext(getContext())
+                                          .build();
+
+
+    Sequence<ResultRow> seq = helper.runQueryOnSegmentsObjs(segmentsGenerator.apply(helper, tempFolder, closer), groupQuery);
+
+    List<ResultRow> results = seq.toList();
+    verifyResults(
+        groupQuery.getResultRowSignature(),
+        results,
+        ImmutableList.of(
+            new Object[]{null, 8L},
+            new Object[]{"100", 2L},
+            new Object[]{"200", 2L},
+            new Object[]{"300", 4L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupBySomeFieldWithFilter()
+  {
+    if (!"segments".equals(segmentsName)) {
+      if (GroupByStrategySelector.STRATEGY_V1.equals(config.getDefaultStrategy())) {
+        expectedException.expect(RuntimeException.class);
+        expectedException.expectMessage(
+            "GroupBy v1 does not support dimension selectors with unknown cardinality."
+        );
+      } else if (vectorize == QueryContexts.Vectorize.FORCE) {
+        expectedException.expect(RuntimeException.class);
+        expectedException.expectMessage(
+            "Cannot vectorize!"
+        );
+      }
+    }
+    List<String> vals = new ArrayList<>();
+    vals.add(NullHandling.defaultStringValue());
+    vals.add("100");
+    vals.add("200");
+    vals.add("300");
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0"))
+                                          .setVirtualColumns(new NestedFieldVirtualColumn("nest", ".x", "v0"))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .setDimFilter(new InDimFilter("v0", vals, null))
                                           .build();
 
 
