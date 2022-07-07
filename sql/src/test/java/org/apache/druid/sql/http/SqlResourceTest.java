@@ -121,13 +121,13 @@ public class SqlResourceTest extends CalciteTestBase
   private static final String DUMMY_SQL_QUERY_ID = "dummy";
 
   private static final List<String> EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS =
-      Arrays.asList("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1", "EXPR$8");
+      Arrays.asList("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1", "EXPR$8");
 
   private static final List<String> EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS =
-      Arrays.asList("LONG", "LONG", "STRING", "STRING", "STRING", "FLOAT", "DOUBLE", "COMPLEX<hyperUnique>", "STRING");
+      Arrays.asList("LONG", "STRING", "STRING", "STRING", "LONG", "FLOAT", "DOUBLE", "COMPLEX<hyperUnique>", "STRING");
 
   private static final List<String> EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS =
-      Arrays.asList("TIMESTAMP", "BIGINT", "VARCHAR", "VARCHAR", "VARCHAR", "FLOAT", "DOUBLE", "OTHER", "VARCHAR");
+      Arrays.asList("TIMESTAMP", "VARCHAR", "VARCHAR", "VARCHAR", "BIGINT", "FLOAT", "DOUBLE", "OTHER", "VARCHAR");
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
@@ -541,10 +541,10 @@ public class SqlResourceTest extends CalciteTestBase
         ImmutableList.of(
             Arrays.asList(
                 "2000-01-01T00:00:00.000Z",
-                1,
                 "",
                 "a",
                 "[\"a\",\"b\"]",
+                1,
                 1.0,
                 1.0,
                 "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -552,10 +552,10 @@ public class SqlResourceTest extends CalciteTestBase
             ),
             Arrays.asList(
                 "2000-01-02T00:00:00.000Z",
-                1,
                 "10.1",
                 nullStr,
                 "[\"b\",\"c\"]",
+                1,
                 2.0,
                 2.0,
                 "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -652,10 +652,10 @@ public class SqlResourceTest extends CalciteTestBase
             EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS,
             Arrays.asList(
                 "2000-01-01T00:00:00.000Z",
-                1,
                 "",
                 "a",
                 "[\"a\",\"b\"]",
+                1,
                 1.0,
                 1.0,
                 "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -663,10 +663,10 @@ public class SqlResourceTest extends CalciteTestBase
             ),
             Arrays.asList(
                 "2000-01-02T00:00:00.000Z",
-                1,
                 "10.1",
                 nullStr,
                 "[\"b\",\"c\"]",
+                1,
                 2.0,
                 2.0,
                 "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -720,10 +720,10 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(
         Arrays.asList(
             "2000-01-01T00:00:00.000Z",
-            1,
             "",
             "a",
             "[\"a\",\"b\"]",
+            1,
             1.0,
             1.0,
             "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -734,10 +734,10 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(
         Arrays.asList(
             "2000-01-02T00:00:00.000Z",
-            1,
             "10.1",
             nullStr,
             "[\"b\",\"c\"]",
+            1,
             2.0,
             2.0,
             "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -768,10 +768,10 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(
         Arrays.asList(
             "2000-01-01T00:00:00.000Z",
-            1,
             "",
             "a",
             "[\"a\",\"b\"]",
+            1,
             1.0,
             1.0,
             "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -782,10 +782,10 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(
         Arrays.asList(
             "2000-01-02T00:00:00.000Z",
-            1,
             "10.1",
             nullStr,
             "[\"b\",\"c\"]",
+            1,
             2.0,
             2.0,
             "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -1096,8 +1096,8 @@ public class SqlResourceTest extends CalciteTestBase
 
     Assert.assertEquals(
         ImmutableList.of(
-            "2000-01-01T00:00:00.000Z,1,,a,\"[\"\"a\"\",\"\"b\"\"]\",1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
-            "2000-01-02T00:00:00.000Z,1,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "2000-01-01T00:00:00.000Z,,a,\"[\"\"a\"\",\"\"b\"\"]\",1,1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "2000-01-02T00:00:00.000Z,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",1,2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
             "",
             ""
         ),
@@ -1121,8 +1121,8 @@ public class SqlResourceTest extends CalciteTestBase
             String.join(",", EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS),
             String.join(",", EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS),
             String.join(",", EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS),
-            "2000-01-01T00:00:00.000Z,1,,a,\"[\"\"a\"\",\"\"b\"\"]\",1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
-            "2000-01-02T00:00:00.000Z,1,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "2000-01-01T00:00:00.000Z,,a,\"[\"\"a\"\",\"\"b\"\"]\",1,1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "2000-01-02T00:00:00.000Z,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",1,2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
             "",
             ""
         ),

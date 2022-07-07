@@ -1162,7 +1162,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
             "id",
             ImmutableList.of(Intervals.utc(1L, 2L)),
             new LinkedHashMap<>(
-                ImmutableMap.<String, ColumnAnalysis>of(
+                ImmutableMap.of(
                     "a",
                     new ColumnAnalysis(
                         null,
