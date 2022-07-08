@@ -674,7 +674,7 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
   }
 
   @Test
-  public void test_convertJoinsToFilters_dontConvertWhenColumnIsUsed()
+  public void test_convertJoinsToFilters_partialConvertWhenColumnIsUsed()
   {
     final JoinableClause clause = new JoinableClause(
         "j.",
@@ -691,7 +691,7 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
 
     Assert.assertEquals(
         Pair.of(
-            ImmutableList.of(),
+            ImmutableList.of(new InDimFilter("x", TEST_LOOKUP_KEYS)),
             ImmutableList.of(clause)
         ),
         conversion
@@ -799,7 +799,7 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
   }
 
   @Test
-  public void test_convertJoinsToFilters_dontConvertJoinsDependedOnByLaterJoins()
+  public void test_convertJoinsToFilters_partialConvertJoinsDependedOnByLaterJoins()
   {
     final ImmutableList<JoinableClause> clauses = ImmutableList.of(
         new JoinableClause(
@@ -830,7 +830,7 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
 
     Assert.assertEquals(
         Pair.of(
-            ImmutableList.of(),
+            ImmutableList.of(new InDimFilter("x", TEST_LOOKUP_KEYS)),
             clauses
         ),
         conversion
@@ -838,7 +838,7 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
   }
 
   @Test
-  public void test_convertJoinsToFilters_dontConvertJoinsDependedOnByLaterJoins2()
+  public void test_convertJoinsToFilters_partialConvertJoinsDependedOnByLaterJoins2()
   {
     final ImmutableList<JoinableClause> clauses = ImmutableList.of(
         new JoinableClause(
@@ -869,7 +869,7 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
 
     Assert.assertEquals(
         Pair.of(
-            ImmutableList.of(new InDimFilter("x", TEST_LOOKUP_KEYS)),
+            ImmutableList.of(new InDimFilter("x", TEST_LOOKUP_KEYS), new InDimFilter("x", TEST_LOOKUP_KEYS)),
             clauses.subList(1, clauses.size())
         ),
         conversion
