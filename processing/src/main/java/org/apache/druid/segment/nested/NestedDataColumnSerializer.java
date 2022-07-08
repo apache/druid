@@ -197,7 +197,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
           writer = new DoubleFieldColumnWriter();
         }
       } else {
-        writer = new AnyFieldColumnWriter();
+        writer = new VariantLiteralFieldColumnWriter();
       }
       writer.open();
       fieldWriters.put(field.getKey(), writer);
@@ -646,7 +646,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     }
   }
 
-  private final class AnyFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<Object>
+  private final class VariantLiteralFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<Object>
   {
     @Override
     int lookupGlobalId(Object value)

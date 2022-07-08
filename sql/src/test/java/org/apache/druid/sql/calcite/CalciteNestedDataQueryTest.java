@@ -203,7 +203,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1",
         ImmutableList.of(
@@ -269,7 +269,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1 LIMIT 10",
         ImmutableList.of(
@@ -302,7 +302,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nester, '.'), "
+        + "JSON_VALUE(nester, '$'), "
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1",
         ImmutableList.of(
@@ -330,9 +330,45 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testGroupByGetPaths() throws Exception
+  {
+    testQuery(
+        "SELECT "
+        + "GET_PATH(nest, '.x'), "
+        + "GET_PATH(nest, '.\"x\"'), "
+        + "GET_PATH(nest, '.[\"x\"]'), "
+        + "SUM(cnt) "
+        + "FROM druid.nested GROUP BY 1, 2, 3",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn("nest", ".\"x\"", "v0", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0"),
+                                new DefaultDimensionSpec("v0", "d1"),
+                                new DefaultDimensionSpec("v0", "d2")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), NullHandling.defaultStringValue(), NullHandling.defaultStringValue(), 4L},
+            new Object[]{"100", "100", "100", 2L},
+            new Object[]{"200", "200", "200", 1L}
+        )
+    );
+  }
 
   @Test
-  public void testGroupByJsonPaths() throws Exception
+  public void testGroupByJsonGetPaths() throws Exception
   {
     testQuery(
         "SELECT "
@@ -408,9 +444,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.x') = '100' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.x') = '100' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -443,9 +479,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.x') = 100 GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.x') = 100 GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -479,9 +515,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.y') = 2.02 GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.y') = 2.02 GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -515,9 +551,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.z') = '400' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.z') = '400' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -547,13 +583,13 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterAny() throws Exception
+  public void testGroupByPathSelectorFilterVariant() throws Exception
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nester, '.n.x') = 1 GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nester, '$.n.x') = 1 GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -578,7 +614,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterAny2() throws Exception
+  public void testGroupByPathSelectorFilterVariant2() throws Exception
   {
     testQuery(
         "SELECT "
@@ -612,7 +648,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterAny3() throws Exception
+  public void testGroupByPathSelectorFilterVariant3() throws Exception
   {
     testQuery(
         "SELECT "
@@ -650,9 +686,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.missing') = 'no way' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.missing') = 'no way' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -715,9 +751,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.x') >= '100' AND GET_PATH(nest, '.x') <= '300' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.x') >= '100' AND JSON_VALUE(nest, '$.x') <= '300' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -748,9 +784,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.x') >= '100' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.x') >= '100' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -781,9 +817,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.x') <= '100' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.x') <= '100' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -814,9 +850,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.x') >= 100 AND GET_PATH(nest, '.x') <= 300 GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.x') >= 100 AND JSON_VALUE(nest, '$.x') <= 300 GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -848,9 +884,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.x') >= 100 GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.x') >= 100 GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -882,9 +918,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.x') <= 100 GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.x') <= 100 GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -915,9 +951,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.y'), "
+        + "JSON_VALUE(nest, '$.y'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.y') >= '1.01' AND GET_PATH(nest, '.y') <= '3.03' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.y') >= '1.01' AND JSON_VALUE(nest, '$.y') <= '3.03' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -948,9 +984,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.y'), "
+        + "JSON_VALUE(nest, '$.y'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.y') >= '1.01' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.y') >= '1.01' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -981,9 +1017,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.y'), "
+        + "JSON_VALUE(nest, '$.y'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.y') <= '2.02' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.y') <= '2.02' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1014,9 +1050,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.y'), "
+        + "JSON_VALUE(nest, '$.y'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.y') >= 2.0 AND GET_PATH(nest, '.y') <= 3.5 GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.y') >= 2.0 AND JSON_VALUE(nest, '$.y') <= 3.5 GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1048,9 +1084,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.y'), "
+        + "JSON_VALUE(nest, '$.y'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.y') >= 1.0 GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.y') >= 1.0 GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1082,9 +1118,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.y'), "
+        + "JSON_VALUE(nest, '$.y'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.y') <= 2.02 GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.y') <= 2.02 GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1115,9 +1151,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.x') >= '100' AND GET_PATH(nest, '.x') <= '300' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.x') >= '100' AND JSON_VALUE(nest, '$.x') <= '300' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1148,9 +1184,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.z') >= '400' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.z') >= '400' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1182,9 +1218,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.z') <= '400' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.z') <= '400' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1216,9 +1252,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.x') LIKE '10%' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.x') LIKE '10%' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1248,9 +1284,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.z') LIKE '30%' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.z') LIKE '30%' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1281,9 +1317,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.z') LIKE '%00%' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.z') LIKE '%00%' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1310,13 +1346,13 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathLikeFilterAny() throws Exception
+  public void testGroupByPathLikeFilterVariant() throws Exception
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nester, '.n.x') LIKE '%ell%' GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nester, '$.n.x') LIKE '%ell%' GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1347,9 +1383,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.x') in (100, 200) GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.x') in (100, 200) GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1381,9 +1417,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.y') in (2.02, 3.03) GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.y') in (2.02, 3.03) GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1415,9 +1451,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nest, '.z') in ('300', 'abcdef') GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.z') in ('300', 'abcdef') GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1445,13 +1481,13 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathInFilterAny() throws Exception
+  public void testGroupByPathInFilterVariant() throws Exception
   {
     testQuery(
         "SELECT "
-        + "GET_PATH(nest, '.x'), "
+        + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
-        + "FROM druid.nested WHERE GET_PATH(nester, '.n.x') in ('hello', 1) GROUP BY 1",
+        + "FROM druid.nested WHERE JSON_VALUE(nester, '$.n.x') in ('hello', 1) GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -1482,7 +1518,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "SUM(JSON_GET_PATH(nest, '.x')) "
+        + "SUM(JSON_VALUE(nest, '$.x')) "
         + "FROM druid.nested",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -1508,7 +1544,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     // this one actually equals 2.1 because the filter is a long so double is cast and is 1 so both rows match
     testQuery(
         "SELECT "
-        + "SUM(JSON_GET_PATH(nest, '.x')) FILTER(WHERE((JSON_GET_PATH(nest, '.y'))=2.02))"
+        + "SUM(JSON_VALUE(nest, '$.x')) FILTER(WHERE((JSON_VALUE(nest, '$.y'))=2.02))"
         + "FROM druid.nested",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -1542,7 +1578,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "SUM(JSON_GET_PATH(nest, '.x')) FILTER(WHERE((JSON_GET_PATH(nest, '.z'))='300'))"
+        + "SUM(JSON_VALUE(nest, '$.x')) FILTER(WHERE((JSON_VALUE(nest, '$.z'))='300'))"
         + "FROM druid.nested",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -1578,7 +1614,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     skipVectorize();
     testQuery(
         "SELECT "
-        + "SUM(JSON_GET_PATH(nest, '.mixed')) "
+        + "SUM(JSON_VALUE(nest, '$.mixed')) "
         + "FROM druid.nested",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -1604,7 +1640,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     // this one actually equals 2.1 because the filter is a long so double is cast and is 1 so both rows match
     testQuery(
         "SELECT "
-        + "SUM(JSON_GET_PATH(nest, '.mixed')) FILTER(WHERE((JSON_GET_PATH(nest, '.mixed'))=1))"
+        + "SUM(JSON_VALUE(nest, '$.mixed')) FILTER(WHERE((JSON_VALUE(nest, '$.mixed'))=1))"
         + "FROM druid.nested",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -1641,7 +1677,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     // with double matcher, only the one row matches since the long value cast is not picked up
     testQuery(
         "SELECT "
-        + "SUM(JSON_GET_PATH(nest, '.mixed')) FILTER(WHERE((JSON_GET_PATH(nest, '.mixed'))=1.1))"
+        + "SUM(JSON_VALUE(nest, '$.mixed')) FILTER(WHERE((JSON_VALUE(nest, '$.mixed'))=1.1))"
         + "FROM druid.nested",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -1671,7 +1707,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "SUM(CAST(JSON_GET_PATH(nest, '.x') as BIGINT)) "
+        + "SUM(CAST(JSON_VALUE(nest, '$.x') as BIGINT)) "
         + "FROM druid.nested",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -1689,12 +1725,60 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
+
   @Test
   public void testCastAndSumPathStrings() throws Exception
   {
     testQuery(
         "SELECT "
-        + "SUM(CAST(JSON_GET_PATH(nest, '.z') as BIGINT)) "
+        + "SUM(CAST(JSON_VALUE(nest, '$.z') as BIGINT)) "
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("nest", ".\"z\"", "v0", ColumnType.LONG))
+                  .aggregators(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{700L}
+        )
+    );
+  }
+
+  @Test
+  public void testReturningAndSumPath() throws Exception
+  {
+    testQuery(
+        "SELECT "
+        + "SUM(JSON_VALUE(nest, '$.x' RETURNING BIGINT)) "
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("nest", ".\"x\"", "v0", ColumnType.LONG))
+                  .aggregators(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{400L}
+        )
+    );
+  }
+
+
+  @Test
+  public void testReturningAndSumPathStrings() throws Exception
+  {
+    testQuery(
+        "SELECT "
+        + "SUM(JSON_VALUE(nest, '$.z' RETURNING BIGINT)) "
         + "FROM druid.nested",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -1850,7 +1934,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "JSON_GET_PATH(nester, '.array[1]'), "
+        + "JSON_VALUE(nester, '$.array[1]'), "
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1",
         ImmutableList.of(
@@ -1882,27 +1966,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     testQueryThrows(
         "SELECT "
-        + "JSON_GET_PATH(nester, '.array.[1]'), "
+        + "JSON_VALUE(nester, '.array.[1]'), "
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1",
         (expected) -> {
           expected.expect(UnsupportedSQLQueryException.class);
-          expected.expectMessage("Cannot use [JSON_GET_PATH]: [Bad format, '.array.[1]' is not a valid 'jq' path: invalid position 7 for '[', must not follow '.' or must be contained with '\"']");
-        }
-    );
-  }
-
-  @Test
-  public void testGroupByInvalidPathOnExpression() throws Exception
-  {
-    testQueryThrows(
-        "SELECT "
-        + "JSON_GET_PATH(JSON_GET_PATH(nester, '.'), '.array[1]'), "
-        + "SUM(cnt) "
-        + "FROM druid.nested GROUP BY 1",
-        (expected) -> {
-          expected.expect(UnsupportedSQLQueryException.class);
-          expected.expectMessage("Cannot use [JSON_GET_PATH] on expression input: [get_path(\"nester\",'.')]");
+          expected.expectMessage("Cannot use [JSON_VALUE_ANY]: [Bad format, '.array.[1]' is not a valid JSONPath path: must start with '$']");
         }
     );
   }

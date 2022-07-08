@@ -42,6 +42,7 @@ import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;
@@ -63,7 +64,8 @@ import java.util.SortedSet;
  */
 public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplier
 {
-  private final NestedLiteralTypeInfo.TypeSet types;
+  @Nullable
+  private final ColumnType singleType;
   private final BitmapFactory bitmapFactory;
   private final GenericIndexed<ImmutableBitmap> bitmaps;
   private final FixedIndexed<Integer> dictionary;
@@ -84,7 +86,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
       FixedIndexed<Double> globalDoubleDictionary
   )
   {
-    this.types = types;
+    this.singleType = types.getSingleType();
     this.bitmapFactory = bitmapFactory;
     this.bitmaps = bitmaps;
     this.dictionary = dictionary;
@@ -104,8 +106,8 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
       return (T) (NullValueIndex) () -> new SimpleImmutableBitmapIndex(bitmaps.get(0));
     }
 
-    if (types.getSingleType() != null) {
-      switch (types.getSingleType().getType()) {
+    if (singleType != null) {
+      switch (singleType.getType()) {
         case STRING:
           if (clazz.equals(StringValueSetIndex.class)) {
             return (T) new NestedStringLiteralValueSetIndex();
@@ -134,9 +136,9 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
       }
     }
     if (clazz.equals(StringValueSetIndex.class)) {
-      return (T) new NestedAnyLiteralValueSetIndex();
+      return (T) new NestedVariantLiteralValueSetIndex();
     } else if (clazz.equals(DruidPredicateIndex.class)) {
-      return (T) new NestedAnyLiteralPredicateIndex();
+      return (T) new NestedVariantLiteralPredicateIndex();
     }
     return null;
   }
@@ -856,7 +858,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
   /**
    * {@link StringValueSetIndex} but for variant typed nested literal columns
    */
-  private class NestedAnyLiteralValueSetIndex extends NestedAnyLiteralIndex implements StringValueSetIndex
+  private class NestedVariantLiteralValueSetIndex extends NestedAnyLiteralIndex implements StringValueSetIndex
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -935,7 +937,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
   /**
    * {@link DruidPredicateIndex} but for variant typed nested literal columns
    */
-  private class NestedAnyLiteralPredicateIndex extends NestedAnyLiteralIndex implements DruidPredicateIndex
+  private class NestedVariantLiteralPredicateIndex extends NestedAnyLiteralIndex implements DruidPredicateIndex
   {
 
     @Override
