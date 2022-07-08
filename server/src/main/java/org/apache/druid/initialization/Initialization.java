@@ -21,6 +21,7 @@ package org.apache.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -29,6 +30,7 @@ import com.google.inject.util.Modules;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.curator.CuratorModule;
 import org.apache.druid.curator.discovery.DiscoveryModule;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.DruidProcessingConfigModule;
@@ -50,6 +52,7 @@ import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.HttpClientModule;
 import org.apache.druid.guice.security.AuthenticatorModule;
@@ -59,6 +62,7 @@ import org.apache.druid.guice.security.EscalatorModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
+import org.apache.druid.rpc.guice.ServiceClientModule;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumModule;
 import org.apache.druid.server.emitter.EmitterModule;
 import org.apache.druid.server.initialization.AuthenticatorMapperModule;
@@ -374,9 +378,21 @@ public class Initialization
     }
   }
 
-  public static Injector makeInjectorWithModules(final Injector baseInjector, Iterable<? extends Module> modules)
+  public static Injector makeInjectorWithModules(
+      final Injector baseInjector,
+      final Iterable<? extends Module> modules
+  )
   {
-    final ModuleList defaultModules = new ModuleList(baseInjector);
+    return makeInjectorWithModules(ImmutableSet.of(), baseInjector, modules);
+  }
+
+  public static Injector makeInjectorWithModules(
+      final Set<NodeRole> nodeRoles,
+      final Injector baseInjector,
+      final Iterable<? extends Module> modules
+  )
+  {
+    final ModuleList defaultModules = new ModuleList(baseInjector, nodeRoles);
     defaultModules.addModules(
         // New modules should be added after Log4jShutterDownerModule
         new Log4jShutterDownerModule(),
@@ -405,6 +421,7 @@ public class Initialization
         new IndexingServiceDiscoveryModule(),
         new CoordinatorDiscoveryModule(),
         new LocalDataStorageDruidModule(),
+        new TombstoneDataStorageModule(),
         new FirehoseModule(),
         new JavaScriptModule(),
         new AuthenticatorModule(),
@@ -413,10 +430,11 @@ public class Initialization
         new AuthorizerModule(),
         new AuthorizerMapperModule(),
         new StartupLoggingModule(),
-        new ExternalStorageAccessSecurityModule()
+        new ExternalStorageAccessSecurityModule(),
+        new ServiceClientModule()
     );
 
-    ModuleList actualModules = new ModuleList(baseInjector);
+    ModuleList actualModules = new ModuleList(baseInjector, nodeRoles);
     actualModules.addModule(DruidSecondaryModule.class);
     for (Object module : modules) {
       actualModules.addModule(module);
@@ -424,7 +442,7 @@ public class Initialization
 
     Module intermediateModules = Modules.override(defaultModules.getModules()).with(actualModules.getModules());
 
-    ModuleList extensionModules = new ModuleList(baseInjector);
+    ModuleList extensionModules = new ModuleList(baseInjector, nodeRoles);
     final ExtensionsConfig config = baseInjector.getInstance(ExtensionsConfig.class);
     for (DruidModule module : Initialization.getFromExtensions(config, DruidModule.class)) {
       extensionModules.addModule(module);
@@ -433,30 +451,36 @@ public class Initialization
     return Guice.createInjector(Modules.override(intermediateModules).with(extensionModules.getModules()));
   }
 
-  private static class ModuleList
+  public static class ModuleList
   {
     private final Injector baseInjector;
+    private final Set<NodeRole> nodeRoles;
     private final ModulesConfig modulesConfig;
     private final ObjectMapper jsonMapper;
     private final ObjectMapper smileMapper;
     private final List<Module> modules;
 
-    public ModuleList(Injector baseInjector)
+    public ModuleList(Injector baseInjector, Set<NodeRole> nodeRoles)
     {
       this.baseInjector = baseInjector;
+      this.nodeRoles = nodeRoles;
       this.modulesConfig = baseInjector.getInstance(ModulesConfig.class);
       this.jsonMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Json.class));
       this.smileMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Smile.class));
       this.modules = new ArrayList<>();
     }
 
-    private List<Module> getModules()
+    public List<Module> getModules()
     {
       return Collections.unmodifiableList(modules);
     }
 
     public void addModule(Object input)
     {
+      if (!shouldLoadOnCurrentNodeType(input)) {
+        return;
+      }
+
       if (input instanceof DruidModule) {
         if (!checkModuleClass(input.getClass())) {
           return;
@@ -484,6 +508,19 @@ public class Initialization
       } else {
         throw new ISE("Unknown module type[%s]", input.getClass());
       }
+    }
+
+    private boolean shouldLoadOnCurrentNodeType(Object object)
+    {
+      LoadScope loadScope = object.getClass().getAnnotation(LoadScope.class);
+      if (loadScope == null) {
+        // always load if annotation is not specified
+        return true;
+      }
+      Set<NodeRole> rolesPredicate = Arrays.stream(loadScope.roles())
+                                           .map(NodeRole::fromJsonName)
+                                           .collect(Collectors.toSet());
+      return rolesPredicate.stream().anyMatch(nodeRoles::contains);
     }
 
     private boolean checkModuleClass(Class<?> moduleClass)

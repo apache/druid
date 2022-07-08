@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
@@ -57,8 +58,8 @@ public class CgroupCpuSetMonitorTest
         cgroupDir,
         "cpuset/system.slice/some.service/f12ba7e0-fa16-462e-bb9d-652ccc27f0ee"
     );
-    Assert.assertTrue((cpusetDir.isDirectory() && cpusetDir.exists()) || cpusetDir.mkdirs());
 
+    FileUtils.mkdirp(cpusetDir);
     TestUtils.copyOrReplaceResource("/cpuset.cpus", new File(cpusetDir, "cpuset.cpus"));
     TestUtils.copyOrReplaceResource("/cpuset.effective_cpus.complex", new File(cpusetDir, "cpuset.effective_cpus"));
     TestUtils.copyOrReplaceResource("/cpuset.mems", new File(cpusetDir, "cpuset.mems"));

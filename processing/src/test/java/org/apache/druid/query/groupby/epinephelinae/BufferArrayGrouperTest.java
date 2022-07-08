@@ -22,9 +22,6 @@ package org.apache.druid.query.groupby.epinephelinae;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.StringUtils;
@@ -38,7 +35,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.util.Comparator;
 import java.util.List;
 
 public class BufferArrayGrouperTest
@@ -63,17 +59,15 @@ public class BufferArrayGrouperTest
     grouper.aggregate(12);
     grouper.aggregate(6);
 
-    final List<Entry<Integer>> expected = ImmutableList.of(
-        new Grouper.Entry<>(6, new Object[]{30L, 3L}),
-        new Grouper.Entry<>(10, new Object[]{10L, 1L}),
-        new Grouper.Entry<>(12, new Object[]{20L, 2L})
+    final List<Entry<IntKey>> expected = ImmutableList.of(
+        new ReusableEntry<>(new IntKey(6), new Object[]{30L, 3L}),
+        new ReusableEntry<>(new IntKey(10), new Object[]{10L, 1L}),
+        new ReusableEntry<>(new IntKey(12), new Object[]{20L, 2L})
     );
-    final List<Entry<Integer>> unsortedEntries = Lists.newArrayList(grouper.iterator(false));
 
-    Assert.assertEquals(
-        expected,
-        Ordering.from((Comparator<Entry<Integer>>) (o1, o2) -> Ints.compare(o1.getKey(), o2.getKey()))
-                .sortedCopy(unsortedEntries)
+    GrouperTestUtil.assertEntriesEquals(
+        expected.iterator(),
+        grouper.iterator(false)
     );
   }
 

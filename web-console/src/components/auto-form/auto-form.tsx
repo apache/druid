@@ -27,7 +27,8 @@ import { IntervalInput } from '../interval-input/interval-input';
 import { JsonInput } from '../json-input/json-input';
 import { NumericInputWithDefault } from '../numeric-input-with-default/numeric-input-with-default';
 import { PopoverText } from '../popover-text/popover-text';
-import { SuggestibleInput, Suggestion } from '../suggestible-input/suggestible-input';
+import { SuggestibleInput } from '../suggestible-input/suggestible-input';
+import { Suggestion } from '../suggestion-menu/suggestion-menu';
 
 import './auto-form.scss';
 
@@ -56,6 +57,7 @@ export interface Field<M> {
   disabled?: Functor<M, boolean>;
   defined?: Functor<M, boolean>;
   required?: Functor<M, boolean>;
+  multiline?: Functor<M, boolean>;
   hide?: Functor<M, boolean>;
   hideInMore?: Functor<M, boolean>;
   valueAdjustment?: (value: any) => any;
@@ -302,6 +304,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
+        multiline={AutoForm.evaluateFunctor(field.multiline, model, false)}
       />
     );
   }
@@ -369,6 +372,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
+        suggestions={AutoForm.evaluateFunctor(field.suggestions, model, undefined)}
       />
     );
   }

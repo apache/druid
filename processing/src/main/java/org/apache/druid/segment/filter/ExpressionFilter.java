@@ -29,9 +29,8 @@ import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.expression.ExprUtils;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.math.expr.InputBindings;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
@@ -47,12 +46,15 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
@@ -81,51 +83,7 @@ public class ExpressionFilter implements Filter
   {
     final Expr theExpr = expr.get();
 
-    DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
-    {
-      @Override
-      public Predicate<String> makeStringPredicate()
-      {
-        return Evals::asBoolean;
-      }
-
-      @Override
-      public DruidLongPredicate makeLongPredicate()
-      {
-        return Evals::asBoolean;
-      }
-
-      @Override
-      public DruidFloatPredicate makeFloatPredicate()
-      {
-        return Evals::asBoolean;
-      }
-
-      @Override
-      public DruidDoublePredicate makeDoublePredicate()
-      {
-        return Evals::asBoolean;
-      }
-
-      // The hashcode and equals are to make SubclassesMustOverrideEqualsAndHashCodeTest stop complaining..
-      // DruidPredicateFactory currently doesn't really need equals or hashcode since 'toString' method that is actually
-      // called when testing equality of DimensionPredicateFilter, so it's the truly required method, but that seems
-      // a bit strange. DimensionPredicateFilter should probably be reworked to use equals from DruidPredicateFactory
-      // instead of using toString.
-      @Override
-      public int hashCode()
-      {
-        return super.hashCode();
-      }
-
-      @Override
-      public boolean equals(Object obj)
-      {
-        return super.equals(obj);
-      }
-    };
-
-
+    DruidPredicateFactory predicateFactory = getPredicateFactory();
     final ExpressionType outputType = theExpr.getOutputType(factory);
 
     // for all vectorizable expressions, outputType will only ever be null in cases where there is absolutely no
@@ -143,7 +101,7 @@ public class ExpressionFilter implements Filter
       // or not.
       return BooleanVectorValueMatcher.of(
           factory.getReadableVectorInspector(),
-          theExpr.eval(ExprUtils.nilBindings()).asBoolean()
+          theExpr.eval(InputBindings.nilBindings()).asBoolean()
       );
     }
 
@@ -181,14 +139,14 @@ public class ExpressionFilter implements Filter
         final ExprEval eval = selector.getObject();
 
         if (eval.type().isArray()) {
-          switch (eval.type().getElementType().getType()) {
+          switch (eval.elementType().getType()) {
             case LONG:
               final Long[] lResult = eval.asLongArray();
               if (lResult == null) {
                 return false;
               }
 
-              return Arrays.stream(lResult).anyMatch(Evals::asBoolean);
+              return Arrays.stream(lResult).filter(Objects::nonNull).anyMatch(Evals::asBoolean);
             case STRING:
               final String[] sResult = eval.asStringArray();
               if (sResult == null) {
@@ -202,7 +160,7 @@ public class ExpressionFilter implements Filter
                 return false;
               }
 
-              return Arrays.stream(dResult).anyMatch(Evals::asBoolean);
+              return Arrays.stream(dResult).filter(Objects::nonNull).anyMatch(Evals::asBoolean);
           }
         }
         return eval.asBoolean();
@@ -216,74 +174,54 @@ public class ExpressionFilter implements Filter
     };
   }
 
+  @Nullable
   @Override
-  public boolean supportsBitmapIndex(final BitmapIndexSelector selector)
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    final Expr.BindingAnalysis details = this.bindingDetails.get();
-
-
+    final Expr.BindingAnalysis details = bindingDetails.get();
     if (details.getRequiredBindings().isEmpty()) {
       // Constant expression.
-      return true;
+      return Filters.makeNullIndex(
+          expr.get().eval(InputBindings.nilBindings()).asBoolean(),
+          selector
+      );
     } else if (details.getRequiredBindings().size() == 1) {
       // Single-column expression. We can use bitmap indexes if this column has an index and the expression can
       // map over the values of the index.
       final String column = Iterables.getOnlyElement(details.getRequiredBindings());
-      return selector.getBitmapIndex(column) != null
-             && ExpressionSelectors.canMapOverDictionary(details, selector.hasMultipleValues(column));
-    } else {
-      // Multi-column expression.
-      return false;
-    }
-  }
 
-  @Override
-  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-  {
-    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
-  }
-
-  @Override
-  public <T> T getBitmapResult(final BitmapIndexSelector selector, final BitmapResultFactory<T> bitmapResultFactory)
-  {
-    if (bindingDetails.get().getRequiredBindings().isEmpty()) {
-      // Constant expression.
-      if (expr.get().eval(ExprUtils.nilBindings()).asBoolean()) {
-        return bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector));
-      } else {
-        return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
-      }
-    } else {
-      // Can assume there's only one binding, it has a bitmap index, and it's a single input mapping.
-      // Otherwise, supportsBitmapIndex would have returned false and the caller should not have called us.
-      assert supportsBitmapIndex(selector);
-
-      final String column = Iterables.getOnlyElement(bindingDetails.get().getRequiredBindings());
-      return Filters.matchPredicate(
+      // we use a default 'all false' capabilities here because if the column has a bitmap index, but the capabilities
+      // are null, it means that the column is missing and should take the single valued path, while truly unknown
+      // things will not have a bitmap index available
+      final ColumnCapabilities capabilities = selector.getColumnCapabilitiesWithDefault(
           column,
-          selector,
-          bitmapResultFactory,
-          value -> expr.get().eval(identifierName -> {
-            // There's only one binding, and it must be the single column, so it can safely be ignored in production.
-            assert column.equals(identifierName);
-            // convert null to Empty before passing to expressions if needed.
-            return NullHandling.nullToEmptyIfNeeded(value);
-          }).asBoolean()
+          ColumnCapabilitiesImpl.createDefault()
       );
+      if (ExpressionSelectors.canMapOverDictionary(details, capabilities)) {
+        if (!Filters.checkFilterTuningUseIndex(column, selector, filterTuning)) {
+          return null;
+        }
+        return Filters.makePredicateIndex(
+            column,
+            selector,
+            getBitmapPredicateFactory()
+        );
+      }
     }
+    return null;
   }
 
   @Override
   public boolean supportsSelectivityEstimation(
       final ColumnSelector columnSelector,
-      final BitmapIndexSelector indexSelector
+      final ColumnIndexSelector indexSelector
   )
   {
     return false;
   }
 
   @Override
-  public double estimateSelectivity(final BitmapIndexSelector indexSelector)
+  public double estimateSelectivity(final ColumnIndexSelector indexSelector)
   {
     // Selectivity estimation not supported.
     throw new UnsupportedOperationException();
@@ -329,5 +267,150 @@ public class ExpressionFilter implements Filter
            "expr=" + expr +
            ", filterTuning=" + filterTuning +
            '}';
+  }
+
+
+
+  /**
+   * {@link DruidPredicateFactory} which pipes already evaluated expression values through to {@link Evals#asBoolean},
+   * used for a value matcher on top of expression selectors
+   */
+  private DruidPredicateFactory getPredicateFactory()
+  {
+    return new DruidPredicateFactory()
+    {
+      @Override
+      public Predicate<String> makeStringPredicate()
+      {
+        return Evals::asBoolean;
+      }
+
+      @Override
+      public DruidLongPredicate makeLongPredicate()
+      {
+        return Evals::asBoolean;
+      }
+
+      @Override
+      public DruidFloatPredicate makeFloatPredicate()
+      {
+        return Evals::asBoolean;
+      }
+
+      @Override
+      public DruidDoublePredicate makeDoublePredicate()
+      {
+        return Evals::asBoolean;
+      }
+
+      // The hashcode and equals are to make SubclassesMustOverrideEqualsAndHashCodeTest stop complaining..
+      // DruidPredicateFactory currently doesn't really need equals or hashcode since 'toString' method that is actually
+      // called when testing equality of DimensionPredicateFilter, so it's the truly required method, but that seems
+      // a bit strange. DimensionPredicateFilter should probably be reworked to use equals from DruidPredicateFactory
+      // instead of using toString.
+      @Override
+      public int hashCode()
+      {
+        return super.hashCode();
+      }
+
+      @Override
+      public boolean equals(Object obj)
+      {
+        return super.equals(obj);
+      }
+    };
+  }
+
+  /**
+   * {@link DruidPredicateFactory} which evaluates the expression using the value as input, used for building predicate
+   * indexes where the raw column values will be checked against this predicate
+   */
+  private DruidPredicateFactory getBitmapPredicateFactory()
+  {
+    return new DruidPredicateFactory()
+    {
+      @Override
+      public Predicate<String> makeStringPredicate()
+      {
+        return value -> expr.get().eval(
+            InputBindings.forFunction(identifierName -> NullHandling.nullToEmptyIfNeeded(value))
+        ).asBoolean();
+      }
+
+      @Override
+      public DruidLongPredicate makeLongPredicate()
+      {
+        return new DruidLongPredicate()
+        {
+          @Override
+          public boolean applyLong(long input)
+          {
+            return expr.get().eval(InputBindings.forFunction(identifierName -> input)).asBoolean();
+          }
+
+          @Override
+          public boolean applyNull()
+          {
+            return expr.get().eval(InputBindings.nilBindings()).asBoolean();
+          }
+        };
+      }
+
+      @Override
+      public DruidFloatPredicate makeFloatPredicate()
+      {
+        return new DruidFloatPredicate()
+        {
+          @Override
+          public boolean applyFloat(float input)
+          {
+            return expr.get().eval(InputBindings.forFunction(identifierName -> input)).asBoolean();
+          }
+
+          @Override
+          public boolean applyNull()
+          {
+            return expr.get().eval(InputBindings.nilBindings()).asBoolean();
+          }
+        };
+      }
+
+      @Override
+      public DruidDoublePredicate makeDoublePredicate()
+      {
+        return new DruidDoublePredicate()
+        {
+          @Override
+          public boolean applyDouble(double input)
+          {
+            return expr.get().eval(InputBindings.forFunction(identifierName -> input)).asBoolean();
+          }
+
+          @Override
+          public boolean applyNull()
+          {
+            return expr.get().eval(InputBindings.nilBindings()).asBoolean();
+          }
+        };
+      }
+
+      // The hashcode and equals are to make SubclassesMustOverrideEqualsAndHashCodeTest stop complaining..
+      // DruidPredicateFactory currently doesn't really need equals or hashcode since 'toString' method that is actually
+      // called when testing equality of DimensionPredicateFilter, so it's the truly required method, but that seems
+      // a bit strange. DimensionPredicateFilter should probably be reworked to use equals from DruidPredicateFactory
+      // instead of using toString.
+      @Override
+      public int hashCode()
+      {
+        return super.hashCode();
+      }
+
+      @Override
+      public boolean equals(Object obj)
+      {
+        return super.equals(obj);
+      }
+    };
   }
 }

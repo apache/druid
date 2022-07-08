@@ -207,13 +207,13 @@ public class GroupingAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getIntermediateType()
   {
     return ColumnType.LONG;
   }
 
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getResultType()
   {
     return ColumnType.LONG;
   }

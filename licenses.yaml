@@ -343,7 +343,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.8.0
+version: 2.11.0
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -596,6 +596,16 @@ libraries:
 
 ---
 
+name: IPAddress
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.3.4
+libraries:
+  - com.github.seancfoley: ipaddress
+
+---
+
 name: Apache Commons Collections
 license_category: binary
 module: java-core
@@ -732,14 +742,18 @@ name: Airline
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.7
+version: 2.8.4
 libraries:
-  - io.airlift: airline
+  - com.github.rvesse: airline
+  - com.github.rvesse: airline-io
 notices:
   - airline: |
       Copyright Notices
       =================
 
+      Copyright 2013-18 Rob Vesse <rvesse@dotnetrdf.org>
+      Copyright 2013 Fernando Hernandez <fernando@clarkparsia.com>
+      Copyright 2013 Michael Grove <mike@clarkparsia.com>
       Copyright 2011 Dain Sundstrom <dain@iq80.com>
       Copyright 2010 Cedric Beust <cedric@beust.com>
 
@@ -789,7 +803,7 @@ name: com.nimbusds lang-tag
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 1.5
+version: 1.7
 libraries:
   - com.nimbusds: lang-tag
 
@@ -819,18 +833,9 @@ name: net.bytebuddy byte-buddy
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 1.9.10
+version: 1.12.7
 libraries:
   - net.bytebuddy: byte-buddy
-
----
-
-name: net.bytebuddy byte-buddy-agent
-license_category: binary
-module: extensions/druid-pac4j
-license_name: Apache License version 2.0
-version: 1.9.10
-libraries:
   - net.bytebuddy: byte-buddy-agent
 
 ---
@@ -839,7 +844,7 @@ name: org.mockito mockito-core
 license_category: binary
 module: extensions/druid-pac4j
 license_name: MIT License
-version: 2.28.2
+version: 4.3.1
 libraries:
   - org.mockito: mockito-core
 
@@ -869,7 +874,7 @@ name: kubernetes official java client
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java
 
@@ -879,7 +884,7 @@ name: kubernetes official java client api
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java-api
 
@@ -889,7 +894,7 @@ name: kubernetes official java client extended
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java-extended
 
@@ -939,7 +944,7 @@ name: io.gsonfire gson-fire
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.8.4
+version: 1.8.5
 libraries:
   - io.gsonfire: gson-fire
 
@@ -969,7 +974,7 @@ name: org.bitbucket.b_c jose4j
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.7.2
+version: 0.7.3
 libraries:
   - org.bitbucket.b_c: jose4j
 
@@ -1009,7 +1014,7 @@ name: io.kubernetes client-java-proto
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java-proto
 
@@ -1501,6 +1506,16 @@ libraries:
 
 ---
 
+name: Jakarta Dependency Injection
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.3
+libraries:
+  - jakarta.inject: jakarta.inject-api
+
+---
+
 name: Javax Inject
 license_category: binary
 module: java-core
@@ -1822,7 +1837,7 @@ name: Apache Log4j
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.8.2
+version: 2.17.1
 libraries:
   - org.apache.logging.log4j: log4j-1.2-api
   - org.apache.logging.log4j: log4j-api
@@ -2007,7 +2022,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.40.v20210413
+version: 9.4.41.v20210516
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -2348,7 +2363,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.7.1
+version: 1.8.0
 libraries:
   - org.lz4: lz4-java
 
@@ -3474,6 +3489,16 @@ libraries:
 
 ---
 
+name: Kinesis Client
+license_category: binary
+version: 1.14.4
+module: extensions/druid-kinesis-indexing-service
+license_name: Apache License version 2.0
+libraries:
+  - com.amazonaws: amazon-kinesis-client
+
+---
+
 name: Kafka Client
 version: 5.5.1-ccs
 license_category: binary
@@ -3682,7 +3707,7 @@ name: Jersey
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: CDDL 1.1
-version: 1.19.3
+version: 1.19.4
 libraries:
   - com.sun.jersey: jersey-json
 
@@ -3726,7 +3751,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.0.0
+version: 3.1.0
 libraries:
   - org.apache.datasketches: datasketches-java
 
@@ -3766,7 +3791,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 3.0.0
+version: 3.2.0
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -3902,10 +3927,9 @@ libraries:
 name: JCL 1.2 Implemented Over SLF4J
 license_category: binary
 module: java-core
-license_name: MIT License
-version: 1.7.12
+license_name: Apache License version 2.0
+version: 1.7.36
 copyright: QOS.ch
-license_file_path: licenses/bin/jcl-over-slf4j.MIT
 libraries:
   - org.slf4j: jcl-over-slf4j
 
@@ -3915,7 +3939,7 @@ name: SLF4J API
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.7.25
+version: 1.7.36
 copyright: QOS.ch
 license_file_path: licenses/bin/slf4j.MIT
 libraries:
@@ -3940,7 +3964,7 @@ name: JNI binding for Zstd
 license_category: binary
 module: java-core
 license_name: BSD-2-Clause License
-version: 1.3.3-1
+version: 1.5.2-3
 copyright: Luben Karavelov
 license_file_path: licenses/bin/zstd-jni.BSD2
 libraries:
@@ -4128,7 +4152,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.2.14
+version: 42.3.3
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4140,7 +4164,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.2.14
+version: 42.3.3
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4152,7 +4176,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.2.14
+version: 42.3.3
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4201,7 +4225,7 @@ name: Jersey
 license_category: binary
 module: java-core
 license_name: CDDL 1.1
-version: 1.19.3
+version: 1.19.4
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/jersey.CDDL11
 libraries:
@@ -4407,7 +4431,7 @@ name: Jersey
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: CDDL 1.1
-version: 1.19.3
+version: 1.19.4
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/jersey.CDDL11
 libraries:
@@ -4543,7 +4567,7 @@ name: Apache ORC libraries
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 1.7.0
+version: 1.7.5
 libraries:
   - org.apache.orc: orc-mapreduce
   - org.apache.orc: orc-core
@@ -4676,7 +4700,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 3.0.0
+version: 3.2.0
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
@@ -5004,7 +5028,7 @@ libraries:
 name: DNS Java
 license_category: binary
 module: java-core
-license_name: BSD 2-Clause license
+license_name: BSD-2-Clause License
 version: 2.1.7
 libraries:
   - dnsjava: dnsjava
@@ -5024,13 +5048,72 @@ libraries:
 
 
 # Web console modules start
-name: "@babel/runtime"
+name: "@babel/code-frame"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Sebastian McKenzie
 version: 7.5.5
+license_file_path: licenses/bin/@babel-code-frame.MIT
+
+---
+
+name: "@babel/helper-module-imports"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Logan Smyth
+version: 7.13.12
+license_file_path: licenses/bin/@babel-helper-module-imports.MIT
+
+---
+
+name: "@babel/helper-validator-identifier"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sebastian McKenzie and other contributors
+version: 7.14.0
+license_file_path: licenses/bin/@babel-helper-validator-identifier.MIT
+
+---
+
+name: "@babel/highlight"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: suchipi
+version: 7.5.0
+license_file_path: licenses/bin/@babel-highlight.MIT
+
+---
+
+name: "@babel/runtime"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: The Babel Team
+version: 7.14.8
 license_file_path: licenses/bin/@babel-runtime.MIT
+
+---
+
+name: "@babel/types"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sebastian McKenzie
+version: 7.14.4
+license_file_path: licenses/bin/@babel-types.MIT
+
+---
+
+name: "@blueprintjs/colors"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Palantir Technologies
+version: 4.0.1
 
 ---
 
@@ -5039,7 +5122,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.45.0
+version: 4.0.3
 
 ---
 
@@ -5048,7 +5131,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.23.4
+version: 4.0.3
 
 ---
 
@@ -5057,7 +5140,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.26.1
+version: 4.1.1
 
 ---
 
@@ -5066,7 +5149,97 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 0.10.1
+version: 1.0.3
+
+---
+
+name: "@emotion/cache"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Emotion team and other contributors
+version: 10.0.29
+license_file_path: licenses/bin/@emotion-cache.MIT
+
+---
+
+name: "@emotion/hash"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Emotion team and other contributors
+version: 0.8.0
+license_file_path: licenses/bin/@emotion-hash.MIT
+
+---
+
+name: "@emotion/memoize"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Emotion team and other contributors
+version: 0.7.4
+license_file_path: licenses/bin/@emotion-memoize.MIT
+
+---
+
+name: "@emotion/serialize"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Emotion team and other contributors
+version: 0.11.16
+license_file_path: licenses/bin/@emotion-serialize.MIT
+
+---
+
+name: "@emotion/sheet"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Emotion team and other contributors
+version: 0.9.4
+license_file_path: licenses/bin/@emotion-sheet.MIT
+
+---
+
+name: "@emotion/stylis"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Emotion team and other contributors
+version: 0.8.5
+license_file_path: licenses/bin/@emotion-stylis.MIT
+
+---
+
+name: "@emotion/unitless"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Emotion team and other contributors
+version: 0.7.5
+license_file_path: licenses/bin/@emotion-unitless.MIT
+
+---
+
+name: "@emotion/utils"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Emotion team and other contributors
+version: 0.11.3
+license_file_path: licenses/bin/@emotion-utils.MIT
+
+---
+
+name: "@emotion/weak-memoize"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Emotion team and other contributors
+version: 0.2.5
+license_file_path: licenses/bin/@emotion-weak-memoize.MIT
 
 ---
 
@@ -5080,12 +5253,21 @@ license_file_path: licenses/bin/@hypnosphi-create-react-context.MIT
 
 ---
 
+name: "@juggle/resize-observer"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Juggle
+version: 3.3.1
+
+---
+
 name: "@popperjs/core"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Federico Zivolo
-version: 2.9.2
+version: 2.11.4
 license_file_path: licenses/bin/@popperjs-core.MIT
 
 ---
@@ -5095,8 +5277,38 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Microsoft Corporation.
-version: 2.0.1
+version: 2.0.2
 license_file_path: licenses/bin/@types-dom4.MIT
+
+---
+
+name: "@types/parse-json"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Microsoft Corporation.
+version: 4.0.0
+license_file_path: licenses/bin/@types-parse-json.MIT
+
+---
+
+name: "ace-builds"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Ajax.org B.V.
+version: 1.4.13
+license_file_path: licenses/bin/ace-builds.BSD3
+
+---
+
+name: "ansi-styles"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sindre Sorhus
+version: 3.2.1
+license_file_path: licenses/bin/ansi-styles.MIT
 
 ---
 
@@ -5105,18 +5317,88 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Matt Zabriskie
-version: 0.21.1
+version: 0.21.4
 license_file_path: licenses/bin/axios.MIT
 
 ---
 
-name: "brace"
+name: "babel-plugin-emotion"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Thorsten Lorenz
-version: 0.11.1
-license_file_path: licenses/bin/brace.MIT
+copyright: Kye Hohenberger
+version: 10.2.2
+license_file_path: licenses/bin/babel-plugin-emotion.MIT
+
+---
+
+name: "babel-plugin-macros"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Kent C. Dodds
+version: 2.8.0
+license_file_path: licenses/bin/babel-plugin-macros.MIT
+
+---
+
+name: "babel-plugin-syntax-jsx"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Syntax JSX team and other contributors
+version: 6.18.0
+license_file_path: licenses/bin/babel-plugin-syntax-jsx.MIT
+
+---
+
+name: "callsites"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sindre Sorhus
+version: 3.1.0
+license_file_path: licenses/bin/callsites.MIT
+
+---
+
+name: "camel-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 4.1.2
+license_file_path: licenses/bin/camel-case.MIT
+
+---
+
+name: "capital-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 1.0.4
+license_file_path: licenses/bin/capital-case.MIT
+
+---
+
+name: "chalk"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
+version: 2.4.2
+license_file_path: licenses/bin/chalk.MIT
+
+---
+
+name: "change-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 4.1.2
+license_file_path: licenses/bin/change-case.MIT
 
 ---
 
@@ -5127,6 +5409,46 @@ license_name: MIT License
 copyright: Jed Watson
 version: 2.2.6
 license_file_path: licenses/bin/classnames.MIT
+
+---
+
+name: "color-convert"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Heather Arthur
+version: 1.9.3
+license_file_path: licenses/bin/color-convert.MIT
+
+---
+
+name: "color-name"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: DY
+version: 1.1.3
+license_file_path: licenses/bin/color-name.MIT
+
+---
+
+name: "constant-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/constant-case.MIT
+
+---
+
+name: "convert-source-map"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Thorsten Lorenz
+version: 1.6.0
+license_file_path: licenses/bin/convert-source-map.MIT
 
 ---
 
@@ -5147,6 +5469,36 @@ license_name: MIT License
 copyright: Denis Pushkarev
 version: 3.10.1
 license_file_path: licenses/bin/core-js.MIT
+
+---
+
+name: "cosmiconfig"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: David Clark
+version: 6.0.0
+license_file_path: licenses/bin/cosmiconfig.MIT
+
+---
+
+name: "create-emotion"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Kye Hohenberger
+version: 10.0.27
+license_file_path: licenses/bin/create-emotion.MIT
+
+---
+
+name: "csstype"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Fredrik Nicol
+version: 2.6.17
+license_file_path: licenses/bin/csstype.MIT
 
 ---
 
@@ -5265,7 +5617,17 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Google
-version: 1.0.4
+version: 1.0.5
+
+---
+
+name: "diff"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Kevin Decker <kpdecker@gmail.com>
+version: 4.0.1
+license_file_path: licenses/bin/diff.BSD3
 
 ---
 
@@ -5274,7 +5636,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jason Quense
-version: 3.4.0
+version: 5.2.1
 license_file_path: licenses/bin/dom-helpers.MIT
 
 ---
@@ -5289,12 +5651,62 @@ license_file_path: licenses/bin/dom4.MIT
 
 ---
 
+name: "dot-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/dot-case.MIT
+
+---
+
 name: "druid-query-toolkit"
 license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.11.10
+version: 0.14.10
+
+---
+
+name: "emotion"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Kye Hohenberger
+version: 10.0.27
+license_file_path: licenses/bin/emotion.MIT
+
+---
+
+name: "error-ex"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: JD Ballard
+version: 1.3.2
+license_file_path: licenses/bin/error-ex.MIT
+
+---
+
+name: "escape-string-regexp"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sindre Sorhus
+version: 1.0.5
+license_file_path: licenses/bin/escape-string-regexp.MIT
+
+---
+
+name: "esutils"
+license_category: binary
+module: web-console
+license_name: BSD-2-Clause License
+copyright: Yusuke Suzuki
+version: 2.0.3
+license_file_path: licenses/bin/esutils.BSD2
 
 ---
 
@@ -5308,12 +5720,22 @@ license_file_path: licenses/bin/file-saver.MIT
 
 ---
 
+name: "find-root"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: jsdnxx
+version: 1.1.0
+license_file_path: licenses/bin/find-root.MIT
+
+---
+
 name: "follow-redirects"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Ruben Verborgh
-version: 1.13.3
+version: 1.14.7
 license_file_path: licenses/bin/follow-redirects.MIT
 
 ---
@@ -5348,6 +5770,16 @@ license_file_path: licenses/bin/gud.MIT
 
 ---
 
+name: "has-flag"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sindre Sorhus
+version: 3.0.0
+license_file_path: licenses/bin/has-flag.MIT
+
+---
+
 name: "has-own-prop"
 license_category: binary
 module: web-console
@@ -5365,6 +5797,16 @@ license_name: MIT License
 copyright: Thiago de Arruda
 version: 1.0.3
 license_file_path: licenses/bin/has.MIT
+
+---
+
+name: "header-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 2.0.4
+license_file_path: licenses/bin/header-case.MIT
 
 ---
 
@@ -5398,6 +5840,16 @@ license_file_path: licenses/bin/hoist-non-react-statics.BSD3
 
 ---
 
+name: "import-fresh"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sindre Sorhus
+version: 3.3.0
+license_file_path: licenses/bin/import-fresh.MIT
+
+---
+
 name: "is-arguments"
 license_category: binary
 module: web-console
@@ -5405,6 +5857,16 @@ license_name: MIT License
 copyright: Jordan Harband
 version: 1.0.4
 license_file_path: licenses/bin/is-arguments.MIT
+
+---
+
+name: "is-arrayish"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Qix
+version: 0.2.1
+license_file_path: licenses/bin/is-arrayish.MIT
 
 ---
 
@@ -5453,8 +5915,28 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Vadim Ogievetsky, Andrey Sidorov
-version: 1.1.0
+version: 1.2.0
 license_file_path: licenses/bin/json-bigint-native.MIT
+
+---
+
+name: "json-parse-even-better-errors"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Kat Marchán
+version: 2.3.1
+license_file_path: licenses/bin/json-parse-even-better-errors.MIT
+
+---
+
+name: "lines-and-columns"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Brian Donovan
+version: 1.1.6
+license_file_path: licenses/bin/lines-and-columns.MIT
 
 ---
 
@@ -5508,6 +5990,16 @@ license_file_path: licenses/bin/loose-envify.MIT
 
 ---
 
+name: "lower-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 2.0.2
+license_file_path: licenses/bin/lower-case.MIT
+
+---
+
 name: "memoize-one"
 license_category: binary
 module: web-console
@@ -5525,6 +6017,16 @@ license_name: MIT License
 copyright: StringEpsilon
 version: 0.3.2
 license_file_path: licenses/bin/mini-create-react-context.MIT
+
+---
+
+name: "no-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/no-case.MIT
 
 ---
 
@@ -5587,6 +6089,66 @@ version: 1.101.0
 
 ---
 
+name: "param-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/param-case.MIT
+
+---
+
+name: "parent-module"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sindre Sorhus
+version: 1.0.1
+license_file_path: licenses/bin/parent-module.MIT
+
+---
+
+name: "parse-json"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sindre Sorhus
+version: 5.2.0
+license_file_path: licenses/bin/parse-json.MIT
+
+---
+
+name: "pascal-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.1.2
+license_file_path: licenses/bin/pascal-case.MIT
+
+---
+
+name: "path-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/path-case.MIT
+
+---
+
+name: "path-parse"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Javier Blanco
+version: 1.0.7
+license_file_path: licenses/bin/path-parse.MIT
+
+---
+
 name: "path-to-regexp"
 license_category: binary
 module: web-console
@@ -5594,6 +6156,16 @@ license_name: MIT License
 copyright: Blake Embrey (hello@blakeembrey.com)
 version: 1.7.0
 license_file_path: licenses/bin/path-to-regexp.MIT
+
+---
+
+name: "path-type"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sindre Sorhus
+version: 4.0.0
+license_file_path: licenses/bin/path-type.MIT
 
 ---
 
@@ -5622,7 +6194,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: James Hrisho
-version: 7.0.5
+version: 9.5.0
 license_file_path: licenses/bin/react-ace.MIT
 
 ---
@@ -5634,6 +6206,16 @@ license_name: MIT License
 copyright: Giampaolo Bellavite
 version: 7.4.9
 license_file_path: licenses/bin/react-day-picker.MIT
+
+---
+
+name: "react-diff-viewer"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Pranesh Ravi
+version: 3.1.1
+license_file_path: licenses/bin/react-diff-viewer.MIT
 
 ---
 
@@ -5664,16 +6246,6 @@ license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
 version: 16.8.6
 license_file_path: licenses/bin/react-is.MIT
-
----
-
-name: "react-lifecycles-compat"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Facebook, Inc.
-version: 3.0.4
-license_file_path: licenses/bin/react-lifecycles-compat.MIT
 
 ---
 
@@ -5732,7 +6304,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: React Community
-version: 2.9.0
+version: 4.4.2
 license_file_path: licenses/bin/react-transition-group.BSD3
 
 ---
@@ -5767,13 +6339,13 @@ license_file_path: licenses/bin/regexp.prototype.flags.MIT
 
 ---
 
-name: "resize-observer-polyfill"
+name: "resolve-from"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Denis Rul
-version: 1.5.1
-license_file_path: licenses/bin/resize-observer-polyfill.MIT
+copyright: Sindre Sorhus
+version: 4.0.0
+license_file_path: licenses/bin/resolve-from.MIT
 
 ---
 
@@ -5787,6 +6359,26 @@ license_file_path: licenses/bin/resolve-pathname.MIT
 
 ---
 
+name: "resolve"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: James Halliday
+version: 1.12.0
+license_file_path: licenses/bin/resolve.MIT
+
+---
+
+name: "safe-buffer"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Feross Aboukhadijeh
+version: 5.1.2
+license_file_path: licenses/bin/safe-buffer.MIT
+
+---
+
 name: "scheduler"
 license_category: binary
 module: web-console
@@ -5794,6 +6386,46 @@ license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
 version: 0.19.1
 license_file_path: licenses/bin/scheduler.MIT
+
+---
+
+name: "sentence-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/sentence-case.MIT
+
+---
+
+name: "snake-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/snake-case.MIT
+
+---
+
+name: "source-map"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Nick Fitzgerald
+version: 0.5.7
+license_file_path: licenses/bin/source-map.BSD3
+
+---
+
+name: "supports-color"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sindre Sorhus
+version: 5.5.0
+license_file_path: licenses/bin/supports-color.MIT
 
 ---
 
@@ -5817,6 +6449,16 @@ license_file_path: licenses/bin/tiny-warning.MIT
 
 ---
 
+name: "to-fast-properties"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sindre Sorhus
+version: 2.0.0
+license_file_path: licenses/bin/to-fast-properties.MIT
+
+---
+
 name: "toggle-selection"
 license_category: binary
 module: web-console
@@ -5832,7 +6474,7 @@ license_category: binary
 module: web-console
 license_name: Zero-Clause BSD
 copyright: Microsoft Corp.
-version: 1.13.0
+version: 2.3.1
 license_file_path: licenses/bin/tslib.0BSD
 
 ---
@@ -5844,6 +6486,26 @@ license_name: MIT License
 copyright: lttb
 version: 0.0.7
 license_file_path: licenses/bin/typed-styles.MIT
+
+---
+
+name: "upper-case-first"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 2.0.2
+license_file_path: licenses/bin/upper-case-first.MIT
+
+---
+
+name: "upper-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 2.0.2
+license_file_path: licenses/bin/upper-case.MIT
 
 ---
 
@@ -5864,4 +6526,14 @@ license_name: MIT License
 copyright: Berkeley Martinez
 version: 4.0.3
 license_file_path: licenses/bin/warning.MIT
+
+---
+
+name: "yaml"
+license_category: binary
+module: web-console
+license_name: ISC License
+copyright: Eemeli Aro
+version: 1.10.2
+license_file_path: licenses/bin/yaml.ISC
 # Web console modules end

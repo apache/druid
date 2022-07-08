@@ -30,6 +30,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.FileEntity;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.hll.HyperLogLogCollector;
@@ -52,6 +53,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -66,6 +68,9 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+
+import static org.junit.Assert.assertThrows;
 
 public class DruidSegmentReaderTest extends NullHandlingTest
 {
@@ -186,6 +191,42 @@ public class DruidSegmentReaderTest extends NullHandlingTest
   }
 
   @Test
+  public void testDruidTombstoneSegmentReader() throws IOException
+  {
+    final DruidTombstoneSegmentReader reader = new DruidTombstoneSegmentReader(
+        makeTombstoneInputEntity(Intervals.of("2000/P1D"))
+    );
+
+    Assert.assertFalse(reader.intermediateRowIterator().hasNext());
+    Assert.assertEquals(
+        Collections.emptyList(),
+        readRows(reader)
+    );
+  }
+
+  @Test
+  public void testDruidTombstoneSegmentReaderBadEntity()
+  {
+    assertThrows(ClassCastException.class, () -> {
+      new DruidTombstoneSegmentReader(
+          new FileEntity(null));
+    });
+  }
+
+  @Test
+  public void testDruidTombstoneSegmentReaderNotCreatedFromTombstone()
+  {
+    Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+      new DruidTombstoneSegmentReader(makeInputEntity(Intervals.of("2000/P1D")));
+    });
+    String expectedMessage =
+        "DruidSegmentInputEntity must be created from a tombstone but is not.";
+    String actualMessage = exception.getMessage();
+    Assert.assertEquals(expectedMessage, actualMessage);
+
+  }
+
+  @Test
   public void testReaderAutoTimestampFormat() throws IOException
   {
     final DruidSegmentReader reader = new DruidSegmentReader(
@@ -239,11 +280,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         makeInputEntity(Intervals.of("2000/P1D")),
         indexIO,
         new TimestampSpec("__time", "millis", DateTimes.of("1971")),
-        new DimensionsSpec(
-            ImmutableList.of(),
-            ImmutableList.of("__time", "s", "cnt", "met_s"),
-            ImmutableList.of()
-        ),
+        DimensionsSpec.builder().setDimensionExclusions(ImmutableList.of("__time", "s", "cnt", "met_s")).build(),
         ColumnsFilter.all(),
         null,
         temporaryFolder.newFolder()
@@ -586,6 +623,11 @@ public class DruidSegmentReaderTest extends NullHandlingTest
 
   private DruidSegmentInputEntity makeInputEntity(final Interval interval)
   {
+    return makeInputEntity(interval, segmentDirectory);
+  }
+
+  public static DruidSegmentInputEntity makeInputEntity(final Interval interval, final File segmentDirectory)
+  {
     return new DruidSegmentInputEntity(
         new SegmentCacheManager()
         {
@@ -618,6 +660,12 @@ public class DruidSegmentReaderTest extends NullHandlingTest
           {
             throw new UnsupportedOperationException();
           }
+
+          @Override
+          public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+          {
+            throw new UnsupportedOperationException();
+          }
         },
         DataSegment.builder()
                    .dataSource("ds")
@@ -631,7 +679,62 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     );
   }
 
-  private List<InputRow> readRows(final DruidSegmentReader reader) throws IOException
+  public static DruidSegmentInputEntity makeTombstoneInputEntity(final Interval interval)
+  {
+    return new DruidSegmentInputEntity(
+        new SegmentCacheManager()
+        {
+          @Override
+          public boolean isSegmentCached(DataSegment segment)
+          {
+            throw new UnsupportedOperationException("unused");
+          }
+
+          @Override
+          public File getSegmentFiles(DataSegment segment)
+          {
+            throw new UnsupportedOperationException("unused");
+          }
+
+          @Override
+          public void cleanup(DataSegment segment)
+          {
+            throw new UnsupportedOperationException("unused");
+          }
+
+          @Override
+          public boolean reserve(DataSegment segment)
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public boolean release(DataSegment segment)
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+          {
+            throw new UnsupportedOperationException();
+
+          }
+        },
+        DataSegment.builder()
+                   .dataSource("ds")
+                   .interval(Intervals.of("2000/P1D"))
+                   .version("1")
+                   .shardSpec(new TombstoneShardSpec())
+                   .loadSpec(ImmutableMap.of("type", "tombstone"))
+                   .size(1)
+                   .build(),
+        interval
+    );
+  }
+
+
+  private List<InputRow> readRows(DruidSegmentReader reader) throws IOException
   {
     final List<InputRow> rows = new ArrayList<>();
     try (final CloseableIterator<Map<String, Object>> iterator = reader.intermediateRowIterator()) {
@@ -641,6 +744,18 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     }
     return rows;
   }
+
+  private List<InputRow> readRows(DruidTombstoneSegmentReader reader) throws IOException
+  {
+    final List<InputRow> rows = new ArrayList<>();
+    try (final CloseableIterator<Map<String, Object>> iterator = reader.intermediateRowIterator()) {
+      while (iterator.hasNext()) {
+        rows.addAll(reader.parseInputRows(iterator.next()));
+      }
+    }
+    return rows;
+  }
+
 
   private static HyperLogLogCollector makeHLLC(final String... values)
   {

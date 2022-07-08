@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import inet.ipaddr.ipv4.IPv4Address;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -27,7 +28,6 @@ import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.net.Inet4Address;
 import java.util.List;
 
 /**
@@ -90,8 +90,7 @@ public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new IPv4AddressStringifyExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
       }
 
       @Nullable
@@ -107,7 +106,7 @@ public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
 
   private static ExprEval evalAsString(ExprEval eval)
   {
-    if (IPv4AddressExprUtils.isValidAddress(eval.asString())) {
+    if (IPv4AddressExprUtils.isValidIPv4Address(eval.asString())) {
       return eval;
     }
     return ExprEval.of(null);
@@ -119,12 +118,10 @@ public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
       return ExprEval.of(null);
     }
 
-    long longValue = eval.asLong();
-    if (IPv4AddressExprUtils.overflowsUnsignedInt(longValue)) {
+    IPv4Address address = IPv4AddressExprUtils.parse(eval.asLong());
+    if (address == null) {
       return ExprEval.of(null);
     }
-
-    Inet4Address address = IPv4AddressExprUtils.parse((int) longValue);
     return ExprEval.of(IPv4AddressExprUtils.toString(address));
   }
 }

@@ -1,11 +1,11 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`query output matches snapshot 1`] = `
+exports[`QueryOutput matches snapshot 1`] = `
 <div
   class="query-output"
 >
   <div
-    class="ReactTable"
+    class="ReactTable -striped -highlight"
   >
     <div
       class="rt-table"
@@ -13,7 +13,7 @@ exports[`query output matches snapshot 1`] = `
     >
       <div
         class="rt-thead -header"
-        style="min-width: 400px;"
+        style="min-width: 720px;"
       >
         <div
           class="rt-tr"
@@ -22,21 +22,23 @@ exports[`query output matches snapshot 1`] = `
           <div
             class="rt-th rt-resizable-header"
             role="columnheader"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             tabindex="-1"
           >
             <div
               class="rt-resizable-header-content"
             >
               <span
-                class="clickable-cell bp3-popover2-target"
+                aria-haspopup="true"
+                class="bp4-popover2-target"
               >
                 <div
-                  class=""
+                  class="clickable-cell"
                 >
                   language
                   <span
-                    class="bp3-icon bp3-icon-filter"
+                    aria-hidden="true"
+                    class="bp4-icon bp4-icon-filter"
                     icon="filter"
                   >
                     <svg
@@ -45,9 +47,6 @@ exports[`query output matches snapshot 1`] = `
                       viewBox="0 0 16 16"
                       width="14"
                     >
-                      <desc>
-                        filter
-                      </desc>
                       <path
                         d="M13.99.99h-12a1.003 1.003 0 00-.71 1.71l4.71 4.71V14a1.003 1.003 0 001.71.71l2-2c.18-.18.29-.43.29-.71V7.41L14.7 2.7a1.003 1.003 0 00-.71-1.71z"
                         fill-rule="evenodd"
@@ -64,21 +63,23 @@ exports[`query output matches snapshot 1`] = `
           <div
             class="rt-th -sort-desc aggregate-header rt-resizable-header"
             role="columnheader"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             tabindex="-1"
           >
             <div
               class="rt-resizable-header-content"
             >
               <span
-                class="clickable-cell bp3-popover2-target"
+                aria-haspopup="true"
+                class="bp4-popover2-target"
               >
                 <div
-                  class=""
+                  class="clickable-cell"
                 >
                   Count
                   <span
-                    class="bp3-icon bp3-icon-filter"
+                    aria-hidden="true"
+                    class="bp4-icon bp4-icon-filter"
                     icon="filter"
                   >
                     <svg
@@ -87,9 +88,6 @@ exports[`query output matches snapshot 1`] = `
                       viewBox="0 0 16 16"
                       width="14"
                     >
-                      <desc>
-                        filter
-                      </desc>
                       <path
                         d="M13.99.99h-12a1.003 1.003 0 00-.71 1.71l4.71 4.71V14a1.003 1.003 0 001.71.71l2-2c.18-.18.29-.43.29-.71V7.41L14.7 2.7a1.003 1.003 0 00-.71-1.71z"
                         fill-rule="evenodd"
@@ -106,17 +104,18 @@ exports[`query output matches snapshot 1`] = `
           <div
             class="rt-th aggregate-header rt-resizable-header"
             role="columnheader"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             tabindex="-1"
           >
             <div
               class="rt-resizable-header-content"
             >
               <span
-                class="clickable-cell bp3-popover2-target"
+                aria-haspopup="true"
+                class="bp4-popover2-target"
               >
                 <div
-                  class=""
+                  class="clickable-cell"
                 >
                   dist_language
                 </div>
@@ -129,17 +128,18 @@ exports[`query output matches snapshot 1`] = `
           <div
             class="rt-th aggregate-header rt-resizable-header"
             role="columnheader"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             tabindex="-1"
           >
             <div
               class="rt-resizable-header-content"
             >
               <span
-                class="clickable-cell bp3-popover2-target"
+                aria-haspopup="true"
+                class="bp4-popover2-target"
               >
                 <div
-                  class=""
+                  class="clickable-cell"
                 >
                   language_filtered_count
                 </div>
@@ -153,7 +153,7 @@ exports[`query output matches snapshot 1`] = `
       </div>
       <div
         class="rt-tbody"
-        style="min-width: 400px;"
+        style="min-width: 720px;"
       >
         <div
           class="rt-tr-group"
@@ -166,70 +166,66 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell null"
                 >
-                  <span
-                    class="table-cell null"
-                  >
-                    null
-                  </span>
-                </span>
-              </div>
+                  null
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    6881
-                  </span>
-                </span>
-              </div>
+                  6881
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    1
-                  </span>
-                </span>
-              </div>
+                  1
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    0
-                  </span>
-                </span>
-              </div>
+                  0
+                </div>
+              </span>
             </div>
           </div>
         </div>
@@ -244,70 +240,66 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    JavaScript
-                  </span>
-                </span>
-              </div>
+                  JavaScript
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    166
-                  </span>
-                </span>
-              </div>
+                  166
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    1
-                  </span>
-                </span>
-              </div>
+                  1
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    0
-                  </span>
-                </span>
-              </div>
+                  0
+                </div>
+              </span>
             </div>
           </div>
         </div>
@@ -322,70 +314,66 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    Python
-                  </span>
-                </span>
-              </div>
+                  Python
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    62
-                  </span>
-                </span>
-              </div>
+                  62
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    1
-                  </span>
-                </span>
-              </div>
+                  1
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    0
-                  </span>
-                </span>
-              </div>
+                  0
+                </div>
+              </span>
             </div>
           </div>
         </div>
@@ -400,70 +388,66 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    HTML
-                  </span>
-                </span>
-              </div>
+                  HTML
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    46
-                  </span>
-                </span>
-              </div>
+                  46
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    1
-                  </span>
-                </span>
-              </div>
+                  1
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell plain"
                 >
-                  <span
-                    class="table-cell plain"
-                  >
-                    0
-                  </span>
-                </span>
-              </div>
+                  0
+                </div>
+              </span>
             </div>
           </div>
         </div>
@@ -478,70 +462,66 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell null"
                 >
-                  <span
-                    class="table-cell null"
-                  >
-                    null
-                  </span>
-                </span>
-              </div>
+                  null
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell null"
                 >
-                  <span
-                    class="table-cell null"
-                  >
-                    null
-                  </span>
-                </span>
-              </div>
+                  null
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell null"
                 >
-                  <span
-                    class="table-cell null"
-                  >
-                    null
-                  </span>
-                </span>
-              </div>
+                  null
+                </div>
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
-              <div>
-                <span
-                  class="bp3-popover2-target"
+              <span
+                aria-haspopup="true"
+                class="bp4-popover2-target"
+              >
+                <div
+                  class="table-cell null"
                 >
-                  <span
-                    class="table-cell null"
-                  >
-                    null
-                  </span>
-                </span>
-              </div>
+                  null
+                </div>
+              </span>
             </div>
           </div>
         </div>
@@ -556,7 +536,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -565,7 +545,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -574,7 +554,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -583,7 +563,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -602,7 +582,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -611,7 +591,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -620,7 +600,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -629,7 +609,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -648,7 +628,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -657,7 +637,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -666,7 +646,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -675,7 +655,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -694,7 +674,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -703,7 +683,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -712,7 +692,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -721,7 +701,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -740,7 +720,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -749,7 +729,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -758,7 +738,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -767,7 +747,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -786,7 +766,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -795,7 +775,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -804,7 +784,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -813,7 +793,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -832,7 +812,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -841,7 +821,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -850,7 +830,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -859,7 +839,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -878,7 +858,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -887,7 +867,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -896,7 +876,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -905,7 +885,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -924,7 +904,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -933,7 +913,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -942,7 +922,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -951,7 +931,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -970,7 +950,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -979,7 +959,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -988,7 +968,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -997,7 +977,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1016,7 +996,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1025,7 +1005,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1034,7 +1014,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1043,7 +1023,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1062,7 +1042,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1071,7 +1051,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1080,7 +1060,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1089,7 +1069,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1108,7 +1088,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1117,7 +1097,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1126,7 +1106,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1135,7 +1115,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1154,7 +1134,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1163,7 +1143,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1172,7 +1152,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1181,7 +1161,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1200,7 +1180,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1209,7 +1189,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1218,7 +1198,7 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  
@@ -1227,7 +1207,237 @@ exports[`query output matches snapshot 1`] = `
             <div
               class="rt-td aggregate-column"
               role="gridcell"
-              style="flex: 100 0 auto; width: 100px;"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -padRow -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -padRow -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -padRow -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -padRow -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -padRow -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 180 0 auto; width: 180px; max-width: 180px;"
             >
               <span>
                  

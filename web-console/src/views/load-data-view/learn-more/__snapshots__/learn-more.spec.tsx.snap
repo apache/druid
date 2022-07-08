@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`learn more matches snapshot 1`] = `
+exports[`LearnMore matches snapshot 1`] = `
 <p
   class="learn-more"
 >

@@ -51,25 +51,19 @@ public class FileTaskLogs implements TaskLogs
   @Override
   public void pushTaskLog(final String taskid, File file) throws IOException
   {
-    if (config.getDirectory().exists() || config.getDirectory().mkdirs()) {
-      final File outputFile = fileForTask(taskid, file.getName());
-      Files.copy(file, outputFile);
-      log.info("Wrote task log to: %s", outputFile);
-    } else {
-      throw new IOE("Unable to create task log dir[%s]", config.getDirectory());
-    }
+    FileUtils.mkdirp(config.getDirectory());
+    final File outputFile = fileForTask(taskid, file.getName());
+    Files.copy(file, outputFile);
+    log.info("Wrote task log to: %s", outputFile);
   }
 
   @Override
   public void pushTaskReports(String taskid, File reportFile) throws IOException
   {
-    if (config.getDirectory().exists() || config.getDirectory().mkdirs()) {
-      final File outputFile = fileForTask(taskid, reportFile.getName());
-      Files.copy(reportFile, outputFile);
-      log.info("Wrote task report to: %s", outputFile);
-    } else {
-      throw new IOE("Unable to create task report dir[%s]", config.getDirectory());
-    }
+    FileUtils.mkdirp(config.getDirectory());
+    final File outputFile = fileForTask(taskid, reportFile.getName());
+    Files.copy(reportFile, outputFile);
+    log.info("Wrote task report to: %s", outputFile);
   }
 
   @Override

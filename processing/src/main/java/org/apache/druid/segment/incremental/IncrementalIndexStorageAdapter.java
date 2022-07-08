@@ -209,7 +209,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    // Different from index.getCapabilities because, in a way, IncrementalIndex's string-typed dimensions
+    // Different from index.getColumnCapabilities because, in a way, IncrementalIndex's string-typed dimensions
     // are always potentially multi-valued at query time. (Missing / null values for a row can potentially be
     // represented by an empty array; see StringDimensionIndexer.IndexerDimensionSelector's getRow method.)
     //
@@ -222,36 +222,24 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     // to the StringDimensionIndexer so the selector built on top of it can produce values from the snapshot state of
     // multi-valuedness at cursor creation time, instead of the latest state, and getSnapshotColumnCapabilities could
     // be removed.
-    return ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column), STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC);
+    return ColumnCapabilitiesImpl.snapshot(
+        index.getColumnCapabilities(column),
+        STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC
+    );
   }
 
   /**
    * Sad workaround for {@link org.apache.druid.query.metadata.SegmentAnalyzer} to deal with the fact that the
    * response from {@link #getColumnCapabilities} is not accurate for string columns, in that it reports all string
-   * string columns as having multiple values. This method returns the actual capabilities of the underlying
-   * {@link IncrementalIndex}at the time this method is called.
+   * columns as having multiple values. This method returns the actual capabilities of the underlying
+   * {@link IncrementalIndex} at the time this method is called.
    */
   public ColumnCapabilities getSnapshotColumnCapabilities(String column)
   {
     return ColumnCapabilitiesImpl.snapshot(
-        index.getCapabilities(column),
+        index.getColumnCapabilities(column),
         SNAPSHOT_STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC
     );
-  }
-
-  @Override
-  public String getColumnTypeName(String column)
-  {
-    final String metricType = index.getMetricType(column);
-    if (metricType != null) {
-      return metricType;
-    }
-    ColumnCapabilities columnCapabilities = getColumnCapabilities(column);
-    if (columnCapabilities != null) {
-      return columnCapabilities.asTypeString();
-    } else {
-      return null;
-    }
   }
 
   @Override
@@ -272,6 +260,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   {
     if (index.isEmpty()) {
       return Sequences.empty();
+    }
+
+    if (queryMetrics != null) {
+      queryMetrics.vectorized(false);
     }
 
     final Interval dataInterval = new Interval(getMinTime(), gran.bucketEnd(getMaxTime()));

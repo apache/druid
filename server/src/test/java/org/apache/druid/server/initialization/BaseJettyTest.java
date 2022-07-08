@@ -122,7 +122,12 @@ public abstract class BaseJettyTest
 
       try {
         this.client = HttpClientInit.createClient(
-            HttpClientConfig.builder().withNumConnections(maxClientConnections).withSslContext(SSLContext.getDefault()).withReadTimeout(Duration.ZERO).build(),
+            HttpClientConfig.builder()
+                            .withNumConnections(maxClientConnections)
+                            .withSslContext(SSLContext.getDefault())
+                            .withReadTimeout(Duration.ZERO)
+                            .withEagerInitialization(true)
+                            .build(),
             druidLifecycle
         );
       }
@@ -145,6 +150,7 @@ public abstract class BaseJettyTest
     {
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
       root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+      JettyServerInitUtils.addQosFilters(root, injector);
       JettyServerInitUtils.addExtensionFilters(root, injector);
       root.addFilter(GuiceFilter.class, "/*", null);
 

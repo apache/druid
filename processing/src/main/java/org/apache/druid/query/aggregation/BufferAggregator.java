@@ -104,7 +104,7 @@ public interface BufferAggregator extends HotLoopCallee
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
    *
    * Implementations are only required to support this method if they are aggregations which
-   * have an {@link AggregatorFactory#getType()} ()} of {@link org.apache.druid.segment.column.ValueType#FLOAT}.
+   * have an {@link AggregatorFactory#getIntermediateType()} ()} of {@link org.apache.druid.segment.column.ValueType#FLOAT}.
    * If unimplemented, throwing an {@link UnsupportedOperationException} is common and recommended.
    *
    * @param buf byte buffer storing the byte array representation of the aggregate
@@ -122,7 +122,7 @@ public interface BufferAggregator extends HotLoopCallee
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
    *
    * Implementations are only required to support this method if they are aggregations which
-   * have an {@link AggregatorFactory#getType()} of  of {@link org.apache.druid.segment.column.ValueType#LONG}.
+   * have an {@link AggregatorFactory#getIntermediateType()} of  of {@link org.apache.druid.segment.column.ValueType#LONG}.
    * If unimplemented, throwing an {@link UnsupportedOperationException} is common and recommended.
    *
    * @param buf byte buffer storing the byte array representation of the aggregate
@@ -140,7 +140,7 @@ public interface BufferAggregator extends HotLoopCallee
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
    *
    * Implementations are only required to support this method if they are aggregations which
-   * have an {@link AggregatorFactory#getType()} of  of {@link org.apache.druid.segment.column.ValueType#DOUBLE}.
+   * have an {@link AggregatorFactory#getIntermediateType()} of  of {@link org.apache.druid.segment.column.ValueType#DOUBLE}.
    * If unimplemented, throwing an {@link UnsupportedOperationException} is common and recommended.
    *
    * The default implementation casts {@link BufferAggregator#getFloat(ByteBuffer, int)} to double.

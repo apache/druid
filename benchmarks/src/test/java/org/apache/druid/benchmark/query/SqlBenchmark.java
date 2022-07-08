@@ -21,6 +21,7 @@ package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -39,6 +40,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
+import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
@@ -425,13 +427,14 @@ public class SqlBenchmark
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
-        CalciteTests.DRUID_SCHEMA_NAME
+        CalciteTests.DRUID_SCHEMA_NAME,
+        new CalciteRulesManager(ImmutableSet.of())
     );
   }
 
@@ -467,7 +470,7 @@ public class SqlBenchmark
     );
     final String sql = QUERIES.get(Integer.parseInt(query));
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
-      final PlannerResult plannerResult = planner.plan(sql);
+      final PlannerResult plannerResult = planner.plan();
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);
@@ -485,7 +488,7 @@ public class SqlBenchmark
     );
     final String sql = QUERIES.get(Integer.parseInt(query));
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
-      final PlannerResult plannerResult = planner.plan(sql);
+      final PlannerResult plannerResult = planner.plan();
       blackhole.consume(plannerResult);
     }
   }

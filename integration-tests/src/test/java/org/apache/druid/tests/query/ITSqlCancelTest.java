@@ -25,14 +25,14 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -60,7 +60,7 @@ public class ITSqlCancelTest
   private static final int NUM_QUERIES = 3;
 
   @Inject
-  private CoordinatorResourceTestClient coordinatorClient;
+  private DataLoaderHelper dataLoaderHelper;
   @Inject
   private SqlTestQueryHelper sqlHelper;
   @Inject
@@ -74,9 +74,7 @@ public class ITSqlCancelTest
   public void before()
   {
     // ensure that wikipedia segments are loaded completely
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE), "wikipedia segment load"
-    );
+    dataLoaderHelper.waitUntilDatasourceIsReady(WIKIPEDIA_DATA_SOURCE);
   }
 
   @Test
@@ -88,7 +86,7 @@ public class ITSqlCancelTest
       queryResponseFutures.add(
           sqlClient.queryAsync(
               sqlHelper.getQueryURL(config.getRouterUrl()),
-              new SqlQuery(QUERY, null, false, ImmutableMap.of("sqlQueryId", queryId), null)
+              new SqlQuery(QUERY, null, false, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, queryId), null)
           )
       );
     }
@@ -100,7 +98,7 @@ public class ITSqlCancelTest
         1000
     );
     if (!responseStatus.equals(HttpResponseStatus.ACCEPTED)) {
-      throw new RE("Failed to cancel query [%s]", queryId);
+      throw new RE("Failed to cancel query [%s]. Response code was [%s]", queryId, responseStatus);
     }
 
     for (Future<StatusResponseHolder> queryResponseFuture : queryResponseFutures) {
@@ -125,7 +123,7 @@ public class ITSqlCancelTest
     final Future<StatusResponseHolder> queryResponseFuture = sqlClient
         .queryAsync(
             sqlHelper.getQueryURL(config.getRouterUrl()),
-            new SqlQuery(QUERY, null, false, ImmutableMap.of("sqlQueryId", "validId"), null)
+            new SqlQuery(QUERY, null, false, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "validId"), null)
         );
 
     // Wait until the sqlLifecycle is authorized and registered
@@ -140,7 +138,7 @@ public class ITSqlCancelTest
 
     final StatusResponseHolder queryResponse = queryResponseFuture.get(30, TimeUnit.SECONDS);
     if (!queryResponse.getStatus().equals(HttpResponseStatus.OK)) {
-      throw new ISE("Query is not canceled after cancel request");
+      throw new ISE("Cancel request failed with status[%s] and content[%s]", queryResponse.getStatus(), queryResponse.getContent());
     }
   }
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.query.lookup;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnType;
@@ -47,7 +48,7 @@ public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
   {
     super(
         SegmentId.dummy(lookupName),
-        () -> {
+        Sequences.simple(() -> {
           final LookupExtractor extractor = lookupExtractorFactory.get();
 
           if (!extractor.canIterate()) {
@@ -55,7 +56,7 @@ public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
           }
 
           return extractor.iterable().iterator();
-        },
+        }),
         new RowAdapter<Map.Entry<String, String>>()
         {
           @Override

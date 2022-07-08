@@ -26,6 +26,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -59,6 +60,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         "0.0",
         "10.0",
         true,
+        true,
+        false,
         "customAccumulator + some_column + some_other_column",
         "customAccumulator + expr_agg_name",
         "if (o1 > o2, if (o1 == o2, 0, 1), -1)",
@@ -104,6 +107,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         "x + y",
         null,
         true,
+        false,
+        false,
         "__acc + some_column + some_other_column",
         "__acc + expr_agg_name",
         null,
@@ -112,7 +117,7 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    agg.getType();
+    agg.getIntermediateType();
   }
 
   @Test
@@ -128,6 +133,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         "0.0",
         "x + y",
         true,
+        false,
+        false,
         "__acc + some_column + some_other_column",
         "__acc + expr_agg_name",
         null,
@@ -136,7 +143,7 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    agg.getFinalizedType();
+    agg.getResultType();
   }
 
   @Test
@@ -149,6 +156,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         "0",
         null,
         true,
+        false,
+        false,
         "__acc + x",
         null,
         null,
@@ -161,6 +170,60 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
   }
 
   @Test
+  public void testCombineExpressionIgnoresNullsIfCombineSkipsNulls()
+  {
+    ExpressionLambdaAggregatorFactory agg = new ExpressionLambdaAggregatorFactory(
+        "expr_agg_name",
+        ImmutableSet.of("x"),
+        null,
+        "ARRAY<STRING>",
+        "ARRAY<STRING>[]",
+        true,
+        false,
+        false,
+        "array_append(__acc, x)",
+        "array_concat(__acc, expr_agg_name)",
+        null,
+        null,
+        null,
+        TestExprMacroTable.INSTANCE
+    );
+
+    Assert.assertArrayEquals(new Object[]{"hello"}, (Object[]) agg.combine(null, new Object[]{"hello"}));
+    Assert.assertArrayEquals(
+        new Object[]{"hello", "world"},
+        (Object[]) agg.combine(new Object[]{"hello"}, new Object[]{"world"})
+    );
+  }
+
+  @Test
+  public void testCombineExpressionDoesntIgnoreNullsIfCombineDoesntSkipsNulls()
+  {
+    ExpressionLambdaAggregatorFactory agg = new ExpressionLambdaAggregatorFactory(
+        "expr_agg_name",
+        ImmutableSet.of("x"),
+        null,
+        "ARRAY<STRING>",
+        "ARRAY<STRING>[]",
+        true,
+        false,
+        true,
+        "array_append(__acc, x)",
+        "array_concat(__acc, expr_agg_name)",
+        null,
+        null,
+        null,
+        TestExprMacroTable.INSTANCE
+    );
+
+    Assert.assertNull(agg.combine(null, new Object[]{"hello"}));
+    Assert.assertArrayEquals(
+        new Object[]{"hello", "world"},
+        (Object[]) agg.combine(new Object[]{"hello"}, new Object[]{"world"})
+    );
+  }
+
+  @Test
   public void testFinalizeCanDo()
   {
     ExpressionLambdaAggregatorFactory agg = new ExpressionLambdaAggregatorFactory(
@@ -170,6 +233,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         "0",
         null,
         true,
+        false,
+        false,
         "__acc + x",
         null,
         null,
@@ -189,8 +254,10 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         ImmutableSet.of("x"),
         null,
         "0",
-        null,
+        "ARRAY<STRING>[]",
         true,
+        true,
+        false,
         "array_set_add(__acc, x)",
         "array_set_add_all(__acc, expr_agg_name)",
         null,
@@ -213,6 +280,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         "''",
         "''",
         true,
+        true,
+        true,
         "concat(__acc, some_column, some_other_column)",
         "concat(__acc, expr_agg_name)",
         null,
@@ -221,9 +290,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.STRING, agg.getType());
-    Assert.assertEquals(ColumnType.STRING, agg.getCombiningFactory().getType());
-    Assert.assertEquals(ColumnType.STRING, agg.getFinalizedType());
+    Assert.assertEquals(ColumnType.STRING, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING, agg.getResultType());
   }
 
   @Test
@@ -236,6 +305,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         "0",
         null,
         null,
+        false,
+        false,
         "__acc + some_column + some_other_column",
         "__acc + expr_agg_name",
         null,
@@ -244,9 +315,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.LONG, agg.getType());
-    Assert.assertEquals(ColumnType.LONG, agg.getCombiningFactory().getType());
-    Assert.assertEquals(ColumnType.LONG, agg.getFinalizedType());
+    Assert.assertEquals(ColumnType.LONG, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.LONG, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.LONG, agg.getResultType());
   }
 
   @Test
@@ -259,6 +330,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         "0.0",
         null,
         null,
+        false,
+        false,
         "__acc + some_column + some_other_column",
         "__acc + expr_agg_name",
         null,
@@ -267,9 +340,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getType());
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getCombiningFactory().getType());
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getFinalizedType());
+    Assert.assertEquals(ColumnType.DOUBLE, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.DOUBLE, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.DOUBLE, agg.getResultType());
   }
 
   @Test
@@ -280,8 +353,10 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         ImmutableSet.of("some_column", "some_other_column"),
         null,
         "''",
-        "<STRING>[]",
+        "ARRAY<STRING>[]",
         null,
+        false,
+        false,
         "concat(__acc, some_column, some_other_column)",
         "array_set_add(__acc, expr_agg_name)",
         null,
@@ -290,9 +365,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.STRING, agg.getType());
-    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getCombiningFactory().getType());
-    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getFinalizedType());
+    Assert.assertEquals(ColumnType.STRING, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getResultType());
   }
 
   @Test
@@ -303,8 +378,10 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         ImmutableSet.of("some_column", "some_other_column"),
         null,
         "''",
-        "<STRING>[]",
+        "ARRAY<STRING>[]",
         null,
+        false,
+        false,
         "concat(__acc, some_column, some_other_column)",
         "array_set_add(__acc, expr_agg_name)",
         null,
@@ -313,9 +390,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.STRING, agg.getType());
-    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getCombiningFactory().getType());
-    Assert.assertEquals(ColumnType.STRING, agg.getFinalizedType());
+    Assert.assertEquals(ColumnType.STRING, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING, agg.getResultType());
   }
 
   @Test
@@ -326,8 +403,10 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         ImmutableSet.of("some_column", "some_other_column"),
         null,
         "0",
-        "<LONG>[]",
+        "ARRAY<LONG>[]",
         null,
+        false,
+        false,
         "__acc + some_column + some_other_column",
         "array_set_add(__acc, expr_agg_name)",
         null,
@@ -336,9 +415,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.LONG, agg.getType());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getCombiningFactory().getType());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getFinalizedType());
+    Assert.assertEquals(ColumnType.LONG, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getResultType());
   }
 
   @Test
@@ -349,8 +428,10 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         ImmutableSet.of("some_column", "some_other_column"),
         null,
         "0",
-        "<LONG>[]",
+        "ARRAY<LONG>[]",
         null,
+        false,
+        false,
         "__acc + some_column + some_other_column",
         "array_set_add(__acc, expr_agg_name)",
         null,
@@ -359,9 +440,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.LONG, agg.getType());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getCombiningFactory().getType());
-    Assert.assertEquals(ColumnType.STRING, agg.getFinalizedType());
+    Assert.assertEquals(ColumnType.LONG, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING, agg.getResultType());
   }
 
   @Test
@@ -372,8 +453,10 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         ImmutableSet.of("some_column", "some_other_column"),
         null,
         "0.0",
-        "<DOUBLE>[]",
+        "ARRAY<DOUBLE>[]",
         null,
+        false,
+        false,
         "__acc + some_column + some_other_column",
         "array_set_add(__acc, expr_agg_name)",
         null,
@@ -382,9 +465,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getType());
-    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getCombiningFactory().getType());
-    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getFinalizedType());
+    Assert.assertEquals(ColumnType.DOUBLE, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getResultType());
   }
 
   @Test
@@ -395,8 +478,10 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         ImmutableSet.of("some_column", "some_other_column"),
         null,
         "0.0",
-        "<DOUBLE>[]",
+        "ARRAY<DOUBLE>[]",
         null,
+        false,
+        false,
         "__acc + some_column + some_other_column",
         "array_set_add(__acc, expr_agg_name)",
         null,
@@ -405,9 +490,59 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getType());
-    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getCombiningFactory().getType());
-    Assert.assertEquals(ColumnType.STRING, agg.getFinalizedType());
+    Assert.assertEquals(ColumnType.DOUBLE, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING, agg.getResultType());
+  }
+
+  @Test
+  public void testComplexType()
+  {
+    ExpressionLambdaAggregatorFactory agg = new ExpressionLambdaAggregatorFactory(
+        "expr_agg_name",
+        ImmutableSet.of("some_column"),
+        null,
+        "hyper_unique()",
+        null,
+        null,
+        false,
+        false,
+        "hyper_unique_add(some_column, __acc)",
+        "hyper_unique_add(__acc, expr_agg_name)",
+        null,
+        null,
+        new HumanReadableBytes(2048),
+        TestExprMacroTable.INSTANCE
+    );
+
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getIntermediateType());
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getResultType());
+  }
+
+  @Test
+  public void testComplexTypeFinalized()
+  {
+    ExpressionLambdaAggregatorFactory agg = new ExpressionLambdaAggregatorFactory(
+        "expr_agg_name",
+        ImmutableSet.of("some_column"),
+        null,
+        "hyper_unique()",
+        null,
+        null,
+        false,
+        false,
+        "hyper_unique_add(some_column, __acc)",
+        "hyper_unique_add(__acc, expr_agg_name)",
+        null,
+        "hyper_unique_estimate(o)",
+        new HumanReadableBytes(2048),
+        TestExprMacroTable.INSTANCE
+    );
+
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getIntermediateType());
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.DOUBLE, agg.getResultType());
   }
 
   @Test
@@ -426,6 +561,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                       "''",
                       "''",
                       null,
+                      false,
+                      false,
                       "concat(__acc, some_column, some_other_column)",
                       "concat(__acc, string_expr)",
                       null,
@@ -440,6 +577,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                       "0.0",
                       null,
                       null,
+                      false,
+                      false,
                       "__acc + some_column + some_other_column",
                       "__acc + double_expr",
                       null,
@@ -454,6 +593,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                       "0",
                       null,
                       null,
+                      false,
+                      false,
                       "__acc + some_column + some_other_column",
                       "__acc + long_expr",
                       null,
@@ -465,9 +606,11 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                       "string_array_expr",
                       ImmutableSet.of("some_column", "some_other_column"),
                       null,
-                      "<STRING>[]",
-                      "<STRING>[]",
+                      "ARRAY<STRING>[]",
+                      "ARRAY<STRING>[]",
                       null,
+                      true,
+                      false,
                       "array_set_add(__acc, concat(some_column, some_other_column))",
                       "array_set_add_all(__acc, string_array_expr)",
                       null,
@@ -480,8 +623,10 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                       ImmutableSet.of("some_column", "some_other_column_expr"),
                       null,
                       "0.0",
-                      "<DOUBLE>[]",
+                      "ARRAY<DOUBLE>[]",
                       null,
+                      false,
+                      false,
                       "__acc + some_column + some_other_column",
                       "array_set_add(__acc, double_array)",
                       null,
@@ -494,8 +639,10 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                       ImmutableSet.of("some_column", "some_other_column"),
                       null,
                       "0",
-                      "<LONG>[]",
+                      "ARRAY<LONG>[]",
                       null,
+                      false,
+                      false,
                       "__acc + some_column + some_other_column",
                       "array_set_add(__acc, long_array_expr)",
                       null,
@@ -508,8 +655,10 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                       ImmutableSet.of("some_column", "some_other_column"),
                       null,
                       "''",
-                      "<STRING>[]",
+                      "ARRAY<STRING>[]",
                       null,
+                      false,
+                      false,
                       "concat(__acc, some_column, some_other_column)",
                       "array_set_add(__acc, string_array_expr)",
                       null,
@@ -522,8 +671,10 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                       ImmutableSet.of("some_column", "some_other_column_expr"),
                       null,
                       "0.0",
-                      "<DOUBLE>[]",
+                      "ARRAY<DOUBLE>[]",
                       null,
+                      false,
+                      false,
                       "__acc + some_column + some_other_column",
                       "array_set_add(__acc, double_array)",
                       null,
@@ -536,12 +687,46 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                       ImmutableSet.of("some_column", "some_other_column"),
                       null,
                       "0",
-                      "<LONG>[]",
+                      "ARRAY<LONG>[]",
                       null,
+                      false,
+                      false,
                       "__acc + some_column + some_other_column",
                       "array_set_add(__acc, long_array_expr)",
                       null,
                       "fold((x, acc) -> x + acc, o, 0)",
+                      new HumanReadableBytes(2048),
+                      TestExprMacroTable.INSTANCE
+                  ),
+                  new ExpressionLambdaAggregatorFactory(
+                      "complex_expr",
+                      ImmutableSet.of("some_column"),
+                      null,
+                      "hyper_unique()",
+                      null,
+                      null,
+                      false,
+                      false,
+                      "hyper_unique_add(some_column, __acc)",
+                      "hyper_unique_add(__acc, expr_agg_name)",
+                      null,
+                      null,
+                      new HumanReadableBytes(2048),
+                      TestExprMacroTable.INSTANCE
+                  ),
+                  new ExpressionLambdaAggregatorFactory(
+                      "complex_expr_finalized",
+                      ImmutableSet.of("some_column"),
+                      null,
+                      "hyper_unique()",
+                      null,
+                      null,
+                      false,
+                      false,
+                      "hyper_unique_add(some_column, __acc)",
+                      "hyper_unique_add(__acc, expr_agg_name)",
+                      null,
+                      "hyper_unique_estimate(o)",
                       new HumanReadableBytes(2048),
                       TestExprMacroTable.INSTANCE
                   )
@@ -552,7 +737,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                   new FieldAccessPostAggregator("double-array-expr-access", "double_array_expr_finalized"),
                   new FinalizingFieldAccessPostAggregator("double-array-expr-finalize", "double_array_expr_finalized"),
                   new FieldAccessPostAggregator("long-array-expr-access", "long_array_expr_finalized"),
-                  new FinalizingFieldAccessPostAggregator("long-array-expr-finalize", "long_array_expr_finalized")
+                  new FinalizingFieldAccessPostAggregator("long-array-expr-finalize", "long_array_expr_finalized"),
+                  new FieldAccessPostAggregator("complex-expr-access", "complex_expr_finalized"),
+                  new FinalizingFieldAccessPostAggregator("complex-expr-finalize", "complex_expr_finalized")
               )
               .build();
 
@@ -576,6 +763,10 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                     .add("double_array_expr_finalized", null)
                     // long because fold type equals finalized type, even though merge type is array
                     .add("long_array_expr_finalized", ColumnType.LONG)
+                    .add("complex_expr", HyperUniquesAggregatorFactory.TYPE)
+                    // type does not equal finalized type. (combining factory type does equal finalized type,
+                    // but this signature doesn't use combining factory)
+                    .add("complex_expr_finalized", null)
                     // fold type is string
                     .add("string-array-expr-access", ColumnType.STRING)
                     // finalized type is string
@@ -588,6 +779,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                     .add("long-array-expr-access", ColumnType.LONG)
                     // finalized type is long
                     .add("long-array-expr-finalize", ColumnType.LONG)
+                    .add("complex-expr-access", HyperUniquesAggregatorFactory.TYPE)
+                    .add("complex-expr-finalize", ColumnType.DOUBLE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

@@ -86,6 +86,12 @@ class IdentifierExpr implements Expr
     return binding;
   }
 
+  @Override
+  public boolean isIdentifier()
+  {
+    return true;
+  }
+
   @Nullable
   @Override
   public String getIdentifierIfIdentifier()
@@ -122,7 +128,7 @@ class IdentifierExpr implements Expr
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.bestEffortOf(bindings.get(binding));
+    return ExprEval.ofType(bindings.getType(binding), bindings.get(binding));
   }
 
   @Override

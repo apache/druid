@@ -20,12 +20,36 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.base.Supplier;
+import org.apache.druid.java.util.common.Pair;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.function.Function;
 
 public class InputBindings
 {
+  private static final Expr.ObjectBinding NIL_BINDINGS = new Expr.ObjectBinding()
+  {
+    @Nullable
+    @Override
+    public Object get(String name)
+    {
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getType(String name)
+    {
+      return null;
+    }
+  };
+
+  public static Expr.ObjectBinding nilBindings()
+  {
+    return NIL_BINDINGS;
+  }
+
   /**
    * Create an {@link Expr.InputBindingInspector} backed by a map of binding identifiers to their {@link ExprType}
    */
@@ -42,23 +66,95 @@ public class InputBindings
     };
   }
 
+  public static Expr.ObjectBinding singleProvider(ExpressionType type, final Function<String, ?> valueFn)
+  {
+    return new Expr.ObjectBinding()
+    {
+      @Nullable
+      @Override
+      public Object get(String name)
+      {
+        return valueFn.apply(name);
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getType(String name)
+      {
+        return type;
+      }
+    };
+  }
+
+  public static Expr.ObjectBinding forFunction(final Function<String, ?> valueFn)
+  {
+    return new Expr.ObjectBinding()
+    {
+      @Nullable
+      @Override
+      public Object get(String name)
+      {
+        return valueFn.apply(name);
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getType(String name)
+      {
+        return ExprEval.bestEffortOf(valueFn.apply(name)).type();
+      }
+    };
+  }
+
   /**
    * Create {@link Expr.ObjectBinding} backed by {@link Map} to provide values for identifiers to evaluate {@link Expr}
    */
   public static Expr.ObjectBinding withMap(final Map<String, ?> bindings)
   {
-    return bindings::get;
+    return new Expr.ObjectBinding()
+    {
+      @Nullable
+      @Override
+      public Object get(String name)
+      {
+        return bindings.get(name);
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getType(String name)
+      {
+        return ExprEval.bestEffortOf(bindings.get(name)).type();
+      }
+    };
   }
 
   /**
    * Create {@link Expr.ObjectBinding} backed by map of {@link Supplier} to provide values for identifiers to evaluate
    * {@link Expr}
    */
-  public static Expr.ObjectBinding withSuppliers(final Map<String, Supplier<Object>> bindings)
+  public static Expr.ObjectBinding withTypedSuppliers(final Map<String, Pair<ExpressionType, Supplier<Object>>> bindings)
   {
-    return (String name) -> {
-      Supplier<Object> supplier = bindings.get(name);
-      return supplier == null ? null : supplier.get();
+    return new Expr.ObjectBinding()
+    {
+      @Nullable
+      @Override
+      public Object get(String name)
+      {
+        Pair<ExpressionType, Supplier<Object>> binding = bindings.get(name);
+        return binding == null || binding.rhs == null ? null : binding.rhs.get();
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getType(String name)
+      {
+        Pair<ExpressionType, Supplier<Object>> binding = bindings.get(name);
+        if (binding == null) {
+          return null;
+        }
+        return binding.lhs;
+      }
     };
   }
 }

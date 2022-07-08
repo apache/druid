@@ -21,6 +21,7 @@ package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -73,7 +74,7 @@ public class FileRequestLogger implements RequestLogger
   public void start()
   {
     try {
-      baseDir.mkdirs();
+      FileUtils.mkdirp(baseDir);
 
       MutableDateTime mutableDateTime = DateTimes.nowUtc().toMutableDateTime(ISOChronology.getInstanceUTC());
       mutableDateTime.setMillisOfDay(0);

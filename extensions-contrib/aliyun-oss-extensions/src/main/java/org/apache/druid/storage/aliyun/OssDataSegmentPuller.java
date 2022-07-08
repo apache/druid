@@ -80,7 +80,7 @@ public class OssDataSegmentPuller implements URIDataPuller
     }
 
     try {
-      org.apache.commons.io.FileUtils.forceMkdir(outDir);
+      FileUtils.mkdirp(outDir);
 
       final URI uri = ossCoords.toUri(OssStorageDruidModule.SCHEME);
       final ByteSource byteSource = new ByteSource()

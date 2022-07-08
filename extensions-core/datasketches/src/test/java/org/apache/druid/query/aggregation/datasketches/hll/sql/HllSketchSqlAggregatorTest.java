@@ -23,10 +23,12 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -51,7 +53,6 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -79,13 +80,15 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   private static final boolean ROUND = true;
 
   @Override
+  public Iterable<? extends Module> getJacksonModules()
+  {
+    return Iterables.concat(super.getJacksonModules(), new HllSketchModule().getJacksonModules());
+  }
+
+  @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
     HllSketchModule.registerSerde();
-    for (Module mod : new HllSketchModule().getJacksonModules()) {
-      CalciteTests.getJsonMapper().registerModule(mod);
-      TestHelper.JSON_MAPPER.registerModule(mod);
-    }
     final QueryableIndex index = IndexBuilder.create()
                                              .tmpDir(temporaryFolder.newFolder())
                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
@@ -293,7 +296,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                               ImmutableMap.of(
                                                   TimeseriesQuery.SKIP_EMPTY_BUCKETS,
                                                   true,
-                                                  "sqlQueryId",
+                                                  BaseQuery.SQL_QUERY_ID,
                                                   "dummy"
                                               ),
                                               "d0"
@@ -476,14 +479,14 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           new FieldAccessPostAggregator("p1", "a1"),
                           new HllSketchToEstimatePostAggregator("p3", new FieldAccessPostAggregator("p2", "a0"), false),
                           new HllSketchToEstimatePostAggregator("p5", new FieldAccessPostAggregator("p4", "a0"), false),
-                          new ExpressionPostAggregator("p6", "(p5 + 1)", null, TestExprMacroTable.INSTANCE),
+                          new ExpressionPostAggregator("p6", "(\"p5\" + 1)", null, TestExprMacroTable.INSTANCE),
                           new HllSketchToEstimatePostAggregator("p8", new FieldAccessPostAggregator("p7", "a2"), false),
                           new HllSketchToEstimatePostAggregator(
                               "p10",
                               new FieldAccessPostAggregator("p9", "a0"),
                               false
                           ),
-                          new ExpressionPostAggregator("p11", "abs(p10)", null, TestExprMacroTable.INSTANCE),
+                          new ExpressionPostAggregator("p11", "abs(\"p10\")", null, TestExprMacroTable.INSTANCE),
                           new HllSketchToEstimateWithBoundsPostAggregator(
                               "p13",
                               new FieldAccessPostAggregator("p12", "a0"),
@@ -497,7 +500,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           new FieldAccessPostAggregator("p16", "a3"),
                           new HllSketchToStringPostAggregator("p18", new FieldAccessPostAggregator("p17", "a0")),
                           new HllSketchToStringPostAggregator("p20", new FieldAccessPostAggregator("p19", "a0")),
-                          new ExpressionPostAggregator("p21", "upper(p20)", null, TestExprMacroTable.INSTANCE),
+                          new ExpressionPostAggregator("p21", "upper(\"p20\")", null, TestExprMacroTable.INSTANCE),
                           new HllSketchToEstimatePostAggregator("p23", new FieldAccessPostAggregator("p22", "a0"), true)
                       )
                   )

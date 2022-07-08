@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
-import com.google.common.collect.Sets;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
@@ -28,6 +27,7 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -39,6 +39,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.List;
 
 public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOperatorConversion
@@ -109,7 +110,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
     if (expr.isLiteral()) {
       // Evaluate the expression to take out the array elements.
       // We can safely pass null if the expression is literal.
-      ExprEval<?> exprEval = expr.eval(name -> null);
+      ExprEval<?> exprEval = expr.eval(InputBindings.nilBindings());
       String[] arrayElements = exprEval.asStringArray();
       if (arrayElements == null || arrayElements.length == 0) {
         // If arrayElements is empty which means complexExpr is an empty array,
@@ -122,7 +123,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
       } else {
         return new InDimFilter(
             simpleExtractionExpr.getSimpleExtraction().getColumn(),
-            Sets.newHashSet(arrayElements),
+            new InDimFilter.ValuesSet(Arrays.asList(arrayElements)),
             simpleExtractionExpr.getSimpleExtraction().getExtractionFn(),
             null
         );

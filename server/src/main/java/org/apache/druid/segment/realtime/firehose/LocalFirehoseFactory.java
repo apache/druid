@@ -35,7 +35,10 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * Firehose that reads data from files on local disk
@@ -82,11 +85,16 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
   @Override
   protected Collection<File> initObjects()
   {
-    return FileUtils.listFiles(
-        Preconditions.checkNotNull(baseDir, "baseDir").getAbsoluteFile(),
+    final Collection<File> files = FileUtils.listFiles(
+        Preconditions.checkNotNull(this.baseDir, "baseDir").getAbsoluteFile(),
         new WildcardFileFilter(filter),
         TrueFileFilter.INSTANCE
     );
+
+    // Sort files for consistent ordering from run to run.
+    final List<File> fileList = files instanceof List ? (List<File>) files : new ArrayList<>(files);
+    fileList.sort(Comparator.naturalOrder());
+    return fileList;
   }
 
   @Override

@@ -21,6 +21,9 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -32,8 +35,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
@@ -73,9 +74,10 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -120,48 +122,42 @@ public class DumpSegment extends GuiceRunnable
   @Option(
       name = {"-d", "--directory"},
       title = "directory",
-      description = "Directory containing segment data.",
-      required = true)
+      description = "Directory containing segment data.")
+  @Required
   public String directory;
 
   @Option(
       name = {"-o", "--out"},
       title = "file",
-      description = "File to write to, or omit to write to stdout.",
-      required = false)
+      description = "File to write to, or omit to write to stdout.")
   public String outputFileName;
 
   @Option(
       name = {"--filter"},
       title = "json",
-      description = "Filter, JSON encoded, or omit to include all rows. Only used if dumping rows.",
-      required = false)
+      description = "Filter, JSON encoded, or omit to include all rows. Only used if dumping rows.")
   public String filterJson = null;
 
   @Option(
       name = {"-c", "--column"},
       title = "column",
-      description = "Column to include, specify multiple times for multiple columns, or omit to include all columns.",
-      required = false)
+      description = "Column to include, specify multiple times for multiple columns, or omit to include all columns.")
   public List<String> columnNamesFromCli = new ArrayList<>();
 
   @Option(
       name = "--time-iso8601",
-      title = "Format __time column in ISO8601 format rather than long. Only used if dumping rows.",
-      required = false)
+      title = "Format __time column in ISO8601 format rather than long. Only used if dumping rows.")
   public boolean timeISO8601 = false;
 
   @Option(
       name = "--dump",
       title = "type",
-      description = "Dump either 'rows' (default), 'metadata', or 'bitmaps'",
-      required = false)
+      description = "Dump either 'rows' (default), 'metadata', or 'bitmaps'")
   public String dumpTypeString = DumpType.ROWS.toString();
 
   @Option(
       name = "--decompress-bitmaps",
-      title = "Dump bitmaps as arrays rather than base64-encoded compressed bitmaps. Only used if dumping bitmaps.",
-      required = false)
+      title = "Dump bitmaps as arrays rather than base64-encoded compressed bitmaps. Only used if dumping bitmaps.")
   public boolean decompressBitmaps = false;
 
   @Override
@@ -187,7 +183,7 @@ public class DumpSegment extends GuiceRunnable
           runMetadata(injector, index);
           break;
         case BITMAPS:
-          runBitmaps(injector, index);
+          runBitmaps(injector, outputFileName, index, getColumnsToInclude(index), decompressBitmaps);
           break;
         default:
           throw new ISE("dumpType[%s] has no handler", dumpType);
@@ -318,7 +314,14 @@ public class DumpSegment extends GuiceRunnable
     );
   }
 
-  private void runBitmaps(final Injector injector, final QueryableIndex index) throws IOException
+  @VisibleForTesting
+  public static void runBitmaps(
+      final Injector injector,
+      final String outputFileName,
+      final QueryableIndex index,
+      List<String> columnNames,
+      boolean decompressBitmaps
+  ) throws IOException
   {
     final ObjectMapper objectMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
@@ -335,35 +338,33 @@ public class DumpSegment extends GuiceRunnable
       );
     }
 
-    final List<String> columnNames = getColumnsToInclude(index);
-
     withOutputStream(
-        new Function<OutputStream, Object>()
-        {
-          @Override
-          public Object apply(final OutputStream out)
-          {
-            try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(out)) {
+        out -> {
+          try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(out)) {
+            jg.writeStartObject();
+            {
+              jg.writeObjectField("bitmapSerdeFactory", bitmapSerdeFactory);
+              jg.writeFieldName("bitmaps");
               jg.writeStartObject();
               {
-                jg.writeObjectField("bitmapSerdeFactory", bitmapSerdeFactory);
-                jg.writeFieldName("bitmaps");
-                jg.writeStartObject();
-                {
-                  for (final String columnName : columnNames) {
-                    final ColumnHolder columnHolder = index.getColumnHolder(columnName);
-                    final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
-
-                    if (bitmapIndex == null) {
+                for (final String columnName : columnNames) {
+                  final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+                  final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+                  if (indexSupplier == null) {
+                    jg.writeNullField(columnName);
+                  } else {
+                    DictionaryEncodedStringValueIndex valueIndex =
+                        indexSupplier.as(DictionaryEncodedStringValueIndex.class);
+                    if (valueIndex == null) {
                       jg.writeNullField(columnName);
                     } else {
                       jg.writeFieldName(columnName);
                       jg.writeStartObject();
-                      for (int i = 0; i < bitmapIndex.getCardinality(); i++) {
-                        String val = bitmapIndex.getValue(i);
+                      for (int i = 0; i < valueIndex.getCardinality(); i++) {
+                        String val = valueIndex.getValue(i);
                         // respect nulls if they are present in the dictionary
                         jg.writeFieldName(val == null ? "null" : val);
-                        final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+                        final ImmutableBitmap bitmap = valueIndex.getBitmap(i);
                         if (decompressBitmaps) {
                           jg.writeStartArray();
                           final IntIterator iterator = bitmap.iterator();
@@ -383,17 +384,18 @@ public class DumpSegment extends GuiceRunnable
                     }
                   }
                 }
-                jg.writeEndObject();
               }
               jg.writeEndObject();
             }
-            catch (IOException e) {
-              throw new RuntimeException(e);
-            }
-
-            return null;
+            jg.writeEndObject();
           }
-        }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+
+          return null;
+        },
+        outputFileName
     );
   }
 
@@ -417,8 +419,13 @@ public class DumpSegment extends GuiceRunnable
     return ImmutableList.copyOf(columnNames);
   }
 
-  @SuppressForbidden(reason = "System#out")
   private <T> T withOutputStream(Function<OutputStream, T> f) throws IOException
+  {
+    return withOutputStream(f, outputFileName);
+  }
+
+  @SuppressForbidden(reason = "System#out")
+  private static <T> T withOutputStream(Function<OutputStream, T> f, String outputFileName) throws IOException
   {
     if (outputFileName == null) {
       return f.apply(System.out);
@@ -494,5 +501,4 @@ public class DumpSegment extends GuiceRunnable
   {
     sequence.accumulate(null, (accumulated, in) -> null);
   }
-
 }

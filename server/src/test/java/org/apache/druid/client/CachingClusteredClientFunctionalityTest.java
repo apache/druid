@@ -80,8 +80,8 @@ import java.util.concurrent.ForkJoinPool;
 public class CachingClusteredClientFunctionalityTest
 {
   private static final ObjectMapper OBJECT_MAPPER = CachingClusteredClientTestUtils.createObjectMapper();
-  private static final Pair<QueryToolChestWarehouse, Closer> WAREHOUSE_AND_CLOSER = CachingClusteredClientTestUtils
-      .createWarehouse(OBJECT_MAPPER);
+  private static final Pair<QueryToolChestWarehouse, Closer> WAREHOUSE_AND_CLOSER =
+      CachingClusteredClientTestUtils.createWarehouse();
   private static final QueryToolChestWarehouse WAREHOUSE = WAREHOUSE_AND_CLOSER.lhs;
   private static final Closer RESOURCE_CLOSER = WAREHOUSE_AND_CLOSER.rhs;
 
@@ -128,7 +128,7 @@ public class CachingClusteredClientFunctionalityTest
 
     ResponseContext responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
-    Assert.assertNull(responseContext.get(ResponseContext.Key.UNCOVERED_INTERVALS));
+    Assert.assertNull(responseContext.getUncoveredIntervals());
 
     builder.intervals("2015-01-01/2015-01-03");
     responseContext = ResponseContext.createEmpty();
@@ -177,8 +177,8 @@ public class CachingClusteredClientFunctionalityTest
     for (String interval : intervals) {
       expectedList.add(Intervals.of(interval));
     }
-    Assert.assertEquals((Object) expectedList, context.get(ResponseContext.Key.UNCOVERED_INTERVALS));
-    Assert.assertEquals(uncoveredIntervalsOverflowed, context.get(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED));
+    Assert.assertEquals((Object) expectedList, context.getUncoveredIntervals());
+    Assert.assertEquals(uncoveredIntervalsOverflowed, context.get(ResponseContext.Keys.UNCOVERED_INTERVALS_OVERFLOWED));
   }
 
   private void addToTimeline(Interval interval, String version)

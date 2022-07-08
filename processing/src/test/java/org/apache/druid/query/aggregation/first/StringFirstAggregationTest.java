@@ -47,11 +47,13 @@ public class StringFirstAggregationTest extends InitializedNullHandlingTest
   private AggregatorFactory combiningAggFactory;
   private ColumnSelectorFactory colSelectorFactory;
   private TestLongColumnSelector timeSelector;
+  private TestLongColumnSelector customTimeSelector;
   private TestObjectColumnSelector<String> valueSelector;
   private TestObjectColumnSelector objectSelector;
 
   private String[] strings = {"1111", "2222", "3333", null, "4444"};
   private long[] times = {8224, 6879, 2436, 3546, 7888};
+  private long[] customTimes = {2, 1, 3, 4, 5};
   private SerializablePairLongString[] pairs = {
       new SerializablePairLongString(52782L, "AAAA"),
       new SerializablePairLongString(65492L, "BBBB"),
@@ -64,13 +66,15 @@ public class StringFirstAggregationTest extends InitializedNullHandlingTest
   public void setup()
   {
     NullHandling.initializeForTests();
-    stringFirstAggFactory = new StringFirstAggregatorFactory("billy", "nilly", MAX_STRING_SIZE);
+    stringFirstAggFactory = new StringFirstAggregatorFactory("billy", "nilly", null, MAX_STRING_SIZE);
     combiningAggFactory = stringFirstAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
+    customTimeSelector = new TestLongColumnSelector(customTimes);
     valueSelector = new TestObjectColumnSelector<>(strings);
     objectSelector = new TestObjectColumnSelector<>(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME)).andReturn(timeSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("customTime")).andReturn(customTimeSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector);
     EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly"))
@@ -95,10 +99,25 @@ public class StringFirstAggregationTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testStringFirstAggregatorWithTimeColumn()
+  {
+    Aggregator agg = new StringFirstAggregatorFactory("billy", "nilly", "customTime", MAX_STRING_SIZE).factorize(colSelectorFactory);
+
+    aggregate(agg);
+    aggregate(agg);
+    aggregate(agg);
+    aggregate(agg);
+
+    Pair<Long, String> result = (Pair<Long, String>) agg.get();
+
+    Assert.assertEquals(strings[1], result.rhs);
+  }
+
+  @Test
   public void testStringFirstBufferAggregator()
   {
-    BufferAggregator agg = stringFirstAggFactory.factorizeBuffered(
-        colSelectorFactory);
+    BufferAggregator agg = new StringFirstAggregatorFactory("billy", "nilly", "customTime", MAX_STRING_SIZE)
+        .factorizeBuffered(colSelectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[stringFirstAggFactory.getMaxIntermediateSize()]);
     agg.init(buffer, 0);
@@ -110,7 +129,7 @@ public class StringFirstAggregationTest extends InitializedNullHandlingTest
 
     Pair<Long, String> result = (Pair<Long, String>) agg.get(buffer, 0);
 
-    Assert.assertEquals(strings[2], result.rhs);
+    Assert.assertEquals(strings[1], result.rhs);
   }
 
   @Test
@@ -202,6 +221,7 @@ public class StringFirstAggregationTest extends InitializedNullHandlingTest
   {
     agg.aggregate();
     timeSelector.increment();
+    customTimeSelector.increment();
     valueSelector.increment();
     objectSelector.increment();
   }
@@ -214,6 +234,7 @@ public class StringFirstAggregationTest extends InitializedNullHandlingTest
   {
     agg.aggregate(buff, position);
     timeSelector.increment();
+    customTimeSelector.increment();
     valueSelector.increment();
     objectSelector.increment();
   }

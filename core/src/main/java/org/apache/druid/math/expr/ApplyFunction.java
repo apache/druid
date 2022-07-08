@@ -25,7 +25,6 @@ import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
@@ -138,54 +137,16 @@ public interface ApplyFunction
     /**
      * Evaluate {@link LambdaExpr} against every index position of an {@link IndexableMapLambdaObjectBinding}
      */
-    ExprEval applyMap(LambdaExpr expr, IndexableMapLambdaObjectBinding bindings)
+    ExprEval applyMap(@Nullable ExpressionType arrayType, LambdaExpr expr, IndexableMapLambdaObjectBinding bindings)
     {
       final int length = bindings.getLength();
-      String[] stringsOut = null;
-      Long[] longsOut = null;
-      Double[] doublesOut = null;
-
-      ExpressionType elementType = null;
+      Object[] out = new Object[length];
       for (int i = 0; i < length; i++) {
 
         ExprEval evaluated = expr.eval(bindings.withIndex(i));
-        if (elementType == null) {
-          elementType = evaluated.type();
-          switch (elementType.getType()) {
-            case STRING:
-              stringsOut = new String[length];
-              break;
-            case LONG:
-              longsOut = new Long[length];
-              break;
-            case DOUBLE:
-              doublesOut = new Double[length];
-              break;
-            default:
-              throw new RE("Unhandled map function output type [%s]", elementType);
-          }
-        }
-
-        Function.ArrayConstructorFunction.setArrayOutputElement(
-            stringsOut,
-            longsOut,
-            doublesOut,
-            elementType,
-            i,
-            evaluated
-        );
+        arrayType = Function.ArrayConstructorFunction.setArrayOutput(arrayType, out, i, evaluated);
       }
-
-      switch (elementType.getType()) {
-        case STRING:
-          return ExprEval.ofStringArray(stringsOut);
-        case LONG:
-          return ExprEval.ofLongArray(longsOut);
-        case DOUBLE:
-          return ExprEval.ofDoubleArray(doublesOut);
-        default:
-          throw new RE("Unhandled map function output type [%s]", elementType);
-      }
+      return ExprEval.ofArray(arrayType, out);
     }
   }
 
@@ -216,8 +177,9 @@ public interface ApplyFunction
         return arrayEval;
       }
 
-      MapLambdaBinding lambdaBinding = new MapLambdaBinding(array, lambdaExpr, bindings);
-      return applyMap(lambdaExpr, lambdaBinding);
+      MapLambdaBinding lambdaBinding = new MapLambdaBinding(arrayEval.elementType(), array, lambdaExpr, bindings);
+      ExpressionType lambdaType = lambdaExpr.getOutputType(lambdaBinding);
+      return applyMap(lambdaType == null ? null : ExpressionTypeFactory.getInstance().ofArray(lambdaType), lambdaExpr, lambdaBinding);
     }
 
     @Override
@@ -261,6 +223,7 @@ public interface ApplyFunction
       List<List<Object>> arrayInputs = new ArrayList<>();
       boolean hadNull = false;
       boolean hadEmpty = false;
+      ExpressionType elementType = null;
       for (Expr expr : argsExpr) {
         ExprEval arrayEval = expr.eval(bindings);
         Object[] array = arrayEval.asArray();
@@ -268,6 +231,7 @@ public interface ApplyFunction
           hadNull = true;
           continue;
         }
+        elementType = arrayEval.elementType();
         if (array.length == 0) {
           hadEmpty = true;
           continue;
@@ -282,8 +246,9 @@ public interface ApplyFunction
       }
 
       List<List<Object>> product = CartesianList.create(arrayInputs);
-      CartesianMapLambdaBinding lambdaBinding = new CartesianMapLambdaBinding(product, lambdaExpr, bindings);
-      return applyMap(lambdaExpr, lambdaBinding);
+      CartesianMapLambdaBinding lambdaBinding = new CartesianMapLambdaBinding(elementType, product, lambdaExpr, bindings);
+      ExpressionType lambdaType = lambdaExpr.getOutputType(lambdaBinding);
+      return applyMap(ExpressionType.asArrayType(lambdaType), lambdaExpr, lambdaBinding);
     }
 
     @Override
@@ -324,7 +289,7 @@ public interface ApplyFunction
       if (accumulator instanceof Boolean) {
         return ExprEval.ofLongBoolean((boolean) accumulator);
       }
-      return ExprEval.bestEffortOf(accumulator);
+      return ExprEval.ofType(bindings.getAccumulatorType(), accumulator);
     }
 
     @Override
@@ -372,7 +337,14 @@ public interface ApplyFunction
       }
       Object accumulator = accEval.value();
 
-      FoldLambdaBinding lambdaBinding = new FoldLambdaBinding(array, accumulator, lambdaExpr, bindings);
+      FoldLambdaBinding lambdaBinding = new FoldLambdaBinding(
+          arrayEval.elementType(),
+          array,
+          accEval.type(),
+          accumulator,
+          lambdaExpr,
+          bindings
+      );
       return applyFold(lambdaExpr, accumulator, lambdaBinding);
     }
 
@@ -415,6 +387,7 @@ public interface ApplyFunction
       List<List<Object>> arrayInputs = new ArrayList<>();
       boolean hadNull = false;
       boolean hadEmpty = false;
+      ExpressionType arrayElementType = null;
       for (int i = 0; i < argsExpr.size() - 1; i++) {
         Expr expr = argsExpr.get(i);
         ExprEval arrayEval = expr.eval(bindings);
@@ -423,6 +396,7 @@ public interface ApplyFunction
           hadNull = true;
           continue;
         }
+        arrayElementType = arrayEval.elementType();
         if (array.length == 0) {
           hadEmpty = true;
           continue;
@@ -444,7 +418,7 @@ public interface ApplyFunction
       Object accumulator = accEval.value();
 
       CartesianFoldLambdaBinding lambdaBindings =
-          new CartesianFoldLambdaBinding(product, accumulator, lambdaExpr, bindings);
+          new CartesianFoldLambdaBinding(arrayElementType, product, accEval.type(), accumulator, lambdaExpr, bindings);
       return applyFold(lambdaExpr, accumulator, lambdaBindings);
     }
 
@@ -495,23 +469,9 @@ public interface ApplyFunction
         return ExprEval.of(null);
       }
 
-      SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(lambdaExpr, bindings);
-      switch (arrayEval.elementType().getType()) {
-        case STRING:
-          String[] filteredString =
-              this.filter(arrayEval.asStringArray(), lambdaExpr, lambdaBinding).toArray(String[]::new);
-          return ExprEval.ofStringArray(filteredString);
-        case LONG:
-          Long[] filteredLong =
-              this.filter(arrayEval.asLongArray(), lambdaExpr, lambdaBinding).toArray(Long[]::new);
-          return ExprEval.ofLongArray(filteredLong);
-        case DOUBLE:
-          Double[] filteredDouble =
-              this.filter(arrayEval.asDoubleArray(), lambdaExpr, lambdaBinding).toArray(Double[]::new);
-          return ExprEval.ofDoubleArray(filteredDouble);
-        default:
-          throw new RE("Unhandled filter function input type [%s]", arrayEval.type());
-      }
+      SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(arrayEval.elementType(), lambdaExpr, bindings);
+      Object[] filtered = filter(arrayEval.asArray(), lambdaExpr, lambdaBinding).toArray();
+      return ExprEval.ofArray(arrayEval.asArrayType(), filtered);
     }
 
     @Override
@@ -565,7 +525,7 @@ public interface ApplyFunction
         return ExprEval.ofLongBoolean(false);
       }
 
-      SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(lambdaExpr, bindings);
+      SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(arrayEval.elementType(), lambdaExpr, bindings);
       return match(array, lambdaExpr, lambdaBinding);
     }
 
@@ -654,14 +614,16 @@ public interface ApplyFunction
   {
     private final Expr.ObjectBinding bindings;
     private final Map<String, Object> lambdaBindings;
+    private final ExpressionType elementType;
 
-    SettableLambdaBinding(LambdaExpr expr, Expr.ObjectBinding bindings)
+    SettableLambdaBinding(ExpressionType elementType, LambdaExpr expr, Expr.ObjectBinding bindings)
     {
+      this.elementType = elementType;
       this.lambdaBindings = new HashMap<>();
       for (String lambdaIdentifier : expr.getIdentifiers()) {
         lambdaBindings.put(lambdaIdentifier, null);
       }
-      this.bindings = bindings != null ? bindings : Collections.emptyMap()::get;
+      this.bindings = bindings != null ? bindings : InputBindings.nilBindings();
     }
 
     @Nullable
@@ -678,6 +640,16 @@ public interface ApplyFunction
     {
       this.lambdaBindings.put(key, value);
       return this;
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getType(String name)
+    {
+      if (lambdaBindings.containsKey(name)) {
+        return elementType;
+      }
+      return bindings.getType(name);
     }
   }
 
@@ -707,17 +679,19 @@ public interface ApplyFunction
   class MapLambdaBinding implements IndexableMapLambdaObjectBinding
   {
     private final Expr.ObjectBinding bindings;
+    private final ExpressionType arrayElementType;
     @Nullable
     private final String lambdaIdentifier;
     private final Object[] arrayValues;
     private int index = 0;
     private final boolean scoped;
 
-    MapLambdaBinding(Object[] arrayValues, LambdaExpr expr, Expr.ObjectBinding bindings)
+    MapLambdaBinding(ExpressionType elementType, Object[] arrayValues, LambdaExpr expr, Expr.ObjectBinding bindings)
     {
       this.lambdaIdentifier = expr.getIdentifier();
+      this.arrayElementType = elementType;
       this.arrayValues = arrayValues;
-      this.bindings = bindings != null ? bindings : Collections.emptyMap()::get;
+      this.bindings = bindings != null ? bindings : InputBindings.nilBindings();
       this.scoped = lambdaIdentifier != null;
     }
 
@@ -743,6 +717,16 @@ public interface ApplyFunction
       this.index = index;
       return this;
     }
+
+    @Nullable
+    @Override
+    public ExpressionType getType(String name)
+    {
+      if (scoped && name.equals(lambdaIdentifier)) {
+        return arrayElementType;
+      }
+      return bindings.getType(name);
+    }
   }
 
   /**
@@ -753,14 +737,16 @@ public interface ApplyFunction
   class CartesianMapLambdaBinding implements IndexableMapLambdaObjectBinding
   {
     private final Expr.ObjectBinding bindings;
+    private final ExpressionType arrayElementType;
     private final Object2IntMap<String> lambdaIdentifiers;
     private final List<List<Object>> lambdaInputs;
     private final boolean scoped;
     private int index = 0;
 
-    CartesianMapLambdaBinding(List<List<Object>> inputs, LambdaExpr expr, Expr.ObjectBinding bindings)
+    CartesianMapLambdaBinding(ExpressionType arrayElementType, List<List<Object>> inputs, LambdaExpr expr, Expr.ObjectBinding bindings)
     {
       this.lambdaInputs = inputs;
+      this.arrayElementType = arrayElementType;
       List<String> ids = expr.getIdentifiers();
       this.scoped = ids.size() > 0;
       this.lambdaIdentifiers = new Object2IntArrayMap<>(ids.size());
@@ -768,7 +754,7 @@ public interface ApplyFunction
         lambdaIdentifiers.put(ids.get(i), i);
       }
 
-      this.bindings = bindings != null ? bindings : Collections.emptyMap()::get;
+      this.bindings = bindings != null ? bindings : InputBindings.nilBindings();
     }
 
     @Nullable
@@ -793,6 +779,16 @@ public interface ApplyFunction
       this.index = index;
       return this;
     }
+
+    @Nullable
+    @Override
+    public ExpressionType getType(String name)
+    {
+      if (scoped && lambdaIdentifiers.containsKey(name)) {
+        return arrayElementType;
+      }
+      return bindings.getType(name);
+    }
   }
 
   /**
@@ -803,6 +799,8 @@ public interface ApplyFunction
    */
   interface IndexableFoldLambdaBinding extends Expr.ObjectBinding
   {
+    ExpressionType getAccumulatorType();
+
     /**
      * Total number of bindings in this binding
      */
@@ -821,20 +819,31 @@ public interface ApplyFunction
   class FoldLambdaBinding implements IndexableFoldLambdaBinding
   {
     private final Expr.ObjectBinding bindings;
+    private final ExpressionType arrayElementType;
+    private final ExpressionType accumulatorType;
     private final String elementIdentifier;
     private final Object[] arrayValues;
     private final String accumulatorIdentifier;
     private Object accumulatorValue;
     private int index;
 
-    FoldLambdaBinding(Object[] arrayValues, Object initialAccumulator, LambdaExpr expr, Expr.ObjectBinding bindings)
+    FoldLambdaBinding(
+        ExpressionType arrayElementType,
+        Object[] arrayValues,
+        ExpressionType accumulatorType,
+        Object initialAccumulator,
+        LambdaExpr expr,
+        Expr.ObjectBinding bindings
+    )
     {
       List<String> ids = expr.getIdentifiers();
       this.elementIdentifier = ids.get(0);
+      this.arrayElementType = arrayElementType;
+      this.accumulatorType = accumulatorType;
       this.accumulatorIdentifier = ids.get(1);
       this.arrayValues = arrayValues;
       this.accumulatorValue = initialAccumulator;
-      this.bindings = bindings != null ? bindings : Collections.emptyMap()::get;
+      this.bindings = bindings != null ? bindings : InputBindings.nilBindings();
     }
 
     @Nullable
@@ -850,6 +859,12 @@ public interface ApplyFunction
     }
 
     @Override
+    public ExpressionType getAccumulatorType()
+    {
+      return accumulatorType;
+    }
+
+    @Override
     public int getLength()
     {
       return arrayValues.length;
@@ -862,6 +877,18 @@ public interface ApplyFunction
       this.accumulatorValue = acc;
       return this;
     }
+
+    @Nullable
+    @Override
+    public ExpressionType getType(String name)
+    {
+      if (name.equals(elementIdentifier)) {
+        return arrayElementType;
+      } else if (name.equals(accumulatorIdentifier)) {
+        return accumulatorType;
+      }
+      return bindings.getType(name);
+    }
   }
 
   /**
@@ -871,14 +898,25 @@ public interface ApplyFunction
   class CartesianFoldLambdaBinding implements IndexableFoldLambdaBinding
   {
     private final Expr.ObjectBinding bindings;
+    private final ExpressionType arrayElementType;
+    private final ExpressionType accumulatorType;
     private final Object2IntMap<String> lambdaIdentifiers;
     private final List<List<Object>> lambdaInputs;
     private final String accumulatorIdentifier;
     private Object accumulatorValue;
     private int index = 0;
 
-    CartesianFoldLambdaBinding(List<List<Object>> inputs, Object accumulatorValue, LambdaExpr expr, Expr.ObjectBinding bindings)
+    CartesianFoldLambdaBinding(
+        @Nullable ExpressionType arrayElementType,
+        List<List<Object>> inputs,
+        ExpressionType accumulatorType,
+        Object accumulatorValue,
+        LambdaExpr expr,
+        Expr.ObjectBinding bindings
+    )
     {
+      this.arrayElementType = arrayElementType;
+      this.accumulatorType = accumulatorType;
       this.lambdaInputs = inputs;
       List<String> ids = expr.getIdentifiers();
       this.lambdaIdentifiers = new Object2IntArrayMap<>(ids.size());
@@ -886,7 +924,7 @@ public interface ApplyFunction
         lambdaIdentifiers.put(ids.get(i), i);
       }
       this.accumulatorIdentifier = ids.get(ids.size() - 1);
-      this.bindings = bindings != null ? bindings : Collections.emptyMap()::get;
+      this.bindings = bindings != null ? bindings : InputBindings.nilBindings();
       this.accumulatorValue = accumulatorValue;
     }
 
@@ -903,6 +941,12 @@ public interface ApplyFunction
     }
 
     @Override
+    public ExpressionType getAccumulatorType()
+    {
+      return accumulatorType;
+    }
+
+    @Override
     public int getLength()
     {
       return lambdaInputs.size();
@@ -914,6 +958,18 @@ public interface ApplyFunction
       this.index = index;
       this.accumulatorValue = acc;
       return this;
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getType(String name)
+    {
+      if (lambdaIdentifiers.containsKey(name)) {
+        return arrayElementType;
+      } else if (accumulatorIdentifier.equals(name)) {
+        return accumulatorType;
+      }
+      return bindings.getType(name);
     }
   }
 

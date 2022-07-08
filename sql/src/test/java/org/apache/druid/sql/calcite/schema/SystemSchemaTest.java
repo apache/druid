@@ -36,10 +36,9 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.client.InventoryView;
-import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -162,7 +161,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private static Closer resourceCloser;
   private MetadataSegmentView metadataView;
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
-  private InventoryView serverInventoryView;
+  private FilteredServerInventoryView serverInventoryView;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -253,13 +252,14 @@ public class SystemSchemaTest extends CalciteTestBase
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     );
     druidSchema.start();
     druidSchema.awaitInitialization();
     metadataView = EasyMock.createMock(MetadataSegmentView.class);
     druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    serverInventoryView = EasyMock.createMock(ServerInventoryView.class);
+    serverInventoryView = EasyMock.createMock(FilteredServerInventoryView.class);
     schema = new SystemSchema(
         druidSchema,
         metadataView,
@@ -275,6 +275,9 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private final CompactionState expectedCompactionState = new CompactionState(
       new DynamicPartitionsSpec(null, null),
+      null,
+      null,
+      null,
       Collections.singletonMap("test", "map"),
       Collections.singletonMap("test2", "map2")
   );
@@ -517,7 +520,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    Assert.assertEquals(17, fields.size());
+    Assert.assertEquals(18, fields.size());
 
     final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
@@ -705,14 +708,15 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(partitionNum, row[6]);
     Assert.assertEquals(numReplicas, row[7]);
     Assert.assertEquals(numRows, row[8]);
-    Assert.assertEquals(isPublished, row[9]);
-    Assert.assertEquals(isAvailable, row[10]);
-    Assert.assertEquals(isRealtime, row[11]);
-    Assert.assertEquals(isOvershadowed, row[12]);
+    Assert.assertEquals((((isPublished == 1) && (isOvershadowed == 0)) || (isRealtime == 1)) ? 1L : 0L, row[9]);
+    Assert.assertEquals(isPublished, row[10]);
+    Assert.assertEquals(isAvailable, row[11]);
+    Assert.assertEquals(isRealtime, row[12]);
+    Assert.assertEquals(isOvershadowed, row[13]);
     if (compactionState == null) {
-      Assert.assertNull(row[16]);
+      Assert.assertNull(row[17]);
     } else {
-      Assert.assertEquals(mapper.writeValueAsString(compactionState), row[16]);
+      Assert.assertEquals(mapper.writeValueAsString(compactionState), row[17]);
     }
   }
 
@@ -1106,7 +1110,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
 
     HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp.getStatus(), httpResp);
+    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp);
 
     EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class))).andReturn(responseHolder).once();
     EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks")).anyTimes();
@@ -1280,7 +1284,7 @@ public class SystemSchemaTest extends CalciteTestBase
             .anyTimes();
 
     HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp.getStatus(), httpResp);
+    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp);
 
     EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class))).andReturn(responseHolder).once();
 
@@ -1395,8 +1399,7 @@ public class SystemSchemaTest extends CalciteTestBase
       String json
   )
   {
-    InputStreamFullResponseHolder responseHolder =
-        new InputStreamFullResponseHolder(httpResponse.getStatus(), httpResponse);
+    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResponse);
 
     byte[] bytesToWrite = json.getBytes(StandardCharsets.UTF_8);
     responseHolder.addChunk(bytesToWrite);

@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 public class InlineInputSource extends AbstractInputSource
@@ -74,5 +75,32 @@ public class InlineInputSource extends AbstractInputSource
         Stream.of(new ByteEntity(StringUtils.toUtf8(data))).iterator(),
         temporaryDirectory
     );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    InlineInputSource that = (InlineInputSource) o;
+    return Objects.equals(data, that.data);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(data);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "InlineInputSource{" +
+           "data='" + data + '\'' +
+           '}';
   }
 }

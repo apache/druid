@@ -23,7 +23,9 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.RetryUtils;
 
 import java.net.URI;
 import java.util.Iterator;
@@ -45,6 +47,8 @@ public class ObjectSummaryIterator implements Iterator<S3ObjectSummary>
   private ListObjectsV2Result result;
   private Iterator<S3ObjectSummary> objectSummaryIterator;
   private S3ObjectSummary currentObjectSummary;
+  private int maxRetries; // this is made available for testing mostly
+
 
   ObjectSummaryIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
@@ -55,7 +59,32 @@ public class ObjectSummaryIterator implements Iterator<S3ObjectSummary>
     this.s3Client = s3Client;
     this.prefixesIterator = prefixes.iterator();
     this.maxListingLength = maxListingLength;
+    maxRetries = RetryUtils.DEFAULT_MAX_TRIES;
 
+    constructorPostProcessing();
+
+  }
+
+  @VisibleForTesting
+  ObjectSummaryIterator(
+      final ServerSideEncryptingAmazonS3 s3Client,
+      final Iterable<URI> prefixes,
+      final int maxListingLength,
+      final int maxRetries
+  )
+  {
+    this.s3Client = s3Client;
+    this.prefixesIterator = prefixes.iterator();
+    this.maxListingLength = maxListingLength;
+    this.maxRetries = maxRetries;
+
+    constructorPostProcessing();
+
+  }
+
+  // helper to factor out stuff that happens in constructor after members are set
+  private void constructorPostProcessing()
+  {
     prepareNextRequest();
     fetchNextBatch();
     advanceObjectSummary();
@@ -94,7 +123,7 @@ public class ObjectSummaryIterator implements Iterator<S3ObjectSummary>
   private void fetchNextBatch()
   {
     try {
-      result = S3Utils.retryS3Operation(() -> s3Client.listObjectsV2(request));
+      result = S3Utils.retryS3Operation(() -> s3Client.listObjectsV2(request), maxRetries);
       request.setContinuationToken(result.getNextContinuationToken());
       objectSummaryIterator = result.getObjectSummaries().iterator();
     }

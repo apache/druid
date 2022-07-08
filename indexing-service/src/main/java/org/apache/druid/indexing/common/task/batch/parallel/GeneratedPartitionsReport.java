@@ -20,8 +20,10 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.common.TaskReport;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -33,11 +35,13 @@ public class GeneratedPartitionsReport implements SubTaskReport
 {
   private final String taskId;
   private final List<PartitionStat> partitionStats;
+  private final Map<String, TaskReport> taskReport;
 
-  GeneratedPartitionsReport(String taskId, List<PartitionStat> partitionStats)
+  GeneratedPartitionsReport(String taskId, List<PartitionStat> partitionStats, Map<String, TaskReport> taskReport)
   {
     this.taskId = taskId;
     this.partitionStats = partitionStats;
+    this.taskReport = taskReport;
   }
 
   @Override
@@ -45,6 +49,12 @@ public class GeneratedPartitionsReport implements SubTaskReport
   public String getTaskId()
   {
     return taskId;
+  }
+
+  @JsonProperty
+  public Map<String, TaskReport> getTaskReport()
+  {
+    return taskReport;
   }
 
   @JsonProperty
@@ -64,13 +74,14 @@ public class GeneratedPartitionsReport implements SubTaskReport
     }
     GeneratedPartitionsReport that = (GeneratedPartitionsReport) o;
     return Objects.equals(taskId, that.taskId) &&
-           Objects.equals(partitionStats, that.partitionStats);
+           Objects.equals(partitionStats, that.partitionStats) &&
+           Objects.equals(taskReport, that.taskReport);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(taskId, partitionStats);
+    return Objects.hash(taskId, partitionStats, taskReport);
   }
 
   @Override
@@ -79,6 +90,7 @@ public class GeneratedPartitionsReport implements SubTaskReport
     return "GeneratedPartitionsReport{" +
         "taskId='" + taskId + '\'' +
         ", partitionStats=" + partitionStats +
+        ", taskReport=" + taskReport +
         '}';
   }
 }

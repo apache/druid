@@ -40,7 +40,7 @@ import {
 import { Api } from '../singletons';
 
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
-import { arrangeWithPrefixSuffix, EMPTY_ARRAY, filterMap, oneOf } from './general';
+import { arrangeWithPrefixSuffix, EMPTY_ARRAY, filterMap } from './general';
 import { deepGet, deepSet } from './object-change';
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
@@ -65,7 +65,6 @@ export interface SampleResponse {
 export type CacheRows = Record<string, any>[];
 
 export interface SampleResponseWithExtraInfo extends SampleResponse {
-  queryGranularity?: any;
   rollup?: boolean;
   columns?: Record<string, any>;
   aggregators?: Record<string, any>;
@@ -78,7 +77,7 @@ export interface SampleEntry {
   error?: string;
 }
 
-export interface HeaderAndRows {
+export interface SampleHeaderAndRows {
   header: string[];
   rows: SampleEntry[];
 }
@@ -140,13 +139,15 @@ export interface HeaderFromSampleResponseOptions {
   ignoreTimeColumn?: boolean;
   columnOrder?: string[];
   suffixColumnOrder?: string[];
+  useInput?: boolean;
 }
 
 export function headerFromSampleResponse(options: HeaderFromSampleResponseOptions): string[] {
-  const { sampleResponse, ignoreTimeColumn, columnOrder, suffixColumnOrder } = options;
+  const { sampleResponse, ignoreTimeColumn, columnOrder, suffixColumnOrder, useInput } = options;
 
+  const key = useInput ? 'input' : 'parsed';
   let columns = arrangeWithPrefixSuffix(
-    dedupe(sampleResponse.data.flatMap(s => (s.parsed ? Object.keys(s.parsed) : []))),
+    dedupe(sampleResponse.data.flatMap(s => (s[key] ? Object.keys(s[key]!) : []))),
     columnOrder || [TIME_COLUMN],
     suffixColumnOrder || [],
   );
@@ -164,12 +165,12 @@ export interface HeaderAndRowsFromSampleResponseOptions extends HeaderFromSample
 
 export function headerAndRowsFromSampleResponse(
   options: HeaderAndRowsFromSampleResponseOptions,
-): HeaderAndRows {
+): SampleHeaderAndRows {
   const { sampleResponse, parsedOnly } = options;
 
   return {
     header: headerFromSampleResponse(options),
-    rows: parsedOnly ? sampleResponse.data.filter((d: any) => d.parsed) : sampleResponse.data,
+    rows: parsedOnly ? sampleResponse.data.filter(d => d.parsed) : sampleResponse.data,
   };
 }
 
@@ -236,26 +237,6 @@ function fixSamplerTypes(sampleSpec: SampleSpec): SampleSpec {
   return sampleSpec;
 }
 
-function cleanupQueryGranularity(queryGranularity: any): any {
-  let queryGranularityType = deepGet(queryGranularity, 'type');
-  if (typeof queryGranularityType !== 'string') return queryGranularity;
-  queryGranularityType = queryGranularityType.toUpperCase();
-
-  const knownGranularity = oneOf(
-    queryGranularityType,
-    'NONE',
-    'SECOND',
-    'MINUTE',
-    'HOUR',
-    'DAY',
-    'WEEK',
-    'MONTH',
-    'YEAR',
-  );
-
-  return knownGranularity ? queryGranularityType : queryGranularity;
-}
-
 export async function sampleForConnect(
   spec: Partial<IngestionSpec>,
   sampleStrategy: SampleStrategy,
@@ -271,7 +252,7 @@ export async function sampleForConnect(
   if (!reingestMode) {
     ioConfig = deepSet(ioConfig, 'inputFormat', {
       type: 'regex',
-      pattern: '(.*)',
+      pattern: '([\\s\\S]*)', // Match the entire line, every single character
       listDelimiter: '56616469-6de2-9da4-efb8-8f416e6e6965', // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
       columns: ['raw'],
     });
@@ -286,6 +267,9 @@ export async function sampleForConnect(
         dataSource: 'sample',
         timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
         dimensionsSpec: {},
+        granularitySpec: {
+          rollup: false,
+        },
       },
     } as any,
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -302,14 +286,11 @@ export async function sampleForConnect(
       intervals: [deepGet(ioConfig, 'inputSource.interval')],
       merge: true,
       lenientAggregatorMerge: true,
-      analysisTypes: ['timestampSpec', 'queryGranularity', 'aggregators', 'rollup'],
+      analysisTypes: ['aggregators', 'rollup'],
     });
 
     if (Array.isArray(segmentMetadataResponse) && segmentMetadataResponse.length === 1) {
       const segmentMetadataResponse0 = segmentMetadataResponse[0];
-      samplerResponse.queryGranularity = cleanupQueryGranularity(
-        segmentMetadataResponse0.queryGranularity,
-      );
       samplerResponse.rollup = segmentMetadataResponse0.rollup;
       samplerResponse.columns = segmentMetadataResponse0.columns;
       samplerResponse.aggregators = segmentMetadataResponse0.aggregators;
@@ -342,6 +323,9 @@ export async function sampleForParser(
         dataSource: 'sample',
         timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
         dimensionsSpec: {},
+        granularitySpec: {
+          rollup: false,
+        },
       },
     },
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -367,6 +351,9 @@ export async function sampleForTimestamp(
         dataSource: 'sample',
         dimensionsSpec: {},
         timestampSpec: timestampSchema === 'column' ? PLACEHOLDER_TIMESTAMP_SPEC : timestampSpec,
+        granularitySpec: {
+          rollup: false,
+        },
       },
     },
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -395,6 +382,9 @@ export async function sampleForTimestamp(
         timestampSpec,
         transformSpec: {
           transforms: transforms.filter(transform => transform.name === TIME_COLUMN),
+        },
+        granularitySpec: {
+          rollup: false,
         },
       },
     },
@@ -441,6 +431,9 @@ export async function sampleForTransform(
           dataSource: 'sample',
           timestampSpec,
           dimensionsSpec: {},
+          granularitySpec: {
+            rollup: false,
+          },
         },
       },
       samplerConfig: BASE_SAMPLER_CONFIG,
@@ -474,6 +467,9 @@ export async function sampleForTransform(
         transformSpec: {
           transforms,
         },
+        granularitySpec: {
+          rollup: false,
+        },
       },
     },
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -502,6 +498,9 @@ export async function sampleForFilter(
           dataSource: 'sample',
           timestampSpec,
           dimensionsSpec: {},
+          granularitySpec: {
+            rollup: false,
+          },
         },
       },
       samplerConfig: BASE_SAMPLER_CONFIG,
@@ -536,6 +535,9 @@ export async function sampleForFilter(
           transforms,
           filter,
         },
+        granularitySpec: {
+          rollup: false,
+        },
       },
     },
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -556,6 +558,7 @@ export async function sampleForSchema(
   const metricsSpec: MetricSpec[] = deepGet(spec, 'spec.dataSchema.metricsSpec') || [];
   const queryGranularity: string =
     deepGet(spec, 'spec.dataSchema.granularitySpec.queryGranularity') || 'NONE';
+  const rollup = deepGet(spec, 'spec.dataSchema.granularitySpec.rollup') ?? true;
 
   const sampleSpec: SampleSpec = {
     type: samplerType,
@@ -567,6 +570,7 @@ export async function sampleForSchema(
         transformSpec,
         granularitySpec: {
           queryGranularity,
+          rollup,
         },
         dimensionsSpec,
         metricsSpec,

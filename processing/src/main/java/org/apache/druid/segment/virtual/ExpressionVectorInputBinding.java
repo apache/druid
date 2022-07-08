@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
-class ExpressionVectorInputBinding implements Expr.VectorInputBinding
+public class ExpressionVectorInputBinding implements Expr.VectorInputBinding
 {
   private final Map<String, VectorValueSelector> numeric;
   private final Map<String, VectorObjectSelector> objects;

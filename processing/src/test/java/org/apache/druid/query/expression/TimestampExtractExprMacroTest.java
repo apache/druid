@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.InputBindings;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -53,7 +54,7 @@ public class TimestampExtractExprMacroTest
             ExprEval.of("2001-02-16").toExpr(),
             ExprEval.of(TimestampExtractExprMacro.Unit.DECADE.toString()).toExpr()
         ));
-    Assert.assertEquals(200, expression.eval(ExprUtils.nilBindings()).asInt());
+    Assert.assertEquals(200, expression.eval(InputBindings.nilBindings()).asInt());
   }
 
   @Test
@@ -64,7 +65,7 @@ public class TimestampExtractExprMacroTest
             ExprEval.of("2000-12-16").toExpr(),
             ExprEval.of(TimestampExtractExprMacro.Unit.CENTURY.toString()).toExpr()
         ));
-    Assert.assertEquals(20, expression.eval(ExprUtils.nilBindings()).asInt());
+    Assert.assertEquals(20, expression.eval(InputBindings.nilBindings()).asInt());
   }
 
   @Test
@@ -75,7 +76,7 @@ public class TimestampExtractExprMacroTest
             ExprEval.of("2001-02-16").toExpr(),
             ExprEval.of(TimestampExtractExprMacro.Unit.CENTURY.toString()).toExpr()
         ));
-    Assert.assertEquals(21, expression.eval(ExprUtils.nilBindings()).asInt());
+    Assert.assertEquals(21, expression.eval(InputBindings.nilBindings()).asInt());
   }
 
   @Test
@@ -86,7 +87,7 @@ public class TimestampExtractExprMacroTest
             ExprEval.of("2000-12-16").toExpr(),
             ExprEval.of(TimestampExtractExprMacro.Unit.MILLENNIUM.toString()).toExpr()
         ));
-    Assert.assertEquals(2, expression.eval(ExprUtils.nilBindings()).asInt());
+    Assert.assertEquals(2, expression.eval(InputBindings.nilBindings()).asInt());
   }
 
   @Test
@@ -97,6 +98,6 @@ public class TimestampExtractExprMacroTest
             ExprEval.of("2001-02-16").toExpr(),
             ExprEval.of(TimestampExtractExprMacro.Unit.MILLENNIUM.toString()).toExpr()
         ));
-    Assert.assertEquals(3, expression.eval(ExprUtils.nilBindings()).asInt());
+    Assert.assertEquals(3, expression.eval(InputBindings.nilBindings()).asInt());
   }
 }

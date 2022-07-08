@@ -84,13 +84,15 @@ public class HttpClientInit
                   new ChannelResourceFactory(
                       createBootstrap(lifecycle, timer, config.getBossPoolSize(), config.getWorkerPoolSize()),
                       config.getSslContext(),
+                      config.getProxyConfig(),
                       timer,
                       config.getSslHandshakeTimeout() == null ? -1 : config.getSslHandshakeTimeout().getMillis()
                   ),
                   new ResourcePoolConfig(
                       config.getNumConnections(),
                       config.getUnusedConnectionTimeoutDuration().getMillis()
-                  )
+                  ),
+                  config.isEagerInitialization()
               ),
               config.getReadTimeout(),
               config.getCompressionCodec(),

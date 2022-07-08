@@ -22,7 +22,7 @@ import React from 'react';
 
 import { SnitchDialog } from './snitch-dialog';
 
-describe('snitch dialog', () => {
+describe('SnitchDialog', () => {
   it('matches snapshot', () => {
     const snitchDialog = <SnitchDialog title="Be snitchin" onSave={() => {}} onClose={() => {}} />;
     render(snitchDialog);

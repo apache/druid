@@ -1,7 +1,7 @@
 ---
 id: query-context
 title: "Query context"
-sidebar_label: "Context parameters"
+sidebar_label: "Query context"
 ---
 
 <!--
@@ -23,23 +23,23 @@ sidebar_label: "Context parameters"
   ~ under the License.
   -->
 
-## General parameters
-
 The query context is used for various query configuration parameters. Query context parameters can be specified in
 the following ways:
 
-- For [Druid SQL](sql.md#client-apis), context parameters are provided either as a JSON object named `context` to the
+- For [Druid SQL](sql-api.md), context parameters are provided either as a JSON object named `context` to the
 HTTP POST API, or as properties to the JDBC connection.
 - For [native queries](querying.md), context parameters are provided as a JSON object named `context`.
 
 Note that setting query context will override both the default value and the runtime properties value in the format of
 `druid.query.default.context.{property_key}` (if set). 
 
+## General parameters
+
 Unless otherwise noted, the following parameters apply to all query types.
 
 |property         |default                                 | description          |
 |-----------------|----------------------------------------|----------------------|
-|timeout          | `druid.server.http.defaultQueryTimeout`| Query timeout in millis, beyond which unfinished queries will be cancelled. 0 timeout means `no timeout`. To set the default timeout, see [Broker configuration](../configuration/index.md#broker) |
+|timeout          | `druid.server.http.defaultQueryTimeout`| Query timeout in millis, beyond which unfinished queries will be cancelled. 0 timeout means `no timeout` (up to the server-side maximum query timeout, `druid.server.http.maxQueryTimeout`). To set the default timeout and maximum timeout, see [Broker configuration](../configuration/index.md#broker) |
 |priority         | `0`                                    | Query Priority. Queries with higher priority get precedence for computational resources.|
 |lane             | `null`                                 | Query lane, used to control usage limits on classes of queries. See [Broker configuration](../configuration/index.md#broker) for more details.|
 |queryId          | auto-generated                         | Unique identifier given to this query. If a query ID is set or known, this can be used to cancel the query |
@@ -62,10 +62,17 @@ Unless otherwise noted, the following parameters apply to all query types.
 |secondaryPartitionPruning|`true`|Enable secondary partition pruning on the Broker. The Broker will always prune unnecessary segments from the input scan based on a filter on time intervals, but if the data is further partitioned with hash or range partitioning, this option will enable additional pruning based on a filter on secondary partition dimensions.|
 |enableJoinLeftTableScanDirect|`false`|This flag applies to queries which have joins. For joins, where left child is a simple scan with a filter,  by default, druid will run the scan as a query and the join the results to the right child on broker. Setting this flag to true overrides that behavior and druid will attempt to push the join to data servers instead. Please note that the flag could be applicable to queries even if there is no explicit join. since queries can internally translated into a join by the SQL planner.|
 |debug| `false` | Flag indicating whether to enable debugging outputs for the query. When set to false, no additional logs will be produced (logs produced will be entirely dependent on your logging level). When set to true, the following addition logs will be produced:<br />- Log the stack trace of the exception (if any) produced by the query |
+|setProcessingThreadNames|`true`| Whether processing thread names will be set to `queryType_dataSource_intervals` while processing a query. This aids in interpreting thread dumps, and is on by default. Query overhead can be reduced slightly by setting this to `false`. This has a tiny effect in most scenarios, but can be meaningful in high-QPS, low-per-segment-processing-time scenarios. |
+|maxNumericInFilters|`-1`|Max limit for the amount of numeric values that can be compared for a string type dimension when the entire SQL WHERE clause of a query translates only to an [OR](../querying/filters.md#or) of [Bound filter](../querying/filters.md#bound-filter). By default, Druid does not restrict the amount of of numeric Bound Filters on String columns, although this situation may block other queries from running. Set this property to a smaller value to prevent Druid from running queries that have prohibitively long segment processing times. The optimal limit requires some trial and error; we recommend starting with 100.  Users who submit a query that exceeds the limit of `maxNumericInFilters` should instead rewrite their queries to use strings in the `WHERE` clause instead of numbers. For example, `WHERE someString IN (‘123’, ‘456’)`. This value cannot exceed the set system configuration `druid.sql.planner.maxNumericInFilters`. This value is ignored if `druid.sql.planner.maxNumericInFilters` is not set explicitly.|
+|inSubQueryThreshold|`2147483647`| Threshold for minimum number of values in an IN clause to convert the query to a JOIN operation on an inlined table rather than a predicate. A threshold of 0 forces usage of an inline table in all cases; a threshold of [Integer.MAX_VALUE] forces usage of OR in all cases. |
 
-## Query-type-specific parameters
+## Druid SQL parameters
 
-In addition, some query types offer context parameters specific to that query type.
+See [SQL query context](sql-query-context.md) for query context parameters specific to Druid SQL queries.
+
+## Parameters by query type
+
+Some query types offer context parameters specific to that query type.
 
 ### TopN
 
@@ -78,6 +85,15 @@ In addition, some query types offer context parameters specific to that query ty
 |property         |default              | description          |
 |-----------------|---------------------|----------------------|
 |skipEmptyBuckets | `false`             | Disable timeseries zero-filling behavior, so only buckets with results will be returned. |
+
+### Join filter
+
+|property         |default              | description          |
+|-----------------|---------------------|----------------------|
+|enableJoinFilterPushDown | `true` | Controls whether a join query will attempt filter push down, which reduces the number of rows that have to be compared in a join operation.|
+|enableJoinFilterRewrite | `true` | Controls whether filter clauses that reference non-base table columns will be rewritten into filters on base table columns.|
+|enableJoinFilterRewriteValueColumnFilters | `false` | Controls whether Druid rewrites non-base table filters on non-key columns in the non-base table. Requires a scan of the non-base table.|
+|joinFilterRewriteMaxSize | `10000` | The maximum size of the correlated value set used for filter rewrites. Set this limit to prevent excessive memory use.| 
 
 ### GroupBy
 
@@ -110,4 +126,4 @@ vectorization. These query types will ignore the "vectorize" parameter even if i
 |--------|-------|------------|
 |vectorize|`true`|Enables or disables vectorized query execution. Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and groupBy or timeseries queries that cannot be vectorized will fail). The `"force"` setting is meant to aid in testing, and is not generally useful in production (since real-time segments can never be processed with vectorized execution, any queries on real-time data will fail). This will override `druid.query.default.context.vectorize` if it's set.|
 |vectorSize|`512`|Sets the row batching size for a particular query. This will override `druid.query.default.context.vectorSize` if it's set.|
-|vectorizeVirtualColumns|`false`|Enables or disables vectorized query processing of queries with virtual columns, layered on top of `vectorize` (`vectorize` must also be set to true for a query to utilize vectorization). Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and groupBy or timeseries queries with virtual columns that cannot be vectorized will fail). The `"force"` setting is meant to aid in testing, and is not generally useful in production. This will override `druid.query.default.context.vectorizeVirtualColumns` if it's set.|
+|vectorizeVirtualColumns|`true`|Enables or disables vectorized query processing of queries with virtual columns, layered on top of `vectorize` (`vectorize` must also be set to true for a query to utilize vectorization). Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and groupBy or timeseries queries with virtual columns that cannot be vectorized will fail). The `"force"` setting is meant to aid in testing, and is not generally useful in production. This will override `druid.query.default.context.vectorizeVirtualColumns` if it's set.|

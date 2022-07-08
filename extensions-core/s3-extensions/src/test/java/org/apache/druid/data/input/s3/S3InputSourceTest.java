@@ -19,7 +19,7 @@
 
 package org.apache.druid.data.input.s3;
 
-import com.amazonaws.ClientConfiguration;
+import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -29,6 +29,7 @@ import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -73,6 +74,7 @@ import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.easymock.IArgumentMatcher;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -91,6 +93,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.easymock.EasyMock.expectLastCall;
+
 public class S3InputSourceTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper MAPPER = createS3ObjectMapper();
@@ -106,6 +110,11 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   private static final S3InputDataConfig INPUT_DATA_CONFIG;
   private static final int MAX_LISTING_LENGTH = 10;
 
+  private static final List<CloudObjectLocation> EXPECTED_OBJECTS = Arrays.asList(
+      new CloudObjectLocation(URI.create("s3://foo/bar/file.csv")),
+      new CloudObjectLocation(URI.create("s3://bar/foo/file2.csv"))
+  );
+
   private static final List<URI> EXPECTED_URIS = Arrays.asList(
       URI.create("s3://foo/bar/file.csv"),
       URI.create("s3://bar/foo/file2.csv")
@@ -114,6 +123,18 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   private static final List<URI> EXPECTED_COMPRESSED_URIS = Arrays.asList(
       URI.create("s3://foo/bar/file.csv.gz"),
       URI.create("s3://bar/foo/file2.csv.gz")
+  );
+
+  private static final List<CloudObjectLocation> OBJECTS_BEFORE_FILTER = Arrays.asList(
+      new CloudObjectLocation(URI.create("s3://foo/bar/file.csv")),
+      new CloudObjectLocation(URI.create("s3://bar/foo/file2.csv")),
+      new CloudObjectLocation(URI.create("s3://bar/foo/file3.txt"))
+  );
+
+  private static final List<URI> URIS_BEFORE_FILTER = Arrays.asList(
+      URI.create("s3://foo/bar/file.csv"),
+      URI.create("s3://bar/foo/file2.csv"),
+      URI.create("s3://bar/foo/file3.txt")
   );
 
   private static final List<List<CloudObjectLocation>> EXPECTED_COORDS =
@@ -151,7 +172,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   public ExpectedException expectedException = ExpectedException.none();
 
   @Test
-  public void testSerdeWithUris() throws Exception
+  public void testGetUris()
   {
     final S3InputSource withUris = new S3InputSource(
         SERVICE,
@@ -160,6 +181,64 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         EXPECTED_URIS,
         null,
         null,
+        null,
+        null
+    );
+
+    Assert.assertEquals(
+        EXPECTED_URIS,
+        withUris.getUris()
+    );
+  }
+
+  @Test
+  public void testGetPrefixes()
+  {
+    final S3InputSource withPrefixes = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        PREFIXES,
+        null,
+        null,
+        null
+    );
+
+    Assert.assertEquals(
+        PREFIXES,
+        withPrefixes.getPrefixes()
+    );
+  }
+
+  @Test
+  public void testGetFilter()
+  {
+    final S3InputSource withUris = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        EXPECTED_URIS,
+        null,
+        null,
+        "*.parquet",
+        null
+    );
+
+    Assert.assertEquals(
+        "*.parquet",
+        withUris.getFilter()
+    );
+  }
+
+  @Test
+  public void testSerdeWithUris() throws Exception
+  {
+    final S3InputSource withUris = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        EXPECTED_URIS,
         null,
         null,
         null,
@@ -180,8 +259,6 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         null,
         null,
-        null,
-        null,
         null
     );
     final S3InputSource serdeWithPrefixes =
@@ -199,8 +276,6 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
-        null,
-        null,
         null,
         null
     );
@@ -226,10 +301,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
-        CLOUD_CONFIG_PROPERTIES,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
+        null,
+        CLOUD_CONFIG_PROPERTIES
     );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
@@ -324,10 +397,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
-        mockConfigPropertiesWithoutKeyAndSecret,
         null,
-        null,
-        null
+        mockConfigPropertiesWithoutKeyAndSecret
     );
     Assert.assertNotNull(withPrefixes);
     // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
@@ -349,10 +420,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
-        CLOUD_CONFIG_PROPERTIES,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
+        null,
+        CLOUD_CONFIG_PROPERTIES
     );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
@@ -374,10 +443,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         EXPECTED_LOCATION,
         null,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
-
+        null
     );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
@@ -396,13 +462,79 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(),
         EXPECTED_LOCATION,
         null,
-        null,
-        null,
         null
     );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+  }
+
+  @Test
+  public void testWithNullJsonProps()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+  }
+
+  @Test
+  public void testIllegalObjectsAndUris()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        EXPECTED_URIS,
+        null,
+        EXPECTED_OBJECTS,
+        null,
+        null
+    );
+  }
+
+  @Test
+  public void testIllegalObjectsAndPrefixes()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        PREFIXES,
+        EXPECTED_OBJECTS,
+        null,
+        null
+    );
+  }
+
+  @Test
+  public void testIllegalUrisAndPrefixes()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        EXPECTED_URIS,
+        PREFIXES,
+        null,
+        null,
+        null
+    );
   }
 
   @Test
@@ -418,9 +550,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         EXPECTED_LOCATION,
         null,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
+        null
     );
   }
 
@@ -437,9 +567,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         ImmutableList.of(),
         null,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
+        null
     );
   }
 
@@ -456,9 +584,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         EXPECTED_LOCATION,
         null,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
+        null
     );
   }
 
@@ -473,9 +599,73 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
+        null
+    );
+
+    Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        null
+    );
+
+    Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+  }
+
+  @Test
+  public void testWithUrisFilter()
+  {
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        URIS_BEFORE_FILTER,
+        null,
+        null,
+        "*.csv",
+        null
+    );
+
+    Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        null
+    );
+
+    Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+  }
+
+  @Test
+  public void testWithObjectsFilter()
+  {
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        OBJECTS_BEFORE_FILTER,
+        "*.csv",
+        null
+    );
+
+    Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        null
+    );
+
+    Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+  }
+
+  @Test
+  public void testWithoutObjectsFilter()
+  {
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        EXPECTED_OBJECTS,
+        null,
+        null
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
@@ -502,9 +692,35 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         null,
         null,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
+        null
+    );
+
+    Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        new MaxSizeSplitHintSpec(null, 1)
+    );
+
+    Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    EasyMock.verify(S3_CLIENT);
+  }
+
+  @Test
+  public void testGetPrefixesSplitStreamWithFilter()
+  {
+    EasyMock.reset(S3_CLIENT);
+    expectListObjects(PREFIXES.get(0), ImmutableList.of(URIS_BEFORE_FILTER.get(0)), CONTENT);
+    expectListObjects(PREFIXES.get(1), ImmutableList.of(URIS_BEFORE_FILTER.get(1), URIS_BEFORE_FILTER.get(2)), CONTENT);
+    EasyMock.replay(S3_CLIENT);
+
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        PREFIXES,
+        null,
+        "*.csv",
+        null
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
@@ -532,9 +748,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         null,
         null,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
+        null
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
@@ -565,9 +779,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         null,
         null,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
+        null
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
@@ -597,9 +809,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
         null,
         null,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
+        null
     );
 
     expectedException.expectMessage("Failed to get object summaries from S3 bucket[bar], prefix[foo/file2.csv]");
@@ -631,9 +841,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
         null,
         null,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
+        null
     );
 
     InputRowSchema someSchema = new InputRowSchema(
@@ -661,6 +869,49 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testReaderRetriesOnSdkClientExceptionButNeverSucceedsThenThrows() throws Exception
+  {
+    EasyMock.reset(S3_CLIENT);
+    expectListObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)), CONTENT);
+    expectSdkClientException(EXPECTED_URIS.get(0));
+    EasyMock.replay(S3_CLIENT);
+
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        ImmutableList.of(PREFIXES.get(0)),
+        null,
+        null,
+        null,
+        3 // only have three retries since they are slow
+    );
+
+    InputRowSchema someSchema = new InputRowSchema(
+        new TimestampSpec("time", "auto", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
+        ColumnsFilter.all()
+    );
+
+    InputSourceReader reader = inputSource.reader(
+        someSchema,
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
+        temporaryFolder.newFolder()
+    );
+
+    final IllegalStateException e = Assert.assertThrows(IllegalStateException.class, reader::read);
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IOException.class));
+    MatcherAssert.assertThat(e.getCause().getCause(), CoreMatchers.instanceOf(SdkClientException.class));
+    MatcherAssert.assertThat(
+        e.getCause().getCause().getMessage(),
+        CoreMatchers.startsWith("Data read has a different length than the expected")
+    );
+
+    EasyMock.verify(S3_CLIENT);
+  }
+
+  @Test
   public void testCompressedReader() throws IOException
   {
     EasyMock.reset(S3_CLIENT);
@@ -678,9 +929,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
         null,
         null,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
+        null
     );
 
     InputRowSchema someSchema = new InputRowSchema(
@@ -747,6 +996,31 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     someObject.setObjectContent(new ByteArrayInputStream(CONTENT));
     EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(someObject).once();
   }
+
+
+  // Setup mocks for invoquing the resettable condition for the S3Entity:
+  private static void expectSdkClientException(URI uri) throws IOException
+  {
+    final String s3Bucket = uri.getAuthority();
+    final String key = S3Utils.extractS3Key(uri);
+
+    S3ObjectInputStream someInputStream = EasyMock.createMock(S3ObjectInputStream.class);
+    EasyMock.expect(someInputStream.read(EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt()))
+            .andThrow(new SdkClientException("Data read has a different length than the expected")).anyTimes();
+    someInputStream.close();
+    expectLastCall().andVoid().anyTimes();
+
+    S3Object someObject = EasyMock.createMock(S3Object.class);
+    EasyMock.expect(someObject.getBucketName()).andReturn(s3Bucket).anyTimes();
+    EasyMock.expect(someObject.getKey()).andReturn(key).anyTimes();
+    EasyMock.expect(someObject.getObjectContent()).andReturn(someInputStream).anyTimes();
+
+    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(someObject).anyTimes();
+
+    EasyMock.replay(someObject);
+    EasyMock.replay(someInputStream);
+  }
+
 
   private static void expectGetObjectCompressed(URI uri) throws IOException
   {

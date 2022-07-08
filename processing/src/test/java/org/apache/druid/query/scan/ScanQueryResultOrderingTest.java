@@ -56,8 +56,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.Function;
-import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -72,24 +70,13 @@ public class ScanQueryResultOrderingTest
   private static final String DATASOURCE = "datasource";
   private static final String ID_COLUMN = "id";
 
-  private static final RowAdapter<Object[]> ROW_ADAPTER = new RowAdapter<Object[]>()
-  {
-    @Override
-    public ToLongFunction<Object[]> timestampFunction()
-    {
+  private static final RowAdapter<Object[]> ROW_ADAPTER = columnName -> {
+    if (ID_COLUMN.equals(columnName)) {
+      return row -> row[1];
+    } else if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
       return row -> ((DateTime) row[0]).getMillis();
-    }
-
-    @Override
-    public Function<Object[], Object> columnFunction(String columnName)
-    {
-      if (ID_COLUMN.equals(columnName)) {
-        return row -> row[1];
-      } else if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
-        return timestampFunction()::applyAsLong;
-      } else {
-        return row -> null;
-      }
+    } else {
+      return row -> null;
     }
   };
 
@@ -101,40 +88,46 @@ public class ScanQueryResultOrderingTest
   private static final List<RowBasedSegment<Object[]>> SEGMENTS = ImmutableList.of(
       new RowBasedSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 0),
-          ImmutableList.of(
-              new Object[]{DateTimes.of("2000T01"), 101},
-              new Object[]{DateTimes.of("2000T01"), 80},
-              new Object[]{DateTimes.of("2000T01"), 232},
-              new Object[]{DateTimes.of("2000T01"), 12},
-              new Object[]{DateTimes.of("2000T02"), 808},
-              new Object[]{DateTimes.of("2000T02"), 411},
-              new Object[]{DateTimes.of("2000T02"), 383},
-              new Object[]{DateTimes.of("2000T05"), 22}
+          Sequences.simple(
+              ImmutableList.of(
+                  new Object[]{DateTimes.of("2000T01"), 101},
+                  new Object[]{DateTimes.of("2000T01"), 80},
+                  new Object[]{DateTimes.of("2000T01"), 232},
+                  new Object[]{DateTimes.of("2000T01"), 12},
+                  new Object[]{DateTimes.of("2000T02"), 808},
+                  new Object[]{DateTimes.of("2000T02"), 411},
+                  new Object[]{DateTimes.of("2000T02"), 383},
+                  new Object[]{DateTimes.of("2000T05"), 22}
+              )
           ),
           ROW_ADAPTER,
           ROW_SIGNATURE
       ),
       new RowBasedSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 1),
-          ImmutableList.of(
-              new Object[]{DateTimes.of("2000T01"), 333},
-              new Object[]{DateTimes.of("2000T01"), 222},
-              new Object[]{DateTimes.of("2000T01"), 444},
-              new Object[]{DateTimes.of("2000T01"), 111},
-              new Object[]{DateTimes.of("2000T03"), 555},
-              new Object[]{DateTimes.of("2000T03"), 999},
-              new Object[]{DateTimes.of("2000T03"), 888},
-              new Object[]{DateTimes.of("2000T05"), 777}
+          Sequences.simple(
+              ImmutableList.of(
+                  new Object[]{DateTimes.of("2000T01"), 333},
+                  new Object[]{DateTimes.of("2000T01"), 222},
+                  new Object[]{DateTimes.of("2000T01"), 444},
+                  new Object[]{DateTimes.of("2000T01"), 111},
+                  new Object[]{DateTimes.of("2000T03"), 555},
+                  new Object[]{DateTimes.of("2000T03"), 999},
+                  new Object[]{DateTimes.of("2000T03"), 888},
+                  new Object[]{DateTimes.of("2000T05"), 777}
+              )
           ),
           ROW_ADAPTER,
           ROW_SIGNATURE
       ),
       new RowBasedSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-02/P1D"), "1", 0),
-          ImmutableList.of(
-              new Object[]{DateTimes.of("2000-01-02T00"), 7},
-              new Object[]{DateTimes.of("2000-01-02T02"), 9},
-              new Object[]{DateTimes.of("2000-01-02T03"), 8}
+          Sequences.simple(
+              ImmutableList.of(
+                  new Object[]{DateTimes.of("2000-01-02T00"), 7},
+                  new Object[]{DateTimes.of("2000-01-02T02"), 9},
+                  new Object[]{DateTimes.of("2000-01-02T03"), 8}
+              )
           ),
           ROW_ADAPTER,
           ROW_SIGNATURE

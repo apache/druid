@@ -50,6 +50,7 @@ public class DruidUnionDataSourceRuleTest
                   .add("col1", ColumnType.STRING)
                   .add("col2", ColumnType.LONG)
                   .build(),
+      null,
       false,
       false
   );
@@ -67,7 +68,7 @@ public class DruidUnionDataSourceRuleTest
 
     Assert.assertEquals(
         Optional.of(ImmutableList.of("__time", "col1", "col2")),
-        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel)
+        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
@@ -84,7 +85,7 @@ public class DruidUnionDataSourceRuleTest
 
     Assert.assertEquals(
         Optional.of(ImmutableList.of("col1")),
-        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel)
+        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
@@ -101,7 +102,7 @@ public class DruidUnionDataSourceRuleTest
 
     Assert.assertEquals(
         Optional.empty(),
-        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel)
+        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
@@ -118,7 +119,7 @@ public class DruidUnionDataSourceRuleTest
 
     Assert.assertEquals(
         Optional.empty(),
-        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel)
+        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
@@ -136,7 +137,7 @@ public class DruidUnionDataSourceRuleTest
 
     Assert.assertEquals(
         Optional.of(ImmutableList.of("__time", "col1", "col2")),
-        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel)
+        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
@@ -163,7 +164,7 @@ public class DruidUnionDataSourceRuleTest
 
     Assert.assertEquals(
         Optional.of(ImmutableList.of("col2", "col1")),
-        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel)
+        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
@@ -181,7 +182,7 @@ public class DruidUnionDataSourceRuleTest
 
     Assert.assertEquals(
         Optional.of(ImmutableList.of("__time", "col1", "col2")),
-        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel)
+        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
@@ -198,7 +199,7 @@ public class DruidUnionDataSourceRuleTest
 
     Assert.assertEquals(
         Optional.empty(),
-        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel)
+        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
@@ -215,7 +216,7 @@ public class DruidUnionDataSourceRuleTest
 
     Assert.assertEquals(
         Optional.empty(),
-        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel)
+        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 }

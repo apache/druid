@@ -34,10 +34,10 @@ This extension can use Oracle's MySQL JDBC driver which is not included in the D
 install it separately. There are a few ways to obtain this library:
 
 - It can be downloaded from the MySQL site at: https://dev.mysql.com/downloads/connector/j/
-- It can be fetched from Maven Central at: https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.48/mysql-connector-java-5.1.48.jar
+- It can be fetched from Maven Central at: https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.49/mysql-connector-java-5.1.49.jar
 - It may be available through your package manager, e.g. as `libmysql-java` on APT for a Debian-based OS
 
-This fetches the MySQL connector JAR file with a name like `mysql-connector-java-5.1.48.jar`.
+This fetches the MySQL connector JAR file with a name like `mysql-connector-java-5.1.49.jar`.
 
 Copy or symlink this file inside the folder `extensions/mysql-metadata-storage` under the distribution root directory.
 
@@ -126,8 +126,6 @@ If using the MariaDB connector library, set `druid.metadata.mysql.driver.driverC
 |`druid.metadata.mysql.ssl.enabledTLSProtocols`|Overrides the TLS protocols with these protocols.|none|no|
 
 ### MySQL InputSource and Firehose
-
-The MySQL extension provides a connector implementation of an [SqlInputSource](../../ingestion/native-batch.md#sql-input-source) and [SqlFirehose](../../ingestion/native-batch.md#firehoses-deprecated) which can be used to ingest data into Druid from a MySQL database. This works with either MySQL or MariaDB connector jars.
 
 ```json
 {

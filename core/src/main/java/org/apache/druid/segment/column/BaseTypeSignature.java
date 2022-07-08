@@ -20,6 +20,8 @@
 package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -34,7 +36,11 @@ public abstract class BaseTypeSignature<Type extends TypeDescriptor> implements 
   @Nullable
   protected final TypeSignature<Type> elementType;
 
+  private final Supplier<TypeStrategy> typeStrategy;
+  private final Supplier<NullableTypeStrategy> nullableTypeStrategy;
+
   public BaseTypeSignature(
+      TypeFactory typeFactory,
       Type type,
       @Nullable String complexTypeName,
       @Nullable TypeSignature<Type> elementType
@@ -43,6 +49,8 @@ public abstract class BaseTypeSignature<Type extends TypeDescriptor> implements 
     this.type = type;
     this.complexTypeName = complexTypeName;
     this.elementType = elementType;
+    this.typeStrategy = Suppliers.memoize(() -> typeFactory.getTypeStrategy(this));
+    this.nullableTypeStrategy = Suppliers.memoize(() -> new NullableTypeStrategy<>(typeStrategy.get()));
   }
 
   @Override
@@ -66,6 +74,18 @@ public abstract class BaseTypeSignature<Type extends TypeDescriptor> implements 
   public TypeSignature<Type> getElementType()
   {
     return elementType;
+  }
+
+  @Override
+  public <T> TypeStrategy<T> getStrategy()
+  {
+    return typeStrategy.get();
+  }
+
+  @Override
+  public <T> NullableTypeStrategy<T> getNullableStrategy()
+  {
+    return nullableTypeStrategy.get();
   }
 
   @Override

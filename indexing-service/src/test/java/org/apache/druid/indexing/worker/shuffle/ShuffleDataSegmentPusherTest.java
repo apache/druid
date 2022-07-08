@@ -28,8 +28,7 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
@@ -37,6 +36,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -110,11 +110,12 @@ public class ShuffleDataSegmentPusherTest
         ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
         false,
         false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null
     );
-    final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient();
+    final OverlordClient overlordClient = new NoopOverlordClient();
     if (LOCAL.equals(intermediateDataStore)) {
-      intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
+      intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
     } else if (DEEPSTORE.equals(intermediateDataStore)) {
       localDeepStore = temporaryFolder.newFolder("localStorage");
       intermediaryDataManager = new DeepStorageIntermediaryDataManager(

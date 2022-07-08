@@ -193,6 +193,7 @@ ORDER BY "start" DESC`;
             y0,
             datasource,
             color: SegmentTimeline.getColor(i),
+            dailySize: d.total,
           };
           y0 += d[datasource] === undefined ? 0 : d[datasource];
           return barUnitData;

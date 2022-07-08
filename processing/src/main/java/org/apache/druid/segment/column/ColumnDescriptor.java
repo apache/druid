@@ -26,11 +26,9 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.serde.ColumnPartSerde;
-import org.apache.druid.segment.serde.ComplexColumnPartSerde;
 import org.apache.druid.segment.serde.Serializer;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
@@ -98,7 +96,11 @@ public class ColumnDescriptor implements Serializer
     }
   }
 
-  public ColumnHolder read(ByteBuffer buffer, ColumnConfig columnConfig, SmooshedFileMapper smooshedFiles)
+  public ColumnHolder read(
+      ByteBuffer buffer,
+      ColumnConfig columnConfig,
+      SmooshedFileMapper smooshedFiles
+  )
   {
     final ColumnBuilder builder = new ColumnBuilder()
         .setType(valueType)
@@ -106,9 +108,6 @@ public class ColumnDescriptor implements Serializer
         .setFileMapper(smooshedFiles);
 
     for (ColumnPartSerde part : parts) {
-      if (part instanceof ComplexColumnPartSerde) {
-        builder.setComplexTypeName(((ComplexColumnPartSerde) part).getTypeName());
-      }
       part.getDeserializer().read(buffer, builder, columnConfig);
     }
 

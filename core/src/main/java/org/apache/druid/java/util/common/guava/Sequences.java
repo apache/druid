@@ -27,7 +27,6 @@ import java.io.Closeable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Executor;
 
@@ -41,22 +40,7 @@ public class Sequences
 
   public static <T> Sequence<T> simple(final Iterable<T> iterable)
   {
-    return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<T, Iterator<T>>()
-        {
-          @Override
-          public Iterator<T> make()
-          {
-            return iterable.iterator();
-          }
-
-          @Override
-          public void cleanup(Iterator<T> iterFromMake)
-          {
-
-          }
-        }
-    );
+    return new SimpleSequence<>(iterable);
   }
 
   @SuppressWarnings("unchecked")
