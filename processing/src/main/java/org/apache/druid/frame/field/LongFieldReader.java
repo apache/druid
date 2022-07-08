@@ -32,6 +32,13 @@ import javax.annotation.Nullable;
 
 /**
  * Reads values written by {@link LongFieldWriter}.
+ *
+ * Values are sortable as bytes without decoding.
+ *
+ * Format:
+ *
+ * - 1 byte: {@link LongFieldWriter#NULL_BYTE} or {@link LongFieldWriter#NOT_NULL_BYTE}
+ * - 8 bytes: encoded long: big-endian order, with sign flipped
  */
 public class LongFieldReader implements FieldReader
 {
@@ -65,6 +72,9 @@ public class LongFieldReader implements FieldReader
     return true;
   }
 
+  /**
+   * Selector that reads a value from a location pointed to by {@link ReadableFieldPointer}.
+   */
   private static class Selector implements LongColumnSelector
   {
     private final Memory memory;

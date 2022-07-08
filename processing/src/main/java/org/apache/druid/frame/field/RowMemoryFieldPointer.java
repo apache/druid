@@ -49,8 +49,11 @@ public class RowMemoryFieldPointer implements ReadableFieldPointer
   public long position()
   {
     if (fieldNumber == 0) {
+      // First field starts after the field end pointers -- one integer per field.
+      // (See RowReader javadocs for format details).
       return rowPointer.position() + (long) Integer.BYTES * fieldCount;
     } else {
+      // Get position from the end pointer of the prior field.
       return rowPointer.position() + memory.getInt(rowPointer.position() + (long) Integer.BYTES * (fieldNumber - 1));
     }
   }

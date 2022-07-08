@@ -54,7 +54,7 @@ public class DoubleFrameColumnWriter implements FrameColumnWriter
   @Override
   public boolean addSelection()
   {
-    if (!(appendableMemory.reserve(sz))) {
+    if (!(appendableMemory.reserveAdditional(sz))) {
       return false;
     }
 

@@ -71,7 +71,7 @@ public class ComplexFrameColumnWriter implements FrameColumnWriter
   @Override
   public boolean addSelection()
   {
-    if (!offsetMemory.reserve(Integer.BYTES)) {
+    if (!offsetMemory.reserveAdditional(Integer.BYTES)) {
       return false;
     }
 
@@ -85,7 +85,7 @@ public class ComplexFrameColumnWriter implements FrameColumnWriter
 
     final int dataLength = complexBytes.length + 1;
 
-    if (dataMemory.size() + dataLength > Integer.MAX_VALUE || !(dataMemory.reserve(dataLength))) {
+    if (dataMemory.size() + dataLength > Integer.MAX_VALUE || !(dataMemory.reserveAdditional(dataLength))) {
       return false;
     }
 

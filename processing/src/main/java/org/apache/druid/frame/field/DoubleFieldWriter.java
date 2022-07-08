@@ -25,13 +25,14 @@ import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 /**
  * Wraps a {@link BaseDoubleColumnValueSelector} and writes field values.
  *
- * Values are transformed such that they are comparable as bytes; see {@link #transform} and {@link #detransform}.
- * Values are preceded by a null byte that is either 0x00 (null) or 0x01 (not null). This ensures that nulls sort
- * earlier than nonnulls.
+ * See {@link DoubleFieldReader} for format details.
  */
 public class DoubleFieldWriter implements FieldWriter
 {
   public static final int SIZE = Double.BYTES + Byte.BYTES;
+
+  // Different from the values in NullHandling, since we want to be able to sort as bytes, and we want
+  // nulls to come before non-nulls.
   public static final byte NULL_BYTE = 0x00;
   public static final byte NOT_NULL_BYTE = 0x01;
 
@@ -66,6 +67,9 @@ public class DoubleFieldWriter implements FieldWriter
     // Nothing to close.
   }
 
+  /**
+   * Transforms a double into a form where it can be compared as unsigned bytes without decoding.
+   */
   public static long transform(final double n)
   {
     final long bits = Double.doubleToLongBits(n);
@@ -73,6 +77,9 @@ public class DoubleFieldWriter implements FieldWriter
     return Long.reverseBytes(bits ^ mask);
   }
 
+  /**
+   * Inverse of {@link #transform}.
+   */
   public static double detransform(final long bits)
   {
     final long reversedBits = Long.reverseBytes(bits);

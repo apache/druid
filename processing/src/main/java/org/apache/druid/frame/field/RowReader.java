@@ -29,6 +29,11 @@ import java.util.List;
  * Class for reading rows in the same format as used by {@link org.apache.druid.frame.FrameType#ROW_BASED}.
  *
  * Stateless and immutable.
+ *
+ * Row format:
+ *
+ * - 4 bytes * rowLength: field *end* pointers (exclusive), relative to the start of the row, little-endian ints
+ * - N bytes * rowLength: fields written by {@link FieldWriter} implementations.
  */
 public class RowReader
 {

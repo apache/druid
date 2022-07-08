@@ -26,12 +26,16 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
 import org.apache.druid.segment.data.ReadableOffset;
 
+/**
+ * Row pointer based on a {@link ReadableOffset} containing a row number.
+ */
 public class CursorFrameRowPointer implements ReadableFrameRowPointer
 {
   private final Frame frame;
   private final ReadableOffset offset;
   private final Memory rowPositions;
 
+  // Cache row position across calls to "position" and "length" for the same offset.
   int cachedOffset = -1;
   long cachedPosition;
   long cachedLength;
@@ -62,13 +66,16 @@ public class CursorFrameRowPointer implements ReadableFrameRowPointer
     final int rowNumber = offset.getOffset();
 
     if (cachedOffset != rowNumber) {
+      // Cached position and length need to be updated.
       final long rowPosition;
       final int physicalRowNumber = frame.physicalRow(offset.getOffset());
       final long rowEndPosition = rowPositions.getLong((long) Long.BYTES * physicalRowNumber);
 
       if (physicalRowNumber == 0) {
+        // The first row is located at the start of the memory region.
         rowPosition = 0;
       } else {
+        // Use the rowPositions (pointers to end positions) to get pointers to subsequent rows.
         rowPosition = rowPositions.getLong((long) Long.BYTES * (physicalRowNumber - 1));
       }
 

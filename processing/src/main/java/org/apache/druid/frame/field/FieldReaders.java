@@ -20,10 +20,18 @@
 package org.apache.druid.frame.field;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.frame.key.RowKey;
+import org.apache.druid.frame.key.RowKeyReader;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
+/**
+ * Helper used to read field values from row-based frames or {@link RowKey}.
+ *
+ * Most callers should use {@link org.apache.druid.frame.read.FrameReader} or {@link RowKeyReader} rather than using
+ * this class directly.
+ */
 public class FieldReaders
 {
   private FieldReaders()

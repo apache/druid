@@ -36,6 +36,12 @@ import javax.annotation.Nullable;
 
 /**
  * Reads values written by {@link ComplexFieldWriter}.
+ *
+ * Format:
+ *
+ * - 1 byte: {@link ComplexFieldWriter#NULL_BYTE} or {@link ComplexFieldWriter#NOT_NULL_BYTE}
+ * - 4 bytes: length of serialized complex value, little-endian int
+ * - N bytes: serialized complex value
  */
 public class ComplexFieldReader implements FieldReader
 {
@@ -83,6 +89,9 @@ public class ComplexFieldReader implements FieldReader
     return false;
   }
 
+  /**
+   * Selector that reads a value from a location pointed to by {@link ReadableFieldPointer}.
+   */
   private static class Selector<T> extends ObjectColumnSelector<T>
   {
     private final Memory memory;

@@ -19,9 +19,14 @@
 
 package org.apache.druid.frame.segment.row;
 
+import org.apache.druid.frame.write.RowBasedFrameWriter;
+
 /**
- * Pointer to a row position in some memory. The row is expected to be in the row-based frame format. Only points to the beginning of the field, since all fields
- * can be read without knowing their entire length.
+ * Pointer to a row position in some memory. The memory itself is handled separately, and generally comes from
+ * region {@link RowBasedFrameWriter#ROW_DATA_REGION} of a row-based frame.
+ *
+ * Each row pointed-to by this pointer is in the row-based frame format documented at
+ * {@link org.apache.druid.frame.field.RowReader}.
  */
 public interface ReadableFrameRowPointer
 {

@@ -28,6 +28,8 @@ import java.util.List;
 /**
  * Like {@link StringFieldWriter}, but reads arrays from a {@link ColumnValueSelector} instead of reading from
  * a {@link org.apache.druid.segment.DimensionSelector}.
+ *
+ * See {@link StringFieldReader} for format details.
  */
 public class StringArrayFieldWriter implements FieldWriter
 {

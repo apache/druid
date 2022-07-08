@@ -30,6 +30,16 @@ import org.apache.druid.segment.column.ValueTypes;
 
 import javax.annotation.Nullable;
 
+/**
+ * Reads values written by {@link FloatFieldWriter}.
+ *
+ * Values are sortable as bytes without decoding.
+ *
+ * Format:
+ *
+ * - 1 byte: {@link FloatFieldWriter#NULL_BYTE} or {@link FloatFieldWriter#NOT_NULL_BYTE}
+ * - 4 bytes: encoded float, using {@link FloatFieldWriter#transform}
+ */
 public class FloatFieldReader implements FieldReader
 {
   FloatFieldReader()

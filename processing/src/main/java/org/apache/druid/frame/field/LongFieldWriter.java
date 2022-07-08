@@ -25,9 +25,7 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 /**
  * Wraps a {@link BaseLongColumnValueSelector} and writes individual values into rframe rows.
  *
- * Longs are written in big-endian order, with the sign bit flipped, so they can be compared as bytes. Longs are
- * preceded by a null byte that is either 0x00 (null) or 0x01 (not null). This ensures that nulls sort earlier than
- * nonnulls.
+ * See {@link LongFieldReader} for format details.
  */
 public class LongFieldWriter implements FieldWriter
 {
@@ -37,6 +35,8 @@ public class LongFieldWriter implements FieldWriter
 
   private final BaseLongColumnValueSelector selector;
 
+  // Different from the values in NullHandling, since we want to be able to sort as bytes, and we want
+  // nulls to come before non-nulls.
   public LongFieldWriter(final BaseLongColumnValueSelector selector)
   {
     this.selector = selector;

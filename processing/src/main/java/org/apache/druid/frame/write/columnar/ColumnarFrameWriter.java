@@ -69,7 +69,7 @@ public class ColumnarFrameWriter implements FrameWriter
       return false;
     }
 
-    if (rowOrderMemory != null && !rowOrderMemory.reserve(Integer.BYTES)) {
+    if (rowOrderMemory != null && !rowOrderMemory.reserveAdditional(Integer.BYTES)) {
       return false;
     }
 

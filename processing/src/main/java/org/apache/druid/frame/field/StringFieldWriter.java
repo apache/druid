@@ -29,23 +29,15 @@ import java.util.List;
 /**
  * Wraps a {@link DimensionSelector} and writes to rframe rows.
  *
- * Strings are written in UTF8 and terminated by {@link #VALUE_TERMINATOR}. Note that this byte appears in valid
- * UTF8 encodings if and only if the string contains a NUL (char 0). Therefore, this field writer cannot write
- * out strings containing NUL characters.
- *
- * Rows are terminated by {@link #ROW_TERMINATOR}.
- *
- * Nulls are stored as {@link #NULL_BYTE}. All other strings are prepended by {@link #NOT_NULL_BYTE} byte to
- * differentiate them from nulls.
- *
- * This encoding allows the encoded data to be compared as bytes in a way that matches the behavior of
- * {@link org.apache.druid.segment.StringDimensionHandler#DIMENSION_SELECTOR_COMPARATOR}, except null and
- * empty list are not considered equal.
+ * See {@link StringFieldReader} for format details.
  */
 public class StringFieldWriter implements FieldWriter
 {
   public static final byte VALUE_TERMINATOR = (byte) 0x00;
   public static final byte ROW_TERMINATOR = (byte) 0x01;
+
+  // Different from the values in NullHandling, since we want to be able to sort as bytes, and we want
+  // nulls to come before non-nulls.
   public static final byte NULL_BYTE = 0x02;
   public static final byte NOT_NULL_BYTE = 0x03;
 

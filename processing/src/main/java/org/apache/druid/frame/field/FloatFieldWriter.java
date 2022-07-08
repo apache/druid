@@ -25,13 +25,14 @@ import org.apache.druid.segment.BaseFloatColumnValueSelector;
 /**
  * Wraps a {@link BaseFloatColumnValueSelector} and writes field values.
  *
- * Values are transformed such that they are comparable as bytes; see {@link #transform} and {@link #detransform}.
- * Values are preceded by a null byte that is either 0x00 (null) or 0x01 (not null). This ensures that nulls sort
- * earlier than nonnulls.
+ * See {@link FloatFieldReader} for format details.
  */
 public class FloatFieldWriter implements FieldWriter
 {
   public static final int SIZE = Float.BYTES + Byte.BYTES;
+
+  // Different from the values in NullHandling, since we want to be able to sort as bytes, and we want
+  // nulls to come before non-nulls.
   public static final byte NULL_BYTE = 0x00;
   public static final byte NOT_NULL_BYTE = 0x01;
 
@@ -66,6 +67,9 @@ public class FloatFieldWriter implements FieldWriter
     // Nothing to close.
   }
 
+  /**
+   * Transforms a float into a form where it can be compared as unsigned bytes without decoding.
+   */
   public static int transform(final float n)
   {
     final int bits = Float.floatToIntBits(n);
@@ -73,6 +77,9 @@ public class FloatFieldWriter implements FieldWriter
     return Integer.reverseBytes(bits ^ mask);
   }
 
+  /**
+   * Inverse of {@link #transform}.
+   */
   public static float detransform(final int bits)
   {
     final int reversedBits = Integer.reverseBytes(bits);

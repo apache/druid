@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.field;
 
+import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.write.RowBasedFrameWriterFactory;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.java.util.common.ISE;
@@ -33,6 +34,12 @@ import org.apache.druid.segment.serde.ComplexMetrics;
 import javax.annotation.Nullable;
 import java.util.List;
 
+/**
+ * Helper used to write field values to row-based frames or {@link RowKey}.
+ *
+ * Most callers should use {@link org.apache.druid.frame.write.FrameWriters} to build frames from
+ * {@link ColumnSelectorFactory}, rather than using this class directly.
+ */
 public class FieldWriters
 {
   private FieldWriters()

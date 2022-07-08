@@ -25,9 +25,12 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 
 /**
  * Wraps a {@link BaseObjectColumnValueSelector} and uses {@link ComplexMetricSerde#toBytes} to write complex objects.
+ *
+ * See {@link ComplexFieldReader} for format details.
  */
 public class ComplexFieldWriter implements FieldWriter
 {
+  // Different from the values in NullHandling, to be consistent with other writers in this package.
   public static final byte NULL_BYTE = 0x00;
   public static final byte NOT_NULL_BYTE = 0x01;
 

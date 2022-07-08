@@ -110,11 +110,11 @@ public class RowBasedFrameWriter implements FrameWriter
       return false;
     }
 
-    if (rowOrderMemory != null && !rowOrderMemory.reserve(Integer.BYTES)) {
+    if (rowOrderMemory != null && !rowOrderMemory.reserveAdditional(Integer.BYTES)) {
       return false;
     }
 
-    if (!rowOffsetMemory.reserve(Long.BYTES)) {
+    if (!rowOffsetMemory.reserveAdditional(Long.BYTES)) {
       return false;
     }
 
@@ -250,7 +250,7 @@ public class RowBasedFrameWriter implements FrameWriter
    */
   private boolean writeDataUsingRowMemory(final MemoryRange<Memory> rowMemory)
   {
-    if (!dataMemory.reserve(Ints.checkedCast(rowMemory.length()))) {
+    if (!dataMemory.reserveAdditional(Ints.checkedCast(rowMemory.length()))) {
       return false;
     }
 
@@ -271,7 +271,7 @@ public class RowBasedFrameWriter implements FrameWriter
     final long fieldPositionBytes = (long) fieldWriters.size() * Integer.BYTES;
 
     if (numRows == 0) {
-      if (!dataMemory.reserve(Ints.checkedCast(Math.max(fieldPositionBytes, BASE_DATA_ALLOCATION_SIZE)))) {
+      if (!dataMemory.reserveAdditional(Ints.checkedCast(Math.max(fieldPositionBytes, BASE_DATA_ALLOCATION_SIZE)))) {
         return false;
       }
     }
@@ -299,7 +299,7 @@ public class RowBasedFrameWriter implements FrameWriter
         // Try again with a bigger allocation.
         reserveMultiple *= 2;
 
-        if (!dataMemory.reserve(Ints.checkedCast((long) BASE_DATA_ALLOCATION_SIZE * reserveMultiple))) {
+        if (!dataMemory.reserveAdditional(Ints.checkedCast((long) BASE_DATA_ALLOCATION_SIZE * reserveMultiple))) {
           return false;
         }
 

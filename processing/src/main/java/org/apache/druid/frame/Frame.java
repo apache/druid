@@ -28,6 +28,7 @@ import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.data.CompressionStrategy;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -67,10 +68,14 @@ import java.nio.channels.WritableByteChannel;
  * There is also a compressed frame format. Compressed frames are written by {@link #writeTo} when "compress" is
  * true, and decompressed by {@link #decompress}. Format:
  *
+ * - 1 byte: compression type: {@link CompressionStrategy#getId()}. Currently, only LZ4 is supported.
  * - 8 bytes: compressed frame length, little-endian long
  * - 8 bytes: uncompressed frame length (numBytes), little-endian long
  * - NNN bytes: LZ4-compressed frame
  * - 8 bytes: 64-bit xxhash checksum of prior content, including 16-byte header and compressed frame, little-endian long
+ *
+ * Note to developers: if we end up needing to add more fields here, consider introducing a Smile (or Protobuf, etc)
+ * header to make it simpler to add more fields.
  */
 public class Frame
 {
@@ -83,7 +88,9 @@ public class Frame
 
   private static final LZ4Compressor LZ4_COMPRESSOR = LZ4Factory.fastestInstance().fastCompressor();
   private static final LZ4SafeDecompressor LZ4_DECOMPRESSOR = LZ4Factory.fastestInstance().safeDecompressor();
-  private static final int COMPRESSED_FRAME_HEADER_SIZE = Long.BYTES * 2; // Compressed, uncompressed lengths
+
+  // Compression type, compressed length, uncompressed length
+  private static final int COMPRESSED_FRAME_HEADER_SIZE = Byte.BYTES + Long.BYTES * 2;
   private static final int COMPRESSED_FRAME_TRAILER_SIZE = Long.BYTES; // Checksum
   private static final int COMPRESSED_FRAME_ENVELOPE_SIZE = COMPRESSED_FRAME_HEADER_SIZE
                                                             + COMPRESSED_FRAME_TRAILER_SIZE;
@@ -135,56 +142,7 @@ public class Frame
     final int numRegions = memory.getInt(Byte.BYTES + Long.BYTES + Integer.BYTES);
     final boolean permuted = memory.getByte(Byte.BYTES + Long.BYTES + Integer.BYTES + Integer.BYTES) != 0;
 
-    if (numBytes != memory.getCapacity()) {
-      throw new IAE("Declared size [%,d] does not match actual size [%,d]", numBytes, memory.getCapacity());
-    }
-
-    // Size of permuted row indices.
-    final long rowOrderSize = (permuted ? (long) numRows * Integer.BYTES : 0);
-
-    // Size of region ending positions.
-    final long regionEndSize = (long) numRegions * Long.BYTES;
-
-    final long expectedSizeForPreamble = HEADER_SIZE + rowOrderSize + regionEndSize;
-
-    if (numBytes < expectedSizeForPreamble) {
-      throw new IAE("Memory too short for preamble");
-    }
-
-    // Verify each region is wholly contained within this buffer.
-    long regionStart = expectedSizeForPreamble; // First region starts immediately after preamble.
-    long regionEnd;
-
-    for (int regionNumber = 0; regionNumber < numRegions; regionNumber++) {
-      regionEnd = memory.getLong(HEADER_SIZE + rowOrderSize + (long) regionNumber * Long.BYTES);
-
-      if (regionEnd < regionStart || regionEnd > numBytes) {
-        throw new ISE(
-            "Region [%d] invalid: end [%,d] out of range [%,d -> %,d]",
-            regionNumber,
-            regionEnd,
-            expectedSizeForPreamble,
-            numBytes
-        );
-      }
-
-      if (regionNumber == 0) {
-        regionStart = expectedSizeForPreamble;
-      } else {
-        regionStart = memory.getLong(HEADER_SIZE + rowOrderSize + (long) (regionNumber - 1) * Long.BYTES);
-      }
-
-      if (regionStart < expectedSizeForPreamble || regionStart > numBytes) {
-        throw new ISE(
-            "Region [%d] invalid: start [%,d] out of range [%,d -> %,d]",
-            regionNumber,
-            regionStart,
-            expectedSizeForPreamble,
-            numBytes
-        );
-      }
-    }
-
+    validate(memory, numBytes, numRows, numRegions, permuted);
     return new Frame(memory, frameType, numBytes, numRows, numRegions, permuted);
   }
 
@@ -236,8 +194,15 @@ public class Frame
       throw new ISE("Checksum mismatch");
     }
 
-    final int uncompressedFrameLength = Ints.checkedCast(memory.getLong(position + Long.BYTES));
-    final int compressedFrameLength = Ints.checkedCast(memory.getLong(position));
+    final byte compressionTypeId = memory.getByte(position);
+    final CompressionStrategy compressionStrategy = CompressionStrategy.forId(compressionTypeId);
+
+    if (compressionStrategy != CompressionStrategy.LZ4) {
+      throw new ISE("Unsupported compression strategy [%s]", compressionStrategy);
+    }
+
+    final int compressedFrameLength = Ints.checkedCast(memory.getLong(position + Byte.BYTES));
+    final int uncompressedFrameLength = Ints.checkedCast(memory.getLong(position + Byte.BYTES + Long.BYTES));
     final int compressedFrameLengthFromRegionLength = Ints.checkedCast(length - COMPRESSED_FRAME_ENVELOPE_SIZE);
     final long frameStart = position + COMPRESSED_FRAME_HEADER_SIZE;
 
@@ -434,8 +399,9 @@ public class Frame
                        .limit(COMPRESSED_FRAME_ENVELOPE_SIZE + compressedFrameLength)
                        .position(0);
 
-      compressionBuffer.putLong(0, compressedFrameLength)
-                       .putLong(Long.BYTES, numBytes);
+      compressionBuffer.put(0, CompressionStrategy.LZ4.getId())
+                       .putLong(Byte.BYTES, compressedFrameLength)
+                       .putLong(Byte.BYTES + Long.BYTES, numBytes);
 
       final long checksum = Memory.wrap(compressionBuffer)
                                   .xxHash64(0, COMPRESSED_FRAME_HEADER_SIZE + compressedFrameLength, CHECKSUM_SEED);
@@ -447,6 +413,66 @@ public class Frame
     } else {
       memory.writeTo(0, numBytes, channel);
       return numBytes;
+    }
+  }
+
+  /**
+   * Perform basic frame validations, ensuring that the length of frame and region locations are correct.
+   */
+  private static void validate(
+      final Memory memory,
+      final long numBytes,
+      final int numRows,
+      final int numRegions,
+      final boolean permuted
+  )
+  {
+    if (numBytes != memory.getCapacity()) {
+      throw new IAE("Declared size [%,d] does not match actual size [%,d]", numBytes, memory.getCapacity());
+    }
+
+    // Size of permuted row indices.
+    final long rowOrderSize = (permuted ? (long) numRows * Integer.BYTES : 0);
+
+    // Size of region ending positions.
+    final long regionEndSize = (long) numRegions * Long.BYTES;
+
+    final long expectedSizeForPreamble = HEADER_SIZE + rowOrderSize + regionEndSize;
+
+    if (numBytes < expectedSizeForPreamble) {
+      throw new IAE("Memory too short for preamble");
+    }
+
+    // Verify each region is wholly contained within this buffer.
+    long regionStart = expectedSizeForPreamble; // First region starts immediately after preamble.
+    long regionEnd;
+
+    for (int regionNumber = 0; regionNumber < numRegions; regionNumber++) {
+      regionEnd = memory.getLong(HEADER_SIZE + rowOrderSize + (long) regionNumber * Long.BYTES);
+
+      if (regionEnd < regionStart || regionEnd > numBytes) {
+        throw new IAE(
+            "Region [%d] invalid: end [%,d] out of range [%,d -> %,d]",
+            regionNumber,
+            regionEnd,
+            expectedSizeForPreamble,
+            numBytes
+        );
+      }
+
+      if (regionNumber > 0) {
+        regionStart = memory.getLong(HEADER_SIZE + rowOrderSize + (long) (regionNumber - 1) * Long.BYTES);
+      }
+
+      if (regionStart < expectedSizeForPreamble || regionStart > numBytes) {
+        throw new IAE(
+            "Region [%d] invalid: start [%,d] out of range [%,d -> %,d]",
+            regionNumber,
+            regionStart,
+            expectedSizeForPreamble,
+            numBytes
+        );
+      }
     }
   }
 }

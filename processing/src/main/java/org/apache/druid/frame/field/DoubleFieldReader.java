@@ -32,6 +32,13 @@ import javax.annotation.Nullable;
 
 /**
  * Reads values written by {@link DoubleFieldWriter}.
+ *
+ * Values are sortable as bytes without decoding.
+ *
+ * Format:
+ *
+ * - 1 byte: {@link DoubleFieldWriter#NULL_BYTE} or {@link DoubleFieldWriter#NOT_NULL_BYTE}
+ * - 8 bytes: encoded double, using {@link DoubleFieldWriter#transform}
  */
 public class DoubleFieldReader implements FieldReader
 {
@@ -65,6 +72,9 @@ public class DoubleFieldReader implements FieldReader
     return true;
   }
 
+  /**
+   * Selector that reads a value from a location pointed to by {@link ReadableFieldPointer}.
+   */
   private static class Selector implements DoubleColumnSelector
   {
     private final Memory dataRegion;

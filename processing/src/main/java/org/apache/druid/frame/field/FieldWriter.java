@@ -27,6 +27,9 @@ import java.io.Closeable;
 /**
  * Helper used to write field values to row-based frames or {@link RowKey}.
  *
+ * Most callers should use {@link org.apache.druid.frame.write.FrameWriters} to build frames from
+ * {@link org.apache.druid.segment.ColumnSelectorFactory}, rather than using this interface directly.
+ *
  * Not thread-safe.
  */
 public interface FieldWriter extends Closeable

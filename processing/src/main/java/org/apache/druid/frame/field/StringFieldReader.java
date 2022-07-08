@@ -44,6 +44,19 @@ import java.util.List;
 
 /**
  * Reads fields written by {@link StringFieldWriter} or {@link StringArrayFieldWriter}.
+ *
+ * Strings are written in UTF8 and terminated by {@link StringFieldWriter#VALUE_TERMINATOR}. Note that this byte
+ * appears in valid UTF8 encodings if and only if the string contains a NUL (char 0). Therefore, this field writer
+ * cannot write out strings containing NUL characters.
+ *
+ * Rows are terminated by {@link StringFieldWriter#ROW_TERMINATOR}.
+ *
+ * Nulls are stored as {@link StringFieldWriter#NULL_BYTE}. All other strings are prepended by
+ * {@link StringFieldWriter#NOT_NULL_BYTE} byte to differentiate them from nulls.
+ *
+ * This encoding allows the encoded data to be compared as bytes in a way that matches the behavior of
+ * {@link org.apache.druid.segment.StringDimensionHandler#DIMENSION_SELECTOR_COMPARATOR}, except null and
+ * empty list are not considered equal.
  */
 public class StringFieldReader implements FieldReader
 {
@@ -80,6 +93,9 @@ public class StringFieldReader implements FieldReader
     return true;
   }
 
+  /**
+   * Selector that reads a value from a location pointed to by {@link ReadableFieldPointer}.
+   */
   private static class Selector implements DimensionSelector
   {
     private final Memory memory;

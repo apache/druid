@@ -94,15 +94,15 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
       return false;
     }
 
-    if (multiValue && !cumulativeRowLengths.reserve(Integer.BYTES)) {
+    if (multiValue && !cumulativeRowLengths.reserveAdditional(Integer.BYTES)) {
       return false;
     }
 
-    if (!cumulativeStringLengths.reserve(Integer.BYTES * utf8Data.size())) {
+    if (!cumulativeStringLengths.reserveAdditional(Integer.BYTES * utf8Data.size())) {
       return false;
     }
 
-    if (!stringData.reserve(utf8DataByteLength)) {
+    if (!stringData.reserveAdditional(utf8DataByteLength)) {
       return false;
     }
 

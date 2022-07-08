@@ -80,7 +80,7 @@ public class AppendableMemory implements Closeable
 
   /**
    * Creates an appendable memory instance with a default initial allocation size. This default size can accept
-   * is a multiple of 4, 5, 8, and 9, meaning that {@link #reserve} can accept allocations of that size and
+   * is a multiple of 4, 5, 8, and 9, meaning that {@link #reserveAdditional} can accept allocations of that size and
    * remain fully-packed.
    */
   public static AppendableMemory create(final MemoryAllocator allocator)
@@ -113,11 +113,15 @@ public class AppendableMemory implements Closeable
    * Ensure that at least "bytes" amount of space is available after the cursor. Allocates a new block if needed.
    * Note: the amount of bytes is guaranteed to be in a *single* block.
    *
-   * Does not move the cursor forward.
+   * Does not move the cursor forward. Multiple calls to this method without moving the cursor forward are not
+   * additive: the reservations overlap on top of each other.
+   *
+   * Typical usage is to call reserveAdditional, then write to the memory, then call {@link #advanceCursor} with
+   * the amount of memory written.
    *
    * @return true if reservation was successful, false otherwise.
    */
-  public boolean reserve(final int bytes)
+  public boolean reserveAdditional(final int bytes)
   {
     if (bytes < 0) {
       throw new IAE("Cannot reserve negative bytes");
@@ -160,7 +164,10 @@ public class AppendableMemory implements Closeable
 
   /**
    * Advances the cursor a certain number of bytes. This number of bytes must not exceed the space available in the
-   * current block. Typically, it is used to commit the memory most recently reserved by {@link #reserve}.
+   * current block.
+   *
+   * Typical usage is to call {@link #reserveAdditional}, then write to the memory, then call advanceCursor with
+   * the amount of memory written.
    */
   public void advanceCursor(final int bytes)
   {
@@ -188,8 +195,11 @@ public class AppendableMemory implements Closeable
   }
 
   /**
-   * Rewinds the cursor a certain number of bytes, effectively erasing them. This number of bytes must not exceed
-   * the current block. Typically, it is used to erase the memory most recently advanced by {@link #advanceCursor}.
+   * Rewinds the cursor a certain number of bytes, effectively erasing them. This provides a way to undo the
+   * most-recently-done write.
+   *
+   * The number of bytes rewound must not rewind prior to the current block. It is safe, and typical, to call
+   * rewindCursor with values up to, and including, the most recent call to {@link #advanceCursor}.
    */
   public void rewindCursor(final int bytes)
   {

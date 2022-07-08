@@ -108,7 +108,7 @@ public class FrameFileWriter implements Closeable
       throw new ISE("Cannot mix partitioned and non-partitioned data");
     }
 
-    if (!tableOfContents.reserve(Long.BYTES)) {
+    if (!tableOfContents.reserveAdditional(Long.BYTES)) {
       // Not likely to happen due to allocator limit of Long.MAX_VALUE.
       throw new ISE("Too many frames");
     }
@@ -134,7 +134,7 @@ public class FrameFileWriter implements Closeable
       }
 
       while (partition > highestPartitionWritten) {
-        if (!partitions.reserve(Integer.BYTES)) {
+        if (!partitions.reserveAdditional(Integer.BYTES)) {
           // Not likely to happen due to allocator limit of Long.MAX_VALUE. But, if this happens, the file is corrupt.
           // Throw an error so the caller knows it is bad.
           throw new ISE("Too many partitions");
@@ -177,7 +177,7 @@ public class FrameFileWriter implements Closeable
 
     writeMagicIfNeeded();
 
-    if (!tableOfContents.reserve(TRAILER_LENGTH)) {
+    if (!tableOfContents.reserveAdditional(TRAILER_LENGTH)) {
       throw new ISE("Can't finish table of contents");
     }
     final MemoryRange<WritableMemory> tocCursor = tableOfContents.cursor();
