@@ -63,14 +63,16 @@ public class SegmentRowCountDistribution
   /**
    * Increments the count for number of tombstones in the distribution
    */
-  public void addTombstoneToDistribution() {
+  public void addTombstoneToDistribution()
+  {
     buckets[TOMBSTONE_BUCKET_INDEX]++;
   }
 
   /**
    * Decrements the count for the number of tombstones in he distribution.
    */
-  public void removeTombstoneFromDistribution() {
+  public void removeTombstoneFromDistribution()
+  {
     buckets[TOMBSTONE_BUCKET_INDEX]--;
   }
 
@@ -116,7 +118,7 @@ public class SegmentRowCountDistribution
    */
   private static int determineBucketFromRowCount(long rowCount)
   {
-    // 0 indexed bucked is reserved for tombstones
+    // 0 indexed bucket is reserved for tombstones
     if (rowCount <= 0L) {
       return 1;
     }
@@ -143,12 +145,13 @@ public class SegmentRowCountDistribution
 
   /**
    * Gives the consumer the range dimension and the associated count. Will not give zero range unless there is a count there.
+   *
    * @param consumer
    */
   public void forEachDimension(final ObjIntConsumer<String> consumer)
   {
     for (int ii = 0; ii < buckets.length; ii++) {
-      // only report tombstones 0 bucket if it has nonzero value
+      // only report tombstones and 0 bucket if it has nonzero value
       if (ii > 1 || buckets[ii] != 0) {
         consumer.accept(getBucketDimensionFromIndex(ii), buckets[ii]);
       }
