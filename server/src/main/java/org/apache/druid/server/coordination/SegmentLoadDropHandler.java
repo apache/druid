@@ -314,7 +314,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
   public Map<String, SegmentRowCountDistribution> getRowCountDistributionPerDatasource()
   {
-    return segmentManager.getRowCountBuckets();
+    return segmentManager.getRowCountDistribution();
   }
 
   @Override

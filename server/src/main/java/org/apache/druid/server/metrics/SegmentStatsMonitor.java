@@ -23,6 +23,7 @@ package org.apache.druid.server.metrics;
 
 import com.google.inject.Inject;
 import org.apache.druid.client.DruidServerConfig;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -43,6 +44,8 @@ public class SegmentStatsMonitor extends AbstractMonitor
   private final DruidServerConfig serverConfig;
   private final SegmentLoadDropHandler segmentLoadDropMgr;
 
+  private static final Logger log = new Logger(SegmentStatsMonitor.class);
+
   /**
    * Constructor for this monitor. Will throw IllegalStateException if lazy load on start is set to true.
    *
@@ -58,13 +61,15 @@ public class SegmentStatsMonitor extends AbstractMonitor
   )
   {
     if (segmentLoaderConfig.isLazyLoadOnStart()) {
+      // log message ensures there is an error displayed at startup if this fails as the exception isn't logged.
+      log.error("Monitor doesn't support working with lazy loading on start");
+      // throw this exception it kill the process at startup
       throw new IllegalStateException("Monitor doesn't support working with lazy loading on start");
     }
     this.serverConfig = serverConfig;
     this.segmentLoadDropMgr = segmentLoadDropMgr;
 
   }
-
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)

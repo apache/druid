@@ -107,6 +107,7 @@ public class SegmentStatsMonitorTest
     expectedEvents.add(rowCountRangeEvent("6M-8M", 0));
     expectedEvents.add(rowCountRangeEvent("8M-10M", 0));
     expectedEvents.add(rowCountRangeEvent("10M+", 0));
+    expectedEvents.add(rowCountRangeEvent("Tombstone", 0));
 
     List<Map<String, Object>> expectedEventsAsMap = getEventMaps(expectedEvents);
     Map<String, Map<String, Object>> expected = metricKeyedMap(expectedEventsAsMap);
@@ -148,6 +149,7 @@ public class SegmentStatsMonitorTest
     expectedEvents.add(rowCountRangeEvent("6M-8M", 0));
     expectedEvents.add(rowCountRangeEvent("8M-10M", 0));
     expectedEvents.add(rowCountRangeEvent("10M+", 0));
+    expectedEvents.add(rowCountRangeEvent("Tombstone", 0));
 
     List<Map<String, Object>> expectedEventsAsMap = getEventMaps(expectedEvents);
     Map<String, Map<String, Object>> expected = metricKeyedMap(expectedEventsAsMap);

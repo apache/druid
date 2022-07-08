@@ -30,7 +30,8 @@ public class SegmentRowCountDistribution
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentRowCountDistribution.class);
 
-  private final int[] buckets = new int[8];
+  private final int[] buckets = new int[9];
+  private static final int TOMBSTONE_BUCKET_INDEX = 0;
 
   /**
    * Increments the count for a particular bucket held in this class
@@ -39,7 +40,7 @@ public class SegmentRowCountDistribution
    */
   public void addRowCountToDistribution(long rowCount)
   {
-    int bucketIndex = determineBucket(rowCount);
+    int bucketIndex = determineBucketFromRowCount(rowCount);
     buckets[bucketIndex]++;
   }
 
@@ -50,13 +51,27 @@ public class SegmentRowCountDistribution
    */
   public void removeRowCountFromDistribution(long rowCount)
   {
-    int bucketIndex = determineBucket(rowCount);
+    int bucketIndex = determineBucketFromRowCount(rowCount);
     buckets[bucketIndex]--;
     if (buckets[bucketIndex] < 0) {
       // can this ever go negative?
       log.error("somehow got a count of less than 0, resetting value to 0");
       buckets[bucketIndex] = 0;
     }
+  }
+
+  /**
+   * Increments the count for number of tombstones in the distribution
+   */
+  public void addTombstoneToDistribution() {
+    buckets[TOMBSTONE_BUCKET_INDEX]++;
+  }
+
+  /**
+   * Decrements the count for the number of tombstones in he distribution.
+   */
+  public void removeTombstoneFromDistribution() {
+    buckets[TOMBSTONE_BUCKET_INDEX]--;
   }
 
   /**
@@ -70,20 +85,22 @@ public class SegmentRowCountDistribution
   {
     switch (index) {
       case 0:
-        return "0";
+        return "Tombstone";
       case 1:
-        return "1-10k";
+        return "0";
       case 2:
-        return "10k-2M";
+        return "1-10k";
       case 3:
-        return "2M-4M";
+        return "10k-2M";
       case 4:
-        return "4M-6M";
+        return "2M-4M";
       case 5:
-        return "6M-8M";
+        return "4M-6M";
       case 6:
-        return "8M-10M";
+        return "6M-8M";
       case 7:
+        return "8M-10M";
+      case 8:
         return "10M+";
       // should never get to default
       default:
@@ -97,30 +114,31 @@ public class SegmentRowCountDistribution
    * @param rowCount the number of rows in a segment
    * @return the bucket index
    */
-  private static int determineBucket(long rowCount)
+  private static int determineBucketFromRowCount(long rowCount)
   {
+    // 0 indexed bucked is reserved for tombstones
     if (rowCount <= 0L) {
-      return 0;
-    }
-    if (rowCount <= 10_000L) {
       return 1;
     }
-    if (rowCount <= 2_000_000L) {
+    if (rowCount <= 10_000L) {
       return 2;
     }
-    if (rowCount <= 4_000_000L) {
+    if (rowCount <= 2_000_000L) {
       return 3;
     }
-    if (rowCount <= 6_000_000L) {
+    if (rowCount <= 4_000_000L) {
       return 4;
     }
-    if (rowCount <= 8_000_000L) {
+    if (rowCount <= 6_000_000L) {
       return 5;
     }
-    if (rowCount <= 10_000_000L) {
+    if (rowCount <= 8_000_000L) {
       return 6;
     }
-    return 7;
+    if (rowCount <= 10_000_000L) {
+      return 7;
+    }
+    return 8;
   }
 
   /**
@@ -130,8 +148,8 @@ public class SegmentRowCountDistribution
   public void forEachDimension(final ObjIntConsumer<String> consumer)
   {
     for (int ii = 0; ii < buckets.length; ii++) {
-      // only report 0 bucket if it has nonzero value
-      if (ii != 0 || buckets[ii] != 0) {
+      // only report tombstones 0 bucket if it has nonzero value
+      if (ii > 1 || buckets[ii] != 0) {
         consumer.accept(getBucketDimensionFromIndex(ii), buckets[ii]);
       }
     }
