@@ -300,7 +300,6 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <argLine>
-                                ${jdk.surefire.argLine}
                                 -server -Xms3G -Xmx3G -Djub.consumers=CONSOLE,H2 -Djub.db.file=benchmarks/benchmarks
                                 -XX:+ExitOnOutOfMemoryError
                                 -XX:+HeapDumpOnOutOfMemoryError
