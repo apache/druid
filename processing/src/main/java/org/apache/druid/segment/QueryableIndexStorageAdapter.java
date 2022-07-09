@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -44,8 +43,9 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  *
@@ -82,8 +82,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public Iterable<String> getAvailableMetrics()
   {
-    HashSet<String> columnNames = Sets.newHashSet(index.getColumnNames());
-    return Sets.difference(columnNames, Sets.newHashSet(index.getAvailableDimensions()));
+    // Use LinkedHashSet to preserve the original order.
+    final Set<String> columnNames = new LinkedHashSet<>(index.getColumnNames());
+
+    for (final String dimension : index.getAvailableDimensions()) {
+      columnNames.remove(dimension);
+    }
+
+    return columnNames;
   }
 
   @Override

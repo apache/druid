@@ -78,6 +78,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -206,7 +207,10 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         serverView,
         segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(globalTableJoinable), ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)),
+        new MapJoinableFactory(
+            ImmutableSet.of(globalTableJoinable),
+            ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
+        ),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
         new BrokerInternalQueryConfig(),
@@ -288,16 +292,16 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     Assert.assertEquals("__time", fields.get(0).getName());
     Assert.assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
 
-    Assert.assertEquals("cnt", fields.get(1).getName());
-    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(1).getType().getSqlTypeName());
+    Assert.assertEquals("dim2", fields.get(1).getName());
+    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(1).getType().getSqlTypeName());
 
-    Assert.assertEquals("dim1", fields.get(2).getName());
-    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(2).getType().getSqlTypeName());
+    Assert.assertEquals("m1", fields.get(2).getName());
+    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(2).getType().getSqlTypeName());
 
-    Assert.assertEquals("dim2", fields.get(3).getName());
+    Assert.assertEquals("dim1", fields.get(3).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getSqlTypeName());
 
-    Assert.assertEquals("m1", fields.get(4).getName());
+    Assert.assertEquals("cnt", fields.get(4).getName());
     Assert.assertEquals(SqlTypeName.BIGINT, fields.get(4).getType().getSqlTypeName());
 
     Assert.assertEquals("unique_dim1", fields.get(5).getName());
@@ -1065,7 +1069,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         new TableDataSource(segment.getDataSource()),
         new MultipleSpecificSegmentSpec(
             segmentIterable.stream()
-                         .map(SegmentId::toDescriptor).collect(Collectors.toList())),
+                           .map(SegmentId::toDescriptor).collect(Collectors.toList())),
         new AllColumnIncluderator(),
         false,
         queryContext,
@@ -1094,7 +1098,8 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
 
     EasyMock.expect(factoryMock.factorize()).andReturn(lifecycleMock).once();
     // This is the mat of the test, making sure that the query created by the method under test matches the expected query, specifically the operator configured context
-    EasyMock.expect(lifecycleMock.runSimple(expectedMetadataQuery, AllowAllAuthenticator.ALLOW_ALL_RESULT, Access.OK)).andReturn(null);
+    EasyMock.expect(lifecycleMock.runSimple(expectedMetadataQuery, AllowAllAuthenticator.ALLOW_ALL_RESULT, Access.OK))
+            .andReturn(null);
 
     EasyMock.replay(factoryMock, lifecycleMock);
 
@@ -1107,36 +1112,28 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
   @Test
   public void testSegmentMetadataColumnType()
   {
+    // Verify order is preserved.
+    final LinkedHashMap<String, ColumnAnalysis> columns = new LinkedHashMap<>();
+    columns.put(
+        "a",
+        new ColumnAnalysis(ColumnType.STRING, ColumnType.STRING.asTypeString(), false, true, 1234, 26, "a", "z", null)
+    );
+
+    columns.put(
+        "count",
+        new ColumnAnalysis(ColumnType.LONG, ColumnType.LONG.asTypeString(), false, true, 1234, 26, "a", "z", null)
+    );
+
+    columns.put(
+        "b",
+        new ColumnAnalysis(ColumnType.DOUBLE, ColumnType.DOUBLE.asTypeString(), false, true, 1234, 26, null, null, null)
+    );
+
     RowSignature signature = DruidSchema.analysisToRowSignature(
         new SegmentAnalysis(
             "id",
             ImmutableList.of(Intervals.utc(1L, 2L)),
-            ImmutableMap.of(
-                "a",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ColumnType.STRING.asTypeString(),
-                    false,
-                    true,
-                    1234,
-                    26,
-                    "a",
-                    "z",
-                    null
-                ),
-                "count",
-                new ColumnAnalysis(
-                    ColumnType.LONG,
-                    ColumnType.LONG.asTypeString(),
-                    false,
-                    true,
-                    1234,
-                    26,
-                    "a",
-                    "z",
-                    null
-                )
-            ),
+            columns,
             1234,
             100,
             null,
@@ -1147,7 +1144,11 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     );
 
     Assert.assertEquals(
-        RowSignature.builder().add("a", ColumnType.STRING).add("count", ColumnType.LONG).build(),
+        RowSignature.builder()
+                    .add("a", ColumnType.STRING)
+                    .add("count", ColumnType.LONG)
+                    .add("b", ColumnType.DOUBLE)
+                    .build(),
         signature
     );
   }
@@ -1160,30 +1161,32 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         new SegmentAnalysis(
             "id",
             ImmutableList.of(Intervals.utc(1L, 2L)),
-            ImmutableMap.of(
-                "a",
-                new ColumnAnalysis(
-                    null,
-                    ColumnType.STRING.asTypeString(),
-                    false,
-                    true,
-                    1234,
-                    26,
+            new LinkedHashMap<>(
+                ImmutableMap.of(
                     "a",
-                    "z",
-                null
-                ),
-                "count",
-                new ColumnAnalysis(
-                    null,
-                    ColumnType.LONG.asTypeString(),
-                    false,
-                    true,
-                    1234,
-                    26,
-                    "a",
-                    "z",
-                    null
+                    new ColumnAnalysis(
+                        null,
+                        ColumnType.STRING.asTypeString(),
+                        false,
+                        true,
+                        1234,
+                        26,
+                        "a",
+                        "z",
+                        null
+                    ),
+                    "count",
+                    new ColumnAnalysis(
+                        null,
+                        ColumnType.LONG.asTypeString(),
+                        false,
+                        true,
+                        1234,
+                        26,
+                        "a",
+                        "z",
+                        null
+                    )
                 )
             ),
             1234,
