@@ -41,12 +41,12 @@ public class GroupByQueryConfig
   public static final String CTX_KEY_EXECUTING_NESTED_QUERY = "executingNestedQuery";
   public static final String CTX_KEY_ARRAY_RESULT_ROWS = "resultAsArray";
   public static final String CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING = "groupByEnableMultiValueUnnesting";
+  public static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
   private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
   private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
   private static final String CTX_KEY_MAX_RESULTS = "maxResults";
   private static final String CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS = "bufferGrouperInitialBuckets";
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_LOAD_FACTOR = "bufferGrouperMaxLoadFactor";
-  private static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
   private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
   private static final String CTX_KEY_INTERMEDIATE_COMBINE_DEGREE = "intermediateCombineDegree";

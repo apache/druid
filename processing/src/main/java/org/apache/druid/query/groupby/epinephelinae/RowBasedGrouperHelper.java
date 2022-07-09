@@ -274,7 +274,7 @@ public class RowBasedGrouperHelper
           includeTimestamp,
           query.getContextSortByDimsFirst(),
           query.getDimensions(),
-          maxMergingDictionarySize,// use entire dictionary space for combining key serde
+          maxMergingDictionarySize, // use entire dictionary space for combining key serde
           valueTypes,
           aggregatorFactories,
           limitSpec
