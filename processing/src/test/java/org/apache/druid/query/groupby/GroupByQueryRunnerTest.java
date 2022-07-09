@@ -303,13 +303,13 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public long getMaxSelectorDictionarySize()
+      public long getConfiguredMaxSelectorDictionarySize()
       {
         return 20;
       }
 
       @Override
-      public long getMaxMergingDictionarySize()
+      public long getConfiguredMaxMergingDictionarySize()
       {
         return 400;
       }

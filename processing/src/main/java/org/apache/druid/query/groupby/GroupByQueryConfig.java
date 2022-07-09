@@ -20,14 +20,19 @@
 package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
+import org.apache.druid.utils.JvmUtils;
 
 /**
  *
  */
 public class GroupByQueryConfig
 {
+  public static final int AUTOMATIC = -1;
+
   public static final String CTX_KEY_STRATEGY = "groupByStrategy";
   public static final String CTX_KEY_FORCE_LIMIT_PUSH_DOWN = "forceLimitPushDown";
   public static final String CTX_KEY_APPLY_LIMIT_PUSH_DOWN = "applyLimitPushDown";
@@ -43,12 +48,14 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_LOAD_FACTOR = "bufferGrouperMaxLoadFactor";
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
-  private static final String CTX_KEY_MAX_SELECTOR_DICTIONARY_SIZE = "maxSelectorDictionarySize";
-  private static final String CTX_KEY_MAX_MERGING_DICTIONARY_SIZE = "maxMergingDictionarySize";
   private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
   private static final String CTX_KEY_INTERMEDIATE_COMBINE_DEGREE = "intermediateCombineDegree";
   private static final String CTX_KEY_NUM_PARALLEL_COMBINE_THREADS = "numParallelCombineThreads";
   private static final String CTX_KEY_MERGE_THREAD_LOCAL = "mergeThreadLocal";
+  private static final double MERGING_DICTIONARY_HEAP_FRACTION = 0.3;
+  private static final double SELECTOR_DICTIONARY_HEAP_FRACTION = 0.10;
+  private static final long MIN_AUTOMATIC_DICTIONARY_SIZE = 1_000_000;
+  private static final long MAX_AUTOMATIC_DICTIONARY_SIZE = 1_000_000_000;
 
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
@@ -75,11 +82,11 @@ public class GroupByQueryConfig
   @JsonProperty
   // Size of on-heap string dictionary for merging, per-processing-thread; when exceeded, partial results will be
   // emitted to the merge buffer early.
-  private long maxSelectorDictionarySize = 100_000_000L;
+  private long maxSelectorDictionarySize = AUTOMATIC;
 
   @JsonProperty
   // Size of on-heap string dictionary for merging, per-query; when exceeded, partial results will be spilled to disk
-  private long maxMergingDictionarySize = 100_000_000L;
+  private long maxMergingDictionarySize = AUTOMATIC;
 
   @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
@@ -165,14 +172,58 @@ public class GroupByQueryConfig
     return bufferGrouperInitialBuckets;
   }
 
-  public long getMaxSelectorDictionarySize()
+  public long getConfiguredMaxSelectorDictionarySize()
   {
     return maxSelectorDictionarySize;
   }
 
-  public long getMaxMergingDictionarySize()
+  public long getActualMaxSelectorDictionarySize(final DruidProcessingConfig processingConfig)
+  {
+    if (maxSelectorDictionarySize == AUTOMATIC) {
+      final long heapForDictionaries =
+          (long) (JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() * SELECTOR_DICTIONARY_HEAP_FRACTION);
+
+      return Math.max(
+          MIN_AUTOMATIC_DICTIONARY_SIZE,
+          Math.min(
+              MAX_AUTOMATIC_DICTIONARY_SIZE,
+
+              // numMergeBuffers is the number of groupBy queries that can run simultaneously
+              heapForDictionaries / processingConfig.getNumMergeBuffers()
+          )
+      );
+    } else if (maxSelectorDictionarySize > 0) {
+      return maxSelectorDictionarySize;
+    } else {
+      throw new IAE("Invalid maxSelectorDictionarySize: %d", maxSelectorDictionarySize);
+    }
+  }
+
+  public long getConfiguredMaxMergingDictionarySize()
   {
     return maxMergingDictionarySize;
+  }
+
+  public long getActualMaxMergingDictionarySize(final DruidProcessingConfig processingConfig)
+  {
+    if (maxMergingDictionarySize == AUTOMATIC) {
+      final long heapForDictionaries =
+          (long) (JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() * MERGING_DICTIONARY_HEAP_FRACTION);
+
+      return Math.max(
+          MIN_AUTOMATIC_DICTIONARY_SIZE,
+          Math.min(
+              MAX_AUTOMATIC_DICTIONARY_SIZE,
+
+              // numMergeBuffers is the number of groupBy queries that can run simultaneously
+              heapForDictionaries / processingConfig.getNumMergeBuffers()
+          )
+      );
+    } else if (maxMergingDictionarySize > 0) {
+      return maxMergingDictionarySize;
+    } else {
+      throw new IAE("Invalid maxMergingDictionarySize: %d", maxMergingDictionarySize);
+    }
   }
 
   public long getMaxOnDiskStorage()
@@ -259,20 +310,8 @@ public class GroupByQueryConfig
         ((Number) query.getContextValue(CTX_KEY_MAX_ON_DISK_STORAGE, getMaxOnDiskStorage())).longValue(),
         getMaxOnDiskStorage()
     );
-    newConfig.maxSelectorDictionarySize = Math.min(
-        ((Number) query.getContextValue(
-            CTX_KEY_MAX_SELECTOR_DICTIONARY_SIZE,
-            getMaxSelectorDictionarySize()
-        )).longValue(),
-        getMaxSelectorDictionarySize()
-    );
-    newConfig.maxMergingDictionarySize = Math.min(
-        ((Number) query.getContextValue(
-            CTX_KEY_MAX_MERGING_DICTIONARY_SIZE,
-            getMaxMergingDictionarySize()
-        )).longValue(),
-        getMaxMergingDictionarySize()
-    );
+    newConfig.maxSelectorDictionarySize = maxSelectorDictionarySize; // No overrides
+    newConfig.maxMergingDictionarySize = maxMergingDictionarySize; // No overrides
     newConfig.forcePushDownLimit = query.getContextBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
     newConfig.applyLimitPushDownToSegment = query.getContextBoolean(
         CTX_KEY_APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT,
