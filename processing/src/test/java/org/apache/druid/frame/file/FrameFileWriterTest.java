@@ -74,7 +74,12 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
 
     MatcherAssert.assertThat(
         e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("end marker location out of range"))
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.anyOf(
+                CoreMatchers.containsString("end marker location out of range"),
+                CoreMatchers.containsString("end marker not in expected location")
+            )
+        )
     );
   }
 }
