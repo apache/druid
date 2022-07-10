@@ -59,8 +59,13 @@ public class GroupByQueryConfig
   //  2) In no case do we want any dictionary to exceed 1GB of memory: if heaps are giant, better to spill at
   //     "reasonable" sizes rather than get giant dictionaries. (There is probably some other reason the user
   //     wanted a giant heap, so we shouldn't monopolize it with dictionaries.)
+  //  3) Use somewhat more memory for merging dictionary vs. selector dictionaries, because if a merging
+  //     dictionary is full we must spill to disk, whereas if a selector dictionary is full we simply emit
+  //     early to the merge buffer. So, a merging dictionary filling up has a more severe impact on
+  //     query performance.
   private static final double MERGING_DICTIONARY_HEAP_FRACTION = 0.3;
   private static final double SELECTOR_DICTIONARY_HEAP_FRACTION = 0.1;
+  private static final long MIN_AUTOMATIC_DICTIONARY_SIZE = 1;
   private static final long MAX_AUTOMATIC_DICTIONARY_SIZE = 1_000_000_000;
 
   @JsonProperty
@@ -194,9 +199,12 @@ public class GroupByQueryConfig
     if (maxSelectorDictionarySize.getBytes() == AUTOMATIC) {
       final long heapForDictionaries = (long) (maxHeapSize * SELECTOR_DICTIONARY_HEAP_FRACTION);
 
-      return Math.min(
-          MAX_AUTOMATIC_DICTIONARY_SIZE,
-          heapForDictionaries / numConcurrentQueries
+      return Math.max(
+          MIN_AUTOMATIC_DICTIONARY_SIZE,
+          Math.min(
+              MAX_AUTOMATIC_DICTIONARY_SIZE,
+              heapForDictionaries / numConcurrentQueries
+          )
       );
     } else {
       return maxSelectorDictionarySize.getBytes();
@@ -229,9 +237,12 @@ public class GroupByQueryConfig
     if (maxMergingDictionarySize.getBytes() == AUTOMATIC) {
       final long heapForDictionaries = (long) (maxHeapSize * MERGING_DICTIONARY_HEAP_FRACTION);
 
-      return Math.min(
-          MAX_AUTOMATIC_DICTIONARY_SIZE,
-          heapForDictionaries / numConcurrentQueries
+      return Math.max(
+          MIN_AUTOMATIC_DICTIONARY_SIZE,
+          Math.min(
+              MAX_AUTOMATIC_DICTIONARY_SIZE,
+              heapForDictionaries / numConcurrentQueries
+          )
       );
     } else {
       return maxMergingDictionarySize.getBytes();
