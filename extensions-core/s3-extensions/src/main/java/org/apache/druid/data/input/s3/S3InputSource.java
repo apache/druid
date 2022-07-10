@@ -37,6 +37,9 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterators;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.druid.common.aws.AWSClientConfig;
+import org.apache.druid.common.aws.AWSEndpointConfig;
+import org.apache.druid.common.aws.AWSProxyConfig;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
@@ -183,10 +186,25 @@ public class S3InputSource extends CloudObjectInputSource
       List<URI> prefixes,
       List<CloudObjectLocation> objects,
       String filter,
-      S3InputSourceConfig s3InputSourceConfig
+      S3InputSourceConfig s3InputSourceConfig,
+      AWSProxyConfig awsProxyConfig,
+      AWSEndpointConfig awsEndpointConfig,
+      AWSClientConfig awsClientConfig
   )
   {
-    this(s3Client, s3ClientBuilder, inputDataConfig, uris, prefixes, objects, filter, s3InputSourceConfig, null);
+    this(s3Client,
+         s3ClientBuilder,
+         inputDataConfig,
+         uris,
+         prefixes,
+         objects,
+         filter,
+         s3InputSourceConfig,
+         awsProxyConfig,
+         awsEndpointConfig,
+         awsClientConfig,
+         null
+    );
   }
 
   @VisibleForTesting
@@ -199,10 +217,26 @@ public class S3InputSource extends CloudObjectInputSource
       List<CloudObjectLocation> objects,
       String filter,
       S3InputSourceConfig s3InputSourceConfig,
+      AWSProxyConfig awsProxyConfig,
+      AWSEndpointConfig awsEndpointConfig,
+      AWSClientConfig awsClientConfig,
       int maxRetries
   )
   {
-    this(s3Client, s3ClientBuilder, inputDataConfig, uris, prefixes, objects, filter, s3InputSourceConfig, null);
+    this(
+        s3Client,
+        s3ClientBuilder,
+        inputDataConfig,
+        uris,
+        prefixes,
+        objects,
+        filter,
+        s3InputSourceConfig,
+        awsProxyConfig,
+        awsEndpointConfig,
+        awsClientConfig,
+        null
+    );
     this.maxRetries = maxRetries;
   }
 

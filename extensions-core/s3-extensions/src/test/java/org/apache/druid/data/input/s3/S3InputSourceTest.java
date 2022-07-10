@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.s3;
 
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
@@ -182,6 +183,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
 
@@ -200,6 +204,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
+        null,
+        null,
+        null,
         null,
         null,
         null
@@ -222,7 +229,11 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         "*.parquet",
+        null,
+        null,
+        null,
         null
+
     );
 
     Assert.assertEquals(
@@ -239,6 +250,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         EXPECTED_URIS,
+        null,
+        null,
+        null,
         null,
         null,
         null,
@@ -259,6 +273,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
     final S3InputSource serdeWithPrefixes =
@@ -276,6 +293,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
+        null,
+        null,
+        null,
         null,
         null
     );
@@ -302,7 +322,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         EXPECTED_LOCATION,
         null,
-        CLOUD_CONFIG_PROPERTIES
+        CLOUD_CONFIG_PROPERTIES,
+        PROXY_CONFIG,
+        ENDPOINT_CONFIG,
+        CLIENT_CONFIG
     );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
@@ -363,6 +386,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
+        null,
         mockConfigPropertiesWithoutKeyAndSecret,
         mockAwsProxyConfig,
         mockAwsEndpointConfig,
@@ -398,7 +422,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         EXPECTED_LOCATION,
         null,
-        mockConfigPropertiesWithoutKeyAndSecret
+        mockConfigPropertiesWithoutKeyAndSecret,
+        PROXY_CONFIG,
+        ENDPOINT_CONFIG,
+        CLIENT_CONFIG
     );
     Assert.assertNotNull(withPrefixes);
     // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
@@ -421,7 +448,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         EXPECTED_LOCATION,
         null,
-        CLOUD_CONFIG_PROPERTIES
+        CLOUD_CONFIG_PROPERTIES,
+        PROXY_CONFIG,
+        ENDPOINT_CONFIG,
+        CLIENT_CONFIG
     );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
@@ -443,6 +473,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         EXPECTED_LOCATION,
         null,
+        null,
+        null,
+        null,
         null
     );
     final S3InputSource serdeWithPrefixes =
@@ -461,6 +494,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(),
         ImmutableList.of(),
         EXPECTED_LOCATION,
+        null,
+        null,
+        null,
         null,
         null
     );
@@ -482,6 +518,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
   }
@@ -498,6 +537,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         EXPECTED_URIS,
         null,
         EXPECTED_OBJECTS,
+        null,
+        null,
+        null,
         null,
         null
     );
@@ -516,6 +558,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         EXPECTED_OBJECTS,
         null,
+        null,
+        null,
+        null,
         null
     );
   }
@@ -531,6 +576,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         EXPECTED_URIS,
         PREFIXES,
+        null,
+        null,
+        null,
         null,
         null,
         null
@@ -550,6 +598,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         EXPECTED_LOCATION,
         null,
+        null,
+        null,
+        null,
         null
     );
   }
@@ -566,6 +617,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         EXPECTED_URIS,
         PREFIXES,
         ImmutableList.of(),
+        null,
+        null,
+        null,
         null,
         null
     );
@@ -584,6 +638,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         EXPECTED_LOCATION,
         null,
+        null,
+        null,
+        null,
         null
     );
   }
@@ -596,6 +653,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         EXPECTED_URIS,
+        null,
+        null,
+        null,
         null,
         null,
         null,
@@ -621,6 +681,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         "*.csv",
+        null,
+        null,
+        null,
         null
     );
 
@@ -643,6 +706,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         OBJECTS_BEFORE_FILTER,
         "*.csv",
+        null,
+        null,
+        null,
         null
     );
 
@@ -664,6 +730,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_OBJECTS,
+        null,
+        null,
+        null,
         null,
         null
     );
@@ -690,6 +759,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
+        null,
+        null,
+        null,
         null,
         null,
         null
@@ -720,6 +792,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         null,
         "*.csv",
+        null,
+        null,
+        null,
         null
     );
 
@@ -746,6 +821,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
+        null,
+        null,
+        null,
         null,
         null,
         null
@@ -779,6 +857,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
 
@@ -807,6 +888,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
+        null,
+        null,
+        null,
         null,
         null,
         null
@@ -839,6 +923,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
+        null,
+        null,
+        null,
         null,
         null,
         null
@@ -885,6 +972,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
         3 // only have three retries since they are slow
     );
 
@@ -927,6 +1017,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
+        null,
+        null,
+        null,
         null,
         null,
         null
