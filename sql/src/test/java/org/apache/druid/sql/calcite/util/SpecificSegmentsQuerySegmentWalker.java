@@ -41,6 +41,7 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
@@ -49,7 +50,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -72,6 +72,21 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
   private final List<Closeable> closeables = new ArrayList<>();
   private final List<DataSegment> segments = new ArrayList<>();
+  private static final LookupExtractorFactoryContainerProvider LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER =
+      new LookupExtractorFactoryContainerProvider()
+      {
+        @Override
+        public Set<String> getAllLookupNames()
+        {
+          return Collections.emptySet();
+        }
+
+        @Override
+        public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+        {
+          return Optional.empty();
+        }
+      };
 
   /**
    * Create an instance using the provided query runner factory conglomerate and lookup provider.
@@ -81,22 +96,14 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   public SpecificSegmentsQuerySegmentWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
       final LookupExtractorFactoryContainerProvider lookupProvider,
-      @Nullable final JoinableFactory joinableFactory,
+      final JoinableFactoryWrapper joinableFactoryWrapper,
       final QueryScheduler scheduler
   )
   {
-    final JoinableFactory joinableFactoryToUse;
-
-    if (joinableFactory == null) {
-      joinableFactoryToUse = QueryStackTests.makeJoinableFactoryForLookup(lookupProvider);
-    } else {
-      joinableFactoryToUse = joinableFactory;
-    }
-
     this.walker = QueryStackTests.createClientQuerySegmentWalker(
         QueryStackTests.createClusterQuerySegmentWalker(
             timelines,
-            joinableFactoryToUse,
+            joinableFactoryWrapper,
             conglomerate,
             scheduler
         ),
@@ -108,11 +115,11 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                             .put(LookupDataSource.class, new LookupSegmentWrangler(lookupProvider))
                             .build()
             ),
-            joinableFactoryToUse,
+            joinableFactoryWrapper,
             scheduler
         ),
         conglomerate,
-        joinableFactoryToUse,
+        joinableFactoryWrapper.getJoinableFactory(),
         new ServerConfig()
     );
   }
@@ -125,21 +132,8 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   {
     this(
         conglomerate,
-        new LookupExtractorFactoryContainerProvider()
-        {
-          @Override
-          public Set<String> getAllLookupNames()
-          {
-            return Collections.emptySet();
-          }
-
-          @Override
-          public Optional<LookupExtractorFactoryContainer> get(String lookupName)
-          {
-            return Optional.empty();
-          }
-        },
-        null,
+        LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER,
+        new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryForLookup(LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER)),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
   }

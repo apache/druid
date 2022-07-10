@@ -49,6 +49,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.ServerManagerTest;
@@ -139,7 +140,7 @@ public class CachingClusteredClientPerfTest
         Mockito.mock(DruidProcessingConfig.class),
         ForkJoinPool.commonPool(),
         queryScheduler,
-        NoopJoinableFactory.INSTANCE,
+        new JoinableFactoryWrapper(NoopJoinableFactory.INSTANCE),
         new NoopServiceEmitter()
     );
 
