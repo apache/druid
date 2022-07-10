@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
+import org.apache.druid.indexing.overlord.config.TaskMasterConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.helpers.OverlordHelperManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
@@ -57,6 +58,8 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 {
   private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
 
+  private final TaskMasterConfig config;
+
   private final DruidLeaderSelector overlordLeaderSelector;
   private final DruidLeaderSelector.Listener leadershipListener;
 
@@ -80,6 +83,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   public TaskMaster(
       final TaskLockConfig taskLockConfig,
       final TaskQueueConfig taskQueueConfig,
+      final TaskMasterConfig taskMasterConfig,
       final DefaultTaskConfig defaultTaskConfig,
       final TaskLockbox taskLockbox,
       final TaskStorage taskStorage,
@@ -94,6 +98,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       @IndexingService final DruidLeaderSelector overlordLeaderSelector
   )
   {
+    this.config = taskMasterConfig;
     this.supervisorManager = supervisorManager;
     this.taskActionClientFactory = taskActionClientFactory;
 
@@ -230,6 +235,11 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   public String getCurrentLeader()
   {
     return overlordLeaderSelector.getCurrentLeader();
+  }
+
+  public TaskMasterConfig getConfig()
+  {
+    return config;
   }
 
   public Optional<TaskRunner> getTaskRunner()

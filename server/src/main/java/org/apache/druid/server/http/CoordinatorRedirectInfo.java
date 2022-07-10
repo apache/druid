@@ -64,6 +64,10 @@ public class CoordinatorRedirectInfo implements RedirectInfo
       return true;
     }
 
+    if (!coordinator.getConfig().getDelegateRequestsToFollowers()) {
+      return false;
+    }
+
     if (requestURI != null) {
       // If the pattern matched exactly, return true
       if (LOCAL_GET_PATHS.contains(requestURI)) {

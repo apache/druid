@@ -143,4 +143,9 @@ public abstract class DruidCoordinatorConfig
     return true;
   }
 
+  @Config("druid.coordinator.delegateRequestsToFollowers")
+  public boolean getDelegateRequestsToFollowers()
+  {
+    return false;
+  }
 }

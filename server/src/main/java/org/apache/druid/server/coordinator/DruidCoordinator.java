@@ -408,6 +408,11 @@ public class DruidCoordinator
     return compactSegments.getAutoCompactionSnapshot();
   }
 
+  public DruidCoordinatorConfig getConfig()
+  {
+    return config;
+  }
+
   public CoordinatorDynamicConfig getDynamicConfigs()
   {
     return CoordinatorDynamicConfig.current(configManager);
