@@ -40,7 +40,7 @@ public class GroupByQueryConfigTest
       .put("maxResults", "3")
       .put("maxOnDiskStorage", "4")
       .put("maxSelectorDictionarySize", "5")
-      .put("maxMergingDictionarySize", "6")
+      .put("maxMergingDictionarySize", "6M")
       .put("bufferGrouperMaxLoadFactor", "7")
       .build();
 
@@ -56,7 +56,7 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(3, config.getMaxResults());
     Assert.assertEquals(4, config.getMaxOnDiskStorage());
     Assert.assertEquals(5, config.getConfiguredMaxSelectorDictionarySize());
-    Assert.assertEquals(6, config.getConfiguredMaxMergingDictionarySize());
+    Assert.assertEquals(6_000_000, config.getConfiguredMaxMergingDictionarySize());
     Assert.assertEquals(7.0, config.getBufferGrouperMaxLoadFactor(), 0.0);
     Assert.assertFalse(config.isApplyLimitPushDownToSegment());
   }
@@ -80,7 +80,7 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(3, config2.getMaxResults());
     Assert.assertEquals(4, config2.getMaxOnDiskStorage());
     Assert.assertEquals(5, config2.getConfiguredMaxSelectorDictionarySize());
-    Assert.assertEquals(6, config2.getConfiguredMaxMergingDictionarySize());
+    Assert.assertEquals(6_000_000, config2.getConfiguredMaxMergingDictionarySize());
     Assert.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
     Assert.assertFalse(config2.isApplyLimitPushDownToSegment());
   }
@@ -114,8 +114,56 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(2, config2.getMaxResults());
     Assert.assertEquals(0, config2.getMaxOnDiskStorage());
     Assert.assertEquals(5 /* Can't override */, config2.getConfiguredMaxSelectorDictionarySize());
-    Assert.assertEquals(6 /* Can't override */, config2.getConfiguredMaxMergingDictionarySize());
+    Assert.assertEquals(6_000_000 /* Can't override */, config2.getConfiguredMaxMergingDictionarySize());
     Assert.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
     Assert.assertTrue(config2.isApplyLimitPushDownToSegment());
+  }
+
+  @Test
+  public void testAutomaticMergingDictionarySize()
+  {
+    final GroupByQueryConfig config = MAPPER.convertValue(
+        ImmutableMap.of("maxMergingDictionarySize", "0"),
+        GroupByQueryConfig.class
+    );
+
+    Assert.assertEquals(GroupByQueryConfig.AUTOMATIC, config.getConfiguredMaxMergingDictionarySize());
+    Assert.assertEquals(150_000_000, config.getActualMaxMergingDictionarySize(1_000_000_000, 2));
+  }
+
+  @Test
+  public void testNonAutomaticMergingDictionarySize()
+  {
+    final GroupByQueryConfig config = MAPPER.convertValue(
+        ImmutableMap.of("maxMergingDictionarySize", "100"),
+        GroupByQueryConfig.class
+    );
+
+    Assert.assertEquals(100, config.getConfiguredMaxMergingDictionarySize());
+    Assert.assertEquals(100, config.getActualMaxMergingDictionarySize(1_000_000_000, 2));
+  }
+
+  @Test
+  public void testAutomaticSelectorDictionarySize()
+  {
+    final GroupByQueryConfig config = MAPPER.convertValue(
+        ImmutableMap.of("maxSelectorDictionarySize", "0"),
+        GroupByQueryConfig.class
+    );
+
+    Assert.assertEquals(GroupByQueryConfig.AUTOMATIC, config.getConfiguredMaxSelectorDictionarySize());
+    Assert.assertEquals(50_000_000, config.getActualMaxSelectorDictionarySize(1_000_000_000, 2));
+  }
+
+  @Test
+  public void testNonAutomaticSelectorDictionarySize()
+  {
+    final GroupByQueryConfig config = MAPPER.convertValue(
+        ImmutableMap.of("maxSelectorDictionarySize", "100"),
+        GroupByQueryConfig.class
+    );
+
+    Assert.assertEquals(100, config.getConfiguredMaxSelectorDictionarySize());
+    Assert.assertEquals(100, config.getActualMaxSelectorDictionarySize(1_000_000_000, 2));
   }
 }

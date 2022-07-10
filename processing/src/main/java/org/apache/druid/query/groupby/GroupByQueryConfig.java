@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
@@ -31,7 +32,7 @@ import org.apache.druid.utils.JvmUtils;
  */
 public class GroupByQueryConfig
 {
-  public static final int AUTOMATIC = -1;
+  public static final long AUTOMATIC = 0;
 
   public static final String CTX_KEY_STRATEGY = "groupByStrategy";
   public static final String CTX_KEY_FORCE_LIMIT_PUSH_DOWN = "forceLimitPushDown";
@@ -52,9 +53,14 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_INTERMEDIATE_COMBINE_DEGREE = "intermediateCombineDegree";
   private static final String CTX_KEY_NUM_PARALLEL_COMBINE_THREADS = "numParallelCombineThreads";
   private static final String CTX_KEY_MERGE_THREAD_LOCAL = "mergeThreadLocal";
+
+  // Constants for sizing merging and selector dictionaries. Rationale for these constants:
+  //  1) In no case do we want total aggregate dictionary size to exceed 40% of max memory.
+  //  2) In no case do we want any dictionary to exceed 1GB of memory: if heaps are giant, better to spill at
+  //     "reasonable" sizes rather than get giant dictionaries. (There is probably some other reason the user
+  //     wanted a giant heap, so we shouldn't monopolize it with dictionaries.)
   private static final double MERGING_DICTIONARY_HEAP_FRACTION = 0.3;
-  private static final double SELECTOR_DICTIONARY_HEAP_FRACTION = 0.10;
-  private static final long MIN_AUTOMATIC_DICTIONARY_SIZE = 1_000_000;
+  private static final double SELECTOR_DICTIONARY_HEAP_FRACTION = 0.1;
   private static final long MAX_AUTOMATIC_DICTIONARY_SIZE = 1_000_000_000;
 
   @JsonProperty
@@ -82,11 +88,11 @@ public class GroupByQueryConfig
   @JsonProperty
   // Size of on-heap string dictionary for merging, per-processing-thread; when exceeded, partial results will be
   // emitted to the merge buffer early.
-  private long maxSelectorDictionarySize = AUTOMATIC;
+  private HumanReadableBytes maxSelectorDictionarySize = HumanReadableBytes.valueOf(AUTOMATIC);
 
   @JsonProperty
   // Size of on-heap string dictionary for merging, per-query; when exceeded, partial results will be spilled to disk
-  private long maxMergingDictionarySize = AUTOMATIC;
+  private HumanReadableBytes maxMergingDictionarySize = HumanReadableBytes.valueOf(AUTOMATIC);
 
   @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
@@ -172,58 +178,74 @@ public class GroupByQueryConfig
     return bufferGrouperInitialBuckets;
   }
 
-  public long getConfiguredMaxSelectorDictionarySize()
+  /**
+   * For unit tests. Production code should use {@link #getActualMaxSelectorDictionarySize}.
+   */
+  long getConfiguredMaxSelectorDictionarySize()
   {
-    return maxSelectorDictionarySize;
+    return maxSelectorDictionarySize.getBytes();
+  }
+
+  /**
+   * For unit tests. Production code should use {@link #getActualMaxSelectorDictionarySize}.
+   */
+  long getActualMaxSelectorDictionarySize(final long maxHeapSize, final int numConcurrentQueries)
+  {
+    if (maxSelectorDictionarySize.getBytes() == AUTOMATIC) {
+      final long heapForDictionaries = (long) (maxHeapSize * SELECTOR_DICTIONARY_HEAP_FRACTION);
+
+      return Math.min(
+          MAX_AUTOMATIC_DICTIONARY_SIZE,
+          heapForDictionaries / numConcurrentQueries
+      );
+    } else {
+      return maxSelectorDictionarySize.getBytes();
+    }
   }
 
   public long getActualMaxSelectorDictionarySize(final DruidProcessingConfig processingConfig)
   {
-    if (maxSelectorDictionarySize == AUTOMATIC) {
-      final long heapForDictionaries =
-          (long) (JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() * SELECTOR_DICTIONARY_HEAP_FRACTION);
+    return getActualMaxSelectorDictionarySize(
+        JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
 
-      return Math.max(
-          MIN_AUTOMATIC_DICTIONARY_SIZE,
-          Math.min(
-              MAX_AUTOMATIC_DICTIONARY_SIZE,
-
-              // numMergeBuffers is the number of groupBy queries that can run simultaneously
-              heapForDictionaries / processingConfig.getNumMergeBuffers()
-          )
-      );
-    } else if (maxSelectorDictionarySize > 0) {
-      return maxSelectorDictionarySize;
-    } else {
-      throw new IAE("Invalid maxSelectorDictionarySize: %d", maxSelectorDictionarySize);
-    }
+        // numMergeBuffers is the number of groupBy queries that can run simultaneously
+        processingConfig.getNumMergeBuffers()
+    );
   }
 
-  public long getConfiguredMaxMergingDictionarySize()
+  /**
+   * For unit tests. Production code should use {@link #getActualMaxMergingDictionarySize}.
+   */
+  long getConfiguredMaxMergingDictionarySize()
   {
-    return maxMergingDictionarySize;
+    return maxMergingDictionarySize.getBytes();
+  }
+
+  /**
+   * For unit tests. Production code should use {@link #getActualMaxMergingDictionarySize}.
+   */
+  public long getActualMaxMergingDictionarySize(final long maxHeapSize, final int numConcurrentQueries)
+  {
+    if (maxMergingDictionarySize.getBytes() == AUTOMATIC) {
+      final long heapForDictionaries = (long) (maxHeapSize * MERGING_DICTIONARY_HEAP_FRACTION);
+
+      return Math.min(
+          MAX_AUTOMATIC_DICTIONARY_SIZE,
+          heapForDictionaries / numConcurrentQueries
+      );
+    } else {
+      return maxMergingDictionarySize.getBytes();
+    }
   }
 
   public long getActualMaxMergingDictionarySize(final DruidProcessingConfig processingConfig)
   {
-    if (maxMergingDictionarySize == AUTOMATIC) {
-      final long heapForDictionaries =
-          (long) (JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() * MERGING_DICTIONARY_HEAP_FRACTION);
+    return getActualMaxMergingDictionarySize(
+        JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
 
-      return Math.max(
-          MIN_AUTOMATIC_DICTIONARY_SIZE,
-          Math.min(
-              MAX_AUTOMATIC_DICTIONARY_SIZE,
-
-              // numMergeBuffers is the number of groupBy queries that can run simultaneously
-              heapForDictionaries / processingConfig.getNumMergeBuffers()
-          )
-      );
-    } else if (maxMergingDictionarySize > 0) {
-      return maxMergingDictionarySize;
-    } else {
-      throw new IAE("Invalid maxMergingDictionarySize: %d", maxMergingDictionarySize);
-    }
+        // numMergeBuffers is the number of groupBy queries that can run simultaneously
+        processingConfig.getNumMergeBuffers()
+    );
   }
 
   public long getMaxOnDiskStorage()
