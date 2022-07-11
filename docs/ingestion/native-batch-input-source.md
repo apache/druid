@@ -138,6 +138,45 @@ Sample specs:
 ...
 ```
 
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "s3",
+        "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
+        "endpointConfig": {
+             "url" : "s3-store.aws.com",
+             "signingRegion" : "us-west-2"
+         },
+         "clientConfig": {
+             "protocol" : "http",
+             "disableChunkedEncoding" : true,
+             "enablePathStyleAccess" : true,
+             "forceGlobalBucketAccessEnabled" : false
+         },
+         "proxyConfig": {
+             "host" : "proxy-s3.aws.com",
+             "port" : 8888,
+             "username" : "admin",
+             "password" : "admin"
+         },
+
+        "properties": {
+          "accessKeyId": "KLJ78979SDFdS2",
+          "secretAccessKey": "KLS89s98sKJHKJKJH8721lljkd",
+          "assumeRoleArn": "arn:aws:iam::2981002874992:role/role-s3"
+        }
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should be `s3`.|None|yes|
@@ -145,6 +184,9 @@ Sample specs:
 |prefixes|JSON array of URI prefixes for the locations of S3 objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of S3 Objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
 |filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
+| endpointConfig |Config for overriding the default S3 endpoint and signing region. This would allow ingesting data from a different S3 store. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
+| clientConfig |S3 client properties for the overridden s3 endpoint. This is used in conjunction with `endPointConfig`. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
+| proxyConfig |Properties for specifying proxy information for the overridden s3 endpoint. This is used in conjunction with `clientConfig`. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
 |properties|Properties Object for overriding the default S3 configuration. See below for more information.|None|No (defaults will be used if not given)
 
 Note that the S3 input source will skip all empty objects only when `prefixes` is specified.
