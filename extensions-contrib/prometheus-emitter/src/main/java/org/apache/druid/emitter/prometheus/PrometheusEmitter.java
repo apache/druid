@@ -151,16 +151,17 @@ public class PrometheusEmitter implements Emitter
     if (userDim != null) {
       return formatLabelValue(userDim.toString());
     } else {
-      if (isIncludeHost && lableName.equals(HOST_LABEL_NAME)) {
+      if (isIncludeHost && HOST_LABEL_NAME.equals(lableName)) {
         return hostName;
-      } else if (isServiceAsTag && lableName.equals(SERVICE_LABEL_NAME)) {
+      } else if (isServiceAsTag && SERVICE_LABEL_NAME.equals(lableName)) {
         return serviceName;
       }
     }
     return "unknown";
   }
 
-  private String formatLabelValue(String input) {
+  private String formatLabelValue(String input)
+  {
     return PATTERN.matcher(input).replaceAll("_");
   }
 

@@ -29,9 +29,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Enumeration;
 
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
@@ -56,7 +53,7 @@ public class PrometheusEmitterTest
     Assert.assertFalse(build.getUserDims().isEmpty());
     emitter.emit(build);
     Double count = CollectorRegistry.defaultRegistry.getSampleValue(
-        "druid_segment_loadqueue_count", new String[]{"druidService","server"}, new String[]{"historical","druid_data01_vpc_region"}
+        "druid_segment_loadqueue_count", new String[]{"druidService", "server"}, new String[]{"historical", "druid_data01_vpc_region"}
     );
     Assert.assertEquals(10, count.intValue());
   }
@@ -77,7 +74,7 @@ public class PrometheusEmitterTest
     Assert.assertFalse(build.getUserDims().isEmpty());
     emitter.emit(build);
     Double count = CollectorRegistry.defaultRegistry.getSampleValue(
-            "druid_segment_loadqueue_count", new String[]{"druidService","hostName","server"}, new String[]{"historical","druid.test.cn","druid_data01_vpc_region"}
+            "druid_segment_loadqueue_count", new String[]{"druidService", "hostName", "server"}, new String[]{"historical", "druid.test.cn", "druid_data01_vpc_region"}
     );
     Assert.assertEquals(10, count.intValue());
   }
