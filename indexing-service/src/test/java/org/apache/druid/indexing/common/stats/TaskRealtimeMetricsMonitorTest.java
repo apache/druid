@@ -61,16 +61,21 @@ public class TaskRealtimeMetricsMonitorTest
     EasyMock.replay(fireDepartment);
 
     TaskRealtimeMetricsMonitor monitor = new TaskRealtimeMetricsMonitor(fireDepartment, rowIngestionMeters, ImmutableMap.of());
+
+    Assert.assertFalse(monitor.isStarted());
     boolean zerothRound = monitor.monitor(emitter);
     monitor.start();
+    Assert.assertTrue(monitor.isStarted());
     boolean firstRound = monitor.monitor(emitter);
     monitor.stop();
+    Assert.assertFalse(monitor.isStarted());
     boolean secondRound = monitor.monitor(emitter);
     boolean thirdRound = monitor.monitor(emitter);
 
     Assert.assertFalse(zerothRound);
     Assert.assertTrue(firstRound && secondRound);
     Assert.assertFalse(thirdRound);
+
     EasyMock.verify(fireDepartment);
   }
 
