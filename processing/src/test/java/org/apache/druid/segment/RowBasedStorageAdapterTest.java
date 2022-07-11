@@ -267,7 +267,7 @@ public class RowBasedStorageAdapterTest
 
     // Row based adapters don't know cardinality (they don't walk their Iterables until makeCursors is called).
     for (String column : ROW_SIGNATURE.getColumnNames()) {
-      Assert.assertEquals(Integer.MAX_VALUE, adapter.getDimensionCardinality(column));
+      Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, adapter.getDimensionCardinality(column));
     }
   }
 
@@ -275,14 +275,14 @@ public class RowBasedStorageAdapterTest
   public void test_getDimensionCardinality_unknownColumn()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    Assert.assertEquals(Integer.MAX_VALUE, adapter.getDimensionCardinality("unknown"));
+    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, adapter.getDimensionCardinality("unknown"));
   }
 
   @Test
   public void test_getDimensionCardinality_timeColumn()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    Assert.assertEquals(Integer.MAX_VALUE, adapter.getDimensionCardinality("__time"));
+    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, adapter.getDimensionCardinality("__time"));
   }
 
   @Test
@@ -336,7 +336,7 @@ public class RowBasedStorageAdapterTest
 
     // Row based adapters don't know cardinality (they don't walk their Iterables until makeCursors is called).
     for (String column : ROW_SIGNATURE.getColumnNames()) {
-      Assert.assertEquals(Integer.MAX_VALUE, adapter.getDimensionCardinality(column));
+      Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, adapter.getDimensionCardinality(column));
     }
   }
 
@@ -391,9 +391,11 @@ public class RowBasedStorageAdapterTest
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.COMPLEX.name());
 
-    // Note: unlike numeric types, COMPLEX-typed columns report that they are incomplete.
+    // Note: unlike numeric types, COMPLEX-typed columns report that they are incomplete for everything
+    // except hasMultipleValues.
     Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, capabilities.toColumnType());
-    Assert.assertTrue(capabilities.hasMultipleValues().isUnknown());
+    Assert.assertFalse(capabilities.hasMultipleValues().isTrue());
+    Assert.assertTrue(capabilities.isDictionaryEncoded().isUnknown());
   }
 
   @Test

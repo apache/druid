@@ -17,23 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.rpc;
 
-import org.apache.druid.indexing.common.IndexTaskClient;
-import org.apache.druid.indexing.common.TaskInfoProvider;
-import org.joda.time.Duration;
-
-public class NoopIndexTaskClientFactory<T extends IndexTaskClient> implements IndexTaskClientFactory<T>
+/**
+ * Factory for creating {@link ServiceClient}.
+ */
+public interface ServiceClientFactory
 {
-  @Override
-  public T build(
-      TaskInfoProvider taskInfoProvider,
-      String callerId,
-      int numThreads,
-      Duration httpTimeout,
-      long numRetries
-  )
-  {
-    throw new UnsupportedOperationException();
-  }
+  /**
+   * Creates a client for a particular service.
+   *
+   * @param serviceName    name of the service, which is used in log messages and exceptions.
+   * @param serviceLocator service locator. This is not owned by the returned client, and should be closed
+   *                       separately when you are done with it.
+   * @param retryPolicy    retry policy
+   */
+  ServiceClient makeClient(String serviceName, ServiceLocator serviceLocator, ServiceRetryPolicy retryPolicy);
 }

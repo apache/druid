@@ -315,7 +315,7 @@ public class DruidPlanner implements Closeable
 
     RelNode parameterized = rewriteRelDynamicParameters(possiblyLimitedRoot.rel);
     final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
-        Rules.DRUID_CONVENTION_RULES,
+        CalciteRulesManager.DRUID_CONVENTION_RULES,
         planner.getEmptyTraitSet()
                .replace(DruidConvention.instance())
                .plus(root.collation),
@@ -362,7 +362,7 @@ public class DruidPlanner implements Closeable
   ) throws RelConversionException
   {
     BindableRel bindableRel = (BindableRel) planner.transform(
-        Rules.BINDABLE_CONVENTION_RULES,
+        CalciteRulesManager.BINDABLE_CONVENTION_RULES,
         planner.getEmptyTraitSet().replace(BindableConvention.INSTANCE).plus(root.collation),
         root.rel
     );

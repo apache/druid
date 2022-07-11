@@ -79,6 +79,7 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -442,7 +443,7 @@ public class IndexIO
     {
       MMappedIndex index = legacyHandler.mapDir(inDir);
 
-      Map<String, Supplier<ColumnHolder>> columns = new HashMap<>();
+      Map<String, Supplier<ColumnHolder>> columns = new LinkedHashMap<>();
 
       for (String dimension : index.getAvailableDimensions()) {
         ColumnBuilder builder = new ColumnBuilder()
@@ -624,7 +625,7 @@ public class IndexIO
         }
       }
 
-      Map<String, Supplier<ColumnHolder>> columns = new HashMap<>();
+      Map<String, Supplier<ColumnHolder>> columns = new LinkedHashMap<>();
 
       // Register the time column
       ByteBuffer timeBuffer = smooshedFiles.mapFile("__time");

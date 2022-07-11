@@ -21,14 +21,16 @@ package org.apache.druid.indexing.worker.shuffle;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskStatus;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
@@ -57,7 +59,7 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   public TemporaryFolder tempDir = new TemporaryFolder();
 
   private TaskConfig taskConfig;
-  private IndexingServiceClient indexingServiceClient;
+  private OverlordClient overlordClient;
 
   @Before
   public void setup() throws IOException
@@ -77,17 +79,17 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null
     );
-    this.indexingServiceClient = new NoopIndexingServiceClient()
+    this.overlordClient = new NoopOverlordClient()
     {
       @Override
-      public Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds)
+      public ListenableFuture<Map<String, TaskStatus>> taskStatuses(Set<String> taskIds)
       {
         final Map<String, TaskStatus> result = new HashMap<>();
         for (String taskId : taskIds) {
           TaskState state = taskId.startsWith("running_") ? TaskState.RUNNING : TaskState.SUCCESS;
           result.put(taskId, new TaskStatus(taskId, state, 10));
         }
-        return result;
+        return Futures.immediateFuture(result);
       }
     };
   }
@@ -133,7 +135,7 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
     // Setup data manager with expiry timeout 1s
     WorkerConfig workerConfig = new TestWorkerConfig(1, 1, timeoutPeriod);
     LocalIntermediaryDataManager intermediaryDataManager =
-        new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
+        new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
     intermediaryDataManager.addSegment(supervisorTaskId, subTaskId, segment, segmentFile);
 
     intermediaryDataManager
