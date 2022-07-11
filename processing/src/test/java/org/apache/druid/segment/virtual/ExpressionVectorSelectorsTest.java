@@ -31,6 +31,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -143,7 +144,7 @@ public class ExpressionVectorSelectorsTest
   public void setup()
   {
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    outputType = parsed.getOutputType(INDEX);
+    outputType = parsed.getOutputType(new DeprecatedQueryableIndexColumnSelector(INDEX));
     if (outputType == null) {
       outputType = ExpressionType.STRING;
     }

@@ -38,8 +38,6 @@ import com.google.common.collect.Maps;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
-import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -184,7 +182,6 @@ public class CompactionTaskTest
   private static final TestUtils TEST_UTILS = new TestUtils();
   private static final Map<DataSegment, File> SEGMENT_MAP = new HashMap<>();
   private static final CoordinatorClient COORDINATOR_CLIENT = new TestCoordinatorClient(SEGMENT_MAP);
-  private static final IndexingServiceClient INDEXING_SERVICE_CLIENT = new NoopIndexingServiceClient();
   private static final ObjectMapper OBJECT_MAPPER = setupInjectablesInObjectMapper(new DefaultObjectMapper());
   private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
   private static final String CONFLICTING_SEGMENT_GRANULARITY_FORMAT =
@@ -288,7 +285,6 @@ public class CompactionTaskTest
                   binder.bind(SegmentCacheManagerFactory.class)
                         .toInstance(new SegmentCacheManagerFactory(objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(new TestAppenderatorsManager());
-                  binder.bind(IndexingServiceClient.class).toInstance(INDEXING_SERVICE_CLIENT);
                 }
             )
         )
@@ -1636,6 +1632,7 @@ public class CompactionTaskTest
         Granularities.SECOND,
         Granularities.MINUTE,
         Granularities.SIX_HOUR,
+        Granularities.EIGHT_HOUR,
         Granularities.DAY,
         null,
         Granularities.ALL,
@@ -1652,6 +1649,7 @@ public class CompactionTaskTest
         Granularities.SECOND,
         Granularities.MINUTE,
         Granularities.SIX_HOUR,
+        Granularities.EIGHT_HOUR,
         Granularities.NONE,
         Granularities.DAY,
         Granularities.NONE,
@@ -2049,7 +2047,6 @@ public class CompactionTaskTest
         .chatHandlerProvider(new NoopChatHandlerProvider())
         .rowIngestionMetersFactory(TEST_UTILS.getRowIngestionMetersFactory())
         .appenderatorsManager(new TestAppenderatorsManager())
-        .indexingServiceClient(INDEXING_SERVICE_CLIENT)
         .coordinatorClient(COORDINATOR_CLIENT)
         .segmentCacheManager(segmentCacheManager)
         .build();

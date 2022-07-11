@@ -67,6 +67,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
+import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -219,6 +220,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                       .in(LazySingleton.class);
                 binder.bind(QueryMakerFactory.class).to(NativeQueryMakerFactory.class);
                 binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
+                binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
               }
             }
         )
@@ -573,14 +575,6 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
-                Pair.of("COLUMN_NAME", "cnt"),
-                Pair.of("DATA_TYPE", Types.BIGINT),
-                Pair.of("TYPE_NAME", "BIGINT"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
-            ),
-            row(
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "dim1"),
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
@@ -601,6 +595,14 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
                 Pair.of("IS_NULLABLE", "YES")
+            ),
+            row(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", "foo"),
+                Pair.of("COLUMN_NAME", "cnt"),
+                Pair.of("DATA_TYPE", Types.BIGINT),
+                Pair.of("TYPE_NAME", "BIGINT"),
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -664,14 +666,6 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
-                Pair.of("COLUMN_NAME", "cnt"),
-                Pair.of("DATA_TYPE", Types.BIGINT),
-                Pair.of("TYPE_NAME", "BIGINT"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
-            ),
-            row(
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
                 Pair.of("COLUMN_NAME", "dim1"),
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
@@ -684,6 +678,14 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
                 Pair.of("IS_NULLABLE", "YES")
+            ),
+            row(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
+                Pair.of("COLUMN_NAME", "cnt"),
+                Pair.of("DATA_TYPE", Types.BIGINT),
+                Pair.of("TYPE_NAME", "BIGINT"),
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -906,7 +908,8 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
               plannerConfig,
               AuthTestUtils.TEST_AUTHORIZER_MAPPER,
               CalciteTests.getJsonMapper(),
-              CalciteTests.DRUID_SCHEMA_NAME
+              CalciteTests.DRUID_SCHEMA_NAME,
+              new CalciteRulesManager(ImmutableSet.of())
           )
         ),
         smallFrameConfig,
@@ -996,7 +999,8 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                 plannerConfig,
                 AuthTestUtils.TEST_AUTHORIZER_MAPPER,
                 CalciteTests.getJsonMapper(),
-                CalciteTests.DRUID_SCHEMA_NAME
+                CalciteTests.DRUID_SCHEMA_NAME,
+                new CalciteRulesManager(ImmutableSet.of())
             )
         ),
         smallFrameConfig,
@@ -1180,11 +1184,6 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
         row(
             Pair.of("TABLE_SCHEM", "druid"),
             Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
-            Pair.of("COLUMN_NAME", "cnt")
-        ),
-        row(
-            Pair.of("TABLE_SCHEM", "druid"),
-            Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
             Pair.of("COLUMN_NAME", "dim1")
         ),
         row(
@@ -1196,6 +1195,11 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
             Pair.of("TABLE_SCHEM", "druid"),
             Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
             Pair.of("COLUMN_NAME", "dim3")
+        ),
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+            Pair.of("COLUMN_NAME", "cnt")
         ),
         row(
             Pair.of("TABLE_SCHEM", "druid"),

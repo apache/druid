@@ -43,11 +43,9 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -182,8 +180,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
    */
   class RowIteratorImpl implements TransformableRowIterator
   {
-    private final Closer closer = Closer.create();
-    private final Map<String, BaseColumn> columnCache = new HashMap<>();
+    private final Closer closer;
+    private final ColumnCache columnCache;
 
     private final SimpleAscendingOffset offset = new SimpleAscendingOffset(numRows);
     private final int maxValidOffset = numRows - 1;
@@ -206,11 +204,12 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
     RowIteratorImpl()
     {
+      this.closer = Closer.create();
+      this.columnCache = new ColumnCache(input, closer);
+
       final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
-          input,
           VirtualColumns.EMPTY,
           false,
-          closer,
           offset,
           columnCache
       );
