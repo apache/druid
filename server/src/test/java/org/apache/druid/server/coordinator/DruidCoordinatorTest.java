@@ -723,6 +723,49 @@ public class DruidCoordinatorTest extends CuratorTestBase
   }
 
   @Test
+  public void testGetConfig()
+  {
+    CoordinatorDynamicConfig dynamicConfig = EasyMock.createNiceMock(CoordinatorDynamicConfig.class);
+    EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(5).times(2);
+    EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(10).once();
+
+    JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
+            EasyMock.anyObject(Class.class),
+            EasyMock.anyObject()
+        )
+    ).andReturn(new AtomicReference(dynamicConfig)).anyTimes();
+
+    DruidCoordinator c = new DruidCoordinator(
+        druidCoordinatorConfig,
+        null,
+        configManager,
+        null,
+        null,
+        null,
+        () -> null,
+        null,
+        scheduledExecutorFactory,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        new CoordinatorCustomDutyGroups(ImmutableSet.of()),
+        null,
+        null,
+        null,
+        null,
+        ZkEnablementConfig.ENABLED
+    );
+
+    Assert.assertEquals(druidCoordinatorConfig, c.getConfig());
+  }
+
+  @Test
   public void testBalancerThreadNumber()
   {
     CoordinatorDynamicConfig dynamicConfig = EasyMock.createNiceMock(CoordinatorDynamicConfig.class);

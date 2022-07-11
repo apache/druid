@@ -49,6 +49,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(Duration.millis(50), config.getLoadQueuePeonRepeatDelay());
     Assert.assertTrue(config.getCompactionSkipLockedIntervals());
     Assert.assertFalse(config.getCoordinatorKillIgnoreDurationToRetain());
+    Assert.assertFalse(config.getDelegateRequestsToFollowers());
 
     //with non-defaults
     Properties props = new Properties();
@@ -64,6 +65,7 @@ public class DruidCoordinatorConfigTest
     props.setProperty("druid.coordinator.loadqueuepeon.repeatDelay", "PT0.100s");
     props.setProperty("druid.coordinator.compaction.skipLockedIntervals", "false");
     props.setProperty("druid.coordinator.kill.ignoreDurationToRetain", "true");
+    props.setProperty("druid.coordinator.delegateRequestsToFollowers", "true");
 
     factory = Config.createFactory(props);
     config = factory.build(DruidCoordinatorConfig.class);
@@ -78,6 +80,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(Duration.millis(100), config.getLoadQueuePeonRepeatDelay());
     Assert.assertFalse(config.getCompactionSkipLockedIntervals());
     Assert.assertTrue(config.getCoordinatorKillIgnoreDurationToRetain());
+    Assert.assertTrue(config.getDelegateRequestsToFollowers());
 
     // Test negative druid.coordinator.kill.durationToRetain now that it is valid.
     props = new Properties();
