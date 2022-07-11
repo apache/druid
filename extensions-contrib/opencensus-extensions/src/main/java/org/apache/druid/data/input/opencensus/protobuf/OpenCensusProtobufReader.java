@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input.opencensus.protobuf;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -42,6 +44,7 @@ import org.apache.druid.utils.CollectionUtils;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -80,7 +83,17 @@ public class OpenCensusProtobufReader implements InputEntityReader
   @Override
   public CloseableIterator<InputRow> read()
   {
-    return CloseableIterators.withEmptyBaggage(readAsList().iterator());
+    Supplier<Iterator<InputRow>> supplier = Suppliers.memoize(() -> readAsList().iterator());
+    return CloseableIterators.withEmptyBaggage(new Iterator<InputRow>() {
+      @Override
+      public boolean hasNext() {
+        return supplier.get().hasNext();
+      }
+      @Override
+      public InputRow next() {
+        return supplier.get().next();
+      }
+    });
   }
 
   List<InputRow> readAsList()

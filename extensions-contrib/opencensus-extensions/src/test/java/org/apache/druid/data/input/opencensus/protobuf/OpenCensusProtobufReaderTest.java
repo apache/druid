@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
@@ -52,7 +53,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class OpenTelemetryMetricsProtobufReaderTest
+public class OpenCensusProtobufReaderTest
 {
   private static final long TIMESTAMP = TimeUnit.MILLISECONDS.toNanos(Instant.parse("2019-07-12T09:30:01.123Z").toEpochMilli());
   public static final String RESOURCE_ATTRIBUTE_COUNTRY = "country";
@@ -323,6 +324,27 @@ public class OpenTelemetryMetricsProtobufReaderTest
     assertDimensionEquals(row, "descriptor.foo_key", "foo_value");
     Assert.assertFalse(row.getDimensions().contains("custom.country"));
     Assert.assertFalse(row.getDimensions().contains("descriptor.color"));
+  }
+
+  @Test
+  public void testInvalidProtobuf() throws IOException {
+    byte[] invalidProtobuf = new byte[] { 0x00, 0x01 };
+    ConsumerRecord consumerRecord = new ConsumerRecord(TOPIC, PARTITION, OFFSET, TS, TSTYPE,
+        -1L, -1, -1, null, invalidProtobuf, HEADERS);
+    KafkaRecordEntity kafkaRecordEntity = new KafkaRecordEntity(consumerRecord);
+    OpenCensusProtobufInputFormat inputFormat = new OpenCensusProtobufInputFormat("metric.name",
+        null,
+        "descriptor.",
+        "custom.");
+
+    CloseableIterator<InputRow> rows = inputFormat.createReader(new InputRowSchema(
+        new TimestampSpec("timestamp", "iso", null),
+        dimensionsSpec,
+        ColumnsFilter.all()
+    ), kafkaRecordEntity, null).read();
+
+    Assert.assertThrows(ParseException.class, () -> rows.hasNext());
+    Assert.assertThrows(ParseException.class, () -> rows.next());
   }
 
   private void assertDimensionEquals(InputRow row, String dimension, Object expected)

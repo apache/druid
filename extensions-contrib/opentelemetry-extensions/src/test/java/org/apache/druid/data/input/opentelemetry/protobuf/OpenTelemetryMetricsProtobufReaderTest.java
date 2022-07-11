@@ -30,6 +30,7 @@ import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -340,6 +341,21 @@ public class OpenTelemetryMetricsProtobufReaderTest
     Assert.assertEquals(0, row.getDimension("descriptor.foo_key").size());
 
     assertDimensionEquals(row, "raw.value", "6");
+  }
+
+  @Test
+  public void testInvalidProtobuf() {
+    byte[] invalidProtobuf = new byte[] { 0x00, 0x01 };
+    CloseableIterator<InputRow> rows = new OpenTelemetryMetricsProtobufReader(
+        dimensionsSpec,
+        new ByteEntity(invalidProtobuf),
+        "metric.name",
+        "raw.value",
+        "descriptor.",
+        "custom."
+    ).read();
+    Assert.assertThrows(ParseException.class, () -> rows.hasNext());
+    Assert.assertThrows(ParseException.class, () -> rows.next());
   }
 
   private void assertDimensionEquals(InputRow row, String dimension, Object expected)
