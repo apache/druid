@@ -49,6 +49,9 @@ public class PrometheusEmitter implements Emitter
   private final PrometheusEmitterConfig.Strategy strategy;
   private static final Pattern PATTERN = Pattern.compile("[^a-zA-Z0-9_][^a-zA-Z0-9_]*");
 
+  private static final String HOST_LABEL_NAME = "hostName";
+  private static final String SERVICE_LABEL_NAME = "druidService";
+
   private HTTPServer server;
   private PushGateway pushGateway;
   private String identifier;
@@ -62,7 +65,7 @@ public class PrometheusEmitter implements Emitter
   {
     this.config = config;
     this.strategy = config.getStrategy();
-    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath());
+    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath(), config.isHostAsLabel(), config.isServiceAsLabel());
   }
 
 
@@ -113,6 +116,7 @@ public class PrometheusEmitter implements Emitter
   {
     String name = metricEvent.getMetric();
     String service = metricEvent.getService();
+    String hostName = metricEvent.getHost();
     Map<String, Object> userDims = metricEvent.getUserDims();
     identifier = (userDims.get("task") == null ? metricEvent.getHost() : (String) userDims.get("task"));
     Number value = metricEvent.getValue();
@@ -125,7 +129,7 @@ public class PrometheusEmitter implements Emitter
         String labelName = labelNames[i];
         //labelName is controlled by the user. Instead of potential NPE on invalid labelName we use "unknown" as the dimension value
         Object userDim = userDims.get(labelName);
-        labelValues[i] = userDim != null ? PATTERN.matcher(userDim.toString()).replaceAll("_") : "unknown";
+        labelValues[i] = fillLabelValue(labelName, userDim, config.isHostAsLabel(), hostName, config.isServiceAsLabel(), service);
       }
 
       if (metric.getCollector() instanceof Counter) {
@@ -140,6 +144,24 @@ public class PrometheusEmitter implements Emitter
     } else {
       log.debug("Unmapped metric [%s]", name);
     }
+  }
+
+  private String fillLabelValue(String lableName, Object userDim, boolean isIncludeHost, String hostName, boolean isServiceAsTag, String serviceName)
+  {
+    if (userDim != null) {
+      return formatLabelValue(userDim.toString());
+    } else {
+      if (isIncludeHost && lableName.equals(HOST_LABEL_NAME)) {
+        return hostName;
+      } else if (isServiceAsTag && lableName.equals(SERVICE_LABEL_NAME)) {
+        return serviceName;
+      }
+    }
+    return "unknown";
+  }
+
+  private String formatLabelValue(String input) {
+    return PATTERN.matcher(input).replaceAll("_");
   }
 
   private void pushMetric()

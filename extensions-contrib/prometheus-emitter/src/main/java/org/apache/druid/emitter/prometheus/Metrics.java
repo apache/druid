@@ -49,6 +49,9 @@ public class Metrics
   private final ObjectMapper mapper = new ObjectMapper();
   public static final Pattern PATTERN = Pattern.compile("[^a-zA-Z_:][^a-zA-Z0-9_:]*");
 
+  private static final String HOST_LABEL_NAME = "hostName";
+  private static final String SERVICE_LABEL_NAME = "druidService";
+
   public DimensionsAndCollector getByName(String name, String service)
   {
     if (registeredMetrics.containsKey(name)) {
@@ -58,13 +61,22 @@ public class Metrics
     }
   }
 
-  public Metrics(String namespace, String path)
+  public Metrics(String namespace, String path, boolean isIncludeHost, boolean isServiceAsTag)
   {
     Map<String, Metric> metrics = readConfig(path);
     for (Map.Entry<String, Metric> entry : metrics.entrySet()) {
       String name = entry.getKey();
       Metric metric = entry.getValue();
       Metric.Type type = metric.type;
+
+      if (isIncludeHost) {
+        metric.dimensions.add(HOST_LABEL_NAME);
+      }
+
+      if (isServiceAsTag) {
+        metric.dimensions.add(SERVICE_LABEL_NAME);
+      }
+
       String[] dimensions = metric.dimensions.toArray(new String[0]);
       String formattedName = PATTERN.matcher(StringUtils.toLowerCase(name)).replaceAll("_");
       SimpleCollector collector = null;
