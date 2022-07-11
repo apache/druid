@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input.opentelemetry.protobuf;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -40,6 +42,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -47,7 +50,6 @@ import java.util.stream.Collectors;
 
 public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
 {
-
   private final ByteEntity source;
   private final String metricDimension;
   private final String valueDimension;
@@ -75,7 +77,17 @@ public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
   @Override
   public CloseableIterator<InputRow> read()
   {
-    return CloseableIterators.withEmptyBaggage(readAsList().iterator());
+    Supplier<Iterator<InputRow>> supplier = Suppliers.memoize(() -> readAsList().iterator());
+    return CloseableIterators.withEmptyBaggage(new Iterator<InputRow>() {
+      @Override
+      public boolean hasNext() {
+        return supplier.get().hasNext();
+      }
+      @Override
+      public InputRow next() {
+        return supplier.get().next();
+      }
+    });
   }
 
   List<InputRow> readAsList()
