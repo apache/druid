@@ -1670,7 +1670,13 @@
                     <!-- required for JvmMonitor tests on Java 11+ -->
                     --add-exports=java.base/jdk.internal.perf=ALL-UNNAMED
                     --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
-                    --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
+
+                    <!-- required for DataSketches Memory on Java 11+ -->
+                    --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
+                    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
+                    --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
+                    --add-opens=java.base/java.nio=ALL-UNNAMED
+                    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
                 </jdk.surefire.argLine>
             </properties>
             <build>
@@ -1757,7 +1763,6 @@
                             <!-- locale settings must be set on the command line before startup -->
                             <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
                             <argLine>
-                                ${jdk.surefire.argLine}
                                 -Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                                 -XX:+ExitOnOutOfMemoryError
                                 -XX:+HeapDumpOnOutOfMemoryError

@@ -38,6 +38,7 @@ import org.apache.druid.segment.MapSegmentWrangler;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.ClientQuerySegmentWalker;
@@ -103,9 +104,9 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
             conglomerate,
             new MapSegmentWrangler(
                 ImmutableMap.<Class<? extends DataSource>, SegmentWrangler>builder()
-                    .put(InlineDataSource.class, new InlineSegmentWrangler())
-                    .put(LookupDataSource.class, new LookupSegmentWrangler(lookupProvider))
-                    .build()
+                            .put(InlineDataSource.class, new InlineSegmentWrangler())
+                            .put(LookupDataSource.class, new LookupSegmentWrangler(lookupProvider))
+                            .build()
             ),
             joinableFactoryToUse,
             scheduler
@@ -143,11 +144,11 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     );
   }
 
-  public SpecificSegmentsQuerySegmentWalker add(final DataSegment descriptor, final QueryableIndex index)
+  public SpecificSegmentsQuerySegmentWalker add(final DataSegment descriptor, final Segment segment)
   {
-    final ReferenceCountingSegment segment =
+    final ReferenceCountingSegment referenceCountingSegment =
         ReferenceCountingSegment.wrapSegment(
-            new QueryableIndexSegment(index, descriptor.getId()),
+            segment,
             descriptor.getShardSpec()
         );
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = timelines.computeIfAbsent(
@@ -157,11 +158,16 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     timeline.add(
         descriptor.getInterval(),
         descriptor.getVersion(),
-        descriptor.getShardSpec().createChunk(segment)
+        descriptor.getShardSpec().createChunk(referenceCountingSegment)
     );
     segments.add(descriptor);
-    closeables.add(segment);
+    closeables.add(referenceCountingSegment);
     return this;
+  }
+
+  public SpecificSegmentsQuerySegmentWalker add(final DataSegment descriptor, final QueryableIndex index)
+  {
+    return add(descriptor, new QueryableIndexSegment(index, descriptor.getId()));
   }
 
   public List<DataSegment> getSegments()

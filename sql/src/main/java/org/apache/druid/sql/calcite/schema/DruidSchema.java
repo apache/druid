@@ -73,6 +73,7 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -783,7 +784,9 @@ public class DruidSchema extends AbstractSchema
   DruidTable buildDruidTable(final String dataSource)
   {
     ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> segmentsMap = segmentMetadataInfo.get(dataSource);
-    final Map<String, ColumnType> columnTypes = new TreeMap<>();
+
+    // Preserve order.
+    final Map<String, ColumnType> columnTypes = new LinkedHashMap<>();
 
     if (segmentsMap != null && !segmentsMap.isEmpty()) {
       for (AvailableSegmentMetadata availableSegmentMetadata : segmentsMap.values()) {
