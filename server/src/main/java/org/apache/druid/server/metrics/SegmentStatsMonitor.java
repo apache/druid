@@ -42,7 +42,7 @@ import java.util.Map;
 public class SegmentStatsMonitor extends AbstractMonitor
 {
   private final DruidServerConfig serverConfig;
-  private final SegmentLoadDropHandler segmentLoadDropMgr;
+  private final SegmentLoadDropHandler segmentLoadDropHandler;
 
   private static final Logger log = new Logger(SegmentStatsMonitor.class);
 
@@ -50,13 +50,13 @@ public class SegmentStatsMonitor extends AbstractMonitor
    * Constructor for this monitor. Will throw IllegalStateException if lazy load on start is set to true.
    *
    * @param serverConfig
-   * @param segmentLoadDropMgr
+   * @param segmentLoadDropHandler
    * @param segmentLoaderConfig
    */
   @Inject
   public SegmentStatsMonitor(
       DruidServerConfig serverConfig,
-      SegmentLoadDropHandler segmentLoadDropMgr,
+      SegmentLoadDropHandler segmentLoadDropHandler,
       SegmentLoaderConfig segmentLoaderConfig
   )
   {
@@ -67,14 +67,14 @@ public class SegmentStatsMonitor extends AbstractMonitor
       throw new IllegalStateException("Monitor doesn't support working with lazy loading on start");
     }
     this.serverConfig = serverConfig;
-    this.segmentLoadDropMgr = segmentLoadDropMgr;
+    this.segmentLoadDropHandler = segmentLoadDropHandler;
 
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    for (Map.Entry<String, Long> entry : segmentLoadDropMgr.getAverageNumOfRowsPerSegmentForDatasource().entrySet()) {
+    for (Map.Entry<String, Long> entry : segmentLoadDropHandler.getAverageNumOfRowsPerSegmentForDatasource().entrySet()) {
       String dataSource = entry.getKey();
       long averageSize = entry.getValue();
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
@@ -84,8 +84,8 @@ public class SegmentStatsMonitor extends AbstractMonitor
       emitter.emit(builder.build("segment/rowCount/avg", averageSize));
     }
 
-    for (Map.Entry<String, SegmentRowCountDistribution> entry : segmentLoadDropMgr.getRowCountDistributionPerDatasource()
-                                                                                  .entrySet()) {
+    for (Map.Entry<String, SegmentRowCountDistribution> entry : segmentLoadDropHandler.getRowCountDistributionPerDatasource()
+                                                                                      .entrySet()) {
       String dataSource = entry.getKey();
       SegmentRowCountDistribution rowCountBucket = entry.getValue();
 
