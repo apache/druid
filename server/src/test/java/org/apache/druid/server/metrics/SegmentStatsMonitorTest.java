@@ -167,7 +167,7 @@ public class SegmentStatsMonitorTest
     Assert.assertEquals("different number of expected values for metrics", expected.size(), actual.size());
     for (Map.Entry<String, Object> expectedMetricEntry : expected.entrySet()) {
       Assert.assertEquals(
-          messagePrefix + " " +expectedMetricEntry.getKey(),
+          messagePrefix + " " + expectedMetricEntry.getKey(),
           expectedMetricEntry.getValue(),
           actual.get(expectedMetricEntry.getKey())
       );
