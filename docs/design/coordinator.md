@@ -27,7 +27,7 @@ title: "Coordinator Process"
 
 For Apache Druid Coordinator Process Configuration, see [Coordinator Configuration](../configuration/index.md#coordinator).
 
-For basic tuning guidance for the Coordinator process, see [Basic Cluster Tuning](../operations/basic-cluster-tuning.html#coordinator).
+For basic tuning guidance for the Coordinator process, see [Basic Cluster Tuning](../operations/basic-cluster-tuning.md#coordinator).
 
 ### HTTP endpoints
 
