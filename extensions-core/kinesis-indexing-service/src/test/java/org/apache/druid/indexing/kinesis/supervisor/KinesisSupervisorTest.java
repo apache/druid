@@ -208,6 +208,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     );
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
@@ -531,7 +532,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             false
     );
 
-    AutoScalerConfig autoscalerConfigNull = kinesisSupervisorIOConfigWithNullAutoScalerConfig.getAutoscalerConfig();
+    AutoScalerConfig autoscalerConfigNull = kinesisSupervisorIOConfigWithNullAutoScalerConfig.getAutoScalerConfig();
     Assert.assertNull(autoscalerConfigNull);
 
     // create KinesisSupervisorIOConfig with autoScalerConfig Empty
@@ -558,7 +559,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             false
     );
 
-    AutoScalerConfig autoscalerConfig = kinesisSupervisorIOConfigWithEmptyAutoScalerConfig.getAutoscalerConfig();
+    AutoScalerConfig autoscalerConfig = kinesisSupervisorIOConfigWithEmptyAutoScalerConfig.getAutoScalerConfig();
     Assert.assertNotNull(autoscalerConfig);
     Assert.assertTrue(autoscalerConfig instanceof LagBasedAutoScalerConfig);
     Assert.assertFalse(autoscalerConfig.getEnableTaskAutoScaler());
@@ -3946,6 +3947,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -5050,6 +5052,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -5465,6 +5468,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             false
         ),
         Collections.emptyMap(),
+        false,
         null
     );
   }

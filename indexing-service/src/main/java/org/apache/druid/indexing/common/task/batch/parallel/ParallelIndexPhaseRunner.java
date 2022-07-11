@@ -120,7 +120,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     final long taskStatusCheckingPeriod = tuningConfig.getTaskStatusCheckPeriodMs();
 
     taskMonitor = new TaskMonitor<>(
-        toolbox.getIndexingServiceClient(),
+        toolbox.getOverlordClient(),
         tuningConfig.getMaxRetry(),
         estimateTotalNumSubTasks()
     );
@@ -453,8 +453,6 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     return tuningConfig;
   }
 
-
-  @VisibleForTesting
   TaskToolbox getToolbox()
   {
     return toolbox;

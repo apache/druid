@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -97,7 +97,8 @@ public class SingleTaskBackgroundRunnerTest
         null,
         false,
         false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null
     );
     final ServiceEmitter emitter = new NoopServiceEmitter();
     EmittingLogger.registerEmitter(emitter);
@@ -123,7 +124,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         null,
-        utils.getTestIndexMergerV9(),
+        utils.getIndexMergerV9Factory(),
         null,
         node,
         null,
@@ -134,7 +135,7 @@ public class SingleTaskBackgroundRunnerTest
         new NoopChatHandlerProvider(),
         utils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
-        new NoopIndexingServiceClient(),
+        new NoopOverlordClient(),
         null,
         null,
         null

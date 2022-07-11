@@ -59,6 +59,13 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   }
 
   @Override
+  public boolean readRetainsBufferReference()
+  {
+    // Can't guarantee that ObjectStrategy *doesn't* retain a reference.
+    return true;
+  }
+
+  @Override
   public int write(ByteBuffer buffer, T value, int maxSizeBytes)
   {
     TypeStrategies.checkMaxSize(buffer.remaining(), maxSizeBytes, typeSignature);

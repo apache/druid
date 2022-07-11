@@ -23,6 +23,8 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClient;
+import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
+import com.amazonaws.services.kinesis.model.DescribeStreamResult;
 import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
 import com.amazonaws.services.kinesis.model.GetShardIteratorResult;
@@ -31,6 +33,7 @@ import com.amazonaws.services.kinesis.model.ListShardsResult;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.ShardIteratorType;
+import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -150,6 +153,10 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   private static ListShardsResult listShardsResult1;
   private static GetShardIteratorResult getShardIteratorResult0;
   private static GetShardIteratorResult getShardIteratorResult1;
+  private static DescribeStreamResult describeStreamResult0;
+  private static DescribeStreamResult describeStreamResult1;
+  private static StreamDescription streamDescription0;
+  private static StreamDescription streamDescription1;
   private static GetRecordsResult getRecordsResult0;
   private static GetRecordsResult getRecordsResult1;
   private static Shard shard0;
@@ -162,6 +169,10 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     kinesis = createMock(AmazonKinesisClient.class);
     listShardsResult0 = createMock(ListShardsResult.class);
     listShardsResult1 = createMock(ListShardsResult.class);
+    describeStreamResult0 = createMock(DescribeStreamResult.class);
+    describeStreamResult1 = createMock(DescribeStreamResult.class);
+    streamDescription0 = createMock(StreamDescription.class);
+    streamDescription1 = createMock(StreamDescription.class);
     getShardIteratorResult0 = createMock(GetShardIteratorResult.class);
     getShardIteratorResult1 = createMock(GetShardIteratorResult.class);
     getRecordsResult0 = createMock(GetRecordsResult.class);
@@ -181,7 +192,69 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   }
 
   @Test
-  public void testSupplierSetup()
+  public void testSupplierSetup_withoutListShards()
+  {
+    final Capture<DescribeStreamRequest> capturedRequest0 = Capture.newInstance();
+    final Capture<DescribeStreamRequest> capturedRequest1 = Capture.newInstance();
+
+    EasyMock.expect(kinesis.describeStream(EasyMock.capture(capturedRequest0))).andReturn(describeStreamResult0).once();
+    EasyMock.expect(describeStreamResult0.getStreamDescription()).andReturn(streamDescription0).once();
+    EasyMock.expect(streamDescription0.getShards()).andReturn(ImmutableList.of(shard0, shard1)).once();
+    EasyMock.expect(shard0.getShardId()).andReturn(SHARD_ID0).once();
+    EasyMock.expect(shard1.getShardId()).andReturn(SHARD_ID1).times(2);
+    EasyMock.expect(streamDescription0.isHasMoreShards()).andReturn(true).once();
+
+    EasyMock.expect(kinesis.describeStream(EasyMock.capture(capturedRequest1))).andReturn(describeStreamResult1).once();
+    EasyMock.expect(describeStreamResult1.getStreamDescription()).andReturn(streamDescription1).once();
+    EasyMock.expect(streamDescription1.getShards()).andReturn(ImmutableList.of()).once();
+    EasyMock.expect(streamDescription1.isHasMoreShards()).andReturn(false).once();
+
+    replayAll();
+
+    Set<StreamPartition<String>> partitions = ImmutableSet.of(
+        StreamPartition.of(STREAM, SHARD_ID0),
+        StreamPartition.of(STREAM, SHARD_ID1)
+    );
+
+    recordSupplier = new KinesisRecordSupplier(
+        kinesis,
+        recordsPerFetch,
+        0,
+        2,
+        false,
+        100,
+        5000,
+        5000,
+        60000,
+        5,
+        true,
+        false
+    );
+
+    Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
+
+    recordSupplier.assign(partitions);
+
+    Assert.assertEquals(partitions, recordSupplier.getAssignment());
+    Assert.assertEquals(ImmutableSet.of(SHARD_ID0, SHARD_ID1), recordSupplier.getPartitionIds(STREAM));
+
+    // calling poll would start background fetch if seek was called, but will instead be skipped and the results
+    // empty
+    Assert.assertEquals(Collections.emptyList(), recordSupplier.poll(100));
+
+    verifyAll();
+
+    // Since the same request is modified, every captured argument will be the same at the end
+    Assert.assertEquals(capturedRequest0.getValues(), capturedRequest1.getValues());
+
+    final DescribeStreamRequest expectedRequest = new DescribeStreamRequest();
+    expectedRequest.setStreamName(STREAM);
+    expectedRequest.setExclusiveStartShardId(SHARD_ID1);
+    Assert.assertEquals(expectedRequest, capturedRequest1.getValue());
+  }
+
+  @Test
+  public void testSupplierSetup_withListShards()
   {
     final Capture<ListShardsRequest> capturedRequest0 = Capture.newInstance();
     final Capture<ListShardsRequest> capturedRequest1 = Capture.newInstance();
@@ -214,6 +287,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         5,
+        true,
         true
     );
 
@@ -308,7 +382,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         100,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -396,7 +471,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
             5000,
             60000,
             100,
-            true
+            true,
+            false
     );
 
     recordSupplier.assign(partitions);
@@ -457,7 +533,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         100,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -536,7 +613,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         100,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -604,7 +682,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         100,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -639,7 +718,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         5,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -702,7 +782,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         1,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -795,7 +876,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         100,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -869,7 +951,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1000,
         100,
-        true
+        true,
+        false
     );
 
     Assert.assertEquals("0", recordSupplier.getLatestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
@@ -907,7 +990,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1000,
         100,
-        true
+        true,
+        false
     );
     return recordSupplier;
   }
@@ -990,7 +1074,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         100,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -1039,7 +1124,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
                                                              5000,
                                                              60000,
                                                              5,
-                                                             true
+                                                             true,
+                                                             false
     );
     Record record = new Record();
 

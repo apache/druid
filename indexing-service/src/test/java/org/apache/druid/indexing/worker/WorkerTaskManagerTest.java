@@ -22,7 +22,7 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -43,7 +43,7 @@ import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.TestTaskRunner;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -66,7 +66,7 @@ public class WorkerTaskManagerTest
   private final TaskLocation location = TaskLocation.create("localhost", 1, 2);
   private final TestUtils testUtils;
   private final ObjectMapper jsonMapper;
-  private final IndexMergerV9 indexMergerV9;
+  private final IndexMergerV9Factory indexMergerV9Factory;
   private final IndexIO indexIO;
 
   private WorkerTaskManager workerTaskManager;
@@ -76,7 +76,7 @@ public class WorkerTaskManagerTest
     testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
     TestTasks.registerSubtypes(jsonMapper);
-    indexMergerV9 = testUtils.getTestIndexMergerV9();
+    indexMergerV9Factory = testUtils.getIndexMergerV9Factory();
     indexIO = testUtils.getTestIndexIO();
   }
 
@@ -94,7 +94,8 @@ public class WorkerTaskManagerTest
         null,
         false,
         false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
@@ -127,7 +128,7 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 null,
-                indexMergerV9,
+                indexMergerV9Factory,
                 null,
                 null,
                 null,
@@ -138,7 +139,7 @@ public class WorkerTaskManagerTest
                 new NoopChatHandlerProvider(),
                 testUtils.getRowIngestionMetersFactory(),
                 new TestAppenderatorsManager(),
-                new NoopIndexingServiceClient(),
+                new NoopOverlordClient(),
                 null,
                 null,
                 null

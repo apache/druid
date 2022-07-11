@@ -20,13 +20,11 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.QueryContext;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
-import java.util.Map;
 import java.util.Objects;
 
 public class PlannerConfig
@@ -36,6 +34,7 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
+  public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
   public static final int NUM_FILTER_NOT_USED = -1;
 
@@ -77,6 +76,9 @@ public class PlannerConfig
 
   @JsonProperty
   private boolean useNativeQueryExplain = false;
+
+  @JsonProperty
+  private boolean forceExpressionVirtualColumns = false;
 
   @JsonProperty
   private int maxNumericInFilters = NUM_FILTER_NOT_USED;
@@ -158,43 +160,50 @@ public class PlannerConfig
     return useNativeQueryExplain;
   }
 
-  public PlannerConfig withOverrides(final Map<String, Object> context)
+  /**
+   * @return true if special virtual columns should not be optimized and should
+   * always be of type "expressions", false otherwise.
+   */
+  public boolean isForceExpressionVirtualColumns()
   {
-    if (context == null) {
+    return forceExpressionVirtualColumns;
+  }
+
+  public PlannerConfig withOverrides(final QueryContext queryContext)
+  {
+    if (queryContext.isEmpty()) {
       return this;
     }
 
     final PlannerConfig newConfig = new PlannerConfig();
     newConfig.metadataRefreshPeriod = getMetadataRefreshPeriod();
     newConfig.maxTopNLimit = getMaxTopNLimit();
-    newConfig.useApproximateCountDistinct = getContextBoolean(
-        context,
+    newConfig.useApproximateCountDistinct = queryContext.getAsBoolean(
         CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
         isUseApproximateCountDistinct()
     );
-    newConfig.useGroupingSetForExactDistinct = getContextBoolean(
-        context,
+    newConfig.useGroupingSetForExactDistinct = queryContext.getAsBoolean(
         CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
         isUseGroupingSetForExactDistinct()
     );
-    newConfig.useApproximateTopN = getContextBoolean(
-        context,
+    newConfig.useApproximateTopN = queryContext.getAsBoolean(
         CTX_KEY_USE_APPROXIMATE_TOPN,
         isUseApproximateTopN()
     );
-    newConfig.computeInnerJoinCostAsFilter = getContextBoolean(
-        context,
+    newConfig.computeInnerJoinCostAsFilter = queryContext.getAsBoolean(
         CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
         computeInnerJoinCostAsFilter
     );
-    newConfig.useNativeQueryExplain = getContextBoolean(
-        context,
+    newConfig.useNativeQueryExplain = queryContext.getAsBoolean(
         CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
         isUseNativeQueryExplain()
     );
+    newConfig.forceExpressionVirtualColumns = queryContext.getAsBoolean(
+        CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS,
+        isForceExpressionVirtualColumns()
+    );
     final int systemConfigMaxNumericInFilters = getMaxNumericInFilters();
-    final int queryContextMaxNumericInFilters = getContextInt(
-        context,
+    final int queryContextMaxNumericInFilters = queryContext.getAsInt(
         CTX_MAX_NUMERIC_IN_FILTERS,
         getMaxNumericInFilters()
     );
@@ -232,42 +241,6 @@ public class PlannerConfig
     return queryContextMaxNumericInFilters;
   }
 
-  private static int getContextInt(
-      final Map<String, Object> context,
-      final String parameter,
-      final int defaultValue
-  )
-  {
-    final Object value = context.get(parameter);
-    if (value == null) {
-      return defaultValue;
-    } else if (value instanceof String) {
-      return Numbers.parseInt(value);
-    } else if (value instanceof Integer) {
-      return (Integer) value;
-    } else {
-      throw new IAE("Expected parameter[%s] to be integer", parameter);
-    }
-  }
-
-  private static boolean getContextBoolean(
-      final Map<String, Object> context,
-      final String parameter,
-      final boolean defaultValue
-  )
-  {
-    final Object value = context.get(parameter);
-    if (value == null) {
-      return defaultValue;
-    } else if (value instanceof String) {
-      return Boolean.parseBoolean((String) value);
-    } else if (value instanceof Boolean) {
-      return (Boolean) value;
-    } else {
-      throw new IAE("Expected parameter[%s] to be boolean", parameter);
-    }
-  }
-
   @Override
   public boolean equals(final Object o)
   {
@@ -288,7 +261,8 @@ public class PlannerConfig
            serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone) &&
-           useNativeQueryExplain == that.useNativeQueryExplain;
+           useNativeQueryExplain == that.useNativeQueryExplain &&
+           forceExpressionVirtualColumns == that.forceExpressionVirtualColumns;
   }
 
   @Override
@@ -306,7 +280,8 @@ public class PlannerConfig
         metadataSegmentCacheEnable,
         metadataSegmentPollPeriod,
         serializeComplexValues,
-        useNativeQueryExplain
+        useNativeQueryExplain,
+        forceExpressionVirtualColumns
     );
   }
 

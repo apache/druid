@@ -34,8 +34,8 @@ env:
     - DOCKER_IP=127.0.0.1  # for integration tests
     - MVN="mvn -B"
     - > # Various options to make execution of maven goals faster (e.g., mvn install)
-      MAVEN_SKIP="-Pskip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true"
-    - MAVEN_SKIP_TESTS="-Pskip-tests"
+      MAVEN_SKIP="-P skip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true"
+    - MAVEN_SKIP_TESTS="-P skip-tests"
 
 addons:
   apt:
@@ -46,7 +46,7 @@ addons:
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
 # output.  To compensate, use travis_wait to extend the timeout.
-install: ./check_test_suite.py && travis_terminate 0  || echo 'Running maven install...' && MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+install: ./check_test_suite.py && travis_terminate 0  || echo 'Running Maven install...' && MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
 # There are 3 stages of tests
 # 1. Tests - phase 1
@@ -110,8 +110,10 @@ jobs:
       # who watches the watchers?
       script: ./check_test_suite_test.py
 
-    - name: "(openjdk8) strict compilation"
+    - name: "(openjdk11) strict compilation"
       install: skip
+      # errorprone requires JDK 11
+      jdk: openjdk11
       # Strict compilation requires more than 2 GB
       script: >
         ./check_test_suite.py && travis_terminate 0 || MAVEN_OPTS='-Xmx3000m' ${MVN} clean -DstrictCompile compile test-compile --fail-at-end
@@ -184,7 +186,7 @@ jobs:
       name: "(openjdk11) packaging check"
       stage: Tests - phase 2
       jdk: openjdk11
-    
+
     - <<: *package
       name: "(openjdk15) packaging check"
       stage: Tests - phase 2
@@ -202,7 +204,7 @@ jobs:
         # Set MAVEN_OPTS for Surefire launcher. Skip remoteresources to avoid intermittent connection timeouts when
         # resolving the SIGAR dependency.
         - >
-          MAVEN_OPTS='-Xmx1100m' ${MVN} test -pl ${MAVEN_PROJECTS}
+          MAVEN_OPTS='-Xmx2048m' ${MVN} test -pl ${MAVEN_PROJECTS}
           ${MAVEN_SKIP} -Dremoteresources.skip=true -Ddruid.generic.useDefaultValueForNull=${DRUID_USE_DEFAULT_VALUE_FOR_NULL}
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
@@ -380,12 +382,34 @@ jobs:
       after_success:
         - (cd web-console && travis_retry npm run codecov)  # retry in case of network error
 
+    - name: "Build and test on ARM64 CPU architecture (1)"
+      stage: Tests - phase 2
+      arch: arm64-graviton2
+      dist: focal
+      virt: vm
+      group: edge
+      jdk: openjdk11
+      env:
+        - MAVEN_PROJECTS='core,indexing-hadoop,indexing-service,processing'
+      script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Ddruid.console.skip=true -DargLine=-Xmx3000m
+
+    - name: "Build and test on ARM64 CPU architecture (2)"
+      stage: Tests - phase 2
+      arch: arm64-graviton2
+      dist: focal
+      virt: vm
+      group: edge
+      jdk: openjdk11
+      env:
+        - MAVEN_PROJECTS='core,sql,server,services'
+      script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Ddruid.console.skip=true -DargLine=-Xmx3000m
+
     - name: "web console end-to-end test"
       before_install: *setup_generate_license
       install: web-console/script/druid build
       before_script:
         - ./check_test_suite.py && travis_terminate 0 || echo 'Starting nvm install...'
-        - nvm install 14.19.0
+        - nvm install 14.19.3
         - web-console/script/druid start
       script: (cd web-console && npm run test-e2e)
       after_script: web-console/script/druid stop

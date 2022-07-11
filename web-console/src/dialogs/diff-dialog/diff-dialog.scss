@@ -20,12 +20,12 @@
 @import '../../blueprint-overrides/common/colors';
 
 .diff-dialog {
-  &.bp3-dialog {
+  &.#{$bp-ns}-dialog {
     height: 90vh;
     width: 90vw;
   }
 
-  .bp3-dialog-body {
+  .#{$bp-ns}-dialog-body {
     position: relative;
 
     .version-selector-bar {

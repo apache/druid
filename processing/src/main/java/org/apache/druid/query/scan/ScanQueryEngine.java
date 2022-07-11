@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.Filter;
@@ -44,6 +45,7 @@ import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -61,9 +63,14 @@ public class ScanQueryEngine
   public Sequence<ScanResultValue> process(
       final ScanQuery query,
       final Segment segment,
-      final ResponseContext responseContext
+      final ResponseContext responseContext,
+      @Nullable final QueryMetrics<?> queryMetrics
   )
   {
+    if (segment.asQueryableIndex() != null && segment.asQueryableIndex().isFromTombstone()) {
+      return Sequences.empty();
+    }
+
     // "legacy" should be non-null due to toolChest.mergeResults
     final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "Expected non-null 'legacy' parameter");
 
@@ -73,7 +80,6 @@ public class ScanQueryEngine
     }
     final boolean hasTimeout = QueryContexts.hasTimeout(query);
     final Long timeoutAt = responseContext.getTimeoutTime();
-    final long start = System.currentTimeMillis();
     final StorageAdapter adapter = segment.asStorageAdapter();
 
     if (adapter == null) {
@@ -131,7 +137,7 @@ public class ScanQueryEngine
                     Granularities.ALL,
                     query.getTimeOrder().equals(ScanQuery.Order.DESCENDING) ||
                     (query.getTimeOrder().equals(ScanQuery.Order.NONE) && query.isDescending()),
-                    null
+                    queryMetrics
                 )
                 .map(cursor -> new BaseSequence<>(
                     new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()
@@ -185,11 +191,6 @@ public class ScanQueryEngine
                               throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
                             }
                             responseContext.addRowScanCount(offset - lastOffset);
-                            if (hasTimeout) {
-                              responseContext.putTimeoutTime(
-                                  timeoutAt - (System.currentTimeMillis() - start)
-                              );
-                            }
                             return new ScanResultValue(segmentId.toString(), allColumns, events);
                           }
 

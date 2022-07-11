@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespaceTest;
 import org.apache.druid.segment.loading.LocalFileTimestampVersionFinder;
+import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.apache.druid.server.lookup.namespace.cache.CacheSchedulerTest;
 import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
@@ -170,71 +171,63 @@ public class UriCacheGeneratorTest
     );
 
     final List<Function<Lifecycle, NamespaceExtractionCacheManager>> cacheManagerCreators = ImmutableList.of(
-        new Function<Lifecycle, NamespaceExtractionCacheManager>()
-        {
-          @Override
-          public NamespaceExtractionCacheManager apply(Lifecycle lifecycle)
-          {
-            return new OnHeapNamespaceExtractionCacheManager(
-                lifecycle,
-                new NoopServiceEmitter(),
-                new NamespaceExtractionConfig()
-            );
-          }
-        },
-        new Function<Lifecycle, NamespaceExtractionCacheManager>()
-        {
-          @Override
-          public NamespaceExtractionCacheManager apply(Lifecycle lifecycle)
-          {
-            return new OffHeapNamespaceExtractionCacheManager(
-                lifecycle,
-                new NoopServiceEmitter(),
-                new NamespaceExtractionConfig()
-            );
-          }
-        }
+        lifecycle -> new OnHeapNamespaceExtractionCacheManager(
+            lifecycle,
+            new NoopServiceEmitter(),
+            new NamespaceExtractionConfig()
+        ),
+        lifecycle -> new OffHeapNamespaceExtractionCacheManager(
+            lifecycle,
+            new NoopServiceEmitter(),
+            new NamespaceExtractionConfig()
+        )
     );
-    return new Iterable<Object[]>()
+    return () -> new Iterator<Object[]>()
     {
+      Iterator<Object[]> compressionIt = compressionParams.iterator();
+      Iterator<Function<Lifecycle, NamespaceExtractionCacheManager>> cacheManagerCreatorsIt =
+          cacheManagerCreators.iterator();
+      Object[] compressions = compressionIt.next();
+
       @Override
-      public Iterator<Object[]> iterator()
+      public boolean hasNext()
       {
-        return new Iterator<Object[]>()
-        {
-          Iterator<Object[]> compressionIt = compressionParams.iterator();
-          Iterator<Function<Lifecycle, NamespaceExtractionCacheManager>> cacheManagerCreatorsIt =
-              cacheManagerCreators.iterator();
-          Object[] compressions = compressionIt.next();
+        return compressionIt.hasNext() || cacheManagerCreatorsIt.hasNext();
+      }
 
-          @Override
-          public boolean hasNext()
-          {
-            return compressionIt.hasNext() || cacheManagerCreatorsIt.hasNext();
-          }
+      @Override
+      public Object[] next()
+      {
+        if (cacheManagerCreatorsIt.hasNext()) {
+          Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator = cacheManagerCreatorsIt.next();
+          return new Object[]{compressions[0], compressions[1], cacheManagerCreator};
+        } else {
+          cacheManagerCreatorsIt = cacheManagerCreators.iterator();
+          compressions = compressionIt.next();
+          return next();
+        }
+      }
 
-          @Override
-          public Object[] next()
-          {
-            if (cacheManagerCreatorsIt.hasNext()) {
-              Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator = cacheManagerCreatorsIt.next();
-              return new Object[]{compressions[0], compressions[1], cacheManagerCreator};
-            } else {
-              cacheManagerCreatorsIt = cacheManagerCreators.iterator();
-              compressions = compressionIt.next();
-              return next();
-            }
-          }
-
-          @Override
-          public void remove()
-          {
-            throw new UOE("Cannot remove");
-          }
-        };
+      @Override
+      public void remove()
+      {
+        throw new UOE("Cannot remove");
       }
     };
   }
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  private final String suffix;
+
+  private final Function<File, OutputStream> outStreamSupplier;
+  private final Lifecycle lifecycle;
+  private final NamespaceExtractionCacheManager cacheManager;
+  private final CacheScheduler scheduler;
+  private File tmpFile;
+  private UriCacheGenerator generator;
+  private UriExtractionNamespace namespace;
 
   public UriCacheGeneratorTest(
       String suffix,
@@ -245,30 +238,19 @@ public class UriCacheGeneratorTest
     this.suffix = suffix;
     this.outStreamSupplier = outStreamSupplier;
     this.lifecycle = new Lifecycle();
+    this.cacheManager = cacheManagerCreator.apply(lifecycle);
     this.scheduler = new CacheScheduler(
         new NoopServiceEmitter(),
         ImmutableMap.of(UriExtractionNamespace.class, new UriCacheGenerator(FINDERS)),
-        cacheManagerCreator.apply(lifecycle)
+        cacheManager
     );
   }
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  private final String suffix;
-  private final Function<File, OutputStream> outStreamSupplier;
-  private Lifecycle lifecycle;
-  private CacheScheduler scheduler;
-  private File tmpFile;
-  private File tmpFileParent;
-  private UriCacheGenerator generator;
-  private UriExtractionNamespace namespace;
 
   @Before
   public void setUp() throws Exception
   {
     lifecycle.start();
-    tmpFileParent = new File(temporaryFolder.newFolder(), "☃");
+    File tmpFileParent = new File(temporaryFolder.newFolder(), "☃");
     Assert.assertTrue(tmpFileParent.mkdir());
     Assert.assertTrue(tmpFileParent.isDirectory());
     tmpFile = Files.createTempFile(tmpFileParent.toPath(), "druidTestURIExtractionNS", suffix).toFile();
@@ -372,15 +354,16 @@ public class UriCacheGeneratorTest
   {
     Assert.assertEquals(0, scheduler.getActiveEntries());
 
-    CacheScheduler.VersionedCache versionedCache = generator.generateCache(namespace, null, null, scheduler);
-    Assert.assertNotNull(versionedCache);
-    Map<String, String> map = versionedCache.getCache();
+    CacheHandler cache = cacheManager.allocateCache();
+    String newVersion = generator.generateCache(namespace, null, null, cache);
+    Assert.assertNotNull(newVersion);
+    Map<String, String> map = cache.getCache();
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
-    String version = versionedCache.getVersion();
+    String version = newVersion;
     Assert.assertNotNull(version);
 
-    Assert.assertNull(generator.generateCache(namespace, null, version, scheduler));
+    Assert.assertNull(generator.generateCache(namespace, null, version, cacheManager.allocateCache()));
   }
 
   @Test(expected = FileNotFoundException.class)
@@ -395,7 +378,7 @@ public class UriCacheGeneratorTest
         null
     );
     Assert.assertTrue(new File(namespace.getUri()).delete());
-    generator.generateCache(badNamespace, null, null, scheduler);
+    generator.generateCache(badNamespace, null, null, cacheManager.allocateCache());
   }
 
   @Test(expected = FileNotFoundException.class)
@@ -411,7 +394,7 @@ public class UriCacheGeneratorTest
         null
     );
     Assert.assertTrue(new File(namespace.getUri()).delete());
-    generator.generateCache(badNamespace, null, null, scheduler);
+    generator.generateCache(badNamespace, null, null, cacheManager.allocateCache());
   }
 
   @Test(expected = IAE.class)
@@ -504,7 +487,7 @@ public class UriCacheGeneratorTest
         null,
         null
     );
-    Assert.assertNotNull(generator.generateCache(extractionNamespace, null, null, scheduler));
+    Assert.assertNotNull(generator.generateCache(extractionNamespace, null, null, cacheManager.allocateCache()));
   }
 
   @Test(timeout = 60_000L)

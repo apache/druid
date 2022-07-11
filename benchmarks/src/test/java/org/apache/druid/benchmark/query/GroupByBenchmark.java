@@ -784,7 +784,7 @@ public class GroupByBenchmark
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             new SerializingQueryRunner<>(
-                new DefaultObjectMapper(new SmileFactory()),
+                new DefaultObjectMapper(new SmileFactory(), null),
                 ResultRow.class,
                 toolChest.mergeResults(
                     factory.mergeRunners(state.executorService, makeMultiRunners(state))

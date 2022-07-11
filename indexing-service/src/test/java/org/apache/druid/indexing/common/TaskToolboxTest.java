@@ -24,12 +24,13 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -38,6 +39,7 @@ import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
@@ -86,7 +88,7 @@ public class TaskToolboxTest
   private SegmentCacheManagerFactory mockSegmentCacheManagerFactory = EasyMock.createMock(SegmentCacheManagerFactory.class);
   private SegmentLocalCacheManager mockSegmentLoaderLocalCacheManager = EasyMock.createMock(SegmentLocalCacheManager.class);
   private Task task = EasyMock.createMock(Task.class);
-  private IndexMergerV9 mockIndexMergerV9 = EasyMock.createMock(IndexMergerV9.class);
+  private IndexMergerV9Factory mockIndexMergerV9 = EasyMock.createMock(IndexMergerV9Factory.class);
   private IndexIO mockIndexIO = EasyMock.createMock(IndexIO.class);
   private Cache mockCache = EasyMock.createMock(Cache.class);
   private CacheConfig mockCacheConfig = EasyMock.createMock(CacheConfig.class);
@@ -99,7 +101,10 @@ public class TaskToolboxTest
   {
     EasyMock.expect(task.getId()).andReturn("task_id").anyTimes();
     EasyMock.expect(task.getDataSource()).andReturn("task_ds").anyTimes();
-    EasyMock.replay(task, mockHandoffNotifierFactory);
+    EasyMock.expect(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)).andReturn(true).anyTimes();
+    IndexMergerV9 indexMergerV9 = EasyMock.createMock(IndexMergerV9.class);
+    EasyMock.expect(mockIndexMergerV9.create(true)).andReturn(indexMergerV9).anyTimes();
+    EasyMock.replay(task, mockHandoffNotifierFactory, mockIndexMergerV9);
 
     taskToolbox = new TaskToolboxFactory(
         new TaskConfig(
@@ -114,7 +119,8 @@ public class TaskToolboxTest
             null,
             false,
             false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+            null
         ),
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         mockTaskActionClientFactory,
@@ -147,7 +153,7 @@ public class TaskToolboxTest
         new NoopChatHandlerProvider(),
         new DropwizardRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
-        new NoopIndexingServiceClient(),
+        new NoopOverlordClient(),
         null,
         null,
         null

@@ -23,11 +23,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.segment.FrameSegment;
+import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -220,17 +222,25 @@ public class IndexBuilder
   {
     // Determine row signature by building an mmapped index first.
     try (final QueryableIndex index = buildMMappedIndex()) {
-      final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
-      for (final String columnName : index.getColumnNames()) {
-        final ColumnCapabilities capabilities = index.getColumnHolder(columnName).getCapabilities();
-        rowSignatureBuilder.add(columnName, capabilities.toColumnType());
-      }
+      final RowSignature signature = new QueryableIndexStorageAdapter(index).getRowSignature();
 
       return new RowBasedSegment<>(
           SegmentId.dummy("IndexBuilder"),
           Sequences.simple(rows),
           RowAdapters.standardRow(),
-          rowSignatureBuilder.build()
+          signature
+      );
+    }
+  }
+
+  public FrameSegment buildFrameSegment(FrameType frameType)
+  {
+    // Build mmapped index first, then copy over.
+    try (final QueryableIndex index = buildMMappedIndex()) {
+      return FrameTestUtil.adapterToFrameSegment(
+          new QueryableIndexStorageAdapter(index),
+          frameType,
+          SegmentId.dummy("IndexBuilder")
       );
     }
   }

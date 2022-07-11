@@ -9,6 +9,7 @@
     "partition_num": 0,
     "num_replicas": 1,
     "num_rows": 4462111,
+    "is_active": 1,
     "is_published": 1,
     "is_available": 1,
     "is_realtime": 0,

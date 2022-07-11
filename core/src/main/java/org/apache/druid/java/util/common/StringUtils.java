@@ -108,6 +108,11 @@ public class StringUtils
     return StringUtils.fromUtf8(buffer, buffer.remaining());
   }
 
+  /**
+   * Converts a string to a UTF-8 byte array.
+   *
+   * @throws NullPointerException if "string" is null
+   */
   public static byte[] toUtf8(final String string)
   {
     try {
@@ -117,6 +122,16 @@ public class StringUtils
       // Should never happen
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * Converts a string to UTF-8 bytes, returning them as a newly-allocated on-heap {@link ByteBuffer}.
+   * If "string" is null, returns null.
+   */
+  @Nullable
+  public static ByteBuffer toUtf8ByteBuffer(@Nullable final String string)
+  {
+    return string == null ? null : ByteBuffer.wrap(toUtf8(string));
   }
 
   /**

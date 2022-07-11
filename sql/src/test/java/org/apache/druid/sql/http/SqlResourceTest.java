@@ -23,8 +23,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -45,7 +47,9 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
@@ -70,6 +74,7 @@ import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlPlanningException.PlanningError;
+import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -118,13 +123,13 @@ public class SqlResourceTest extends CalciteTestBase
   private static final String DUMMY_SQL_QUERY_ID = "dummy";
 
   private static final List<String> EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS =
-      Arrays.asList("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1", "EXPR$8");
+      Arrays.asList("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1", "EXPR$8");
 
   private static final List<String> EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS =
-      Arrays.asList("LONG", "LONG", "STRING", "STRING", "STRING", "FLOAT", "DOUBLE", "COMPLEX<hyperUnique>", "STRING");
+      Arrays.asList("LONG", "STRING", "STRING", "STRING", "LONG", "FLOAT", "DOUBLE", "COMPLEX<hyperUnique>", "STRING");
 
   private static final List<String> EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS =
-      Arrays.asList("TIMESTAMP", "BIGINT", "VARCHAR", "VARCHAR", "VARCHAR", "FLOAT", "DOUBLE", "OTHER", "VARCHAR");
+      Arrays.asList("TIMESTAMP", "VARCHAR", "VARCHAR", "VARCHAR", "BIGINT", "FLOAT", "DOUBLE", "OTHER", "VARCHAR");
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
@@ -239,7 +244,8 @@ public class SqlResourceTest extends CalciteTestBase
         plannerConfig,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
-        CalciteTests.DRUID_SCHEMA_NAME
+        CalciteTests.DRUID_SCHEMA_NAME,
+        new CalciteRulesManager(ImmutableSet.of())
     );
 
     lifecycleManager = new SqlLifecycleManager()
@@ -254,11 +260,15 @@ public class SqlResourceTest extends CalciteTestBase
       }
     };
     final ServiceEmitter emitter = new NoopServiceEmitter();
+    final AuthConfig authConfig = new AuthConfig();
+    final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of());
     sqlLifecycleFactory = new SqlLifecycleFactory(
         plannerFactory,
         emitter,
         testRequestLogger,
-        scheduler
+        scheduler,
+        authConfig,
+        Suppliers.ofInstance(defaultQueryConfig)
     )
     {
       @Override
@@ -269,6 +279,7 @@ public class SqlResourceTest extends CalciteTestBase
             emitter,
             testRequestLogger,
             scheduler,
+            authConfig,
             System.currentTimeMillis(),
             System.nanoTime(),
             validateAndAuthorizeLatchSupplier,
@@ -533,10 +544,10 @@ public class SqlResourceTest extends CalciteTestBase
         ImmutableList.of(
             Arrays.asList(
                 "2000-01-01T00:00:00.000Z",
-                1,
                 "",
                 "a",
                 "[\"a\",\"b\"]",
+                1,
                 1.0,
                 1.0,
                 "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -544,10 +555,10 @@ public class SqlResourceTest extends CalciteTestBase
             ),
             Arrays.asList(
                 "2000-01-02T00:00:00.000Z",
-                1,
                 "10.1",
                 nullStr,
                 "[\"b\",\"c\"]",
+                1,
                 2.0,
                 2.0,
                 "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -644,10 +655,10 @@ public class SqlResourceTest extends CalciteTestBase
             EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS,
             Arrays.asList(
                 "2000-01-01T00:00:00.000Z",
-                1,
                 "",
                 "a",
                 "[\"a\",\"b\"]",
+                1,
                 1.0,
                 1.0,
                 "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -655,10 +666,10 @@ public class SqlResourceTest extends CalciteTestBase
             ),
             Arrays.asList(
                 "2000-01-02T00:00:00.000Z",
-                1,
                 "10.1",
                 nullStr,
                 "[\"b\",\"c\"]",
+                1,
                 2.0,
                 2.0,
                 "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -712,10 +723,10 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(
         Arrays.asList(
             "2000-01-01T00:00:00.000Z",
-            1,
             "",
             "a",
             "[\"a\",\"b\"]",
+            1,
             1.0,
             1.0,
             "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -726,10 +737,10 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(
         Arrays.asList(
             "2000-01-02T00:00:00.000Z",
-            1,
             "10.1",
             nullStr,
             "[\"b\",\"c\"]",
+            1,
             2.0,
             2.0,
             "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -760,10 +771,10 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(
         Arrays.asList(
             "2000-01-01T00:00:00.000Z",
-            1,
             "",
             "a",
             "[\"a\",\"b\"]",
+            1,
             1.0,
             1.0,
             "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -774,10 +785,10 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(
         Arrays.asList(
             "2000-01-02T00:00:00.000Z",
-            1,
             "10.1",
             nullStr,
             "[\"b\",\"c\"]",
+            1,
             2.0,
             2.0,
             "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -1088,8 +1099,8 @@ public class SqlResourceTest extends CalciteTestBase
 
     Assert.assertEquals(
         ImmutableList.of(
-            "2000-01-01T00:00:00.000Z,1,,a,\"[\"\"a\"\",\"\"b\"\"]\",1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
-            "2000-01-02T00:00:00.000Z,1,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "2000-01-01T00:00:00.000Z,,a,\"[\"\"a\"\",\"\"b\"\"]\",1,1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "2000-01-02T00:00:00.000Z,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",1,2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
             "",
             ""
         ),
@@ -1113,8 +1124,8 @@ public class SqlResourceTest extends CalciteTestBase
             String.join(",", EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS),
             String.join(",", EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS),
             String.join(",", EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS),
-            "2000-01-01T00:00:00.000Z,1,,a,\"[\"\"a\"\",\"\"b\"\"]\",1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
-            "2000-01-02T00:00:00.000Z,1,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "2000-01-01T00:00:00.000Z,,a,\"[\"\"a\"\",\"\"b\"\"]\",1,1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "2000-01-02T00:00:00.000Z,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",1,2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
             "",
             ""
         ),
@@ -1164,7 +1175,7 @@ public class SqlResourceTest extends CalciteTestBase
             ImmutableMap.<String, Object>of(
                 "PLAN",
                 StringUtils.format(
-                    "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"sqlQueryId\":\"%s\"}}], signature=[{a0:LONG}])\n",
+                    "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"context\":{\"sqlQueryId\":\"%s\"}}], signature=[{a0:LONG}])\n",
                     DUMMY_SQL_QUERY_ID
                 ),
                 "RESOURCES",
@@ -1594,6 +1605,30 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
   }
 
+  @Test
+  public void testQueryContextException() throws Exception
+  {
+    final String sqlQueryId = "badQueryContextTimeout";
+    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, "2000'", BaseQuery.SQL_QUERY_ID, sqlQueryId);
+    final QueryException queryContextException = doPost(
+        new SqlQuery(
+            "SELECT 1337",
+            ResultFormat.OBJECT,
+            false,
+            false,
+            false,
+            queryContext,
+            null
+        )
+    ).lhs;
+    Assert.assertNotNull(queryContextException);
+    Assert.assertEquals(BadQueryContextException.ERROR_CODE, queryContextException.getErrorCode());
+    Assert.assertEquals(BadQueryContextException.ERROR_CLASS, queryContextException.getErrorClass());
+    Assert.assertTrue(queryContextException.getMessage().contains("For input string: \"2000'\""));
+    checkSqlRequestLog(false);
+    Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
+  }
+
   @SuppressWarnings("unchecked")
   private void checkSqlRequestLog(boolean success)
   {
@@ -1764,6 +1799,7 @@ public class SqlResourceTest extends CalciteTestBase
         ServiceEmitter emitter,
         RequestLogger requestLogger,
         QueryScheduler queryScheduler,
+        AuthConfig authConfig,
         long startMs,
         long startNs,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier,
@@ -1772,7 +1808,7 @@ public class SqlResourceTest extends CalciteTestBase
         SettableSupplier<Function<Sequence<Object[]>, Sequence<Object[]>>> sequenceMapFnSupplier
     )
     {
-      super(plannerFactory, emitter, requestLogger, queryScheduler, startMs, startNs);
+      super(plannerFactory, emitter, requestLogger, queryScheduler, authConfig, new DefaultQueryConfig(ImmutableMap.of()), startMs, startNs);
       this.validateAndAuthorizeLatchSupplier = validateAndAuthorizeLatchSupplier;
       this.planLatchSupplier = planLatchSupplier;
       this.executeLatchSupplier = executeLatchSupplier;

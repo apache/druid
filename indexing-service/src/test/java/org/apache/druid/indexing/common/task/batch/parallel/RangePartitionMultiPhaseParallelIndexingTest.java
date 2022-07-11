@@ -41,7 +41,6 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanResultValue;
-import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -191,6 +190,40 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     return intervalToDims;
   }
 
+
+  private static SetMultimap<Interval, List<Object>> createInputFilesForReplace(File inputDir, boolean useMultivalueDim)
+      throws IOException
+  {
+    SetMultimap<Interval, List<Object>> intervalToDims = HashMultimap.create();
+
+    Set<Integer> fileIds = new HashSet<>();
+    fileIds.add(1);
+    fileIds.add(7);
+    fileIds.add(9);
+    for (Integer fileIndex : fileIds) {
+      Path path = new File(inputDir, TEST_FILE_NAME_PREFIX + fileIndex).toPath();
+      try (final Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
+        for (int i = 11; i < 2 * (NUM_ROW / DIM_FILE_CARDINALITY); i++) {
+          for (int d = 0; d < DIM_FILE_CARDINALITY; d++) {
+            int rowIndex = i * DIM_FILE_CARDINALITY + d;
+            String dim1Value = createDim1Value(rowIndex, fileIndex, useMultivalueDim);
+
+            // This is the original row
+            writeRow(writer, i + d, dim1Value, fileIndex, intervalToDims);
+
+            // This row should get rolled up with original row
+            writeRow(writer, i + d, dim1Value, fileIndex, intervalToDims);
+
+            // This row should not get rolled up with original row
+            writeRow(writer, i + d, dim1Value, fileIndex + NUM_FILE, intervalToDims);
+          }
+        }
+      }
+    }
+
+    return intervalToDims;
+  }
+
   @Nullable
   private static String createDim1Value(int rowIndex, int fileIndex, boolean useMultivalueDim)
   {
@@ -222,10 +255,15 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     intervalToDims.put(interval, Arrays.asList(dim1Value, dim2Value));
   }
 
+  // The next test also verifies replace functionality. Now, they are together to save on test execution time
+  // due to Travis CI 10 minute default running time (with no output) -- having it separate made it
+  // last longer. At some point we should really simplify this file, so it runs faster (splitting, etc.)
   @Test
   public void createsCorrectRangePartitions() throws Exception
   {
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
+
+    // verify dropExisting false
     final Set<DataSegment> publishedSegments = runTask(runTestTask(
         new DimensionRangePartitionsSpec(
             targetRowsPerSegment,
@@ -233,30 +271,47 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
             Collections.singletonList(DIM1),
             false
         ),
+        inputDir,
+        false,
         false
     ), useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS);
 
     if (!useMultivalueDim) {
       assertRangePartitions(publishedSegments);
     }
-  }
 
-  @Test
-  public void testRowStats()
-  {
-    if (useMultivalueDim) {
+    // verify dropExisting true
+    if (intervalToIndex == null) {
+      // dropExisting requires intervals
       return;
     }
-    final int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
-    ParallelIndexSupervisorTask task = runTestTask(
-        new SingleDimensionPartitionsSpec(targetRowsPerSegment, null, DIM1, false),
-        false);
-    Map<String, Object> expectedReports = buildExpectedTaskReportParallel(
-        task.getId(),
-        ImmutableList.of(),
-        new RowIngestionMetersTotals(600, 0, 0, 0));
-    Map<String, Object> actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
-    compareTaskReports(expectedReports, actualReports);
+
+    File inputDirectory = temporaryFolder.newFolder("dataReplace");
+    createInputFilesForReplace(inputDirectory, useMultivalueDim);
+
+    final Set<DataSegment> publishedSegmentsAfterReplace = runTask(runTestTask(
+        new DimensionRangePartitionsSpec(
+            targetRowsPerSegment,
+            null,
+            Collections.singletonList(DIM1),
+            false
+        ),
+        inputDirectory,
+        false,
+        true
+    ), useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS);
+
+    int tombstones = 0;
+    for (DataSegment ds : publishedSegmentsAfterReplace) {
+      if (ds.isTombstone()) {
+        tombstones++;
+      }
+    }
+
+    if (!useMultivalueDim) {
+      Assert.assertEquals(11, tombstones);
+      Assert.assertEquals(10, publishedSegmentsAfterReplace.size() - tombstones);
+    }
   }
 
   @Test
@@ -275,6 +330,8 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
                 DIM1,
                 false
             ),
+            inputDir,
+            false,
             false
         ), TaskState.SUCCESS)
     );
@@ -282,14 +339,18 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     publishedSegments.addAll(
         runTask(runTestTask(
             new DynamicPartitionsSpec(5, null),
-            true
+            inputDir,
+            true,
+            false
         ), TaskState.SUCCESS)
     );
     // And append again
     publishedSegments.addAll(
         runTask(runTestTask(
             new DynamicPartitionsSpec(10, null),
-            true
+            inputDir,
+            true,
+            false
         ), TaskState.SUCCESS)
     );
 
@@ -323,7 +384,9 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
 
   private ParallelIndexSupervisorTask runTestTask(
       PartitionsSpec partitionsSpec,
-      boolean appendToExisting
+      File inputDirectory,
+      boolean appendToExisting,
+      boolean dropExisting
   )
   {
     if (isUseInputFormatApi()) {
@@ -333,11 +396,12 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
           INPUT_FORMAT,
           null,
           intervalToIndex,
-          inputDir,
+          inputDirectory,
           TEST_FILE_NAME_PREFIX + "*",
           partitionsSpec,
           maxNumConcurrentSubTasks,
-          appendToExisting
+          appendToExisting,
+          dropExisting
       );
     } else {
       return createTask(
@@ -346,11 +410,12 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
           null,
           PARSE_SPEC,
           intervalToIndex,
-          inputDir,
+          inputDirectory,
           TEST_FILE_NAME_PREFIX + "*",
           partitionsSpec,
           maxNumConcurrentSubTasks,
-          appendToExisting
+          appendToExisting,
+          dropExisting
       );
     }
   }

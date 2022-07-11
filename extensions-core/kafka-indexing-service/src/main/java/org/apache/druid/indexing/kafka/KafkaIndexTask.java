@@ -38,7 +38,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
 {
   private static final String TYPE = "index_kafka";
 
-  private final KafkaIndexTaskIOConfig ioConfig;
   private final ObjectMapper configMapper;
 
   // This value can be tuned in some tests
@@ -65,7 +64,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
         getFormattedGroupId(dataSchema.getDataSource(), TYPE)
     );
     this.configMapper = configMapper;
-    this.ioConfig = ioConfig;
 
     Preconditions.checkArgument(
         ioConfig.getStartSequenceNumbers().getExclusivePartitions().isEmpty(),

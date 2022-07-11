@@ -19,11 +19,14 @@
 
 package org.apache.druid.sql;
 
+import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.log.RequestLogger;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 
 @LazySingleton
@@ -33,19 +36,25 @@ public class SqlLifecycleFactory
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final QueryScheduler queryScheduler;
+  private final AuthConfig authConfig;
+  private final DefaultQueryConfig defaultQueryConfig;
 
   @Inject
   public SqlLifecycleFactory(
       PlannerFactory plannerFactory,
       ServiceEmitter emitter,
       RequestLogger requestLogger,
-      QueryScheduler queryScheduler
+      QueryScheduler queryScheduler,
+      AuthConfig authConfig,
+      Supplier<DefaultQueryConfig> defaultQueryConfig
   )
   {
     this.plannerFactory = plannerFactory;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.queryScheduler = queryScheduler;
+    this.authConfig = authConfig;
+    this.defaultQueryConfig = defaultQueryConfig.get();
   }
 
   public SqlLifecycle factorize()
@@ -55,6 +64,8 @@ public class SqlLifecycleFactory
         emitter,
         requestLogger,
         queryScheduler,
+        authConfig,
+        defaultQueryConfig,
         System.currentTimeMillis(),
         System.nanoTime()
     );

@@ -387,6 +387,15 @@ public class DruidExpression
     return virtualColumnCreator.create(name, outputType, expression.get(), macroTable);
   }
 
+  public VirtualColumn toExpressionVirtualColumn(
+      final String name,
+      final ColumnType outputType,
+      final ExprMacroTable macroTable
+  )
+  {
+    return DEFAULT_VIRTUAL_COLUMN_BUILDER.create(name, outputType, expression.get(), macroTable);
+  }
+
   public NodeType getType()
   {
     return nodeType;
@@ -495,7 +504,7 @@ public class DruidExpression
     {
       List<DruidExpression> list = new ArrayList<>(expressions.size());
       for (DruidExpression expr : expressions) {
-        list.add(visit(expr));
+        list.add(visit(expr.visit(this)));
       }
       return list;
     }

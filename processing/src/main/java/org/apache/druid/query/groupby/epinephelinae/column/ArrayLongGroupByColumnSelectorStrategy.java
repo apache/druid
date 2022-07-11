@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Arrays;
 import java.util.List;
@@ -31,10 +32,9 @@ import java.util.stream.Collectors;
 
 public class ArrayLongGroupByColumnSelectorStrategy extends ArrayNumericGroupByColumnSelectorStrategy<Long>
 {
-
   public ArrayLongGroupByColumnSelectorStrategy()
   {
-
+    super(Long.BYTES);
   }
 
   @VisibleForTesting
@@ -43,12 +43,11 @@ public class ArrayLongGroupByColumnSelectorStrategy extends ArrayNumericGroupByC
       Object2IntOpenHashMap<List<Long>> reverseDictionary
   )
   {
-    super(dictionary, reverseDictionary);
+    super(dictionary, reverseDictionary, Long.BYTES);
   }
 
-
   @Override
-  public Object getOnlyValue(ColumnValueSelector selector)
+  protected int computeDictionaryId(ColumnValueSelector selector)
   {
     Object object = selector.getObject();
     if (object == null) {
@@ -64,7 +63,7 @@ public class ArrayLongGroupByColumnSelectorStrategy extends ArrayNumericGroupByC
                                           .map(a -> (Long) a)
                                           .collect(Collectors.toList()));
     } else {
-      throw new ISE("Found unknowm type %s in ColumnValueSelector.", object.getClass().toString());
+      throw new ISE("Found unexpected object type [%s] in %s array.", object.getClass().getName(), ValueType.LONG);
     }
   }
 }

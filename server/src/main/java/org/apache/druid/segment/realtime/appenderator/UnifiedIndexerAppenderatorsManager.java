@@ -627,6 +627,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         boolean rollup,
         AggregatorFactory[] metricAggs,
         File outDir,
+        DimensionsSpec dimensionsSpec,
         IndexSpec indexSpec,
         int maxColumnsToMerge
     )

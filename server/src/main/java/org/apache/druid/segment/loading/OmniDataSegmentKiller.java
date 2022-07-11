@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -43,11 +44,18 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
   @Override
   public void kill(DataSegment segment) throws SegmentLoadingException
   {
-    getKiller(segment).kill(segment);
+    DataSegmentKiller dataSegmentKiller = getKiller(segment);
+    if (dataSegmentKiller != null) {
+      dataSegmentKiller.kill(segment);
+    }
   }
 
+  @Nullable
   private DataSegmentKiller getKiller(DataSegment segment) throws SegmentLoadingException
   {
+    if (segment.isTombstone()) {
+      return null;
+    }
     String type = MapUtils.getString(segment.getLoadSpec(), "type");
     DataSegmentKiller loader = killers.get(type);
 

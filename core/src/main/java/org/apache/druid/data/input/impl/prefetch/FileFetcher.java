@@ -98,7 +98,7 @@ public class FileFetcher<T> extends Fetcher<T>
   {
     return new OpenObject<>(
         object,
-        new RetryingInputStream<>(object, openObjectFunction, retryCondition, null, getFetchConfig().getMaxFetchRetry()),
+        new RetryingInputStream<>(object, openObjectFunction, retryCondition, getFetchConfig().getMaxFetchRetry()),
         getNoopCloser()
     );
   }

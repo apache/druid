@@ -1,43 +1,43 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`FormJsonSelector matches snapshot form json 1`] = `
-<Blueprint3.FormGroup
+<Blueprint4.FormGroup
   className="form-json-selector"
 >
-  <Blueprint3.ButtonGroup
+  <Blueprint4.ButtonGroup
     fill={true}
   >
-    <Blueprint3.Button
+    <Blueprint4.Button
       active={false}
       onClick={[Function]}
       text="Form"
     />
-    <Blueprint3.Button
+    <Blueprint4.Button
       active={true}
       onClick={[Function]}
       text="JSON"
     />
-  </Blueprint3.ButtonGroup>
-</Blueprint3.FormGroup>
+  </Blueprint4.ButtonGroup>
+</Blueprint4.FormGroup>
 `;
 
 exports[`FormJsonSelector matches snapshot form tab 1`] = `
-<Blueprint3.FormGroup
+<Blueprint4.FormGroup
   className="form-json-selector"
 >
-  <Blueprint3.ButtonGroup
+  <Blueprint4.ButtonGroup
     fill={true}
   >
-    <Blueprint3.Button
+    <Blueprint4.Button
       active={true}
       onClick={[Function]}
       text="Form"
     />
-    <Blueprint3.Button
+    <Blueprint4.Button
       active={false}
       onClick={[Function]}
       text="JSON"
     />
-  </Blueprint3.ButtonGroup>
-</Blueprint3.FormGroup>
+  </Blueprint4.ButtonGroup>
+</Blueprint4.FormGroup>
 `;

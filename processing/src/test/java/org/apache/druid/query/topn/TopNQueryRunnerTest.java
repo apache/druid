@@ -4615,6 +4615,48 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testFullOnTopNAggregateLongVirtualColumn()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .virtualColumns(new ExpressionVirtualColumn("v0", "index", ColumnType.LONG, ExprMacroTable.nil()))
+        .dimension(new DefaultDimensionSpec("quality", "quality"))
+        .metric("sumIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .aggregators(Collections.singletonList(new LongSumAggregatorFactory("sumIndex", "v0")))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                                .put("quality", "mezzanine")
+                                .put("sumIndex", 217586L)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("quality", "premium")
+                                .put("sumIndex", 210722L)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("quality", "automotive")
+                                .put("sumIndex", 12226L)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("quality", "entertainment")
+                                .put("sumIndex", 12038L)
+                                .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
   public void testTopNStringVirtualColumn()
   {
     TopNQuery query = new TopNQueryBuilder()
