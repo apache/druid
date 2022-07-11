@@ -56,6 +56,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -140,7 +141,7 @@ public class SegmentManagerThreadSafetyTest
     Assert.assertEquals(0, segmentCacheManager.getSegmentLocks().size());
   }
 
-  @Test(timeout = 6000L)
+  @Test
   public void testLoadMultipleSegments() throws IOException, ExecutionException, InterruptedException
   {
     final List<DataSegment> segments = new ArrayList<>(88);
@@ -227,6 +228,8 @@ public class SegmentManagerThreadSafetyTest
     {
       return new Segment()
       {
+        StorageAdapter storageAdapter = Mockito.mock(StorageAdapter.class);
+
         @Override
         public SegmentId getId()
         {
@@ -249,7 +252,8 @@ public class SegmentManagerThreadSafetyTest
         @Override
         public StorageAdapter asStorageAdapter()
         {
-          throw new UnsupportedOperationException();
+          Mockito.when(storageAdapter.getNumRows()).thenReturn(1);
+          return storageAdapter;
         }
 
         @Override

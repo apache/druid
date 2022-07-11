@@ -107,7 +107,6 @@ public class SegmentStatsMonitorTest
     expectedEvents.add(rowCountRangeEvent("6M-8M", 0));
     expectedEvents.add(rowCountRangeEvent("8M-10M", 0));
     expectedEvents.add(rowCountRangeEvent("10M+", 0));
-    expectedEvents.add(rowCountRangeEvent("Tombstone", 0));
 
     List<Map<String, Object>> expectedEventsAsMap = getEventMaps(expectedEvents);
     Map<String, Map<String, Object>> expected = metricKeyedMap(expectedEventsAsMap);
@@ -115,16 +114,18 @@ public class SegmentStatsMonitorTest
     Assert.assertEquals("different number of metrics were returned", expected.size(), actual.size());
     for (Map.Entry<String, Map<String, Object>> expectedKeyedEntry : expected.entrySet()) {
       Map<String, Object> actualValue = actual.get(expectedKeyedEntry.getKey());
-      assertMetricMapsEqual(expectedKeyedEntry.getValue(), actualValue);
+      assertMetricMapsEqual(expectedKeyedEntry.getKey(), expectedKeyedEntry.getValue(), actualValue);
     }
   }
 
   @Test
-  public void testZeroDistribution()
+  public void testZeroAndTombstoneDistribution()
   {
     final SegmentRowCountDistribution segmentRowCountDistribution = new SegmentRowCountDistribution();
     segmentRowCountDistribution.addRowCountToDistribution(100_000L);
     segmentRowCountDistribution.addRowCountToDistribution(0L);
+    segmentRowCountDistribution.addTombstoneToDistribution();
+    segmentRowCountDistribution.addTombstoneToDistribution();
 
     Mockito.when(segmentLoadDropMgr.getAverageNumOfRowsPerSegmentForDatasource())
            .thenReturn(ImmutableMap.of(DATA_SOURCE, 50_000L));
@@ -142,6 +143,7 @@ public class SegmentStatsMonitorTest
     List<ServiceEventBuilder<ServiceMetricEvent>> expectedEvents = new ArrayList<>();
     expectedEvents.add(averageRowCountEvent(50_000L));
     expectedEvents.add(rowCountRangeEvent("0", 1));
+    expectedEvents.add(rowCountRangeEvent("Tombstone", 2));
     expectedEvents.add(rowCountRangeEvent("1-10k", 0));
     expectedEvents.add(rowCountRangeEvent("10k-2M", 1));
     expectedEvents.add(rowCountRangeEvent("2M-4M", 0));
@@ -149,7 +151,6 @@ public class SegmentStatsMonitorTest
     expectedEvents.add(rowCountRangeEvent("6M-8M", 0));
     expectedEvents.add(rowCountRangeEvent("8M-10M", 0));
     expectedEvents.add(rowCountRangeEvent("10M+", 0));
-    expectedEvents.add(rowCountRangeEvent("Tombstone", 0));
 
     List<Map<String, Object>> expectedEventsAsMap = getEventMaps(expectedEvents);
     Map<String, Map<String, Object>> expected = metricKeyedMap(expectedEventsAsMap);
@@ -157,16 +158,16 @@ public class SegmentStatsMonitorTest
     Assert.assertEquals("different number of metrics were returned", expected.size(), actual.size());
     for (Map.Entry<String, Map<String, Object>> expectedKeyedEntry : expected.entrySet()) {
       Map<String, Object> actualValue = actual.get(expectedKeyedEntry.getKey());
-      assertMetricMapsEqual(expectedKeyedEntry.getValue(), actualValue);
+      assertMetricMapsEqual(expectedKeyedEntry.getKey(), expectedKeyedEntry.getValue(), actualValue);
     }
   }
 
-  private void assertMetricMapsEqual(Map<String, Object> expected, Map<String, Object> actual)
+  private void assertMetricMapsEqual(String messagePrefix, Map<String, Object> expected, Map<String, Object> actual)
   {
     Assert.assertEquals("different number of expected values for metrics", expected.size(), actual.size());
     for (Map.Entry<String, Object> expectedMetricEntry : expected.entrySet()) {
       Assert.assertEquals(
-          expectedMetricEntry.getKey(),
+          messagePrefix + " " +expectedMetricEntry.getKey(),
           expectedMetricEntry.getValue(),
           actual.get(expectedMetricEntry.getKey())
       );

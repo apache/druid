@@ -24,13 +24,22 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager.DataSourceState;
@@ -40,12 +49,15 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -89,11 +101,14 @@ public class SegmentManagerTest
   {
     private final String version;
     private final Interval interval;
+    private final StorageAdapter storageAdapter;
 
     SegmentForTesting(String version, Interval interval)
     {
       this.version = version;
       this.interval = interval;
+      storageAdapter = Mockito.mock(StorageAdapter.class);
+      Mockito.when(storageAdapter.getNumRows()).thenReturn(1);
     }
 
     public String getVersion()
@@ -127,7 +142,7 @@ public class SegmentManagerTest
     @Override
     public StorageAdapter asStorageAdapter()
     {
-      throw new UnsupportedOperationException();
+      return storageAdapter;
     }
 
     @Override
