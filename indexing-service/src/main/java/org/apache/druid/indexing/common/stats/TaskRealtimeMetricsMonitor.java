@@ -75,9 +75,10 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
   @Override
   public boolean monitor(ServiceEmitter emitter)
   {
-    if (started) {
+    if (isStarted()) {
       return doMonitor(emitter);
     } else if (lastRoundMetricsToBePushed) {
+      // Run one more time even if the monitor was removed, in case there's some extra data to flush
       lastRoundMetricsToBePushed = false;
       return doMonitor(emitter);
     }

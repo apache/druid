@@ -27,7 +27,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
  */
 public abstract class AbstractMonitor implements Monitor
 {
-  protected volatile boolean started = false;
+  private volatile boolean started = false;
   
   @Override
   public void start()
@@ -39,6 +39,11 @@ public abstract class AbstractMonitor implements Monitor
   public void stop()
   {
     started = false;
+  }
+
+  public boolean isStarted()
+  {
+    return started;
   }
 
   @Override
