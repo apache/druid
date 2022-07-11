@@ -27,6 +27,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine.VectorGroupByEngineIterator;
 import org.apache.druid.segment.ColumnProcessors;
@@ -82,6 +83,7 @@ public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
     final VectorGroupByEngineIterator iterator = new VectorGroupByEngineIterator(
         query,
         new GroupByQueryConfig(),
+        GroupByQueryRunnerTest.DEFAULT_PROCESSING_CONFIG,
         storageAdapter,
         cursor,
         interval,
