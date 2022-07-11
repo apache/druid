@@ -323,9 +323,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         EXPECTED_LOCATION,
         null,
         CLOUD_CONFIG_PROPERTIES,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
+        null,
+        null,
+        null
     );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
@@ -449,9 +449,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         EXPECTED_LOCATION,
         null,
         CLOUD_CONFIG_PROPERTIES,
-        PROXY_CONFIG,
-        ENDPOINT_CONFIG,
-        CLIENT_CONFIG
+        null,
+        null,
+        null
     );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
