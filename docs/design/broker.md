@@ -27,7 +27,7 @@ title: "Broker"
 
 For Apache Druid Broker Process Configuration, see [Broker Configuration](../configuration/index.md#broker).
 
-For basic tuning guidance for the Broker process, see [Basic Cluster Tuning](../operations/basic-cluster-tuning.html#broker).
+For basic tuning guidance for the Broker process, see [Basic Cluster Tuning](../operations/basic-cluster-tuning.md#broker).
 
 ### HTTP endpoints
 
