@@ -35,8 +35,7 @@ import java.util.Set;
 
 /**
  * Binary serialization for nested field type info, translated into this compact format for storage in segments.
- * The index of the type info here is the same as the field index in
- * {@link CompressedNestedDataComplexColumn#fields}
+ * The index of the type info here is the same as the field index in {@link CompressedNestedDataComplexColumn#fields}
  */
 public class NestedLiteralTypeInfo
 {

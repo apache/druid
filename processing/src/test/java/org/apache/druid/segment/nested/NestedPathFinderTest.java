@@ -47,7 +47,7 @@ public class NestedPathFinderTest
   @Test
   public void testParseJqPath()
   {
-    List<NestedPathFinder.NestedPathPart> pathParts;
+    List<NestedPathPart> pathParts;
 
     pathParts = NestedPathFinder.parseJqPath(".");
     Assert.assertEquals(0, pathParts.size());
@@ -55,146 +55,146 @@ public class NestedPathFinderTest
     // { "z" : "hello" }
     pathParts = NestedPathFinder.parseJqPath(".z");
     Assert.assertEquals(1, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("z", pathParts.get(0).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("z", pathParts.get(0).getPartIdentifier());
     Assert.assertEquals(".\"z\"", NestedPathFinder.toNormalizedJqPath(pathParts));
 
     // { "z" : "hello" }
     pathParts = NestedPathFinder.parseJqPath(".\"z\"");
     Assert.assertEquals(1, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("z", pathParts.get(0).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("z", pathParts.get(0).getPartIdentifier());
     Assert.assertEquals(".\"z\"", NestedPathFinder.toNormalizedJqPath(pathParts));
 
     // { "z" : "hello" }
     pathParts = NestedPathFinder.parseJqPath(".[\"z\"]");
     Assert.assertEquals(1, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("z", pathParts.get(0).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("z", pathParts.get(0).getPartIdentifier());
     Assert.assertEquals(".\"z\"", NestedPathFinder.toNormalizedJqPath(pathParts));
 
     // { "x" : ["a", "b"]}
     pathParts = NestedPathFinder.parseJqPath(".x[1]");
     Assert.assertEquals(2, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.ArrayElement);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathArrayElement);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
     Assert.assertEquals(".\"x\"[1]", NestedPathFinder.toNormalizedJqPath(pathParts));
 
     // { "x" : ["a", "b"]}
     pathParts = NestedPathFinder.parseJqPath(".\"x\"[1]");
     Assert.assertEquals(2, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.ArrayElement);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathArrayElement);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
     Assert.assertEquals(".\"x\"[1]", NestedPathFinder.toNormalizedJqPath(pathParts));
 
     // { "x" : ["a", "b"]}
     pathParts = NestedPathFinder.parseJqPath(".[\"x\"][1]");
     Assert.assertEquals(2, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.ArrayElement);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathArrayElement);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
     Assert.assertEquals(".\"x\"[1]", NestedPathFinder.toNormalizedJqPath(pathParts));
 
     // { "x" : { "1" : "hello" }}
     pathParts = NestedPathFinder.parseJqPath(".[\"x\"][\"1\"]");
     Assert.assertEquals(2, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathField);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
     Assert.assertEquals(".\"x\".\"1\"", NestedPathFinder.toNormalizedJqPath(pathParts));
 
 
     // { "x" : [ { "foo" : { "bar" : "hello" }}, { "foo" : { "bar" : "world" }}]}
     pathParts = NestedPathFinder.parseJqPath(".x[1].foo.bar");
     Assert.assertEquals(4, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.ArrayElement);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
-    Assert.assertTrue(pathParts.get(2) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("foo", pathParts.get(2).getPartName());
-    Assert.assertTrue(pathParts.get(3) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("bar", pathParts.get(3).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathArrayElement);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(2) instanceof NestedPathField);
+    Assert.assertEquals("foo", pathParts.get(2).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(3) instanceof NestedPathField);
+    Assert.assertEquals("bar", pathParts.get(3).getPartIdentifier());
     Assert.assertEquals(".\"x\"[1].\"foo\".\"bar\"", NestedPathFinder.toNormalizedJqPath(pathParts));
 
     // { "x" : [ { "foo" : { "bar" : "hello" }}, { "foo" : { "bar" : "world" }}]}
     pathParts = NestedPathFinder.parseJqPath(".x[1].\"foo\".bar");
     Assert.assertEquals(4, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.ArrayElement);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
-    Assert.assertTrue(pathParts.get(2) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("foo", pathParts.get(2).getPartName());
-    Assert.assertTrue(pathParts.get(3) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("bar", pathParts.get(3).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathArrayElement);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(2) instanceof NestedPathField);
+    Assert.assertEquals("foo", pathParts.get(2).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(3) instanceof NestedPathField);
+    Assert.assertEquals("bar", pathParts.get(3).getPartIdentifier());
     Assert.assertEquals(".\"x\"[1].\"foo\".\"bar\"", NestedPathFinder.toNormalizedJqPath(pathParts));
 
     // { "x" : [ { "foo" : { "bar" : "hello" }}, { "foo" : { "bar" : "world" }}]}
     pathParts = NestedPathFinder.parseJqPath(".[\"x\"][1].\"foo\"[\"bar\"]");
     Assert.assertEquals(4, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.ArrayElement);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
-    Assert.assertTrue(pathParts.get(2) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("foo", pathParts.get(2).getPartName());
-    Assert.assertTrue(pathParts.get(3) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("bar", pathParts.get(3).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathArrayElement);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(2) instanceof NestedPathField);
+    Assert.assertEquals("foo", pathParts.get(2).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(3) instanceof NestedPathField);
+    Assert.assertEquals("bar", pathParts.get(3).getPartIdentifier());
     Assert.assertEquals(".\"x\"[1].\"foo\".\"bar\"", NestedPathFinder.toNormalizedJqPath(pathParts));
 
     // make sure we chomp question marks
     // { "x" : [ { "foo" : { "bar" : "hello" }}, { "foo" : { "bar" : "world" }}]}
     pathParts = NestedPathFinder.parseJqPath(".[\"x\"]?[1]?.foo?.\"bar\"?");
     Assert.assertEquals(4, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.ArrayElement);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
-    Assert.assertTrue(pathParts.get(2) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("foo", pathParts.get(2).getPartName());
-    Assert.assertTrue(pathParts.get(3) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("bar", pathParts.get(3).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathArrayElement);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(2) instanceof NestedPathField);
+    Assert.assertEquals("foo", pathParts.get(2).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(3) instanceof NestedPathField);
+    Assert.assertEquals("bar", pathParts.get(3).getPartIdentifier());
     Assert.assertEquals(".\"x\"[1].\"foo\".\"bar\"", NestedPathFinder.toNormalizedJqPath(pathParts));
 
     // { "x" : { "1" : { "foo" : { "bar" : "hello" }}}}
     pathParts = NestedPathFinder.parseJqPath(".\"x\"[\"1\"].\"foo\".\"bar\"");
     Assert.assertEquals(4, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
-    Assert.assertTrue(pathParts.get(2) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("foo", pathParts.get(2).getPartName());
-    Assert.assertTrue(pathParts.get(3) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("bar", pathParts.get(3).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathField);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(2) instanceof NestedPathField);
+    Assert.assertEquals("foo", pathParts.get(2).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(3) instanceof NestedPathField);
+    Assert.assertEquals("bar", pathParts.get(3).getPartIdentifier());
     Assert.assertEquals(".\"x\".\"1\".\"foo\".\"bar\"", NestedPathFinder.toNormalizedJqPath(pathParts));
 
     // stress out the parser
     // { "x.y.z]?[\\\"]][]\" : { "13234.12[]][23" : { "f?o.o" : { ".b?.a.r.": "hello" }}}}
     pathParts = NestedPathFinder.parseJqPath(".[\"x.y.z]?[\\\"]][]\"]?[\"13234.12[]][23\"].\"f?o.o\"?[\".b?.a.r.\"]");
     Assert.assertEquals(4, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x.y.z]?[\\\"]][]", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("13234.12[]][23", pathParts.get(1).getPartName());
-    Assert.assertTrue(pathParts.get(2) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("f?o.o", pathParts.get(2).getPartName());
-    Assert.assertTrue(pathParts.get(3) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals(".b?.a.r.", pathParts.get(3).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x.y.z]?[\\\"]][]", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathField);
+    Assert.assertEquals("13234.12[]][23", pathParts.get(1).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(2) instanceof NestedPathField);
+    Assert.assertEquals("f?o.o", pathParts.get(2).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(3) instanceof NestedPathField);
+    Assert.assertEquals(".b?.a.r.", pathParts.get(3).getPartIdentifier());
     Assert.assertEquals(".\"x.y.z]?[\\\"]][]\".\"13234.12[]][23\".\"f?o.o\".\".b?.a.r.\"", NestedPathFinder.toNormalizedJqPath(pathParts));
   }
 
   @Test
   public void testParseJsonPath()
   {
-    List<NestedPathFinder.NestedPathPart> pathParts;
+    List<NestedPathPart> pathParts;
 
     pathParts = NestedPathFinder.parseJsonPath("$.");
     Assert.assertEquals(0, pathParts.size());
@@ -205,36 +205,36 @@ public class NestedPathFinderTest
     // { "z" : "hello" }
     pathParts = NestedPathFinder.parseJsonPath("$.z");
     Assert.assertEquals(1, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("z", pathParts.get(0).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("z", pathParts.get(0).getPartIdentifier());
     Assert.assertEquals(".\"z\"", NestedPathFinder.toNormalizedJqPath(pathParts));
     Assert.assertEquals("$.z", NestedPathFinder.toNormalizedJsonPath(pathParts));
 
     // { "z" : "hello" }
     pathParts = NestedPathFinder.parseJsonPath("$['z']");
     Assert.assertEquals(1, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("z", pathParts.get(0).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("z", pathParts.get(0).getPartIdentifier());
     Assert.assertEquals(".\"z\"", NestedPathFinder.toNormalizedJqPath(pathParts));
     Assert.assertEquals("$.z", NestedPathFinder.toNormalizedJsonPath(pathParts));
 
     // { "x" : ["a", "b"]}
     pathParts = NestedPathFinder.parseJsonPath("$.x[1]");
     Assert.assertEquals(2, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.ArrayElement);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathArrayElement);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
     Assert.assertEquals(".\"x\"[1]", NestedPathFinder.toNormalizedJqPath(pathParts));
     Assert.assertEquals("$.x[1]", NestedPathFinder.toNormalizedJsonPath(pathParts));
 
     // { "x" : ["a", "b"]}
     pathParts = NestedPathFinder.parseJsonPath("$['x'][1]");
     Assert.assertEquals(2, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.ArrayElement);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathArrayElement);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
     Assert.assertEquals(".\"x\"[1]", NestedPathFinder.toNormalizedJqPath(pathParts));
     Assert.assertEquals("$.x[1]", NestedPathFinder.toNormalizedJsonPath(pathParts));
 
@@ -242,10 +242,10 @@ public class NestedPathFinderTest
     // { "x" : { "1" : "hello" }}
     pathParts = NestedPathFinder.parseJsonPath("$['x']['1']");
     Assert.assertEquals(2, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathField);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
     Assert.assertEquals(".\"x\".\"1\"", NestedPathFinder.toNormalizedJqPath(pathParts));
     Assert.assertEquals("$.x.1", NestedPathFinder.toNormalizedJsonPath(pathParts));
 
@@ -253,42 +253,42 @@ public class NestedPathFinderTest
     // { "x" : [ { "foo" : { "bar" : "hello" }}, { "foo" : { "bar" : "world" }}]}
     pathParts = NestedPathFinder.parseJsonPath("$.x[1].foo.bar");
     Assert.assertEquals(4, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.ArrayElement);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
-    Assert.assertTrue(pathParts.get(2) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("foo", pathParts.get(2).getPartName());
-    Assert.assertTrue(pathParts.get(3) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("bar", pathParts.get(3).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathArrayElement);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(2) instanceof NestedPathField);
+    Assert.assertEquals("foo", pathParts.get(2).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(3) instanceof NestedPathField);
+    Assert.assertEquals("bar", pathParts.get(3).getPartIdentifier());
     Assert.assertEquals(".\"x\"[1].\"foo\".\"bar\"", NestedPathFinder.toNormalizedJqPath(pathParts));
     Assert.assertEquals("$.x[1].foo.bar", NestedPathFinder.toNormalizedJsonPath(pathParts));
 
     // { "x" : [ { "foo" : { "bar" : "hello" }}, { "foo" : { "bar" : "world" }}]}
     pathParts = NestedPathFinder.parseJsonPath("$.x[1]['foo'].bar");
     Assert.assertEquals(4, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.ArrayElement);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
-    Assert.assertTrue(pathParts.get(2) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("foo", pathParts.get(2).getPartName());
-    Assert.assertTrue(pathParts.get(3) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("bar", pathParts.get(3).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathArrayElement);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(2) instanceof NestedPathField);
+    Assert.assertEquals("foo", pathParts.get(2).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(3) instanceof NestedPathField);
+    Assert.assertEquals("bar", pathParts.get(3).getPartIdentifier());
     Assert.assertEquals(".\"x\"[1].\"foo\".\"bar\"", NestedPathFinder.toNormalizedJqPath(pathParts));
     Assert.assertEquals("$.x[1].foo.bar", NestedPathFinder.toNormalizedJsonPath(pathParts));
 
     // { "x" : [ { "foo" : { "bar" : "hello" }}, { "foo" : { "bar" : "world" }}]}
     pathParts = NestedPathFinder.parseJsonPath("$['x'][1].foo['bar']");
     Assert.assertEquals(4, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.ArrayElement);
-    Assert.assertEquals("1", pathParts.get(1).getPartName());
-    Assert.assertTrue(pathParts.get(2) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("foo", pathParts.get(2).getPartName());
-    Assert.assertTrue(pathParts.get(3) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("bar", pathParts.get(3).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathArrayElement);
+    Assert.assertEquals("1", pathParts.get(1).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(2) instanceof NestedPathField);
+    Assert.assertEquals("foo", pathParts.get(2).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(3) instanceof NestedPathField);
+    Assert.assertEquals("bar", pathParts.get(3).getPartIdentifier());
     Assert.assertEquals(".\"x\"[1].\"foo\".\"bar\"", NestedPathFinder.toNormalizedJqPath(pathParts));
     Assert.assertEquals("$.x[1].foo.bar", NestedPathFinder.toNormalizedJsonPath(pathParts));
 
@@ -296,14 +296,14 @@ public class NestedPathFinderTest
     // { "x.y.z]?[\\\"]][]\" : { "13234.12[]][23" : { "f?o.o" : { ".b?.a.r.": "hello" }}}}
     pathParts = NestedPathFinder.parseJsonPath("$['x.y.z][\\']][]']['13234.12[]][23']['fo.o']['.b.a.r.']");
     Assert.assertEquals(4, pathParts.size());
-    Assert.assertTrue(pathParts.get(0) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("x.y.z][\\']][]", pathParts.get(0).getPartName());
-    Assert.assertTrue(pathParts.get(1) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("13234.12[]][23", pathParts.get(1).getPartName());
-    Assert.assertTrue(pathParts.get(2) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals("fo.o", pathParts.get(2).getPartName());
-    Assert.assertTrue(pathParts.get(3) instanceof NestedPathFinder.MapField);
-    Assert.assertEquals(".b.a.r.", pathParts.get(3).getPartName());
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x.y.z][\\']][]", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathField);
+    Assert.assertEquals("13234.12[]][23", pathParts.get(1).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(2) instanceof NestedPathField);
+    Assert.assertEquals("fo.o", pathParts.get(2).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(3) instanceof NestedPathField);
+    Assert.assertEquals(".b.a.r.", pathParts.get(3).getPartIdentifier());
     Assert.assertEquals(
         ".\"x.y.z][\\']][]\".\"13234.12[]][23\".\"fo.o\".\".b.a.r.\"",
         NestedPathFinder.toNormalizedJqPath(pathParts)
@@ -399,7 +399,7 @@ public class NestedPathFinderTest
   @Test
   public void testPathSplitter()
   {
-    List<NestedPathFinder.NestedPathPart> pathParts;
+    List<NestedPathPart> pathParts;
 
     pathParts = NestedPathFinder.parseJqPath(".");
     Assert.assertEquals(NESTER, NestedPathFinder.find(NESTER, pathParts));

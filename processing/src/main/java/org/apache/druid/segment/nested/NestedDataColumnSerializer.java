@@ -76,7 +76,6 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
 {
   private static final Logger log = new Logger(NestedDataColumnSerializer.class);
   public static final IntTypeStrategy INT_TYPE_STRATEGY = new IntTypeStrategy();
-
   public static final String STRING_DICTIONARY_FILE_NAME = "__stringDictionary";
   public static final String LONG_DICTIONARY_FILE_NAME = "__longDictionary";
   public static final String DOUBLE_DICTIONARY_FILE_NAME = "__doubleDictionary";
@@ -89,23 +88,6 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   @SuppressWarnings("unused")
   private final Closer closer;
 
-  private byte[] metadataBytes;
-  private GlobalDictionaryIdLookup globalDictionaryIdLookup;
-  private SortedMap<String, NestedLiteralTypeInfo.MutableTypeSet> fields;
-  private GenericIndexedWriter<String> fieldsWriter;
-  private NestedLiteralTypeInfo.Writer fieldsInfoWriter;
-  private GenericIndexedWriter<String> dictionaryWriter;
-  private FixedIndexedWriter<Long> longDictionaryWriter;
-  private FixedIndexedWriter<Double> doubleDictionaryWriter;
-  private CompressedVariableSizedBlobColumnSerializer rawWriter;
-  private ByteBufferWriter<ImmutableBitmap> nullBitmapWriter;
-  private MutableBitmap nullRowsBitmap;
-
-
-  private Map<String, GlobalDictionaryEncodedFieldColumnWriter<?>> fieldWriters;
-
-  private int rowCount = 0;
-  private boolean closedForWrite = false;
   private final StructuredDataProcessor fieldProcessor = new StructuredDataProcessor()
   {
     @Override
@@ -126,6 +108,21 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       return 0;
     }
   };
+
+  private byte[] metadataBytes;
+  private GlobalDictionaryIdLookup globalDictionaryIdLookup;
+  private SortedMap<String, NestedLiteralTypeInfo.MutableTypeSet> fields;
+  private GenericIndexedWriter<String> fieldsWriter;
+  private NestedLiteralTypeInfo.Writer fieldsInfoWriter;
+  private GenericIndexedWriter<String> dictionaryWriter;
+  private FixedIndexedWriter<Long> longDictionaryWriter;
+  private FixedIndexedWriter<Double> doubleDictionaryWriter;
+  private CompressedVariableSizedBlobColumnSerializer rawWriter;
+  private ByteBufferWriter<ImmutableBitmap> nullBitmapWriter;
+  private MutableBitmap nullRowsBitmap;
+  private Map<String, GlobalDictionaryEncodedFieldColumnWriter<?>> fieldWriters;
+  private int rowCount = 0;
+  private boolean closedForWrite = false;
 
   public NestedDataColumnSerializer(
       String name,

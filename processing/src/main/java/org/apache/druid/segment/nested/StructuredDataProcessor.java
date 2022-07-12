@@ -39,6 +39,10 @@ public abstract class StructuredDataProcessor
   /**
    * Process fields, returning a list of all "normalized" 'jq' paths to literal fields, consistent with the output of
    * {@link NestedPathFinder#toNormalizedJqPath(List)}.
+   *
+   * Note: in the future, {@link ProcessResults#getLiteralFields()} should instead probably be modified to deal in
+   * lists of {@link NestedPathPart} instead so that callers can decide how to represent the path instead of assuing
+   * 'jq' syntax.
    */
   public ProcessResults processFields(Object raw)
   {

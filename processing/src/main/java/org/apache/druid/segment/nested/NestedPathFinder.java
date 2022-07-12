@@ -38,23 +38,23 @@ public class NestedPathFinder
     StringBuilder bob = new StringBuilder();
     boolean first = true;
     for (NestedPathPart partFinder : paths) {
-      if (partFinder instanceof MapField) {
+      if (partFinder instanceof NestedPathField) {
         if (first) {
           bob.append("$.");
         } else {
           bob.append(".");
         }
-        final String id = partFinder.getPartName();
+        final String id = partFinder.getPartIdentifier();
         if (id.contains(".") || id.contains("'") || id.contains("\"") || id.contains("[") || id.contains("]")) {
           bob.append("['").append(id).append("']");
         } else {
           bob.append(id);
         }
-      } else if (partFinder instanceof ArrayElement) {
+      } else if (partFinder instanceof NestedPathArrayElement) {
         if (first) {
           bob.append("$");
         }
-        bob.append("[").append(partFinder.getPartName()).append("]");
+        bob.append("[").append(partFinder.getPartIdentifier()).append("]");
       }
       first = false;
     }
@@ -89,7 +89,7 @@ public class NestedPathFinder
       final char current = path.charAt(i);
       if (current == '.' && arrayMark < 0 && quoteMark < 0) {
         if (dotMark >= 0) {
-          parts.add(new MapField(getPathSubstring(path, partMark, i)));
+          parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
         }
         dotMark = i;
         partMark = i + 1;
@@ -98,7 +98,7 @@ public class NestedPathFinder
           badFormatJsonPath(path, "invalid position " + i + " for '[', must not follow '.' or must be contained with '");
         }
         if (dotMark >= 0 && i > 1) {
-          parts.add(new MapField(getPathSubstring(path, partMark, i)));
+          parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
           dotMark = -1;
         }
         arrayMark = i;
@@ -107,7 +107,7 @@ public class NestedPathFinder
         String maybeNumber = getPathSubstring(path, partMark, i);
         try {
           int index = Integer.parseInt(maybeNumber);
-          parts.add(new ArrayElement(index));
+          parts.add(new NestedPathArrayElement(index));
           dotMark = -1;
           arrayMark = -1;
           partMark = i + 1;
@@ -124,7 +124,7 @@ public class NestedPathFinder
         quoteMark = i;
         partMark = i + 1;
       } else if (current == '\'' && quoteMark >= 0 && path.charAt(i - 1) != '\\') {
-        parts.add(new MapField(getPathSubstring(path, partMark, i)));
+        parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
         dotMark = -1;
         quoteMark = -1;
         // chomp to next char to eat closing array
@@ -146,7 +146,7 @@ public class NestedPathFinder
       if (arrayMark != -1) {
         badFormatJsonPath(path, "unterminated '['");
       }
-      parts.add(new MapField(path.substring(partMark)));
+      parts.add(new NestedPathField(path.substring(partMark)));
     }
 
     return parts;
@@ -164,14 +164,14 @@ public class NestedPathFinder
     StringBuilder bob = new StringBuilder();
     boolean first = true;
     for (NestedPathPart partFinder : paths) {
-      if (partFinder instanceof MapField) {
+      if (partFinder instanceof NestedPathField) {
         bob.append(".");
-        bob.append("\"").append(partFinder.getPartName()).append("\"");
+        bob.append("\"").append(partFinder.getPartIdentifier()).append("\"");
       } else {
         if (first) {
           bob.append(".");
         }
-        bob.append("[").append(partFinder.getPartName()).append("]");
+        bob.append("[").append(partFinder.getPartIdentifier()).append("]");
       }
       first = false;
     }
@@ -200,7 +200,7 @@ public class NestedPathFinder
       final char current = path.charAt(i);
       if (current == '.' && arrayMark < 0 && quoteMark < 0) {
         if (dotMark >= 0) {
-          parts.add(new MapField(getPathSubstring(path, partMark, i)));
+          parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
         }
         dotMark = i;
         partMark = i + 1;
@@ -208,7 +208,7 @@ public class NestedPathFinder
         // eat optional marker
         if (partMark != i) {
           if (dotMark >= 0) {
-            parts.add(new MapField(getPathSubstring(path, partMark, i)));
+            parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
             dotMark = -1;
           } else {
             badFormat(path, "invalid position " + i + " for '?'");
@@ -220,7 +220,7 @@ public class NestedPathFinder
           badFormat(path, "invalid position " + i + " for '[', must not follow '.' or must be contained with '\"'");
         }
         if (dotMark >= 0 && i > 1) {
-          parts.add(new MapField(getPathSubstring(path, partMark, i)));
+          parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
           dotMark = -1;
         }
         arrayMark = i;
@@ -229,7 +229,7 @@ public class NestedPathFinder
         String maybeNumber = getPathSubstring(path, partMark, i);
         try {
           int index = Integer.parseInt(maybeNumber);
-          parts.add(new ArrayElement(index));
+          parts.add(new NestedPathArrayElement(index));
           dotMark = -1;
           arrayMark = -1;
           partMark = i + 1;
@@ -249,7 +249,7 @@ public class NestedPathFinder
         quoteMark = i;
         partMark = i + 1;
       } else if (current == '"' && quoteMark >= 0 && path.charAt(i - 1) != '\\') {
-        parts.add(new MapField(getPathSubstring(path, partMark, i)));
+        parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
         dotMark = -1;
         quoteMark = -1;
         if (arrayMark > 0) {
@@ -275,7 +275,7 @@ public class NestedPathFinder
       if (arrayMark != -1) {
         badFormat(path, "unterminated '['");
       }
-      parts.add(new MapField(path.substring(partMark)));
+      parts.add(new NestedPathField(path.substring(partMark)));
     }
 
     return parts;
@@ -365,72 +365,4 @@ public class NestedPathFinder
     return currentObject;
   }
 
-  public interface NestedPathPart
-  {
-    @Nullable
-    Object find(@Nullable Object input);
-
-    String getPartName();
-  }
-
-  static class MapField implements NestedPathPart
-  {
-    private final String path;
-
-    MapField(String path)
-    {
-      this.path = path;
-    }
-
-    @Override
-    public Object find(Object input)
-    {
-      if (input instanceof Map) {
-        Map<String, Object> currentMap = (Map<String, Object>) input;
-        return currentMap.get(path);
-      }
-      return null;
-    }
-
-    @Override
-    public String getPartName()
-    {
-      return path;
-    }
-  }
-
-  static class ArrayElement implements NestedPathPart
-  {
-    private final int index;
-
-    ArrayElement(int index)
-    {
-      this.index = index;
-    }
-
-    @Nullable
-    @Override
-    public Object find(@Nullable Object input)
-    {
-      // handle lists or arrays because who knows what might end up here, depending on how is created
-      if (input instanceof List) {
-        List<?> currentList = (List<?>) input;
-        if (currentList.size() > index) {
-          return currentList.get(index);
-        }
-      } else if (input instanceof Object[]) {
-        Object[] currentList = (Object[]) input;
-        if (currentList.length > index) {
-          return currentList[index];
-        }
-      }
-      return null;
-    }
-
-    @Override
-    public String getPartName()
-    {
-      return String.valueOf(index);
-    }
-  }
 }

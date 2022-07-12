@@ -33,6 +33,7 @@ import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.NestedPathFinder;
+import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.StructuredDataProcessor;
 
@@ -289,7 +290,7 @@ public class NestedDataExpressions
     @Override
     public Expr apply(List<Expr> args)
     {
-      final List<NestedPathFinder.NestedPathPart> parts = getArg1PathPartsFromLiteral(name(), args);
+      final List<NestedPathPart> parts = getArg1PathPartsFromLiteral(name(), args);
       class GetPathExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
         public GetPathExpr(List<Expr> args)
@@ -338,7 +339,7 @@ public class NestedDataExpressions
     @Override
     public Expr apply(List<Expr> args)
     {
-      final List<NestedPathFinder.NestedPathPart> parts = getArg1JsonPathPartsFromLiteral(name(), args);
+      final List<NestedPathPart> parts = getArg1JsonPathPartsFromLiteral(name(), args);
       class JsonQueryExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
         public JsonQueryExpr(List<Expr> args)
@@ -388,7 +389,7 @@ public class NestedDataExpressions
     @Override
     public Expr apply(List<Expr> args)
     {
-      final List<NestedPathFinder.NestedPathPart> parts = getArg1JsonPathPartsFromLiteral(name(), args);
+      final List<NestedPathPart> parts = getArg1JsonPathPartsFromLiteral(name(), args);
       class JsonValueExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
         public JsonValueExpr(List<Expr> args)
@@ -560,7 +561,7 @@ public class NestedDataExpressions
     @Override
     public Expr apply(List<Expr> args)
     {
-      final List<NestedPathFinder.NestedPathPart> parts = getArg1PathPartsFromLiteral(name(), args);
+      final List<NestedPathPart> parts = getArg1PathPartsFromLiteral(name(), args);
       class ListKeysExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
         public ListKeysExpr(List<Expr> args)
@@ -607,7 +608,7 @@ public class NestedDataExpressions
     return input.value();
   }
 
-  static List<NestedPathFinder.NestedPathPart> getArg1PathPartsFromLiteral(String fnName, List<Expr> args)
+  static List<NestedPathPart> getArg1PathPartsFromLiteral(String fnName, List<Expr> args)
   {
     if (!(args.get(1).isLiteral() && args.get(1).getLiteralValue() instanceof String)) {
       throw new IAE(
@@ -618,7 +619,7 @@ public class NestedDataExpressions
       );
     }
     final String path = (String) args.get(1).getLiteralValue();
-    List<NestedPathFinder.NestedPathPart> parts;
+    List<NestedPathPart> parts;
     try {
       parts = NestedPathFinder.parseJsonPath(path);
     }
@@ -628,7 +629,7 @@ public class NestedDataExpressions
     return parts;
   }
 
-  static List<NestedPathFinder.NestedPathPart> getArg1JsonPathPartsFromLiteral(String fnName, List<Expr> args)
+  static List<NestedPathPart> getArg1JsonPathPartsFromLiteral(String fnName, List<Expr> args)
   {
     if (!(args.get(1).isLiteral() && args.get(1).getLiteralValue() instanceof String)) {
       throw new IAE(
@@ -638,7 +639,9 @@ public class NestedDataExpressions
           ExpressionType.STRING
       );
     }
-    final List<NestedPathFinder.NestedPathPart> parts = NestedPathFinder.parseJsonPath((String) args.get(1).getLiteralValue());
+    final List<NestedPathPart> parts = NestedPathFinder.parseJsonPath(
+        (String) args.get(1).getLiteralValue()
+    );
     return parts;
   }
 

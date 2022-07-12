@@ -39,6 +39,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.NestedPathFinder;
+import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -103,7 +104,7 @@ public class NestedDataOperatorConversions
       }
       // pre-normalize path so that the same expressions with different jq syntax are collapsed
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
-      final List<NestedPathFinder.NestedPathPart> parts;
+      final List<NestedPathPart> parts;
       try {
         parts = NestedPathFinder.parseJqPath(path);
       }
@@ -129,8 +130,9 @@ public class NestedDataOperatorConversions
                 name,
                 outputType,
                 parts,
-                normalized,
-                false
+                false,
+                null,
+                null
             )
         );
       }
@@ -276,7 +278,7 @@ public class NestedDataOperatorConversions
       }
       // pre-normalize path so that the same expressions with different jq syntax are collapsed
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
-      final List<NestedPathFinder.NestedPathPart> parts;
+      final List<NestedPathPart> parts;
       try {
         parts = NestedPathFinder.parseJsonPath(path);
       }
@@ -287,7 +289,6 @@ public class NestedDataOperatorConversions
             iae.getMessage()
         );
       }
-      final String normalized = NestedPathFinder.toNormalizedJqPath(parts);
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
       final DruidExpression.ExpressionGenerator builder = (args) ->
           "json_query(" + args.get(0).getExpression() + ",'" + jsonPath + "')";
@@ -304,8 +305,9 @@ public class NestedDataOperatorConversions
                 name,
                 outputType,
                 parts,
-                normalized,
-                true
+                true,
+                null,
+                null
             )
         );
       }
@@ -358,7 +360,7 @@ public class NestedDataOperatorConversions
       }
       // pre-normalize path so that the same expressions with different jq syntax are collapsed
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
-      final List<NestedPathFinder.NestedPathPart> parts;
+      final List<NestedPathPart> parts;
       try {
         parts = NestedPathFinder.parseJsonPath(path);
       }
@@ -369,7 +371,6 @@ public class NestedDataOperatorConversions
             iae.getMessage()
         );
       }
-      final String normalized = NestedPathFinder.toNormalizedJqPath(parts);
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
       final DruidExpression.ExpressionGenerator builder = (args) ->
           "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "')";
@@ -387,8 +388,9 @@ public class NestedDataOperatorConversions
                 name,
                 outputType,
                 parts,
-                normalized,
-                false
+                false,
+                null,
+                null
             )
         );
       }

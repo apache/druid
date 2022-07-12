@@ -107,7 +107,7 @@ public class NestedDataTopNQueryTest extends InitializedNullHandlingTest
                                            .granularity(Granularities.ALL)
                                            .intervals(Collections.singletonList(Intervals.ETERNITY))
                                            .dimension(DefaultDimensionSpec.of("v0"))
-                                           .virtualColumns(new NestedFieldVirtualColumn("nest", ".x", "v0"))
+                                           .virtualColumns(new NestedFieldVirtualColumn("nest", "$.x", "v0"))
                                            .aggregators(new CountAggregatorFactory("count"))
                                            .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                                            .threshold(10)
@@ -139,8 +139,8 @@ public class NestedDataTopNQueryTest extends InitializedNullHandlingTest
                                            .intervals(Collections.singletonList(Intervals.ETERNITY))
                                            .dimension(DefaultDimensionSpec.of("v0"))
                                            .virtualColumns(
-                                               new NestedFieldVirtualColumn("nest", ".x", "v0"),
-                                               new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.DOUBLE)
+                                               new NestedFieldVirtualColumn("nest", "$.x", "v0"),
+                                               new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.DOUBLE)
                                            )
                                            .aggregators(new DoubleSumAggregatorFactory("a0", "v1", null, TestExprMacroTable.INSTANCE))
                                            .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))

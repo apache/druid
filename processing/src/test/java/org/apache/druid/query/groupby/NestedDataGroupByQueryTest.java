@@ -144,7 +144,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
                                           .setGranularity(Granularities.ALL)
                                           .setInterval(Intervals.ETERNITY)
                                           .setDimensions(DefaultDimensionSpec.of("v0"))
-                                          .setVirtualColumns(new NestedFieldVirtualColumn("nest", ".x", "v0"))
+                                          .setVirtualColumns(new NestedFieldVirtualColumn("nest", "$.x", "v0"))
                                           .setAggregatorSpecs(new CountAggregatorFactory("count"))
                                           .setContext(getContext())
                                           .build();
@@ -191,7 +191,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
                                           .setGranularity(Granularities.ALL)
                                           .setInterval(Intervals.ETERNITY)
                                           .setDimensions(DefaultDimensionSpec.of("v0"))
-                                          .setVirtualColumns(new NestedFieldVirtualColumn("nest", ".x", "v0"))
+                                          .setVirtualColumns(new NestedFieldVirtualColumn("nest", "$.x", "v0"))
                                           .setAggregatorSpecs(new CountAggregatorFactory("count"))
                                           .setContext(getContext())
                                           .setDimFilter(new InDimFilter("v0", vals, null))

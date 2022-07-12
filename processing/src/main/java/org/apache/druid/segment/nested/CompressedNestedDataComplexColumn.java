@@ -67,7 +67,13 @@ import org.apache.druid.utils.CloseableUtils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Implementation of {@link NestedDataComplexColumn} which uses a {@link CompressedVariableSizedBlobColumn} for the
+ * 'raw' {@link StructuredData} values and provides selectors for nested 'literal' field columns.
+ */
 public final class CompressedNestedDataComplexColumn extends NestedDataComplexColumn
 {
   private final NestedDataColumnMetadata metadata;
@@ -83,6 +89,8 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
   private final FixedIndexed<Long> longDictionary;
   private final FixedIndexed<Double> doubleDictionary;
   private final SmooshedFileMapper fileMapper;
+
+  private final ConcurrentHashMap<String, ColumnHolder> columns = new ConcurrentHashMap<>();
 
   private static final ObjectStrategy<Object> STRATEGY = NestedDataComplexTypeSerde.INSTANCE.getObjectStrategy();
 
@@ -264,8 +272,9 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
   }
 
   @Override
-  public DimensionSelector makeDimensionSelector(String field, ReadableOffset readableOffset, ExtractionFn fn)
+  public DimensionSelector makeDimensionSelector(List<NestedPathPart> path, ReadableOffset readableOffset, ExtractionFn fn)
   {
+    final String field = getField(path);
     Preconditions.checkNotNull(field, "Null field");
 
     if (fields.indexOf(field) >= 0) {
@@ -277,8 +286,9 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
   }
 
   @Override
-  public ColumnValueSelector<?> makeColumnValueSelector(String field, ReadableOffset readableOffset)
+  public ColumnValueSelector<?> makeColumnValueSelector(List<NestedPathPart> path, ReadableOffset readableOffset)
   {
+    final String field = getField(path);
     Preconditions.checkNotNull(field, "Null field");
 
     if (fields.indexOf(field) >= 0) {
@@ -291,10 +301,11 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
 
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(
-      String field,
+      List<NestedPathPart> path,
       ReadableVectorOffset readableOffset
   )
   {
+    final String field = getField(path);
     Preconditions.checkNotNull(field, "Null field");
 
     if (fields.indexOf(field) >= 0) {
@@ -306,8 +317,9 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
   }
 
   @Override
-  public VectorObjectSelector makeVectorObjectSelector(String field, ReadableVectorOffset readableOffset)
+  public VectorObjectSelector makeVectorObjectSelector(List<NestedPathPart> path, ReadableVectorOffset readableOffset)
   {
+    final String field = getField(path);
     Preconditions.checkNotNull(field, "Null field");
 
     if (fields.indexOf(field) >= 0) {
@@ -319,8 +331,9 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
   }
 
   @Override
-  public VectorValueSelector makeVectorValueSelector(String field, ReadableVectorOffset readableOffset)
+  public VectorValueSelector makeVectorValueSelector(List<NestedPathPart> path, ReadableVectorOffset readableOffset)
   {
+    final String field = getField(path);
     Preconditions.checkNotNull(field, "Null field");
 
     if (fields.indexOf(field) >= 0) {
@@ -333,7 +346,33 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
 
   @Nullable
   @Override
-  public ColumnHolder readNestedFieldColumn(String field)
+  public ColumnIndexSupplier getColumnIndexSupplier(List<NestedPathPart> path)
+  {
+    final String field = getField(path);
+    if (fields.indexOf(field) < 0) {
+      return null;
+    }
+    return getColumnHolder(field).getIndexSupplier();
+  }
+
+  @Override
+  public boolean isNumeric(List<NestedPathPart> path)
+  {
+    final String field = getField(path);
+    return columns.computeIfAbsent(field, this::readNestedFieldColumn).getCapabilities().isNumeric();
+  }
+
+  private String getField(List<NestedPathPart> path)
+  {
+    return NestedPathFinder.toNormalizedJqPath(path);
+  }
+
+  private ColumnHolder getColumnHolder(String field)
+  {
+    return columns.computeIfAbsent(field, this::readNestedFieldColumn);
+  }
+
+  private ColumnHolder readNestedFieldColumn(String field)
   {
     try {
       if (fields.indexOf(field) < 0) {
@@ -427,15 +466,5 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
     catch (IOException ex) {
       throw new RE(ex, "Failed to read data for [%s]", field);
     }
-  }
-
-  @Nullable
-  @Override
-  public ColumnIndexSupplier getColumnIndexSupplier(String field)
-  {
-    if (fields.indexOf(field) < 0) {
-      return null;
-    }
-    return getColumnHolder(field).getIndexSupplier();
   }
 }

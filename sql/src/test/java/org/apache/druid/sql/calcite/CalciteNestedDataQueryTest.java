@@ -85,7 +85,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .put("t", "2000-01-01")
                   .put("string", "aaa")
                   .put("nest", ImmutableMap.of("x", 100L, "y", 2.02, "z", "300", "mixed", 1L, "mixed2", "1"))
-                  .put("nester", ImmutableMap.of("array", ImmutableList.of("a", "b"), "n", ImmutableMap.of("x", "hello")))
+                  .put(
+                      "nester",
+                      ImmutableMap.of("array", ImmutableList.of("a", "b"), "n", ImmutableMap.of("x", "hello"))
+                  )
                   .put("long", 5L)
                   .build(),
       ImmutableMap.<String, Object>builder()
@@ -212,7 +215,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".x", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -245,7 +248,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".x", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -274,20 +277,20 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         + "FROM druid.nested GROUP BY 1 LIMIT 10",
         ImmutableList.of(
             new TopNQueryBuilder()
-                        .dataSource(DATA_SOURCE)
-                        .intervals(querySegmentSpec(Filtration.eternity()))
-                        .granularity(Granularities.ALL)
-                        .virtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".x", "v0", ColumnType.STRING)
-                        )
-                        .dimension(
-                            new DefaultDimensionSpec("v0", "d0")
-                        )
-                        .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
-                        .threshold(10)
-                        .context(QUERY_CONTEXT_DEFAULT)
-                        .build()
+                .dataSource(DATA_SOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .virtualColumns(
+                    new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
+                )
+                .dimension(
+                    new DefaultDimensionSpec("v0", "d0")
+                )
+                .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
         ),
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 4L},
@@ -311,7 +314,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nester", ".", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nester", "$.", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -346,7 +349,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".\"x\"", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -360,7 +363,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), NullHandling.defaultStringValue(), NullHandling.defaultStringValue(), 4L},
+            new Object[]{
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
+                4L
+            },
             new Object[]{"100", "100", "100", 2L},
             new Object[]{"200", "200", "200", 1L}
         )
@@ -383,7 +391,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".\"x\"", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -397,7 +405,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), NullHandling.defaultStringValue(), NullHandling.defaultStringValue(), 4L},
+            new Object[]{
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
+                4L
+            },
             new Object[]{"100", "100", "100", 2L},
             new Object[]{"200", "200", "200", 1L}
         )
@@ -419,7 +432,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".\"x\"", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -453,7 +466,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".x", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -488,8 +501,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".x", "v0", ColumnType.LONG),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.LONG),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -524,8 +537,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".y", "v0", ColumnType.DOUBLE),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.y", "v0", ColumnType.DOUBLE),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -560,8 +573,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".z", "v0", ColumnType.STRING),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.z", "v0", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -596,8 +609,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nester", ".n.x", "v0", ColumnType.LONG),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nester", "$.n.x", "v0", ColumnType.LONG),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -627,8 +640,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".mixed2", "v0", ColumnType.STRING),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.mixed2", "v0", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -661,8 +674,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".mixed2", "v0", ColumnType.STRING),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.mixed2", "v0", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -695,8 +708,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".missing", "v0", ColumnType.STRING),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.missing", "v0", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -726,8 +739,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".z", "v0", ColumnType.STRING),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.z", "v0", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -760,7 +773,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".x", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -793,7 +806,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".x", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -826,7 +839,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".x", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -859,8 +872,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".x", "v0", ColumnType.LONG),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.LONG),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -893,8 +906,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".x", "v0", ColumnType.LONG),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.LONG),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -927,8 +940,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".x", "v0", ColumnType.LONG),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.LONG),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -960,7 +973,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".y", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.y", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -993,7 +1006,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".y", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.y", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1026,7 +1039,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".y", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.y", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1059,8 +1072,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".y", "v0", ColumnType.DOUBLE),
-                            new NestedFieldVirtualColumn("nest", ".y", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.y", "v0", ColumnType.DOUBLE),
+                            new NestedFieldVirtualColumn("nest", "$.y", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1093,8 +1106,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".y", "v0", ColumnType.DOUBLE),
-                            new NestedFieldVirtualColumn("nest", ".y", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.y", "v0", ColumnType.DOUBLE),
+                            new NestedFieldVirtualColumn("nest", "$.y", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1127,8 +1140,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".y", "v0", ColumnType.DOUBLE),
-                            new NestedFieldVirtualColumn("nest", ".y", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.y", "v0", ColumnType.DOUBLE),
+                            new NestedFieldVirtualColumn("nest", "$.y", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1160,7 +1173,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".x", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1193,8 +1206,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".z", "v0", ColumnType.STRING),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.z", "v0", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1227,8 +1240,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".z", "v0", ColumnType.STRING),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.z", "v0", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1261,7 +1274,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".x", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1293,8 +1306,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".z", "v0", ColumnType.STRING),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.z", "v0", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1326,8 +1339,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".z", "v0", ColumnType.STRING),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.z", "v0", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1359,8 +1372,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nester", ".n.x", "v0", ColumnType.STRING),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nester", "$.n.x", "v0", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1392,8 +1405,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".x", "v0", ColumnType.LONG),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.LONG),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1426,8 +1439,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".y", "v0", ColumnType.DOUBLE),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.y", "v0", ColumnType.DOUBLE),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1460,8 +1473,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", ".z", "v0", ColumnType.STRING),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.z", "v0", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1494,8 +1507,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nester", ".n.x", "v0", ColumnType.STRING),
-                            new NestedFieldVirtualColumn("nest", ".x", "v1", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nester", "$.n.x", "v0", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1525,7 +1538,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .virtualColumns(new NestedFieldVirtualColumn("nest", ".\"x\"", "v0", ColumnType.DOUBLE))
+                  .virtualColumns(new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.DOUBLE))
                   .aggregators(aggregators(new DoubleSumAggregatorFactory("a0", "v0")))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -1535,7 +1548,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
 
 
   @Test
@@ -1552,8 +1564,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .virtualColumns(
-                      new NestedFieldVirtualColumn("nest", ".\"y\"", "v0", ColumnType.DOUBLE),
-                      new NestedFieldVirtualColumn("nest", ".\"x\"", "v1", ColumnType.DOUBLE)
+                      new NestedFieldVirtualColumn("nest", "$.y", "v0", ColumnType.DOUBLE),
+                      new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.DOUBLE)
                   )
 
                   .aggregators(
@@ -1586,8 +1598,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .virtualColumns(
-                      new NestedFieldVirtualColumn("nest", ".\"z\"", "v0", ColumnType.STRING),
-                      new NestedFieldVirtualColumn("nest", ".\"x\"", "v1", ColumnType.DOUBLE)
+                      new NestedFieldVirtualColumn("nest", "$.z", "v0", ColumnType.STRING),
+                      new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.DOUBLE)
                   )
 
                   .aggregators(
@@ -1621,7 +1633,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .virtualColumns(new NestedFieldVirtualColumn("nest", ".\"mixed\"", "v0", ColumnType.DOUBLE))
+                  .virtualColumns(new NestedFieldVirtualColumn("nest", "$.mixed", "v0", ColumnType.DOUBLE))
                   .aggregators(aggregators(new DoubleSumAggregatorFactory("a0", "v0")))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -1648,8 +1660,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .virtualColumns(
-                      new NestedFieldVirtualColumn("nest", ".\"mixed\"", "v0", ColumnType.LONG),
-                      new NestedFieldVirtualColumn("nest", ".\"mixed\"", "v1", ColumnType.DOUBLE)
+                      new NestedFieldVirtualColumn("nest", "$.mixed", "v0", ColumnType.LONG),
+                      new NestedFieldVirtualColumn("nest", "$.mixed", "v1", ColumnType.DOUBLE)
                   )
 
                   .aggregators(
@@ -1684,7 +1696,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .virtualColumns(new NestedFieldVirtualColumn("nest", ".\"mixed\"", "v0", ColumnType.DOUBLE))
+                  .virtualColumns(new NestedFieldVirtualColumn("nest", "$.mixed", "v0", ColumnType.DOUBLE))
                   .aggregators(
                       aggregators(
                           new FilteredAggregatorFactory(
@@ -1714,7 +1726,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .virtualColumns(new NestedFieldVirtualColumn("nest", ".\"x\"", "v0", ColumnType.LONG))
+                  .virtualColumns(new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.LONG))
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "v0")))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -1738,7 +1750,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .virtualColumns(new NestedFieldVirtualColumn("nest", ".\"z\"", "v0", ColumnType.LONG))
+                  .virtualColumns(new NestedFieldVirtualColumn("nest", "$.z", "v0", ColumnType.LONG))
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "v0")))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -1761,7 +1773,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .virtualColumns(new NestedFieldVirtualColumn("nest", ".\"x\"", "v0", ColumnType.LONG))
+                  .virtualColumns(new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.LONG))
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "v0")))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -1785,7 +1797,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .virtualColumns(new NestedFieldVirtualColumn("nest", ".\"z\"", "v0", ColumnType.LONG))
+                  .virtualColumns(new NestedFieldVirtualColumn("nest", "$.z", "v0", ColumnType.LONG))
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "v0")))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -1811,7 +1823,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new ExpressionVirtualColumn("v0", "list_keys(\"nester\",'.')", ColumnType.STRING_ARRAY, macroTable)
+                            new ExpressionVirtualColumn(
+                                "v0",
+                                "list_keys(\"nester\",'.')",
+                                ColumnType.STRING_ARRAY,
+                                macroTable
+                            )
                         )
                         .setDimensions(
                             dimensions(
@@ -1844,7 +1861,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new ExpressionVirtualColumn("v0", "list_keys(\"nester\",'$.')", ColumnType.STRING_ARRAY, macroTable)
+                            new ExpressionVirtualColumn(
+                                "v0",
+                                "list_keys(\"nester\",'$.')",
+                                ColumnType.STRING_ARRAY,
+                                macroTable
+                            )
                         )
                         .setDimensions(
                             dimensions(
@@ -1877,7 +1899,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new ExpressionVirtualColumn("v0", "list_keys(\"nest\",'.')", ColumnType.STRING_ARRAY, macroTable)
+                            new ExpressionVirtualColumn(
+                                "v0",
+                                "list_keys(\"nest\",'.')",
+                                ColumnType.STRING_ARRAY,
+                                macroTable
+                            )
                         )
                         .setDimensions(
                             dimensions(
@@ -1911,7 +1938,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new ExpressionVirtualColumn("v0", "json_paths(\"nester\")", ColumnType.STRING_ARRAY, macroTable)
+                            new ExpressionVirtualColumn(
+                                "v0",
+                                "json_paths(\"nester\")",
+                                ColumnType.STRING_ARRAY,
+                                macroTable
+                            )
                         )
                         .setDimensions(
                             dimensions(
@@ -1943,7 +1975,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nester", ".array[1]", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nester", "$.array[1]", "v0", ColumnType.STRING)
                         )
                         .setDimensions(
                             dimensions(
@@ -1971,7 +2003,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         + "FROM druid.nested GROUP BY 1",
         (expected) -> {
           expected.expect(UnsupportedSQLQueryException.class);
-          expected.expectMessage("Cannot use [JSON_VALUE_ANY]: [Bad format, '.array.[1]' is not a valid JSONPath path: must start with '$']");
+          expected.expectMessage(
+              "Cannot use [JSON_VALUE_ANY]: [Bad format, '.array.[1]' is not a valid JSONPath path: must start with '$']");
         }
     );
   }
@@ -1987,8 +2020,24 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .virtualColumns(
-                      new NestedFieldVirtualColumn("nester", ".n", "v0", NestedDataComplexTypeSerde.TYPE, true),
-                      new NestedFieldVirtualColumn("nester", ".", "v1", NestedDataComplexTypeSerde.TYPE, true)
+                      new NestedFieldVirtualColumn(
+                          "nester",
+                          "v0",
+                          NestedDataComplexTypeSerde.TYPE,
+                          null,
+                          true,
+                          "$.n",
+                          false
+                      ),
+                      new NestedFieldVirtualColumn(
+                          "nester",
+                          "v1",
+                          NestedDataComplexTypeSerde.TYPE,
+                          null,
+                          true,
+                          "$.",
+                          false
+                      )
                   )
                   .columns("v0", "v1")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -1996,13 +2045,13 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[] {"{\"x\":\"hello\"}", "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}"},
-            new Object[] {null, "\"hello\""},
-            new Object[] {null, null},
-            new Object[] {null, null},
-            new Object[] {null, null},
-            new Object[] {"{\"x\":1}", "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"},
-            new Object[] {null, "2"}
+            new Object[]{"{\"x\":\"hello\"}", "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}"},
+            new Object[]{null, "\"hello\""},
+            new Object[]{null, null},
+            new Object[]{null, null},
+            new Object[]{null, null},
+            new Object[]{"{\"x\":1}", "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"},
+            new Object[]{null, "2"}
         )
     );
   }
@@ -2018,9 +2067,22 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .virtualColumns(
-                      new ExpressionVirtualColumn("v0", "json_object('n',\"v1\",'x',\"v2\")", NestedDataComplexTypeSerde.TYPE, macroTable),
-                      new NestedFieldVirtualColumn("nester", ".n", "v1", NestedDataComplexTypeSerde.TYPE, true),
-                      new NestedFieldVirtualColumn("nest", ".x", "v2", ColumnType.STRING)
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "json_object('n',\"v1\",'x',\"v2\")",
+                          NestedDataComplexTypeSerde.TYPE,
+                          macroTable
+                      ),
+                      new NestedFieldVirtualColumn(
+                          "nester",
+                          "v1",
+                          NestedDataComplexTypeSerde.TYPE,
+                          null,
+                          true,
+                          "$.n",
+                          false
+                      ),
+                      new NestedFieldVirtualColumn("nest", "$.x", "v2", ColumnType.STRING)
                   )
                   .columns("v0")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -2028,13 +2090,13 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[] {"{\"x\":\"100\",\"n\":{\"x\":\"hello\"}}"},
-            new Object[] {"{\"x\":null,\"n\":null}"},
-            new Object[] {"{\"x\":\"200\",\"n\":null}"},
-            new Object[] {"{\"x\":null,\"n\":null}"},
-            new Object[] {"{\"x\":null,\"n\":null}"},
-            new Object[] {"{\"x\":\"100\",\"n\":{\"x\":1}}"},
-            new Object[] {"{\"x\":null,\"n\":null}"}
+            new Object[]{"{\"x\":\"100\",\"n\":{\"x\":\"hello\"}}"},
+            new Object[]{"{\"x\":null,\"n\":null}"},
+            new Object[]{"{\"x\":\"200\",\"n\":null}"},
+            new Object[]{"{\"x\":null,\"n\":null}"},
+            new Object[]{"{\"x\":null,\"n\":null}"},
+            new Object[]{"{\"x\":\"100\",\"n\":{\"x\":1}}"},
+            new Object[]{"{\"x\":null,\"n\":null}"}
         )
     );
   }
@@ -2050,10 +2112,30 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .virtualColumns(
-                      new ExpressionVirtualColumn("v0", "to_json(\"string\")", NestedDataComplexTypeSerde.TYPE, macroTable),
-                      new ExpressionVirtualColumn("v1", "parse_json(\"string\")", NestedDataComplexTypeSerde.TYPE, macroTable),
-                      new ExpressionVirtualColumn("v2", "parse_json('{\\u0022foo\\u0022:1}')", NestedDataComplexTypeSerde.TYPE, macroTable),
-                      new ExpressionVirtualColumn("v3", "parse_json(to_json_string(\"nester\"))", NestedDataComplexTypeSerde.TYPE, macroTable)
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "to_json(\"string\")",
+                          NestedDataComplexTypeSerde.TYPE,
+                          macroTable
+                      ),
+                      new ExpressionVirtualColumn(
+                          "v1",
+                          "parse_json(\"string\")",
+                          NestedDataComplexTypeSerde.TYPE,
+                          macroTable
+                      ),
+                      new ExpressionVirtualColumn(
+                          "v2",
+                          "parse_json('{\\u0022foo\\u0022:1}')",
+                          NestedDataComplexTypeSerde.TYPE,
+                          macroTable
+                      ),
+                      new ExpressionVirtualColumn(
+                          "v3",
+                          "parse_json(to_json_string(\"nester\"))",
+                          NestedDataComplexTypeSerde.TYPE,
+                          macroTable
+                      )
                   )
                   .columns("string", "v0", "v1", "v2", "v3")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -2061,13 +2143,19 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[] {"aaa", "\"aaa\"", "\"aaa\"", "{\"foo\":1}", "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}"},
-            new Object[] {"bbb", "\"bbb\"", "\"bbb\"", "{\"foo\":1}", "\"hello\""},
-            new Object[] {"ccc", "\"ccc\"", "\"ccc\"", "{\"foo\":1}", null},
-            new Object[] {"ddd", "\"ddd\"", "\"ddd\"", "{\"foo\":1}", null},
-            new Object[] {"eee", "\"eee\"", "\"eee\"", "{\"foo\":1}", null},
-            new Object[] {"aaa", "\"aaa\"", "\"aaa\"", "{\"foo\":1}", "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"},
-            new Object[] {"ddd", "\"ddd\"", "\"ddd\"", "{\"foo\":1}", "2"}
+            new Object[]{
+                "aaa",
+                "\"aaa\"",
+                "\"aaa\"",
+                "{\"foo\":1}",
+                "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}"
+            },
+            new Object[]{"bbb", "\"bbb\"", "\"bbb\"", "{\"foo\":1}", "\"hello\""},
+            new Object[]{"ccc", "\"ccc\"", "\"ccc\"", "{\"foo\":1}", null},
+            new Object[]{"ddd", "\"ddd\"", "\"ddd\"", "{\"foo\":1}", null},
+            new Object[]{"eee", "\"eee\"", "\"eee\"", "{\"foo\":1}", null},
+            new Object[]{"aaa", "\"aaa\"", "\"aaa\"", "{\"foo\":1}", "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"},
+            new Object[]{"ddd", "\"ddd\"", "\"ddd\"", "{\"foo\":1}", "2"}
         )
     );
   }

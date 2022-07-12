@@ -40,16 +40,13 @@ import java.nio.ByteBuffer;
 public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
 {
   private final NestedDataColumnMetadata metadata;
-
   private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
-
   private final ImmutableBitmap nullValues;
   private final GenericIndexed<String> fields;
   private final NestedLiteralTypeInfo fieldInfo;
   private final GenericIndexed<String> dictionary;
   private final FixedIndexed<Long> longDictionary;
   private final FixedIndexed<Double> doubleDictionary;
-
   private final ColumnConfig columnConfig;
   private final SmooshedFileMapper fileMapper;
 
@@ -126,15 +123,6 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
     this.columnConfig = columnConfig;
   }
 
-  private ByteBuffer loadInternalFile(SmooshedFileMapper fileMapper, String internalFileName) throws IOException
-  {
-    return fileMapper.mapFile(
-        NestedDataColumnSerializer.getInternalFileName(
-            metadata.getFileNameBase(), internalFileName
-        )
-    );
-  }
-
   @Override
   public ComplexColumn get()
   {
@@ -149,6 +137,15 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
         longDictionary,
         doubleDictionary,
         fileMapper
+    );
+  }
+
+  private ByteBuffer loadInternalFile(SmooshedFileMapper fileMapper, String internalFileName) throws IOException
+  {
+    return fileMapper.mapFile(
+        NestedDataColumnSerializer.getInternalFileName(
+            metadata.getFileNameBase(), internalFileName
+        )
     );
   }
 }

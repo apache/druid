@@ -69,7 +69,7 @@ import java.util.BitSet;
 
 public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
 {
-  NestedLiteralTypeInfo.TypeSet types;
+  private final NestedLiteralTypeInfo.TypeSet types;
   @Nullable
   private final ColumnType singleType;
   private final ColumnarLongs longsColumn;

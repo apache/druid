@@ -23,6 +23,7 @@ package org.apache.druid.segment.virtual;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -43,7 +44,9 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.nested.NestedDataComplexColumn;
+import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.NestedPathFinder;
+import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
@@ -59,35 +62,58 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Optimized virtual column that can make direct selectors into a {@link NestedDataComplexColumn} or any associated
+ * nested fields ({@link org.apache.druid.segment.nested.NestedFieldLiteralDictionaryEncodedColumn}) including using
+ * their indexes.
+ *
+ * This virtual column is used for the SQL operators JSON_VALUE (if {@link #processFromRaw} is set to false) or
+ * JSON_QUERY (if it is true), and accepts 'JSONPath' or 'jq' syntax string representations of paths, or a parsed
+ * list of {@link NestedPathPart} in order to determine what should be selected from the column.
+ *
+ * Type information for nested fields is completely absent in the SQL planner, so it guesses the best it can to set
+ * {@link #expectedType} from the context of how something is being used, e.g. an aggregators default type or an
+ * explicit cast, or, if using the 'RETURNING' syntax which explicitly specifies type. This might not be the same as
+ * if it had actual type information, but, we try to stick with whatever we chose there to do the best we can for now.
+ *
+ * Since {@link #capabilities(ColumnInspector, String)} is determined by the {@link #expectedType}, the results will
+ * be best effor cast to the expected type if the column is not natively the expected type so that this column can
+ * fulfill the contract of the type of selector that is likely to be created to read this column.
+ */
 public class NestedFieldVirtualColumn implements VirtualColumn
 {
   private final String columnName;
-  private final String path;
   private final String outputName;
-  private final List<NestedPathFinder.NestedPathPart> parts;
-  /**
-   * type information for nested fields is completely absent in the SQL planner, so it guesses the best it can
-   * from the context of how something is being used. This might not be the same as if it had actual type information,
-   * but, we try to stick with whatever we chose there to do the best we can for now
-   */
   @Nullable
   private final ColumnType expectedType;
-
+  private final List<NestedPathPart> parts;
   private final boolean processFromRaw;
 
   @JsonCreator
   public NestedFieldVirtualColumn(
       @JsonProperty("columnName") String columnName,
-      @JsonProperty("path") String path,
       @JsonProperty("outputName") String outputName,
       @JsonProperty("expectedType") @Nullable ColumnType expectedType,
-      @JsonProperty("processFromRaw") @Nullable Boolean processFromRaw
+      @JsonProperty("pathParts") @Nullable List<NestedPathPart> parts,
+      @JsonProperty("processFromRaw") @Nullable Boolean processFromRaw,
+      @JsonProperty("path") @Nullable String path,
+      @JsonProperty("useJqSyntax") @Nullable Boolean useJqSyntax
   )
   {
     this.columnName = columnName;
     this.outputName = outputName;
-    this.parts = NestedPathFinder.parseJqPath(path);
-    this.path = NestedPathFinder.toNormalizedJqPath(parts);
+    if (path != null) {
+      Preconditions.checkArgument(parts == null, "Cannot define both 'path' and 'pathParts'");
+    } else if (parts == null) {
+      throw new IllegalArgumentException("Must define exactly one of 'path' or 'pathParts'");
+    }
+
+    if (parts != null) {
+      this.parts = parts;
+    } else {
+      boolean isInputJq = useJqSyntax != null && useJqSyntax;
+      this.parts = isInputJq ? NestedPathFinder.parseJqPath(path) : NestedPathFinder.parseJsonPath(path);
+    }
     this.expectedType = expectedType;
     this.processFromRaw = processFromRaw == null ? false : processFromRaw;
   }
@@ -99,7 +125,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       String outputName
   )
   {
-    this(columnName, path, outputName, null, null);
+    this(columnName, outputName, null, null, null, path, false);
   }
 
   @VisibleForTesting
@@ -110,48 +136,16 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       ColumnType expectedType
   )
   {
-    this(columnName, path, outputName, expectedType, null);
-  }
-
-  public NestedFieldVirtualColumn(
-      String columnName,
-      String outputName,
-      ColumnType expectedType,
-      List<NestedPathFinder.NestedPathPart> parts,
-      String normalizedPath
-  )
-  {
-    this.columnName = columnName;
-    this.outputName = outputName;
-    this.parts = parts;
-    this.path = normalizedPath;
-    this.expectedType = expectedType;
-    this.processFromRaw = false;
-  }
-
-  public NestedFieldVirtualColumn(
-      String columnName,
-      String outputName,
-      ColumnType expectedType,
-      List<NestedPathFinder.NestedPathPart> parts,
-      String normalizedPath,
-      boolean processFromRaw
-  )
-  {
-    this.columnName = columnName;
-    this.outputName = outputName;
-    this.parts = parts;
-    this.path = normalizedPath;
-    this.expectedType = expectedType;
-    this.processFromRaw = processFromRaw;
+    this(columnName, outputName, expectedType, null, null, path, false);
   }
 
   @Override
   public byte[] getCacheKey()
   {
+    final String partsString = NestedPathFinder.toNormalizedJsonPath(parts);
     return new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_USER_DEFINED).appendString("nested-field")
                                                                                    .appendString(columnName)
-                                                                                   .appendString(path)
+                                                                                   .appendString(partsString)
                                                                                    .appendBoolean(processFromRaw)
                                                                                    .build();
   }
@@ -169,10 +163,10 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     return columnName;
   }
 
-  @JsonProperty
-  public String getPath()
+  @JsonProperty("pathParts")
+  public List<NestedPathPart> getPathParts()
   {
-    return path;
+    return parts;
   }
 
   @JsonProperty
@@ -193,6 +187,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       ColumnSelectorFactory factory
   )
   {
+    // this dimension selector is used for realtime queries, nested paths are not themselves dictionary encoded until
+    // written to segment, so we fall back to processing the structured data from a column value selector on the
+    // complex column
     ColumnValueSelector valueSelector = makeColumnValueSelector(dimensionSpec.getOutputName(), factory);
 
     class FieldDimensionSelector extends BaseSingleValueDimensionSelector
@@ -223,8 +220,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       ColumnSelectorFactory factory
   )
   {
+    // this column value selector is used for realtime queries, so we always process StructuredData
     final ColumnValueSelector baseSelector = factory.makeColumnValueSelector(this.columnName);
 
+    // processFromRaw is true that means JSON_QUERY, which can return partial results, otherwise this virtual column
+    // is JSON_VALUE which only returns literals, so use the literal value selector instead
     return processFromRaw
            ? new RawFieldColumnSelector(baseSelector, parts)
            : new RawFieldLiteralColumnValueSelector(baseSelector, parts);
@@ -240,9 +240,10 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   {
     final NestedDataComplexColumn column = NestedDataComplexColumn.fromColumnSelector(columnSelector, columnName);
     if (column == null) {
+      // complex column itself didn't exist
       return DimensionSelector.constant(null);
     }
-    return column.makeDimensionSelector(path, offset, dimensionSpec.getExtractionFn());
+    return column.makeDimensionSelector(parts, offset, dimensionSpec.getExtractionFn());
   }
 
 
@@ -258,9 +259,12 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (column == null) {
       return NilColumnValueSelector.instance();
     }
+
+    // processFromRaw is true, that means JSON_QUERY, which can return partial results, otherwise this virtual column
+    // is JSON_VALUE which only returns literals, so we can use the nested columns value selector
     return processFromRaw
            ? new RawFieldColumnSelector(column.makeColumnValueSelector(offset), parts)
-           : column.makeColumnValueSelector(path, offset);
+           : column.makeColumnValueSelector(parts, offset);
   }
 
   @Override
@@ -281,7 +285,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (column == null) {
       return NilVectorSelector.create(offset);
     }
-    return column.makeSingleValueDimensionVectorSelector(path, offset);
+    return column.makeSingleValueDimensionVectorSelector(parts, offset);
   }
 
   @Nullable
@@ -296,9 +300,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (column == null) {
       return NilVectorSelector.create(offset);
     }
+    // processFromRaw is true, that means JSON_QUERY, which can return partial results, otherwise this virtual column
+    // is JSON_VALUE which only returns literals, so we can use the nested columns value selector
     return processFromRaw
            ? new RawFieldVectorObjectSelector(column.makeVectorObjectSelector(offset), parts)
-           : column.makeVectorObjectSelector(path, offset);
+           : column.makeVectorObjectSelector(parts, offset);
   }
 
   @Nullable
@@ -316,11 +322,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
 
     // if column is numeric, it has a vector value selector, so we can directly make a vector value selector
     // if we are missing an expectedType, then we've got nothing else to work with so try it anyway
-    if (column.isNumeric(path) || expectedType == null) {
-      return column.makeVectorValueSelector(path, offset);
+    if (column.isNumeric(parts) || expectedType == null) {
+      return column.makeVectorValueSelector(parts, offset);
     }
 
-    final VectorObjectSelector objectSelector = column.makeVectorObjectSelector(path, offset);
+    final VectorObjectSelector objectSelector = column.makeVectorObjectSelector(parts, offset);
     if (expectedType.is(ValueType.LONG)) {
       return new BaseLongVectorValueSelector(offset)
       {
@@ -460,12 +466,18 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (column == null) {
       return null;
     }
-    return column.getColumnIndexSupplier(path);
+    return column.getColumnIndexSupplier(parts);
   }
 
   @Override
   public ColumnCapabilities capabilities(String columnName)
   {
+    if (processFromRaw) {
+      // JSON_QUERY always returns a StructuredData
+      return ColumnCapabilitiesImpl.createDefault()
+                                   .setType(NestedDataComplexTypeSerde.TYPE)
+                                   .setHasMultipleValues(false);
+    }
     return ColumnCapabilitiesImpl.createDefault()
                                  .setType(expectedType != null ? expectedType : ColumnType.STRING);
   }
@@ -473,6 +485,12 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   @Override
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
+    if (processFromRaw) {
+      // JSON_QUERY always returns a StructuredData
+      return ColumnCapabilitiesImpl.createDefault()
+                                   .setType(NestedDataComplexTypeSerde.TYPE)
+                                   .setHasMultipleValues(false);
+    }
     // ColumnInspector isn't really enough... we need the ability to read the complex column itself to examine
     // the nested fields type information to really be accurate here, so we rely on the expectedType to guide us
     final ColumnCapabilities complexCapabilites = inspector.getColumnCapabilities(this.columnName);
@@ -509,14 +527,17 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return false;
     }
     NestedFieldVirtualColumn that = (NestedFieldVirtualColumn) o;
-    return columnName.equals(that.columnName) && outputName.equals(that.outputName) && path.equals(that.path)
-           && Objects.equals(expectedType, that.expectedType) && processFromRaw == that.processFromRaw;
+    return columnName.equals(that.columnName) &&
+           outputName.equals(that.outputName) &&
+           parts.equals(that.parts) &&
+           Objects.equals(expectedType, that.expectedType) &&
+           processFromRaw == that.processFromRaw;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(columnName, path, outputName, expectedType, processFromRaw);
+    return Objects.hash(columnName, parts, outputName, expectedType, processFromRaw);
   }
 
   @Override
@@ -524,13 +545,12 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   {
     return "NestedFieldVirtualColumn{" +
            "columnName='" + columnName + '\'' +
-           ", path='" + path + '\'' +
            ", outputName='" + outputName + '\'' +
            ", typeHint='" + expectedType + '\'' +
+           ", pathParts='" + parts + '\'' +
            ", allowFallback=" + processFromRaw +
            '}';
   }
-
 
   /**
    * Process the "raw" data to extract literals with {@link NestedPathFinder#findLiteral(Object, List)}. Like
@@ -538,15 +558,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
    *
    * This is used as a selector on realtime data when the native field columns are not available.
    */
-  public static class RawFieldLiteralColumnValueSelector implements ColumnValueSelector<Object>
+  public static class RawFieldLiteralColumnValueSelector extends RawFieldColumnSelector
   {
-    private final ColumnValueSelector baseSelector;
-    private final List<NestedPathFinder.NestedPathPart> parts;
-
-    public RawFieldLiteralColumnValueSelector(ColumnValueSelector baseSelector, List<NestedPathFinder.NestedPathPart> parts)
+    public RawFieldLiteralColumnValueSelector(ColumnValueSelector baseSelector, List<NestedPathPart> parts)
     {
-      this.baseSelector = baseSelector;
-      this.parts = parts;
+      super(baseSelector, parts);
     }
 
     @Override
@@ -583,6 +599,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
       inspector.visit("baseSelector", baseSelector);
+      inspector.visit("parts", parts);
     }
 
     @Override
@@ -612,10 +629,10 @@ public class NestedFieldVirtualColumn implements VirtualColumn
    */
   public static class RawFieldColumnSelector implements ColumnValueSelector<Object>
   {
-    private final ColumnValueSelector baseSelector;
-    private final List<NestedPathFinder.NestedPathPart> parts;
+    protected final ColumnValueSelector baseSelector;
+    protected final List<NestedPathPart> parts;
 
-    public RawFieldColumnSelector(ColumnValueSelector baseSelector, List<NestedPathFinder.NestedPathPart> parts)
+    public RawFieldColumnSelector(ColumnValueSelector baseSelector, List<NestedPathPart> parts)
     {
       this.baseSelector = baseSelector;
       this.parts = parts;
@@ -624,9 +641,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public double getDouble()
     {
-      Object o = getObject();
-      if (o instanceof Number) {
-        return ((Number) o).doubleValue();
+      StructuredData data = (StructuredData) getObject();
+      if (data != null && data.getValue() instanceof Number) {
+        return ((Number) data.getValue()).doubleValue();
       }
       return 0.0;
     }
@@ -634,9 +651,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public float getFloat()
     {
-      Object o = getObject();
-      if (o instanceof Number) {
-        return ((Number) o).floatValue();
+      StructuredData data = (StructuredData) getObject();
+      if (data != null && data.getValue() instanceof Number) {
+        return ((Number) data.getValue()).floatValue();
       }
       return 0f;
     }
@@ -644,9 +661,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public long getLong()
     {
-      Object o = getObject();
-      if (o instanceof Number) {
-        return ((Number) o).longValue();
+      StructuredData data = (StructuredData) getObject();
+      if (data != null && data.getValue() instanceof Number) {
+        return ((Number) data.getValue()).longValue();
       }
       return 0L;
     }
@@ -655,12 +672,14 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
       inspector.visit("baseSelector", baseSelector);
+      inspector.visit("parts", parts);
     }
 
     @Override
     public boolean isNull()
     {
-      return !(getObject() instanceof Number);
+      StructuredData data = (StructuredData) getObject();
+      return data == null || !(data.getValue() instanceof Number);
     }
 
     @Nullable
@@ -679,18 +698,18 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   }
 
   /**
-   * Process the "raw" data to extract vectors of values with {@link NestedPathFinder#find(Object, List)}, wrapping the result
-   * in {@link StructuredData}
+   * Process the "raw" data to extract vectors of values with {@link NestedPathFinder#find(Object, List)}, wrapping the
+   * result in {@link StructuredData}
    */
   public static class RawFieldVectorObjectSelector implements VectorObjectSelector
   {
     private final VectorObjectSelector baseSelector;
-    private final List<NestedPathFinder.NestedPathPart> parts;
+    private final List<NestedPathPart> parts;
     private final Object[] vector;
 
     public RawFieldVectorObjectSelector(
         VectorObjectSelector baseSelector,
-        List<NestedPathFinder.NestedPathPart> parts
+        List<NestedPathPart> parts
     )
     {
       this.baseSelector = baseSelector;

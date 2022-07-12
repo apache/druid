@@ -36,8 +36,13 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
 
+/**
+ * Describes the basic shape for any 'nested data' ({@link StructuredData}) {@link ComplexColumn} implementation along
+ * with basic facilities for caching any columns created and methods for retrieving selectors for nested literal field
+ * columns.
+ */
 public abstract class NestedDataComplexColumn implements ComplexColumn
 {
   @Nullable
@@ -62,22 +67,62 @@ public abstract class NestedDataComplexColumn implements ComplexColumn
     );
   }
 
-  private final ConcurrentHashMap<String, ColumnHolder> columns = new ConcurrentHashMap<>();
 
-  public abstract DimensionSelector makeDimensionSelector(String field, ReadableOffset readableOffset, ExtractionFn fn);
-  public abstract ColumnValueSelector<?> makeColumnValueSelector(String field, ReadableOffset readableOffset);
+  /**
+   * Make a {@link DimensionSelector} for a nested literal field column associated with this nested
+   * complex column specified by a sequence of {@link NestedPathPart}.
+   */
+  public abstract DimensionSelector makeDimensionSelector(
+      List<NestedPathPart> path,
+      ReadableOffset readableOffset,
+      ExtractionFn fn
+  );
 
+  /**
+   * Make a {@link ColumnValueSelector} for a nested literal field column associated with this nested
+   * complex column specified by a sequence of {@link NestedPathPart}.
+   */
+  public abstract ColumnValueSelector<?> makeColumnValueSelector(
+      List<NestedPathPart> path,
+      ReadableOffset readableOffset
+  );
+
+  /**
+   * Make a {@link SingleValueDimensionVectorSelector} for a nested literal field column associated with this nested
+   * complex column specified by a sequence of {@link NestedPathPart}.
+   */
   public abstract SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(
-      String field,
+      List<NestedPathPart> path,
       ReadableVectorOffset readableOffset
   );
-  public abstract VectorObjectSelector makeVectorObjectSelector(String field, ReadableVectorOffset readableOffset);
 
-  public abstract VectorValueSelector makeVectorValueSelector(String field, ReadableVectorOffset readableOffset);
-  public abstract ColumnHolder readNestedFieldColumn(String field);
+  /**
+   * Make a {@link VectorObjectSelector} for a nested literal field column associated with this nested
+   * complex column located at the 'path' represented as a sequence of {@link NestedPathPart}.
+   */
+  public abstract VectorObjectSelector makeVectorObjectSelector(
+      List<NestedPathPart> path,
+      ReadableVectorOffset readableOffset
+  );
 
+  /**
+   * Make a {@link VectorValueSelector} for a nested literal field column associated with this nested
+   * complex column located at the 'path' represented as a sequence of {@link NestedPathPart}.
+   */
+  public abstract VectorValueSelector makeVectorValueSelector(
+      List<NestedPathPart> path,
+      ReadableVectorOffset readableOffset
+  );
+
+  /**
+   * Make a {@link ColumnIndexSupplier} for a nested literal field column associated with this nested
+   * complex column located at the 'path' represented as a sequence of {@link NestedPathPart}.
+   */
   @Nullable
-  public abstract ColumnIndexSupplier getColumnIndexSupplier(String field);
+  public abstract ColumnIndexSupplier getColumnIndexSupplier(List<NestedPathPart> path);
+
+  public abstract boolean isNumeric(List<NestedPathPart> path);
+
   @Override
   public Class<?> getClazz()
   {
@@ -88,15 +133,5 @@ public abstract class NestedDataComplexColumn implements ComplexColumn
   public String getTypeName()
   {
     return NestedDataComplexTypeSerde.TYPE_NAME;
-  }
-
-  protected ColumnHolder getColumnHolder(String field)
-  {
-    return columns.computeIfAbsent(field, this::readNestedFieldColumn);
-  }
-
-  public boolean isNumeric(String field)
-  {
-    return columns.computeIfAbsent(field, this::readNestedFieldColumn).getCapabilities().isNumeric();
   }
 }

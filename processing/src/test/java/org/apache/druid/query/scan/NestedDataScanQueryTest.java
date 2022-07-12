@@ -52,6 +52,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.NestedPathFinder;
+import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -117,9 +118,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  )
                                              )
                                              .virtualColumns(
-                                                 new NestedFieldVirtualColumn("nest", ".x", "x"),
-                                                 new NestedFieldVirtualColumn("nester", ".x[0]", "x_0"),
-                                                 new NestedFieldVirtualColumn("nester", ".y.c[1]", "y_c_1")
+                                                 new NestedFieldVirtualColumn("nest", "$.x", "x"),
+                                                 new NestedFieldVirtualColumn("nester", "$.x[0]", "x_0"),
+                                                 new NestedFieldVirtualColumn("nester", "$.y.c[1]", "y_c_1")
                                              )
                                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                              .limit(100)
@@ -146,7 +147,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  )
                                              )
                                              .virtualColumns(
-                                                 new NestedFieldVirtualColumn("nest", ".long", "long")
+                                                 new NestedFieldVirtualColumn("nest", "$.long", "long")
                                              )
                                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                              .limit(100)
@@ -185,10 +186,10 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  )
                                              )
                                              .virtualColumns(
-                                                 new NestedFieldVirtualColumn("nest", ".x", "x"),
-                                                 new NestedFieldVirtualColumn("nester", ".x[0]", "x_0"),
-                                                 new NestedFieldVirtualColumn("nester", ".y.c[1]", "y_c_1"),
-                                                 new NestedFieldVirtualColumn("nester", ".", "nester_root")
+                                                 new NestedFieldVirtualColumn("nest", "$.x", "x"),
+                                                 new NestedFieldVirtualColumn("nester", "$.x[0]", "x_0"),
+                                                 new NestedFieldVirtualColumn("nester", "$.y.c[1]", "y_c_1"),
+                                                 new NestedFieldVirtualColumn("nester", "$.", "nester_root")
                                              )
                                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                              .limit(100)
@@ -224,10 +225,42 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              )
                                              .columns("x", "x_0", "y_c_1")
                                              .virtualColumns(
-                                                 new NestedFieldVirtualColumn("nest", ".x", "x", ColumnType.LONG, true),
-                                                 new NestedFieldVirtualColumn("nester", ".x[0]", "x_0", NestedDataComplexTypeSerde.TYPE, true),
-                                                 new NestedFieldVirtualColumn("nester", ".y.c[1]", "y_c_1", NestedDataComplexTypeSerde.TYPE, true),
-                                                 new NestedFieldVirtualColumn("nester", ".", "nester_root", NestedDataComplexTypeSerde.TYPE, true)
+                                                 new NestedFieldVirtualColumn(
+                                                     "nest",
+                                                     "x",
+                                                     ColumnType.LONG,
+                                                     null,
+                                                     true,
+                                                     "$.x",
+                                                     false
+                                                 ),
+                                                 new NestedFieldVirtualColumn(
+                                                     "nester",
+                                                     "x_0",
+                                                     NestedDataComplexTypeSerde.TYPE,
+                                                     null,
+                                                     true,
+                                                     "$.x[0]",
+                                                     false
+                                                 ),
+                                                 new NestedFieldVirtualColumn(
+                                                     "nester",
+                                                     "y_c_1",
+                                                     NestedDataComplexTypeSerde.TYPE,
+                                                     null,
+                                                     true,
+                                                     "$.y.c[1]",
+                                                     false
+                                                 ),
+                                                 new NestedFieldVirtualColumn(
+                                                     "nester",
+                                                     "nester_root",
+                                                     NestedDataComplexTypeSerde.TYPE,
+                                                     null,
+                                                     true,
+                                                     "$.",
+                                                     false
+                                                 )
                                              )
                                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                              .limit(100)
@@ -262,9 +295,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  )
                                              )
                                              .virtualColumns(
-                                                 new NestedFieldVirtualColumn("nest", ".x", "x"),
-                                                 new NestedFieldVirtualColumn("nester", ".x[0]", "x_0"),
-                                                 new NestedFieldVirtualColumn("nester", ".y.c[1]", "y_c_1")
+                                                 new NestedFieldVirtualColumn("nest", "$.x", "x"),
+                                                 new NestedFieldVirtualColumn("nester", "$.x[0]", "x_0"),
+                                                 new NestedFieldVirtualColumn("nester", "$.y.c[1]", "y_c_1")
                                              )
                                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                              .limit(100)
@@ -321,7 +354,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  )
                                              )
                                              .virtualColumns(
-                                                 new NestedFieldVirtualColumn("nest", ".x", "x")
+                                                 new NestedFieldVirtualColumn("nest", "$.x", "x")
                                              )
                                              .filters(
                                                  new SelectorDimFilter("x", "200", null)
@@ -351,7 +384,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  )
                                              )
                                              .virtualColumns(
-                                                 new NestedFieldVirtualColumn("nest", ".x", "x")
+                                                 new NestedFieldVirtualColumn("nest", "$.x", "x")
                                              )
                                              .filters(
                                                  new BoundDimFilter(
@@ -512,42 +545,50 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
 
   private VirtualColumns makeNestedNumericVirtualColumns()
   {
-    List<NestedPathFinder.NestedPathPart> longParts = NestedPathFinder.parseJqPath(".long");
-    List<NestedPathFinder.NestedPathPart> doubleParts = NestedPathFinder.parseJqPath(".double");
-    List<NestedPathFinder.NestedPathPart> mixedNumericParts = NestedPathFinder.parseJqPath(".mixed_numeric");
-    List<NestedPathFinder.NestedPathPart> mixedParts = NestedPathFinder.parseJqPath(".mixed");
-    List<NestedPathFinder.NestedPathPart> sparseLongParts = NestedPathFinder.parseJqPath(".sparse_long");
-    List<NestedPathFinder.NestedPathPart> sparseDoubleParts = NestedPathFinder.parseJqPath(".sparse_double");
-    List<NestedPathFinder.NestedPathPart> sparseMixedNumericParts = NestedPathFinder.parseJqPath(".sparse_mixed_numeric");
-    List<NestedPathFinder.NestedPathPart> sparseMixedParts = NestedPathFinder.parseJqPath(".sparse_mixed");
+    List<NestedPathPart> longParts = NestedPathFinder.parseJqPath(".long");
+    List<NestedPathPart> doubleParts = NestedPathFinder.parseJqPath(".double");
+    List<NestedPathPart> mixedNumericParts = NestedPathFinder.parseJqPath(".mixed_numeric");
+    List<NestedPathPart> mixedParts = NestedPathFinder.parseJqPath(".mixed");
+    List<NestedPathPart> sparseLongParts = NestedPathFinder.parseJqPath(".sparse_long");
+    List<NestedPathPart> sparseDoubleParts = NestedPathFinder.parseJqPath(".sparse_double");
+    List<NestedPathPart> sparseMixedNumericParts = NestedPathFinder.parseJqPath(".sparse_mixed_numeric");
+    List<NestedPathPart> sparseMixedParts = NestedPathFinder.parseJqPath(".sparse_mixed");
 
     NestedFieldVirtualColumn longVirtualColumn = new NestedFieldVirtualColumn(
         "nest",
         NESTED_LONG_FIELD,
         ColumnType.LONG,
         longParts,
-        NestedPathFinder.toNormalizedJqPath(longParts)
+        false,
+        null,
+        null
     );
     NestedFieldVirtualColumn doubleVirtualColumn = new NestedFieldVirtualColumn(
         "nest",
         NESTED_DOUBLE_FIELD,
         ColumnType.DOUBLE,
         doubleParts,
-        NestedPathFinder.toNormalizedJqPath(doubleParts)
+        false,
+        null,
+        null
     );
     NestedFieldVirtualColumn mixedNumericVirtualColumn = new NestedFieldVirtualColumn(
         "nest",
         NESTED_MIXED_NUMERIC_FIELD,
         null,
         mixedNumericParts,
-        NestedPathFinder.toNormalizedJqPath(mixedNumericParts)
+        false,
+        null,
+        null
     );
     NestedFieldVirtualColumn mixedVirtualColumn = new NestedFieldVirtualColumn(
         "nest",
         NESTED_MIXED_FIELD,
         null,
         mixedParts,
-        NestedPathFinder.toNormalizedJqPath(mixedParts)
+        false,
+        null,
+        null
     );
 
     NestedFieldVirtualColumn sparseLongVirtualColumn = new NestedFieldVirtualColumn(
@@ -555,28 +596,36 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NESTED_SPARSE_LONG_FIELD,
         ColumnType.LONG,
         sparseLongParts,
-        NestedPathFinder.toNormalizedJqPath(sparseLongParts)
+        false,
+        null,
+        null
     );
     NestedFieldVirtualColumn sparseDoubleVirtualColumn = new NestedFieldVirtualColumn(
         "nest",
         NESTED_SPARSE_DOUBLE_FIELD,
         ColumnType.DOUBLE,
         sparseDoubleParts,
-        NestedPathFinder.toNormalizedJqPath(sparseDoubleParts)
+        false,
+        null,
+        null
     );
     NestedFieldVirtualColumn sparseMixedNumericVirtualColumn = new NestedFieldVirtualColumn(
         "nest",
         NESTED_SPARSE_MIXED_NUMERIC_FIELD,
         null,
         sparseMixedNumericParts,
-        NestedPathFinder.toNormalizedJqPath(sparseMixedNumericParts)
+        false,
+        null,
+        null
     );
     NestedFieldVirtualColumn sparseMixedVirtualColumn = new NestedFieldVirtualColumn(
         "nest",
         NESTED_SPARSE_MIXED_FIELD,
         null,
         sparseMixedParts,
-        NestedPathFinder.toNormalizedJqPath(sparseMixedParts)
+        false,
+        null,
+        null
     );
 
     return VirtualColumns.create(

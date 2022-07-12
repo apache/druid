@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.nested.NestedPathFinder;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,13 +35,63 @@ public class NestedFieldVirtualColumnTest
   @Test
   public void testSerde() throws JsonProcessingException
   {
-    NestedFieldVirtualColumn virtualColumn = new NestedFieldVirtualColumn("nested", ".x.y.z", "v0", ColumnType.LONG);
-    Assert.assertEquals(virtualColumn, JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(virtualColumn), NestedFieldVirtualColumn.class));
+    NestedFieldVirtualColumn there = new NestedFieldVirtualColumn("nested", "$.x.y.z", "v0", ColumnType.LONG);
+    String json = JSON_MAPPER.writeValueAsString(there);
+    NestedFieldVirtualColumn andBackAgain = JSON_MAPPER.readValue(json, NestedFieldVirtualColumn.class);
+    Assert.assertEquals(there, andBackAgain);
+  }
+
+  @Test
+  public void testSerdeArrayParts() throws JsonProcessingException
+  {
+    NestedFieldVirtualColumn there = new NestedFieldVirtualColumn("nested", "$.x.y.z[1]", "v0", ColumnType.LONG);
+    String json = JSON_MAPPER.writeValueAsString(there);
+    NestedFieldVirtualColumn andBackAgain = JSON_MAPPER.readValue(json, NestedFieldVirtualColumn.class);
+    Assert.assertEquals(there, andBackAgain);
+  }
+
+  @Test
+  public void testBothPathAndPartsDefined()
+  {
+    Assert.assertThrows(
+        "Cannot define both 'path' and 'pathParts'",
+        IllegalArgumentException.class,
+        () -> new NestedFieldVirtualColumn(
+            "nested",
+            "v0",
+            ColumnType.LONG,
+            NestedPathFinder.parseJsonPath("$.x.y.z"),
+            false,
+            "$.x.y.z",
+            false
+        )
+    );
+  }
+
+  @Test
+  public void testNoPathAndPartsDefined()
+  {
+    Assert.assertThrows(
+        "Must define exactly one of 'path' or 'pathParts'",
+        IllegalArgumentException.class,
+        () -> new NestedFieldVirtualColumn(
+            "nested",
+            "v0",
+            ColumnType.LONG,
+            null,
+            null,
+            null,
+            null
+        )
+    );
   }
 
   @Test
   public void testEqualsAndHashcode()
   {
-    EqualsVerifier.forClass(NestedFieldVirtualColumn.class).withNonnullFields("columnName", "path", "outputName").withIgnoredFields("parts").usingGetClass().verify();
+    EqualsVerifier.forClass(NestedFieldVirtualColumn.class)
+                  .withNonnullFields("columnName", "outputName")
+                  .usingGetClass()
+                  .verify();
   }
 }
