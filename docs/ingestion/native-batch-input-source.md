@@ -138,7 +138,7 @@ Sample specs:
 ...
 ```
 
-|property|description|default|required?|
+|Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |type|This should be `s3`.|None|yes|
 |uris|JSON array of URIs where S3 objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
@@ -151,23 +151,23 @@ Note that the S3 input source will skip all empty objects only when `prefixes` i
 
 S3 Object:
 
-|property|description|default|required?|
+|Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |bucket|Name of the S3 bucket|None|yes|
 |path|The path where data is located.|None|yes|
 
 Properties Object:
 
-|property|description|default|required?|
+|Property|Description|Default|Required|
 |--------|-----------|-------|---------|
-|accessKeyId|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's access key|None|yes if secretAccessKey is given|
-|secretAccessKey|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's secret key|None|yes if accessKeyId is given|
+|accessKeyId|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 input source access key|None|yes if secretAccessKey is given|
+|secretAccessKey|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 input source secret key|None|yes if accessKeyId is given|
 |assumeRoleArn|AWS ARN of the role to assume [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). **assumeRoleArn** can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
 |assumeRoleExternalId|A unique identifier that might be required when you assume a role in another account [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html)|None|no|
 
 > **Note:** If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
 
-## Google Cloud Storage Input Source
+## Google Cloud Storage input source
 
 > You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the Google Cloud Storage input source.
 
@@ -234,7 +234,7 @@ Sample specs:
 ...
 ```
 
-|property|description|default|required?|
+|Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |type|This should be `google`.|None|yes|
 |uris|JSON array of URIs where Google Cloud Storage objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
@@ -246,7 +246,7 @@ Note that the Google Cloud Storage input source will skip all empty objects only
 
 Google Cloud Storage object:
 
-|property|description|default|required?|
+|Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |bucket|Name of the Google Cloud Storage bucket|None|yes|
 |path|The path where data is located.|None|yes|
@@ -315,7 +315,7 @@ Sample specs:
 ...
 ```
 
-|property|description|default|required?|
+|Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |type|This should be `azure`.|None|yes|
 |uris|JSON array of URIs where the Azure objects to be ingested are located, in the form "azure://\<container>/\<path-to-file\>"|None|`uris` or `prefixes` or `objects` must be set|
@@ -327,12 +327,12 @@ Note that the Azure input source skips all empty objects only when `prefixes` is
 
 The `objects` property is:
 
-|property|description|default|required?|
+|Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |bucket|Name of the Azure Blob Storage or Azure Data Lake container|None|yes|
 |path|The path where data is located.|None|yes|
 
-## HDFS Input Source
+## HDFS input source
 
 > You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFS input source.
 
@@ -407,7 +407,7 @@ Sample specs:
 ...
 ```
 
-|property|description|default|required?|
+|Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |type|This should be `hdfs`.|None|yes|
 |paths|HDFS paths. Can be either a JSON array or comma-separated string of paths. Wildcards like `*` are supported in these paths. Empty files located under one of the given paths will be skipped.|None|yes|
@@ -417,7 +417,7 @@ However, if you want to ingest from cloud storage, consider using the service-sp
 If you want to use a non-hdfs protocol with the HDFS input source, include the protocol
 in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security configuration](../configuration/index.md#hdfs-input-source) for more details.
 
-## HTTP Input Source
+## HTTP input source
 
 The HTTP input source is to support reading files directly from remote sites via HTTP.
 
@@ -492,7 +492,7 @@ You can also use the other existing Druid PasswordProviders. Here is an example 
 }
 ```
 
-|property|description|default|required?|
+|Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |type|This should be `http`|None|yes|
 |uris|URIs of the input files. See below for the protocols allowed for URIs.|None|yes|
@@ -502,7 +502,7 @@ You can also use the other existing Druid PasswordProviders. Here is an example 
 You can only use protocols listed in the `druid.ingestion.http.allowedProtocols` property as HTTP input sources.
 The `http` and `https` protocols are allowed by default. See [HTTP input source security configuration](../configuration/index.md#http-input-source) for more details.
 
-## Inline Input Source
+## Inline input source
 
 The Inline input source can be used to read the data inlined in its own spec.
 It can be used for demos or for quickly testing out parsing and schema.
@@ -525,12 +525,12 @@ Sample spec:
 ...
 ```
 
-|property|description|required?|
+|Property|Description|Required|
 |--------|-----------|---------|
 |type|This should be "inline".|yes|
 |data|Inlined data to ingest.|yes|
 
-## Local Input Source
+## Local input source
 
 The Local input source is to support reading files directly from local storage,
 and is mainly intended for proof-of-concept testing.
@@ -557,14 +557,14 @@ Sample spec:
 ...
 ```
 
-|property|description|required?|
+|Property|Description|Required|
 |--------|-----------|---------|
 |type|This should be "local".|yes|
 |filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|yes if `baseDir` is specified|
 |baseDir|Directory to search recursively for files to be ingested. Empty files under the `baseDir` will be skipped.|At least one of `baseDir` or `files` should be specified|
 |files|File paths to ingest. Some files can be ignored to avoid ingesting duplicate files if they are located under the specified `baseDir`. Empty files will be skipped.|At least one of `baseDir` or `files` should be specified|
 
-## Druid Input Source
+## Druid input source
 
 The Druid input source is to support reading data directly from existing Druid segments,
 potentially using a new schema and changing the name, dimensions, metrics, rollup, etc. of the segment.
@@ -572,7 +572,7 @@ The Druid input source is _splittable_ and can be used by the [Parallel task](./
 This input source has a fixed input format for reading from Druid segments;
 no `inputFormat` field needs to be specified in the ingestion spec when using this input source.
 
-|property|description|required?|
+|Property|Description|Required|
 |--------|-----------|---------|
 |type|This should be "druid".|yes|
 |dataSource|A String defining the Druid datasource to fetch rows from|yes|
@@ -654,7 +654,7 @@ rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and 
 > [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration)
 > to `true` to enable a compatibility mode where the timestampSpec is ignored.
 
-## SQL Input Source
+## SQL input source
 
 The SQL input source is used to read data directly from RDBMS.
 The SQL input source is _splittable_ and can be used by the [Parallel task](./native-batch.md), where each worker task will read from one SQL query from the list of queries.
@@ -662,14 +662,14 @@ This input source does not support Split Hint Spec.
 Since this input source has a fixed input format for reading events, no `inputFormat` field needs to be specified in the ingestion spec when using this input source.
 Please refer to the Recommended practices section below before using this input source.
 
-|property|description|required?|
+|Property|Description|Required|
 |--------|-----------|---------|
 |type|This should be "sql".|Yes|
 |database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support. The specified extension must be loaded into Druid:<br/><br/><ul><li>[mysql-metadata-storage](../development/extensions-core/mysql.md) for `mysql`</li><li> [postgresql-metadata-storage](../development/extensions-core/postgresql.md) extension for `postgresql`.</li></ul><br/><br/>You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../configuration/index.md#jdbc-connections-to-external-databases) for more details.|Yes|
 |foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|No|
 |sqls|List of SQL queries where each SQL query would retrieve the data to be indexed.|Yes|
 
-An example SqlInputSource spec is shown below:
+The following is an example of an SQL input source spec:
 
 ```json
 ...
@@ -696,7 +696,7 @@ Each of the SQL queries will be run in its own sub-task and thus for the above e
 
 **Recommended practices**
 
-Compared to the other native batch InputSources, SQL InputSource behaves differently in terms of reading the input data and so it would be helpful to consider the following points before using this InputSource in a production environment:
+Compared to the other native batch input sources, SQL input source behaves differently in terms of reading the input data and so it would be helpful to consider the following points before using this input source in a production environment:
 
 * During indexing, each sub-task would execute one of the SQL queries and the results are stored locally on disk. The sub-tasks then proceed to read the data from these local input files and generate segments. Presently, there isn’t any restriction on the size of the generated files and this would require the MiddleManagers or Indexers to have sufficient disk capacity based on the volume of data being indexed.
 
@@ -707,18 +707,21 @@ Compared to the other native batch InputSources, SQL InputSource behaves differe
 * Similar to file-based input formats, any updates to existing data will replace the data in segments specific to the intervals specified in the `granularitySpec`.
 
 
-## Combining input sources
+## Combining input source
 
-The Combining input source is used to read data from multiple InputSources. This input source should be only used if all the delegate input sources are
- _splittable_ and can be used by the [Parallel task](./native-batch.md). This input source will identify the splits from its delegates and each split will be processed by a worker task. Similar to other input sources, this input source supports a single `inputFormat`. Therefore, please note that delegate input sources requiring an `inputFormat` must have the same format for input data.
+The Combining input source lets you read data from multiple input sources.
+It identifies the splits from delegate input sources and uses a worker task to process each split.
+Use the Combining input source only if all the delegates are _splittable_ and can be used by the [Parallel task](./native-batch.md). 
 
-|property|description|required?|
+Similar to other input sources, the Combining input source supports a single `inputFormat`.
+Delegates that require an `inputFormat` must have the same input data format as their Combining input source.
+
+|Property|Description|Required|
 |--------|-----------|---------|
 |type|This should be "combining".|Yes|
-|delegates|List of _splittable_ InputSources to read data from.|Yes|
+|delegates|List of _splittable_ input sources to read data from.|Yes|
 
-Sample spec:
-
+The following is an example of a Combining input source spec:
 
 ```json
 ...
@@ -748,3 +751,8 @@ Sample spec:
 ...
 ```
 
+When using the Combining input source to read delegate `dataSources` results , set the value of `maxNumConcurrentSubTasks` in `tuningConfig` as follows:
+- more or equal to 1 for `range` or `single_dim` types
+- more or equal to 2 for `hashed` or `dynamic` types
+
+For more information on the `maxNumConcurrentSubTasks` field, see [Implementation considerations](native-batch.md#implementation-considerations).
