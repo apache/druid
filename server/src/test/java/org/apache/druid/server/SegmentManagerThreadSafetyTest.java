@@ -141,7 +141,7 @@ public class SegmentManagerThreadSafetyTest
     Assert.assertEquals(0, segmentCacheManager.getSegmentLocks().size());
   }
 
-  @Test
+  @Test(timeout = 6000L)
   public void testLoadMultipleSegments() throws IOException, ExecutionException, InterruptedException
   {
     final List<DataSegment> segments = new ArrayList<>(88);
