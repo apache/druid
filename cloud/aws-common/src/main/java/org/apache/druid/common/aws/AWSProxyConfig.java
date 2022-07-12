@@ -54,4 +54,15 @@ public class AWSProxyConfig
   {
     return password;
   }
+
+  @Override
+  public String toString()
+  {
+    return "AWSProxyConfig{" +
+           "host='" + host + '\'' +
+           ", port=" + port +
+           ", username='" + username + '\'' +
+           ", password='" + password + '\'' +
+           '}';
+  }
 }
