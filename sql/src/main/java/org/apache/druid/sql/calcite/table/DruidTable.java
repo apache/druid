@@ -107,7 +107,7 @@ public class DruidTable implements TranslatableTable
   public RelDataType getRowType(final RelDataTypeFactory typeFactory)
   {
     // For external datasources, the row type should be determined by whatever the row signature has been explicitly
-    // passed in. Typecasting will lead to inconsistencies with the Calcite functions
+    // passed in. Typecasting directly to SqlTypeName.TIMESTAMP will lead to inconsistencies with the Calcite functions
     boolean typecastTimeColumn = !(dataSource instanceof ExternalDataSource);
     return RowSignatures.toRelDataType(rowSignature, typeFactory, typecastTimeColumn);
   }
