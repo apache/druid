@@ -79,8 +79,9 @@ import java.util.stream.Collectors;
 
 public class JoinableFactoryWrapperTest extends NullHandlingTest
 {
-  private static final JoinableFactoryWrapper NOOP_JOINABLE_FACTORY_WRAPPER = new JoinableFactoryWrapper(
-      NoopJoinableFactory.INSTANCE);
+  public static final JoinableFactoryWrapper NOOP_JOINABLE_FACTORY_WRAPPER = new JoinableFactoryWrapper(
+      NoopJoinableFactory.INSTANCE
+  );
 
   private static final Map<String, String> TEST_LOOKUP =
       ImmutableMap.<String, String>builder()
