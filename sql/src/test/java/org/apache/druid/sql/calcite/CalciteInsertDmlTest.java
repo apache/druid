@@ -22,6 +22,8 @@ package org.apache.druid.sql.calcite;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -35,6 +37,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlPlanningException;
+import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -751,6 +754,31 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                     "The granularity specified in PARTITIONED BY is not supported. "
                     + "Please use an equivalent of these granularities: second, minute, five_minute, ten_minute, "
                     + "fifteen_minute, thirty_minute, hour, six_hour, eight_hour, day, week, month, quarter, year, all."))
+            )
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertOnExternalDataSourceWithIncompatibleTimeColumnSignature()
+  {
+    ExternalDataSource restrictedSignature = new ExternalDataSource(
+        new InlineInputSource("100\nc200\n"),
+        new CsvInputFormat(ImmutableList.of("__time"), null, false, false, 0),
+        RowSignature.builder()
+                    .add("__time", ColumnType.STRING)
+                    .build()
+    );
+    testIngestionQuery()
+        .sql(
+            "INSERT INTO dst SELECT __time FROM %s PARTITIONED BY ALL TIME",
+            externSql(restrictedSignature)
+        )
+        .expectValidationError(
+            CoreMatchers.allOf(
+                CoreMatchers.instanceOf(SqlPlanningException.class),
+                ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                    "Unable to use EXTERN function with data containing a __time column of any type other than long"))
             )
         )
         .verify();
