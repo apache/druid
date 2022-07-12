@@ -760,10 +760,10 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertOnExternalDataSourceWithIncompatibleTimeColumnSignature()
+  public void testInsertOnExternalDataSourceWithStringTimeColumn()
   {
-    ExternalDataSource restrictedSignature = new ExternalDataSource(
-        new InlineInputSource("100\nc200\n"),
+    ExternalDataSource externalDataSourceWithTimeColumn = new ExternalDataSource(
+        new InlineInputSource("\"2022-02-02T02:02:02.002\"\n\"2022-02-02T02:02:02.002\"\n"),
         new CsvInputFormat(ImmutableList.of("__time"), null, false, false, 0),
         RowSignature.builder()
                     .add("__time", ColumnType.STRING)
@@ -772,15 +772,25 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql(
             "INSERT INTO dst SELECT __time FROM %s PARTITIONED BY ALL TIME",
-            externSql(restrictedSignature)
+            externSql(externalDataSourceWithTimeColumn)
         )
-        .expectValidationError(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(SqlPlanningException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                    "Unable to use EXTERN function with data containing a __time column of any type other than long"))
-            )
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget(
+            "dst",
+            RowSignature.builder()
+                        .add("__time", ColumnType.STRING)
+                        .build()
         )
+        .expectResources(dataSourceWrite("dst"), ExternalOperatorConversion.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(externalDataSourceWithTimeColumn)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time")
+                .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+
         .verify();
   }
 }

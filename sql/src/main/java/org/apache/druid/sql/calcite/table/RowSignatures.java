@@ -87,16 +87,30 @@ public class RowSignatures
   }
 
   /**
-   * Returns a Calcite RelDataType corresponding to a row signature.
+   * Returns a Calcite RelDataType corresponding to a row signature. It will typecast __time column to TIMESTAMP
+   * irrespective of the type present in the row signature
    */
   public static RelDataType toRelDataType(final RowSignature rowSignature, final RelDataTypeFactory typeFactory)
+  {
+    return toRelDataType(rowSignature, typeFactory, true);
+  }
+
+  /**
+   * Returns a Calcite RelDataType corresponding to a row signature.
+   * For columns that are named "__time", it automatically casts it to TIMESTAMP if typecastTimeColumn is set to true
+   */
+  public static RelDataType toRelDataType(
+      final RowSignature rowSignature,
+      final RelDataTypeFactory typeFactory,
+      boolean typecastTimeColumn
+  )
   {
     final RelDataTypeFactory.Builder builder = typeFactory.builder();
     final boolean nullNumeric = !NullHandling.replaceWithDefault();
     for (final String columnName : rowSignature.getColumnNames()) {
       final RelDataType type;
 
-      if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
+      if (typecastTimeColumn && ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
         type = Calcites.createSqlType(typeFactory, SqlTypeName.TIMESTAMP);
       } else {
         final ColumnType columnType =

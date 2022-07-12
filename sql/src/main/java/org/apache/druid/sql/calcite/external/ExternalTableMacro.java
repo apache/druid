@@ -31,14 +31,10 @@ import org.apache.calcite.schema.TranslatableTable;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Used by {@link ExternalOperatorConversion} to generate {@link DruidTable} that reference {@link ExternalDataSource}.
@@ -62,21 +58,6 @@ public class ExternalTableMacro implements TableMacro
       final InputSource inputSource = jsonMapper.readValue((String) arguments.get(0), InputSource.class);
       final InputFormat inputFormat = jsonMapper.readValue((String) arguments.get(1), InputFormat.class);
       final RowSignature signature = jsonMapper.readValue((String) arguments.get(2), RowSignature.class);
-
-      // Prevent a RowSignature that has a ColumnSignature with name "__time" and type that is not LONG because it will most
-      // likely  be used in a Calcite function, and cause an exception.
-      // Columns with name __time are automatically assumed to be of the type SqlTypeName.TIMESTAMP because of the logic
-      // present in RowSignatures#toRelDataType
-      // This is not the most optimal approach because of the following caveats:
-      // 1. __time in the external data source may map to a different column
-      // 2. __time in the external data source might be ignored while ingesting the data
-      // 3. Even if __time is of type LONG, it may be used with some function, which would cause the abovementioned Calcite failure
-      // The most optimal solution would be to prevent assumption of the __time column having the type SqlTypeName.TIMESTAMP
-      // when passed in EXTERN
-      Optional<ColumnType> timestampColumnTypeOptional = signature.getColumnType(ColumnHolder.TIME_COLUMN_NAME);
-      if (timestampColumnTypeOptional.isPresent() && !timestampColumnTypeOptional.get().equals(ColumnType.LONG)) {
-        throw new ISE("Unable to use EXTERN function with data containing a __time column of any type other than long");
-      }
 
       return new DruidTable(
           new ExternalDataSource(inputSource, inputFormat, signature),
