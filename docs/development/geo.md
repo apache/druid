@@ -44,19 +44,19 @@ The following example shows spatial dimensions in JSON format:
 
 ```json
 {
-	"type": "hadoop",
-	"dataSchema": {
-		"dataSource": "DatasourceName",
-		"parser": {
-			"type": "string",
-			"parseSpec": {
-				"format": "json",
-				"timestampSpec": {
-					"column": "timestamp",
-					"format": "auto"
-				},
-				"dimensionsSpec": {
-					"dimensions": [
+  "type": "hadoop",
+  "dataSchema": {
+    "dataSource": "DatasourceName",
+    "parser": {
+      "type": "string",
+      "parseSpec": {
+        "format": "json",
+        "timestampSpec": {
+          "column": "timestamp",
+          "format": "auto"
+        },
+        "dimensionsSpec": {
+          "dimensions": [
             {
               "type": "double",
               "name": "x"
@@ -66,14 +66,19 @@ The following example shows spatial dimensions in JSON format:
               "name": "y"
             }
           ],
-					"spatialDimensions": [{
-						"dimName": "coordinates",
-						"dims": ["x", "y"]
-					}]
-				}
-			}
-		}
-	}
+          "spatialDimensions": [
+            {
+              "dimName": "coordinates",
+              "dims": [
+                "x",
+                "y"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
 }
 ```
 
