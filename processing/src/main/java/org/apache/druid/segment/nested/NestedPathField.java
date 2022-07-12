@@ -81,7 +81,7 @@ public class NestedPathField implements NestedPathPart
   @Override
   public String toString()
   {
-    return "NestedPathMapField{" +
+    return "NestedPathField{" +
            "field='" + field + '\'' +
            '}';
   }
