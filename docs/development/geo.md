@@ -23,14 +23,24 @@ title: "Spatial filters"
   -->
 
 > Apache Druid supports two query languages: [Druid SQL](../querying/sql.md) and [native queries](../querying/querying.md).
-> This document describes the feature that is only available in the native language.
+> This document describes a feature that is only available in the native language.
 
-Apache Druid supports filtering specially spatially indexed columns based on an origin and a bound.
+Apache Druid supports filtering spatially indexed columns based on an origin and a bound.
+
+This topic explains how to apply spatial filters.
+For information on other filters supported by Druid, see [Query filters](../querying/filters.md).
 
 ## Spatial indexing
 
-In any of the data specs, there is the option of providing spatial dimensions.
-For example, you can specify spatial dimensions for a JSON data spec as follows:
+Spatial indexing refers to ingesting data of a spatial data type, such as geometry or geography, into Druid.
+
+Spatial dimensions are sting columns that contain coordinates separated by a comma.
+In the ingestion spec, you configure spatial dimensions in the `dimensionsSpec` object of the `dataSchema` component.
+For information on how to use the ingestion spec to configure ingestion, see [Ingestion spec reference](../ingestion/ingestion-spec.md).
+For general information on loading data in Druid, see [Ingestion](../ingestion/index.md).
+
+You can provide spatial dimensions in any of the [data formats](../ingestion/data-formats.md) supported by Druid.
+The following example shows spatial dimensions in JSON format:
 
 ```json
 {
@@ -46,7 +56,16 @@ For example, you can specify spatial dimensions for a JSON data spec as follows:
 					"format": "auto"
 				},
 				"dimensionsSpec": {
-					"dimensions": [],
+					"dimensions": [
+            {
+              "type": "double",
+              "name": "x"
+            },
+            {
+              "type": "double",
+              "name": "y"
+            }
+          ],
 					"spatialDimensions": [{
 						"dimName": "coordinates",
 						"dims": ["x", "y"]
@@ -58,19 +77,24 @@ For example, you can specify spatial dimensions for a JSON data spec as follows:
 }
 ```
 
-## Spatial filters
+The `spatialDimensions` array has the following elements:
 
 |Property|Description|Required|
 |--------|-----------|--------|
-|`dimName`|The name of the spatial dimension. A spatial dimension may be constructed from multiple other dimensions or it may already exist as part of an event. If a spatial dimension already exists, it must be an array of coordinate values.|yes|
-|`dims`|A list of dimension names that comprise a spatial dimension.|no|
+|`dimName`|The name of a spatial dimension. You can construct a spatial dimenion from other dimensions or it may already exist as part of an event. If a spatial dimension already exists, it must be an array of coordinate values.|yes|
+|`dims`|The list of dimension names that comprise the spatial dimension.|no|
 
-The grammar for a spatial filter is as follows:
+## Spatial filters
+
+A filter is a JSON object indicating which rows of data should be included in the computation for a query.
+You can filter on spatial structures, such as rectangles and polygons, using the spatial filter.
+
+The spatial filter has the following structure:
 
 ```json
 "filter" : {
     "type": "spatial",
-    "dimension": "spatialDim",
+    "dimension": "coordinates",
     "bound": {
         "type": "rectangular",
         "minCoords": [10.0, 20.0],
@@ -79,25 +103,36 @@ The grammar for a spatial filter is as follows:
 }
 ```
 
+The order of the dimension coordinates in the spatial filter must be equal to the order of the dimension coordinates in the `spatialDimensions` array.
+
 ### Bound types
 
-#### `rectangular`
+The `bound` property of the spatial filter object lets you filter on ranges of dimension values. 
+You can define rectangular, radius, and polygon filter bounds.
+
+#### Rectangular
+
+The `rectangular` bound has the following elements:
 
 |Property|Description|Required|
 |--------|-----------|--------|
-|`minCoords`|List of minimum dimension coordinates for coordinates [x, y, z, …]|yes|
-|`maxCoords`|List of maximum dimension coordinates for coordinates [x, y, z, …]|yes|
+|`minCoords`|The list of minimum dimension coordinates in the form [latitude, longitude]|yes|
+|`maxCoords`|The list of maximum dimension coordinates in the form [latitude, longitude]|yes|
 
-#### `radius`
+#### Radius
+
+The `radius` bound has the following elements:
 
 |Property|Description|Required|
 |--------|-----------|--------|
-|`coords`|Origin coordinates in the form [x, y, z, …]|yes|
+|`coords`|Origin coordinates in the form [x, y]|yes|
 |`radius`|The float radius value|yes|
 
-#### `polygon`
+#### Polygon
+
+The `polygon` bound has the following elements:
 
 |Property|Description|Required|
 |--------|-----------|--------|
-|`abscissa`|Horizontal coordinate for corners of the polygon|yes|
-|`ordinate`|Vertical coordinate for corners of the polygon|yes|
+|`abscissa`|Horizontal coordinate for the corners of the polygon|yes|
+|`ordinate`|Vertical coordinate for the corners of the polygon|yes|
