@@ -323,6 +323,8 @@ decisions.
 |`segment/usedPercent`|Percentage of space used by served segments.|dataSource, tier, priority.|< 100%|
 |`segment/count`|Number of served segments.|dataSource, tier, priority.|Varies.|
 |`segment/pendingDelete`|On-disk size in bytes of segments that are waiting to be cleared out|Varies.|
+|`segment/rowCount/avg`| The average number of rows per segment on a historical. `SegmentStatsMonitor` must be enabled.| dataSource, tier, priority.|Varies. See [segment optimization](../operations/segment-optimization.md) for guidance on optimal segment sizes. |
+|`segment/rowCount/range/count`| The number of segments in a bucket. `SegmentStatsMonitor` must be enabled.| dataSource, tier, priority, range.|Varies.|
 
 ### JVM
 
