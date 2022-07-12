@@ -22,11 +22,14 @@ package org.apache.druid.segment.join;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultiset;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.google.inject.Inject;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -67,9 +70,15 @@ public class JoinableFactoryWrapper
 
   private final JoinableFactory joinableFactory;
 
+  @Inject
   public JoinableFactoryWrapper(final JoinableFactory joinableFactory)
   {
     this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
+  }
+
+  public JoinableFactory getJoinableFactory()
+  {
+    return joinableFactory;
   }
 
   /**
@@ -141,7 +150,12 @@ public class JoinableFactoryWrapper
             );
 
             return baseSegment ->
-                new HashJoinSegment(baseSegment, baseFilterToUse, clausesToUse, joinFilterPreAnalysis);
+                new HashJoinSegment(
+                    baseSegment,
+                    baseFilterToUse,
+                    GuavaUtils.firstNonNull(clausesToUse, ImmutableList.of()),
+                    joinFilterPreAnalysis
+                );
           }
         }
     );

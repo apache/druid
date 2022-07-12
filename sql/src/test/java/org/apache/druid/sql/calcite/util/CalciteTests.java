@@ -95,6 +95,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.join.table.RowBasedIndexedTable;
 import org.apache.druid.segment.loading.SegmentLoader;
@@ -883,7 +884,7 @@ public class CalciteTests
       final QueryScheduler scheduler
   )
   {
-    return createMockWalker(conglomerate, tmpDir, scheduler, null);
+    return createMockWalker(conglomerate, tmpDir, scheduler, (JoinableFactory) null);
   }
 
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(
@@ -891,6 +892,29 @@ public class CalciteTests
       final File tmpDir,
       final QueryScheduler scheduler,
       final JoinableFactory joinableFactory
+  )
+  {
+    final JoinableFactory joinableFactoryToUse;
+    if (joinableFactory == null) {
+      joinableFactoryToUse = QueryStackTests.makeJoinableFactoryForLookup(
+          INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class)
+      );
+    } else {
+      joinableFactoryToUse = joinableFactory;
+    }
+    return createMockWalker(
+        conglomerate,
+        tmpDir,
+        scheduler,
+        new JoinableFactoryWrapper(joinableFactoryToUse)
+    );
+  }
+
+  public static SpecificSegmentsQuerySegmentWalker createMockWalker(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final File tmpDir,
+      final QueryScheduler scheduler,
+      final JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
     final QueryableIndex index1 = IndexBuilder
@@ -969,7 +993,7 @@ public class CalciteTests
     return new SpecificSegmentsQuerySegmentWalker(
         conglomerate,
         INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class),
-        joinableFactory,
+        joinableFactoryWrapper,
         scheduler
     ).add(
         DataSegment.builder()
