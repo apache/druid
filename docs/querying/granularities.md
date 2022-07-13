@@ -38,7 +38,7 @@ You can specify a time period as a [simple](#simple-granularities) string, as a 
 
 Simple granularities are specified as a string and bucket timestamps by their UTC time (e.g., days start at 00:00 UTC).
 
-Supported granularity strings are: 
+Druid supports the following granularity strings: 
   - `all`
   - `none`
   - `second`
