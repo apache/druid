@@ -407,13 +407,14 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     private TaskStatus runAndWait(Task task)
     {
       try {
-        return runTask(task).get();
+        // 20 minutes should be enough for the tasks to finish.
+        return runTask(task).get(20, TimeUnit.MINUTES);
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         throw new RuntimeException(e);
       }
-      catch (ExecutionException e) {
+      catch (ExecutionException | TimeoutException e) {
         throw new RuntimeException(e);
       }
     }
