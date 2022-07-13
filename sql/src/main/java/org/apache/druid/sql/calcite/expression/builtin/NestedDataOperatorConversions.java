@@ -223,7 +223,7 @@ public class NestedDataOperatorConversions
           rexNode,
           druidExpressions -> DruidExpression.ofExpression(
               ColumnType.STRING_ARRAY,
-              DruidExpression.functionCall("list_keys"),
+              DruidExpression.functionCall("json_keys"),
               druidExpressions
           )
       );

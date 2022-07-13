@@ -1825,7 +1825,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             new ExpressionVirtualColumn(
                                 "v0",
-                                "list_keys(\"nester\",'.')",
+                                "json_keys(\"nester\",'.')",
                                 ColumnType.STRING_ARRAY,
                                 macroTable
                             )
@@ -1863,7 +1863,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             new ExpressionVirtualColumn(
                                 "v0",
-                                "list_keys(\"nester\",'$.')",
+                                "json_keys(\"nester\",'$.')",
                                 ColumnType.STRING_ARRAY,
                                 macroTable
                             )
@@ -1901,7 +1901,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             new ExpressionVirtualColumn(
                                 "v0",
-                                "list_keys(\"nest\",'.')",
+                                "json_keys(\"nest\",'.')",
                                 ColumnType.STRING_ARRAY,
                                 macroTable
                             )

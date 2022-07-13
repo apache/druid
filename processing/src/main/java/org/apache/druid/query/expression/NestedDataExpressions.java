@@ -598,6 +598,17 @@ public class NestedDataExpressions
     }
   }
 
+  public static class JsonKeysExprMacro extends ListKeysExprMacro
+  {
+    public static final String NAME = "json_keys";
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+  }
+
   @Nullable
   static Object maybeUnwrapStructuredData(ExprEval input)
   {

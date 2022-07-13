@@ -43,6 +43,8 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
           new NestedDataExpressions.GetPathExprMacro(),
           new NestedDataExpressions.ListKeysExprMacro(),
           new NestedDataExpressions.ListPathsExprMacro(),
+          new NestedDataExpressions.JsonPathsExprMacro(),
+          new NestedDataExpressions.JsonKeysExprMacro(),
           new NestedDataExpressions.JsonObjectExprMacro(),
           new NestedDataExpressions.JsonValueExprMacro(),
           new NestedDataExpressions.JsonQueryExprMacro(),
@@ -144,6 +146,48 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
     Assert.assertArrayEquals(new Object[]{".\"x\"[0]", ".\"x\"[1]", ".\"x\"[2]", ".\"y\".\"b\"", ".\"y\".\"a\""}, (Object[]) eval.value());
 
+  }
+
+  @Test
+  public void testJsonKeysExpression()
+  {
+    Expr expr = Parser.parse("json_keys(nest, '.')", MACRO_TABLE);
+    ExprEval eval = expr.eval(inputBindings);
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[]{"x", "y", "z"}, (Object[]) eval.value());
+
+
+    expr = Parser.parse("json_keys(nester, '.x')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[]{"0", "1", "2"}, (Object[]) eval.value());
+
+    expr = Parser.parse("json_keys(nester, '.y')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[]{"a", "b"}, (Object[]) eval.value());
+
+    expr = Parser.parse("json_keys(nester, '.x.a')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertNull(eval.value());
+
+    expr = Parser.parse("json_keys(nester, '.x.a.b')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertNull(eval.value());
+  }
+
+  @Test
+  public void testJsonPathsExpression()
+  {
+    Expr expr = Parser.parse("json_paths(nest)", MACRO_TABLE);
+    ExprEval eval = expr.eval(inputBindings);
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[]{"$.y", "$.z", "$.x"}, (Object[]) eval.value());
+
+    expr = Parser.parse("json_paths(nester)", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[]{"$.x[0]", "$.x[1]", "$.x[2]", "$.y.b", "$.y.a"}, (Object[]) eval.value());
   }
 
   @Test
