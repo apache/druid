@@ -84,9 +84,45 @@ class CheckTestSuite(unittest.TestCase):
             )
         )
 
+    def test_testable_script(self):
+        self.assertEqual(False, check_test_suite.check_testable_script('.travis.yml'))
+        self.assertEqual(True, check_test_suite.check_testable_script('check_test_suite.py'))
+        self.assertEqual(True, check_test_suite.check_testable_script('check_test_suite_test.py'))
+
+        script_job = 'script checks'
+        some_java_job = 'spotbugs checks'
+        self.assertEqual(
+            False,
+            check_test_suite.check_should_run_suite(
+                script_job,
+                ['core/src/main/java/org/apache/druid/math/expr/Expr.java']
+            )
+        )
+        self.assertEqual(
+            True,
+            check_test_suite.check_should_run_suite(
+                some_java_job,
+                ['check_test_suite_test.py', 'core/src/main/java/org/apache/druid/math/expr/Expr.java']
+            )
+        )
+        self.assertEqual(
+            True,
+            check_test_suite.check_should_run_suite(
+                some_java_job,
+                ['check_test_suite_test.py', 'core/src/main/java/org/apache/druid/math/expr/Expr.java']
+            )
+        )
+        self.assertEqual(
+            False,
+            check_test_suite.check_should_run_suite(
+                some_java_job,
+                ['check_test_suite_test.py']
+            )
+        )
+
     def test_some_java(self):
 
-        some_java_job = "spotbugs checks"
+        some_java_job = 'spotbugs checks'
         some_non_java_diffs = [
             ['.travis.yml'],
             ['check_test_suite_test.py'],
