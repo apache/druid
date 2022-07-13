@@ -221,7 +221,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
                                           .setGranularity(Granularities.ALL)
                                           .setInterval(Intervals.ETERNITY)
                                           .setDimensions(DefaultDimensionSpec.of("v0"))
-                                          .setVirtualColumns(new NestedFieldVirtualColumn("nest", "$.fake", "v0",ColumnType.STRING))
+                                          .setVirtualColumns(new NestedFieldVirtualColumn("nest", "$.fake", "v0", ColumnType.STRING))
                                           .setAggregatorSpecs(new CountAggregatorFactory("count"))
                                           .setContext(getContext())
                                           .setDimFilter(new InDimFilter("v0", vals, null))
