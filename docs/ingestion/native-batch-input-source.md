@@ -714,7 +714,7 @@ It identifies the splits from delegate input sources and uses a worker task to p
 Use the Combining input source only if all the delegates are _splittable_ and can be used by the [Parallel task](./native-batch.md). 
 
 Similar to other input sources, the Combining input source supports a single `inputFormat`.
-Delegates that require an `inputFormat` must have the same input data format as their Combining input source.
+Delegate input sources that require an `inputFormat` must have the same format for input data.
 
 |Property|Description|Required|
 |--------|-----------|---------|
