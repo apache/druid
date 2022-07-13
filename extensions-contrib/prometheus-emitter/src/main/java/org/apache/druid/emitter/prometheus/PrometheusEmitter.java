@@ -49,8 +49,8 @@ public class PrometheusEmitter implements Emitter
   private final PrometheusEmitterConfig.Strategy strategy;
   private static final Pattern PATTERN = Pattern.compile("[^a-zA-Z0-9_][^a-zA-Z0-9_]*");
 
-  private static final String HOST_LABEL_NAME = "hostName";
-  private static final String SERVICE_LABEL_NAME = "druidService";
+  private static final String TAG_HOSTNAME = "host_name";
+  private static final String TAG_SERVICE = "druid_service";
 
   private HTTPServer server;
   private PushGateway pushGateway;
@@ -65,7 +65,7 @@ public class PrometheusEmitter implements Emitter
   {
     this.config = config;
     this.strategy = config.getStrategy();
-    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath(), config.isHostAsLabel(), config.isServiceAsLabel());
+    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath(), config.isAddHostAsLabel(), config.isAddServiceAsLabel());
   }
 
 
@@ -116,7 +116,7 @@ public class PrometheusEmitter implements Emitter
   {
     String name = metricEvent.getMetric();
     String service = metricEvent.getService();
-    String hostName = metricEvent.getHost();
+    String host = metricEvent.getHost();
     Map<String, Object> userDims = metricEvent.getUserDims();
     identifier = (userDims.get("task") == null ? metricEvent.getHost() : (String) userDims.get("task"));
     Number value = metricEvent.getValue();
@@ -129,7 +129,18 @@ public class PrometheusEmitter implements Emitter
         String labelName = labelNames[i];
         //labelName is controlled by the user. Instead of potential NPE on invalid labelName we use "unknown" as the dimension value
         Object userDim = userDims.get(labelName);
-        labelValues[i] = fillLabelValue(labelName, userDim, config.isHostAsLabel(), hostName, config.isServiceAsLabel(), service);
+
+        if (userDim != null) {
+          labelValues[i] = PATTERN.matcher(userDim.toString()).replaceAll("_");
+        } else {
+          if (config.isAddHostAsLabel() && TAG_HOSTNAME.equals(labelName)) {
+            labelValues[i] = host;
+          } else if (config.isAddServiceAsLabel() && TAG_SERVICE.equals(labelName)) {
+            labelValues[i] = service;
+          } else {
+            labelValues[i] = "unknown";
+          }
+        }
       }
 
       if (metric.getCollector() instanceof Counter) {
@@ -144,25 +155,6 @@ public class PrometheusEmitter implements Emitter
     } else {
       log.debug("Unmapped metric [%s]", name);
     }
-  }
-
-  private String fillLabelValue(String lableName, Object userDim, boolean isIncludeHost, String hostName, boolean isServiceAsTag, String serviceName)
-  {
-    if (userDim != null) {
-      return formatLabelValue(userDim.toString());
-    } else {
-      if (isIncludeHost && HOST_LABEL_NAME.equals(lableName)) {
-        return hostName;
-      } else if (isServiceAsTag && SERVICE_LABEL_NAME.equals(lableName)) {
-        return serviceName;
-      }
-    }
-    return "unknown";
-  }
-
-  private String formatLabelValue(String input)
-  {
-    return PATTERN.matcher(input).replaceAll("_");
   }
 
   private void pushMetric()

@@ -33,8 +33,8 @@ public class MetricsTest
     Assert.assertNotNull(dimensionsAndCollector);
     String[] dimensions = dimensionsAndCollector.getDimensions();
     Assert.assertEquals("dataSource", dimensions[0]);
-    Assert.assertEquals("druidService", dimensions[1]);
-    Assert.assertEquals("hostName", dimensions[2]);
+    Assert.assertEquals("druid_service", dimensions[1]);
+    Assert.assertEquals("host_name", dimensions[2]);
     Assert.assertEquals("type", dimensions[3]);
     Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
     Assert.assertTrue(dimensionsAndCollector.getCollector() instanceof Histogram);
@@ -42,8 +42,8 @@ public class MetricsTest
     DimensionsAndCollector d = metrics.getByName("segment/loadQueue/count", "historical");
     Assert.assertNotNull(d);
     String[] dims = d.getDimensions();
-    Assert.assertEquals("druidService", dims[0]);
-    Assert.assertEquals("hostName", dims[1]);
+    Assert.assertEquals("druid_service", dims[0]);
+    Assert.assertEquals("host_name", dims[1]);
     Assert.assertEquals("server", dims[2]);
   }
 }

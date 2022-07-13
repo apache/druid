@@ -53,7 +53,7 @@ public class PrometheusEmitterTest
     Assert.assertFalse(build.getUserDims().isEmpty());
     emitter.emit(build);
     Double count = CollectorRegistry.defaultRegistry.getSampleValue(
-        "druid_segment_loadqueue_count", new String[]{"druidService", "server"}, new String[]{"historical", "druid_data01_vpc_region"}
+        "druid_segment_loadqueue_count", new String[]{"druid_service", "server"}, new String[]{"historical", "druid_data01_vpc_region"}
     );
     Assert.assertEquals(10, count.intValue());
   }
@@ -74,7 +74,7 @@ public class PrometheusEmitterTest
     Assert.assertFalse(build.getUserDims().isEmpty());
     emitter.emit(build);
     Double count = CollectorRegistry.defaultRegistry.getSampleValue(
-            "druid_segment_loadqueue_count", new String[]{"druidService", "hostName", "server"}, new String[]{"historical", "druid.test.cn", "druid_data01_vpc_region"}
+            "druid_segment_loadqueue_count", new String[]{"druid_service", "host_name", "server"}, new String[]{"historical", "druid.test.cn", "druid_data01_vpc_region"}
     );
     Assert.assertEquals(10, count.intValue());
   }
@@ -94,10 +94,10 @@ public class PrometheusEmitterTest
     emitter.emit(build);
     double assertEpsilon = 0.0001;
     Assert.assertEquals(0.0, CollectorRegistry.defaultRegistry.getSampleValue(
-            "namespace_task_run_time_bucket", new String[]{"dataSource", "druidService", "hostName", "taskType", "le"}, new String[]{"test", "overlord", "druid.test.cn", "index_parallel", "0.1"}
+            "namespace_task_run_time_bucket", new String[]{"dataSource", "druid_service", "host_name", "taskType", "le"}, new String[]{"test", "overlord", "druid.test.cn", "index_parallel", "0.1"}
     ), assertEpsilon);
     Assert.assertEquals(1.0, CollectorRegistry.defaultRegistry.getSampleValue(
-            "namespace_task_run_time_bucket", new String[]{"dataSource", "druidService", "hostName", "taskType", "le"}, new String[]{"test", "overlord", "druid.test.cn", "index_parallel", "0.5"}
+            "namespace_task_run_time_bucket", new String[]{"dataSource", "druid_service", "host_name", "taskType", "le"}, new String[]{"test", "overlord", "druid.test.cn", "index_parallel", "0.5"}
     ), assertEpsilon);
   }
 

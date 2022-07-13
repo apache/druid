@@ -49,8 +49,8 @@ public class Metrics
   private final ObjectMapper mapper = new ObjectMapper();
   public static final Pattern PATTERN = Pattern.compile("[^a-zA-Z_:][^a-zA-Z0-9_:]*");
 
-  private static final String HOST_LABEL_NAME = "hostName";
-  private static final String SERVICE_LABEL_NAME = "druidService";
+  private static final String TAG_HOSTNAME = "host_name";
+  private static final String TAG_SERVICE = "druid_service";
 
   public DimensionsAndCollector getByName(String name, String service)
   {
@@ -61,7 +61,7 @@ public class Metrics
     }
   }
 
-  public Metrics(String namespace, String path, boolean isIncludeHost, boolean isServiceAsTag)
+  public Metrics(String namespace, String path, boolean isAddHostAsLabel, boolean isAddServiceAsLabel)
   {
     Map<String, Metric> metrics = readConfig(path);
     for (Map.Entry<String, Metric> entry : metrics.entrySet()) {
@@ -69,12 +69,12 @@ public class Metrics
       Metric metric = entry.getValue();
       Metric.Type type = metric.type;
 
-      if (isIncludeHost) {
-        metric.dimensions.add(HOST_LABEL_NAME);
+      if (isAddHostAsLabel) {
+        metric.dimensions.add(TAG_HOSTNAME);
       }
 
-      if (isServiceAsTag) {
-        metric.dimensions.add(SERVICE_LABEL_NAME);
+      if (isAddServiceAsLabel) {
+        metric.dimensions.add(TAG_SERVICE);
       }
 
       String[] dimensions = metric.dimensions.toArray(new String[0]);
