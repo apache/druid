@@ -751,7 +751,7 @@ The following is an example of a Combining input source spec:
 ...
 ```
 
-When using the Combining input source to read delegate `dataSources` results , set the value of `maxNumConcurrentSubTasks` in `tuningConfig` as follows:
+For the Combining input source to read data correctly, set the value of `maxNumConcurrentSubTasks` in `tuningConfig` as follows:
 - more or equal to 1 for `range` or `single_dim` types
 - more or equal to 2 for `hashed` or `dynamic` types
 
