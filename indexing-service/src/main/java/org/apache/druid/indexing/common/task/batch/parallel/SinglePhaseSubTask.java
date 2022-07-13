@@ -39,8 +39,8 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
+import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
-import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
@@ -161,7 +161,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         groupId,
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
-        context
+        context,
+        AbstractTask.computeBatchIngestionMode(ingestionSchema.getIOConfig())
     );
 
     if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
@@ -172,7 +173,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
-    this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
+    this.missingIntervalsInOverwriteMode = ingestionSchema.getIOConfig().isAppendToExisting() != true
                                            && ingestionSchema.getDataSchema()
                                                              .getGranularitySpec()
                                                              .inputIntervals()
@@ -250,10 +251,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           ingestionSchema.getDataSchema().getParser()
       );
 
-      final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
-          new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
-          getId(),
-          1, // always use a single http thread
+      final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
+          supervisorTaskId,
           ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
           ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
       );
@@ -275,7 +274,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
                                                          .toSet();
 
       Map<String, TaskReport> taskReport = getTaskCompletionReports();
-      taskClient.report(supervisorTaskId, new PushedSegmentsReport(getId(), oldSegments, pushedSegments, taskReport));
+      taskClient.report(new PushedSegmentsReport(getId(), oldSegments, pushedSegments, taskReport));
 
       toolbox.getTaskReportFileWriter().write(getId(), taskReport);
 
@@ -298,7 +297,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   @Override
   public boolean requireLockExistingSegments()
   {
-    return !ingestionSchema.getIOConfig().isAppendToExisting();
+    return getIngestionMode() != IngestionMode.APPEND;
   }
 
   @Override
@@ -388,7 +387,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
         getIngestionSchema().getDataSchema(),
         getTaskLockHelper(),
-        ingestionSchema.getIOConfig().isAppendToExisting(),
+        getIngestionMode(),
         partitionsSpec,
         useLineageBasedSegmentAllocation
     );

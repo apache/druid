@@ -909,7 +909,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
         .build();
     ResponseContext responseContext = DefaultResponseContext.createEmpty();
-    responseContext.putTimeoutTime(System.currentTimeMillis());
+    final long timeoutAt = System.currentTimeMillis();
+    responseContext.putTimeoutTime(timeoutAt);
     try {
       runner.run(QueryPlus.wrap(query), responseContext).toList();
       Assert.fail("didn't timeout");
@@ -917,6 +918,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     catch (RuntimeException e) {
       Assert.assertTrue(e instanceof QueryTimeoutException);
       Assert.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
+      Assert.assertEquals(timeoutAt, responseContext.getTimeoutTime().longValue());
     }
   }
 
@@ -1166,6 +1168,14 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
           Object exValue = ex.getValue();
           if (exValue instanceof Double || exValue instanceof Float) {
             final double expectedDoubleValue = ((Number) exValue).doubleValue();
+            Assert.assertNotNull(
+                StringUtils.format(
+                    "invalid null value for %s (expected %f)",
+                    ex.getKey(),
+                    expectedDoubleValue
+                ),
+                actVal
+            );
             Assert.assertEquals(
                 "invalid value for " + ex.getKey(),
                 expectedDoubleValue,

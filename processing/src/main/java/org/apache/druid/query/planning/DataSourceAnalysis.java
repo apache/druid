@@ -117,7 +117,7 @@ public class DataSourceAnalysis
 
       if (!(subQuery instanceof BaseQuery)) {
         // We must verify that the subQuery is a BaseQuery, because it is required to make "getBaseQuerySegmentSpec"
-        // work properly. All builtin query types are BaseQuery, so we only expect this with funky extension queries.
+        // work properly. All built-in query types are BaseQuery, so we only expect this with funky extension queries.
         throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
       }
 
@@ -213,7 +213,7 @@ public class DataSourceAnalysis
   }
 
   /**
-   * Returns the bottommost (i.e. innermost) {@link Query} from a possible stack of outer queries at the root of
+   * Returns the bottom-most (i.e. innermost) {@link Query} from a possible stack of outer queries at the root of
    * the datasource tree. This is the query that will be applied to the base datasource plus any joinables that might
    * be present.
    *

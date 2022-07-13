@@ -21,6 +21,7 @@ package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -37,6 +38,7 @@ import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.SqlVectorizedExpressionSanityTest;
+import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -208,7 +210,10 @@ public class SqlExpressionBenchmark
       // 40: LATEST aggregator double
       "SELECT LATEST(float3) FROM foo",
       // 41: LATEST aggregator double
-      "SELECT LATEST(float3), LATEST(long1), LATEST(double4) FROM foo"
+      "SELECT LATEST(float3), LATEST(long1), LATEST(double4) FROM foo",
+      // 42,43: filter numeric nulls
+      "SELECT SUM(long5) FROM foo WHERE long5 IS NOT NULL",
+      "SELECT string2, SUM(long5) FROM foo WHERE long5 IS NOT NULL GROUP BY 1"
   );
 
   @Param({"5000000"})
@@ -229,7 +234,7 @@ public class SqlExpressionBenchmark
       "4",
       "5",
       "6",
-      // expressions
+      // expressions, etc
       "7",
       "8",
       "9",
@@ -264,7 +269,9 @@ public class SqlExpressionBenchmark
       "38",
       "39",
       "40",
-      "41"
+      "41",
+      "42",
+      "43"
   })
   private String query;
 
@@ -312,7 +319,8 @@ public class SqlExpressionBenchmark
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
-        CalciteTests.DRUID_SCHEMA_NAME
+        CalciteTests.DRUID_SCHEMA_NAME,
+        new CalciteRulesManager(ImmutableSet.of())
     );
 
     try {

@@ -76,7 +76,7 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>4.3.0</apache.curator.version>
-        <apache.kafka.version>3.1.0</apache.kafka.version>
+        <apache.kafka.version>3.2.0</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
         <avatica.version>1.17.0</avatica.version>
@@ -84,7 +84,7 @@
         <!-- sql/src/main/codegen/config.fmpp is based on a file from calcite-core, and needs to be
           updated when upgrading Calcite. Refer to the top-level comments in that file for details. -->
         <calcite.version>1.21.0</calcite.version>
-        <datasketches.version>3.1.0</datasketches.version>
+        <datasketches.version>3.2.0</datasketches.version>
         <datasketches.memory.version>2.0.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
@@ -93,12 +93,12 @@
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.40.v20210413</jetty.version>
+        <jetty.version>9.4.41.v20210516</jetty.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.10.5.20201202</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.17.1</log4j.version>
-        <mysql.version>5.1.48</mysql.version>
+        <mysql.version>5.1.49</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
         <netty4.version>4.1.68.Final</netty4.version>
@@ -127,6 +127,14 @@
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
+
+        <!-- Using -DskipTests or -P skip-tests will skip both the unit tests and
+             the "new" integration tests. To skip just the unit tests (but run the
+             new integration tests by setting the required profile), use -DskipUTs=true.
+             -->
+        <skipTests>false</skipTests>
+        <skipUTs>${skipTests}</skipUTs>
+        <skipITs>${skipTests}</skipITs>
     </properties>
 
     <modules>
@@ -214,7 +222,7 @@
         <!-- Only used by core, but moved to root for parallel build dependency resolution -->
         <repository>
           <id>sigar</id>
-          <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/</url>
+          <url>https://repository.mulesoft.org/nexus/content/repositories/public</url>
         </repository>
     </repositories>
 
@@ -246,6 +254,11 @@
                <artifactId>commons-net</artifactId>
                <version>3.6</version>
            </dependency>
+          <dependency>
+              <groupId>com.github.seancfoley</groupId>
+              <artifactId>ipaddress</artifactId>
+              <version>5.3.4</version>
+          </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
@@ -444,7 +457,7 @@
             <dependency>
                 <groupId>com.github.luben</groupId>
                 <artifactId>zstd-jni</artifactId>
-                <version>1.3.3-1</version>
+                <version>1.5.2-3</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
@@ -693,7 +706,7 @@
             <dependency>
                 <groupId>org.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.7.1</version>
+                <version>1.8.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -1164,6 +1177,7 @@
                     <excludes>
                         <!-- Ignore initialization classes, these are tested by the integration tests. -->
                         <exclude>org/apache/druid/cli/Cli*</exclude>
+                        <exclude>org/apache/druid/cli/GuiceRunnable.class</exclude>
                         <exclude>org/apache/druid/cli/*JettyServerInitializer*</exclude>
                         <exclude>org/apache/druid/server/initialization/*Module*</exclude>
                         <exclude>org/apache/druid/server/initialization/jetty/*Module*</exclude>
@@ -1178,6 +1192,13 @@
                         <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
+                        <!-- The ITs has test code sprinkled through the module tree. Remove the following
+                             once the old version is retired. -->
+                        <exclude>org/apache/druid/server/coordination/ServerManagerForQueryErrorTest.class</exclude>
+                        <exclude>org/apache/druid/guice/SleepModule.class</exclude>
+                        <exclude>org/apache/druid/guice/CustomNodeRoleClientModule.class</exclude>
+                        <exclude>org/apache/druid/cli/CustomNodeRoleCommandCreator.class</exclude>
+                        <exclude>org/apache/druid/cli/QueryRetryTestCommandCreator.class</exclude>
 
                         <!-- Exceptions -->
                         <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
@@ -1495,20 +1516,28 @@
                         <!-- set default options -->
                         <argLine>
                             @{jacocoArgLine}
+                            ${jdk.surefire.argLine}
                             -Xmx1500m
-                            -XX:MaxDirectMemorySize=512m
+                            -XX:MaxDirectMemorySize=2500m
+                            -XX:+ExitOnOutOfMemoryError
+                            -XX:+HeapDumpOnOutOfMemoryError
                             -Duser.language=en
                             -Duser.GroupByQueryRunnerTest.javacountry=US
                             -Dfile.encoding=UTF-8
                             -Duser.timezone=UTC
                             -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                             -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
+                            -Ddruid.test.stupidPool.poison=true
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                         </argLine>
+                        <!-- Skip the tests which Surefire runs. Surefire runs the unit tests,
+                             while its sister plugin, Failsafe, runs the "new" ITs. -->
+                        <skipTests>${skipUTs}</skipTests>
                         <trimStackTrace>false</trimStackTrace>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                        <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -1641,6 +1670,13 @@
                     <!-- required for JvmMonitor tests on Java 11+ -->
                     --add-exports=java.base/jdk.internal.perf=ALL-UNNAMED
                     --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+
+                    <!-- required for DataSketches Memory on Java 11+ -->
+                    --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
+                    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
+                    --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
+                    --add-opens=java.base/java.nio=ALL-UNNAMED
+                    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
                 </jdk.surefire.argLine>
             </properties>
             <build>
@@ -1727,10 +1763,12 @@
                             <!-- locale settings must be set on the command line before startup -->
                             <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
                             <argLine>
-                                ${jdk.surefire.argLine}
                                 -Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
+                                -XX:+ExitOnOutOfMemoryError
+                                -XX:+HeapDumpOnOutOfMemoryError
                                 -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                                 -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
+                                -Ddruid.test.stupidPool.poison=true
                                 <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                                 -Ddruid.indexing.doubleStorage=double
                             </argLine>
@@ -1819,7 +1857,7 @@
                                 <exclude>docker/service-supervisords/*.conf</exclude>
                                 <exclude>target/**</exclude>
                                 <exclude>licenses/**</exclude>
-                                <exclude>**/test/resources/**</exclude>
+                                <exclude>**/test/resources/**</exclude> <!-- test data for "old" ITs. -->
                                 <exclude>**/derby.log</exclude>
                                 <exclude>**/jvm.config</exclude>
                                 <exclude>**/*.avsc</exclude>
@@ -1827,6 +1865,8 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>**/*.pmd</exclude> <!-- Artifact of maven-pmd-plugin -->
+                                <exclude>**/*.pmdruleset.xml</exclude> <!-- Artifact of maven-pmd-plugin -->
                                 <exclude>**/docker/schema-registry/*</exclude>
                                 <exclude>LICENSE</exclude>
                                 <exclude>LICENSE.BINARY</exclude>
@@ -1901,8 +1941,11 @@
         </profile>
         <profile>
           <id>skip-tests</id>
+          <activation>
+            <activeByDefault>false</activeByDefault>
+          </activation>
           <properties>
-            <skipTests>true</skipTests>
+            <skipTests>true</skipTests> <!-- skips both UTs and ITs -->
             <jacoco.skip>true</jacoco.skip>
           </properties>
         </profile>

@@ -214,7 +214,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
     // Set up downstream context.
     final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
-    context.put("finalize", false);
+    context.put(QueryContexts.FINALIZE_KEY, false);
     context.put(GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2);
     context.put(CTX_KEY_OUTERMOST, false);
 
@@ -441,6 +441,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           wasQueryPushedDown ? queryToRun : subquery,
           subqueryResult,
           configSupplier.get(),
+          processingConfig,
           resource,
           spillMapper,
           processingConfig.getTmpDir(),
@@ -513,6 +514,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           baseSubtotalQuery,
           queryResult,
           configSupplier.get(),
+          processingConfig,
           resource,
           spillMapper,
           processingConfig.getTmpDir(),
@@ -575,6 +577,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
               subtotalQuery,
               resultSupplierOneFinal.results(subTotalDimensionSpec),
               configSupplier.get(),
+              processingConfig,
               resource,
               spillMapper,
               processingConfig.getTmpDir(),
@@ -680,6 +683,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   {
     return new GroupByMergingQueryRunnerV2(
         configSupplier.get(),
+        processingConfig,
         queryProcessingPool,
         queryWatcher,
         queryRunners,
@@ -703,6 +707,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         storageAdapter,
         bufferPool,
         configSupplier.get().withOverrides(query),
+        processingConfig,
         groupByQueryMetrics
     );
   }

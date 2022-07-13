@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
@@ -153,7 +153,7 @@ public class TaskToolboxTest
         new NoopChatHandlerProvider(),
         new DropwizardRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
-        new NoopIndexingServiceClient(),
+        new NoopOverlordClient(),
         null,
         null,
         null

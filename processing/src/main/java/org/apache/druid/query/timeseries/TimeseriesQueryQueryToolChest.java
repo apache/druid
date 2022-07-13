@@ -233,6 +233,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
                                  RowAdapters.standardRow(),
                                  () -> new MapBasedRow(null, null),
                                  aggregatorsSignature,
+                                 false,
                                  false
                              )
                          );

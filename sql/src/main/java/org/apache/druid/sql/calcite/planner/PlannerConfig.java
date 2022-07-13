@@ -34,6 +34,7 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
+  public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
   public static final int NUM_FILTER_NOT_USED = -1;
 
@@ -75,6 +76,9 @@ public class PlannerConfig
 
   @JsonProperty
   private boolean useNativeQueryExplain = false;
+
+  @JsonProperty
+  private boolean forceExpressionVirtualColumns = false;
 
   @JsonProperty
   private int maxNumericInFilters = NUM_FILTER_NOT_USED;
@@ -156,6 +160,15 @@ public class PlannerConfig
     return useNativeQueryExplain;
   }
 
+  /**
+   * @return true if special virtual columns should not be optimized and should
+   * always be of type "expressions", false otherwise.
+   */
+  public boolean isForceExpressionVirtualColumns()
+  {
+    return forceExpressionVirtualColumns;
+  }
+
   public PlannerConfig withOverrides(final QueryContext queryContext)
   {
     if (queryContext.isEmpty()) {
@@ -184,6 +197,10 @@ public class PlannerConfig
     newConfig.useNativeQueryExplain = queryContext.getAsBoolean(
         CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
         isUseNativeQueryExplain()
+    );
+    newConfig.forceExpressionVirtualColumns = queryContext.getAsBoolean(
+        CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS,
+        isForceExpressionVirtualColumns()
     );
     final int systemConfigMaxNumericInFilters = getMaxNumericInFilters();
     final int queryContextMaxNumericInFilters = queryContext.getAsInt(
@@ -244,7 +261,8 @@ public class PlannerConfig
            serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone) &&
-           useNativeQueryExplain == that.useNativeQueryExplain;
+           useNativeQueryExplain == that.useNativeQueryExplain &&
+           forceExpressionVirtualColumns == that.forceExpressionVirtualColumns;
   }
 
   @Override
@@ -262,7 +280,8 @@ public class PlannerConfig
         metadataSegmentCacheEnable,
         metadataSegmentPollPeriod,
         serializeComplexValues,
-        useNativeQueryExplain
+        useNativeQueryExplain,
+        forceExpressionVirtualColumns
     );
   }
 

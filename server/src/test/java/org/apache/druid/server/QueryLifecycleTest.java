@@ -28,6 +28,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
+import org.apache.druid.query.QueryContextTest;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -242,6 +243,40 @@ public class QueryLifecycleTest
 
     lifecycle.initialize(query);
     Assert.assertFalse(lifecycle.authorize(mockRequest()).isAllowed());
+  }
+
+  @Test
+  public void testAuthorizeLegacyQueryContext_authorized()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authConfig.authorizeQueryContextParams()).andReturn(true).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("fake", ResourceType.DATASOURCE), Action.READ))
+            .andReturn(Access.OK);
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("foo", ResourceType.QUERY_CONTEXT), Action.WRITE))
+            .andReturn(Access.OK);
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("baz", ResourceType.QUERY_CONTEXT), Action.WRITE)).andReturn(Access.OK);
+    // to use legacy query context with context authorization, even system generated things like queryId need to be explicitly added
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("queryId", ResourceType.QUERY_CONTEXT), Action.WRITE))
+            .andReturn(Access.OK);
+
+    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest)
+            .once();
+
+    replayAll();
+
+    final QueryContextTest.LegacyContextQuery query = new QueryContextTest.LegacyContextQuery(ImmutableMap.of("foo", "bar", "baz", "qux"));
+
+    lifecycle.initialize(query);
+
+    Assert.assertNull(lifecycle.getQuery().getQueryContext());
+    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("foo"));
+    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("baz"));
+    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
+
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
   }
 
   private HttpServletRequest mockRequest()

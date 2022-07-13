@@ -22,6 +22,8 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
+import com.google.common.util.concurrent.Futures;
+import org.apache.commons.codec.Charsets;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
@@ -31,6 +33,9 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -41,13 +46,19 @@ import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.DimensionRangeBucketShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.easymock.EasyMock;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -59,6 +70,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -381,6 +393,74 @@ public class ParallelIndexSupervisorTaskTest
                                     0, task1, task2);
       verifyPartitionIdAndLocations(day2, 7, partitionToLocations,
                                     1, task1);
+    }
+
+    @Test
+    public void testGetTaskReportOk() throws Exception
+    {
+      final String taskId = "task";
+      final Map<String, Object> report = ImmutableMap.of("foo", "bar");
+
+      final OverlordClient client = mock(OverlordClient.class);
+      expect(client.taskReportAsMap(taskId)).andReturn(Futures.immediateFuture(report));
+      EasyMock.replay(client);
+
+      Assert.assertEquals(report, ParallelIndexSupervisorTask.getTaskReport(client, taskId));
+      EasyMock.verify(client);
+    }
+
+    @Test
+    public void testGetTaskReport404() throws Exception
+    {
+      final String taskId = "task";
+
+      final OverlordClient client = mock(OverlordClient.class);
+      final HttpResponse response = mock(HttpResponse.class);
+      expect(response.getContent()).andReturn(ChannelBuffers.buffer(0));
+      expect(response.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).anyTimes();
+      EasyMock.replay(response);
+
+      expect(client.taskReportAsMap(taskId)).andReturn(
+          Futures.immediateFailedFuture(
+              new HttpResponseException(new StringFullResponseHolder(response, Charsets.UTF_8))
+          )
+      );
+      EasyMock.replay(client);
+
+      Assert.assertNull(ParallelIndexSupervisorTask.getTaskReport(client, taskId));
+      EasyMock.verify(client, response);
+    }
+
+    @Test
+    public void testGetTaskReport403()
+    {
+      final String taskId = "task";
+
+      final OverlordClient client = mock(OverlordClient.class);
+      final HttpResponse response = mock(HttpResponse.class);
+      expect(response.getContent()).andReturn(ChannelBuffers.buffer(0));
+      expect(response.getStatus()).andReturn(HttpResponseStatus.FORBIDDEN).anyTimes();
+      EasyMock.replay(response);
+
+      expect(client.taskReportAsMap(taskId)).andReturn(
+          Futures.immediateFailedFuture(
+              new HttpResponseException(new StringFullResponseHolder(response, Charsets.UTF_8))
+          )
+      );
+      EasyMock.replay(client);
+
+      final ExecutionException e = Assert.assertThrows(
+          ExecutionException.class,
+          () -> ParallelIndexSupervisorTask.getTaskReport(client, taskId)
+      );
+
+      MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(HttpResponseException.class));
+      MatcherAssert.assertThat(
+          e.getCause(),
+          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Server error [403 Forbidden]"))
+      );
+
+      EasyMock.verify(client, response);
     }
 
     private PartitionStat createRangePartitionStat(Interval interval, int bucketId)

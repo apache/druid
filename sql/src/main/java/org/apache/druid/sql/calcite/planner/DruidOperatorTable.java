@@ -115,6 +115,7 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversi
 import org.apache.druid.sql.calcite.expression.builtin.TimestampToMillisOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
+import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;

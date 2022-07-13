@@ -80,7 +80,6 @@ public class ScanQueryEngine
     }
     final boolean hasTimeout = QueryContexts.hasTimeout(query);
     final Long timeoutAt = responseContext.getTimeoutTime();
-    final long start = System.currentTimeMillis();
     final StorageAdapter adapter = segment.asStorageAdapter();
 
     if (adapter == null) {
@@ -192,11 +191,6 @@ public class ScanQueryEngine
                               throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
                             }
                             responseContext.addRowScanCount(offset - lastOffset);
-                            if (hasTimeout) {
-                              responseContext.putTimeoutTime(
-                                  timeoutAt - (System.currentTimeMillis() - start)
-                              );
-                            }
                             return new ScanResultValue(segmentId.toString(), allColumns, events);
                           }
 

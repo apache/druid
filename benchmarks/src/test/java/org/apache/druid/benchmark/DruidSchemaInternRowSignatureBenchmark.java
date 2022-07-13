@@ -57,8 +57,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -113,7 +112,7 @@ public class DruidSchemaInternRowSignatureBenchmark
     protected Sequence<SegmentAnalysis> runSegmentMetadataQuery(Iterable<SegmentId> segments)
     {
       final int numColumns = 1000;
-      Map<String, ColumnAnalysis> columnToAnalysisMap = new HashMap<>();
+      LinkedHashMap<String, ColumnAnalysis> columnToAnalysisMap = new LinkedHashMap<>();
       for (int i = 0; i < numColumns; ++i) {
         columnToAnalysisMap.put(
             "col" + i,

@@ -125,6 +125,12 @@ public class GenericIndexedWriter<T> implements Serializer
       }
 
       @Override
+      public boolean canCompare()
+      {
+        return false;
+      }
+
+      @Override
       public int compare(ByteBuffer o1, ByteBuffer o2)
       {
         throw new UnsupportedOperationException();
