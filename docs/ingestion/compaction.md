@@ -125,7 +125,7 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 |`dimensionsSpec`|Custom `dimensionsSpec`. The compaction task uses the specified `dimensionsSpec` if it exists instead of generating one. See [Compaction dimensionsSpec](#compaction-dimensions-spec) for details.|No|
 |`transformSpec`|Custom `transformSpec`. The compaction task uses the specified `transformSpec` rather than using `null`. See [Compaction transformSpec](#compaction-transform-spec) for details.|No|
 |`metricsSpec`|Custom `metricsSpec`. The compaction task uses the specified `metricsSpec` rather than generating one.|No|
-|`segmentGranularity`|When set, the compaction task changes the segment granularity for the given interval.  Deprecated. Use `granularitySpec`. |No|
+|`segmentGranularity`|When set, the compaction task changes the segment granularity for the given interval. Deprecated. Use `granularitySpec`. |No|
 |`tuningConfig`|[Parallel indexing task tuningConfig](native-batch.md#tuningconfig). `awaitSegmentAvailabilityTimeoutMillis` in the tuning config is not supported for compaction tasks. Leave this parameter at the default value, 0.|No|
 |`granularitySpec`|Custom `granularitySpec`. The compaction task uses the specified `granularitySpec` rather than generating one. See [Compaction `granularitySpec`](#compaction-granularity-spec) for details.|No|
 |`context`|[Task context](./tasks.md#context).|No|
@@ -217,7 +217,7 @@ Druid supports two supported `inputSpec` formats:
 |-----|-----------|--------|
 |`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null', which preserves the original segment granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
 |`queryGranularity`|The resolution of timestamp storage within each segment. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
-|`rollup`|Whether to enable ingestion-time rollup or not. Defaults to 'null', which preserves the original setting. Note that once data is rollup, individual records can no longer be recovered. |No|
+|`rollup`|Whether to enable ingestion-time rollup or not. Defaults to 'null', which preserves the original setting. Once the data is rolled up, you can no longer recover individual records. |No|
 
 ## Learn more
 
