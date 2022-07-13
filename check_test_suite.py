@@ -43,6 +43,7 @@ docs_jobs = ['docs']
 web_console_prefixes = ['web-console/']
 # travis web-console job name
 web_console_jobs = ['web console', 'web console end-to-end test']
+web_console_still_run_for_java_jobs = ['web console end-to-end test']
 
 
 def check_ignore(file):
@@ -108,6 +109,8 @@ def check_should_run_suite(suite, diff_files):
     # if all of the changes are docs paths, but the current suite is not a docs job, we can skip
     if all_docs:
         return False
+    if suite in web_console_still_run_for_java_jobs:
+        return any_console or any_java
     # if the test suite is a web console job, return true if any of the changes are web console files
     if suite in web_console_jobs:
         return any_console

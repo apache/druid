@@ -46,6 +46,8 @@ class CheckTestSuite(unittest.TestCase):
             )
 
     def test_web_console(self):
+        web_console_job = 'web console'
+        e2e_job = 'web console end-to-end test'
         self.assertEqual(False, check_test_suite.check_console('.travis.yml'))
         self.assertEqual(False, check_test_suite.check_console('check_test_suite_test.py'))
         self.assertEqual(False, check_test_suite.check_console('website/core/Footer.js'))
@@ -53,21 +55,34 @@ class CheckTestSuite(unittest.TestCase):
         self.assertEqual(True, check_test_suite.check_console('web-console/src/views/index.ts'))
         self.assertEqual(True, check_test_suite.check_console('web-console/unified-console.html'))
 
-        for job in check_test_suite.web_console_jobs:
-            self.assertEqual(
-                True,
-                check_test_suite.check_should_run_suite(
-                    job,
-                    ['check_test_suite_test.py', 'web-console/unified-console.html']
-                )
+        self.assertEqual(
+            True,
+            check_test_suite.check_should_run_suite(
+                web_console_job,
+                ['check_test_suite_test.py', 'web-console/unified-console.html']
             )
-            self.assertEqual(
-                False,
-                check_test_suite.check_should_run_suite(
-                    job,
-                    ['check_test_suite_test.py', 'core/src/main/java/org/apache/druid/math/expr/Expr.java']
-                )
+        )
+        self.assertEqual(
+            False,
+            check_test_suite.check_should_run_suite(
+                web_console_job,
+                ['check_test_suite_test.py', 'core/src/main/java/org/apache/druid/math/expr/Expr.java']
             )
+        )
+        self.assertEqual(
+            True,
+            check_test_suite.check_should_run_suite(
+                e2e_job,
+                ['check_test_suite_test.py', 'web-console/unified-console.html']
+            )
+        )
+        self.assertEqual(
+            True,
+            check_test_suite.check_should_run_suite(
+                e2e_job,
+                ['check_test_suite_test.py', 'core/src/main/java/org/apache/druid/math/expr/Expr.java']
+            )
+        )
 
     def test_some_java(self):
 
