@@ -109,11 +109,13 @@ public class PrometheusEmitterConfig
     return strategy;
   }
 
-  public boolean isAddHostAsLabel() {
+  public boolean isAddHostAsLabel()
+  {
     return addHostAsLabel;
   }
 
-  public boolean isAddServiceAsLabel() {
+  public boolean isAddServiceAsLabel()
+  {
     return addServiceAsLabel;
   }
 
