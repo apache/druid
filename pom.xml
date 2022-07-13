@@ -82,7 +82,9 @@
         <avatica.version>1.17.0</avatica.version>
         <avro.version>1.9.2</avro.version>
         <!-- sql/src/main/codegen/config.fmpp is based on a file from calcite-core, and needs to be
-          updated when upgrading Calcite. Refer to the top-level comments in that file for details. -->
+          updated when upgrading Calcite. Refer to the top-level comments in that file for details.
+          Also, CalcitePlanner is a clone of Calcite's PlannerImpl and may require updates when
+          Calcite is upgrade. -->
         <calcite.version>1.21.0</calcite.version>
         <datasketches.version>3.2.0</datasketches.version>
         <datasketches.memory.version>2.0.0</datasketches.memory.version>

@@ -62,7 +62,6 @@ import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -313,10 +312,6 @@ public class DruidPlanner implements Closeable
   ) throws ValidationException
   {
     final RelRoot possiblyLimitedRoot = possiblyWrapRootWithOuterLimitFromContext(root);
-    if (possiblyLimitedRoot == null) {
-      // Not sure what to do in this case. This keeps IntelliJ happy.
-      throw new RE("Invalid statement");
-    }
     final QueryMaker queryMaker = buildQueryMaker(root, insertOrReplace);
     plannerContext.setQueryMaker(queryMaker);
 
@@ -415,11 +410,13 @@ public class DruidPlanner implements Closeable
                     return enumerator.moveNext();
                   }
 
-                  @SuppressWarnings("IteratorNextCanNotThrowNoSuchElementException")
                   @Override
                   public Object[] next()
                   {
-                    return (Object[]) enumerator.current();
+                    // Avoids an Intellij IteratorNextCanNotThrowNoSuchElementException
+                    // warning.
+                    Object[] temp = (Object[]) enumerator.current();
+                    return temp;
                   }
                 });
               }
@@ -481,6 +478,7 @@ public class DruidPlanner implements Closeable
    *
    * @param rel Instance of the root {@link DruidRel} which is formed by running the planner transformations on it
    * @return A string representing an array of native queries that correspond to the given SQL query, in JSON format
+   * @throws JsonProcessingException
    */
   private String explainSqlPlanAsNativeQueries(DruidRel<?> rel) throws JsonProcessingException
   {
