@@ -33,16 +33,19 @@ import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -117,14 +120,8 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
     return constructors;
   }
 
-  @After
-  public void teardown() throws IOException
-  {
-    closer.close();
-  }
-
-  @Test
-  public void testGroupBySomeField()
+  @Before
+  public void setup()
   {
     if (!"segments".equals(segmentsName)) {
       if (GroupByStrategySelector.STRATEGY_V1.equals(config.getDefaultStrategy())) {
@@ -139,6 +136,17 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
         );
       }
     }
+  }
+
+  @After
+  public void teardown() throws IOException
+  {
+    closer.close();
+  }
+
+  @Test
+  public void testGroupBySomeField()
+  {
     GroupByQuery groupQuery = GroupByQuery.builder()
                                           .setDataSource("test_datasource")
                                           .setGranularity(Granularities.ALL)
@@ -168,19 +176,6 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
   @Test
   public void testGroupBySomeFieldWithFilter()
   {
-    if (!"segments".equals(segmentsName)) {
-      if (GroupByStrategySelector.STRATEGY_V1.equals(config.getDefaultStrategy())) {
-        expectedException.expect(RuntimeException.class);
-        expectedException.expectMessage(
-            "GroupBy v1 does not support dimension selectors with unknown cardinality."
-        );
-      } else if (vectorize == QueryContexts.Vectorize.FORCE) {
-        expectedException.expect(RuntimeException.class);
-        expectedException.expectMessage(
-            "Cannot vectorize!"
-        );
-      }
-    }
     List<String> vals = new ArrayList<>();
     vals.add(NullHandling.defaultStringValue());
     vals.add("100");
@@ -210,6 +205,71 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
             new Object[]{"200", 2L},
             new Object[]{"300", 4L}
         )
+    );
+  }
+
+  @Test
+  public void testGroupByNoFieldWithFilter()
+  {
+    List<String> vals = new ArrayList<>();
+    vals.add(NullHandling.defaultStringValue());
+    vals.add("100");
+    vals.add("200");
+    vals.add("300");
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0"))
+                                          .setVirtualColumns(new NestedFieldVirtualColumn("nest", "$.fake", "v0",ColumnType.STRING))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .setDimFilter(new InDimFilter("v0", vals, null))
+                                          .build();
+
+
+    Sequence<ResultRow> seq = helper.runQueryOnSegmentsObjs(segmentsGenerator.apply(helper, tempFolder, closer), groupQuery);
+
+    List<ResultRow> results = seq.toList();
+    verifyResults(
+        groupQuery.getResultRowSignature(),
+        results,
+        ImmutableList.of(new Object[]{null, 16L})
+    );
+  }
+
+  @Test
+  public void testGroupBySomeFieldWithNonExistentAgg()
+  {
+    List<String> vals = new ArrayList<>();
+    vals.add(NullHandling.defaultStringValue());
+    vals.add("100");
+    vals.add("200");
+    vals.add("300");
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0"))
+                                          .setVirtualColumns(
+                                              new NestedFieldVirtualColumn("nest", "$.nope", "v0", ColumnType.STRING),
+                                              new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING),
+                                              new NestedFieldVirtualColumn("nest", "$.fake", "v2", ColumnType.DOUBLE)
+                                          )
+                                          .setAggregatorSpecs(new LongSumAggregatorFactory("a0", "v2"))
+                                          .setDimFilter(new InDimFilter("v1", vals, null))
+                                          .setContext(getContext())
+                                          .build();
+
+
+    Sequence<ResultRow> seq = helper.runQueryOnSegmentsObjs(segmentsGenerator.apply(helper, tempFolder, closer), groupQuery);
+
+    List<ResultRow> results = seq.toList();
+
+    verifyResults(
+        groupQuery.getResultRowSignature(),
+        results,
+        ImmutableList.of(new Object[]{null, NullHandling.defaultLongValue()})
     );
   }
 

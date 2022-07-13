@@ -359,7 +359,10 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
   public boolean isNumeric(List<NestedPathPart> path)
   {
     final String field = getField(path);
-    return columns.computeIfAbsent(field, this::readNestedFieldColumn).getCapabilities().isNumeric();
+    if (fields.indexOf(field) < 0) {
+      return true;
+    }
+    return getColumnHolder(field).getCapabilities().isNumeric();
   }
 
   private String getField(List<NestedPathPart> path)

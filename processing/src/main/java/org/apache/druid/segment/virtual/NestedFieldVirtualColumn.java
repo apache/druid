@@ -478,6 +478,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                                    .setType(NestedDataComplexTypeSerde.TYPE)
                                    .setHasMultipleValues(false);
     }
+    // this should only be used for 'realtime' queries, so don't indicate that we are dictionary encoded or have indexes
+    // from here
     return ColumnCapabilitiesImpl.createDefault()
                                  .setType(expectedType != null ? expectedType : ColumnType.STRING);
   }
