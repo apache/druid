@@ -28,6 +28,9 @@ import org.joda.time.chrono.ISOChronology;
 /**
  * Only to create a mapping of the granularity and all the supported file patterns
  * namely: default, lowerDefault and hive.
+ *
+ * NOTE:
+ * When a new granularity type is added to following type, DO remember document it here: docs/querying/granularities.md#simple-granularities
  */
 public enum GranularityType
 {
