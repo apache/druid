@@ -76,6 +76,7 @@
           "querying/sql-scalar",
           "querying/sql-aggregations",
           "querying/sql-multivalue-string-functions",
+          "querying/sql-functions",
           "querying/sql-api",
           "querying/sql-jdbc",
           "querying/sql-query-context",
