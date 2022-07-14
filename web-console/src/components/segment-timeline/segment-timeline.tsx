@@ -33,6 +33,7 @@ import {
   Capabilities,
   ceilToUtcDay,
   formatBytes,
+  formatInteger,
   queryDruidSql,
   QueryManager,
   uniq,
@@ -422,9 +423,10 @@ ORDER BY "start" DESC`;
   }
 
   private readonly formatTick = (n: number) => {
+    if (isNaN(n)) return '';
     const { activeDataType } = this.state;
     if (activeDataType === 'countData') {
-      return n.toString();
+      return formatInteger(n);
     } else {
       return formatBytes(n);
     }
