@@ -47,7 +47,17 @@ public class TestExprMacroTable extends ExprMacroTable
             new HyperUniqueExpressions.HllCreateExprMacro(),
             new HyperUniqueExpressions.HllAddExprMacro(),
             new HyperUniqueExpressions.HllEstimateExprMacro(),
-            new HyperUniqueExpressions.HllRoundEstimateExprMacro()
+            new HyperUniqueExpressions.HllRoundEstimateExprMacro(),
+            new NestedDataExpressions.JsonObjectExprMacro(),
+            new NestedDataExpressions.ListKeysExprMacro(),
+            new NestedDataExpressions.ListPathsExprMacro(),
+            new NestedDataExpressions.JsonKeysExprMacro(),
+            new NestedDataExpressions.JsonPathsExprMacro(),
+            new NestedDataExpressions.JsonValueExprMacro(),
+            new NestedDataExpressions.JsonQueryExprMacro(),
+            new NestedDataExpressions.ToJsonExprMacro(),
+            new NestedDataExpressions.ToJsonStringExprMacro(),
+            new NestedDataExpressions.ParseJsonExprMacro()
         )
     );
   }
