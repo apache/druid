@@ -226,6 +226,7 @@ ORDER BY "start" DESC`;
             y,
             datasource,
             color: SegmentTimeline.getColor(i),
+            dailySize: d.total,
           };
         });
         if (!dataResult.every((d: any) => d.y === 0)) {
