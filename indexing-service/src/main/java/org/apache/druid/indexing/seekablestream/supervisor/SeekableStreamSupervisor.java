@@ -2328,7 +2328,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Set<PartitionIdType> partitionIdsFromSupplier;
     recordSupplierLock.lock();
     try {
-      partitionIdsFromSupplier = recordSupplier.getPartitionIds(ioConfig.getStream());
+      partitionIdsFromSupplier = new TreeSet<>(recordSupplier.getPartitionIds(ioConfig.getStream()));
       if (shouldSkipIgnorablePartitions()) {
         partitionIdsFromSupplier.removeAll(computeIgnorablePartitionIds());
       }
