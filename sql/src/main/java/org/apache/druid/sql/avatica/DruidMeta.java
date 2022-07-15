@@ -242,7 +242,7 @@ public class DruidMeta extends MetaImpl
           null, // No parameters in this path
           doAuthenticate(druidConnection)
       );
-      DruidJdbcPreparedStatement stmt = getDruidConnection(ch.id).createPreparedStatement(
+      DruidJdbcPreparedStatement stmt = druidConnection.createPreparedStatement(
           sqlLifecycleFactory,
           sqlReq,
           maxRowCount);
