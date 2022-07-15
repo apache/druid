@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.SqlLifecycleFactory;
-import org.apache.druid.sql.SqlRequest;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.Map;
@@ -125,7 +125,7 @@ public class DruidConnection
 
   public DruidJdbcPreparedStatement createPreparedStatement(
       SqlLifecycleFactory sqlLifecycleFactory,
-      SqlRequest sqlRequest,
+      SqlQueryPlus queryPlus,
       final long maxRowCount)
   {
     final int statementId = statementCounter.incrementAndGet();
@@ -145,7 +145,7 @@ public class DruidConnection
       final DruidJdbcPreparedStatement jdbcStmt = new DruidJdbcPreparedStatement(
           this,
           statementId,
-          sqlRequest,
+          queryPlus,
           sqlLifecycleFactory,
           maxRowCount
       );
@@ -159,12 +159,12 @@ public class DruidConnection
 
   public void prepareAndExecute(
       final DruidJdbcStatement druidStatement,
-      final SqlRequest sqlRequest,
+      final SqlQueryPlus queryPlus,
       final long maxRowCount
   ) throws RelConversionException
   {
     Preconditions.checkNotNull(context, "JDBC connection context is null!");
-    druidStatement.execute(sqlRequest.withContext(makeContext()), maxRowCount);
+    druidStatement.execute(queryPlus.withContext(makeContext()), maxRowCount);
   }
 
   public AbstractDruidJdbcStatement getStatement(final int statementId)

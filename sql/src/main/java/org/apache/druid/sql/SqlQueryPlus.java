@@ -20,7 +20,6 @@
 package org.apache.druid.sql;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -38,14 +37,14 @@ import java.util.Map;
  * items can be filled in later as needed (except for the SQL
  * and auth result, which are required.)
  */
-public class SqlRequest
+public class SqlQueryPlus
 {
   private final String sql;
   private final QueryContext queryContext;
   private final List<TypedValue> parameters;
   private final AuthenticationResult authResult;
 
-  public SqlRequest(
+  public SqlQueryPlus(
       String sql,
       QueryContext queryContext,
       List<TypedValue> parameters,
@@ -54,7 +53,7 @@ public class SqlRequest
   {
     this.sql = Preconditions.checkNotNull(sql);
     this.queryContext = queryContext == null
-        ? new QueryContext(ImmutableMap.of())
+        ? new QueryContext()
         : queryContext;
     this.parameters = parameters == null
         ? Collections.emptyList()
@@ -62,29 +61,19 @@ public class SqlRequest
     this.authResult = Preconditions.checkNotNull(authResult);
   }
 
-  public SqlRequest(final String sql, final AuthenticationResult authResult)
+  public SqlQueryPlus(final String sql, final AuthenticationResult authResult)
   {
     this(sql, (QueryContext) null, null, authResult);
   }
 
-  public static SqlRequest fromQuery(SqlQuery sqlQuery, final AuthenticationResult authResult)
-  {
-    return new SqlRequest(
-        sqlQuery.getQuery(),
-        new QueryContext(sqlQuery.getContext()),
-        sqlQuery.getParameterList(),
-        authResult
-    );
-  }
-
-  public static SqlRequest fromSqlParameters(
+  public static SqlQueryPlus fromSqlParameters(
       String sql,
       Map<String, Object> queryContext,
       List<SqlParameter> parameters,
       AuthenticationResult authResult
   )
   {
-    return new SqlRequest(
+    return new SqlQueryPlus(
         sql,
         queryContext == null ? null : new QueryContext(queryContext),
         parameters == null ? null : SqlQuery.getParameterList(parameters),
@@ -92,14 +81,14 @@ public class SqlRequest
      );
   }
 
-  public static SqlRequest from(
+  public static SqlQueryPlus from(
       String sql,
       Map<String, Object> queryContext,
       List<TypedValue> parameters,
       AuthenticationResult authResult
   )
   {
-    return new SqlRequest(
+    return new SqlQueryPlus(
         sql,
         queryContext == null ? null : new QueryContext(queryContext),
         parameters,
@@ -127,13 +116,13 @@ public class SqlRequest
     return authResult;
   }
 
-  public SqlRequest withContext(QueryContext context)
+  public SqlQueryPlus withContext(QueryContext context)
   {
-    return new SqlRequest(sql, context, parameters, authResult);
+    return new SqlQueryPlus(sql, context, parameters, authResult);
   }
 
-  public SqlRequest withParameters(List<TypedValue> parameters)
+  public SqlQueryPlus withParameters(List<TypedValue> parameters)
   {
-    return new SqlRequest(sql, queryContext, parameters, authResult);
+    return new SqlQueryPlus(sql, queryContext, parameters, authResult);
   }
 }

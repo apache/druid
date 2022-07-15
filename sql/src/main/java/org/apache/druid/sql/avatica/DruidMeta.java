@@ -45,7 +45,7 @@ import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycleFactory;
-import org.apache.druid.sql.SqlRequest;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.joda.time.Interval;
 
@@ -236,7 +236,7 @@ public class DruidMeta extends MetaImpl
   {
     try {
       final DruidConnection druidConnection = getDruidConnection(ch.id);
-      SqlRequest sqlReq = new SqlRequest(
+      SqlQueryPlus sqlReq = new SqlQueryPlus(
           sql,
           null, // Context provided by connection
           null, // No parameters in this path
@@ -300,7 +300,7 @@ public class DruidMeta extends MetaImpl
       final DruidJdbcStatement druidStatement = getDruidStatement(statement, DruidJdbcStatement.class);
       final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
       // No parameters for a "regular" JDBC statement.
-      SqlRequest sqlRequest = new SqlRequest(sql, null, null, doAuthenticate(druidConnection));
+      SqlQueryPlus sqlRequest = new SqlQueryPlus(sql, null, null, doAuthenticate(druidConnection));
       druidConnection.prepareAndExecute(druidStatement, sqlRequest, maxRowCount);
       ExecuteResult result = doFetch(druidStatement, maxRowsInFirstFrame);
       LOG.debug("Successfully prepared statement [%s] and started execution", druidStatement.getStatementId());

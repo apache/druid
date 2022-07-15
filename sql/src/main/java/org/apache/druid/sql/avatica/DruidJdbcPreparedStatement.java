@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
-import org.apache.druid.sql.SqlRequest;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
 import java.util.List;
@@ -43,7 +43,7 @@ import java.util.List;
 public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
 {
   private final SqlLifecycle sqlStatement;
-  private final SqlRequest sqlRequest;
+  private final SqlQueryPlus queryPlus;
   private final SqlLifecycleFactory lifecycleFactory;
   private final long maxRowCount;
   private Meta.Signature signature;
@@ -52,28 +52,28 @@ public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
   public DruidJdbcPreparedStatement(
       final DruidConnection connection,
       final int statementId,
-      final SqlRequest sqlRequest,
+      final SqlQueryPlus queryPlus,
       final SqlLifecycleFactory lifecycleFactory,
       final long maxRowCount
   )
   {
     super(connection, statementId);
     this.lifecycleFactory = lifecycleFactory;
-    this.sqlRequest = sqlRequest;
+    this.queryPlus = queryPlus;
     this.maxRowCount = maxRowCount;
     this.sqlStatement = lifecycleFactory.factorize();
-    sqlStatement.initialize(sqlRequest.sql(), connection.makeContext());
+    sqlStatement.initialize(queryPlus.sql(), connection.makeContext());
   }
 
   public synchronized void prepare()
   {
     try {
       ensure(State.NEW);
-      sqlStatement.validateAndAuthorize(sqlRequest.authResult());
+      sqlStatement.validateAndAuthorize(queryPlus.authResult());
       PrepareResult prepareResult = sqlStatement.prepare();
       signature = createSignature(
           prepareResult,
-          sqlRequest.sql()
+          queryPlus.sql()
       );
       state = State.PREPARED;
     }
@@ -107,9 +107,9 @@ public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
     closeResultSet();
     try {
       SqlLifecycle directStmt = lifecycleFactory.factorize();
-      directStmt.initialize(sqlRequest.sql(), connection.makeContext());
+      directStmt.initialize(queryPlus.sql(), connection.makeContext());
       directStmt.setParameters(parameters);
-      resultSet = new DruidJdbcResultSet(this, sqlRequest, directStmt, maxRowCount);
+      resultSet = new DruidJdbcResultSet(this, queryPlus, directStmt, maxRowCount);
       resultSet.execute();
     }
     // Failure to execute does not close the prepared statement.

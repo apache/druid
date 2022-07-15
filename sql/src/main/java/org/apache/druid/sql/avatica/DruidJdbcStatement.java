@@ -25,7 +25,7 @@ import org.apache.calcite.tools.RelConversionException;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
-import org.apache.druid.sql.SqlRequest;
+import org.apache.druid.sql.SqlQueryPlus;
 
 /**
  * Represents Druid's version of the JDBC {@code Statement} class:
@@ -47,7 +47,7 @@ public class DruidJdbcStatement extends AbstractDruidJdbcStatement
     this.lifecycleFactory = Preconditions.checkNotNull(lifecycleFactory, "lifecycleFactory");
   }
 
-  public synchronized void execute(SqlRequest sqlRequest, long maxRowCount) throws RelConversionException
+  public synchronized void execute(SqlQueryPlus sqlRequest, long maxRowCount) throws RelConversionException
   {
     closeResultSet();
     SqlLifecycle stmt = lifecycleFactory.factorize();

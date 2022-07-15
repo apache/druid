@@ -121,7 +121,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Tests Avatica using JSON serialization.
+ * Tests the Avatica-based JDBC implementation using JSON serialization. See
+ * {@link DruidAvaticaProtobufHandlerTest} for a subclass which runs
+ * this same set of tests using Protobuf serialization.
  */
 public class DruidAvaticaHandlerTest extends CalciteTestBase
 {

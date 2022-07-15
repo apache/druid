@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.sql.SqlLifecycle;
-import org.apache.druid.sql.SqlRequest;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
 import java.io.Closeable;
@@ -73,7 +73,7 @@ public class DruidJdbcResultSet implements Closeable
    * https://github.com/apache/druid/pull/4415
    */
   private final AbstractDruidJdbcStatement jdbcStatement;
-  private final SqlRequest sqlRequest;
+  private final SqlQueryPlus sqlRequest;
   private final SqlLifecycle stmt;
   private final long maxRowCount;
   private State state = State.NEW;
@@ -83,7 +83,7 @@ public class DruidJdbcResultSet implements Closeable
 
   public DruidJdbcResultSet(
       final AbstractDruidJdbcStatement jdbcStatement,
-      final SqlRequest sqlRequest,
+      final SqlQueryPlus sqlRequest,
       final SqlLifecycle stmt,
       final long maxRowCount
   )

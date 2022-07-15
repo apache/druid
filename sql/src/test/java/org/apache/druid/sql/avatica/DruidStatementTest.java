@@ -20,8 +20,8 @@
 package org.apache.druid.sql.avatica;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
@@ -36,8 +36,8 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
-import org.apache.druid.sql.SqlRequest;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -148,7 +148,7 @@ public class DruidStatementTest extends CalciteTestBase
   @Test
   public void testSubQueryWithOrderByDirect() throws RelConversionException
   {
-    SqlRequest sqlRequest = new SqlRequest(
+    SqlQueryPlus queryPlus = new SqlQueryPlus(
         SUB_QUERY_WITH_ORDER_BY,
         null,
         null,
@@ -156,34 +156,11 @@ public class DruidStatementTest extends CalciteTestBase
     );
     try (final DruidJdbcStatement statement = jdbcStatement()) {
       // First frame, ask for all rows.
-      statement.execute(sqlRequest, -1);
+      statement.execute(queryPlus, -1);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
-          Lists.newArrayList(
-              Lists.newArrayList("__time", "TIMESTAMP", "java.lang.Long"),
-              Lists.newArrayList("cnt", "BIGINT", "java.lang.Number"),
-              Lists.newArrayList("dim1", "VARCHAR", "java.lang.String"),
-              Lists.newArrayList("dim2", "VARCHAR", "java.lang.String"),
-              Lists.newArrayList("dim3", "VARCHAR", "java.lang.String"),
-              Lists.newArrayList("m1", "FLOAT", "java.lang.Float"),
-              Lists.newArrayList("m2", "DOUBLE", "java.lang.Double"),
-              Lists.newArrayList("unique_dim1", "OTHER", "java.lang.Object")
-          ),
-          Lists.transform(
-              signature.columns,
-              new Function<ColumnMetaData, List<String>>()
-              {
-                @Override
-                public List<String> apply(final ColumnMetaData columnMetaData)
-                {
-                  return Lists.newArrayList(
-                      columnMetaData.label,
-                      columnMetaData.type.name,
-                      columnMetaData.type.rep.clazz.getName()
-                  );
-                }
-              }
-          )
+          subQueryWithOrderByResults(),
+          frame
       );
       Assert.assertTrue(statement.isDone());
     }
@@ -192,7 +169,7 @@ public class DruidStatementTest extends CalciteTestBase
   @Test
   public void testFetchPastEOFDirect() throws RelConversionException
   {
-    SqlRequest sqlRequest = new SqlRequest(
+    SqlQueryPlus queryPlus = new SqlQueryPlus(
         SUB_QUERY_WITH_ORDER_BY,
         null,
         null,
@@ -200,7 +177,7 @@ public class DruidStatementTest extends CalciteTestBase
     );
     try (final DruidJdbcStatement statement = jdbcStatement()) {
       // First frame, ask for all rows.
-      statement.execute(sqlRequest, -1);
+      statement.execute(queryPlus, -1);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           subQueryWithOrderByResults(),
@@ -233,6 +210,22 @@ public class DruidStatementTest extends CalciteTestBase
     }
   }
 
+  @Test
+  public void testSignatureDirect() throws RelConversionException
+  {
+    SqlQueryPlus queryPlus = new SqlQueryPlus(
+        SELECT_STAR_FROM_FOO,
+        null,
+        null,
+        AllowAllAuthenticator.ALLOW_ALL_RESULT
+    );
+    try (final DruidJdbcStatement statement = jdbcStatement()) {
+      // Check signature.
+      statement.execute(queryPlus, -1);
+      verifySignature(statement.getSignature());
+    }
+  }
+
   /**
    * Ensure an error is thrown if the client attempts to fetch from a
    * statement after its result set is closed.
@@ -240,7 +233,7 @@ public class DruidStatementTest extends CalciteTestBase
   @Test
   public void testFetchAfterResultCloseDirect()
   {
-    SqlRequest sqlRequest = new SqlRequest(
+    SqlQueryPlus queryPlus = new SqlQueryPlus(
         SUB_QUERY_WITH_ORDER_BY,
         null,
         null,
@@ -248,7 +241,7 @@ public class DruidStatementTest extends CalciteTestBase
     );
     try (final DruidJdbcStatement statement = jdbcStatement()) {
       // First frame, ask for all rows.
-      statement.execute(sqlRequest, -1);
+      statement.execute(queryPlus, -1);
       statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       statement.closeResultSet();
       statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
@@ -262,14 +255,14 @@ public class DruidStatementTest extends CalciteTestBase
   @Test
   public void testSubQueryWithOrderByDirectTwice() throws RelConversionException
   {
-    SqlRequest sqlRequest = new SqlRequest(
+    SqlQueryPlus queryPlus = new SqlQueryPlus(
         SUB_QUERY_WITH_ORDER_BY,
         null,
         null,
         AllowAllAuthenticator.ALLOW_ALL_RESULT
     );
     try (final DruidJdbcStatement statement = jdbcStatement()) {
-      statement.execute(sqlRequest, -1);
+      statement.execute(queryPlus, -1);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           subQueryWithOrderByResults(),
@@ -278,7 +271,7 @@ public class DruidStatementTest extends CalciteTestBase
 
       // Do it again. JDBC says we can reuse statements sequentially.
       Assert.assertTrue(statement.isDone());
-      statement.execute(sqlRequest, -1);
+      statement.execute(queryPlus, -1);
       frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           subQueryWithOrderByResults(),
@@ -307,7 +300,7 @@ public class DruidStatementTest extends CalciteTestBase
   @Test
   public void testSelectAllInFirstFrameDirect() throws RelConversionException
   {
-    SqlRequest sqlRequest = new SqlRequest(
+    SqlQueryPlus queryPlus = new SqlQueryPlus(
         SELECT_FROM_FOO,
         null,
         null,
@@ -315,7 +308,7 @@ public class DruidStatementTest extends CalciteTestBase
     );
     try (final DruidJdbcStatement statement = jdbcStatement()) {
       // First frame, ask for all rows.
-      statement.execute(sqlRequest, -1);
+      statement.execute(queryPlus, -1);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           Meta.Frame.create(
@@ -350,7 +343,7 @@ public class DruidStatementTest extends CalciteTestBase
   @Test
   public void testSelectSplitOverTwoFramesDirect() throws RelConversionException
   {
-    SqlRequest sqlRequest = new SqlRequest(
+    SqlQueryPlus queryPlus = new SqlQueryPlus(
         SELECT_FROM_FOO,
         null,
         null,
@@ -359,7 +352,7 @@ public class DruidStatementTest extends CalciteTestBase
     try (final DruidJdbcStatement statement = jdbcStatement()) {
 
       // First frame, ask for 2 rows.
-      statement.execute(sqlRequest, -1);
+      statement.execute(queryPlus, -1);
       Assert.assertEquals(0, statement.getCurrentOffset());
       Assert.assertFalse(statement.isDone());
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 2);
@@ -388,7 +381,7 @@ public class DruidStatementTest extends CalciteTestBase
   @Test
   public void testTwoFramesAutoCloseDirect() throws RelConversionException
   {
-    SqlRequest sqlRequest = new SqlRequest(
+    SqlQueryPlus queryPlus = new SqlQueryPlus(
         SELECT_FROM_FOO,
         null,
         null,
@@ -396,7 +389,7 @@ public class DruidStatementTest extends CalciteTestBase
     );
     try (final DruidJdbcStatement statement = jdbcStatement()) {
       // First frame, ask for 2 rows.
-      statement.execute(sqlRequest, -1);
+      statement.execute(queryPlus, -1);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 2);
       Assert.assertEquals(
           firstFrameResults(),
@@ -405,7 +398,7 @@ public class DruidStatementTest extends CalciteTestBase
       Assert.assertFalse(statement.isDone());
 
       // Do it again. Closes the prior result set.
-      statement.execute(sqlRequest, -1);
+      statement.execute(queryPlus, -1);
       frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 2);
       Assert.assertEquals(
           firstFrameResults(),
@@ -431,7 +424,7 @@ public class DruidStatementTest extends CalciteTestBase
   @Test
   public void testTwoFramesCloseWithResultSetDirect() throws RelConversionException
   {
-    SqlRequest sqlRequest = new SqlRequest(
+    SqlQueryPlus queryPlus = new SqlQueryPlus(
         SELECT_FROM_FOO,
         null,
         null,
@@ -439,7 +432,7 @@ public class DruidStatementTest extends CalciteTestBase
     );
     try (final DruidJdbcStatement statement = jdbcStatement()) {
       // First frame, ask for 2 rows.
-      statement.execute(sqlRequest, -1);
+      statement.execute(queryPlus, -1);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 2);
       Assert.assertEquals(
           firstFrameResults(),
@@ -483,22 +476,6 @@ public class DruidStatementTest extends CalciteTestBase
     );
   }
 
-  @Test
-  public void testSignatureDirect() throws RelConversionException
-  {
-    SqlRequest sqlRequest = new SqlRequest(
-        SELECT_STAR_FROM_FOO,
-        null,
-        null,
-        AllowAllAuthenticator.ALLOW_ALL_RESULT
-    );
-    try (final DruidJdbcStatement statement = jdbcStatement()) {
-      // Check signature.
-      statement.execute(sqlRequest, -1);
-      verifySignature(statement.getSignature());
-    }
-  }
-
   @SuppressWarnings("unchecked")
   private void verifySignature(Meta.Signature signature)
   {
@@ -508,10 +485,10 @@ public class DruidStatementTest extends CalciteTestBase
     Assert.assertEquals(
         Lists.newArrayList(
             Lists.newArrayList("__time", "TIMESTAMP", "java.lang.Long"),
-            Lists.newArrayList("cnt", "BIGINT", "java.lang.Number"),
             Lists.newArrayList("dim1", "VARCHAR", "java.lang.String"),
             Lists.newArrayList("dim2", "VARCHAR", "java.lang.String"),
             Lists.newArrayList("dim3", "VARCHAR", "java.lang.String"),
+            Lists.newArrayList("cnt", "BIGINT", "java.lang.Number"),
             Lists.newArrayList("m1", "FLOAT", "java.lang.Float"),
             Lists.newArrayList("m2", "DOUBLE", "java.lang.Double"),
             Lists.newArrayList("unique_dim1", "OTHER", "java.lang.Object")
@@ -540,12 +517,12 @@ public class DruidStatementTest extends CalciteTestBase
   // The JDBC PreparedStatement class starts with, then allows executing
   // the statement sequentially, typically with a set of parameters.
 
-  private DruidJdbcPreparedStatement jdbcPreparedStatement(SqlRequest sqlRequest)
+  private DruidJdbcPreparedStatement jdbcPreparedStatement(SqlQueryPlus queryPlus)
   {
     return new DruidJdbcPreparedStatement(
         conn,
         0,
-        sqlRequest,
+        queryPlus,
         sqlLifecycleFactory,
         Long.MAX_VALUE
     );
@@ -555,13 +532,13 @@ public class DruidStatementTest extends CalciteTestBase
   public void testSubQueryWithOrderByPrepared()
   {
     final String sql = "select T20.F13 as F22  from (SELECT DISTINCT dim1 as F13 FROM druid.foo T10) T20 order by T20.F13 ASC";
-    SqlRequest sqlRequest = new SqlRequest(
+    SqlQueryPlus queryPlus = new SqlQueryPlus(
         sql,
         null,
         null,
         AllowAllAuthenticator.ALLOW_ALL_RESULT
     );
-    try (final DruidJdbcPreparedStatement statement = jdbcPreparedStatement(sqlRequest)) {
+    try (final DruidJdbcPreparedStatement statement = jdbcPreparedStatement(queryPlus)) {
       statement.prepare();
       // First frame, ask for all rows.
       statement.execute(Collections.emptyList());
@@ -578,13 +555,13 @@ public class DruidStatementTest extends CalciteTestBase
   public void testSubQueryWithOrderByPreparedTwice()
   {
     final String sql = "select T20.F13 as F22  from (SELECT DISTINCT dim1 as F13 FROM druid.foo T10) T20 order by T20.F13 ASC";
-    SqlRequest sqlRequest = new SqlRequest(
+    SqlQueryPlus queryPlus = new SqlQueryPlus(
         sql,
         null,
         null,
         AllowAllAuthenticator.ALLOW_ALL_RESULT
     );
-    try (final DruidJdbcPreparedStatement statement = jdbcPreparedStatement(sqlRequest)) {
+    try (final DruidJdbcPreparedStatement statement = jdbcPreparedStatement(queryPlus)) {
       statement.prepare();
       statement.execute(Collections.emptyList());
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
@@ -608,13 +585,13 @@ public class DruidStatementTest extends CalciteTestBase
   @Test
   public void testSignaturePrepared()
   {
-    SqlRequest sqlRequest = new SqlRequest(
+    SqlQueryPlus queryPlus = new SqlQueryPlus(
         SELECT_STAR_FROM_FOO,
         null,
         null,
         AllowAllAuthenticator.ALLOW_ALL_RESULT
     );
-    try (final DruidJdbcPreparedStatement statement = jdbcPreparedStatement(sqlRequest)) {
+    try (final DruidJdbcPreparedStatement statement = jdbcPreparedStatement(queryPlus)) {
       statement.prepare();
       verifySignature(statement.getSignature());
     }
@@ -623,7 +600,7 @@ public class DruidStatementTest extends CalciteTestBase
   @Test
   public void testParameters()
   {
-    SqlRequest sqlRequest = new SqlRequest(
+    SqlQueryPlus queryPlus = new SqlQueryPlus(
         "SELECT COUNT(*) AS cnt FROM sys.servers WHERE servers.host = ?",
         null,
         null,
@@ -631,7 +608,7 @@ public class DruidStatementTest extends CalciteTestBase
     );
     Meta.Frame expected = Meta.Frame.create(0, true, Collections.singletonList(new Object[] {1L}));
     List<TypedValue> matchingParams = Collections.singletonList(TypedValue.ofLocal(ColumnMetaData.Rep.STRING, "dummy"));
-    try (final DruidJdbcPreparedStatement statement = jdbcPreparedStatement(sqlRequest)) {
+    try (final DruidJdbcPreparedStatement statement = jdbcPreparedStatement(queryPlus)) {
 
       // PreparedStatement protocol: prepare once...
       statement.prepare();
