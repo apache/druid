@@ -596,7 +596,13 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   public void seek(StreamPartition<String> partition, String sequenceNumber) throws InterruptedException
   {
     filterBufferAndResetBackgroundFetch(ImmutableSet.of(partition));
-    partitionSeek(partition, sequenceNumber, ShardIteratorType.AT_SEQUENCE_NUMBER);
+    if (KinesisSequenceNumber.UNREAD_TRIM_HORIZON.equals(sequenceNumber)) {
+      partitionSeek(partition, null, ShardIteratorType.TRIM_HORIZON);
+    } else if (KinesisSequenceNumber.UNREAD_LATEST.equals(sequenceNumber)) {
+      partitionSeek(partition, null, ShardIteratorType.LATEST);
+    } else {
+      partitionSeek(partition, sequenceNumber, ShardIteratorType.AT_SEQUENCE_NUMBER);
+    }
   }
 
   @Override
@@ -743,11 +749,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   {
     Map<String, Long> partitionLag = Maps.newHashMapWithExpectedSize(currentOffsets.size());
     for (Map.Entry<String, String> partitionOffset : currentOffsets.entrySet()) {
+      StreamPartition<String> partition = new StreamPartition<>(stream, partitionOffset.getKey());
+      long currentLag = 0L;
       if (KinesisSequenceNumber.isValidAWSKinesisSequence(partitionOffset.getValue())) {
-        StreamPartition<String> partition = new StreamPartition<>(stream, partitionOffset.getKey());
-        long currentLag = getPartitionTimeLag(partition, partitionOffset.getValue());
-        partitionLag.put(partitionOffset.getKey(), currentLag);
+        currentLag = getPartitionTimeLag(partition, partitionOffset.getValue());
       }
+      partitionLag.put(partitionOffset.getKey(), currentLag);
     }
     return partitionLag;
   }
@@ -832,6 +839,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
    * {@link #GET_SEQUENCE_NUMBER_RECORD_COUNT} records and return the first sequence number from the result set.
    * This method is thread safe as it does not depend on the internal state of the supplier (it doesn't use the
    * {@link PartitionResource} which have been assigned to the supplier), and the Kinesis client is thread safe.
+   *
+   * When there are no records at the offset corresponding to the ShardIteratorType,
+   *    If shard is closed, return custom EOS sequence marker
+   *    While getting the earliest sequence number, return a custom marker corresponding to TRIM_HORIZON
+   *    While getting the most recent sequence number, return a custom marker corresponding to LATEST
    */
   @Nullable
   private String getSequenceNumber(StreamPartition<String> partition, ShardIteratorType iteratorEnum)
@@ -840,62 +852,57 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
       String shardIterator =
           kinesis.getShardIterator(partition.getStream(), partition.getPartitionId(), iteratorEnum.toString())
                  .getShardIterator();
-      long timeoutMillis = System.currentTimeMillis() + fetchSequenceNumberTimeout;
-      GetRecordsResult recordsResult = null;
 
-      while (shardIterator != null && System.currentTimeMillis() < timeoutMillis) {
+      if (closed) {
+        log.info("KinesisRecordSupplier closed while fetching sequenceNumber");
+        return null;
+      }
+      final GetRecordsRequest request = new GetRecordsRequest().withShardIterator(shardIterator)
+                                                               .withLimit(GET_SEQUENCE_NUMBER_RECORD_COUNT);
+      GetRecordsResult recordsResult = RetryUtils.retry(
+          () -> kinesis.getRecords(request),
+          (throwable) -> {
+            if (throwable instanceof ProvisionedThroughputExceededException) {
+              log.warn(
+                  throwable,
+                  "encountered ProvisionedThroughputExceededException while fetching records, this means "
+                  + "that the request rate for the stream is too high, or the requested data is too large for "
+                  + "the available throughput. Reduce the frequency or size of your requests. Consider increasing "
+                  + "the number of shards to increase throughput."
+              );
+              return true;
+            }
+            if (throwable instanceof AmazonClientException) {
+              AmazonClientException ase = (AmazonClientException) throwable;
+              return AWSClientUtil.isClientExceptionRecoverable(ase);
+            }
+            return false;
+          },
+          GET_SEQUENCE_NUMBER_RETRY_COUNT
+      );
 
-        if (closed) {
-          log.info("KinesisRecordSupplier closed while fetching sequenceNumber");
-          return null;
-        }
-        final String currentShardIterator = shardIterator;
-        final GetRecordsRequest request = new GetRecordsRequest().withShardIterator(currentShardIterator)
-                                                                 .withLimit(GET_SEQUENCE_NUMBER_RECORD_COUNT);
-        recordsResult = RetryUtils.retry(
-            () -> kinesis.getRecords(request),
-            (throwable) -> {
-              if (throwable instanceof ProvisionedThroughputExceededException) {
-                log.warn(
-                    throwable,
-                    "encountered ProvisionedThroughputExceededException while fetching records, this means "
-                    + "that the request rate for the stream is too high, or the requested data is too large for "
-                    + "the available throughput. Reduce the frequency or size of your requests. Consider increasing "
-                    + "the number of shards to increase throughput."
-                );
-                return true;
-              }
-              if (throwable instanceof AmazonClientException) {
-                AmazonClientException ase = (AmazonClientException) throwable;
-                return AWSClientUtil.isClientExceptionRecoverable(ase);
-              }
-              return false;
-            },
-            GET_SEQUENCE_NUMBER_RETRY_COUNT
-        );
+      List<Record> records = recordsResult.getRecords();
 
-        List<Record> records = recordsResult.getRecords();
-
-        if (!records.isEmpty()) {
-          return records.get(0).getSequenceNumber();
-        }
-
-        shardIterator = recordsResult.getNextShardIterator();
+      if (!records.isEmpty()) {
+        return records.get(0).getSequenceNumber();
       }
 
-      if (shardIterator == null) {
-        log.info("Partition[%s] returned a null shard iterator, is the shard closed?", partition.getPartitionId());
+      if (recordsResult.getNextShardIterator() == null) {
+        log.info("Partition[%s] is closed and empty", partition.getPartitionId());
         return KinesisSequenceNumber.END_OF_SHARD_MARKER;
       }
 
+      if (iteratorEnum.equals(ShardIteratorType.LATEST)) {
+        log.info("Partition[%s] has no records at LATEST offset", partition.getPartitionId());
+        return KinesisSequenceNumber.UNREAD_LATEST;
+      }
 
-      // if we reach here, it usually means either the shard has no more records, or records have not been
-      // added to this shard
-      log.warn(
-          "timed out while trying to fetch position for shard[%s], millisBehindLatest is [%s], likely no more records in shard",
-          partition.getPartitionId(),
-          recordsResult != null ? recordsResult.getMillisBehindLatest() : "UNKNOWN"
-      );
+      if (iteratorEnum.equals(ShardIteratorType.TRIM_HORIZON)) {
+        log.info("Partition[%s] has no records at TRIM_HORIZON offset", partition.getPartitionId());
+        return KinesisSequenceNumber.UNREAD_TRIM_HORIZON;
+      }
+
+      log.warn("Could not fetch sequence number for Partition[%s]", partition.getPartitionId());
       return null;
     });
   }

@@ -129,7 +129,9 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
         String sequence = currOffsets.get(streamPartition.getPartitionId());
         String earliestSequenceNumber = recordSupplier.getEarliestSequenceNumber(streamPartition);
         if (earliestSequenceNumber == null
-            || createSequenceNumber(earliestSequenceNumber).compareTo(createSequenceNumber(sequence)) > 0) {
+            || !KinesisSequenceNumber.of(sequence)
+                                     .isAvailableWithEarliest(KinesisSequenceNumber.of(earliestSequenceNumber))) {
+
           if (task.getTuningConfig().isResetOffsetAutomatically()) {
             log.info("Attempting to reset sequences automatically for all partitions");
             try {

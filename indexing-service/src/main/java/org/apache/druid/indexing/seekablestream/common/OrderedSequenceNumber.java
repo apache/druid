@@ -81,4 +81,15 @@ public abstract class OrderedSequenceNumber<SequenceOffsetType>
            ", isExclusive=" + isExclusive +
            '}';
   }
+
+  public boolean isAvailableWithEarliest(OrderedSequenceNumber<SequenceOffsetType> earliest)
+  {
+    return earliest.compareTo(this) <= 0;
+  }
+
+  public boolean isMoreToReadBeforeReadingRecord(OrderedSequenceNumber<SequenceOffsetType> end)
+  {
+    final int compareToEnd = this.compareTo(end);
+    return isExclusive ? compareToEnd < 0 : compareToEnd <= 0;
+  }
 }
