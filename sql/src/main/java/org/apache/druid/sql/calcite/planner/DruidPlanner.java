@@ -29,10 +29,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.DataContext;
-import org.apache.calcite.adapter.java.JavaTypeFactory;
-import org.apache.calcite.config.CalciteConnectionConfig;
-import org.apache.calcite.config.CalciteConnectionConfigImpl;
-import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.interpreter.BindableRel;
 import org.apache.calcite.interpreter.Bindables;
@@ -41,8 +37,6 @@ import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.prepare.CalciteCatalogReader;
-import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.Sort;
@@ -51,6 +45,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlDynamicParam;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
@@ -62,10 +57,7 @@ import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.tools.FrameworkConfig;
-import org.apache.calcite.tools.Frameworks;
-import org.apache.calcite.tools.Planner;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
@@ -96,12 +88,12 @@ import org.apache.druid.utils.Throwables;
 import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -112,7 +104,7 @@ public class DruidPlanner implements Closeable
   private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
 
   private final FrameworkConfig frameworkConfig;
-  private final Planner planner;
+  private final CalcitePlanner planner;
   private final PlannerContext plannerContext;
   private final QueryMakerFactory queryMakerFactory;
 
@@ -125,9 +117,16 @@ public class DruidPlanner implements Closeable
   )
   {
     this.frameworkConfig = frameworkConfig;
-    this.planner = Frameworks.getPlanner(frameworkConfig);
+    this.planner = new CalcitePlanner(frameworkConfig);
     this.plannerContext = plannerContext;
     this.queryMakerFactory = queryMakerFactory;
+  }
+
+  private ParsedNodes parse() throws SqlParseException, ValidationException
+  {
+    resetPlanner();
+    SqlNode root = planner.parse(plannerContext.getSql());
+    return ParsedNodes.create(root, plannerContext.getTimeZone());
   }
 
   /**
@@ -137,18 +136,17 @@ public class DruidPlanner implements Closeable
    */
   public ValidationResult validate(boolean authorizeContextParams) throws SqlParseException, ValidationException
   {
-    resetPlanner();
-    final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()), plannerContext.getTimeZone());
-    final SqlValidator validator = getValidator();
+    final ParsedNodes parsed = parse();
     final SqlNode validatedQueryNode;
 
     try {
-      validatedQueryNode = validator.validate(rewriteDynamicParameters(parsed.getQueryNode()));
+      validatedQueryNode = planner.validate(rewriteDynamicParameters(parsed.getQueryNode()));
     }
     catch (RuntimeException e) {
       throw new ValidationException(e);
     }
 
+    final SqlValidator validator = planner.getValidator();
     SqlResourceCollectorShuttle resourceCollectorShuttle = new SqlResourceCollectorShuttle(validator, plannerContext);
     validatedQueryNode.accept(resourceCollectorShuttle);
 
@@ -172,18 +170,19 @@ public class DruidPlanner implements Closeable
    * Prepare an SQL query for execution, including some initial parsing and validation and any dynamic parameter type
    * resolution, to support prepared statements via JDBC.
    *
-   * In some future this could perhaps re-use some of the work done by {@link #validate(boolean)}
+   * In some future this could perhaps re-use some work done by {@link #validate(boolean)}
    * instead of repeating it, but that day is not today.
    */
+  // RelConversionException is no longer thrown, but removing it causes
+  // cascading Intellij warnings in many files. Leave well enough alone.
+  @SuppressWarnings("RedundantThrows")
   public PrepareResult prepare() throws SqlParseException, ValidationException, RelConversionException
   {
-    resetPlanner();
-
-    final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()), plannerContext.getTimeZone());
+    final ParsedNodes parsed = parse();
     final SqlNode validatedQueryNode = planner.validate(parsed.getQueryNode());
     final RelRoot rootQueryRel = planner.rel(validatedQueryNode);
 
-    final SqlValidator validator = getValidator();
+    final SqlValidator validator = planner.getValidator();
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
     final RelDataType parameterTypes = validator.getParameterRowType(validator.validate(validatedQueryNode));
     final RelDataType returnedRowType;
@@ -201,11 +200,14 @@ public class DruidPlanner implements Closeable
    * Plan an SQL query for execution, returning a {@link PlannerResult} which can be used to actually execute the query.
    *
    * Ideally, the query can be planned into a native Druid query, using {@link #planWithDruidConvention}, but will
-   * fall-back to {@link #planWithBindableConvention} if this is not possible.
+   * fall back to {@link #planWithBindableConvention} if this is not possible.
    *
-   * In some future this could perhaps re-use some of the work done by {@link #validate(boolean)}
+   * In some future this could perhaps re-use some work done by {@link #validate(boolean)}
    * instead of repeating it, but that day is not today.
    */
+  // RelConversionException is no longer thrown, but removing it causes
+  // cascading Intellij warnings in many files. Leave well enough alone.
+  @SuppressWarnings("RedundantThrows")
   public PlannerResult plan() throws SqlParseException, ValidationException, RelConversionException
   {
     resetPlanner();
@@ -307,7 +309,7 @@ public class DruidPlanner implements Closeable
       final RelRoot root,
       @Nullable final SqlExplain explain,
       @Nullable final SqlInsert insertOrReplace
-  ) throws ValidationException, RelConversionException
+  ) throws ValidationException
   {
     final RelRoot possiblyLimitedRoot = possiblyWrapRootWithOuterLimitFromContext(root);
     final QueryMaker queryMaker = buildQueryMaker(root, insertOrReplace);
@@ -359,7 +361,7 @@ public class DruidPlanner implements Closeable
   private PlannerResult planWithBindableConvention(
       final RelRoot root,
       @Nullable final SqlExplain explain
-  ) throws RelConversionException
+  )
   {
     BindableRel bindableRel = (BindableRel) planner.transform(
         CalciteRulesManager.BINDABLE_CONVENTION_RULES,
@@ -388,8 +390,8 @@ public class DruidPlanner implements Closeable
     } else {
       final BindableRel theRel = bindableRel;
       final DataContext dataContext = plannerContext.createDataContext(
-          (JavaTypeFactory) planner.getTypeFactory(),
-          plannerContext.getParameters()
+              planner.getTypeFactory(),
+              plannerContext.getParameters()
       );
       final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
         final Enumerable<?> enumerable = theRel.bind(dataContext);
@@ -411,7 +413,10 @@ public class DruidPlanner implements Closeable
                   @Override
                   public Object[] next()
                   {
-                    return (Object[]) enumerator.current();
+                    // Avoids an Intellij IteratorNextCanNotThrowNoSuchElementException
+                    // warning.
+                    Object[] temp = (Object[]) enumerator.current();
+                    return temp;
                   }
                 });
               }
@@ -596,46 +601,8 @@ public class DruidPlanner implements Closeable
   }
 
   /**
-   * Constructs an SQL validator, just like papa {@link #planner} uses.
-   */
-  private SqlValidator getValidator()
-  {
-    // this is sort of lame, planner won't cough up its validator, which is nice and seeded after validating a query,
-    // but it is private and has no accessors, so make another one so we can get the parameter types... but i suppose
-    // beats creating our own Prepare and Planner implementations
-    Preconditions.checkNotNull(planner.getTypeFactory());
-
-    final CalciteConnectionConfig connectionConfig;
-
-    if (frameworkConfig.getContext() != null) {
-      connectionConfig = frameworkConfig.getContext().unwrap(CalciteConnectionConfig.class);
-    } else {
-      Properties properties = new Properties();
-      properties.setProperty(
-          CalciteConnectionProperty.CASE_SENSITIVE.camelName(),
-          String.valueOf(PlannerFactory.PARSER_CONFIG.caseSensitive())
-      );
-      connectionConfig = new CalciteConnectionConfigImpl(properties);
-    }
-
-    Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
-        CalciteSchema.from(frameworkConfig.getDefaultSchema().getParentSchema()),
-        CalciteSchema.from(frameworkConfig.getDefaultSchema()).path(null),
-        planner.getTypeFactory(),
-        connectionConfig
-    );
-
-    return SqlValidatorUtil.newValidator(
-        frameworkConfig.getOperatorTable(),
-        catalogReader,
-        planner.getTypeFactory(),
-        DruidConformance.instance()
-    );
-  }
-
-  /**
    * Uses {@link SqlParameterizerShuttle} to rewrite {@link SqlNode} to swap out any
-   * {@link org.apache.calcite.sql.SqlDynamicParam} early for their {@link SqlLiteral}
+   * {@link SqlDynamicParam} early for their {@link SqlLiteral}
    * replacement
    */
   private SqlNode rewriteDynamicParameters(SqlNode parsed)
