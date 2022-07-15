@@ -64,6 +64,8 @@ import java.util.stream.Collectors;
 import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.END_OF_SHARD_MARKER;
 import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.EXPIRED_MARKER;
 import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER;
+import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.UNREAD_LATEST;
+import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.UNREAD_TRIM_HORIZON;
 
 public class KinesisRecordSupplierTest extends EasyMockSupport
 {
@@ -899,20 +901,22 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   }
 
   @Test
-  public void getLatestSequenceNumberWhenShardIsEmptyShouldReturnsNull()
+  public void getLatestSequenceNumberWhenShardIsEmptyShouldReturnUnreadToken()
   {
 
-    KinesisRecordSupplier recordSupplier = getSequenceNumberWhenShardIsEmptyShouldReturnsNullHelper();
-    Assert.assertNull(recordSupplier.getLatestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
+    KinesisRecordSupplier recordSupplier = getSequenceNumberWhenNoRecordsHelperForOpenShard();
+    Assert.assertEquals(KinesisSequenceNumber.UNREAD_LATEST,
+                        recordSupplier.getLatestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
     verifyAll();
   }
 
   @Test
-  public void getEarliestSequenceNumberWhenShardIsEmptyShouldReturnsNull()
+  public void getEarliestSequenceNumberWhenShardIsEmptyShouldReturnUnreadToken()
   {
 
-    KinesisRecordSupplier recordSupplier = getSequenceNumberWhenShardIsEmptyShouldReturnsNullHelper();
-    Assert.assertNull(recordSupplier.getEarliestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
+    KinesisRecordSupplier recordSupplier = getSequenceNumberWhenNoRecordsHelperForOpenShard();
+    Assert.assertEquals(KinesisSequenceNumber.UNREAD_TRIM_HORIZON,
+                        recordSupplier.getEarliestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
     verifyAll();
   }
 
@@ -958,24 +962,23 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     Assert.assertEquals("0", recordSupplier.getLatestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
   }
 
-  private KinesisRecordSupplier getSequenceNumberWhenShardIsEmptyShouldReturnsNullHelper()
+  private KinesisRecordSupplier getSequenceNumberWhenNoRecordsHelperForOpenShard()
   {
     EasyMock.expect(kinesis.getShardIterator(
         EasyMock.eq(STREAM),
         EasyMock.eq(SHARD_ID0),
         EasyMock.anyString()
     )).andReturn(
-        getShardIteratorResult0).anyTimes();
+        getShardIteratorResult0).times(1);
 
-    EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).anyTimes();
+    EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).times(1);
 
     EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR, 1000)))
             .andReturn(getRecordsResult0)
-            .times(1, Integer.MAX_VALUE);
+            .times(1);
 
-    EasyMock.expect(getRecordsResult0.getRecords()).andReturn(Collections.emptyList()).times(1, Integer.MAX_VALUE);
-    EasyMock.expect(getRecordsResult0.getNextShardIterator()).andReturn(SHARD0_ITERATOR).times(1, Integer.MAX_VALUE);
-    EasyMock.expect(getRecordsResult0.getMillisBehindLatest()).andReturn(0L).once();
+    EasyMock.expect(getRecordsResult0.getRecords()).andReturn(Collections.emptyList()).times(1);
+    EasyMock.expect(getRecordsResult0.getNextShardIterator()).andReturn(SHARD0_ITERATOR).times(1);
 
     replayAll();
 
@@ -1100,12 +1103,19 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     Assert.assertEquals(SHARDS_LAG_MILLIS_EMPTY, independentTimeLag);
 
     // Verify that kinesis apis are not called for custom sequence numbers
-    for (String sequenceNum : Arrays.asList(NO_END_SEQUENCE_NUMBER, END_OF_SHARD_MARKER, EXPIRED_MARKER)) {
+    for (String sequenceNum : Arrays.asList(NO_END_SEQUENCE_NUMBER, END_OF_SHARD_MARKER, EXPIRED_MARKER,
+                                            UNREAD_LATEST, UNREAD_TRIM_HORIZON)) {
       offsets = ImmutableMap.of(
           SHARD_ID1, sequenceNum,
           SHARD_ID0, sequenceNum
       );
-      Assert.assertEquals(Collections.emptyMap(), recordSupplier.getPartitionsTimeLag(STREAM, offsets));
+
+      Map<String, Long> zeroOffsets = ImmutableMap.of(
+          SHARD_ID1, 0L,
+          SHARD_ID0, 0L
+      );
+
+      Assert.assertEquals(zeroOffsets, recordSupplier.getPartitionsTimeLag(STREAM, offsets));
     }
     verifyAll();
   }
