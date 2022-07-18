@@ -2328,9 +2328,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Set<PartitionIdType> partitionIdsFromSupplier;
     recordSupplierLock.lock();
     try {
-      partitionIdsFromSupplier = new TreeSet<>(recordSupplier.getPartitionIds(ioConfig.getStream()));
+      partitionIdsFromSupplier = recordSupplier.getPartitionIds(ioConfig.getStream());
       if (shouldSkipIgnorablePartitions()) {
-        partitionIdsFromSupplier.removeAll(computeIgnorablePartitionIds());
+        Set<PartitionIdType> ignorablePartitions = computeIgnorablePartitionIds();
+        partitionIdsFromSupplier = partitionIdsFromSupplier.stream()
+                                                           .filter(x -> !ignorablePartitions.contains(x))
+                                                           .collect(Collectors.toSet());
       }
     }
     catch (Exception e) {
