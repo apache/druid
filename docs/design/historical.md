@@ -27,7 +27,7 @@ title: "Historical Process"
 
 For Apache Druid Historical Process Configuration, see [Historical Configuration](../configuration/index.md#historical).
 
-For basic tuning guidance for the Historical process, see [Basic Cluster Tuning](../operations/basic-cluster-tuning.md#historical).
+For basic tuning guidance for the Historical process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#historical).
 
 ### HTTP endpoints
 
