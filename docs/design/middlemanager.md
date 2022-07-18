@@ -27,7 +27,7 @@ title: "MiddleManager Process"
 
 For Apache Druid MiddleManager Process Configuration, see [Indexing Service Configuration](../configuration/index.md#middlemanager-and-peons).
 
-For basic tuning guidance for the MiddleManager process, see [Basic Cluster Tuning](../operations/basic-cluster-tuning.md#middlemanager).
+For basic tuning guidance for the MiddleManager process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#middlemanager).
 
 ### HTTP endpoints
 
