@@ -166,12 +166,11 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
     final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
     buildSegmentsMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
 
-    toolbox.addMonitor(
-        new RealtimeMetricsMonitor(
-            Collections.singletonList(fireDepartmentForMetrics),
-            Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
-        )
+    RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
+        Collections.singletonList(fireDepartmentForMetrics),
+        Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
     );
+    toolbox.addMonitor(metricsMonitor);
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final PartitionsSpec partitionsSpec = tuningConfig.getGivenOrDefaultPartitionsSpec();
@@ -231,6 +230,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
       } else {
         appenderator.close();
       }
+      toolbox.removeMonitor(metricsMonitor);
     }
   }
 
