@@ -27,7 +27,7 @@ title: "Overlord Process"
 
 For Apache Druid Overlord Process Configuration, see [Overlord Configuration](../configuration/index.md#overlord).
 
-For basic tuning guidance for the Overlord process, see [Basic Cluster Tuning](../operations/basic-cluster-tuning.md#overlord).
+For basic tuning guidance for the Overlord process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#overlord).
 
 ### HTTP endpoints
 
