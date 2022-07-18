@@ -132,7 +132,7 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 
 > Note: Use `granularitySpec` over `segmentGranularity` and only set one of these values. If you specify different values for these in the same compaction spec, the task fails.
 
-To control the number of result segments per time chunk, you can set [`maxRowsPerSegment`](../configuration/index.md#automatic-compaction-dynamic-configuration) or [`numShards`](../ingestion/native-batch.md#tuningconfig).
+To control the number of result segments per time chunk, you can set [`maxRowsPerSegment`](./native-batch.md#partitionsspec) or [`numShards`](../ingestion/native-batch.md#tuningconfig).
 
 > You can run multiple compaction tasks in parallel. For example, if you want to compact the data for a year, you are not limited to running a single task for the entire year. You can run 12 compaction tasks with month-long intervals.
 
