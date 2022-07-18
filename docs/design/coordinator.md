@@ -113,7 +113,7 @@ need compaction.
 A set of segments needs compaction if all conditions below are satisfied:
 
 1) Total size of segments in the time chunk is smaller than or equal to the configured `inputSegmentSizeBytes`.
-2) Segments have never been compacted yet or compaction spec has been updated since the last compaction:  `maxTotalRows` or`indexSpec`.
+2) Segments have never been compacted yet or compaction spec has been updated since the last compaction: `maxTotalRows` or `indexSpec`.
 
 Here are some details with an example. Suppose we have two dataSources (`foo`, `bar`) as seen below:
 

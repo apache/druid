@@ -99,7 +99,7 @@ This compacts all segments for the interval `2015-09-12/2015-09-13` in the `comp
 
 The parameters in the `tuningConfig` control the maximum number of rows present in each compacted segment and thus affect the number of segments in the compacted set.
 
-This datasource only has 39,244 rows. 39,244 is below the default limit of 5,000,000 `maxRowsPerSegment` for dynamic partitioning. Therefore, Druid only creates one compacted segment per hour.
+This datasource only has 39,244 rows. 39,244 is below the default limit of 5,000,000 `maxRowsPerSegment` for [dynamic partitioning](../ingestion/native-batch.md#dynamic-partitioning). Therefore, Druid only creates one compacted segment per hour.
 
 Submit the compaction task now:
 
@@ -121,7 +121,7 @@ During that time, you may see 75 total segments comprised of the old segment set
 The new compacted segments have a more recent version than the original segments.
 Even though the Druid console displays both sets of segments, queries only read from the new compacted segments.
 
-Running a COUNT query on `compaction-tutorial` again to verify the number of rows remains 39,244:
+Run a COUNT query on `compaction-tutorial` again to verify the number of rows remains 39,244:
 
 ```bash
 dsql> select count(*) from "compaction-tutorial";
@@ -179,9 +179,10 @@ It takes some time before the Coordinator marks the old input segments as unused
 
 ![Compacted segments day granularity 2](../assets/tutorial-compaction-08.png "Compacted segments day granularity 2")
 
+## Learn more
+
 This tutorial demonstrated how to use a compaction task spec to manually compact segments and how to optionally change the segment granularity for segments.
 
-## Learn more
 
 - For more details, see [Compaction](../ingestion/compaction.md).
 - To learn about the benefits of compaction, see [Segment optimization](../operations/segment-optimization.md).
