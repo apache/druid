@@ -98,8 +98,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.apache.druid.sql.calcite.planner.PlannerContext.CTX_SQL_OUTER_LIMIT;
-
 public class DruidPlanner implements Closeable
 {
   private static final EmittingLogger log = new EmittingLogger(DruidPlanner.class);
@@ -155,8 +153,8 @@ public class DruidPlanner implements Closeable
     final Set<ResourceAction> resourceActions = new HashSet<>(resourceCollectorShuttle.getResourceActions());
 
     if (parsed.getInsertOrReplace() != null) {
-      if (plannerContext.getQueryContext().get(CTX_SQL_OUTER_LIMIT) != null) {
-        throw new ValidationException(CTX_SQL_OUTER_LIMIT + " cannot be provided on INSERT or REPLACE queries.");
+      if (plannerContext.getQueryContext().get(PlannerContext.CTX_SQL_OUTER_LIMIT) != null) {
+        throw new ValidationException(PlannerContext.CTX_SQL_OUTER_LIMIT + " cannot be provided on INSERT or REPLACE queries.");
       }
       final String targetDataSource = validateAndGetDataSourceForIngest(parsed.getInsertOrReplace());
       resourceActions.add(new ResourceAction(new Resource(targetDataSource, ResourceType.DATASOURCE), Action.WRITE));
