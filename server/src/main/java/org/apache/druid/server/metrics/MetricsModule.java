@@ -26,12 +26,15 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import io.timeandspace.cronscheduler.CronScheduler;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -46,6 +49,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.query.ExecutorServiceMonitor;
 
+import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -170,13 +174,41 @@ public class MetricsModule implements Module
   @Provides
   @ManageLifecycle
   public SysMonitor getSysMonitor(
-      DataSourceTaskIdHolder dataSourceTaskIdHolder
+      DataSourceTaskIdHolder dataSourceTaskIdHolder,
+      Injector injector
   )
   {
+    Set<NodeRole> nodeRoles = getNodeRoles(injector);
     Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
         dataSourceTaskIdHolder.getDataSource(),
         dataSourceTaskIdHolder.getTaskId()
     );
-    return new SysMonitor(dimensions);
+    return new SysMonitor(dimensions, isPeonRole(nodeRoles));
+  }
+
+  @Nullable
+  static Set<NodeRole> getNodeRoles(Injector injector)
+  {
+    try {
+      return injector.getInstance(
+          Key.get(
+              new TypeLiteral<Set<NodeRole>>()
+              {
+              },
+              Self.class
+          )
+      );
+    }
+    catch (Exception e) {
+      return null;
+    }
+  }
+
+  private static boolean isPeonRole(Set<NodeRole> nodeRoles)
+  {
+    if (nodeRoles == null) {
+      return false;
+    }
+    return nodeRoles.contains(NodeRole.PEON);
   }
 }

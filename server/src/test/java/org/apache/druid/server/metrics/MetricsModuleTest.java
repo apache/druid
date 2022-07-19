@@ -20,6 +20,7 @@
 package org.apache.druid.server.metrics;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.CreationException;
 import com.google.inject.Guice;
@@ -27,7 +28,9 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -50,6 +53,7 @@ import org.junit.rules.ExpectedException;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.util.Properties;
+import java.util.Set;
 
 public class MetricsModuleTest
 {
@@ -153,6 +157,27 @@ public class MetricsModuleTest
     expectedException.expectCause(CoreMatchers.instanceOf(IllegalArgumentException.class));
     expectedException.expectMessage("Unknown monitor scheduler[UnknownScheduler]");
     createInjector(properties).getInstance(MonitorScheduler.class);
+  }
+
+  @Test
+  public void testGetNodeRolesViaInjector()
+  {
+    final NodeRole nodeRole = NodeRole.PEON;
+    final Injector injector = Guice.createInjector(
+        new JacksonModule(),
+        new LifecycleModule(),
+        binder -> {
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+        },
+        binder -> {
+          binder.bind(
+              new TypeLiteral<Set<NodeRole>>()
+              {
+              }).annotatedWith(Self.class).toInstance(ImmutableSet.of(nodeRole));
+        }
+    );
+    final Set<NodeRole> nodeRoles = MetricsModule.getNodeRoles(injector);
+    Assert.assertEquals(ImmutableSet.of(nodeRole), nodeRoles);
   }
 
   private static Injector createInjector(Properties properties)
