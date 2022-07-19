@@ -750,4 +750,17 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         )
         .verify();
   }
+
+  @Test
+  public void testReplaceWithSqlOuterLimit()
+  {
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
+
+    testIngestionQuery()
+        .context(context)
+        .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .expectValidationError(SqlPlanningException.class, "sqlOuterLimit cannot be provided on INSERT or REPLACE queries.")
+        .verify();
+  }
 }
