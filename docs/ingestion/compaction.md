@@ -118,9 +118,9 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 
 |Field|Description|Required|
 |-----|-----------|--------|
-|`type`|Task type. Should be `compact`|Yes|
-|`id`|Task id|No|
-|`dataSource`|Data source name to compact|Yes|
+|`type`|Task type. Set the value to `compact`.|Yes|
+|`id`|Task ID.|No|
+|`dataSource`|Data source name to compact.|Yes|
 |`ioConfig`|I/O configuration for compaction task. See [Compaction I/O configuration](#compaction-io-configuration) for details.|Yes|
 |`dimensionsSpec`|Custom `dimensionsSpec`. The compaction task uses the specified `dimensionsSpec` if it exists instead of generating one. See [Compaction dimensionsSpec](#compaction-dimensions-spec) for details.|No|
 |`transformSpec`|Custom `transformSpec`. The compaction task uses the specified `transformSpec` rather than using `null`. See [Compaction transformSpec](#compaction-transform-spec) for details.|No|
@@ -175,9 +175,9 @@ If you don't specify `granularitySpec`, Druid retains the original segment and q
 
 The compaction `ioConfig` requires specifying `inputSpec` as follows:
 
-|Field|Description|Default|Required?|
+|Field|Description|Default|Required|
 |-----|-----------|-------|--------|
-|`type`|Task type: `compact`|none|Yes|
+|`type`|Task type. Set the value to `compact`.|none|Yes|
 |`inputSpec`|Specification of the target [intervals](#interval-inputspec) or [segments](#segments-inputspec).|none|Yes|
 |`dropExisting`|If `true`, the task replaces all existing segments fully contained by either of the following:<br>- the `interval` in the `interval` type `inputSpec`.<br>- the umbrella interval of the `segments` in the `segment` type `inputSpec`.<br>If compaction fails, Druid does not change any of the existing segments.<br>**WARNING**: `dropExisting` in `ioConfig` is a beta feature. |false|No|
 
@@ -188,15 +188,15 @@ Druid supports two supported `inputSpec` formats:
 
 |Field|Description|Required|
 |-----|-----------|--------|
-|`type`|Task type. Should be `interval`|Yes|
-|`interval`|Interval to compact|Yes|
+|`type`|Task type. Set the value to `interval`.|Yes|
+|`interval`|Interval to compact.|Yes|
 
 #### Segments `inputSpec`
 
 |Field|Description|Required|
 |-----|-----------|--------|
-|`type`|Task type. Should be `segments`|Yes|
-|`segments`|A list of segment IDs|Yes|
+|`type`|Task type. Set the value to `segments`.|Yes|
+|`segments`|A list of segment IDs.|Yes|
 
 ### Compaction dimensions spec
 
@@ -217,7 +217,7 @@ Druid supports two supported `inputSpec` formats:
 |-----|-----------|--------|
 |`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null', which preserves the original segment granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
 |`queryGranularity`|The resolution of timestamp storage within each segment. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
-|`rollup`|Whether to enable ingestion-time rollup or not. Defaults to 'null', which preserves the original setting. Once the data is rolled up, you can no longer recover individual records. |No|
+|`rollup`|Set the value to `true` to enable compaction-time rollup. Once the data is rolled up, you can no longer recover individual records. Defaults to 'null', which preserves the original setting.|No|
 
 ## Learn more
 
