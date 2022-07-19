@@ -82,6 +82,8 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.transform.TransformingStringInputRowParser;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
@@ -508,6 +510,51 @@ public class AggregationTestHelper implements Closeable
   }
 
   public void createIndex(
+      InputStream inputDataStream,
+      String parserJson,
+      String transformSpecJson,
+      String aggregators,
+      File outDir,
+      long minTimestamp,
+      Granularity gran,
+      int maxRowCount,
+      boolean rollup
+  ) throws Exception
+  {
+    try {
+      StringInputRowParser parser = mapper.readValue(parserJson, StringInputRowParser.class);
+      TransformSpec transformSpec;
+      if (transformSpecJson != null) {
+        transformSpec = mapper.readValue(transformSpecJson, TransformSpec.class);
+        parser = new TransformingStringInputRowParser(parser.getParseSpec(), parser.getEncoding(), transformSpec);
+      }
+
+      LineIterator iter = IOUtils.lineIterator(inputDataStream, "UTF-8");
+      List<AggregatorFactory> aggregatorSpecs = mapper.readValue(
+          aggregators,
+          new TypeReference<List<AggregatorFactory>>()
+          {
+          }
+      );
+
+      createIndex(
+          iter,
+          parser,
+          aggregatorSpecs.toArray(new AggregatorFactory[0]),
+          outDir,
+          minTimestamp,
+          gran,
+          true,
+          maxRowCount,
+          rollup
+      );
+    }
+    finally {
+      Closeables.close(inputDataStream, true);
+    }
+  }
+
+  public void createIndex(
       Iterator rows,
       InputRowParser parser,
       final AggregatorFactory[] metrics,
@@ -562,6 +609,7 @@ public class AggregationTestHelper implements Closeable
           //Note: this is required because StringInputRowParser is InputRowParser<ByteBuffer> as opposed to
           //InputRowsParser<String>
           index.add(((StringInputRowParser) parser).parse((String) row));
+
         } else {
           index.add(((List<InputRow>) parser.parseBatch(row)).get(0));
         }

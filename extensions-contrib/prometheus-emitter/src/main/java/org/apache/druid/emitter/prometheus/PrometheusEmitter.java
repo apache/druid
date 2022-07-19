@@ -49,6 +49,9 @@ public class PrometheusEmitter implements Emitter
   private final PrometheusEmitterConfig.Strategy strategy;
   private static final Pattern PATTERN = Pattern.compile("[^a-zA-Z0-9_][^a-zA-Z0-9_]*");
 
+  private static final String TAG_HOSTNAME = "host_name";
+  private static final String TAG_SERVICE = "druid_service";
+
   private HTTPServer server;
   private PushGateway pushGateway;
   private String identifier;
@@ -62,7 +65,7 @@ public class PrometheusEmitter implements Emitter
   {
     this.config = config;
     this.strategy = config.getStrategy();
-    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath());
+    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath(), config.isAddHostAsLabel(), config.isAddServiceAsLabel());
   }
 
 
@@ -113,6 +116,7 @@ public class PrometheusEmitter implements Emitter
   {
     String name = metricEvent.getMetric();
     String service = metricEvent.getService();
+    String host = metricEvent.getHost();
     Map<String, Object> userDims = metricEvent.getUserDims();
     identifier = (userDims.get("task") == null ? metricEvent.getHost() : (String) userDims.get("task"));
     Number value = metricEvent.getValue();
@@ -125,7 +129,18 @@ public class PrometheusEmitter implements Emitter
         String labelName = labelNames[i];
         //labelName is controlled by the user. Instead of potential NPE on invalid labelName we use "unknown" as the dimension value
         Object userDim = userDims.get(labelName);
-        labelValues[i] = userDim != null ? PATTERN.matcher(userDim.toString()).replaceAll("_") : "unknown";
+
+        if (userDim != null) {
+          labelValues[i] = PATTERN.matcher(userDim.toString()).replaceAll("_");
+        } else {
+          if (config.isAddHostAsLabel() && TAG_HOSTNAME.equals(labelName)) {
+            labelValues[i] = host;
+          } else if (config.isAddServiceAsLabel() && TAG_SERVICE.equals(labelName)) {
+            labelValues[i] = service;
+          } else {
+            labelValues[i] = "unknown";
+          }
+        }
       }
 
       if (metric.getCollector() instanceof Counter) {

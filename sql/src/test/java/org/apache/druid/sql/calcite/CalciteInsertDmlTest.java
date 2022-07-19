@@ -39,12 +39,14 @@ import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
@@ -753,6 +755,19 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                     + "fifteen_minute, thirty_minute, hour, six_hour, eight_hour, day, week, month, quarter, year, all."))
             )
         )
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithSqlOuterLimit()
+  {
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
+
+    testIngestionQuery()
+        .context(context)
+        .sql("INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .expectValidationError(SqlPlanningException.class, "sqlOuterLimit cannot be provided on INSERT or REPLACE queries.")
         .verify();
   }
 }

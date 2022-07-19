@@ -176,7 +176,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   {
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     TaskStatus taskStatus = getIndexingServiceClient().runAndWait(task);
-    Assert.assertEquals(expectedTaskStatus, taskStatus.getStatusCode());
+    Assert.assertEquals("Actual task status: " + taskStatus, expectedTaskStatus, taskStatus.getStatusCode());
   }
 
   Set<DataSegment> runTask(Task task, TaskState expectedTaskStatus)
