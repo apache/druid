@@ -153,6 +153,11 @@ public class DruidPlanner implements Closeable
     final Set<ResourceAction> resourceActions = new HashSet<>(resourceCollectorShuttle.getResourceActions());
 
     if (parsed.getInsertOrReplace() != null) {
+      // Check if CTX_SQL_OUTER_LIMIT is specified and fail the query if it is. CTX_SQL_OUTER_LIMIT being provided causes
+      // the number of rows inserted to be limited which is likely to be confusing and unintended.
+      if (plannerContext.getQueryContext().get(PlannerContext.CTX_SQL_OUTER_LIMIT) != null) {
+        throw new ValidationException(PlannerContext.CTX_SQL_OUTER_LIMIT + " cannot be provided on INSERT or REPLACE queries.");
+      }
       final String targetDataSource = validateAndGetDataSourceForIngest(parsed.getInsertOrReplace());
       resourceActions.add(new ResourceAction(new Resource(targetDataSource, ResourceType.DATASOURCE), Action.WRITE));
     }
