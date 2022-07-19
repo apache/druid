@@ -178,7 +178,7 @@ public class MetricsModule implements Module
       Injector injector
   )
   {
-    Set<NodeRole> nodeRoles = getNodeRoles(injector);
+    final Set<NodeRole> nodeRoles = getNodeRoles(injector);
     Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
         dataSourceTaskIdHolder.getDataSource(),
         dataSourceTaskIdHolder.getTaskId()
@@ -204,7 +204,7 @@ public class MetricsModule implements Module
     }
   }
 
-  private static boolean isPeonRole(Set<NodeRole> nodeRoles)
+  static boolean isPeonRole(Set<NodeRole> nodeRoles)
   {
     if (nodeRoles == null) {
       return false;

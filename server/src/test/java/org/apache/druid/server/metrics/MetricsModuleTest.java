@@ -180,6 +180,21 @@ public class MetricsModuleTest
     Assert.assertEquals(ImmutableSet.of(nodeRole), nodeRoles);
   }
 
+  @Test
+  public void testGetNodeRolesWhenNull()
+  {
+    final Set<NodeRole> nodeRoles = MetricsModule.getNodeRoles(createInjector(new Properties()));
+    Assert.assertNull(nodeRoles);
+  }
+
+  @Test
+  public void testIsPeonRole()
+  {
+    Assert.assertTrue(MetricsModule.isPeonRole(ImmutableSet.of(NodeRole.PEON)));
+    Assert.assertFalse(MetricsModule.isPeonRole(ImmutableSet.of(NodeRole.COORDINATOR, NodeRole.OVERLORD)));
+    Assert.assertFalse(MetricsModule.isPeonRole(null));
+  }
+
   private static Injector createInjector(Properties properties)
   {
     return Guice.createInjector(
