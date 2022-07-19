@@ -140,7 +140,7 @@ Sample specs:
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
-|type|This should be `s3`.|None|yes|
+|type|Set the value to `s3`.|None|yes|
 |uris|JSON array of URIs where S3 objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of S3 objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of S3 Objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
@@ -236,7 +236,7 @@ Sample specs:
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
-|type|This should be `google`.|None|yes|
+|type|Set the value to `google`.|None|yes|
 |uris|JSON array of URIs where Google Cloud Storage objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Google Cloud Storage objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Google Cloud Storage objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
@@ -317,9 +317,9 @@ Sample specs:
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
-|type|This should be `azure`.|None|yes|
+|type|Set the value to `azure`.|None|yes|
 |uris|JSON array of URIs where the Azure objects to be ingested are located, in the form "azure://\<container>/\<path-to-file\>"|None|`uris` or `prefixes` or `objects` must be set|
-|prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form "azure://\<container>/\<prefix\>". Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
+|prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form `azure://\<container>/\<prefix\>`. Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Azure objects to ingest.|None|`uris` or `prefixes` or `objects` must be set|
 |filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
 
@@ -409,7 +409,7 @@ Sample specs:
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
-|type|This should be `hdfs`.|None|yes|
+|type|Set the value to `hdfs`.|None|yes|
 |paths|HDFS paths. Can be either a JSON array or comma-separated string of paths. Wildcards like `*` are supported in these paths. Empty files located under one of the given paths will be skipped.|None|yes|
 
 You can also ingest from other storage using the HDFS input source if the HDFS client supports that storage.
@@ -494,7 +494,7 @@ You can also use the other existing Druid PasswordProviders. Here is an example 
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
-|type|This should be `http`|None|yes|
+|type|Set the value to `http`.|None|yes|
 |uris|URIs of the input files. See below for the protocols allowed for URIs.|None|yes|
 |httpAuthenticationUsername|Username to use for authentication with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
 |httpAuthenticationPassword|PasswordProvider to use with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
@@ -527,7 +527,7 @@ Sample spec:
 
 |Property|Description|Required|
 |--------|-----------|---------|
-|type|This should be "inline".|yes|
+|type|Set the value to `inline`.|yes|
 |data|Inlined data to ingest.|yes|
 
 ## Local input source
@@ -559,7 +559,7 @@ Sample spec:
 
 |Property|Description|Required|
 |--------|-----------|---------|
-|type|This should be "local".|yes|
+|type|Set the value to `local`.|yes|
 |filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|yes if `baseDir` is specified|
 |baseDir|Directory to search recursively for files to be ingested. Empty files under the `baseDir` will be skipped.|At least one of `baseDir` or `files` should be specified|
 |files|File paths to ingest. Some files can be ignored to avoid ingesting duplicate files if they are located under the specified `baseDir`. Empty files will be skipped.|At least one of `baseDir` or `files` should be specified|
@@ -574,7 +574,7 @@ no `inputFormat` field needs to be specified in the ingestion spec when using th
 
 |Property|Description|Required|
 |--------|-----------|---------|
-|type|This should be "druid".|yes|
+|type|Set the value to `druid`.|yes|
 |dataSource|A String defining the Druid datasource to fetch rows from|yes|
 |interval|A String representing an ISO-8601 interval, which defines the time range to fetch the data over.|yes|
 |filter| See [Filters](../querying/filters.md). Only rows that match the filter, if specified, will be returned.|no|
@@ -664,7 +664,7 @@ Please refer to the Recommended practices section below before using this input 
 
 |Property|Description|Required|
 |--------|-----------|---------|
-|type|This should be "sql".|Yes|
+|type|Set the value to `sql`.|Yes|
 |database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support. The specified extension must be loaded into Druid:<br/><br/><ul><li>[mysql-metadata-storage](../development/extensions-core/mysql.md) for `mysql`</li><li> [postgresql-metadata-storage](../development/extensions-core/postgresql.md) extension for `postgresql`.</li></ul><br/><br/>You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../configuration/index.md#jdbc-connections-to-external-databases) for more details.|Yes|
 |foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|No|
 |sqls|List of SQL queries where each SQL query would retrieve the data to be indexed.|Yes|
@@ -711,15 +711,15 @@ Compared to the other native batch input sources, SQL input source behaves diffe
 
 The Combining input source lets you read data from multiple input sources.
 It identifies the splits from delegate input sources and uses a worker task to process each split.
-Use the Combining input source only if all the delegates are _splittable_ and can be used by the [Parallel task](./native-batch.md). 
+Use the Combining input source only if all the delegates are splittable and can be used by the [Parallel task](./native-batch.md). 
 
 Similar to other input sources, the Combining input source supports a single `inputFormat`.
 Delegate input sources that require an `inputFormat` must have the same format for input data.
 
 |Property|Description|Required|
 |--------|-----------|---------|
-|type|This should be "combining".|Yes|
-|delegates|List of _splittable_ input sources to read data from.|Yes|
+|type|Set the value to `combining`.|Yes|
+|delegates|List of splittable input sources to read data from.|Yes|
 
 The following is an example of a Combining input source spec:
 
@@ -751,8 +751,9 @@ The following is an example of a Combining input source spec:
 ...
 ```
 
-For the Combining input source to read data correctly, set the value of `maxNumConcurrentSubTasks` in `tuningConfig` as follows:
-- more or equal to 1 for `range` or `single_dim` types
-- more or equal to 2 for `hashed` or `dynamic` types
+The [secondary partitioning method](native-batch.md#partitionsspec) determines the requisite number of concurrent worker tasks that run in parallel to complete ingestion with the Combining input source.
+Set this value in `maxNumConcurrentSubTasks` in `tuningConfig` based on the secondary partitioning method:
+- `range` or `single_dim` partitioning: greater than or equal to 1
+- `hashed` or `dynamic` partitioning: greater than or equal to 2
 
 For more information on the `maxNumConcurrentSubTasks` field, see [Implementation considerations](native-batch.md#implementation-considerations).
