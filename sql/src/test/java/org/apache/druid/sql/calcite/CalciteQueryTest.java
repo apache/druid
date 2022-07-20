@@ -39,6 +39,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
@@ -13900,6 +13901,115 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
           // Ignore the results, only need to check that the type of query is a filter.
         },
         null
+    );
+  }
+
+  @Test
+  public void testGreatestFunctionForNumberWithIsNull() throws Exception
+  {
+    String query = "SELECT dim1, MAX(GREATEST(l1, l2)) IS NULL FROM druid.numfoo GROUP BY dim1";
+
+    List<Object[]> expectedResult;
+    List<Query> expectedQueries;
+
+    if (NullHandling.replaceWithDefault()) {
+      expectedResult = ImmutableList.of(
+          new Object[]{"", false},
+          new Object[]{"1", false},
+          new Object[]{"10.1", false},
+          new Object[]{"2", false},
+          new Object[]{"abc", false},
+          new Object[]{"def", false}
+      );
+      expectedQueries = ImmutableList.of(
+          GroupByQuery.builder()
+                      .setDataSource(CalciteTests.DATASOURCE3)
+                      .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                      .setGranularity(Granularities.ALL)
+                      .addDimension(new DefaultDimensionSpec("dim1", "_d0"))
+                      .setPostAggregatorSpecs(ImmutableList.of(
+                          expressionPostAgg("p0", "0")
+                      ))
+                      .build()
+      );
+    } else {
+      cannotVectorize();
+      expectedResult = ImmutableList.of(
+          new Object[]{"", false},
+          new Object[]{"1", true},
+          new Object[]{"10.1", false},
+          new Object[]{"2", false},
+          new Object[]{"abc", true},
+          new Object[]{"def", true}
+      );
+      expectedQueries = ImmutableList.of(
+          GroupByQuery.builder()
+                      .setDataSource(CalciteTests.DATASOURCE3)
+                      .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                      .setVirtualColumns(
+                          expressionVirtualColumn(
+                              "v0",
+                              "greatest(\"l1\",\"l2\")",
+                              ColumnType.LONG
+                          )
+                      )
+                      .setGranularity(Granularities.ALL)
+                      .addDimension(new DefaultDimensionSpec("dim1", "_d0"))
+                      .addAggregator(new LongMaxAggregatorFactory("a0", "v0"))
+                      .setPostAggregatorSpecs(ImmutableList.of(
+                          expressionPostAgg("p0", "isnull(\"a0\")")
+                      ))
+                      .build()
+      );
+    }
+
+    testQuery(
+        query,
+        expectedQueries,
+        expectedResult
+    );
+  }
+
+  @Test
+  public void testGreatestFunctionForStringWithIsNull() throws Exception
+  {
+    cannotVectorize();
+
+    String query = "SELECT l1, LATEST(GREATEST(dim1, dim2)) IS NULL FROM druid.numfoo GROUP BY l1";
+
+    testQuery(
+        query,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "CAST(greatest(\"dim1\",\"dim2\"), 'DOUBLE')",
+                                ColumnType.DOUBLE
+                            )
+                        )
+                        .setGranularity(Granularities.ALL)
+                        .addDimension(new DefaultDimensionSpec("l1", "_d0", ColumnType.LONG))
+                        .addAggregator(new DoubleLastAggregatorFactory("a0", "v0", null))
+                        .setPostAggregatorSpecs(ImmutableList.of(
+                            expressionPostAgg("p0", "isnull(\"a0\")")
+                        ))
+                        .build()
+        ),
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{0L, false},
+            new Object[]{7L, false},
+            new Object[]{325323L, false}
+        ) :
+        ImmutableList.of(
+            new Object[]{null, true},
+            new Object[]{0L, false},
+            new Object[]{7L, true},
+            new Object[]{325323L, false}
+        )
     );
   }
 }
