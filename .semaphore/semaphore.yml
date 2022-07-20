@@ -2,8 +2,7 @@ version: v1.0
 name: Apache Druid
 agent:
   machine:
-    type: e1-standard-4
-    os_image: ubuntu1804
+    type: s1-prod-ubuntu20-04-amd64-1
 
 blocks:
   - name: "Install"
@@ -28,6 +27,7 @@ blocks:
           value: "-DskipTests -Djacoco.skip=true"
       prologue:
         commands:
+          - echo $SEMAPHORE_WORKFLOW_ID
           - sem-version java 11
           - checkout
       jobs:
@@ -44,6 +44,7 @@ blocks:
       env_vars: *env_vars
       prologue:
         commands:
+          - echo $SEMAPHORE_WORKFLOW_ID
           - sem-version java 11
           - checkout
           - cache restore
