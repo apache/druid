@@ -77,9 +77,7 @@ public class ParseExceptionHandler
       rowIngestionMeters.incrementUnparseable();
     }
 
-    if (logParseExceptions) {
-      LOG.error(e, "Encountered parse exception");
-    }
+    logParseExceptionHelper(e);
 
     if (savedParseExceptionReports != null) {
       ParseExceptionReport parseExceptionReport = new ParseExceptionReport(
@@ -102,5 +100,11 @@ public class ParseExceptionHandler
   public CircularBuffer<ParseExceptionReport> getSavedParseExceptionReports()
   {
     return savedParseExceptionReports;
+  }
+
+  public void logParseExceptionHelper(Exception e) {
+    if (logParseExceptions) {
+      LOG.error(e, "Encountered parse exception");
+    }
   }
 }
