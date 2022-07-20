@@ -40,15 +40,21 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
 import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.java.util.metrics.NoopSysMonitor;
+import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.server.DruidNode;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
@@ -57,6 +63,8 @@ import java.util.Set;
 
 public class MetricsModuleTest
 {
+  private static final String CPU_ARCH = System.getProperty("os.arch");
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -160,8 +168,11 @@ public class MetricsModuleTest
   }
 
   @Test
-  public void testGetNodeRolesViaInjector()
+  public void testGetSysMonitorViaInjector()
   {
+    // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
+    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
+
     final NodeRole nodeRole = NodeRole.PEON;
     final Injector injector = Guice.createInjector(
         new JacksonModule(),
@@ -176,23 +187,33 @@ public class MetricsModuleTest
               }).annotatedWith(Self.class).toInstance(ImmutableSet.of(nodeRole));
         }
     );
-    final Set<NodeRole> nodeRoles = MetricsModule.getNodeRoles(injector);
-    Assert.assertEquals(ImmutableSet.of(nodeRole), nodeRoles);
+    final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
+    injector.injectMembers(dimensionIdHolder);
+    final MetricsModule metricsModule = new MetricsModule();
+    final SysMonitor sysMonitor = metricsModule.getSysMonitor(dimensionIdHolder, injector);
+    final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    sysMonitor.doMonitor(emitter);
+
+    Assert.assertTrue(sysMonitor instanceof NoopSysMonitor);
+    Mockito.verify(emitter, Mockito.never()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 
   @Test
-  public void testGetNodeRolesWhenNull()
+  public void testGetSysMonitorWhenNull()
   {
-    final Set<NodeRole> nodeRoles = MetricsModule.getNodeRoles(createInjector(new Properties()));
-    Assert.assertNull(nodeRoles);
-  }
+    // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
+    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
 
-  @Test
-  public void testIsPeonRole()
-  {
-    Assert.assertTrue(MetricsModule.isPeonRole(ImmutableSet.of(NodeRole.PEON)));
-    Assert.assertFalse(MetricsModule.isPeonRole(ImmutableSet.of(NodeRole.COORDINATOR, NodeRole.OVERLORD)));
-    Assert.assertFalse(MetricsModule.isPeonRole(null));
+    final Injector injector = createInjector(new Properties());
+    final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
+    injector.injectMembers(dimensionIdHolder);
+    final MetricsModule metricsModule = new MetricsModule();
+    final SysMonitor sysMonitor = metricsModule.getSysMonitor(dimensionIdHolder, injector);
+    final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    sysMonitor.doMonitor(emitter);
+
+    Assert.assertFalse(sysMonitor instanceof NoopSysMonitor);
+    Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 
   private static Injector createInjector(Properties properties)

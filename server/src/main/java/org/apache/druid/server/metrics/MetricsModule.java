@@ -46,6 +46,7 @@ import org.apache.druid.java.util.metrics.JvmMonitor;
 import org.apache.druid.java.util.metrics.JvmThreadsMonitor;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.java.util.metrics.NoopSysMonitor;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.query.ExecutorServiceMonitor;
 
@@ -179,15 +180,20 @@ public class MetricsModule implements Module
   )
   {
     final Set<NodeRole> nodeRoles = getNodeRoles(injector);
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-        dataSourceTaskIdHolder.getDataSource(),
-        dataSourceTaskIdHolder.getTaskId()
-    );
-    return new SysMonitor(dimensions, isPeonRole(nodeRoles));
+
+    if (isPeonRole(nodeRoles)) {
+      return new NoopSysMonitor();
+    } else {
+      Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
+          dataSourceTaskIdHolder.getDataSource(),
+          dataSourceTaskIdHolder.getTaskId()
+      );
+      return new SysMonitor(dimensions);
+    }
   }
 
   @Nullable
-  static Set<NodeRole> getNodeRoles(Injector injector)
+  private static Set<NodeRole> getNodeRoles(Injector injector)
   {
     try {
       return injector.getInstance(
@@ -204,7 +210,7 @@ public class MetricsModule implements Module
     }
   }
 
-  static boolean isPeonRole(Set<NodeRole> nodeRoles)
+  private static boolean isPeonRole(Set<NodeRole> nodeRoles)
   {
     if (nodeRoles == null) {
       return false;

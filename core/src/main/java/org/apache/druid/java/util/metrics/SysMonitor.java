@@ -61,15 +61,15 @@ public class SysMonitor extends FeedDefiningMonitor
 
   public SysMonitor()
   {
-    this(ImmutableMap.of(), false);
+    this(ImmutableMap.of());
   }
 
-  public SysMonitor(Map<String, String[]> dimensions, boolean isPeonRole)
+  public SysMonitor(Map<String, String[]> dimensions)
   {
-    this(dimensions, DEFAULT_METRICS_FEED, isPeonRole);
+    this(dimensions, DEFAULT_METRICS_FEED);
   }
 
-  public SysMonitor(Map<String, String[]> dimensions, String feed, boolean isPeonRole)
+  public SysMonitor(Map<String, String[]> dimensions, String feed)
   {
     super(feed);
     Preconditions.checkNotNull(dimensions);
@@ -78,20 +78,18 @@ public class SysMonitor extends FeedDefiningMonitor
     sigar.enableLogging(true);
 
     this.statsList = new ArrayList<Stats>();
-    if (!isPeonRole) {
-      this.statsList.addAll(
-          Arrays.asList(
-              new MemStats(),
-              new FsStats(),
-              new DiskStats(),
-              new NetStats(),
-              new CpuStats(),
-              new SwapStats(),
-              new SysStats(),
-              new TcpStats()
-          )
-      );
-    }
+    this.statsList.addAll(
+        Arrays.asList(
+            new MemStats(),
+            new FsStats(),
+            new DiskStats(),
+            new NetStats(),
+            new CpuStats(),
+            new SwapStats(),
+            new SysStats(),
+            new TcpStats()
+        )
+    );
   }
 
   public void addDirectoriesToMonitor(String[] dirList)

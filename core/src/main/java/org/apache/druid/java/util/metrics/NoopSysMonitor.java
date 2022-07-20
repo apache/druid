@@ -19,39 +19,18 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mockito;
 
-public class SysMonitorTest
+public class NoopSysMonitor extends SysMonitor
 {
-  private ServiceEmitter emitter;
-
-  @Before
-  public void setup()
+  public NoopSysMonitor()
   {
-    emitter = Mockito.mock(ServiceEmitter.class);
+    super();
   }
 
-  @Test
-  public void testLoadedStatsListForPeon()
+  @Override
+  public boolean doMonitor(ServiceEmitter emitter)
   {
-    SysMonitor monitor = new SysMonitor(ImmutableMap.of(), true);
-    monitor.doMonitor(emitter);
-
-    Mockito.verify(emitter, Mockito.never()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
-  }
-
-  @Test
-  public void testLoadedStatsListForNotPeon()
-  {
-    SysMonitor monitor = new SysMonitor(ImmutableMap.of(), false);
-    monitor.doMonitor(emitter);
-
-    Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
+    return false;
   }
 }
