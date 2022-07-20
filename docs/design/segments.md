@@ -169,7 +169,9 @@ Behind the scenes, a segment is comprised of several files, listed below.
 
 * `XXXXX.smoosh`
 
-    The `smoosh` files represent multiple files "smooshed" together in order to minimize the number of file descriptors that must be open to house the data. They are files of up to 2 GB in size (to match the limit of a memory mapped ByteBuffer in Java). The `smoosh` files house individual files for each of the columns in the data as well as an `index.drd` file with extra metadata about the segment.
+    Smoosh (`.smoosh`) files are concatenated binary data. This file consolidation reduces the number of file descriptors that must be open when accessing data. The files should be 2 GB or less in size to remain within the limit of a memory mapped `ByteBuffer` in Java. Smoosh files contain individual files for each column in the data and an `index.drd` file that contains additional segment metadata.
+
+    Each segment must contain a column called `__time`, which Druid uses to store the primary timestamp.
 
 In the codebase, segments have an internal format version. The current segment format version is `v9`.
 
