@@ -21,7 +21,7 @@ package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -68,7 +68,7 @@ public class VectorStringProcessors
   {
     final ExprVectorProcessor<String[]>[] inputProcessors = new ExprVectorProcessor[inputs.size()];
     for (int i = 0; i < inputs.size(); i++) {
-      inputProcessors[i] = CastToTypeVectorProcessor.cast(inputs.get(i).buildVectorized(inspector), ExprType.STRING);
+      inputProcessors[i] = CastToTypeVectorProcessor.cast(inputs.get(i).buildVectorized(inspector), ExpressionType.STRING);
     }
     final ExprVectorProcessor processor = new StringOutMultiStringInVectorProcessor(
         inputProcessors,

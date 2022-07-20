@@ -36,7 +36,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -50,6 +50,8 @@ import java.util.Objects;
 @JsonTypeName("stringFirst")
 public class StringFirstAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex("serializablePairLongString");
+
   private static final Aggregator NIL_AGGREGATOR = new StringFirstAggregator(
       NilColumnValueSelector.instance(),
       NilColumnValueSelector.instance(),
@@ -124,12 +126,14 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
 
   private final String fieldName;
   private final String name;
+  private final String timeColumn;
   protected final int maxStringBytes;
 
   @JsonCreator
   public StringFirstAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("timeColumn") @Nullable final String timeColumn,
       @JsonProperty("maxStringBytes") Integer maxStringBytes
   )
   {
@@ -142,6 +146,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
+    this.timeColumn = timeColumn == null ? ColumnHolder.TIME_COLUMN_NAME : timeColumn;
     this.maxStringBytes = maxStringBytes == null
                           ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE
                           : maxStringBytes;
@@ -155,7 +160,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
       return NIL_AGGREGATOR;
     } else {
       return new StringFirstAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector,
           maxStringBytes,
           StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
@@ -171,7 +176,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
       return NIL_BUFFER_AGGREGATOR;
     } else {
       return new StringFirstBufferAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector,
           maxStringBytes,
           StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
@@ -200,13 +205,13 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new StringFirstAggregatorFactory(name, name, maxStringBytes);
+    return new StringFirstAggregatorFactory(name, name, timeColumn, maxStringBytes);
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new StringFirstAggregatorFactory(fieldName, fieldName, maxStringBytes));
+    return Collections.singletonList(new StringFirstAggregatorFactory(fieldName, fieldName, timeColumn, maxStringBytes));
   }
 
   @Override
@@ -237,6 +242,12 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   }
 
   @JsonProperty
+  public String getTimeColumn()
+  {
+    return timeColumn;
+  }
+
+  @JsonProperty
   public Integer getMaxStringBytes()
   {
     return maxStringBytes;
@@ -245,7 +256,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, fieldName);
+    return Arrays.asList(timeColumn, fieldName);
   }
 
   @Override
@@ -253,29 +264,24 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   {
     return new CacheKeyBuilder(AggregatorUtil.STRING_FIRST_CACHE_TYPE_ID)
         .appendString(fieldName)
+        .appendString(timeColumn)
         .appendInt(maxStringBytes)
         .build();
-  }
-
-  @Override
-  public String getComplexTypeName()
-  {
-    return "serializablePairLongString";
   }
 
   /**
    * actual type is {@link SerializablePairLongString}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getIntermediateType()
   {
-    return ValueType.COMPLEX;
+    return TYPE;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getResultType()
   {
-    return ValueType.STRING;
+    return ColumnType.STRING;
   }
 
   @Override
@@ -296,13 +302,14 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     StringFirstAggregatorFactory that = (StringFirstAggregatorFactory) o;
     return maxStringBytes == that.maxStringBytes &&
            Objects.equals(fieldName, that.fieldName) &&
+           Objects.equals(timeColumn, that.timeColumn) &&
            Objects.equals(name, that.name);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(fieldName, name, maxStringBytes);
+    return Objects.hash(fieldName, name, timeColumn, maxStringBytes);
   }
 
   @Override
@@ -311,6 +318,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     return "StringFirstAggregatorFactory{" +
            "fieldName='" + fieldName + '\'' +
            ", name='" + name + '\'' +
+           ", timeColumn='" + timeColumn + '\'' +
            ", maxStringBytes=" + maxStringBytes +
            '}';
   }

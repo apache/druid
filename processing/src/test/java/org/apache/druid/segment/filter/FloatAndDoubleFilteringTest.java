@@ -86,9 +86,7 @@ public class FloatAndDoubleFilteringTest extends BaseFilterTest
                   new StringDimensionSchema("dim0"),
                   new FloatDimensionSchema("flt"),
                   new DoubleDimensionSchema("dbl")
-              ),
-              null,
-              null
+              )
           )
       )
   );

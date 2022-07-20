@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.avatica;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -30,9 +32,11 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import org.apache.calcite.avatica.AvaticaClientRuntimeException;
+import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
@@ -47,12 +51,15 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.RequestLogLine;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -60,10 +67,13 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
+import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
+import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
@@ -208,6 +218,9 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                 binder.bind(QueryScheduler.class)
                       .toProvider(QuerySchedulerProvider.class)
                       .in(LazySingleton.class);
+                binder.bind(QueryMakerFactory.class).to(NativeQueryMakerFactory.class);
+                binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
+                binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
               }
             }
         )
@@ -227,7 +240,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     final Properties propertiesLosAngeles = new Properties();
     propertiesLosAngeles.setProperty("sqlTimeZone", "America/Los_Angeles");
     propertiesLosAngeles.setProperty("user", "regularUserLA");
-    propertiesLosAngeles.setProperty("sqlQueryId", DUMMY_SQL_QUERY_ID);
+    propertiesLosAngeles.setProperty(BaseQuery.SQL_QUERY_ID, DUMMY_SQL_QUERY_ID);
     clientLosAngeles = DriverManager.getConnection(url, propertiesLosAngeles);
   }
 
@@ -367,7 +380,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
         ImmutableList.of(
             ImmutableMap.of(
                 "PLAN",
-                StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"sqlQueryId\":\"%s\",\"sqlStringifyArrays\":false,\"sqlTimeZone\":\"America/Los_Angeles\"}}], signature=[{a0:LONG}])\n",
+                StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"context\":{\"sqlQueryId\":\"%s\",\"sqlStringifyArrays\":false,\"sqlTimeZone\":\"America/Los_Angeles\"}}], signature=[{a0:LONG}])\n",
                                    DUMMY_SQL_QUERY_ID
                 ),
                 "RESOURCES",
@@ -562,14 +575,6 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
-                Pair.of("COLUMN_NAME", "cnt"),
-                Pair.of("DATA_TYPE", Types.BIGINT),
-                Pair.of("TYPE_NAME", "BIGINT"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
-            ),
-            row(
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "dim1"),
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
@@ -594,6 +599,14 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
+                Pair.of("COLUMN_NAME", "cnt"),
+                Pair.of("DATA_TYPE", Types.BIGINT),
+                Pair.of("TYPE_NAME", "BIGINT"),
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
+            ),
+            row(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "m1"),
                 Pair.of("DATA_TYPE", Types.FLOAT),
                 Pair.of("TYPE_NAME", "FLOAT"),
@@ -612,7 +625,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "unique_dim1"),
                 Pair.of("DATA_TYPE", Types.OTHER),
-                Pair.of("TYPE_NAME", "OTHER"),
+                Pair.of("TYPE_NAME", "COMPLEX<hyperUnique>"),
                 Pair.of("IS_NULLABLE", "YES")
             )
         ),
@@ -653,14 +666,6 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
-                Pair.of("COLUMN_NAME", "cnt"),
-                Pair.of("DATA_TYPE", Types.BIGINT),
-                Pair.of("TYPE_NAME", "BIGINT"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
-            ),
-            row(
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
                 Pair.of("COLUMN_NAME", "dim1"),
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
@@ -673,6 +678,14 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
                 Pair.of("IS_NULLABLE", "YES")
+            ),
+            row(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
+                Pair.of("COLUMN_NAME", "cnt"),
+                Pair.of("DATA_TYPE", Types.BIGINT),
+                Pair.of("TYPE_NAME", "BIGINT"),
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -695,7 +708,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
                 Pair.of("COLUMN_NAME", "unique_dim1"),
                 Pair.of("DATA_TYPE", Types.OTHER),
-                Pair.of("TYPE_NAME", "OTHER"),
+                Pair.of("TYPE_NAME", "COMPLEX<hyperUnique>"),
                 Pair.of("IS_NULLABLE", "YES")
             )
         ),
@@ -834,7 +847,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     clientNoTrailingSlash.createStatement();
 
     expectedException.expect(AvaticaClientRuntimeException.class);
-    expectedException.expectMessage("Too many connections, limit is[4]");
+    expectedException.expectMessage("Too many connections");
 
     final Connection connection5 = DriverManager.getConnection(url);
   }
@@ -889,16 +902,18 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
         CalciteTests.createSqlLifecycleFactory(
           new PlannerFactory(
               rootSchema,
-              CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+              CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
               operatorTable,
               macroTable,
               plannerConfig,
               AuthTestUtils.TEST_AUTHORIZER_MAPPER,
               CalciteTests.getJsonMapper(),
-              CalciteTests.DRUID_SCHEMA_NAME
+              CalciteTests.DRUID_SCHEMA_NAME,
+              new CalciteRulesManager(ImmutableSet.of())
           )
         ),
         smallFrameConfig,
+        new ErrorHandler(new ServerConfig()),
         injector
     )
     {
@@ -978,16 +993,18 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
         CalciteTests.createSqlLifecycleFactory(
             new PlannerFactory(
                 rootSchema,
-                CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+                CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
                 operatorTable,
                 macroTable,
                 plannerConfig,
                 AuthTestUtils.TEST_AUTHORIZER_MAPPER,
                 CalciteTests.getJsonMapper(),
-                CalciteTests.DRUID_SCHEMA_NAME
+                CalciteTests.DRUID_SCHEMA_NAME,
+                new CalciteRulesManager(ImmutableSet.of())
             )
         ),
         smallFrameConfig,
+        new ErrorHandler(new ServerConfig()),
         injector
     )
     {
@@ -1094,9 +1111,24 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   @Test
-  public void testSysTableParameterBinding() throws Exception
+  public void testSysTableParameterBindingRegularUser() throws Exception
   {
-    PreparedStatement statement = client.prepareStatement("SELECT COUNT(*) AS cnt FROM sys.servers WHERE servers.host = ?");
+    PreparedStatement statement =
+        client.prepareStatement("SELECT COUNT(*) AS cnt FROM sys.servers WHERE servers.host = ?");
+    statement.setString(1, "dummy");
+
+    Assert.assertThrows(
+        "Insufficient permission to view servers",
+        AvaticaSqlException.class,
+        statement::executeQuery
+    );
+  }
+
+  @Test
+  public void testSysTableParameterBindingSuperUser() throws Exception
+  {
+    PreparedStatement statement =
+        superuserClient.prepareStatement("SELECT COUNT(*) AS cnt FROM sys.servers WHERE servers.host = ?");
     statement.setString(1, "dummy");
     final ResultSet resultSet = statement.executeQuery();
     final List<Map<String, Object>> rows = getRows(resultSet);
@@ -1152,11 +1184,6 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
         row(
             Pair.of("TABLE_SCHEM", "druid"),
             Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
-            Pair.of("COLUMN_NAME", "cnt")
-        ),
-        row(
-            Pair.of("TABLE_SCHEM", "druid"),
-            Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
             Pair.of("COLUMN_NAME", "dim1")
         ),
         row(
@@ -1168,6 +1195,11 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
             Pair.of("TABLE_SCHEM", "druid"),
             Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
             Pair.of("COLUMN_NAME", "dim3")
+        ),
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+            Pair.of("COLUMN_NAME", "cnt")
         ),
         row(
             Pair.of("TABLE_SCHEM", "druid"),

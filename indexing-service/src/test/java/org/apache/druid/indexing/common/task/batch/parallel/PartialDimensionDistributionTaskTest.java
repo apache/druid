@@ -22,9 +22,9 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -32,10 +32,8 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
-import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
 import org.apache.druid.java.util.common.StringUtils;
@@ -48,7 +46,6 @@ import org.apache.logging.log4j.core.LogEvent;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.hamcrest.Matchers;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -97,10 +94,10 @@ public class PartialDimensionDistributionTaskTest
     }
 
     @Test
-    public void requiresSingleDimensionPartitions()
+    public void requiresMultiDimensionPartitions()
     {
       exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("single_dim partitionsSpec required");
+      exception.expectMessage("range partitionsSpec required");
 
       PartitionsSpec partitionsSpec = new HashedPartitionsSpec(null, 1, null);
       ParallelIndexTuningConfig tuningConfig =
@@ -148,36 +145,22 @@ public class PartialDimensionDistributionTaskTest
     {
       reportCapture = Capture.newInstance();
       ParallelIndexSupervisorTaskClient taskClient = EasyMock.mock(ParallelIndexSupervisorTaskClient.class);
-      taskClient.report(EasyMock.eq(ParallelIndexTestingFactory.SUPERVISOR_TASK_ID), EasyMock.capture(reportCapture));
+      taskClient.report(EasyMock.capture(reportCapture));
       EasyMock.replay(taskClient);
       taskToolbox = EasyMock.mock(TaskToolbox.class);
       EasyMock.expect(taskToolbox.getIndexingTmpDir()).andStubReturn(temporaryFolder.getRoot());
-      EasyMock.expect(taskToolbox.getSupervisorTaskClientFactory()).andReturn(
-          new IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>()
-          {
-            @Override
-            public ParallelIndexSupervisorTaskClient build(
-                TaskInfoProvider taskInfoProvider,
-                String callerId,
-                int numThreads,
-                Duration httpTimeout,
-                long numRetries
-            )
-            {
-              return taskClient;
-            }
-          }
-      );
-      EasyMock.expect(taskToolbox.getIndexingServiceClient()).andReturn(new NoopIndexingServiceClient());
+      EasyMock.expect(taskToolbox.getSupervisorTaskClientProvider())
+              .andReturn((supervisorTaskId, httpTimeout, numRetries) -> taskClient);
+      EasyMock.expect(taskToolbox.getOverlordClient()).andReturn(null);
       EasyMock.expect(taskToolbox.getRowIngestionMetersFactory()).andReturn(new DropwizardRowIngestionMetersFactory());
       EasyMock.replay(taskToolbox);
     }
 
     @Test
-    public void requiresPartitionDimension() throws Exception
+    public void requiresPartitionDimensions() throws Exception
     {
       exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("partitionDimension must be specified");
+      exception.expectMessage("partitionDimensions must be specified");
 
       ParallelIndexTuningConfig tuningConfig = new ParallelIndexTestingFactory.TuningConfigBuilder()
           .partitionsSpec(
@@ -373,10 +356,10 @@ public class PartialDimensionDistributionTaskTest
       PartitionBoundaries partitions = distribution.getEvenPartitionsByMaxSize(1);
       Assert.assertEquals(minBloomFilterBits + 2, partitions.size()); // 2 = min + max
 
-      String minDimensionValue = dimensionValues.get(0);
+      StringTuple minDimensionValue = StringTuple.create(dimensionValues.get(0));
       Assert.assertEquals(minDimensionValue, ((StringSketch) distribution).getMin());
 
-      String maxDimensionValue = dimensionValues.get(dimensionValues.size() - 1);
+      StringTuple maxDimensionValue = StringTuple.create(dimensionValues.get(dimensionValues.size() - 1));
       Assert.assertEquals(maxDimensionValue, ((StringSketch) distribution).getMax());
     }
 

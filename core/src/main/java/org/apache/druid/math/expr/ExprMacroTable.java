@@ -94,9 +94,17 @@ public class ExprMacroTable
   }
 
   /**
+   * stub interface to allow {@link Parser#flatten(Expr)} a way to recognize macro functions that exend this
+   */
+  public interface ExprMacroFunctionExpr extends Expr
+  {
+    List<Expr> getArgs();
+  }
+
+  /**
    * Base class for single argument {@link ExprMacro} function {@link Expr}
    */
-  public abstract static class BaseScalarUnivariateMacroFunctionExpr implements Expr
+  public abstract static class BaseScalarUnivariateMacroFunctionExpr implements ExprMacroFunctionExpr
   {
     protected final String name;
     protected final Expr arg;
@@ -109,6 +117,12 @@ public class ExprMacroTable
       this.name = name;
       this.arg = arg;
       analyzeInputsSupplier = Suppliers.memoize(this::supplyAnalyzeInputs);
+    }
+
+    @Override
+    public List<Expr> getArgs()
+    {
+      return Collections.singletonList(arg);
     }
 
     @Override
@@ -147,12 +161,19 @@ public class ExprMacroTable
     {
       return arg.analyzeInputs().withScalarArguments(ImmutableSet.of(arg));
     }
+
+
+    @Override
+    public String toString()
+    {
+      return StringUtils.format("(%s %s)", name, getArgs());
+    }
   }
 
   /**
    * Base class for multi-argument {@link ExprMacro} function {@link Expr}
    */
-  public abstract static class BaseScalarMacroFunctionExpr implements Expr
+  public abstract static class BaseScalarMacroFunctionExpr implements ExprMacroFunctionExpr
   {
     protected final String name;
     protected final List<Expr> args;
@@ -165,6 +186,12 @@ public class ExprMacroTable
       this.name = name;
       this.args = args;
       analyzeInputsSupplier = Suppliers.memoize(this::supplyAnalyzeInputs);
+    }
+
+    @Override
+    public List<Expr> getArgs()
+    {
+      return args;
     }
 
     @Override
@@ -212,6 +239,12 @@ public class ExprMacroTable
         argSet.add(arg);
       }
       return accumulator.withScalarArguments(argSet);
+    }
+
+    @Override
+    public String toString()
+    {
+      return StringUtils.format("(%s %s)", name, getArgs());
     }
   }
 }

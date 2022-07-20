@@ -20,68 +20,63 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExpressionType;
+
+import javax.annotation.Nullable;
 
 /**
- * common machinery for processing two input operators and functions, which should always treat null inputs as null
- * output, and are backed by a primitive values instead of an object values (and need to use the null vectors instead of
- * checking the vector themselves for nulls)
+ * Basic vector processor that processes 2 inputs and works for both primitive value vectors and object vectors.
+ * Different from {@link BivariateFunctionVectorValueProcessor} and {@link BivariateFunctionVectorObjectProcessor} in
+ * that subclasses of this class must check for and directly decide how to handle null values.
  */
 public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, TOutput>
     implements ExprVectorProcessor<TOutput>
 {
-  final ExprVectorProcessor<TLeftInput> left;
-  final ExprVectorProcessor<TRightInput> right;
-  final int maxVectorSize;
-  final boolean[] outNulls;
-  final TOutput outValues;
+  private final ExpressionType outputType;
+  private final ExprVectorProcessor<TLeftInput> left;
+  private final ExprVectorProcessor<TRightInput> right;
 
-  protected BivariateFunctionVectorProcessor(
+  public BivariateFunctionVectorProcessor(
+      ExpressionType outputType,
       ExprVectorProcessor<TLeftInput> left,
-      ExprVectorProcessor<TRightInput> right,
-      int maxVectorSize,
-      TOutput outValues
+      ExprVectorProcessor<TRightInput> right
   )
   {
+    this.outputType = outputType;
     this.left = left;
     this.right = right;
-    this.maxVectorSize = maxVectorSize;
-    this.outNulls = new boolean[maxVectorSize];
-    this.outValues = outValues;
   }
 
   @Override
-  public final ExprEvalVector<TOutput> evalVector(Expr.VectorInputBinding bindings)
+  public ExprEvalVector<TOutput> evalVector(Expr.VectorInputBinding bindings)
   {
     final ExprEvalVector<TLeftInput> lhs = left.evalVector(bindings);
     final ExprEvalVector<TRightInput> rhs = right.evalVector(bindings);
 
-    final int currentSize = bindings.getCurrentVectorSize();
-    final boolean[] leftNulls = lhs.getNullVector();
-    final boolean[] rightNulls = rhs.getNullVector();
-    final boolean hasLeftNulls = leftNulls != null;
-    final boolean hasRightNulls = rightNulls != null;
-    final boolean hasNulls = hasLeftNulls || hasRightNulls;
+    TLeftInput leftValues = lhs.values;
+    TRightInput rightValues = rhs.values;
+    final boolean[] leftNulls = outputType.isNumeric() ? lhs.getNullVector() : null;
+    final boolean[] rightNulls = outputType.isNumeric() ? rhs.getNullVector() : null;
 
-    final TLeftInput leftInput = lhs.values();
-    final TRightInput rightInput = rhs.values();
-
-    if (hasNulls) {
-      for (int i = 0; i < currentSize; i++) {
-        outNulls[i] = (hasLeftNulls && leftNulls[i]) || (hasRightNulls && rightNulls[i]);
-        if (!outNulls[i]) {
-          processIndex(leftInput, rightInput, i);
-        }
-      }
-    } else {
-      for (int i = 0; i < currentSize; i++) {
-        processIndex(leftInput, rightInput, i);
-        outNulls[i] = false;
-      }
+    for (int i = 0; i < bindings.getCurrentVectorSize(); i++) {
+      processIndex(leftValues, leftNulls, rightValues, rightNulls, i);
     }
     return asEval();
   }
 
-  abstract void processIndex(TLeftInput leftInput, TRightInput rightInput, int i);
+  public abstract void processIndex(
+      TLeftInput leftInput,
+      @Nullable boolean[] leftNulls,
+      TRightInput rightInput,
+      @Nullable boolean[] rightNulls,
+      int i
+  );
 
-  abstract ExprEvalVector<TOutput> asEval();
+  public abstract ExprEvalVector<TOutput> asEval();
+
+  @Override
+  public ExpressionType getOutputType()
+  {
+    return outputType;
+  }
 }

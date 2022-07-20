@@ -36,7 +36,6 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.JavaScriptExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
-import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DruidDoublePredicate;
@@ -66,6 +65,7 @@ import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
+import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -370,7 +370,7 @@ public class FilterPartitionBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void readOrFilterCNF(Blackhole blackhole)
+  public void readOrFilterCNF(Blackhole blackhole) throws CNFFilterExplosionException
   {
     Filter filter = new NoBitmapSelectorFilter("dimSequential", "199");
     Filter filter2 = new AndFilter(Arrays.asList(new SelectorFilter("dimMultivalEnumerated2", "Corundum"), new NoBitmapSelectorFilter("dimMultivalEnumerated", "Bar")));
@@ -421,7 +421,7 @@ public class FilterPartitionBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void readComplexOrFilterCNF(Blackhole blackhole)
+  public void readComplexOrFilterCNF(Blackhole blackhole) throws CNFFilterExplosionException
   {
     DimFilter dimFilter1 = new OrDimFilter(Arrays.asList(
         new SelectorDimFilter("dimSequential", "199", null),
@@ -512,11 +512,6 @@ public class FilterPartitionBenchmark
       super(dimension, value);
     }
 
-    @Override
-    public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-    {
-      return false;
-    }
   }
 
   private static class NoBitmapDimensionPredicateFilter extends DimensionPredicateFilter
@@ -530,11 +525,6 @@ public class FilterPartitionBenchmark
       super(dimension, predicateFactory, extractionFn);
     }
 
-    @Override
-    public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-    {
-      return false;
-    }
   }
 
   private static class NoBitmapSelectorDimFilter extends SelectorDimFilter

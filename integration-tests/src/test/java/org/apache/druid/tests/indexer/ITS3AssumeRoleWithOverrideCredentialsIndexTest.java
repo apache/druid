@@ -40,7 +40,7 @@ import org.testng.annotations.Test;
  *    -Ddruid.test.config.s3AssumeRoleWithExternalId or setting "s3_assume_role_with_external_id" in the config file.
  *    -Ddruid.test.config.s3AssumeRoleExternalId or setting "s3_assume_role_external_id" in the config file.
  *    -Ddruid.test.config.s3AssumeRoleWithoutExternalId or setting "s3_assume_role_without_external_id" in the config file.
- *     The credientials provided in OVERRIDE_S3_ACCESS_KEY and OVERRIDE_S3_SECRET_KEY must be able to assume these roles.
+ *     The credentials provided in OVERRIDE_S3_ACCESS_KEY and OVERRIDE_S3_SECRET_KEY must be able to assume these roles.
  *     These roles must also have access to the bucket and path for your data in #1.
  *     (s3AssumeRoleExternalId is the external id for s3AssumeRoleWithExternalId, while s3AssumeRoleWithoutExternalId
  *     should not have external id set)

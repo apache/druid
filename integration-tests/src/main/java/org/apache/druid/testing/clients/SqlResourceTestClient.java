@@ -30,7 +30,6 @@ import javax.ws.rs.core.MediaType;
 
 public class SqlResourceTestClient extends AbstractQueryResourceTestClient<SqlQuery>
 {
-
   @Inject
   SqlResourceTestClient(
       ObjectMapper jsonMapper,

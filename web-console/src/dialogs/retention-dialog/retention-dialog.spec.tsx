@@ -21,7 +21,7 @@ import React from 'react';
 
 import { RetentionDialog } from './retention-dialog';
 
-describe('retention dialog', () => {
+describe('RetentionDialog', () => {
   it('matches snapshot', () => {
     const retentionDialog = (
       <RetentionDialog

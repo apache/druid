@@ -96,6 +96,12 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
     }
 
     @Override
+    public boolean canCompare()
+    {
+      return false;
+    }
+
+    @Override
     public int compare(ImmutableBitmap o1, ImmutableBitmap o2)
     {
       throw new UnsupportedOperationException();

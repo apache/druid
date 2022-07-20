@@ -26,7 +26,7 @@ sidebar_label: "SegmentMetadata"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes a query
 > type that is only available in the native language. However, Druid SQL contains similar functionality in
-> its [metadata tables](sql.md#metadata-tables).
+> its [metadata tables](sql-metadata-tables.md).
 
 Segment metadata queries return per-segment information about:
 
@@ -87,9 +87,11 @@ The format of the result is:
 } ]
 ```
 
-Dimension columns will have type `STRING`, `FLOAT`, `DOUBLE`, or `LONG`.
-Metric columns will have type `FLOAT`, `DOUBLE`, or `LONG`, or the name of the underlying complex type such as `hyperUnique` in case of COMPLEX metric.
-Timestamp column will have type `LONG`.
+All columns contain a `typeSignature` that Druid uses to represent the column type information internally. The `typeSignature` is typically the same value used to identify the JSON type information at query or ingest time. One of: `STRING`, `FLOAT`, `DOUBLE`, `LONG`, or `COMPLEX<typeName>`, e.g. `COMPLEX<hyperUnique>`.
+
+Columns also have a legacy `type` name. For some column types, the value may match the `typeSignature`  (`STRING`, `FLOAT`, `DOUBLE`, or `LONG`). For `COMPLEX` columns, the `type` only contains the name of the underlying complex type such as `hyperUnique`.
+
+New applications should use `typeSignature`, not `type`.
 
 If the `errorMessage` field is non-null, you should not trust the other fields in the response. Their contents are
 undefined.
@@ -161,7 +163,7 @@ segments.
 size of the column in Druid. If you want the actual storage size in bytes of a segment, look elsewhere. Some pointers:
 
 - To get the storage size in bytes of an entire segment, check the `size` field in the
-[`sys.segments` table](sql.md#segments-table). This is the size of the memory-mappable content.
+[`sys.segments` table](sql-metadata-tables.md#segments-table). This is the size of the memory-mappable content.
 - To get the storage size in bytes of a particular column in a particular segment, unpack the segment and look at the
 `meta.smoosh` file inside the archive. The difference between the third and fourth columns is the size in bytes.
 Currently, there is no API for retrieving this information.

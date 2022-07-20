@@ -116,11 +116,11 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
   SequenceOffsetType getPosition(StreamPartition<PartitionIdType> partition);
 
   /**
-   * returns the set of partitions under the given stream
+   * returns the set of all available partitions under the given stream
    *
    * @param stream name of stream
    *
-   * @return set of partitions
+   * @return set of partition ids belonging to the stream
    */
   Set<PartitionIdType> getPartitionIds(String stream);
 

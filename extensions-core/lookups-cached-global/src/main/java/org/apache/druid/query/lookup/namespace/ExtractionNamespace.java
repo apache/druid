@@ -36,4 +36,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public interface ExtractionNamespace
 {
   long getPollMs();
+
+  default long getMaxHeapPercentage()
+  {
+    return -1L;
+  }
 }

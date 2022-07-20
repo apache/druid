@@ -31,15 +31,21 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.context.ResponseContextDeserializer;
 import org.joda.time.DateTimeZone;
 
 import java.io.IOException;
 import java.nio.ByteOrder;
 
 /**
+ *
  */
+@SuppressWarnings("serial")
 public class DruidDefaultSerializersModule extends SimpleModule
 {
+  @SuppressWarnings("rawtypes")
   public DruidDefaultSerializersModule()
   {
     super("Druid default serializers");
@@ -78,6 +84,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
         Sequence.class,
         new JsonSerializer<Sequence>()
         {
+          @SuppressWarnings("unchecked")
           @Override
           public void serialize(Sequence value, final JsonGenerator jgen, SerializerProvider provider)
               throws IOException
@@ -87,11 +94,26 @@ public class DruidDefaultSerializersModule extends SimpleModule
                 null,
                 new Accumulator<Object, Object>()
                 {
+                  // Save allocations in jgen.writeObject by caching serializer.
+                  JsonSerializer<Object> serializer = null;
+                  Class<?> serializerClass = null;
+
                   @Override
-                  public Object accumulate(Object o, Object o1)
+                  public Object accumulate(Object ignored, Object object)
                   {
                     try {
-                      jgen.writeObject(o1);
+                      if (object == null) {
+                        jgen.writeNull();
+                      } else {
+                        final Class<?> clazz = object.getClass();
+
+                        if (serializerClass != clazz) {
+                          serializer = JacksonUtils.getSerializer(provider, clazz);
+                          serializerClass = clazz;
+                        }
+
+                        serializer.serialize(object, jgen, provider);
+                      }
                     }
                     catch (IOException e) {
                       throw new RuntimeException(e);
@@ -108,15 +130,32 @@ public class DruidDefaultSerializersModule extends SimpleModule
         Yielder.class,
         new JsonSerializer<Yielder>()
         {
+          @SuppressWarnings("unchecked")
           @Override
           public void serialize(Yielder yielder, final JsonGenerator jgen, SerializerProvider provider)
               throws IOException
           {
+            // Save allocations in jgen.writeObject by caching serializer.
+            JsonSerializer<Object> serializer = null;
+            Class<?> serializerClass = null;
+
             try {
               jgen.writeStartArray();
               while (!yielder.isDone()) {
                 final Object o = yielder.get();
-                jgen.writeObject(o);
+                if (o == null) {
+                  jgen.writeNull();
+                } else {
+                  final Class<?> clazz = o.getClass();
+
+                  if (serializerClass != clazz) {
+                    serializer = JacksonUtils.getSerializer(provider, clazz);
+                    serializerClass = clazz;
+                  }
+
+                  serializer.serialize(o, jgen, provider);
+                }
+
                 yielder = yielder.next(null);
               }
               jgen.writeEndArray();
@@ -142,5 +181,6 @@ public class DruidDefaultSerializersModule extends SimpleModule
           }
         }
     );
+    addDeserializer(ResponseContext.class, new ResponseContextDeserializer());
   }
 }

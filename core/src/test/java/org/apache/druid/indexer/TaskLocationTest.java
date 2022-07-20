@@ -21,10 +21,28 @@ package org.apache.druid.indexer;
 
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Assert;
 import org.junit.Test;
+
+import java.net.MalformedURLException;
+import java.net.URL;
 
 public class TaskLocationTest
 {
+  @Test
+  @SuppressWarnings("HttpUrlsUsage")
+  public void testMakeURL() throws MalformedURLException
+  {
+    Assert.assertEquals(new URL("http://abc:80/foo"), new TaskLocation("abc", 80, 0).makeURL("/foo"));
+    Assert.assertEquals(new URL("http://abc:80/foo"), new TaskLocation("abc", 80, -1).makeURL("/foo"));
+    Assert.assertEquals(new URL("https://abc:443/foo"), new TaskLocation("abc", 80, 443).makeURL("/foo"));
+    Assert.assertThrows(
+        "URL that does not start with '/'",
+        IllegalArgumentException.class,
+        () -> new TaskLocation("abc", 80, 443).makeURL("foo")
+    );
+  }
+
   @Test
   public void testEqualsAndHashCode()
   {

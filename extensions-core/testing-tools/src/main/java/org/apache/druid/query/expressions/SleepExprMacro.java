@@ -24,7 +24,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr;
 import org.apache.druid.math.expr.ExprMacroTable.ExprMacro;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.expression.ExprUtils;
 
 import java.util.List;
@@ -85,8 +85,7 @@ public class SleepExprMacro implements ExprMacro
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new SleepExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
       }
 
       /**
@@ -101,7 +100,7 @@ public class SleepExprMacro implements ExprMacro
       }
 
       @Override
-      public ExprType getOutputType(InputBindingInspector inspector)
+      public ExpressionType getOutputType(InputBindingInspector inspector)
       {
         return null;
       }

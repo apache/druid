@@ -53,13 +53,21 @@ public class PrometheusEmitterConfig
   @Nullable
   private final String pushGatewayAddress;
 
+  @JsonProperty
+  private final boolean addHostAsLabel;
+
+  @JsonProperty
+  private final boolean addServiceAsLabel;
+
   @JsonCreator
   public PrometheusEmitterConfig(
       @JsonProperty("strategy") @Nullable Strategy strategy,
       @JsonProperty("namespace") @Nullable String namespace,
       @JsonProperty("dimensionMapPath") @Nullable String dimensionMapPath,
       @JsonProperty("port") @Nullable Integer port,
-      @JsonProperty("pushGatewayAddress") @Nullable String pushGatewayAddress
+      @JsonProperty("pushGatewayAddress") @Nullable String pushGatewayAddress,
+      @JsonProperty("addHostAsLabel") boolean addHostAsLabel,
+      @JsonProperty("addServiceAsLabel") boolean addServiceAsLabel
   )
   {
 
@@ -68,7 +76,12 @@ public class PrometheusEmitterConfig
     Preconditions.checkArgument(PATTERN.matcher(this.namespace).matches(), "Invalid namespace " + this.namespace);
     this.dimensionMapPath = dimensionMapPath;
     this.port = port;
+    if (this.strategy == Strategy.pushgateway) {
+      Preconditions.checkNotNull(pushGatewayAddress, "Invalid pushGateway address");
+    }
     this.pushGatewayAddress = pushGatewayAddress;
+    this.addHostAsLabel = addHostAsLabel;
+    this.addServiceAsLabel = addServiceAsLabel;
   }
 
   public String getNamespace()
@@ -94,6 +107,16 @@ public class PrometheusEmitterConfig
   public Strategy getStrategy()
   {
     return strategy;
+  }
+
+  public boolean isAddHostAsLabel()
+  {
+    return addHostAsLabel;
+  }
+
+  public boolean isAddServiceAsLabel()
+  {
+    return addServiceAsLabel;
   }
 
   public enum Strategy

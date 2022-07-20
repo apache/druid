@@ -25,6 +25,8 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -38,7 +40,6 @@ import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -53,8 +54,8 @@ import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
@@ -67,10 +68,12 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -106,12 +109,15 @@ public class DruidSchema extends AbstractSchema
   private final JoinableFactory joinableFactory;
   private final ExecutorService cacheExec;
   private final ExecutorService callbackExec;
+  private final DruidSchemaManager druidSchemaManager;
 
   /**
    * Map of DataSource -> DruidTable.
    * This map can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
   private final ConcurrentMap<String, DruidTable> tables = new ConcurrentHashMap<>();
+
+  private static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
 
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
@@ -209,7 +215,8 @@ public class DruidSchema extends AbstractSchema
       final JoinableFactory joinableFactory,
       final PlannerConfig config,
       final Escalator escalator,
-      final BrokerInternalQueryConfig brokerInternalQueryConfig
+      final BrokerInternalQueryConfig brokerInternalQueryConfig,
+      final DruidSchemaManager druidSchemaManager
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
@@ -221,7 +228,13 @@ public class DruidSchema extends AbstractSchema
     this.callbackExec = Execs.singleThreaded("DruidSchema-Callback-%d");
     this.escalator = escalator;
     this.brokerInternalQueryConfig = brokerInternalQueryConfig;
+    this.druidSchemaManager = druidSchemaManager;
 
+    initServerViewTimelineCallback(serverView);
+  }
+
+  private void initServerViewTimelineCallback(final TimelineServerView serverView)
+  {
     serverView.registerTimelineCallback(
         callbackExec,
         new TimelineServerView.TimelineCallback()
@@ -264,8 +277,7 @@ public class DruidSchema extends AbstractSchema
     );
   }
 
-  @LifecycleStart
-  public void start() throws InterruptedException
+  private void startCacheExec()
   {
     cacheExec.submit(
         () -> {
@@ -358,6 +370,12 @@ public class DruidSchema extends AbstractSchema
           }
         }
     );
+  }
+
+  @LifecycleStart
+  public void start() throws InterruptedException
+  {
+    startCacheExec();
 
     if (config.isAwaitInitializationOnStart()) {
       final long startNanos = System.nanoTime();
@@ -386,6 +404,11 @@ public class DruidSchema extends AbstractSchema
     // Rebuild the dataSources.
     for (String dataSource : dataSourcesToRebuild) {
       final DruidTable druidTable = buildDruidTable(dataSource);
+      if (druidTable == null) {
+        log.info("dataSource[%s] no longer exists, all metadata removed.", dataSource);
+        tables.remove(dataSource);
+        continue;
+      }
       final DruidTable oldTable = tables.put(dataSource, druidTable);
       final String description = druidTable.getDataSource().isGlobal() ? "global dataSource" : "dataSource";
       if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
@@ -411,11 +434,15 @@ public class DruidSchema extends AbstractSchema
   @Override
   protected Map<String, Table> getTableMap()
   {
-    return ImmutableMap.copyOf(tables);
+    if (druidSchemaManager != null && !(druidSchemaManager instanceof NoopDruidSchemaManager)) {
+      return ImmutableMap.copyOf(druidSchemaManager.getTables());
+    } else {
+      return ImmutableMap.copyOf(tables);
+    }
   }
 
   @VisibleForTesting
-  void addSegment(final DruidServerMetadata server, final DataSegment segment)
+  protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
@@ -441,7 +468,7 @@ public class DruidSchema extends AbstractSchema
                       // segmentReplicatable is used to determine if segments are served by historical or realtime servers
                       long isRealtime = server.isSegmentReplicationTarget() ? 0 : 1;
                       segmentMetadata = AvailableSegmentMetadata
-                          .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS)
+                          .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS) // Added without needing a refresh
                           .build();
                       markSegmentAsNeedRefresh(segment.getId());
                       if (!server.isSegmentReplicationTarget()) {
@@ -621,7 +648,7 @@ public class DruidSchema extends AbstractSchema
    * which may be a subset of the asked-for set.
    */
   @VisibleForTesting
-  Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
+  protected Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
   {
     final Set<SegmentId> retVal = new HashSet<>();
 
@@ -753,18 +780,21 @@ public class DruidSchema extends AbstractSchema
   }
 
   @VisibleForTesting
+  @Nullable
   DruidTable buildDruidTable(final String dataSource)
   {
     ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> segmentsMap = segmentMetadataInfo.get(dataSource);
-    final Map<String, ValueType> columnTypes = new TreeMap<>();
 
-    if (segmentsMap != null) {
+    // Preserve order.
+    final Map<String, ColumnType> columnTypes = new LinkedHashMap<>();
+
+    if (segmentsMap != null && !segmentsMap.isEmpty()) {
       for (AvailableSegmentMetadata availableSegmentMetadata : segmentsMap.values()) {
         final RowSignature rowSignature = availableSegmentMetadata.getRowSignature();
         if (rowSignature != null) {
           for (String column : rowSignature.getColumnNames()) {
             // Newer column types should override older ones.
-            final ValueType columnType =
+            final ColumnType columnType =
                 rowSignature.getColumnType(column)
                             .orElseThrow(() -> new ISE("Encountered null type for column[%s]", column));
 
@@ -772,6 +802,9 @@ public class DruidSchema extends AbstractSchema
           }
         }
       }
+    } else {
+      // table has no segments
+      return null;
     }
 
     final RowSignature.Builder builder = RowSignature.builder();
@@ -792,7 +825,7 @@ public class DruidSchema extends AbstractSchema
     } else {
       tableDataSource = new TableDataSource(dataSource);
     }
-    return new DruidTable(tableDataSource, builder.build(), isJoinable, isBroadcast);
+    return new DruidTable(tableDataSource, builder.build(), null, isJoinable, isBroadcast);
   }
 
   @VisibleForTesting
@@ -845,7 +878,7 @@ public class DruidSchema extends AbstractSchema
    * @return {@link Sequence} of {@link SegmentAnalysis} objects
    */
   @VisibleForTesting
-  Sequence<SegmentAnalysis> runSegmentMetadataQuery(
+  protected Sequence<SegmentAnalysis> runSegmentMetadataQuery(
       final Iterable<SegmentId> segments
   )
   {
@@ -876,7 +909,8 @@ public class DruidSchema extends AbstractSchema
         .runSimple(segmentMetadataQuery, escalator.createEscalatedAuthenticationResult(), Access.OK);
   }
 
-  private static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
+  @VisibleForTesting
+  static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
   {
     final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
@@ -885,19 +919,25 @@ public class DruidSchema extends AbstractSchema
         continue;
       }
 
-      ValueType valueType;
-      try {
-        valueType = ValueType.valueOf(StringUtils.toUpperCase(entry.getValue().getType()));
-      }
-      catch (IllegalArgumentException e) {
-        // Assume unrecognized types are some flavor of COMPLEX. This throws away information about exactly
-        // what kind of complex column it is, which we may want to preserve some day.
-        valueType = ValueType.COMPLEX;
+      ColumnType valueType = entry.getValue().getTypeSignature();
+
+      // this shouldn't happen, but if it does, first try to fall back to legacy type information field in case
+      // standard upgrade order was not followed for 0.22 to 0.23+, and if that also fails, then assume types are some
+      // flavor of COMPLEX.
+      if (valueType == null) {
+        // at some point in the future this can be simplified to the contents of the catch clause here, once the
+        // likelyhood of upgrading from some version lower than 0.23 is low
+        try {
+          valueType = ColumnType.fromString(entry.getValue().getType());
+        }
+        catch (IllegalArgumentException ignored) {
+          valueType = ColumnType.UNKNOWN_COMPLEX;
+        }
       }
 
       rowSignatureBuilder.add(entry.getKey(), valueType);
     }
-    return rowSignatureBuilder.build();
+    return ROW_SIGNATURE_INTERNER.intern(rowSignatureBuilder.build());
   }
 
   /**

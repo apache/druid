@@ -91,7 +91,7 @@ public class RegexParser implements Parser<String, Object>
       final Matcher matcher = compiled.matcher(input);
 
       if (!matcher.matches()) {
-        throw new ParseException("Incorrect Regex: %s . No match found.", pattern);
+        throw new ParseException(input, "Incorrect Regex: %s . No match found.", pattern);
       }
 
       List<String> values = new ArrayList<>();
@@ -106,7 +106,7 @@ public class RegexParser implements Parser<String, Object>
       return Utils.zipMapPartial(fieldNames, Iterables.transform(values, valueFunction));
     }
     catch (Exception e) {
-      throw new ParseException(e, "Unable to parse row [%s]", input);
+      throw new ParseException(input, e, "Unable to parse row [%s]", input);
     }
   }
 

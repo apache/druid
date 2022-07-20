@@ -24,6 +24,8 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.concurrent.ExecutorService;
+
 /**
  * Loading segments from deep storage to local storage. Internally, this class can delegate the download to
  * {@link SegmentCacheManager}. Implementations must be thread-safe.
@@ -52,4 +54,15 @@ public interface SegmentLoader
    * cleanup any state used by this segment
    */
   void cleanup(DataSegment segment);
+
+  /**
+   * Asyncly load segment into page cache.
+   * Equivalent to `cat segment_files > /dev/null` to force loading the segment index files into page cache so that
+   * later when the segment is queried, they are already in page cache and only a minor page fault needs to be triggered
+   * instead of a major page fault to make the query latency more consistent.
+   *
+   * @param segment The segment to load its index files into page cache
+   * @param exec The thread pool to use
+   */
+  void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec);
 }

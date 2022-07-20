@@ -20,10 +20,12 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Properties;
 
 public class MetadataStorageConnectorConfigTest
@@ -186,5 +188,20 @@ public class MetadataStorageConnectorConfigTest
     Properties dbcpProperties = config.getDbcpProperties();
     Assert.assertEquals(dbcpProperties.getProperty("maxConnLifetimeMillis"), "1200000");
     Assert.assertEquals(dbcpProperties.getProperty("defaultQueryTimeout"), "30000");
+  }
+
+  @Test
+  public void testCreate()
+  {
+    Map<String, Object> props = ImmutableMap.of("key", "value");
+    MetadataStorageConnectorConfig config = MetadataStorageConnectorConfig.create(
+        "connectURI",
+        "user",
+        "pwd",
+        props);
+    Assert.assertEquals("connectURI", config.getConnectURI());
+    Assert.assertEquals("user", config.getUser());
+    Assert.assertEquals("pwd", config.getPassword());
+    Assert.assertEquals(1, config.getDbcpProperties().size());
   }
 }

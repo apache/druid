@@ -130,7 +130,8 @@ public class SimpleServerView implements TimelineServerView
         k -> new ServerSelector(segment, tierSelectorStrategy)
     );
     selector.addServerAndUpdateSegment(servers.get(server), segment);
-    timelines.computeIfAbsent(segment.getDataSource(), k -> new VersionedIntervalTimeline<>(Ordering.natural()))
+    // broker needs to skip tombstones in its timelines
+    timelines.computeIfAbsent(segment.getDataSource(), k -> new VersionedIntervalTimeline<>(Ordering.natural(), true))
              .add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
   }
 

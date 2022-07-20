@@ -164,12 +164,16 @@ public class Request
 
   public Request setBasicAuthentication(String username, String password)
   {
-    final String base64Value = base64Encode(username + ":" + password);
-    setHeader(HttpHeaders.Names.AUTHORIZATION, "Basic " + base64Value);
+    setHeader(HttpHeaders.Names.AUTHORIZATION, makeBasicAuthenticationString(username, password));
     return this;
   }
 
-  private String base64Encode(final String value)
+  public static String makeBasicAuthenticationString(String username, String password)
+  {
+    return "Basic " + base64Encode(username + ":" + password);
+  }
+
+  private static String base64Encode(final String value)
   {
     final ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
 

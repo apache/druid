@@ -20,6 +20,9 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.Protocol;
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CanonicalGrantee;
@@ -33,14 +36,20 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSClientUtil;
+import org.apache.druid.common.aws.AWSEndpointConfig;
+import org.apache.druid.common.aws.AWSProxyConfig;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.RetryUtils.Task;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -66,6 +75,12 @@ public class S3Utils
         return false;
       } else if (e instanceof IOException) {
         return true;
+      } else if (e instanceof SdkClientException
+                 && e.getMessage().contains("Data read has a different length than the expected")) {
+        // Can happen when connections to S3 are dropped; see https://github.com/apache/druid/pull/11941.
+        // SdkClientException can be thrown for many reasons and the only way to distinguish it is to look at
+        // the message. This is not ideal, since the message may change, so it may need to be adjusted in the future.
+        return true;
       } else if (e instanceof AmazonClientException) {
         return AWSClientUtil.isClientExceptionRecoverable((AmazonClientException) e);
       } else {
@@ -81,6 +96,15 @@ public class S3Utils
   static <T> T retryS3Operation(Task<T> f) throws Exception
   {
     return RetryUtils.retry(f, S3RETRY, RetryUtils.DEFAULT_MAX_TRIES);
+  }
+
+  /**
+   * Retries S3 operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
+   * found, etc) are not retried. Also provide a way to set maxRetries that can be useful, i.e. for testing.
+   */
+  static <T> T retryS3Operation(Task<T> f, int maxRetries) throws Exception
+  {
+    return RetryUtils.retry(f, S3RETRY, maxRetries);
   }
 
   static boolean isObjectInBucketIgnoringPermission(
@@ -118,6 +142,25 @@ public class S3Utils
   )
   {
     return new ObjectSummaryIterator(s3Client, prefixes, maxListingLength);
+  }
+
+  /**
+   * Create an iterator over a set of S3 objects specified by a set of prefixes.
+   *
+   * For each provided prefix URI, the iterator will walk through all objects that are in the same bucket as the
+   * provided URI and whose keys start with that URI's path, except for directory placeholders (which will be
+   * ignored). The iterator is computed incrementally by calling {@link ServerSideEncryptingAmazonS3#listObjectsV2} for
+   * each prefix in batches of {@param maxListLength}. The first call is made at the same time the iterator is
+   * constructed.
+   */
+  public static Iterator<S3ObjectSummary> objectSummaryIterator(
+      final ServerSideEncryptingAmazonS3 s3Client,
+      final Iterable<URI> prefixes,
+      final int maxListingLength,
+      final int maxRetries
+  )
+  {
+    return new ObjectSummaryIterator(s3Client, prefixes, maxListingLength, maxRetries);
   }
 
   /**
@@ -198,11 +241,13 @@ public class S3Utils
 
   /**
    * Delete the files from S3 in a specified bucket, matching a specified prefix and filter
+   *
    * @param s3Client s3 client
    * @param config   specifies the configuration to use when finding matching files in S3 to delete
    * @param bucket   s3 bucket
    * @param prefix   the file prefix
    * @param filter   function which returns true if the prefix file found should be deleted and false otherwise.
+   *
    * @throws Exception
    */
   public static void deleteObjectsInPath(
@@ -276,5 +321,55 @@ public class S3Utils
     }
     log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
     service.putObject(putObjectRequest);
+  }
+
+  @Nullable
+  private static Protocol parseProtocol(@Nullable String protocol)
+  {
+    if (protocol == null) {
+      return null;
+    }
+
+    if (protocol.equalsIgnoreCase("http")) {
+      return Protocol.HTTP;
+    } else if (protocol.equalsIgnoreCase("https")) {
+      return Protocol.HTTPS;
+    } else {
+      throw new IAE("Unknown protocol[%s]", protocol);
+    }
+  }
+
+  public static Protocol determineProtocol(AWSClientConfig clientConfig, AWSEndpointConfig endpointConfig)
+  {
+    final Protocol protocolFromClientConfig = parseProtocol(clientConfig.getProtocol());
+    final String endpointUrl = endpointConfig.getUrl();
+    if (org.apache.commons.lang.StringUtils.isNotEmpty(endpointUrl)) {
+      //noinspection ConstantConditions
+      final URI uri = URIs.parse(endpointUrl, protocolFromClientConfig.toString());
+      final Protocol protocol = parseProtocol(uri.getScheme());
+      if (protocol != null && (protocol != protocolFromClientConfig)) {
+        log.warn("[%s] protocol will be used for endpoint [%s]", protocol, endpointUrl);
+      }
+      return protocol;
+    } else {
+      return protocolFromClientConfig;
+    }
+  }
+
+  public static ClientConfiguration setProxyConfig(ClientConfiguration conf, AWSProxyConfig proxyConfig)
+  {
+    if (org.apache.commons.lang.StringUtils.isNotEmpty(proxyConfig.getHost())) {
+      conf.setProxyHost(proxyConfig.getHost());
+    }
+    if (proxyConfig.getPort() != -1) {
+      conf.setProxyPort(proxyConfig.getPort());
+    }
+    if (org.apache.commons.lang.StringUtils.isNotEmpty(proxyConfig.getUsername())) {
+      conf.setProxyUsername(proxyConfig.getUsername());
+    }
+    if (org.apache.commons.lang.StringUtils.isNotEmpty(proxyConfig.getPassword())) {
+      conf.setProxyPassword(proxyConfig.getPassword());
+    }
+    return conf;
   }
 }

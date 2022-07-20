@@ -56,9 +56,9 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -187,7 +187,7 @@ public class SegmentManagerThreadSafetyTest
     );
     final String storageDir = DataSegmentPusher.getDefaultStorageDir(tmpSegment, false);
     final File segmentDir = new File(segmentDeepStorageDir, storageDir);
-    org.apache.commons.io.FileUtils.forceMkdir(segmentDir);
+    FileUtils.mkdirp(segmentDir);
 
     final File factoryJson = new File(segmentDir, "factory.json");
     objectMapper.writeValue(factoryJson, new TestSegmentizerFactory());
@@ -228,6 +228,8 @@ public class SegmentManagerThreadSafetyTest
     {
       return new Segment()
       {
+        StorageAdapter storageAdapter = Mockito.mock(StorageAdapter.class);
+
         @Override
         public SegmentId getId()
         {
@@ -250,7 +252,8 @@ public class SegmentManagerThreadSafetyTest
         @Override
         public StorageAdapter asStorageAdapter()
         {
-          throw new UnsupportedOperationException();
+          Mockito.when(storageAdapter.getNumRows()).thenReturn(1);
+          return storageAdapter;
         }
 
         @Override

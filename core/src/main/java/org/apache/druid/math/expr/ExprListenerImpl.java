@@ -390,7 +390,7 @@ public class ExprListenerImpl extends ExprBaseListener
   @Override
   public void exitDoubleArray(ExprParser.DoubleArrayContext ctx)
   {
-    Double[] values = new Double[ctx.numericElement().size()];
+    Object[] values = new Object[ctx.numericElement().size()];
     for (int i = 0; i < values.length; i++) {
       if (ctx.numericElement(i).NULL() != null) {
         values[i] = null;
@@ -402,13 +402,51 @@ public class ExprListenerImpl extends ExprBaseListener
         throw new RE("Failed to parse array element %s as a double", ctx.numericElement(i).getText());
       }
     }
-    nodes.put(ctx, new DoubleArrayExpr(values));
+    nodes.put(ctx, new ArrayExpr(ExpressionType.DOUBLE_ARRAY, values));
+  }
+
+  @Override
+  public void exitExplicitArray(ExprParser.ExplicitArrayContext ctx)
+  {
+    ExpressionType type = ExpressionType.fromString(ctx.ARRAY_TYPE().getText());
+    if (type == null) {
+      throw new RE("Failed to convert array type %s to expression type", ctx.ARRAY_TYPE().getText());
+    }
+    Object[] values = new Object[ctx.literalElement().size()];
+    for (int i = 0; i < values.length; i++) {
+      if (ctx.literalElement(i).NULL() != null) {
+        values[i] = null;
+      } else {
+        final ExprParser.LiteralElementContext elementContext = ctx.literalElement(i);
+        // if value is a string, escape quoting
+        final String toParse;
+        if (elementContext.STRING() != null) {
+          toParse = escapeStringLiteral(elementContext.STRING().getText());
+        } else {
+          toParse = elementContext.getText();
+        }
+        switch (type.getElementType().getType()) {
+          case LONG:
+            values[i] = Numbers.parseLongObject(toParse);
+            break;
+          case DOUBLE:
+            values[i] = Numbers.parseDoubleObject(toParse);
+            break;
+          case STRING:
+            values[i] = toParse;
+            break;
+          default:
+            throw new RE("Failed to parse array element %s as a %s", toParse, type.getElementType().asTypeString());
+        }
+      }
+    }
+    nodes.put(ctx, new ArrayExpr(type, values));
   }
 
   @Override
   public void exitLongArray(ExprParser.LongArrayContext ctx)
   {
-    Long[] values = new Long[ctx.longElement().size()];
+    Object[] values = new Object[ctx.longElement().size()];
     for (int i = 0; i < values.length; i++) {
       if (ctx.longElement(i).NULL() != null) {
         values[i] = null;
@@ -418,13 +456,13 @@ public class ExprListenerImpl extends ExprBaseListener
         throw new RE("Failed to parse array element %s as a long", ctx.longElement(i).getText());
       }
     }
-    nodes.put(ctx, new LongArrayExpr(values));
+    nodes.put(ctx, new ArrayExpr(ExpressionType.LONG_ARRAY, values));
   }
 
   @Override
   public void exitExplicitLongArray(ExprParser.ExplicitLongArrayContext ctx)
   {
-    Long[] values = new Long[ctx.numericElement().size()];
+    Object[] values = new Object[ctx.numericElement().size()];
     for (int i = 0; i < values.length; i++) {
       if (ctx.numericElement(i).NULL() != null) {
         values[i] = null;
@@ -436,13 +474,13 @@ public class ExprListenerImpl extends ExprBaseListener
         throw new RE("Failed to parse array element %s as a long", ctx.numericElement(i).getText());
       }
     }
-    nodes.put(ctx, new LongArrayExpr(values));
+    nodes.put(ctx, new ArrayExpr(ExpressionType.LONG_ARRAY, values));
   }
 
   @Override
   public void exitStringArray(ExprParser.StringArrayContext ctx)
   {
-    String[] values = new String[ctx.stringElement().size()];
+    Object[] values = new Object[ctx.stringElement().size()];
     for (int i = 0; i < values.length; i++) {
       if (ctx.stringElement(i).NULL() != null) {
         values[i] = null;
@@ -452,13 +490,13 @@ public class ExprListenerImpl extends ExprBaseListener
         throw new RE("Failed to parse array: element %s is not a string", ctx.stringElement(i).getText());
       }
     }
-    nodes.put(ctx, new StringArrayExpr(values));
+    nodes.put(ctx, new ArrayExpr(ExpressionType.STRING_ARRAY, values));
   }
 
   @Override
   public void exitExplicitStringArray(ExprParser.ExplicitStringArrayContext ctx)
   {
-    String[] values = new String[ctx.literalElement().size()];
+    Object[] values = new Object[ctx.literalElement().size()];
     for (int i = 0; i < values.length; i++) {
       if (ctx.literalElement(i).NULL() != null) {
         values[i] = null;
@@ -472,7 +510,7 @@ public class ExprListenerImpl extends ExprBaseListener
         throw new RE("Failed to parse array element %s as a string", ctx.literalElement(i).getText());
       }
     }
-    nodes.put(ctx, new StringArrayExpr(values));
+    nodes.put(ctx, new ArrayExpr(ExpressionType.STRING_ARRAY, values));
   }
 
   /**

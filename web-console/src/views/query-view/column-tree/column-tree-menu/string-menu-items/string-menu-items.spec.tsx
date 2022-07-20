@@ -22,7 +22,7 @@ import React from 'react';
 
 import { StringMenuItems } from './string-menu-items';
 
-describe('string menu', () => {
+describe('StringMenuItems', () => {
   it('matches snapshot when menu is opened for column not inside group by', () => {
     const stringMenu = (
       <StringMenuItems

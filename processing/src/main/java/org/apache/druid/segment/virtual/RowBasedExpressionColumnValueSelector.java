@@ -24,7 +24,10 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.segment.RowIdSupplier;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,11 +37,13 @@ import java.util.stream.Collectors;
  * Expression column value selector that examines a set of 'unknown' type input bindings on a row by row basis,
  * transforming the expression to handle multi-value list typed inputs as they are encountered.
  *
- * Currently, string dimensions are the only bindings which might appear as a {@link String} or a {@link String[]}, so
+ * Currently, string dimensions are the only bindings which might appear as a {@link String} or a {@link Object[]}, so
  * numbers are eliminated from the set of 'unknown' bindings to check as they are encountered.
  */
-public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValueSelector
+public class RowBasedExpressionColumnValueSelector extends BaseExpressionColumnValueSelector
 {
+  private final Expr.ObjectBinding bindings;
+  private final Expr expression;
   private final List<String> unknownColumns;
   private final Expr.BindingAnalysis baseBindingAnalysis;
   private final Set<String> ignoredColumns;
@@ -46,10 +51,13 @@ public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValue
 
   public RowBasedExpressionColumnValueSelector(
       ExpressionPlan plan,
-      Expr.ObjectBinding bindings
+      Expr.ObjectBinding bindings,
+      @Nullable RowIdSupplier rowIdSupplier
   )
   {
-    super(plan.getAppliedExpression(), bindings);
+    super(rowIdSupplier);
+    this.bindings = bindings;
+    this.expression = plan.getAppliedExpression();
     this.unknownColumns = plan.getUnknownInputs()
                               .stream()
                               .filter(x -> !plan.getAnalysis().getArrayBindings().contains(x))
@@ -60,10 +68,16 @@ public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValue
   }
 
   @Override
-  public ExprEval getObject()
+  protected ExprEval<?> eval()
   {
     // check to find any arrays for this row
-    List<String> arrayBindings = unknownColumns.stream().filter(this::isBindingArray).collect(Collectors.toList());
+    List<String> arrayBindings = new ArrayList<>();
+
+    for (String unknownColumn : unknownColumns) {
+      if (isBindingArray(unknownColumn)) {
+        arrayBindings.add(unknownColumn);
+      }
+    }
 
     // eliminate anything that will never be an array
     if (ignoredColumns.size() > 0) {
@@ -94,7 +108,7 @@ public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValue
   {
     Object binding = bindings.get(x);
     if (binding != null) {
-      if (binding instanceof String[]) {
+      if (binding instanceof Object[] && ((Object[]) binding).length > 0) {
         return true;
       } else if (binding instanceof Number) {
         ignoredColumns.add(x);

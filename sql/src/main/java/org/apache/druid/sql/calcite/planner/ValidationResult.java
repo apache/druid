@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
 
 import java.util.Set;
 
@@ -31,17 +32,17 @@ import java.util.Set;
  */
 public class ValidationResult
 {
-  private final Set<Resource> resources;
+  private final Set<ResourceAction> resourceActions;
 
   public ValidationResult(
-      final Set<Resource> resources
+      final Set<ResourceAction> resourceActions
   )
   {
-    this.resources = ImmutableSet.copyOf(resources);
+    this.resourceActions = ImmutableSet.copyOf(resourceActions);
   }
 
-  public Set<Resource> getResources()
+  public Set<ResourceAction> getResourceActions()
   {
-    return resources;
+    return resourceActions;
   }
 }

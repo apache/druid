@@ -97,7 +97,7 @@ public class ParserUtils
   {
     Set<String> duplicates = findDuplicates(fieldNames);
     if (!duplicates.isEmpty()) {
-      throw new ParseException("Duplicate column entries found : %s", duplicates.toString());
+      throw new ParseException(null, "Duplicate column entries found : %s", duplicates.toString());
     }
   }
 
