@@ -44,7 +44,7 @@ Here we describe the internal structure of segment files, which is
 essentially *columnar*: the data for each column is laid out in
 separate data structures. By storing each column separately, Druid can
 decrease query latency by scanning only those columns actually needed
-for a query.  There are three basic column types: the timestamp
+for a query. There are three basic column types: the timestamp
 column, dimension columns, and metric columns, as illustrated in the
 image below:
 
@@ -76,7 +76,7 @@ queries. In other words, queries that solely aggregate metrics based
 on filters do not need to touch the list of dimension values stored in \(2\).
 
 To get a concrete sense of these data structures, consider the ‘page’
-column from the example data above.  The three data structures that
+column from the example data above. The three data structures that
 represent this dimension are illustrated in the diagram below.
 
 ```
@@ -143,37 +143,33 @@ the 'column data' is an array of values. Additionally, a row with *n*
 values in 'column data' will have *n* non-zero valued entries in
 bitmaps.
 
-## SQL Compatible Null Handling
+## SQL compatible null handling
 By default, Druid string dimension columns use the values `''` and `null` interchangeably and numeric and metric columns can not represent `null` at all, instead coercing nulls to `0`. However, Druid also provides a SQL compatible null handling mode, which must be enabled at the system level, through `druid.generic.useDefaultValueForNull`. This setting, when set to `false`, will allow Druid to _at ingestion time_ create segments whose string columns can distinguish `''` from `null`, and numeric columns which can represent `null` valued rows instead of `0`.
 
 String dimension columns contain no additional column structures in this mode, instead just reserving an additional dictionary entry for the `null` value. Numeric columns however will be stored in the segment with an additional bitmap whose set bits indicate `null` valued rows. In addition to slightly increased segment sizes, SQL compatible null handling can incur a performance cost at query time as well, due to the need to check the null bitmap. This performance cost only occurs for columns that actually contain nulls.
 
-## Naming Convention
+## Naming convention
 
 Identifiers for segments are typically constructed using the segment datasource, interval start time (in ISO 8601 format), interval end time (in ISO 8601 format), and a version. If data is additionally sharded beyond a time range, the segment identifier will also contain a partition number.
 
 An example segment identifier may be:
 datasource_intervalStart_intervalEnd_version_partitionNum
 
-## Segment Components
+## Segment components
 
 Behind the scenes, a segment is comprised of several files, listed below.
 
 * `version.bin`
 
-    4 bytes representing the current segment version as an integer. E.g., for v9 segments, the version is 0x0, 0x0, 0x0, 0x9
+    4 bytes representing the current segment version as an integer. For example, for v9 segments, the version is 0x0, 0x0, 0x0, 0x9.
 
 * `meta.smoosh`
 
-    A file with metadata (filenames and offsets) about the contents of the other `smoosh` files
+    A file with metadata (filenames and offsets) about the contents of the other `smoosh` files.
 
 * `XXXXX.smoosh`
 
-    There are some number of these files, which are concatenated binary data
-
-    The `smoosh` files represent multiple files "smooshed" together in order to minimize the number of file descriptors that must be open to house the data. They are files of up to 2GB in size (to match the limit of a memory mapped ByteBuffer in Java). The `smoosh` files house individual files for each of the columns in the data as well as an `index.drd` file with extra metadata about the segment.
-
-    There is also a special column called `__time` that refers to the time column of the segment. This will hopefully become less and less special as the code evolves, but for now it’s as special as my Mommy always told me I am.
+    The `smoosh` files represent multiple files "smooshed" together in order to minimize the number of file descriptors that must be open to house the data. They are files of up to 2 GB in size (to match the limit of a memory mapped ByteBuffer in Java). The `smoosh` files house individual files for each of the columns in the data as well as an `index.drd` file with extra metadata about the segment.
 
 In the codebase, segments have an internal format version. The current segment format version is `v9`.
 
@@ -189,7 +185,7 @@ A ColumnDescriptor is essentially an object that allows us to use Jackson's poly
 ### Compression
 Druid compresses blocks of values for string, long, float, and double columns, using [LZ4](https://github.com/lz4/lz4-java) by default, and bitmaps for string columns and numeric null values are compressed using [Roaring](https://github.com/RoaringBitmap/RoaringBitmap). We recommend sticking with these defaults unless experimental verification with your own data and query patterns suggest that non-default options will perform better in your specific case. For example, for bitmap in string columns, the differences between using Roaring and CONCISE are most pronounced for high cardinality columns. In this case, Roaring is substantially faster on filters that match a lot of values, but in some cases CONCISE can have a lower footprint due to the overhead of the Roaring format (but is still slower when lots of values are matched). Currently, compression is configured on at the segment level rather than individual columns, see [IndexSpec](../ingestion/ingestion-spec.md#indexspec) for more details.
 
-## Sharding Data to Create Segments
+## Sharding data to create segments
 
 ### Sharding
 
