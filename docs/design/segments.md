@@ -39,18 +39,8 @@ for more guidance.
 
 ## Segment file structure
 
-<<<<<<< HEAD
-Here we describe the internal structure of segment files, which is
-essentially *columnar*: the data for each column is laid out in
-separate data structures. By storing each column separately, Druid can
-decrease query latency by scanning only those columns actually needed
-for a query. There are three basic column types: the timestamp
-column, dimension columns, and metric columns, as illustrated in the
-image below:
-=======
 Segment files are *columnar*: the data for each column is laid out in
 separate data structures. By storing each column separately, Druid decreases query latency by scanning only those columns actually needed for a query.  There are three basic column types: timestamp, dimensions, and metrics:
->>>>>>> upstream/master
 
 ![Druid column types](../assets/druid-column-types.png "Druid Column Types")
 
@@ -66,13 +56,7 @@ three data structures:
 - __List__: The column’s values, encoded using the dictionary. Required for GroupBy and TopN queries. These operators allow queries that solely aggregate metrics based on filters to run without accessing the list of values.
 - __Bitmap__: One bitmap for each distinct value in the column, to indicate which rows contain that value. Bitmaps allow for quick filtering operations because they are convenient for quickly applying AND and OR operators. Also known as inverted indexes.
 
-<<<<<<< HEAD
-To get a concrete sense of these data structures, consider the ‘page’
-column from the example data above. The three data structures that
-represent this dimension are illustrated in the diagram below.
-=======
 To get a better sense of these data structures, consider the "Page" column from the example data above, represented by the following data structures:
->>>>>>> upstream/master
 
 ```
 1: Dictionary
@@ -147,53 +131,20 @@ A multi-value column allows a single row to contain multiple strings for a colum
 
 Note the changes to the second row in the list of column data and the `Ke$ha`
 bitmap. If a row has more than one value for a column, its entry in
-<<<<<<< HEAD
-the 'column data' is an array of values. Additionally, a row with *n*
-values in 'column data' will have *n* non-zero valued entries in
-bitmaps.
-
-## SQL compatible null handling
-By default, Druid string dimension columns use the values `''` and `null` interchangeably and numeric and metric columns can not represent `null` at all, instead coercing nulls to `0`. However, Druid also provides a SQL compatible null handling mode, which must be enabled at the system level, through `druid.generic.useDefaultValueForNull`. This setting, when set to `false`, will allow Druid to _at ingestion time_ create segments whose string columns can distinguish `''` from `null`, and numeric columns which can represent `null` valued rows instead of `0`.
-
-String dimension columns contain no additional column structures in this mode, instead just reserving an additional dictionary entry for the `null` value. Numeric columns however will be stored in the segment with an additional bitmap whose set bits indicate `null` valued rows. In addition to slightly increased segment sizes, SQL compatible null handling can incur a performance cost at query time as well, due to the need to check the null bitmap. This performance cost only occurs for columns that actually contain nulls.
-
-## Naming convention
-
-Identifiers for segments are typically constructed using the segment datasource, interval start time (in ISO 8601 format), interval end time (in ISO 8601 format), and a version. If data is additionally sharded beyond a time range, the segment identifier will also contain a partition number.
-
-An example segment identifier may be:
-datasource_intervalStart_intervalEnd_version_partitionNum
-
-## Segment components
-=======
 the list is an array of values. Additionally, a row with *n* values in the list has *n* non-zero valued entries in bitmaps.
->>>>>>> upstream/master
 
 ## Compression
 
 Druid uses LZ4 by default to compress blocks of values for string, long, float, and double columns. Druid uses Roaring to compress bitmaps for string columns and numeric null values. We recommend that you use these defaults unless you've experimented with your data and query patterns suggest that non-default options will perform better in your specific case. 
 
-<<<<<<< HEAD
-    4 bytes representing the current segment version as an integer. For example, for v9 segments, the version is 0x0, 0x0, 0x0, 0x9.
-=======
 Druid also supports Concise bitmap compression. For string column bitmaps, the differences between using Roaring and Concise are most pronounced for high cardinality columns. In this case, Roaring is substantially faster on filters that match many values, but in some cases Concise can have a lower footprint due to the overhead of the Roaring format (but is still slower when many values are matched). You configure compression at the segment level, not for individual columns. See [IndexSpec](../ingestion/ingestion-spec.md#indexspec) for more details.
->>>>>>> upstream/master
 
 ## Segment identification
 
-<<<<<<< HEAD
-    A file with metadata (filenames and offsets) about the contents of the other `smoosh` files.
-=======
 Segment identifiers typically contain the segment datasource, interval start time (in ISO 8601 format), interval end time (in ISO 8601 format), and version information. If data is additionally sharded beyond a time range, the segment identifier also contains a partition number:
->>>>>>> upstream/master
 
 `datasource_intervalStart_intervalEnd_version_partitionNum`
 
-<<<<<<< HEAD
-    Smoosh (`.smoosh`) files are concatenated binary data. This file consolidation reduces the number of file descriptors that must be open when accessing data. The files should be 2 GB or less in size to remain within the limit of a memory mapped `ByteBuffer` in Java. Smoosh files contain individual files for each column in the data and an `index.drd` file that contains additional segment metadata.
-
-    Each segment must contain a column called `__time`, which Druid uses to store the primary timestamp.
-=======
 ### Segment ID examples
 
 The increasing partition numbers in the following segments indicate that multiple segments exist for the same interval:
@@ -203,7 +154,6 @@ foo_2015-01-01/2015-01-02_v1_0
 foo_2015-01-01/2015-01-02_v1_1
 foo_2015-01-01/2015-01-02_v1_2
 ```
->>>>>>> upstream/master
 
 If you reindex the data with a new schema, Druid allocates a new version ID to the newly created segments:
 
@@ -225,11 +175,7 @@ sampleData_2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z_v1_2
 
 All three segments must load before a query for the interval `2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z` can complete.
 
-<<<<<<< HEAD
-## Sharding data to create segments
-=======
 Linear shard specs are an exception to this rule. Linear shard specs do not enforce "completeness" so queries can complete even if shards are not completely loaded.
->>>>>>> upstream/master
 
 For example, if a real-time ingestion creates three segments that were sharded with linear shard spec, and only two of the segments are loaded, queries return results for those two segments.
 
