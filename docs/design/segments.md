@@ -28,7 +28,7 @@ Apache Druid stores its data and indexes in *segment files* partitioned by time.
 The time interval is configurable in the `segmentGranularity` parameter of the [`granularitySpec`](../ingestion/ingestion-spec.md#granularityspec).
 
 For Druid to operate well under heavy query load, it is important for the segment
-file size to be within the recommended range of 300 MB-700 MB. If your
+file size to be within the recommended range of 300-700 MB. If your
 segment files are larger than this range, then consider either
 changing the granularity of the segment time interval or partitioning your
 data and/or adjusting the `targetRowsPerSegment` in your `partitionsSpec`.
@@ -189,13 +189,14 @@ A segment contains several files:
 
 * `meta.smoosh`
 
-    A file containing metadata (filenames and offsets) about the contents of the other `smoosh` files
+    A file containing metadata (filenames and offsets) about the contents of the other `smoosh` files.
 
 * `XXXXX.smoosh`
 
-    Smoosh (`.smoosh`) files contain concatenated binary data. This file consolidation reduces the number of file descriptors that must be open when accessing data. The files should be 2 GB or less in size to remain within the limit of a memory mapped `ByteBuffer` in Java. Smoosh files contain individual files for each column in the data and an `index.drd` file that contains additional segment metadata.
-
-Additionally, a column called `__time` refers to the time column of the segment.
+    Smoosh (`.smoosh`) files contain concatenated binary data. This file consolidation reduces the number of file descriptors that must be open when accessing data. The files are 2 GB or less in size to remain within the limit of a memory-mapped `ByteBuffer` in Java. 
+    Smoosh files contain the following: 
+    - Individual files for each column in the data, including one for the `__time` column that refers to the timestamp of the segment. 
+    - An `index.drd` file that contains additional segment metadata.
 
 In the codebase, segments have an internal format version. The current segment format version is `v9`.
 
