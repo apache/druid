@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.AbstractPrioritizedQueryRunnerCallable;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
@@ -87,6 +88,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   private static final String CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION = "mergeRunnersUsingChainedExecution";
 
   private final GroupByQueryConfig config;
+  private final DruidProcessingConfig processingConfig;
   private final Iterable<QueryRunner<ResultRow>> queryables;
   private final QueryProcessingPool queryProcessingPool;
   private final QueryWatcher queryWatcher;
@@ -98,6 +100,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
 
   public GroupByMergingQueryRunnerV2(
       GroupByQueryConfig config,
+      DruidProcessingConfig processingConfig,
       QueryProcessingPool queryProcessingPool,
       QueryWatcher queryWatcher,
       Iterable<QueryRunner<ResultRow>> queryables,
@@ -109,6 +112,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   )
   {
     this.config = config;
+    this.processingConfig = processingConfig;
     this.queryProcessingPool = queryProcessingPool;
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
@@ -197,6 +201,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
                       query,
                       null,
                       config,
+                      processingConfig,
                       Suppliers.ofInstance(mergeBufferHolder.get()),
                       combineBufferHolder,
                       concurrencyHint,

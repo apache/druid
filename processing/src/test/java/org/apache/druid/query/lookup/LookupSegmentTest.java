@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -162,13 +163,19 @@ public class LookupSegmentTest
   @Test
   public void test_asStorageAdapter_getDimensionCardinalityK()
   {
-    Assert.assertEquals(Integer.MAX_VALUE, LOOKUP_SEGMENT.asStorageAdapter().getDimensionCardinality("k"));
+    Assert.assertEquals(
+        DimensionDictionarySelector.CARDINALITY_UNKNOWN,
+        LOOKUP_SEGMENT.asStorageAdapter().getDimensionCardinality("k")
+    );
   }
 
   @Test
   public void test_asStorageAdapter_getDimensionCardinalityV()
   {
-    Assert.assertEquals(Integer.MAX_VALUE, LOOKUP_SEGMENT.asStorageAdapter().getDimensionCardinality("v"));
+    Assert.assertEquals(
+        DimensionDictionarySelector.CARDINALITY_UNKNOWN,
+        LOOKUP_SEGMENT.asStorageAdapter().getDimensionCardinality("v")
+    );
   }
 
   @Test

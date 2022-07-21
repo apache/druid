@@ -23,6 +23,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExpressionTypeConversion;
 import org.apache.druid.segment.column.ColumnType;
@@ -53,7 +54,7 @@ class ReductionOperatorConversionHelper
 
         SqlTypeName returnSqlTypeName = SqlTypeName.NULL;
         boolean hasDouble = false;
-
+        boolean isString = false;
         for (int i = 0; i < n; i++) {
           RelDataType type = opBinding.getOperandType(i);
           SqlTypeName sqlTypeName = type.getSqlTypeName();
@@ -63,6 +64,7 @@ class ReductionOperatorConversionHelper
           if (valueType != null) {
             if (valueType.is(ValueType.STRING)) {
               returnSqlTypeName = sqlTypeName;
+              isString = true;
               break;
             } else if (valueType.anyOf(ValueType.DOUBLE, ValueType.FLOAT)) {
               returnSqlTypeName = SqlTypeName.DOUBLE;
@@ -75,6 +77,12 @@ class ReductionOperatorConversionHelper
           }
         }
 
-        return typeFactory.createSqlType(returnSqlTypeName);
+        if (isString || NullHandling.sqlCompatible()) {
+          // String can be null in both modes
+          return typeFactory.createTypeWithNullability(typeFactory.createSqlType(returnSqlTypeName), true);
+        } else {
+          return typeFactory.createSqlType(returnSqlTypeName);
+        }
       };
 }
+

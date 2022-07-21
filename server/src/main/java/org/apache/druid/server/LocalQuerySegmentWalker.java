@@ -37,7 +37,6 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.joda.time.Interval;
 
@@ -66,14 +65,14 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   public LocalQuerySegmentWalker(
       QueryRunnerFactoryConglomerate conglomerate,
       SegmentWrangler segmentWrangler,
-      JoinableFactory joinableFactory,
+      JoinableFactoryWrapper joinableFactoryWrapper,
       QueryScheduler scheduler,
       ServiceEmitter emitter
   )
   {
     this.conglomerate = conglomerate;
     this.segmentWrangler = segmentWrangler;
-    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
+    this.joinableFactoryWrapper = joinableFactoryWrapper;
     this.scheduler = scheduler;
     this.emitter = emitter;
   }
