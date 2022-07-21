@@ -31,10 +31,7 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
-import org.apache.log4j.spi.LoggingEvent;
-import org.hibernate.validator.constraints.Email;
 import org.joda.time.DateTime;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -312,9 +309,9 @@ public class FilteringCloseableInputRowIteratorTest
         } else {
           try {
             throw new IllegalArgumentException("this is the root cause of the exception!");
-          } catch  (Exception e) {
+          }
+          catch (Exception e) {
             throw new ParseException(null, e, "Parse exception at [%d]", currentIndex);
-
           }
         }
       }

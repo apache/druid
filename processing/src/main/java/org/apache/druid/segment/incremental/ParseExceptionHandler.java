@@ -104,7 +104,8 @@ public class ParseExceptionHandler
   }
 
   @VisibleForTesting
-  public void logParseExceptionHelper(Exception e) {
+  public void logParseExceptionHelper(Exception e)
+  {
     if (logParseExceptions) {
       LOG.error(e, "Encountered parse exception");
     }
