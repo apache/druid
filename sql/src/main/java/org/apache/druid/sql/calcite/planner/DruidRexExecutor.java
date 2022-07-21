@@ -32,7 +32,6 @@ import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
-import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -168,7 +167,7 @@ public class DruidRexExecutor implements RexExecutor
           } else {
             literal = rexBuilder.makeLiteral(Arrays.asList(exprResult.asArray()), constExp.getType(), true);
           }
-        } else if (sqlTypeName == SqlTypeName.OTHER && constExp.getType() instanceof RowSignatures.ComplexSqlType) {
+        } else if (sqlTypeName == SqlTypeName.OTHER) {
           // complex constant is not reducible, so just leave it as an expression
           literal = constExp;
         } else {

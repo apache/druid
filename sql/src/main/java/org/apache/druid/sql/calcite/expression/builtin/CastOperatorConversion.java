@@ -116,9 +116,14 @@ public class CastOperatorConversion implements SqlOperatorConversion
     } else if (SqlTypeName.DATETIME_TYPES.contains(fromType) && SqlTypeName.CHAR_TYPES.contains(toType)) {
       return castDateTimeToChar(plannerContext, operandExpression, fromType, Calcites.getColumnTypeForRelDataType(rexNode.getType()));
     } else {
-      // Handle other casts.
-      final ExprType fromExprType = EXPRESSION_TYPES.get(fromType);
-      final ExprType toExprType = EXPRESSION_TYPES.get(toType);
+      // Handle other casts. If either type is ANY, use the other type instead. If both are ANY, this means nulls
+      // downstream, Druid will try its best
+      final ExprType fromExprType = SqlTypeName.ANY.equals(fromType)
+                                    ? EXPRESSION_TYPES.get(toType)
+                                    : EXPRESSION_TYPES.get(fromType);
+      final ExprType toExprType = SqlTypeName.ANY.equals(toType)
+                                  ? EXPRESSION_TYPES.get(fromType)
+                                  : EXPRESSION_TYPES.get(toType);
 
       if (fromExprType == null || toExprType == null) {
         // We have no runtime type for these SQL types.

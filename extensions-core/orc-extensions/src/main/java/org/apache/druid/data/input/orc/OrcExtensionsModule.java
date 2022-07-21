@@ -62,6 +62,10 @@ public class OrcExtensionsModule implements DruidModule
     // to properly initialize everything
 
     final Configuration conf = new Configuration();
+
+    // Set explicit CL. Otherwise it'll try to use thread context CL, which may not have all of our dependencies.
+    conf.setClassLoader(getClass().getClassLoader());
+
     if (props != null) {
       for (String propName : props.stringPropertyNames()) {
         if (propName.startsWith("hadoop.")) {

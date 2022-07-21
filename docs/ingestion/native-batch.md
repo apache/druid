@@ -717,6 +717,6 @@ For details on available input sources see:
 - [Druid input Source](./native-batch-input-source.md#druid-input-source) (`druid`) reads data from a Druid datasource.
 - [SQL input Source](./native-batch-input-source.md#sql-input-source) (`sql`) reads data from a RDBMS source.
 
-For information on how to combine input sources, see [Combining input sources](./native-batch-input-source.md#combining-input-sources).
+For information on how to combine input sources, see [Combining input source](./native-batch-input-source.md#combining-input-source).
 
 

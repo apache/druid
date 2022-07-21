@@ -70,10 +70,10 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
   protected static final RowSignature FOO_TABLE_SIGNATURE =
       RowSignature.builder()
                   .addTimeColumn()
-                  .add("cnt", ColumnType.LONG)
                   .add("dim1", ColumnType.STRING)
                   .add("dim2", ColumnType.STRING)
                   .add("dim3", ColumnType.STRING)
+                  .add("cnt", ColumnType.LONG)
                   .add("m1", ColumnType.FLOAT)
                   .add("m2", ColumnType.DOUBLE)
                   .add("unique_dim1", HyperUniquesAggregatorFactory.TYPE)

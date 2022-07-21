@@ -45,6 +45,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.MetadataConfigModule;
 import org.apache.druid.guice.ModulesConfig;
+import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.StartupLoggingModule;
@@ -62,6 +63,7 @@ import org.apache.druid.guice.security.EscalatorModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
+import org.apache.druid.rpc.guice.ServiceClientModule;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumModule;
 import org.apache.druid.server.emitter.EmitterModule;
 import org.apache.druid.server.initialization.AuthenticatorMapperModule;
@@ -412,6 +414,7 @@ public class Initialization
         new StorageNodeModule(),
         new JettyServerModule(),
         new ExpressionModule(),
+        new NestedDataModule(),
         new DiscoveryModule(),
         new ServerViewModule(),
         new MetadataConfigModule(),
@@ -429,7 +432,8 @@ public class Initialization
         new AuthorizerModule(),
         new AuthorizerMapperModule(),
         new StartupLoggingModule(),
-        new ExternalStorageAccessSecurityModule()
+        new ExternalStorageAccessSecurityModule(),
+        new ServiceClientModule()
     );
 
     ModuleList actualModules = new ModuleList(baseInjector, nodeRoles);

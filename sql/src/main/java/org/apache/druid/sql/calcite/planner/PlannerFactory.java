@@ -72,6 +72,7 @@ public class PlannerFactory
   private final ObjectMapper jsonMapper;
   private final AuthorizerMapper authorizerMapper;
   private final String druidSchemaName;
+  private final CalciteRulesManager calciteRuleManager;
 
   @Inject
   public PlannerFactory(
@@ -82,7 +83,8 @@ public class PlannerFactory
       final PlannerConfig plannerConfig,
       final AuthorizerMapper authorizerMapper,
       final @Json ObjectMapper jsonMapper,
-      final @DruidSchemaName String druidSchemaName
+      final @DruidSchemaName String druidSchemaName,
+      final CalciteRulesManager calciteRuleManager
   )
   {
     this.rootSchema = rootSchema;
@@ -93,6 +95,7 @@ public class PlannerFactory
     this.authorizerMapper = authorizerMapper;
     this.jsonMapper = jsonMapper;
     this.druidSchemaName = druidSchemaName;
+    this.calciteRuleManager = calciteRuleManager;
   }
 
   /**
@@ -163,7 +166,7 @@ public class PlannerFactory
         .traitDefs(ConventionTraitDef.INSTANCE, RelCollationTraitDef.INSTANCE)
         .convertletTable(new DruidConvertletTable(plannerContext))
         .operatorTable(operatorTable)
-        .programs(Rules.programs(plannerContext))
+        .programs(calciteRuleManager.programs(plannerContext))
         .executor(new DruidRexExecutor(plannerContext))
         .typeSystem(DruidTypeSystem.INSTANCE)
         .defaultSchema(rootSchema.getSubSchema(druidSchemaName))

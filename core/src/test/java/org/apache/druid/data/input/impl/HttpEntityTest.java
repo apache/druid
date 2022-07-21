@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.google.common.net.HttpHeaders;
+import com.sun.net.httpserver.HttpServer;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
@@ -33,10 +34,14 @@ import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 
 public class HttpEntityTest
 {
@@ -64,11 +69,48 @@ public class HttpEntityTest
   @Test
   public void testOpenInputStream() throws IOException, URISyntaxException
   {
-    URI url = new URI("https://druid.apache.org/data/wikipedia.json.gz");
-    final InputStream inputStream = HttpEntity.openInputStream(url, "", null, 0);
-    final InputStream inputStreamPartial = HttpEntity.openInputStream(url, "", null, 5);
-    inputStream.skip(5);
-    Assert.assertTrue(IOUtils.contentEquals(inputStream, inputStreamPartial));
+    HttpServer server = null;
+    InputStream inputStream = null;
+    InputStream inputStreamPartial = null;
+    ServerSocket serverSocket = null;
+    try {
+      serverSocket = new ServerSocket(0);
+      int port = serverSocket.getLocalPort();
+      // closing port so that the httpserver can use. Can cause race conditions.
+      serverSocket.close();
+      server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
+      server.createContext(
+          "/test",
+          (httpExchange) -> {
+            String payload = "12345678910";
+            byte[] outputBytes = payload.getBytes(StandardCharsets.UTF_8);
+            httpExchange.sendResponseHeaders(200, outputBytes.length);
+            OutputStream os = httpExchange.getResponseBody();
+            httpExchange.getResponseHeaders().set(HttpHeaders.CONTENT_TYPE, "application/octet-stream");
+            httpExchange.getResponseHeaders().set(HttpHeaders.CONTENT_LENGTH, String.valueOf(outputBytes.length));
+            httpExchange.getResponseHeaders().set(HttpHeaders.CONTENT_RANGE, "bytes 0");
+            os.write(outputBytes);
+            os.close();
+          }
+      );
+      server.start();
+
+      URI url = new URI("http://" + server.getAddress().getHostName() + ":" + server.getAddress().getPort() + "/test");
+      inputStream = HttpEntity.openInputStream(url, "", null, 0);
+      inputStreamPartial = HttpEntity.openInputStream(url, "", null, 5);
+      inputStream.skip(5);
+      Assert.assertTrue(IOUtils.contentEquals(inputStream, inputStreamPartial));
+    }
+    finally {
+      IOUtils.closeQuietly(inputStream);
+      IOUtils.closeQuietly(inputStreamPartial);
+      if (server != null) {
+        server.stop(0);
+      }
+      if (serverSocket != null) {
+        serverSocket.close();
+      }
+    }
   }
 
   @Test

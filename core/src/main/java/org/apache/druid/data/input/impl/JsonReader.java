@@ -47,7 +47,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * In constract to {@link JsonLineReader} which processes input text line by line independently,
+ * In contrast to {@link JsonLineReader} which processes input text line by line independently,
  * this class tries to parse the input text as a whole to an array of objects.
  *
  * The input text can be:

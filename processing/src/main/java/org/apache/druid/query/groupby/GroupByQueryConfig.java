@@ -20,14 +20,19 @@
 package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
+import org.apache.druid.utils.JvmUtils;
 
 /**
  *
  */
 public class GroupByQueryConfig
 {
+  public static final long AUTOMATIC = 0;
+
   public static final String CTX_KEY_STRATEGY = "groupByStrategy";
   public static final String CTX_KEY_FORCE_LIMIT_PUSH_DOWN = "forceLimitPushDown";
   public static final String CTX_KEY_APPLY_LIMIT_PUSH_DOWN = "applyLimitPushDown";
@@ -36,19 +41,31 @@ public class GroupByQueryConfig
   public static final String CTX_KEY_EXECUTING_NESTED_QUERY = "executingNestedQuery";
   public static final String CTX_KEY_ARRAY_RESULT_ROWS = "resultAsArray";
   public static final String CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING = "groupByEnableMultiValueUnnesting";
+  public static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
   private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
   private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
   private static final String CTX_KEY_MAX_RESULTS = "maxResults";
   private static final String CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS = "bufferGrouperInitialBuckets";
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_LOAD_FACTOR = "bufferGrouperMaxLoadFactor";
-  private static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
-  private static final String CTX_KEY_MAX_SELECTOR_DICTIONARY_SIZE = "maxSelectorDictionarySize";
-  private static final String CTX_KEY_MAX_MERGING_DICTIONARY_SIZE = "maxMergingDictionarySize";
   private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
   private static final String CTX_KEY_INTERMEDIATE_COMBINE_DEGREE = "intermediateCombineDegree";
   private static final String CTX_KEY_NUM_PARALLEL_COMBINE_THREADS = "numParallelCombineThreads";
   private static final String CTX_KEY_MERGE_THREAD_LOCAL = "mergeThreadLocal";
+
+  // Constants for sizing merging and selector dictionaries. Rationale for these constants:
+  //  1) In no case do we want total aggregate dictionary size to exceed 40% of max memory.
+  //  2) In no case do we want any dictionary to exceed 1GB of memory: if heaps are giant, better to spill at
+  //     "reasonable" sizes rather than get giant dictionaries. (There is probably some other reason the user
+  //     wanted a giant heap, so we shouldn't monopolize it with dictionaries.)
+  //  3) Use somewhat more memory for merging dictionary vs. selector dictionaries, because if a merging
+  //     dictionary is full we must spill to disk, whereas if a selector dictionary is full we simply emit
+  //     early to the merge buffer. So, a merging dictionary filling up has a more severe impact on
+  //     query performance.
+  private static final double MERGING_DICTIONARY_HEAP_FRACTION = 0.3;
+  private static final double SELECTOR_DICTIONARY_HEAP_FRACTION = 0.1;
+  private static final long MIN_AUTOMATIC_DICTIONARY_SIZE = 1;
+  private static final long MAX_AUTOMATIC_DICTIONARY_SIZE = 1_000_000_000;
 
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
@@ -75,11 +92,11 @@ public class GroupByQueryConfig
   @JsonProperty
   // Size of on-heap string dictionary for merging, per-processing-thread; when exceeded, partial results will be
   // emitted to the merge buffer early.
-  private long maxSelectorDictionarySize = 100_000_000L;
+  private HumanReadableBytes maxSelectorDictionarySize = HumanReadableBytes.valueOf(AUTOMATIC);
 
   @JsonProperty
   // Size of on-heap string dictionary for merging, per-query; when exceeded, partial results will be spilled to disk
-  private long maxMergingDictionarySize = 100_000_000L;
+  private HumanReadableBytes maxMergingDictionarySize = HumanReadableBytes.valueOf(AUTOMATIC);
 
   @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
@@ -165,14 +182,80 @@ public class GroupByQueryConfig
     return bufferGrouperInitialBuckets;
   }
 
-  public long getMaxSelectorDictionarySize()
+  /**
+   * For unit tests. Production code should use {@link #getActualMaxSelectorDictionarySize}.
+   */
+  long getConfiguredMaxSelectorDictionarySize()
   {
-    return maxSelectorDictionarySize;
+    return maxSelectorDictionarySize.getBytes();
   }
 
-  public long getMaxMergingDictionarySize()
+  /**
+   * For unit tests. Production code should use {@link #getActualMaxSelectorDictionarySize}.
+   */
+  long getActualMaxSelectorDictionarySize(final long maxHeapSize, final int numConcurrentQueries)
   {
-    return maxMergingDictionarySize;
+    if (maxSelectorDictionarySize.getBytes() == AUTOMATIC) {
+      final long heapForDictionaries = (long) (maxHeapSize * SELECTOR_DICTIONARY_HEAP_FRACTION);
+
+      return Math.max(
+          MIN_AUTOMATIC_DICTIONARY_SIZE,
+          Math.min(
+              MAX_AUTOMATIC_DICTIONARY_SIZE,
+              heapForDictionaries / numConcurrentQueries
+          )
+      );
+    } else {
+      return maxSelectorDictionarySize.getBytes();
+    }
+  }
+
+  public long getActualMaxSelectorDictionarySize(final DruidProcessingConfig processingConfig)
+  {
+    return getActualMaxSelectorDictionarySize(
+        JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
+
+        // numMergeBuffers is the number of groupBy queries that can run simultaneously
+        processingConfig.getNumMergeBuffers()
+    );
+  }
+
+  /**
+   * For unit tests. Production code should use {@link #getActualMaxMergingDictionarySize}.
+   */
+  long getConfiguredMaxMergingDictionarySize()
+  {
+    return maxMergingDictionarySize.getBytes();
+  }
+
+  /**
+   * For unit tests. Production code should use {@link #getActualMaxMergingDictionarySize}.
+   */
+  public long getActualMaxMergingDictionarySize(final long maxHeapSize, final int numConcurrentQueries)
+  {
+    if (maxMergingDictionarySize.getBytes() == AUTOMATIC) {
+      final long heapForDictionaries = (long) (maxHeapSize * MERGING_DICTIONARY_HEAP_FRACTION);
+
+      return Math.max(
+          MIN_AUTOMATIC_DICTIONARY_SIZE,
+          Math.min(
+              MAX_AUTOMATIC_DICTIONARY_SIZE,
+              heapForDictionaries / numConcurrentQueries
+          )
+      );
+    } else {
+      return maxMergingDictionarySize.getBytes();
+    }
+  }
+
+  public long getActualMaxMergingDictionarySize(final DruidProcessingConfig processingConfig)
+  {
+    return getActualMaxMergingDictionarySize(
+        JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
+
+        // numMergeBuffers is the number of groupBy queries that can run simultaneously
+        processingConfig.getNumMergeBuffers()
+    );
   }
 
   public long getMaxOnDiskStorage()
@@ -259,20 +342,8 @@ public class GroupByQueryConfig
         ((Number) query.getContextValue(CTX_KEY_MAX_ON_DISK_STORAGE, getMaxOnDiskStorage())).longValue(),
         getMaxOnDiskStorage()
     );
-    newConfig.maxSelectorDictionarySize = Math.min(
-        ((Number) query.getContextValue(
-            CTX_KEY_MAX_SELECTOR_DICTIONARY_SIZE,
-            getMaxSelectorDictionarySize()
-        )).longValue(),
-        getMaxSelectorDictionarySize()
-    );
-    newConfig.maxMergingDictionarySize = Math.min(
-        ((Number) query.getContextValue(
-            CTX_KEY_MAX_MERGING_DICTIONARY_SIZE,
-            getMaxMergingDictionarySize()
-        )).longValue(),
-        getMaxMergingDictionarySize()
-    );
+    newConfig.maxSelectorDictionarySize = maxSelectorDictionarySize; // No overrides
+    newConfig.maxMergingDictionarySize = maxMergingDictionarySize; // No overrides
     newConfig.forcePushDownLimit = query.getContextBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
     newConfig.applyLimitPushDownToSegment = query.getContextBoolean(
         CTX_KEY_APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT,

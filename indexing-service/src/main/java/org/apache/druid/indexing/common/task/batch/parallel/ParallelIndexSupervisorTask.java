@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.Union;
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
@@ -61,6 +62,8 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -80,6 +83,7 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.apache.druid.utils.CollectionUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -110,6 +114,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -1338,7 +1343,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   /**
    * Worker tasks spawned by the supervisor call this API to report the segments they generated and pushed.
    *
-   * @see ParallelIndexSupervisorTaskClient#report(String, SubTaskReport)
+   * @see ParallelIndexSupervisorTaskClient#report(SubTaskReport)
    */
   @POST
   @Path("/report")
@@ -1623,7 +1628,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     final MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
     for (String runningTaskId : runningTaskIds) {
       try {
-        Map<String, Object> report = toolbox.getIndexingServiceClient().getTaskReport(runningTaskId);
+        final Map<String, Object> report = getTaskReport(toolbox.getOverlordClient(), runningTaskId);
+
         if (report == null || report.isEmpty()) {
           // task does not have a running report yet
           continue;
@@ -1772,6 +1778,28 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
 
     return Response.ok(doGetLiveReports(full)).build();
+  }
+
+  /**
+   * Like {@link OverlordClient#taskReportAsMap}, but synchronous, and returns null instead of throwing an error if
+   * the server returns 404.
+   */
+  @Nullable
+  @VisibleForTesting
+  static Map<String, Object> getTaskReport(final OverlordClient overlordClient, final String taskId)
+      throws InterruptedException, ExecutionException
+  {
+    try {
+      return FutureUtils.get(overlordClient.taskReportAsMap(taskId), true);
+    }
+    catch (ExecutionException e) {
+      if (e.getCause() instanceof HttpResponseException &&
+          ((HttpResponseException) e.getCause()).getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+        return null;
+      } else {
+        throw e;
+      }
+    }
   }
 
   /**

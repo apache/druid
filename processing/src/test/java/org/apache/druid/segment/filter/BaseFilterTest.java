@@ -38,6 +38,9 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.segment.FrameSegment;
+import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -334,6 +337,14 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                 "rowBasedWithTypeSignature",
                 input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {})
             )
+            .put("frame (row-based)", input -> {
+              final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
+              return Pair.of(segment.asStorageAdapter(), segment);
+            })
+            .put("frame (columnar)", input -> {
+              final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
+              return Pair.of(segment.asStorageAdapter(), segment);
+            })
             .build();
 
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
@@ -765,9 +776,14 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final List<String> expectedRows
   )
   {
-    // IncrementalIndex and RowBasedSegment cannot ever vectorize.
+    // IncrementalIndex, RowBasedSegment cannot vectorize.
+    // Columnar FrameStorageAdapter *can* vectorize, but the tests won't pass, because the vectorizable cases
+    // differ from QueryableIndexStorageAdapter due to frames not having indexes. So, skip these too.
     final boolean testVectorized =
-        !(adapter instanceof IncrementalIndexStorageAdapter) && !(adapter instanceof RowBasedStorageAdapter);
+        !(adapter instanceof IncrementalIndexStorageAdapter)
+        && !(adapter instanceof RowBasedStorageAdapter)
+        && !(adapter instanceof FrameStorageAdapter);
+
     assertFilterMatches(filter, expectedRows, testVectorized);
   }
 

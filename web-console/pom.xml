@@ -45,6 +45,7 @@
         <artifactId>frontend-maven-plugin</artifactId>
         <configuration>
           <skip>${druid.console.skip}</skip>
+          <skipTests>${skipUTs}</skipTests>
         </configuration>
         <executions>
           <execution>
