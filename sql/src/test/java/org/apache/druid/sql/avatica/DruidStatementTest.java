@@ -126,10 +126,10 @@ public class DruidStatementTest extends CalciteTestBase
       Assert.assertEquals(
           Lists.newArrayList(
               Lists.newArrayList("__time", "TIMESTAMP", "java.lang.Long"),
-              Lists.newArrayList("cnt", "BIGINT", "java.lang.Number"),
               Lists.newArrayList("dim1", "VARCHAR", "java.lang.String"),
               Lists.newArrayList("dim2", "VARCHAR", "java.lang.String"),
               Lists.newArrayList("dim3", "VARCHAR", "java.lang.String"),
+              Lists.newArrayList("cnt", "BIGINT", "java.lang.Number"),
               Lists.newArrayList("m1", "FLOAT", "java.lang.Float"),
               Lists.newArrayList("m2", "DOUBLE", "java.lang.Double"),
               Lists.newArrayList("unique_dim1", "OTHER", "java.lang.Object")
@@ -166,9 +166,7 @@ public class DruidStatementTest extends CalciteTestBase
               true,
               Lists.newArrayList(
                   new Object[]{""},
-                  new Object[]{
-                      "1"
-                  },
+                  new Object[]{"1"},
                   new Object[]{"10.1"},
                   new Object[]{"2"},
                   new Object[]{"abc"},

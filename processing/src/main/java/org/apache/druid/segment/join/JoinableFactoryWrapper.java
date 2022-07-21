@@ -22,11 +22,14 @@ package org.apache.druid.segment.join;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultiset;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.google.inject.Inject;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -67,9 +70,15 @@ public class JoinableFactoryWrapper
 
   private final JoinableFactory joinableFactory;
 
+  @Inject
   public JoinableFactoryWrapper(final JoinableFactory joinableFactory)
   {
     this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
+  }
+
+  public JoinableFactory getJoinableFactory()
+  {
+    return joinableFactory;
   }
 
   /**
@@ -141,7 +150,12 @@ public class JoinableFactoryWrapper
             );
 
             return baseSegment ->
-                new HashJoinSegment(baseSegment, baseFilterToUse, clausesToUse, joinFilterPreAnalysis);
+                new HashJoinSegment(
+                    baseSegment,
+                    baseFilterToUse,
+                    GuavaUtils.firstNonNull(clausesToUse, ImmutableList.of()),
+                    joinFilterPreAnalysis
+                );
           }
         }
     );
@@ -261,7 +275,9 @@ public class JoinableFactoryWrapper
    * - the right-hand columns referenced by the condition must not have any duplicate values. If there are duplicates
    *   values in the column, then the join is tried to be converted to a filter while maintaining the join clause on top
    *   as well for correct results.
-   * - no columns from the right-hand side can appear in "requiredColumns"
+   * - no columns from the right-hand side can appear in "requiredColumns". If the columns from right side are required
+   *   (ie they are directly or indirectly projected in the join output), then the join is tried to be converted to a
+   *   filter while maintaining the join clause on top as well for correct results.
    *
    * @return {@link JoinClauseToFilterConversion} object which contains the converted filter for the clause and a boolean
    * to represent whether the converted filter encapsulates the whole clause or not. More semantics of the object are
@@ -275,12 +291,12 @@ public class JoinableFactoryWrapper
   )
   {
     if (clause.getJoinType() == JoinType.INNER
-        && requiredColumns.stream().noneMatch(clause::includesColumn)
         && clause.getCondition().getNonEquiConditions().isEmpty()
         && clause.getCondition().getEquiConditions().size() > 0) {
       final List<Filter> filters = new ArrayList<>();
       int numValues = maxNumFilterValues;
-      boolean joinClauseFullyConverted = true;
+      // if the right side columns are required, the clause cannot be fully converted
+      boolean joinClauseFullyConverted = requiredColumns.stream().noneMatch(clause::includesColumn);
 
       for (final Equality condition : clause.getCondition().getEquiConditions()) {
         final String leftColumn = condition.getLeftExpr().getBindingIfIdentifier();

@@ -20,6 +20,7 @@
 package org.apache.druid.client.indexing;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 

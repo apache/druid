@@ -28,7 +28,7 @@ Apache Druid stores its data and indexes in *segment files* partitioned by time.
 The time interval is configurable in the `segmentGranularity` parameter of the [`granularitySpec`](../ingestion/ingestion-spec.md#granularityspec).
 
 For Druid to operate well under heavy query load, it is important for the segment
-file size to be within the recommended range of 300MB-700MB. If your
+file size to be within the recommended range of 300-700 MB. If your
 segment files are larger than this range, then consider either
 changing the granularity of the segment time interval or partitioning your
 data and/or adjusting the `targetRowsPerSegment` in your `partitionsSpec`.
@@ -40,7 +40,7 @@ for more guidance.
 ## Segment file structure
 
 Segment files are *columnar*: the data for each column is laid out in
-separate data structures. By storing each column separately, Druid decreases query latency by scanning only those columns actually needed for a query.  There are three basic column types: timestamp, dimensions, and metrics:
+separate data structures. By storing each column separately, Druid decreases query latency by scanning only those columns actually needed for a query. There are three basic column types: timestamp, dimensions, and metrics:
 
 ![Druid column types](../assets/druid-column-types.png "Druid Column Types")
 
@@ -189,15 +189,14 @@ A segment contains several files:
 
 * `meta.smoosh`
 
-    A file containing metadata (filenames and offsets) about the contents of the other `smoosh` files
+    A file containing metadata (filenames and offsets) about the contents of the other `smoosh` files.
 
 * `XXXXX.smoosh`
 
-    A number of files containing concatenated binary data.
-
-    The `smoosh` files represent multiple files "smooshed" together in order to minimize the number of file descriptors that must be open to house the data. They are files of up to 2GB in size (to match the limit of a memory mapped ByteBuffer in Java). The `smoosh` files house individual files for each of the columns in the data as well as an `index.drd` file with extra metadata about the segment.
-
-Additionally, a column called `__time` refers to the time column of the segment.
+    Smoosh (`.smoosh`) files contain concatenated binary data. This file consolidation reduces the number of file descriptors that must be open when accessing data. The files are 2 GB or less in size to remain within the limit of a memory-mapped `ByteBuffer` in Java. 
+    Smoosh files contain the following: 
+    - Individual files for each column in the data, including one for the `__time` column that refers to the timestamp of the segment. 
+    - An `index.drd` file that contains additional segment metadata.
 
 In the codebase, segments have an internal format version. The current segment format version is `v9`.
 

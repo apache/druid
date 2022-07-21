@@ -248,6 +248,7 @@ For your convenience, Druid processes running inside Docker have been debugging 
 | Historical | 5007 |
 | Middlemanager | 5008 |
 | Overlord | 5009 |
+| Peons (Workers on Middlemanager) |  Ephemeral port assigned by debugger (check task log for port assigned to each task) |
 
 You can use remote debugger(such as via IntelliJ IDEA's Remote Configuration) to debug the corresponding Druid process at above port.
 

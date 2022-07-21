@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
@@ -117,6 +118,7 @@ public class RowBasedGrouperHelper
       final GroupByQuery query,
       @Nullable final GroupByQuery subquery,
       final GroupByQueryConfig config,
+      final DruidProcessingConfig processingConfig,
       final Supplier<ByteBuffer> bufferSupplier,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
@@ -127,6 +129,7 @@ public class RowBasedGrouperHelper
         query,
         subquery,
         config,
+        processingConfig,
         bufferSupplier,
         null,
         SINGLE_THREAD_CONCURRENCY_HINT,
@@ -158,6 +161,7 @@ public class RowBasedGrouperHelper
    * @param subquery            optional subquery that we are receiving results from (see combining vs. subquery
    *                            mode above)
    * @param config              groupBy query config
+   * @param processingConfig    processing config
    * @param bufferSupplier      supplier of merge buffers
    * @param combineBufferHolder holder of combine buffers. Unused if concurrencyHint = -1, and may be null in that case
    * @param concurrencyHint     -1 for single-threaded Grouper, >=1 for concurrent Grouper
@@ -174,6 +178,7 @@ public class RowBasedGrouperHelper
       final GroupByQuery query,
       @Nullable final GroupByQuery subquery,
       final GroupByQueryConfig config,
+      final DruidProcessingConfig processingConfig,
       final Supplier<ByteBuffer> bufferSupplier,
       @Nullable final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder,
       final int concurrencyHint,
@@ -235,11 +240,13 @@ public class RowBasedGrouperHelper
       aggregatorFactories = query.getAggregatorSpecs().toArray(new AggregatorFactory[0]);
     }
 
+    final long maxMergingDictionarySize = querySpecificConfig.getActualMaxMergingDictionarySize(processingConfig);
+
     final Grouper.KeySerdeFactory<RowBasedKey> keySerdeFactory = new RowBasedKeySerdeFactory(
         includeTimestamp,
         query.getContextSortByDimsFirst(),
         query.getDimensions(),
-        querySpecificConfig.getMaxMergingDictionarySize() / (concurrencyHint == -1 ? 1 : concurrencyHint),
+        maxMergingDictionarySize / (concurrencyHint == -1 ? 1 : concurrencyHint),
         valueTypes,
         aggregatorFactories,
         limitSpec
@@ -267,7 +274,7 @@ public class RowBasedGrouperHelper
           includeTimestamp,
           query.getContextSortByDimsFirst(),
           query.getDimensions(),
-          querySpecificConfig.getMaxMergingDictionarySize(), // use entire dictionary space for combining key serde
+          maxMergingDictionarySize, // use entire dictionary space for combining key serde
           valueTypes,
           aggregatorFactories,
           limitSpec

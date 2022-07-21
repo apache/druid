@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -121,6 +122,7 @@ public class GroupByQueryEngineV2
       @Nullable final StorageAdapter storageAdapter,
       final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool,
       final GroupByQueryConfig querySpecificConfig,
+      final DruidProcessingConfig processingConfig,
       @Nullable final GroupByQueryMetrics groupByQueryMetrics
   )
   {
@@ -164,6 +166,7 @@ public class GroupByQueryEngineV2
             filter,
             interval,
             querySpecificConfig,
+            processingConfig,
             groupByQueryMetrics
         );
       } else {
@@ -173,6 +176,7 @@ public class GroupByQueryEngineV2
             bufferHolder.get(),
             fudgeTimestamp,
             querySpecificConfig,
+            processingConfig,
             filter,
             interval,
             groupByQueryMetrics
@@ -193,6 +197,7 @@ public class GroupByQueryEngineV2
       final ByteBuffer processingBuffer,
       @Nullable final DateTime fudgeTimestamp,
       final GroupByQueryConfig querySpecificConfig,
+      final DruidProcessingConfig processingConfig,
       @Nullable final Filter filter,
       final Interval interval,
       @Nullable final GroupByQueryMetrics groupByQueryMetrics
@@ -237,6 +242,7 @@ public class GroupByQueryEngineV2
                   return new ArrayAggregateIterator(
                       query,
                       querySpecificConfig,
+                      processingConfig,
                       cursor,
                       processingBuffer,
                       fudgeTimestamp,
@@ -248,6 +254,7 @@ public class GroupByQueryEngineV2
                   return new HashAggregateIterator(
                       query,
                       querySpecificConfig,
+                      processingConfig,
                       cursor,
                       processingBuffer,
                       fudgeTimestamp,
@@ -465,11 +472,12 @@ public class GroupByQueryEngineV2
     protected CloseableGrouperIterator<KeyType, ResultRow> delegate = null;
     protected final boolean allSingleValueDims;
     protected final boolean allowMultiValueGrouping;
-
+    protected final long maxSelectorFootprint;
 
     public GroupByEngineIterator(
         final GroupByQuery query,
         final GroupByQueryConfig querySpecificConfig,
+        final DruidProcessingConfig processingConfig,
         final Cursor cursor,
         final ByteBuffer buffer,
         @Nullable final DateTime fudgeTimestamp,
@@ -479,6 +487,7 @@ public class GroupByQueryEngineV2
     {
       this.query = query;
       this.querySpecificConfig = querySpecificConfig;
+      this.maxSelectorFootprint = querySpecificConfig.getActualMaxSelectorDictionarySize(processingConfig);
       this.cursor = cursor;
       this.buffer = buffer;
       this.keySerde = new GroupByEngineKeySerde(dims, query);
@@ -632,6 +641,7 @@ public class GroupByQueryEngineV2
     public HashAggregateIterator(
         GroupByQuery query,
         GroupByQueryConfig querySpecificConfig,
+        DruidProcessingConfig processingConfig,
         Cursor cursor,
         ByteBuffer buffer,
         @Nullable DateTime fudgeTimestamp,
@@ -639,7 +649,7 @@ public class GroupByQueryEngineV2
         boolean allSingleValueDims
     )
     {
-      super(query, querySpecificConfig, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
+      super(query, querySpecificConfig, processingConfig, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
 
       final int dimCount = query.getDimensions().size();
       stack = new int[dimCount];
@@ -747,7 +757,7 @@ public class GroupByQueryEngineV2
 
         // Check selectorInternalFootprint after advancing the cursor. (We reset after the first row that causes
         // us to go past the limit.)
-        if (selectorInternalFootprint > querySpecificConfig.getMaxSelectorDictionarySize()) {
+        if (selectorInternalFootprint > maxSelectorFootprint) {
           return;
         }
       }
@@ -836,7 +846,7 @@ public class GroupByQueryEngineV2
 
         // Check selectorInternalFootprint after advancing the cursor. (We reset after the first row that causes
         // us to go past the limit.)
-        if (selectorInternalFootprint > querySpecificConfig.getMaxSelectorDictionarySize()) {
+        if (selectorInternalFootprint > maxSelectorFootprint) {
           return;
         }
       }
@@ -870,6 +880,7 @@ public class GroupByQueryEngineV2
     public ArrayAggregateIterator(
         GroupByQuery query,
         GroupByQueryConfig querySpecificConfig,
+        DruidProcessingConfig processingConfig,
         Cursor cursor,
         ByteBuffer buffer,
         @Nullable DateTime fudgeTimestamp,
@@ -878,7 +889,7 @@ public class GroupByQueryEngineV2
         int cardinality
     )
     {
-      super(query, querySpecificConfig, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
+      super(query, querySpecificConfig, processingConfig, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
       this.cardinality = cardinality;
       if (dims.length == 1) {
         this.dim = dims[0];

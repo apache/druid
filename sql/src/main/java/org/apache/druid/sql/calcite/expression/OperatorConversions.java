@@ -460,7 +460,6 @@ public class OperatorConversions
       return this;
     }
 
-    @SuppressWarnings("unused")
     public OperatorBuilder operandTypeInference(SqlOperandTypeInference operandTypeInference)
     {
       this.operandTypeInference = operandTypeInference;
