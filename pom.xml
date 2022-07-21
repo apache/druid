@@ -95,7 +95,7 @@
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.41.v20210516</jetty.version>
+        <jetty.version>9.4.47.v20220610</jetty.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.10.5.20201202</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
@@ -111,7 +111,7 @@
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.8.5</hadoop.compile.version>
         <mockito.version>4.3.1</mockito.version>
-        <aws.sdk.version>1.12.37</aws.sdk.version>
+        <aws.sdk.version>1.12.264</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.7</jacoco.version>
         <hibernate-validator.version>5.2.5.Final</hibernate-validator.version>
