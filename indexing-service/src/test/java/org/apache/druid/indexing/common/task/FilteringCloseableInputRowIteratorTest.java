@@ -35,6 +35,8 @@ import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -62,12 +64,12 @@ public class FilteringCloseableInputRowIteratorTest
   public void setup()
   {
     rowIngestionMeters = new SimpleRowIngestionMeters();
-    parseExceptionHandler = new ParseExceptionHandler(
+    parseExceptionHandler = Mockito.spy(new ParseExceptionHandler(
         rowIngestionMeters,
-        false,
+        true,
         Integer.MAX_VALUE,
         1024 // do not use Integer.MAX_VALUE since it will create an object array of this length
-    );
+    ));
   }
 
   @Test
@@ -286,6 +288,67 @@ public class FilteringCloseableInputRowIteratorTest
     rowIterator.close();
     Assert.assertTrue(closed.isTrue());
   }
+
+  @Test
+  public void testParseExceptionSaveExceptionCause()
+  {
+
+    // This iterator throws ParseException every other call to hasNext().
+    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<InputRow>()
+    {
+      final int numRowsToIterate = ROWS.size() * 2;
+      int currentIndex = 0;
+      int nextIndex = 0;
+
+      @Override
+      public boolean hasNext()
+      {
+        currentIndex = nextIndex++;
+        if (currentIndex % 2 == 0) {
+          return currentIndex < numRowsToIterate;
+        } else {
+          try {
+            throw new IllegalArgumentException("this is the root cause of the exception!");
+          }
+          catch (Exception e) {
+            throw new ParseException(null, e, "Parse exception at [%d]", currentIndex);
+          }
+        }
+      }
+
+      @Override
+      public InputRow next()
+      {
+        return ROWS.get(currentIndex / 2);
+      }
+
+      @Override
+      public void close()
+      {
+      }
+    };
+
+    final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
+        parseExceptionThrowingIterator,
+        row -> true,
+        rowIngestionMeters,
+        parseExceptionHandler
+    );
+
+    final List<InputRow> filteredRows = new ArrayList<>();
+    rowIterator.forEachRemaining(filteredRows::add);
+    ArgumentCaptor<Exception> exceptionArgumentCaptor = ArgumentCaptor.forClass(Exception.class);
+    Mockito.verify(parseExceptionHandler, Mockito.times(6)).logParseExceptionHelper(exceptionArgumentCaptor.capture());
+    Exception parseException = exceptionArgumentCaptor.getValue();
+    Assert.assertTrue(parseException.getMessage().contains("Parse exception at"));
+    Assert.assertNotNull(parseException.getCause());
+    Assert.assertTrue(parseException.getCause().getMessage().contains("this is the root cause of the exception!"));
+    Assert.assertEquals(IllegalArgumentException.class, parseException.getCause().getClass());
+
+    Assert.assertEquals(ROWS, filteredRows);
+    Assert.assertEquals(ROWS.size(), rowIngestionMeters.getUnparseable());
+  }
+
 
   private static InputRow newRow(DateTime timestamp, Object dim1Val, Object dim2Val)
   {
