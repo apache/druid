@@ -45,6 +45,7 @@ import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -304,6 +305,16 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         }
       }
     }
+  }
+
+  public Map<String, Long> getAverageNumOfRowsPerSegmentForDatasource()
+  {
+    return segmentManager.getAverageRowCountForDatasource();
+  }
+
+  public Map<String, SegmentRowCountDistribution> getRowCountDistributionPerDatasource()
+  {
+    return segmentManager.getRowCountDistribution();
   }
 
   @Override

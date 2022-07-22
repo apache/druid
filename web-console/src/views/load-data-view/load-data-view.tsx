@@ -1290,21 +1290,22 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 newSpec = deepSet(
                   newSpec,
                   'spec.dataSchema.dimensionsSpec.dimensions',
-                  Object.keys(inputData.columns)
-                    .filter(k => k !== TIME_COLUMN && !aggregators[k])
-                    .map(k => ({
-                      name: k,
-                      type: String(inputData.columns![k].type || 'string').toLowerCase(),
-                    })),
+                  filterMap(inputData.columns, column => {
+                    if (column === TIME_COLUMN || aggregators[column]) return;
+                    return {
+                      name: column,
+                      type: String(inputData.columnInfo?.[column]?.type || 'string').toLowerCase(),
+                    };
+                  }),
                 );
-              }
 
-              if (inputData.aggregators) {
-                newSpec = deepSet(
-                  newSpec,
-                  'spec.dataSchema.metricsSpec',
-                  Object.values(inputData.aggregators),
-                );
+                if (inputData.aggregators) {
+                  newSpec = deepSet(
+                    newSpec,
+                    'spec.dataSchema.metricsSpec',
+                    filterMap(inputData.columns, column => aggregators[column]),
+                  );
+                }
               }
 
               this.updateSpec(fillDataSourceNameIfNeeded(newSpec));

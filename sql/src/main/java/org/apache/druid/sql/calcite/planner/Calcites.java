@@ -106,9 +106,18 @@ public class Calcites
     // system properties, so we'll have to set those...
 
     final String charset = ConversionUtil.NATIVE_UTF16_CHARSET_NAME;
+
+    // Deprecated in Calcite 1.19. See:
+    // https://calcite.apache.org/javadocAggregate/org/apache/calcite/util/SaffronProperties.html
     System.setProperty("saffron.default.charset", Calcites.defaultCharset().name());
     System.setProperty("saffron.default.nationalcharset", Calcites.defaultCharset().name());
     System.setProperty("saffron.default.collation.name", StringUtils.format("%s$en_US", charset));
+
+    // The following are the current names. See org.apache.calcite.config.CalciteSystemProperty
+    // https://github.com/apache/calcite/blob/master/core/src/main/java/org/apache/calcite/config/CalciteSystemProperty.java
+    System.setProperty("calcite.default.charset", Calcites.defaultCharset().name());
+    System.setProperty("calcite.default.nationalcharset", Calcites.defaultCharset().name());
+    System.setProperty("calcite.default.collation.name", StringUtils.format("%s$en_US", charset));
   }
 
   public static Charset defaultCharset()
