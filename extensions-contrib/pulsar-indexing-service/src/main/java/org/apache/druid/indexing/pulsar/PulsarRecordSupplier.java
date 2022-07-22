@@ -149,7 +149,10 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
       this.requestTimeoutMs = requestTimeoutMs;
       this.maxBackoffIntervalNanos = maxBackoffIntervalNanos;
 
-      client = PulsarClient.builder().serviceUrl(this.serviceUrl).build();
+      client = PulsarClient.builder()
+          .serviceUrl(this.serviceUrl)
+          .authentication(this.authPluginClassName, this.authParams)
+          .build();
 
     } catch (PulsarClientException e) {
       throw new RuntimeException(e);
