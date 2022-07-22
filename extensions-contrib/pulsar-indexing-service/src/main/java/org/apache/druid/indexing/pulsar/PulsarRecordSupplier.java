@@ -153,6 +153,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
           .serviceUrl(this.serviceUrl)
           .authentication(this.authPluginClassName, this.authParams)
           .allowTlsInsecureConnection(this.tlsAllowInsecureConnection)
+          .enableTlsHostnameVerification(this.tlsHostnameVerificationEnable)
           .build();
 
     } catch (PulsarClientException e) {
