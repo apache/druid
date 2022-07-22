@@ -31,10 +31,14 @@ import org.apache.calcite.schema.TranslatableTable;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Used by {@link ExternalOperatorConversion} to generate {@link DruidTable} that reference {@link ExternalDataSource}.
@@ -58,6 +62,15 @@ public class ExternalTableMacro implements TableMacro
       final InputSource inputSource = jsonMapper.readValue((String) arguments.get(0), InputSource.class);
       final InputFormat inputFormat = jsonMapper.readValue((String) arguments.get(1), InputFormat.class);
       final RowSignature signature = jsonMapper.readValue((String) arguments.get(2), RowSignature.class);
+
+      // Prevent a RowSignature that has a ColumnSignature with name "__time" and type that is not LONG because it
+      // will be automatically casted to LONG while processing in RowBasedColumnSelectorFactory.
+      // This can cause an issue when the incorrectly typecasted data is ingested or processed upon. One such example
+      // of inconsistency is that functions such as TIME_PARSE evaluate incorrectly
+      Optional<ColumnType> timestampColumnTypeOptional = signature.getColumnType(ColumnHolder.TIME_COLUMN_NAME);
+      if (timestampColumnTypeOptional.isPresent() && !timestampColumnTypeOptional.get().equals(ColumnType.LONG)) {
+        throw new ISE("Unable to use EXTERN function with data containing a __time column of any type other than long");
+      }
 
       return new DruidTable(
           new ExternalDataSource(inputSource, inputFormat, signature),
