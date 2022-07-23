@@ -19,24 +19,33 @@
 
 package org.apache.druid.initialization;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Module;
+import com.google.inject.util.Modules;
+import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.guice.ExtensionsLoader;
 
 /**
- * Initialize Guice for a server. Clients and tests should use
- * the individual builders to create a non-server environment.
+ * Injector builder which overrides service modules with extension
+ * modules. Used only in the server, not in clients or tests.
  */
-public class Initialization
+public class ExtensionInjectorBuilder extends DruidInjectorBuilder
 {
-  // Use individual builders for testing: this method brings in
-  // server-only dependencies, which is generally not desired.
-  @Deprecated
-  public static Injector makeInjectorWithModules(
-      final Injector baseInjector,
-      final Iterable<? extends Module> modules
-  )
+  private final ServiceInjectorBuilder serviceBuilder;
+
+  public ExtensionInjectorBuilder(ServiceInjectorBuilder serviceBuilder)
   {
-    return ServerInjectorBuilder.makeServerInjector(baseInjector, ImmutableSet.of(), modules);
+    super(serviceBuilder);
+    this.serviceBuilder = serviceBuilder;
+    ExtensionsLoader extnLoader = ExtensionsLoader.instance(baseInjector);
+    for (DruidModule module : extnLoader.getFromExtensions(DruidModule.class)) {
+      addDruidModule(module);
+    }
+  }
+
+  @Override
+  public Injector build()
+  {
+    return Guice.createInjector(Modules.override(serviceBuilder.merge()).with(modules()));
   }
 }
