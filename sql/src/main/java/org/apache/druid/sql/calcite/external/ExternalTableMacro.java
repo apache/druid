@@ -69,7 +69,8 @@ public class ExternalTableMacro implements TableMacro
       // of inconsistency is that functions such as TIME_PARSE evaluate incorrectly
       Optional<ColumnType> timestampColumnTypeOptional = signature.getColumnType(ColumnHolder.TIME_COLUMN_NAME);
       if (timestampColumnTypeOptional.isPresent() && !timestampColumnTypeOptional.get().equals(ColumnType.LONG)) {
-        throw new ISE("Unable to use EXTERN function with data containing a __time column of any type other than long");
+        throw new ISE("EXTERN function with __time column can be used when __time column is of type long. "
+                      + "Please change the column name to something other than __time");
       }
 
       return new DruidTable(

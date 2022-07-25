@@ -780,7 +780,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                    "Unable to use EXTERN function with data containing a __time column of any type other than long"))
+                    "EXTERN function with __time column can be used when __time column is of type long"))
             )
         )
         .verify();
