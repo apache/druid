@@ -55,6 +55,7 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(2, config.getMaxIntermediateRows());
     Assert.assertEquals(3, config.getMaxResults());
     Assert.assertEquals(4, config.getMaxOnDiskStorage());
+    Assert.assertEquals(4, config.getDefaultOnDiskStorage());
     Assert.assertEquals(5, config.getConfiguredMaxSelectorDictionarySize());
     Assert.assertEquals(6_000_000, config.getConfiguredMaxMergingDictionarySize());
     Assert.assertEquals(7.0, config.getBufferGrouperMaxLoadFactor(), 0.0);
@@ -165,5 +166,51 @@ public class GroupByQueryConfigTest
 
     Assert.assertEquals(100, config.getConfiguredMaxSelectorDictionarySize());
     Assert.assertEquals(100, config.getActualMaxSelectorDictionarySize(1_000_000_000, 2));
+  }
+
+  /**
+   * Tests that the defaultOnDiskStorage value is used when applying override context that is lacking maxOnDiskStorage.
+   */
+  @Test
+  public void testUseDefaultOnDiskStorage()
+  {
+    final GroupByQueryConfig config = MAPPER.convertValue(
+        ImmutableMap.of(
+            "maxOnDiskStorage", "10",
+            "defaultOnDiskStorage", "5"
+        ),
+        GroupByQueryConfig.class
+    );
+    final GroupByQueryConfig config2 = config.withOverrides(
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setInterval(Intervals.of("2000/P1D"))
+                    .setGranularity(Granularities.ALL)
+                    .setContext(ImmutableMap.<String, Object>builder().build())
+                    .build()
+    );
+    Assert.assertEquals(5L, config2.getMaxOnDiskStorage());
+  }
+
+  @Test
+  public void testUseMaxOnDiskStorageWhenClientOverrideIsTooLarge()
+  {
+    final GroupByQueryConfig config = MAPPER.convertValue(
+        ImmutableMap.of("maxOnDiskStorage", "10"),
+        GroupByQueryConfig.class
+    );
+    final GroupByQueryConfig config2 = config.withOverrides(
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setInterval(Intervals.of("2000/P1D"))
+                    .setGranularity(Granularities.ALL)
+                    .setContext(
+                        ImmutableMap.<String, Object>builder()
+                            .put("maxOnDiskStorage", 500)
+                            .build()
+                    )
+                    .build()
+    );
+    Assert.assertEquals(10L, config2.getMaxOnDiskStorage());
   }
 }

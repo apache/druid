@@ -67,6 +67,8 @@ public class GroupByQueryConfig
   private static final long MIN_AUTOMATIC_DICTIONARY_SIZE = 1;
   private static final long MAX_AUTOMATIC_DICTIONARY_SIZE = 1_000_000_000;
 
+
+
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
 
@@ -101,6 +103,9 @@ public class GroupByQueryConfig
   @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
   private long maxOnDiskStorage = 0L;
+
+  @JsonProperty
+  private long defaultOnDiskStorage = Integer.MAX_VALUE;
 
   @JsonProperty
   private boolean forcePushDownLimit = false;
@@ -263,6 +268,19 @@ public class GroupByQueryConfig
     return maxOnDiskStorage;
   }
 
+  /**
+   * Mirror maxOnDiskStorage if defaultOnDiskStorage's default is not overridden by cluster operator.
+   *
+   * This mirroring is done to maintain continuity in behavior between Druid versions. If an operator wants to use
+   * defaultOnDiskStorage, they have to explicitly override it.
+   *
+   * @return The working value for defaultOnDiskStorage
+   */
+  public long getDefaultOnDiskStorage()
+  {
+    return defaultOnDiskStorage == Integer.MAX_VALUE ? getMaxOnDiskStorage() : defaultOnDiskStorage;
+  }
+
   public boolean isForcePushDownLimit()
   {
     return forcePushDownLimit;
@@ -338,8 +356,11 @@ public class GroupByQueryConfig
         CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS,
         getBufferGrouperInitialBuckets()
     );
+    // If the client overrides do not provide "maxOnDiskStorage" context key, the server side "defaultOnDiskStorage"
+    // value is used in the calculation of the newConfig value of maxOnDiskStorage. This allows the operator to
+    // choose a default value lower than the max allowed when the context key is missing in the client query.
     newConfig.maxOnDiskStorage = Math.min(
-        ((Number) query.getContextValue(CTX_KEY_MAX_ON_DISK_STORAGE, getMaxOnDiskStorage())).longValue(),
+        ((Number) query.getContextValue(CTX_KEY_MAX_ON_DISK_STORAGE, getDefaultOnDiskStorage())).longValue(),
         getMaxOnDiskStorage()
     );
     newConfig.maxSelectorDictionarySize = maxSelectorDictionarySize; // No overrides
@@ -384,6 +405,7 @@ public class GroupByQueryConfig
            ", bufferGrouperInitialBuckets=" + bufferGrouperInitialBuckets +
            ", maxMergingDictionarySize=" + maxMergingDictionarySize +
            ", maxOnDiskStorage=" + maxOnDiskStorage +
+           ", defaultOnDiskStorage=" + getDefaultOnDiskStorage() + // use the getter because of special behavior for mirroring maxOnDiskStorage if defaultOnDiskStorage not explicitly set.
            ", forcePushDownLimit=" + forcePushDownLimit +
            ", forceHashAggregation=" + forceHashAggregation +
            ", intermediateCombineDegree=" + intermediateCombineDegree +
