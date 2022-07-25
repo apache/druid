@@ -176,8 +176,15 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
               for (final ConsumerRecord<String, String> record : records) {
                 final String key = record.key();
                 final String message = record.value();
-                if (key == null || message == null) {
-                  LOG.error("Bad key/message from topic [%s]: [%s]", topic, record);
+                if (key == null) {
+                  LOG.error("Bad key from topic [%s]: [%s]", topic, record);
+                  continue;
+                }
+                if (message == null) {
+                  LOG.trace("Removed key[%s] val[%s]", key, message);
+                  doubleEventCount.incrementAndGet();
+                  map.remove(key);
+                  doubleEventCount.incrementAndGet();
                   continue;
                 }
                 doubleEventCount.incrementAndGet();
