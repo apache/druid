@@ -127,7 +127,7 @@ public class ITQueryRetryTestOnMissingSegments
   {
     // Since retry is enabled, all queries must succeed even though partial result is disallowed.
     // All queries must return correct result.
-    testQueries(buildQuery(30, false), Expectation.ALL_SUCCESS);
+    testQueries(buildQuery(1, false), Expectation.ALL_SUCCESS);
   }
 
   private void testQueries(String queryWithResultsStr, Expectation expectation) throws Exception
@@ -147,74 +147,73 @@ public class ITQueryRetryTestOnMissingSegments
     int queryFailure = 0;
     int resultMatches = 0;
     int resultMismatches = 0;
-    for (int i = 0; i < TIMES_TO_RUN; i++) {
-      for (QueryWithResults queryWithResult : queries) {
-        final StatusResponseHolder responseHolder = queryClient
-            .queryAsync(queryHelper.getQueryURL(config.getBrokerUrl()), queryWithResult.getQuery())
-            .get();
 
-        if (responseHolder.getStatus().getCode() == HttpResponseStatus.OK.getCode()) {
-          querySuccess++;
+    for (QueryWithResults queryWithResult : queries) {
+      final StatusResponseHolder responseHolder = queryClient
+          .queryAsync(queryHelper.getQueryURL(config.getBrokerUrl()), queryWithResult.getQuery())
+          .get();
 
-          List<Map<String, Object>> result = jsonMapper.readValue(
-              responseHolder.getContent(),
-              new TypeReference<List<Map<String, Object>>>()
-              {
-              }
-          );
-          if (!QueryResultVerifier.compareResults(
-              result,
-              queryWithResult.getExpectedResults(),
-              queryWithResult.getFieldsToTest()
-          )) {
-            if (expectation != Expectation.INCORRECT_RESULT) {
-              throw new ISE(
-                  "Incorrect query results for query %s \n expectedResults: %s \n actualResults : %s",
-                  queryWithResult.getQuery(),
-                  jsonMapper.writeValueAsString(queryWithResult.getExpectedResults()),
-                  jsonMapper.writeValueAsString(result)
-              );
-            } else {
-              resultMismatches++;
+      if (responseHolder.getStatus().getCode() == HttpResponseStatus.OK.getCode()) {
+        querySuccess++;
+
+        List<Map<String, Object>> result = jsonMapper.readValue(
+            responseHolder.getContent(),
+            new TypeReference<List<Map<String, Object>>>()
+            {
             }
+        );
+        if (!QueryResultVerifier.compareResults(
+            result,
+            queryWithResult.getExpectedResults(),
+            queryWithResult.getFieldsToTest()
+        )) {
+          if (expectation != Expectation.INCORRECT_RESULT) {
+            throw new ISE(
+                "Incorrect query results for query %s \n expectedResults: %s \n actualResults : %s",
+                queryWithResult.getQuery(),
+                jsonMapper.writeValueAsString(queryWithResult.getExpectedResults()),
+                jsonMapper.writeValueAsString(result)
+            );
           } else {
-            resultMatches++;
+            resultMismatches++;
           }
-        } else if (responseHolder.getStatus().getCode() == HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode() &&
-                   expectation == Expectation.QUERY_FAILURE) {
-          final Map<String, Object> response = jsonMapper.readValue(responseHolder.getContent(), Map.class);
-          final String errorMessage = (String) response.get("errorMessage");
-          Assert.assertNotNull(errorMessage, "errorMessage");
-          Assert.assertTrue(errorMessage.contains("No results found for segments"));
-          queryFailure++;
         } else {
-          throw new ISE(
-              "Unexpected failure, code: [%s], content: [%s]",
-              responseHolder.getStatus(),
-              responseHolder.getContent()
-          );
+          resultMatches++;
         }
+      } else if (responseHolder.getStatus().getCode() == HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode() &&
+                 expectation == Expectation.QUERY_FAILURE) {
+        final Map<String, Object> response = jsonMapper.readValue(responseHolder.getContent(), Map.class);
+        final String errorMessage = (String) response.get("errorMessage");
+        Assert.assertNotNull(errorMessage, "errorMessage");
+        Assert.assertTrue(errorMessage.contains("No results found for segments"));
+        queryFailure++;
+      } else {
+        throw new ISE(
+            "Unexpected failure, code: [%s], content: [%s]",
+            responseHolder.getStatus(),
+            responseHolder.getContent()
+        );
       }
     }
 
     switch (expectation) {
       case ALL_SUCCESS:
-        Assert.assertEquals(querySuccess, ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN);
+        Assert.assertEquals(querySuccess, 1);
         Assert.assertEquals(queryFailure, 0);
-        Assert.assertEquals(resultMatches, ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN);
+        Assert.assertEquals(resultMatches, 1);
         Assert.assertEquals(resultMismatches, 0);
         break;
       case QUERY_FAILURE:
-        Assert.assertTrue(querySuccess > 0, "At least one query is expected to succeed.");
-        Assert.assertTrue(queryFailure > 0, "At least one query is expected to fail.");
-        Assert.assertEquals(querySuccess, resultMatches);
+        Assert.assertEquals(querySuccess, 0);
+        Assert.assertEquals(queryFailure, 1);
+        Assert.assertEquals(resultMatches, 0);
         Assert.assertEquals(resultMismatches, 0);
         break;
       case INCORRECT_RESULT:
-        Assert.assertEquals(querySuccess, ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN);
+        Assert.assertEquals(querySuccess, 1);
         Assert.assertEquals(queryFailure, 0);
-        Assert.assertTrue(resultMatches > 0, "At least one query is expected to return correct results.");
-        Assert.assertTrue(resultMismatches > 0, "At least one query is expected to return less results.");
+        Assert.assertEquals(resultMatches, 0);
+        Assert.assertEquals(resultMismatches, 1);
         break;
       default:
         throw new ISE("Unknown expectation[%s]", expectation);
@@ -235,6 +234,7 @@ public class ITQueryRetryTestOnMissingSegments
     final Map<String, Object> context = new HashMap<>();
     // Disable cache so that each run hits historical.
     context.put(QueryContexts.USE_CACHE_KEY, false);
+    context.put(QueryContexts.USE_RESULT_LEVEL_CACHE_KEY, false);
     context.put(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, numRetriesOnMissingSegments);
     context.put(QueryContexts.RETURN_PARTIAL_RESULTS_KEY, allowPartialResults);
     context.put(ServerManagerForQueryErrorTest.QUERY_RETRY_TEST_CONTEXT_KEY, true);

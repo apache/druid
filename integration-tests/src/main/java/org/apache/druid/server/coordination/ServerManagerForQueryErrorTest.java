@@ -51,9 +51,7 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -82,9 +80,9 @@ public class ServerManagerForQueryErrorTest extends ServerManager
   public static final String QUERY_FAILURE_TEST_CONTEXT_KEY = "query-failure-test";
 
   private static final Logger LOG = new Logger(ServerManagerForQueryErrorTest.class);
-  private static final int MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS = 3;
+  private static final int MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS = 1;
 
-  private final ConcurrentHashMap<String, Set<SegmentDescriptor>> queryToIgnoredSegments = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, Integer> queryToIgnoredSegments = new ConcurrentHashMap<>();
 
   @Inject
   public ServerManagerForQueryErrorTest(
@@ -130,15 +128,15 @@ public class ServerManagerForQueryErrorTest extends ServerManager
       final MutableBoolean isIgnoreSegment = new MutableBoolean(false);
       queryToIgnoredSegments.compute(
           query.getMostSpecificId(),
-          (queryId, ignoredSegments) -> {
-            if (ignoredSegments == null) {
-              ignoredSegments = new HashSet<>();
+          (queryId, ignoreCounter) -> {
+            if (ignoreCounter == null) {
+              ignoreCounter = 0;
             }
-            if (ignoredSegments.size() < MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS) {
-              ignoredSegments.add(descriptor);
+            if (ignoreCounter < MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS) {
+              ignoreCounter++;
               isIgnoreSegment.setTrue();
             }
-            return ignoredSegments;
+            return ignoreCounter;
           }
       );
 
