@@ -19,13 +19,10 @@
 
 package org.apache.druid.server.router;
 
-import com.google.common.collect.Lists;
-import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -42,14 +39,14 @@ public class RendezvousHasher
       return null;
     }
 
-    final HashCode keyHash = HASH_FN.hashBytes(key);
     long maxHash = Long.MIN_VALUE;
     String maxNode = null;
 
     for (String nodeId : nodeIds) {
-      HashCode nodeHash = HASH_FN.hashString(nodeId, StandardCharsets.UTF_8);
-      List<HashCode> hashes = Lists.newArrayList(nodeHash, keyHash);
-      long combinedHash = Hashing.combineOrdered(hashes).asLong();
+      long combinedHash = HASH_FN.newHasher()
+                                 .putString(nodeId, StandardCharsets.UTF_8)
+                                 .putBytes(key)
+                                 .hash().asLong();
       if (maxNode == null) {
         maxHash = combinedHash;
         maxNode = nodeId;
