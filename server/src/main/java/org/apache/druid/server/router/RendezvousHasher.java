@@ -33,7 +33,7 @@ public class RendezvousHasher
 {
   private static final HashFunction HASH_FN = Hashing.murmur3_128();
 
-  public <KeyType> String chooseNode(Set<String> nodeIds, byte[] key)
+  public String chooseNode(Set<String> nodeIds, byte[] key)
   {
     if (nodeIds.isEmpty()) {
       return null;
