@@ -19,34 +19,18 @@
 
 package org.apache.druid.segment.column;
 
-import javax.annotation.Nullable;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
 
 /**
- * This exposes a 'raw' view into a bitmap value indexes of a string {@link DictionaryEncodedColumn}, allowing
- * operation via dictionaryIds, as well as access to lower level details of such a column like value lookup and
- * value cardinality.
+ * This exposes a 'raw' view into a bitmap value indexes, allowing operation via dictionaryIds
  *
  * This interface should only be used when it is beneficial to operate in such a manner, most filter implementations
- * should likely be using {@link StringValueSetIndex}, {@link DruidPredicateIndex}, {@link LexicographicalRangeIndex} or
- * some other higher level index instead.
+ * should likely be using higher level index instead.
  */
-public interface DictionaryEncodedStringValueIndex extends DictionaryEncodedValueIndex
+public interface DictionaryEncodedValueIndex
 {
-  boolean hasNulls();
   /**
-   * Get the cardinality of the underlying value dictionary
+   * Get the {@link ImmutableBitmap} for dictionary id of the underlying dictionary
    */
-  int getCardinality();
-
-  /**
-   * Get the value in the underlying value dictionary of the specified dictionary id
-   */
-  @Nullable
-  String getValue(int index);
-
-  /**
-   * Returns the index of "value" in this DictionaryEncodedStringValueIndex, or a negative value, if not present in
-   * the underlying dictionary
-   */
-  int getIndex(@Nullable String value);
+  ImmutableBitmap getBitmap(int idx);
 }
