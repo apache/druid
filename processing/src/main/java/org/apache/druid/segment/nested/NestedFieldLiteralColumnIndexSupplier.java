@@ -46,6 +46,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;
+import org.apache.druid.segment.column.NumericRangeIndex;
 import org.apache.druid.segment.column.SimpleBitmapColumnIndex;
 import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.column.SimpleImmutableBitmapIterableIndex;
@@ -120,6 +121,8 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
         case LONG:
           if (clazz.equals(StringValueSetIndex.class)) {
             return (T) new NestedLongLiteralValueSetIndex();
+          } else if (clazz.equals(NumericRangeIndex.class)) {
+            return (T) new NestedLongLiteralNumericRangeIndex();
           } else if (clazz.equals(DruidPredicateIndex.class)) {
             return (T) new NestedLongLiteralPredicateIndex();
           }
@@ -127,6 +130,8 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
         case DOUBLE:
           if (clazz.equals(StringValueSetIndex.class)) {
             return (T) new NestedDoubleLiteralValueSetIndex();
+          } else if (clazz.equals(NumericRangeIndex.class)) {
+            return (T) new NestedDoubleLiteralNumericRangeIndex();
           } else if (clazz.equals(DruidPredicateIndex.class)) {
             return (T) new NestedDoubleLiteralPredicateIndex();
           }
@@ -153,14 +158,14 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
     return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
   }
 
-  private IntIntPair getGlobalRange(
-      @Nullable String startValue,
+  private <T> IntIntPair getGlobalRange(
+      @Nullable T startValue,
       boolean startStrict,
-      @Nullable String endValue,
+      @Nullable T endValue,
       boolean endStrict,
       int rangeStart,
       int rangeEnd,
-      GlobalIndexGetFunction getFn
+      GlobalIndexGetFunction<T> getFn
   )
   {
     int startIndex, endIndex;
@@ -190,10 +195,68 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
     return new IntIntImmutablePair(startIndex, endIndex);
   }
 
-  @FunctionalInterface
-  interface GlobalIndexGetFunction
+  private Iterable<ImmutableBitmap> buildRangeIndexIterator(int max, int start, int end)
   {
-    int indexOf(String value);
+    // iterates over the range of values in the global dictionary, mapping to relevant range in the local
+    // dictionary, skipping duplicates
+    return () -> new Iterator<ImmutableBitmap>()
+    {
+      int currentGlobalIndex = start;
+      // initialize to -1 because findNext uses this field to check for duplicates, and could legitimately find
+      // 0 for the first candidate
+      @SuppressWarnings("UnusedAssignment")
+      int currentLocalIndex = -1;
+
+      {
+        currentLocalIndex = findNext();
+      }
+
+      private int findNext()
+      {
+        int candidateLocalIndex = dictionary.indexOf(currentGlobalIndex);
+        if (candidateLocalIndex < 0) {
+          candidateLocalIndex = -(candidateLocalIndex + 1);
+        }
+        while (currentGlobalIndex < end && candidateLocalIndex == currentLocalIndex) {
+          currentGlobalIndex++;
+          candidateLocalIndex = dictionary.indexOf(currentGlobalIndex);
+          if (candidateLocalIndex < 0) {
+            candidateLocalIndex = -(candidateLocalIndex + 1);
+          }
+        }
+        if (currentGlobalIndex < end && candidateLocalIndex < max) {
+          currentGlobalIndex++;
+          return candidateLocalIndex;
+        } else {
+          return -1;
+        }
+      }
+
+      @Override
+      public boolean hasNext()
+      {
+        return currentLocalIndex != -1;
+      }
+
+      @Override
+      public ImmutableBitmap next()
+      {
+        int cur = currentLocalIndex;
+
+        if (cur == -1) {
+          throw new NoSuchElementException();
+        }
+
+        currentLocalIndex = findNext();
+        return getBitmap(cur);
+      }
+    };
+  }
+
+  @FunctionalInterface
+  interface GlobalIndexGetFunction<T>
+  {
+    int indexOf(T value);
   }
 
   private class NestedStringLiteralValueSetIndex implements StringValueSetIndex
@@ -274,7 +337,6 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
 
   private class NestedStringLiteralLexicographicalRangeIndex implements LexicographicalRangeIndex
   {
-
     @Override
     public BitmapColumnIndex forRange(
         @Nullable String startValue,
@@ -293,58 +355,11 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
               startStrict,
               endValue,
               endStrict,
-              0,
+              dictionary.get(0) == 0 ? 1 : 0, // if first value is null, don't consider it for range indexes
               globalDictionary.size(),
               globalDictionary::indexOf
           );
-          final int start = range.leftInt(), end = range.rightInt();
-          // iterates over the range of values in the global dictionary, mapping to relevant range in the local
-          // dictionary, skipping duplicates
-          return () -> new Iterator<ImmutableBitmap>()
-          {
-            int currentGlobalIndex = start;
-            // initialize to -1 because findNext uses this field to check for duplicates, and could legitimately find
-            // 0 for the first candidate
-            @SuppressWarnings("UnusedAssignment")
-            int currentLocalIndex = -1;
-            {
-              currentLocalIndex = findNext();
-            }
-
-            private int findNext()
-            {
-              int candidateLocalIndex = Math.abs(dictionary.indexOf(currentGlobalIndex));
-              while (currentGlobalIndex < end && candidateLocalIndex == currentLocalIndex) {
-                currentGlobalIndex++;
-                candidateLocalIndex = Math.abs(dictionary.indexOf(currentGlobalIndex));
-              }
-              if (currentGlobalIndex < end) {
-                currentGlobalIndex++;
-                return candidateLocalIndex;
-              } else {
-                return -1;
-              }
-            }
-
-            @Override
-            public boolean hasNext()
-            {
-              return currentLocalIndex != -1;
-            }
-
-            @Override
-            public ImmutableBitmap next()
-            {
-              int cur = currentLocalIndex;
-
-              if (cur == -1) {
-                throw new NoSuchElementException();
-              }
-
-              currentLocalIndex = findNext();
-              return getBitmap(cur);
-            }
-          };
+          return buildRangeIndexIterator(dictionary.size(), range.leftInt(), range.rightInt());
         }
       };
     }
@@ -388,10 +403,16 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
 
             private int findNext()
             {
-              int candidateLocalIndex = Math.abs(dictionary.indexOf(currentGlobalIndex));
+              int candidateLocalIndex = dictionary.indexOf(currentGlobalIndex);
+              if (candidateLocalIndex < 0) {
+                candidateLocalIndex = -(candidateLocalIndex + 1);
+              }
               while (currentGlobalIndex < end && shouldSkipGlobal(candidateLocalIndex)) {
                 currentGlobalIndex++;
-                candidateLocalIndex = Math.abs(dictionary.indexOf(currentGlobalIndex));
+                candidateLocalIndex = dictionary.indexOf(currentGlobalIndex);
+                if (candidateLocalIndex < 0) {
+                  candidateLocalIndex = -(candidateLocalIndex + 1);
+                }
               }
 
               if (currentGlobalIndex < end) {
@@ -404,7 +425,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
 
             private boolean shouldSkipGlobal(int candidate)
             {
-              return currentLocalIndex == candidate || !matcher.apply(globalDictionary.get(currentGlobalIndex));
+              return currentLocalIndex == candidate || !matcher.apply(globalDictionary.get(dictionary.get(candidate)));
             }
 
 
@@ -492,10 +513,8 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
     }
   }
 
-
   private class NestedLongLiteralValueSetIndex implements StringValueSetIndex
   {
-
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
     {
@@ -587,6 +606,40 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
               }
             }
           };
+        }
+      };
+    }
+  }
+
+  private class NestedLongLiteralNumericRangeIndex implements NumericRangeIndex
+  {
+    @Override
+    public BitmapColumnIndex forRange(
+        @Nullable Number startValue,
+        boolean startStrict,
+        @Nullable Number endValue,
+        boolean endStrict
+    )
+    {
+      return new SimpleImmutableBitmapIterableIndex()
+      {
+        @Override
+        public Iterable<ImmutableBitmap> getBitmapIterable()
+        {
+          final IntIntPair range = getGlobalRange(
+              startValue != null ? startValue.longValue() : null,
+              startStrict,
+              endValue != null ? endValue.longValue() : null,
+              endStrict,
+              0,
+              globalLongDictionary.size(),
+              globalLongDictionary::indexOf
+          );
+          return buildRangeIndexIterator(
+              dictionary.size(),
+              range.leftInt() + adjustLongId,
+              range.rightInt() + adjustLongId
+          );
         }
       };
     }
@@ -755,6 +808,40 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
     }
   }
 
+  private class NestedDoubleLiteralNumericRangeIndex implements NumericRangeIndex
+  {
+    @Override
+    public BitmapColumnIndex forRange(
+        @Nullable Number startValue,
+        boolean startStrict,
+        @Nullable Number endValue,
+        boolean endStrict
+    )
+    {
+      return new SimpleImmutableBitmapIterableIndex()
+      {
+        final IntIntPair range = getGlobalRange(
+            startValue != null ? startValue.doubleValue() : null,
+            startStrict,
+            endValue != null ? endValue.doubleValue() : null,
+            endStrict,
+            0,
+            globalDoubleDictionary.size(),
+            globalDoubleDictionary::indexOf
+        );
+        @Override
+        public Iterable<ImmutableBitmap> getBitmapIterable()
+        {
+          return buildRangeIndexIterator(
+              dictionary.size(),
+              range.leftInt() + adjustDoubleId,
+              range.rightInt() + adjustDoubleId
+          );
+        }
+      };
+    }
+  }
+
   private class NestedDoubleLiteralPredicateIndex implements DruidPredicateIndex
   {
     @Override
@@ -818,7 +905,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
     }
   }
 
-  private abstract class NestedAnyLiteralIndex
+  private abstract class NestedVariantLiteralIndex
   {
     IntList getIndexes(@Nullable String value)
     {
@@ -858,7 +945,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
   /**
    * {@link StringValueSetIndex} but for variant typed nested literal columns
    */
-  private class NestedVariantLiteralValueSetIndex extends NestedAnyLiteralIndex implements StringValueSetIndex
+  private class NestedVariantLiteralValueSetIndex extends NestedVariantLiteralIndex implements StringValueSetIndex
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -937,9 +1024,8 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
   /**
    * {@link DruidPredicateIndex} but for variant typed nested literal columns
    */
-  private class NestedVariantLiteralPredicateIndex extends NestedAnyLiteralIndex implements DruidPredicateIndex
+  private class NestedVariantLiteralPredicateIndex extends NestedVariantLiteralIndex implements DruidPredicateIndex
   {
-
     @Override
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
