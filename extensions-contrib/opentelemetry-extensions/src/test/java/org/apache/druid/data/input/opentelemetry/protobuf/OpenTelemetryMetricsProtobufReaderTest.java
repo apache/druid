@@ -357,6 +357,30 @@ public class OpenTelemetryMetricsProtobufReaderTest
     Assert.assertThrows(ParseException.class, () -> rows.hasNext());
     Assert.assertThrows(ParseException.class, () -> rows.next());
   }
+  
+  @Test
+  public void testInvalidMetricType() {
+    metricBuilder
+        .setName("deprecated_intsum")
+        .getIntSumBuilder()
+        .addDataPointsBuilder()
+        .setTimeUnixNano(TIMESTAMP);
+
+    MetricsData metricsData = metricsDataBuilder.build();
+
+    CloseableIterator<InputRow> rows = new OpenTelemetryMetricsProtobufReader(
+        dimensionsSpec,
+        new ByteEntity(metricsData.toByteArray()),
+        "metric.name",
+        "raw.value",
+        "descriptor.",
+        "custom."
+    ).read();
+
+    List<InputRow> rowList = new ArrayList<>();
+    rows.forEachRemaining(rowList::add);
+    Assert.assertEquals(0, rowList.size());
+  }
 
   private void assertDimensionEquals(InputRow row, String dimension, Object expected)
   {
