@@ -87,6 +87,13 @@ public abstract class OrderedSequenceNumber<SequenceOffsetType>
     return earliest.compareTo(this) <= 0;
   }
 
+  /**
+   * Returns true if, given that we want to start reading from this sequence number and stop at the sequence number end,
+   * there is more left to read. Used in pre-read checks to determine if there is anything left to read.
+   *
+   * @param end the end offset of the partition for a given task
+   * @return true if more records need to be read given that this is the current sequence number
+   */
   public boolean isMoreToReadBeforeReadingRecord(OrderedSequenceNumber<SequenceOffsetType> end)
   {
     final int compareToEnd = this.compareTo(end);

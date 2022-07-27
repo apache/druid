@@ -139,6 +139,8 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   @Override
   public boolean isMoreToReadBeforeReadingRecord(OrderedSequenceNumber<String> end)
   {
+    // Kinesis sequence number checks are exclusive for AWS numeric sequences
+    // However, If a record is UNREAD and the end offset is finalized to be UNREAD, we have caught up. (inclusive)
     if (isUnreadSequence(end.get())) {
       return false;
     }
