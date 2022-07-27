@@ -30,7 +30,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
