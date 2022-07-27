@@ -35,6 +35,7 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
@@ -50,6 +51,8 @@ import java.util.stream.Collectors;
 
 public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
 {
+  private static final Logger log = new Logger(OpenTelemetryMetricsProtobufReader.class);
+
   private final ByteEntity source;
   private final String metricDimension;
   private final String valueDimension;
@@ -146,12 +149,11 @@ public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
       }
       // TODO Support HISTOGRAM and SUMMARY metrics
       case HISTOGRAM:
-      case SUMMARY: {
-        inputRows = Collections.emptyList();
-        break;
-      }
+      case SUMMARY:
       default:
-        throw new IllegalStateException("Unexpected value: " + metric.getDataCase());
+        log.warn("Metric type " + metric.getDataCase() + " is not supported or deprecated.");
+        inputRows = Collections.emptyList();
+
     }
     return inputRows;
   }
