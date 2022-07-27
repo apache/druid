@@ -36,7 +36,11 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -52,8 +56,10 @@ import org.junit.Test;
 import javax.servlet.http.HttpServletRequest;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class SqlLifecycleTest
@@ -144,6 +150,10 @@ public class SqlLifecycleTest
     EasyMock.expectLastCall();
     mockPlanner.validate();
     EasyMock.expectLastCall();
+    Set<ResourceAction> mockActions = new HashSet<>();
+    mockActions.add(new ResourceAction(new Resource("dummy", ResourceType.DATASOURCE), Action.READ));
+    EasyMock.expect(mockPlanner.resourceActions(EasyMock.eq(false))).andReturn(mockActions).once();
+    EasyMock.expectLastCall();
     EasyMock.expect(mockPlanner.authorize(EasyMock.anyObject(), EasyMock.eq(false))).andReturn(Access.OK).once();
     EasyMock.expectLastCall();
 
@@ -233,6 +243,10 @@ public class SqlLifecycleTest
     mockPlannerContext.setParameters(parameters);
     EasyMock.expectLastCall();
     mockPlanner.validate();
+    EasyMock.expectLastCall();
+    Set<ResourceAction> mockActions = new HashSet<>();
+    mockActions.add(new ResourceAction(new Resource("dummy", ResourceType.DATASOURCE), Action.READ));
+    EasyMock.expect(mockPlanner.resourceActions(EasyMock.eq(false))).andReturn(mockActions).once();
     EasyMock.expectLastCall();
     EasyMock.expect(mockPlanner.authorize(EasyMock.anyObject(), EasyMock.eq(false))).andReturn(Access.OK).once();
     EasyMock.expectLastCall();
