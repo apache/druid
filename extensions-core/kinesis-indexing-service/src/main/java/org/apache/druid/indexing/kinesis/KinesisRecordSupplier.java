@@ -400,7 +400,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   private final boolean deaggregate;
   private final int recordBufferOfferTimeout;
   private final int recordBufferFullWait;
-  private final int fetchSequenceNumberTimeout;
   private final int maxRecordsPerPoll;
   private final int fetchThreads;
   private final int recordBufferSize;
@@ -426,7 +425,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
       int recordBufferSize,
       int recordBufferOfferTimeout,
       int recordBufferFullWait,
-      int fetchSequenceNumberTimeout,
       int maxRecordsPerPoll,
       boolean useEarliestSequenceNumber,
       boolean useListShards
@@ -439,7 +437,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     this.deaggregate = deaggregate;
     this.recordBufferOfferTimeout = recordBufferOfferTimeout;
     this.recordBufferFullWait = recordBufferFullWait;
-    this.fetchSequenceNumberTimeout = fetchSequenceNumberTimeout;
     this.maxRecordsPerPoll = maxRecordsPerPoll;
     this.fetchThreads = fetchThreads;
     this.recordBufferSize = recordBufferSize;
