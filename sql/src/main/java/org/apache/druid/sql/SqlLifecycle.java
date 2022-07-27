@@ -170,7 +170,7 @@ public class SqlLifecycle
   }
 
   /**
-   * Assign dynamic parameters to be used to substitute values during query exection. This can be performed at any
+   * Assign dynamic parameters to be used to substitute values during query execution. This can be performed at any
    * part of the lifecycle.
    */
   public void setParameters(List<TypedValue> parameters)

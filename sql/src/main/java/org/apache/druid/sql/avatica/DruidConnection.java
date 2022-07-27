@@ -20,17 +20,22 @@
 package org.apache.druid.sql.avatica;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.calcite.tools.RelConversionException;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.SqlQueryPlus;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -44,15 +49,14 @@ public class DruidConnection
 
   private final String connectionId;
   private final int maxStatements;
-  private final ImmutableMap<String, Object> userSecret;
-  private final QueryContext context;
+  private final Map<String, Object> userSecret;
+  private final Map<String, Object> context;
   private final AtomicInteger statementCounter = new AtomicInteger();
   private final AtomicReference<Future<?>> timeoutFuture = new AtomicReference<>();
+  private final ExecutorService yielderOpenCloseExecutor;
 
-  // Typically synchronized by connectionLock, except in one case: the onClose function passed
-  // into DruidStatements contained by the map.
   @GuardedBy("connectionLock")
-  private final ConcurrentMap<Integer, DruidStatement> statements;
+  private final ConcurrentMap<Integer, AbstractDruidJdbcStatement> statements = new ConcurrentHashMap<>();
   private final Object connectionLock = new Object();
 
   @GuardedBy("connectionLock")
@@ -62,14 +66,19 @@ public class DruidConnection
       final String connectionId,
       final int maxStatements,
       final Map<String, Object> userSecret,
-      final QueryContext context
+      final Map<String, Object> context
   )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId);
     this.maxStatements = maxStatements;
     this.userSecret = ImmutableMap.copyOf(userSecret);
-    this.context = context;
-    this.statements = new ConcurrentHashMap<>();
+    this.context = Preconditions.checkNotNull(context);
+    this.yielderOpenCloseExecutor = Execs.singleThreaded(
+        StringUtils.format(
+            "JDBCYielderOpenCloseExecutor-connection-%s",
+            StringUtils.encodeForFormat(connectionId)
+        )
+    );
   }
 
   public String getConnectionId()
@@ -77,7 +86,16 @@ public class DruidConnection
     return connectionId;
   }
 
-  public DruidStatement createStatement(SqlLifecycleFactory sqlLifecycleFactory)
+  public QueryContext makeContext()
+  {
+    // QueryContext constructor copies the context parameters.
+    // we don't want to stringify arrays for JDBC ever because Avatica needs to handle this
+    final QueryContext queryContext = new QueryContext(context);
+    queryContext.addSystemParam(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
+    return queryContext;
+  }
+
+  public DruidJdbcStatement createStatement(SqlLifecycleFactory sqlLifecycleFactory)
   {
     final int statementId = statementCounter.incrementAndGet();
 
@@ -89,33 +107,82 @@ public class DruidConnection
       }
 
       if (statements.size() >= maxStatements) {
-        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is[%,d]", maxStatements));
+        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is [%,d]", maxStatements));
       }
 
       @SuppressWarnings("GuardedBy")
-      final DruidStatement statement = new DruidStatement(
-          connectionId,
+      final DruidJdbcStatement statement = new DruidJdbcStatement(
+          this,
           statementId,
-          context,
-          sqlLifecycleFactory.factorize(),
-          () -> {
-            // onClose function for the statement
-            LOG.debug("Connection[%s] closed statement[%s].", connectionId, statementId);
-            // statements will be accessed unsynchronized to avoid deadlock
-            statements.remove(statementId);
-          }
+          sqlLifecycleFactory
       );
 
       statements.put(statementId, statement);
-      LOG.debug("Connection[%s] opened statement[%s].", connectionId, statementId);
+      LOG.debug("Connection [%s] opened statement [%s].", connectionId, statementId);
       return statement;
     }
   }
 
-  public DruidStatement getStatement(final int statementId)
+  public DruidJdbcPreparedStatement createPreparedStatement(
+      SqlLifecycleFactory sqlLifecycleFactory,
+      SqlQueryPlus queryPlus,
+      final long maxRowCount)
+  {
+    final int statementId = statementCounter.incrementAndGet();
+
+    synchronized (connectionLock) {
+      if (statements.containsKey(statementId)) {
+        // Will only happen if statementCounter rolls over before old statements are cleaned up. If this
+        // ever happens then something fishy is going on, because we shouldn't have billions of statements.
+        throw DruidMeta.logFailure(new ISE("Uh oh, too many statements"));
+      }
+
+      if (statements.size() >= maxStatements) {
+        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is [%,d]", maxStatements));
+      }
+
+      @SuppressWarnings("GuardedBy")
+      final DruidJdbcPreparedStatement jdbcStmt = new DruidJdbcPreparedStatement(
+          this,
+          statementId,
+          queryPlus,
+          sqlLifecycleFactory,
+          maxRowCount
+      );
+      jdbcStmt.prepare();
+
+      statements.put(statementId, jdbcStmt);
+      LOG.debug("Connection [%s] opened prepared statement [%s].", connectionId, statementId);
+      return jdbcStmt;
+    }
+  }
+
+  public void prepareAndExecute(
+      final DruidJdbcStatement druidStatement,
+      final SqlQueryPlus queryPlus,
+      final long maxRowCount
+  ) throws RelConversionException
+  {
+    Preconditions.checkNotNull(context, "JDBC connection context is null!");
+    druidStatement.execute(queryPlus.withContext(makeContext()), maxRowCount);
+  }
+
+  public AbstractDruidJdbcStatement getStatement(final int statementId)
   {
     synchronized (connectionLock) {
       return statements.get(statementId);
+    }
+  }
+
+  public void closeStatement(int statementId)
+  {
+    AbstractDruidJdbcStatement stmt;
+    synchronized (connectionLock) {
+      stmt = statements.remove(statementId);
+    }
+    if (stmt != null) {
+      stmt.close();
+      LOG.debug("Connection [%s] closed statement [%s].", connectionId, statementId);
     }
   }
 
@@ -139,18 +206,18 @@ public class DruidConnection
   public void close()
   {
     synchronized (connectionLock) {
-      // Copy statements before iterating because statement.close() modifies it.
-      for (DruidStatement statement : ImmutableList.copyOf(statements.values())) {
+      open = false;
+      for (AbstractDruidJdbcStatement statement : statements.values()) {
         try {
           statement.close();
         }
         catch (Exception e) {
-          LOG.warn("Connection[%s] failed to close statement[%s]!", connectionId, statement.getStatementId());
+          LOG.warn("Connection [%s] failed to close statement [%s]!", connectionId, statement.getStatementId());
         }
       }
-
-      LOG.debug("Connection[%s] closed.", connectionId);
-      open = false;
+      statements.clear();
+      yielderOpenCloseExecutor.shutdownNow();
+      LOG.debug("Connection [%s] closed.", connectionId);
     }
   }
 
@@ -166,5 +233,10 @@ public class DruidConnection
   public Map<String, Object> userSecret()
   {
     return userSecret;
+  }
+
+  public ExecutorService executor()
+  {
+    return yielderOpenCloseExecutor;
   }
 }
