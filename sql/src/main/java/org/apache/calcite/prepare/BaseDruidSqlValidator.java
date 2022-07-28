@@ -26,9 +26,9 @@ import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlConformance;
 
 /**
- * Extend {@link CalciteSqlValidator} to make it visible to Druid.
- * {code CalciteSqlValidator} itself is protected which is why
- * this class is in a Calcite name space.
+ * Extend the Java-focused {@link CalciteSqlValidator} to make it visible
+ * to Druid. {@link CalciteSqlValidator} itself is protected and can be
+ * extended only if this class is in the same Calcite package.
  */
 public class BaseDruidSqlValidator extends CalciteSqlValidator
 {
