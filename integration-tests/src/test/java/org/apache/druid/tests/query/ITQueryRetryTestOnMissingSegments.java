@@ -51,8 +51,8 @@ import java.util.Map;
 /**
  * This class tests the query retry on missing segments. A segment can be missing in a historical during a query if
  * the historical drops the segment after the broker issues the query to the historical. To mimic this case, this
- * test spawns two historicals, a normal historical and a historical modified for testing. The later historical
- * announces all segments assigned, but doesn't serve all of them. Instead, it can report missing segments for some
+ * test spawns a historical modified for testing. This historical announces all segments assigned, but doesn't serve
+ * all of them always. Instead, it can report missing segments for some
  * segments. See {@link ServerManagerForQueryErrorTest} for more details.
  * <p>
  * To run this test properly, the test group must be specified as {@link TestNGGroup#QUERY_RETRY}.
@@ -63,25 +63,22 @@ public class ITQueryRetryTestOnMissingSegments
 {
   private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
   private static final String QUERIES_RESOURCE = "/queries/wikipedia_editstream_queries_query_retry_test.json";
-  private static final int TIMES_TO_RUN = 50;
 
   /**
-   * This test runs the same query multiple times. This enumeration represents an expectation after finishing
-   * running the query.
+   * This enumeration represents an expectation after finishing running the test query.
    */
   private enum Expectation
   {
     /**
-     * Expect that all runs succeed.
+     * Expect that the test query succeed and with correct results.
      */
     ALL_SUCCESS,
     /**
-     * Expect that all runs returns the 200 HTTP response, but some of them can return incorrect result.
+     * Expect that the test query returns the 200 HTTP response, but will surely return incorrect result.
      */
     INCORRECT_RESULT,
     /**
-     * Expect that some runs can return the 500 HTTP response. For the runs returned the 200 HTTP response, the query
-     * result must be correct.
+     * Expect that the test query must return the 500 HTTP response.
      */
     QUERY_FAILURE
   }
@@ -100,7 +97,7 @@ public class ITQueryRetryTestOnMissingSegments
   @BeforeMethod
   public void before()
   {
-    // ensure that wikipedia segments are loaded completely
+    // ensure that wikipedia segment is loaded completely
     ITRetryUtil.retryUntilTrue(
         () -> coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE), "wikipedia segment load"
     );
@@ -109,24 +106,25 @@ public class ITQueryRetryTestOnMissingSegments
   @Test
   public void testWithRetriesDisabledPartialResultDisallowed() throws Exception
   {
-    // Since retry is disabled and partial result is not allowed, we can expect some queries can fail.
-    // If a query succeed, its result must be correct.
+    // Since retry is disabled and partial result is not allowed, the query must fail.
     testQueries(buildQuery(0, false), Expectation.QUERY_FAILURE);
   }
 
   @Test
   public void testWithRetriesDisabledPartialResultAllowed() throws Exception
   {
-    // Since retry is disabled but partial result is allowed, all queries must succeed.
-    // However, some queries can return incorrect result.
+    // Since retry is disabled but partial result is allowed, the query must succeed.
+    // However, the query must return incorrect result.
     testQueries(buildQuery(0, true), Expectation.INCORRECT_RESULT);
   }
 
   @Test
   public void testWithRetriesEnabledPartialResultDisallowed() throws Exception
   {
-    // Since retry is enabled, all queries must succeed even though partial result is disallowed.
-    // All queries must return correct result.
+    // Since retry is enabled, the query must succeed even though partial result is disallowed.
+    // The retry count is set to 1 since on the first retry of the query (i.e second overall try), the historical
+    // will start processing the segment and not call it missing.
+    // The query must return correct results.
     testQueries(buildQuery(1, false), Expectation.ALL_SUCCESS);
   }
 

@@ -61,8 +61,9 @@ import java.util.function.Function;
  *
  * - Missing segments. A segment can be missing during a query if a historical drops the segment
  *   after the broker issues the query to the historical. To mimic this situation, the historical
- *   with this server manager announces all segments assigned, but reports missing segments for the
- *   first 3 segments specified in the query. See ITQueryRetryTestOnMissingSegments.
+ *   with this server manager announces all segments assigned, but reports missing segment for the
+ *   first segment of the datasource specified in the query. The missing report is only generated once for the first
+ *   segment. Post that report, all segments are served for the datasource. See ITQueryRetryTestOnMissingSegments.
  * - Other query errors. This server manager returns a sequence that always throws an exception
  *   based on a given query context value. See ITQueryErrorTest.
  *
