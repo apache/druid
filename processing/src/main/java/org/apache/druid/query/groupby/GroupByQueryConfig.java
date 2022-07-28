@@ -21,6 +21,7 @@ package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
@@ -31,6 +32,8 @@ import org.apache.druid.utils.JvmUtils;
  */
 public class GroupByQueryConfig
 {
+  private static final Logger logger = new Logger(GroupByQueryConfig.class);
+
   public static final long AUTOMATIC = 0;
 
   public static final String CTX_KEY_STRATEGY = "groupByStrategy";
@@ -389,6 +392,8 @@ public class GroupByQueryConfig
         CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
         isMultiValueUnnestingEnabled()
     );
+
+    logger.debug(newConfig.toString());
     return newConfig;
   }
 
