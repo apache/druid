@@ -57,7 +57,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.sql.calcite.table.DruidTable;
+import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
@@ -71,6 +71,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -88,7 +89,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public class DruidSchemaConcurrencyTest extends DruidSchemaTestCommon
+public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
 {
   private static final String DATASOURCE = "datasource";
 
@@ -96,7 +97,7 @@ public class DruidSchemaConcurrencyTest extends DruidSchemaTestCommon
   private SpecificSegmentsQuerySegmentWalker walker;
   private TestServerInventoryView inventoryView;
   private BrokerServerView serverView;
-  private DruidSchema schema;
+  private SegmentMetadataCache schema;
   private ExecutorService exec;
 
   @Before
@@ -119,30 +120,33 @@ public class DruidSchemaConcurrencyTest extends DruidSchemaTestCommon
   }
 
   /**
-   * This tests the contention between 3 components, DruidSchema, InventoryView, and BrokerServerView.
-   * It first triggers refreshing DruidSchema. To mimic some heavy work done with {@link DruidSchema#lock},
-   * {@link DruidSchema#buildDruidTable} is overriden to sleep before doing real work. While refreshing DruidSchema,
-   * more new segments are added to InventoryView, which triggers updates of BrokerServerView. Finally, while
-   * BrokerServerView is updated, {@link BrokerServerView#getTimeline} is continuously called to mimic user query
+   * This tests the contention between three components, {@link SegmentMetadataCache},
+   * {@code InventoryView}, and {@link BrokerServerView}. It first triggers
+   * refreshing {@code SegmentMetadataCache}. To mimic some heavy work done with
+   * {@link SegmentMetadataCache#lock}, {@link SegmentMetadataCache#buildDruidTable}
+   * is overridden to sleep before doing real work. While refreshing
+   * {@code SegmentMetadataCache}, more new segments are added to
+   * {@code InventoryView}, which triggers updates of {@code BrokerServerView}.
+   * Finally, while {@code BrokerServerView} is updated,
+   * {@link BrokerServerView#getTimeline} is continuously called to mimic user query
    * processing. All these calls must return without heavy contention.
    */
   @Test(timeout = 30000L)
-  public void testDruidSchemaRefreshAndInventoryViewAddSegmentAndBrokerServerViewGetTimeline()
+  public void testSegmentMetadataRefreshAndInventoryViewAddSegmentAndBrokerServerViewGetTimeline()
       throws InterruptedException, ExecutionException, TimeoutException
   {
-    schema = new DruidSchema(
+    schema = new SegmentMetadataCache(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         serverView,
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
-        null
+        new BrokerInternalQueryConfig()
     )
     {
       @Override
-      DruidTable buildDruidTable(final String dataSource)
+      DatasourceTable.DatasourceMetadata buildDruidTable(final String dataSource)
       {
         doInLock(() -> {
           try {
@@ -194,8 +198,9 @@ public class DruidSchemaConcurrencyTest extends DruidSchemaTestCommon
     // Wait for all segments to be loaded in BrokerServerView
     Assert.assertTrue(segmentLoadLatch.await(5, TimeUnit.SECONDS));
 
-    // Trigger refresh of DruidSchema. This will internally run the heavy work mimicked by the overriden buildDruidTable
-    Future refreshFuture = exec.submit(() -> {
+    // Trigger refresh of DruidSchema. This will internally run the heavy work
+    // mimicked by the overridden buildDruidTable
+    Future<?> refreshFuture = exec.submit(() -> {
       schema.refresh(
           walker.getSegments().stream().map(DataSegment::getId).collect(Collectors.toSet()),
           Sets.newHashSet(DATASOURCE)
@@ -225,33 +230,36 @@ public class DruidSchemaConcurrencyTest extends DruidSchemaTestCommon
   }
 
   /**
-   * This tests the contention between 2 methods of DruidSchema, {@link DruidSchema#refresh} and
-   * {@link DruidSchema#getSegmentMetadataSnapshot()}. It first triggers refreshing DruidSchema.
-   * To mimic some heavy work done with {@link DruidSchema#lock}, {@link DruidSchema#buildDruidTable} is overriden
-   * to sleep before doing real work. While refreshing DruidSchema, getSegmentMetadataSnapshot() is continuously
-   * called to mimic reading the segments table of SystemSchema. All these calls must return without heavy contention.
+   * This tests the contention between two methods of {@link SegmentMetadataCache}:
+   * {@link SegmentMetadataCache#refresh} and
+   * {@link SegmentMetadataCache#getSegmentMetadataSnapshot()}. It first triggers
+   * refreshing {@code SegmentMetadataCache}. To mimic some heavy work done with
+   * {@link SegmentMetadataCache#lock}, {@link SegmentMetadataCache#buildDruidTable}
+   * is overridden to sleep before doing real work. While refreshing
+   * {@code SegmentMetadataCache}, {@code getSegmentMetadataSnapshot()} is continuously
+   * called to mimic reading the segments table of SystemSchema. All these calls
+   * must return without heavy contention.
    */
   @Test(timeout = 30000L)
-  public void testDruidSchemaRefreshAndDruidSchemaGetSegmentMetadata()
+  public void testSegmentMetadataRefreshAndDruidSchemaGetSegmentMetadata()
       throws InterruptedException, ExecutionException, TimeoutException
   {
-    schema = new DruidSchema(
+    schema = new SegmentMetadataCache(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         serverView,
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
-        null
+        new BrokerInternalQueryConfig()
     )
     {
       @Override
-      DruidTable buildDruidTable(final String dataSource)
+      DatasourceTable.DatasourceMetadata buildDruidTable(final String dataSource)
       {
         doInLock(() -> {
           try {
-            // Mimic some heavy work done in lock in DruidSchema
+            // Mimic some heavy work done in lock in SegmentMetadataCache
             Thread.sleep(5000);
           }
           catch (InterruptedException e) {
@@ -299,8 +307,9 @@ public class DruidSchemaConcurrencyTest extends DruidSchemaTestCommon
     // Wait for all segments to be loaded in BrokerServerView
     Assert.assertTrue(segmentLoadLatch.await(5, TimeUnit.SECONDS));
 
-    // Trigger refresh of DruidSchema. This will internally run the heavy work mimicked by the overriden buildDruidTable
-    Future refreshFuture = exec.submit(() -> {
+    // Trigger refresh of SegmentMetadataCache. This will internally run the heavy work mimicked
+    // by the overridden buildDruidTable
+    Future<?> refreshFuture = exec.submit(() -> {
       schema.refresh(
           walker.getSegments().stream().map(DataSegment::getId).collect(Collectors.toSet()),
           Sets.newHashSet(DATASOURCE)
@@ -438,6 +447,7 @@ public class DruidSchemaConcurrencyTest extends DruidSchemaTestCommon
       segmentCallbacks.forEach(pair -> pair.rhs.execute(() -> pair.lhs.segmentRemoved(server.getMetadata(), segment)));
     }
 
+    @SuppressWarnings("unused")
     private void removeServer(DruidServer server)
     {
       serverMap.remove(server.getName());

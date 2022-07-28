@@ -23,16 +23,30 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
-import java.util.concurrent.ConcurrentMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * This interface provides a map of datasource names to {@link DruidTable} objects, used by the {@link DruidSchema}
- * class as the SQL planner's view of Druid datasource schemas. If a non-default implementation is provided,
- * the segment metadata polling-based view of the Druid tables will not be built in DruidSchema.
+ * This interface provides a map of datasource names to {@link DruidTable}
+ * objects, used by the {@link DruidSchema} class as the SQL planner's
+ * view of Druid datasource schemas. If a non-default implementation is
+ * provided, the segment metadata polling-based view of the Druid tables
+ * will not be built in DruidSchema.
  */
 @ExtensionPoint
 @UnstableApi
 public interface DruidSchemaManager
 {
-  ConcurrentMap<String, DruidTable> getTables();
+  @Deprecated
+  Map<String, DruidTable> getTables();
+
+  default DruidTable getTable(String name)
+  {
+    return getTables().get(name);
+  }
+
+  default Set<String> getTableNames()
+  {
+    return getTables().keySet();
+  }
 }
