@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -88,35 +89,10 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   );
 
   // used in comparing aggregation results amongst distinct groups. hence the comparison is done on the finalized
-  // result which is string/value part of the result pair.
-  public static final Comparator<SerializablePairLongString> VALUE_COMPARATOR = (o1, o2) -> {
-    int comparation;
-
-    // First we check if the objects are null
-    if (o1 == null && o2 == null) {
-      comparation = 0;
-    } else if (o1 == null) {
-      comparation = -1;
-    } else if (o2 == null) {
-      comparation = 1;
-    } else {
-      // First we check if the strings are null
-      if (o1.rhs == null && o2.rhs == null) {
-        comparation = 0;
-      } else if (o1.rhs == null) {
-        comparation = -1;
-      } else if (o2.rhs == null) {
-        comparation = 1;
-      } else {
-
-        // If the strings are not null, we will compare them
-        // Note: This comparation maybe doesn't make sense to first/last aggregators
-        comparation = o1.rhs.compareTo(o2.rhs);
-      }
-    }
-
-    return comparation;
-  };
+  // result which is string/value part of the result pair. Null SerializablePairLongString values are put first.
+  public static final Comparator<SerializablePairLongString> VALUE_COMPARATOR = Comparator.nullsFirst(
+      Comparator.comparing(SerializablePair::getRhs, Comparator.nullsFirst(Comparator.naturalOrder()))
+  );
 
   private final String fieldName;
   private final String name;
