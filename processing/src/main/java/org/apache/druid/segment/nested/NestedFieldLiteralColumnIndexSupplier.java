@@ -216,7 +216,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
       localEndIndex = localEndFound + 1;
     }
 
-    return new IntIntImmutablePair(localStartIndex, localEndIndex);
+    return new IntIntImmutablePair(localStartIndex, Math.min(dictionary.size(), localEndIndex));
   }
 
   private <T> BitmapColumnIndex makeRangeIndex(
