@@ -521,6 +521,20 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
 
     ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory);
     checkBitmap(bitmap, 0, 1, 2, 3, 4, 6, 7, 8, 9);
+
+    forRange = rangeIndex.forRange(1.1, false, 3.3, false);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.9, forRange.estimateSelectivity(10), 0.0);
+
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 0, 1, 2, 3, 4, 6, 7, 8, 9);
+
+    forRange = rangeIndex.forRange(1.1, true, 3.3, true);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.6, forRange.estimateSelectivity(10), 0.0);
+
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 2, 3, 4, 6, 7, 9);
   }
 
   @Test

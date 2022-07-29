@@ -35,11 +35,13 @@ import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -53,6 +55,7 @@ import org.apache.druid.segment.column.SimpleImmutableBitmapIterableIndex;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
@@ -158,105 +161,106 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
     return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
   }
 
-  private <T> IntIntPair getGlobalRange(
+  /**
+   * Gets a value range from a global dictionary and maps it to a range on the local {@link #dictionary}.
+   * The starting index of the resulting range is inclusive, while the endpoint is exclusive [start, end)
+   */
+  private <T> IntIntPair getLocalRangeFromDictionary(
       @Nullable T startValue,
       boolean startStrict,
       @Nullable T endValue,
       boolean endStrict,
-      int rangeStart,
-      int rangeEnd,
-      GlobalIndexGetFunction<T> getFn
+      Indexed<T> globalDictionary,
+      int adjust
   )
   {
-    int startIndex, endIndex;
+    int globalStartIndex, globalEndIndex;
+    int localStartIndex, localEndIndex;
     if (startValue == null) {
-      startIndex = rangeStart;
+      globalStartIndex = adjust == 0 ? 1 : adjust; // global index 0 is always the null value
     } else {
-      final int found = getFn.indexOf(startValue);
+      final int found = globalDictionary.indexOf(startValue);
       if (found >= 0) {
-        startIndex = startStrict ? found + 1 : found;
+        globalStartIndex = adjust + (startStrict ? found + 1 : found);
       } else {
-        startIndex = -(found + 1);
+        globalStartIndex = adjust + (-(found + 1));
       }
+    }
+    // with starting global index settled, now lets find starting local index
+    int localFound = dictionary.indexOf(globalStartIndex);
+    if (localFound < 0) {
+      // the first valid global index is not within the local dictionary, so the insertion point is where we begin
+      localStartIndex = -(localFound + 1);
+    } else {
+      // valid global index in local dictionary, start here
+      localStartIndex = localFound;
     }
 
     if (endValue == null) {
-      endIndex = rangeEnd;
+      globalEndIndex = globalDictionary.size() + adjust;
     } else {
-      final int found = getFn.indexOf(endValue);
+      final int found = globalDictionary.indexOf(endValue);
       if (found >= 0) {
-        endIndex = endStrict ? found : found + 1;
+        globalEndIndex = adjust + (endStrict ? found : found + 1);
       } else {
-        endIndex = -(found + 1);
+        globalEndIndex = adjust + (-(found + 1));
       }
     }
+    globalEndIndex = Math.max(globalStartIndex, globalEndIndex);
+    // end index is not inclusive, so we find the last value in the local dictionary that falls within the range
+    int localEndFound = dictionary.indexOf(globalEndIndex - 1);
+    if (localEndFound < 0) {
+      localEndIndex = -localEndFound;
+    } else {
+      // add 1 because the last valid global end value is in the local dictionary, and end index is exclusive
+      localEndIndex = localEndFound + 1;
+    }
 
-    endIndex = Math.max(startIndex, endIndex);
-    return new IntIntImmutablePair(startIndex, endIndex);
+    return new IntIntImmutablePair(localStartIndex, localEndIndex);
   }
 
-  private Iterable<ImmutableBitmap> buildRangeIndexIterator(int max, int start, int end)
+  private <T> BitmapColumnIndex makeRangeIndex(
+      @Nullable T startValue,
+      boolean startStrict,
+      @Nullable T endValue,
+      boolean endStrict,
+      Indexed<T> globalDictionary,
+      int adjust
+  )
   {
-    // iterates over the range of values in the global dictionary, mapping to relevant range in the local
-    // dictionary, skipping duplicates
-    return () -> new Iterator<ImmutableBitmap>()
+    final IntIntPair localRange = getLocalRangeFromDictionary(
+        startValue,
+        startStrict,
+        endValue,
+        endStrict,
+        globalDictionary,
+        adjust
+    );
+    final int startIndex = localRange.leftInt();
+    final int endIndex = localRange.rightInt();
+    return new SimpleImmutableBitmapIterableIndex()
     {
-      int currentGlobalIndex = start;
-      // initialize to -1 because findNext uses this field to check for duplicates, and could legitimately find
-      // 0 for the first candidate
-      @SuppressWarnings("UnusedAssignment")
-      int currentLocalIndex = -1;
-
+      @Override
+      public Iterable<ImmutableBitmap> getBitmapIterable()
       {
-        currentLocalIndex = findNext();
-      }
+        return () -> new Iterator<ImmutableBitmap>()
+        {
+          final IntIterator rangeIterator = IntListUtils.fromTo(startIndex, endIndex).iterator();
 
-      private int findNext()
-      {
-        int candidateLocalIndex = dictionary.indexOf(currentGlobalIndex);
-        if (candidateLocalIndex < 0) {
-          candidateLocalIndex = -(candidateLocalIndex + 1);
-        }
-        while (currentGlobalIndex < end && candidateLocalIndex == currentLocalIndex) {
-          currentGlobalIndex++;
-          candidateLocalIndex = dictionary.indexOf(currentGlobalIndex);
-          if (candidateLocalIndex < 0) {
-            candidateLocalIndex = -(candidateLocalIndex + 1);
+          @Override
+          public boolean hasNext()
+          {
+            return rangeIterator.hasNext();
           }
-        }
-        if (currentGlobalIndex < end && candidateLocalIndex < max) {
-          currentGlobalIndex++;
-          return candidateLocalIndex;
-        } else {
-          return -1;
-        }
-      }
 
-      @Override
-      public boolean hasNext()
-      {
-        return currentLocalIndex != -1;
-      }
-
-      @Override
-      public ImmutableBitmap next()
-      {
-        int cur = currentLocalIndex;
-
-        if (cur == -1) {
-          throw new NoSuchElementException();
-        }
-
-        currentLocalIndex = findNext();
-        return getBitmap(cur);
+          @Override
+          public ImmutableBitmap next()
+          {
+            return getBitmap(rangeIterator.nextInt());
+          }
+        };
       }
     };
-  }
-
-  @FunctionalInterface
-  interface GlobalIndexGetFunction<T>
-  {
-    int indexOf(T value);
   }
 
   private class NestedStringLiteralValueSetIndex implements StringValueSetIndex
@@ -345,23 +349,14 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
         boolean endStrict
     )
     {
-      return new SimpleImmutableBitmapIterableIndex()
-      {
-        @Override
-        public Iterable<ImmutableBitmap> getBitmapIterable()
-        {
-          final IntIntPair range = getGlobalRange(
-              startValue,
-              startStrict,
-              endValue,
-              endStrict,
-              dictionary.get(0) == 0 ? 1 : 0, // if first value is null, don't consider it for range indexes
-              globalDictionary.size(),
-              globalDictionary::indexOf
-          );
-          return buildRangeIndexIterator(dictionary.size(), range.leftInt(), range.rightInt());
-        }
-      };
+      return makeRangeIndex(
+          NullHandling.emptyToNullIfNeeded(startValue),
+          startStrict,
+          NullHandling.emptyToNullIfNeeded(endValue),
+          endStrict,
+          globalDictionary,
+          0
+      );
     }
 
     @Override
@@ -378,73 +373,53 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
-          final IntIntPair stringsRange = getGlobalRange(
+          final IntIntPair range = getLocalRangeFromDictionary(
               startValue,
               startStrict,
               endValue,
               endStrict,
-              0,
-              globalDictionary.size(),
-              globalDictionary::indexOf
+              globalDictionary,
+              0
           );
-          // iterates over the range of values in the global dictionary, mapping to relevant range in the local
-          // dictionary, skipping duplicates
+          final int start = range.leftInt(), end = range.rightInt();
           return () -> new Iterator<ImmutableBitmap>()
           {
-            int currentGlobalIndex = stringsRange.leftInt();
-            final int end = stringsRange.rightInt();
-            // initialize to -1 because findNext uses this field to check for duplicates, and could legitimately find
-            // 0 for the first candidate
-            @SuppressWarnings("UnusedAssignment")
-            int currentLocalIndex = -1;
+            int currIndex = start;
+            int found;
+
             {
-              currentLocalIndex = findNext();
+              found = findNext();
             }
 
             private int findNext()
             {
-              int candidateLocalIndex = dictionary.indexOf(currentGlobalIndex);
-              if (candidateLocalIndex < 0) {
-                candidateLocalIndex = -(candidateLocalIndex + 1);
-              }
-              while (currentGlobalIndex < end && shouldSkipGlobal(candidateLocalIndex)) {
-                currentGlobalIndex++;
-                candidateLocalIndex = dictionary.indexOf(currentGlobalIndex);
-                if (candidateLocalIndex < 0) {
-                  candidateLocalIndex = -(candidateLocalIndex + 1);
-                }
+              while (currIndex < end && !matcher.apply(globalDictionary.get(dictionary.get(currIndex)))) {
+                currIndex++;
               }
 
-              if (currentGlobalIndex < end) {
-                currentGlobalIndex++;
-                return candidateLocalIndex;
+              if (currIndex < end) {
+                return currIndex++;
               } else {
                 return -1;
               }
             }
 
-            private boolean shouldSkipGlobal(int candidate)
-            {
-              return currentLocalIndex == candidate || !matcher.apply(globalDictionary.get(dictionary.get(candidate)));
-            }
-
-
             @Override
             public boolean hasNext()
             {
-              return currentLocalIndex != -1;
+              return found != -1;
             }
 
             @Override
             public ImmutableBitmap next()
             {
-              int cur = currentLocalIndex;
+              int cur = found;
 
               if (cur == -1) {
                 throw new NoSuchElementException();
               }
 
-              currentLocalIndex = findNext();
+              found = findNext();
               return getBitmap(cur);
             }
           };
@@ -621,27 +596,14 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
         boolean endStrict
     )
     {
-      return new SimpleImmutableBitmapIterableIndex()
-      {
-        @Override
-        public Iterable<ImmutableBitmap> getBitmapIterable()
-        {
-          final IntIntPair range = getGlobalRange(
-              startValue != null ? startValue.longValue() : null,
-              startStrict,
-              endValue != null ? endValue.longValue() : null,
-              endStrict,
-              0,
-              globalLongDictionary.size(),
-              globalLongDictionary::indexOf
-          );
-          return buildRangeIndexIterator(
-              dictionary.size(),
-              range.leftInt() + adjustLongId,
-              range.rightInt() + adjustLongId
-          );
-        }
-      };
+      return makeRangeIndex(
+          startValue != null ? startValue.longValue() : null,
+          startStrict,
+          endValue != null ? endValue.longValue() : null,
+          endStrict,
+          globalLongDictionary,
+          adjustLongId
+      );
     }
   }
 
@@ -711,7 +673,6 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
 
   private class NestedDoubleLiteralValueSetIndex implements StringValueSetIndex
   {
-
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
     {
@@ -818,27 +779,14 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
         boolean endStrict
     )
     {
-      return new SimpleImmutableBitmapIterableIndex()
-      {
-        final IntIntPair range = getGlobalRange(
-            startValue != null ? startValue.doubleValue() : null,
-            startStrict,
-            endValue != null ? endValue.doubleValue() : null,
-            endStrict,
-            0,
-            globalDoubleDictionary.size(),
-            globalDoubleDictionary::indexOf
-        );
-        @Override
-        public Iterable<ImmutableBitmap> getBitmapIterable()
-        {
-          return buildRangeIndexIterator(
-              dictionary.size(),
-              range.leftInt() + adjustDoubleId,
-              range.rightInt() + adjustDoubleId
-          );
-        }
-      };
+      return makeRangeIndex(
+          startValue != null ? startValue.doubleValue() : null,
+          startStrict,
+          endValue != null ? endValue.doubleValue() : null,
+          endStrict,
+          globalDoubleDictionary,
+          adjustDoubleId
+      );
     }
   }
 
