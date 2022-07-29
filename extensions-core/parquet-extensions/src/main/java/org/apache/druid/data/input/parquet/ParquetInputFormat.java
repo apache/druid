@@ -55,8 +55,8 @@ public class ParquetInputFormat extends NestedInputFormat
 
   private void initialize(Configuration conf)
   {
-    //Initializing seperately since during eager initialization, resolving
-    //namenode hostname throws an error if nodes are ephemeral
+    // Initializing seperately since during eager initialization, resolving
+    // namenode hostname throws an error if nodes are ephemeral
 
     // Ensure that FileSystem class level initialization happens with correct CL
     // See https://github.com/apache/druid/issues/1714
