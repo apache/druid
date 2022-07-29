@@ -34,6 +34,7 @@ import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.Reader;
 import org.apache.pulsar.client.api.ReaderListener;
 import org.apache.pulsar.common.naming.TopicName;
+import org.apache.pulsar.client.impl.auth.AuthenticationToken;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -125,6 +126,13 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
                               Long maxBackoffIntervalNanos)
   {
     try {
+      client = PulsarClient.builder()
+          .serviceUrl(
+              "pulsar+ssl://pulsar-proxy.dev.attentivemobile.com:6651"
+          ).authentication(
+              AuthenticationToken.class.getCanonicalName(),
+              "token:OTA5MTQwYmEtMTllYS1kMjdjLTQyMWMtYjQ4MGI1ODFkYzk4OmViOTY3N2M2LWUwYjgtODkwMi04ZTY1LTgwYTEyZjhiMTY5ZQ==")
+          .build();
       this.serviceUrl = serviceUrl;
       this.readerName = readerName;
       this.maxRecordsInSinglePoll = maxRecordsInSinglePoll;
@@ -148,13 +156,6 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
       this.connectionTimeoutMs = connectionTimeoutMs;
       this.requestTimeoutMs = requestTimeoutMs;
       this.maxBackoffIntervalNanos = maxBackoffIntervalNanos;
-
-      client = PulsarClient.builder()
-          .serviceUrl(this.serviceUrl)
-          .authentication(this.authPluginClassName, this.authParams)
-          .allowTlsInsecureConnection(this.tlsAllowInsecureConnection)
-          .enableTlsHostnameVerification(this.tlsHostnameVerificationEnable)
-          .build();
 
     } catch (PulsarClientException e) {
       throw new RuntimeException(e);
