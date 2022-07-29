@@ -53,6 +53,7 @@ import org.apache.druid.common.aws.AWSCredentialsUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -667,6 +668,30 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   public String getEarliestSequenceNumber(StreamPartition<String> partition)
   {
     return getSequenceNumber(partition, ShardIteratorType.TRIM_HORIZON);
+  }
+
+  @Override
+  public boolean isOffsetAvailable(StreamPartition<String> partition, OrderedSequenceNumber<String> offset)
+  {
+    KinesisSequenceNumber kinesisSequence = (KinesisSequenceNumber) offset;
+    // No records have been read from the stream and any record is valid
+    if (kinesisSequence.isUnread()) {
+      return true;
+    }
+    // Any other custom sequence number
+    if (!KinesisSequenceNumber.isValidAWSKinesisSequence(kinesisSequence.get())) {
+      return false;
+    }
+    // The first record using AT_SEQUENCE_NUMBER should match the offset
+    String shardIterator = kinesis.getShardIterator(partition.getStream(),
+                                                    partition.getPartitionId(),
+                                                    ShardIteratorType.AT_SEQUENCE_NUMBER.name(),
+                                                    kinesisSequence.get())
+                                  .getShardIterator();
+    GetRecordsRequest getRecordsRequest = new GetRecordsRequest().withShardIterator(shardIterator);
+    List<Record> records = kinesis.getRecords(getRecordsRequest)
+                                  .getRecords();
+    return !records.isEmpty() && records.get(0).getSequenceNumber().equals(kinesisSequence.get());
   }
 
   public Set<Shard> getShards(String stream)

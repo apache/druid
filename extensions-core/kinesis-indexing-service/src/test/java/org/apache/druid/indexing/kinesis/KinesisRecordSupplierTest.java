@@ -227,7 +227,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        60000,
         5,
         true,
         false
@@ -287,7 +286,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        60000,
         5,
         true,
         true
@@ -382,7 +380,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        60000,
         100,
         true,
         false
@@ -471,7 +468,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
             100,
             5000,
             5000,
-            60000,
             100,
             true,
             false
@@ -533,7 +529,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        60000,
         100,
         true,
         false
@@ -613,7 +608,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        60000,
         100,
         true,
         false
@@ -682,7 +676,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        60000,
         100,
         true,
         false
@@ -718,7 +711,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        60000,
         5,
         true,
         false
@@ -782,7 +774,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        60000,
         1,
         true,
         false
@@ -876,7 +867,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        60000,
         100,
         true,
         false
@@ -953,7 +943,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        1000,
         100,
         true,
         false
@@ -991,7 +980,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        1000,
         100,
         true,
         false
@@ -1075,7 +1063,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        60000,
         100,
         true,
         false
@@ -1132,7 +1119,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
                                                              100,
                                                              5000,
                                                              5000,
-                                                             60000,
                                                              5,
                                                              true,
                                                              false

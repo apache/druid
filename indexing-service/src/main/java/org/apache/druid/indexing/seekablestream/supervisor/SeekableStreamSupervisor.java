@@ -3916,9 +3916,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       @NotNull SequenceOffsetType offsetFromMetadata
   )
   {
-    final SequenceOffsetType earliestOffset = getOffsetFromStreamForPartition(partition, true);
-    return earliestOffset != null
-           && makeSequenceNumber(offsetFromMetadata).isAvailableWithEarliest(makeSequenceNumber(earliestOffset));
+    StreamPartition<PartitionIdType> streamPartition = StreamPartition.of(ioConfig.getStream(), partition);
+    OrderedSequenceNumber<SequenceOffsetType> sequenceNumber = makeSequenceNumber(offsetFromMetadata);
+    return recordSupplier.isOffsetAvailable(streamPartition, sequenceNumber);
   }
 
   protected void emitNoticeProcessTime(String noticeType, long timeInMillis)

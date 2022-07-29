@@ -147,7 +147,7 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
     return super.isMoreToReadBeforeReadingRecord(end);
   }
 
-  private boolean isUnread()
+  public boolean isUnread()
   {
     return isUnreadSequence(get());
   }

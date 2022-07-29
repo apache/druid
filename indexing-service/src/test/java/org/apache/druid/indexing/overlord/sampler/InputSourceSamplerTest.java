@@ -44,6 +44,7 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.seekablestream.RecordSupplierInputSource;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -1599,6 +1600,12 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     public Long getEarliestSequenceNumber(StreamPartition<Integer> partition)
     {
       return null;
+    }
+
+    @Override
+    public boolean isOffsetAvailable(StreamPartition<Integer> partition, OrderedSequenceNumber<Long> offset)
+    {
+      return true;
     }
 
     @Override
