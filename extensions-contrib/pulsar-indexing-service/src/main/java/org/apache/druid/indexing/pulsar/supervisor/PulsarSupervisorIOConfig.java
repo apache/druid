@@ -89,24 +89,25 @@ public class PulsarSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 
     this.serviceUrl = (String) consumerProperties.get(SERVICE_URL_KEY);
     this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT_MILLIS;
-    this.authPluginClassName = (String) consumerProperties.get("authPluginClassName");
-    this.authParams = (String) consumerProperties.get("authParams");
-    this.operationTimeoutMs = (Long) consumerProperties.get("operationTimeoutMs");
-    this.statsIntervalSeconds = (Long) consumerProperties.get("statsIntervalSeconds");
-    this.numIoThreads = (Integer) consumerProperties.get("numIoThreads");
-    this.numListenerThreads = (Integer) consumerProperties.get("numListenerThreads");
-    this.useTcpNoDelay = (Boolean) consumerProperties.get("useTcpNoDelay");
-    this.useTls = (Boolean) consumerProperties.get("useTls");
-    this.tlsTrustCertsFilePath = (String) consumerProperties.get("tlsTrustCertsFilePath");
-    this.tlsAllowInsecureConnection = (Boolean) consumerProperties.get("tlsAllowInsecureConnection");
-    this.tlsHostnameVerificationEnable = (Boolean) consumerProperties.get("tlsHostnameVerificationEnable");
-    this.concurrentLookupRequest = (Integer) consumerProperties.get("concurrentLookupRequest");
-    this.maxLookupRequest = (Integer) consumerProperties.get("maxLookupRequest");
-    this.maxNumberOfRejectedRequestPerConnection = (Integer) consumerProperties.get("maxNumberOfRejectedRequestPerConnection");
-    this.connectionTimeoutMs = (Integer) consumerProperties.get("keepAliveIntervalSeconds");
-    this.requestTimeoutMs = (Integer) consumerProperties.get("requestTimeoutMs");
-    this.keepAliveIntervalSeconds = (Integer) consumerProperties.get("keepAliveIntervalSeconds");
-    this.maxBackoffIntervalNanos = (Long) consumerProperties.get("maxBackoffIntervalNanos");
+    this.authPluginClassName = (String) consumerProperties.getOrDefault("authPluginClassName", "");
+    this.authParams = (String) consumerProperties.getOrDefault("authParams", "");
+    this.operationTimeoutMs = Long.parseLong((String) consumerProperties.getOrDefault("operationTimeoutMs", "60000l"));
+    this.statsIntervalSeconds = Long.parseLong((String)consumerProperties.getOrDefault("statsIntervalSeconds", "10000l"));
+    this.numIoThreads = (Integer) consumerProperties.getOrDefault("numIoThreads",1);
+    this.numListenerThreads = (Integer) consumerProperties.getOrDefault("numListenerThreads", 1);
+    this.useTcpNoDelay = (Boolean) consumerProperties.getOrDefault("useTcpNoDelay", false);
+    this.useTls = (Boolean) consumerProperties.getOrDefault("useTls", false);
+    this.tlsTrustCertsFilePath = (String) consumerProperties.getOrDefault("tlsTrustCertsFilePath", "");
+    this.tlsAllowInsecureConnection = (Boolean) consumerProperties.getOrDefault("tlsAllowInsecureConnection", false);
+    this.tlsHostnameVerificationEnable = (Boolean) consumerProperties.getOrDefault("tlsHostnameVerificationEnable", false);
+    this.concurrentLookupRequest = (Integer) consumerProperties.getOrDefault("concurrentLookupRequest", 10);
+    this.maxLookupRequest = (Integer) consumerProperties.getOrDefault("maxLookupRequest", 1000);
+    this.maxNumberOfRejectedRequestPerConnection = (Integer) consumerProperties.getOrDefault("maxNumberOfRejectedRequestPerConnection", 100);
+    this.connectionTimeoutMs = (Integer) consumerProperties.getOrDefault("keepAliveIntervalSeconds", 60000);
+    this.requestTimeoutMs = (Integer) consumerProperties.getOrDefault("requestTimeoutMs", 10000);
+    this.keepAliveIntervalSeconds = (Integer) consumerProperties.getOrDefault("keepAliveIntervalSeconds", 10);
+    this.maxBackoffIntervalNanos =  Long.parseLong(
+        (String) consumerProperties.getOrDefault("maxBackoffIntervalNanos", "10000l"));
   }
 
   @JsonProperty
