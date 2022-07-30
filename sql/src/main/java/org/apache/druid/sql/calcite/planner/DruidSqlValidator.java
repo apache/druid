@@ -17,22 +17,21 @@
  * under the License.
  */
 
-//CHECKSTYLE.OFF: PackageName - Must be in Calcite
-
-package org.apache.calcite.prepare;
+package org.apache.druid.sql.calcite.planner;
 
 import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.prepare.BaseDruidSqlValidator;
+import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlConformance;
 
 /**
- * Extend {@link CalciteSqlValidator} to make it visible to Druid.
- * {code CalciteSqlValidator} itself is protected which is why
- * this class is in a Calcite name space.
+ * Druid extended SQL validator. (At present, it doesn't actually
+ * have any extensions yet, but it will soon.)
  */
-public class DruidSqlValidator extends CalciteSqlValidator
+class DruidSqlValidator extends BaseDruidSqlValidator
 {
-  public DruidSqlValidator(
+  protected DruidSqlValidator(
       SqlOperatorTable opTab,
       CalciteCatalogReader catalogReader,
       JavaTypeFactory typeFactory,
@@ -40,5 +39,4 @@ public class DruidSqlValidator extends CalciteSqlValidator
   {
     super(opTab, catalogReader, typeFactory, conformance);
   }
-
 }

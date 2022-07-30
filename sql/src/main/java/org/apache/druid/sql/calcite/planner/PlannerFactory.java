@@ -113,15 +113,7 @@ public class PlannerFactory
         queryContext
     );
 
-    return createPlannerWithContext(context);
-  }
-
-  /**
-   * Create a new Druid query planner, re-using a previous {@link PlannerContext}
-   */
-  public DruidPlanner createPlannerWithContext(final PlannerContext plannerContext)
-  {
-    return new DruidPlanner(buildFrameworkConfig(plannerContext), plannerContext, queryMakerFactory);
+    return new DruidPlanner(buildFrameworkConfig(context), context, queryMakerFactory);
   }
 
   /**
@@ -135,12 +127,12 @@ public class PlannerFactory
     thePlanner.getPlannerContext()
               .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
     try {
-      thePlanner.validate(false);
+      thePlanner.validate();
     }
     catch (SqlParseException | ValidationException e) {
       throw new RuntimeException(e);
     }
-    thePlanner.getPlannerContext().setAuthorizationResult(Access.OK);
+    thePlanner.authorize(ra -> Access.OK, false);
     return thePlanner;
   }
 

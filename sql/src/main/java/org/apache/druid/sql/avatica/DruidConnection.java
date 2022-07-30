@@ -141,7 +141,6 @@ public class DruidConnection
         throw DruidMeta.logFailure(new ISE("Too many open statements, limit is [%,d]", maxStatements));
       }
 
-      @SuppressWarnings("GuardedBy")
       final DruidJdbcPreparedStatement jdbcStmt = new DruidJdbcPreparedStatement(
           this,
           statementId,
