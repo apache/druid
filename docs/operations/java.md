@@ -32,7 +32,7 @@ Druid fully supports Java 8 and 11. The project team recommends Java 11.
 The project team does not recommend running with Java 17, because certain Druid functionality is not currently
 compatible with Java 17.
 
-There are many free and actively-supported Java runtimes available for these versions, such as
+There are many free and actively-supported Java runtime environments available, such as
 [Corretto](https://aws.amazon.com/corretto/) and [Zulu](https://www.azul.com/downloads/?package=jdk#download-openjdk).
 The project team does not recommend any specific runtime over any other.
 
@@ -63,7 +63,7 @@ WARNING: All illegal access operations will be denied in a future release
 ```
 
 These warning messages are harmless, and can be ignored. However, you can avoid them entirely if you wish by adding the
-following Java command line parameters. These paramaters are not part of the default configurations that ship with
+following Java command line parameters. These parameters are not part of the default configurations that ship with
 Druid, because Java 8 does not recognize these parameters and fails to start up if they are provided.
 
 To do this, add the following lines to your `jvm.config` files:

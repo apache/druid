@@ -1429,6 +1429,8 @@ time-iso8601
 hadoopStorageDirectory
  - ../docs/operations/insert-segment-to-db.md
 0.14.x
+ - ../docs/operations/java.md
+G1
  - ../docs/operations/metrics.md
 0.14.x
 1s

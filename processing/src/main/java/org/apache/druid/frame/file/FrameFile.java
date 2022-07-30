@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.file;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 import org.apache.datasketches.memory.MapHandle;
@@ -29,6 +30,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -337,17 +339,7 @@ public class FrameFile implements Closeable
       mapHandle = Memory.map(file, 0, file.length(), ByteOrder.LITTLE_ENDIAN);
     }
     catch (NoClassDefFoundError | ExceptionInInitializerError e) {
-      // Memory.map does not work on JDK 14+ due to issues with AllocateDirectMap.
-      if (JvmUtils.majorVersion() >= 14) {
-        throw new ISE(
-            "Cannot read frame files larger than %,d bytes with Java %d. Try using Java 11.",
-            Integer.MAX_VALUE,
-            JvmUtils.majorVersion()
-        );
-      } else {
-        // We don't have a good reason why this happened. Throw the original error.
-        throw e;
-      }
+      throw handleMemoryMapError(e, JvmUtils.majorVersion());
     }
 
     return Pair.of(
@@ -361,6 +353,22 @@ public class FrameFile implements Closeable
           }
         }
     );
+  }
+
+  @VisibleForTesting
+  static RuntimeException handleMemoryMapError(Throwable e, int javaMajorVersion)
+  {
+    // Memory.map does not work on JDK 14+ due to issues with AllocateDirectMap.
+    if (javaMajorVersion >= 14) {
+      throw new ISE(
+          "Cannot read frame files larger than %,d bytes with Java %d. Try using Java 11.",
+          Integer.MAX_VALUE,
+          javaMajorVersion
+      );
+    } else {
+      // We don't have a good reason why this happened. Throw the original error.
+      throw new RE(e, "Could not map frame file");
+    }
   }
 
   private static long getFrameEndPosition(final Memory memory, final int frameNumber, final int numFrames)
