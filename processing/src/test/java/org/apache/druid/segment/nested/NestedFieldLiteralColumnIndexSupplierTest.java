@@ -28,6 +28,8 @@ import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;
@@ -927,6 +929,28 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     Assert.assertEquals(0.5, columnIndex.estimateSelectivity(10), 0.0);
     ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
     checkBitmap(bitmap, 1, 3, 4, 6, 9);
+  }
+
+  @Test
+  public void testDictionaryEncodedStringValueIndex() throws IOException
+  {
+    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeVariantSupplierWithNull();
+
+    DictionaryEncodedStringValueIndex lowLevelIndex = indexSupplier.as(DictionaryEncodedStringValueIndex.class);
+    Assert.assertNotNull(lowLevelIndex);
+    Assert.assertNotNull(indexSupplier.as(DictionaryEncodedValueIndex.class));
+
+    // 10 rows
+    // local: [null, b, z, 1, 300, 1.1, 9.9]
+    // column: [1, b, null, 9.9, 300, 1, z, null, 1.1, b]
+
+    Assert.assertNull(lowLevelIndex.getValue(0));
+    Assert.assertEquals("b", lowLevelIndex.getValue(1));
+    Assert.assertEquals("z", lowLevelIndex.getValue(2));
+    Assert.assertEquals("1", lowLevelIndex.getValue(3));
+    Assert.assertEquals("300", lowLevelIndex.getValue(4));
+    Assert.assertEquals("1.1", lowLevelIndex.getValue(5));
+    Assert.assertEquals("9.9", lowLevelIndex.getValue(6));
   }
 
   private NestedFieldLiteralColumnIndexSupplier makeSingleTypeStringSupplier() throws IOException

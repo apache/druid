@@ -45,6 +45,8 @@ import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;
@@ -108,6 +110,8 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
     if (clazz.equals(NullValueIndex.class)) {
       // null index is always 0 in the global dictionary, even if there are no null rows in any of the literal columns
       return (T) (NullValueIndex) () -> new SimpleImmutableBitmapIndex(bitmaps.get(0));
+    } else if (clazz.equals(DictionaryEncodedStringValueIndex.class) || clazz.equals(DictionaryEncodedValueIndex.class)) {
+      return (T) new NestedLiteralDictionaryEncodedStringValueIndex();
     }
 
     if (singleType != null) {
@@ -219,6 +223,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
     return new IntIntImmutablePair(localStartIndex, Math.min(dictionary.size(), localEndIndex));
   }
 
+
   private <T> BitmapColumnIndex makeRangeIndex(
       @Nullable T startValue,
       boolean startStrict,
@@ -261,6 +266,35 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
         };
       }
     };
+  }
+
+  private class NestedLiteralDictionaryEncodedStringValueIndex implements DictionaryEncodedStringValueIndex
+  {
+    @Override
+    public int getCardinality()
+    {
+      return dictionary.size();
+    }
+
+    @Nullable
+    @Override
+    public String getValue(int index)
+    {
+      int globalIndex = dictionary.get(index);
+      if (globalIndex < adjustLongId) {
+        return globalDictionary.get(globalIndex);
+      } else if (globalIndex < adjustDoubleId) {
+        return String.valueOf(globalLongDictionary.get(globalIndex - adjustLongId));
+      } else {
+        return String.valueOf(globalDoubleDictionary.get(globalIndex - adjustDoubleId));
+      }
+    }
+
+    @Override
+    public ImmutableBitmap getBitmap(int idx)
+    {
+      return NestedFieldLiteralColumnIndexSupplier.this.getBitmap(idx);
+    }
   }
 
   private class NestedStringLiteralValueSetIndex implements StringValueSetIndex
