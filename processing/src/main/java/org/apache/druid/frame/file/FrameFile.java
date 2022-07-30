@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.ReferenceCountingCloseableObject;
 import org.apache.druid.utils.CloseableUtils;
+import org.apache.druid.utils.JvmUtils;
 
 import java.io.Closeable;
 import java.io.File;
@@ -330,7 +331,25 @@ public class FrameFile implements Closeable
    */
   private static Pair<Memory, Closeable> mapFileDS(final File file)
   {
-    final MapHandle mapHandle = Memory.map(file, 0, file.length(), ByteOrder.LITTLE_ENDIAN);
+    final MapHandle mapHandle;
+
+    try {
+      mapHandle = Memory.map(file, 0, file.length(), ByteOrder.LITTLE_ENDIAN);
+    }
+    catch (NoClassDefFoundError | ExceptionInInitializerError e) {
+      // Memory.map does not work on JDK 14+ due to issues with AllocateDirectMap.
+      if (JvmUtils.majorVersion() >= 14) {
+        throw new ISE(
+            "Cannot read frame files larger than %,d bytes with Java %d. Try using Java 11.",
+            Integer.MAX_VALUE,
+            JvmUtils.majorVersion()
+        );
+      } else {
+        // We don't have a good reason why this happened. Throw the original error.
+        throw e;
+      }
+    }
+
     return Pair.of(
         mapHandle.get(),
         () -> {
