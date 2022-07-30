@@ -523,7 +523,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
     private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
 
-    InFilterDruidPredicateFactory(
+    public InFilterDruidPredicateFactory(
         final ExtractionFn extractionFn,
         final ValuesSet values
     )
