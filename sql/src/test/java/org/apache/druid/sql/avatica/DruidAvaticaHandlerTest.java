@@ -779,10 +779,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   @Test
   public void testTooManyStatements() throws SQLException
   {
-    client.createStatement();
-    client.createStatement();
-    client.createStatement();
-    client.createStatement();
+    for (int i = 0; i < 4; i++) {
+      client.createStatement();
+    }
 
     expectedException.expect(AvaticaClientRuntimeException.class);
     expectedException.expectMessage("Too many open statements, limit is [4]");
@@ -792,16 +791,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   @Test
   public void testNotTooManyStatementsWhenYouCloseThem() throws SQLException
   {
-    client.createStatement().close();
-    client.createStatement().close();
-    client.createStatement().close();
-    client.createStatement().close();
-    client.createStatement().close();
-    client.createStatement().close();
-    client.createStatement().close();
-    client.createStatement().close();
-    client.createStatement().close();
-    client.createStatement().close();
+    for (int i = 0; i < 10; i++) {
+      client.createStatement().close();
+    }
   }
 
   /**
@@ -1133,8 +1125,13 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     catch (SQLException e) {
       // Expected
     }
-    // SqlLifecycle does not allow logging for security failures.
-    Assert.assertEquals(0, testRequestLogger.getSqlQueryLogs().size());
+    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    {
+      final Map<String, Object> stats = testRequestLogger.getSqlQueryLogs().get(0).getQueryStats().getStats();
+      Assert.assertEquals(false, stats.get("success"));
+      Assert.assertEquals("regularUser", stats.get("identity"));
+      Assert.assertTrue(stats.containsKey("exception"));
+    }
   }
 
   @Test
@@ -1180,8 +1177,13 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     catch (SQLException e) {
       // Expected
     }
-    // SqlLifecycle does not allow logging for security failures.
-    Assert.assertEquals(0, testRequestLogger.getSqlQueryLogs().size());
+    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    {
+      final Map<String, Object> stats = testRequestLogger.getSqlQueryLogs().get(0).getQueryStats().getStats();
+      Assert.assertEquals(false, stats.get("success"));
+      Assert.assertEquals("regularUser", stats.get("identity"));
+      Assert.assertTrue(stats.containsKey("exception"));
+    }
   }
 
   @Test

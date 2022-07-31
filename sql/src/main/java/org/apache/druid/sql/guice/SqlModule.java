@@ -56,7 +56,6 @@ public class SqlModule implements Module
 
   public SqlModule()
   {
-
   }
 
   @VisibleForTesting
@@ -70,48 +69,49 @@ public class SqlModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    if (isEnabled()) {
-      Calcites.setSystemProperties();
+    if (!isEnabled()) {
+      return;
+    }
+    Calcites.setSystemProperties();
 
-      PolyBind.optionBinder(binder, Key.get(ViewManager.class))
-              .addBinding(NoopViewManager.TYPE)
-              .to(NoopViewManager.class)
-              .in(LazySingleton.class);
+    PolyBind.optionBinder(binder, Key.get(ViewManager.class))
+            .addBinding(NoopViewManager.TYPE)
+            .to(NoopViewManager.class)
+            .in(LazySingleton.class);
 
-      PolyBind.createChoiceWithDefault(
-          binder,
-          PROPERTY_SQL_VIEW_MANAGER_TYPE,
-          Key.get(ViewManager.class),
-          NoopViewManager.TYPE
-      );
+    PolyBind.createChoiceWithDefault(
+        binder,
+        PROPERTY_SQL_VIEW_MANAGER_TYPE,
+        Key.get(ViewManager.class),
+        NoopViewManager.TYPE
+    );
 
-      PolyBind.optionBinder(binder, Key.get(DruidSchemaManager.class))
-              .addBinding(NoopDruidSchemaManager.TYPE)
-              .to(NoopDruidSchemaManager.class)
-              .in(LazySingleton.class);
+    PolyBind.optionBinder(binder, Key.get(DruidSchemaManager.class))
+            .addBinding(NoopDruidSchemaManager.TYPE)
+            .to(NoopDruidSchemaManager.class)
+            .in(LazySingleton.class);
 
-      PolyBind.createChoiceWithDefault(
-          binder,
-          PROPERTY_SQL_SCHEMA_MANAGER_TYPE,
-          Key.get(DruidSchemaManager.class),
-          NoopDruidSchemaManager.TYPE
-      );
+    PolyBind.createChoiceWithDefault(
+        binder,
+        PROPERTY_SQL_SCHEMA_MANAGER_TYPE,
+        Key.get(DruidSchemaManager.class),
+        NoopDruidSchemaManager.TYPE
+    );
 
-      binder.install(new DruidCalciteSchemaModule());
-      binder.install(new CalcitePlannerModule());
-      binder.install(new SqlAggregationModule());
-      binder.install(new DruidViewModule());
+    binder.install(new DruidCalciteSchemaModule());
+    binder.install(new CalcitePlannerModule());
+    binder.install(new SqlAggregationModule());
+    binder.install(new DruidViewModule());
 
-      // QueryLookupOperatorConversion isn't in DruidOperatorTable since it needs a LookupExtractorFactoryContainerProvider injected.
-      SqlBindings.addOperatorConversion(binder, QueryLookupOperatorConversion.class);
+    // QueryLookupOperatorConversion isn't in DruidOperatorTable since it needs a LookupExtractorFactoryContainerProvider injected.
+    SqlBindings.addOperatorConversion(binder, QueryLookupOperatorConversion.class);
 
-      if (isJsonOverHttpEnabled()) {
-        binder.install(new SqlHttpModule());
-      }
+    if (isJsonOverHttpEnabled()) {
+      binder.install(new SqlHttpModule());
+    }
 
-      if (isAvaticaEnabled()) {
-        binder.install(new AvaticaModule());
-      }
+    if (isAvaticaEnabled()) {
+      binder.install(new AvaticaModule());
     }
   }
 

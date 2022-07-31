@@ -41,8 +41,9 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.SqlLifecycle;
-import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.DirectStatement;
+import org.apache.druid.sql.SqlQueryPlus;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -145,7 +146,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     private String expectedTargetDataSource;
     private RowSignature expectedTargetSignature;
     private List<ResourceAction> expectedResources;
-    private Query expectedQuery;
+    private Query<?> expectedQuery;
     private Matcher<Throwable> validationErrorMatcher;
 
     private IngestionDmlTester()
@@ -267,7 +268,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
         throw new ISE("Test must not have expectedQuery");
       }
 
-      final SqlLifecycleFactory sqlLifecycleFactory = getSqlLifecycleFactory(
+      final SqlStatementFactory sqlLifecycleFactory = getSqlLifecycleFactory(
           plannerConfig,
           new AuthConfig(),
           createOperatorTable(),
@@ -276,14 +277,13 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           queryJsonMapper
       );
 
-      final SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-      sqlLifecycle.initialize(sql, new QueryContext(queryContext));
+      DirectStatement stmt = sqlLifecycleFactory.directStatement(
+          new SqlQueryPlus(sql, new QueryContext(queryContext), authenticationResult));
 
       final Throwable e = Assert.assertThrows(
           Throwable.class,
           () -> {
-            sqlLifecycle.validateAndAuthorize(authenticationResult);
-            sqlLifecycle.plan();
+            stmt.execute();
           }
       );
 
@@ -291,7 +291,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       Assert.assertTrue(queryLogHook.getRecordedQueries().isEmpty());
     }
 
-    private void verifySuccess() throws Exception
+    private void verifySuccess()
     {
       if (expectedTargetDataSource == null) {
         throw new ISE("Test must have expectedTargetDataSource");
@@ -301,18 +301,22 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
         throw new ISE("Test must have expectedResources");
       }
 
-      final List<Query> expectedQueries =
+      final List<Query<?>> expectedQueries =
           expectedQuery == null
           ? Collections.emptyList()
           : Collections.singletonList(recursivelyOverrideContext(expectedQuery, queryContext));
 
+      SqlQueryPlus queryPlus = SqlQueryPlus.fromSqlParameters(
+          sql,
+          queryContext,
+          DEFAULT_PARAMETERS,
+          authenticationResult);
       Assert.assertEquals(
           ImmutableSet.copyOf(expectedResources),
-          analyzeResources(plannerConfig, new AuthConfig(), sql, queryContext, authenticationResult)
+          analyzeResources(plannerConfig, new AuthConfig(), queryPlus)
       );
 
-      final Pair<RowSignature, List<Object[]>> results =
-          getResults(plannerConfig, queryContext, Collections.emptyList(), sql, authenticationResult);
+      final Pair<RowSignature, List<Object[]>> results = getResults(plannerConfig, queryPlus);
 
       verifyResults(
           sql,

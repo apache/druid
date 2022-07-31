@@ -128,7 +128,7 @@
         <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
-        <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
+        <!-- <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount> -->
 
         <!-- Using -DskipTests or -P skip-tests will skip both the unit tests and
              the "new" integration tests. To skip just the unit tests (but run the
