@@ -65,7 +65,7 @@ public class DruidHttpClientConfig
    * respected by CachingClusteredClient (broker -> data server communication).
    */
   @JsonProperty
-  private HumanReadableBytes maxQueuedBytes = HumanReadableBytes.ZERO;
+  private HumanReadableBytes maxQueuedBytes = HumanReadableBytes.valueOf(25_000_000);
 
   @JsonProperty
   private boolean eagerInitialization = true;
