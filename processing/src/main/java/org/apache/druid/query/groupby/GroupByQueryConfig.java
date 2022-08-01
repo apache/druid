@@ -391,7 +391,7 @@ public class GroupByQueryConfig
         isMultiValueUnnestingEnabled()
     );
 
-    logger.debug(newConfig.toString());
+    logger.debug("Override config for GroupBy query %s - %s", query.getId(), newConfig.toString());
     return newConfig;
   }
 
