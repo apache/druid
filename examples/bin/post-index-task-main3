@@ -26,6 +26,7 @@ import time
 import urllib.request, urllib.error, urllib.parse
 import urllib.parse
 
+# Read a file. Returns string.
 def read_task_file(args):
   with open(args.file, 'r') as f:
     contents = f.read()
@@ -42,7 +43,7 @@ def add_basic_auth_header(args, req):
     basic_auth_encoded = base64.b64encode('%s:%s' % (args.user, args.password))
     req.add_header("Authorization", "Basic %s" % basic_auth_encoded)
 
-# Keep trying until timeout_at, maybe die then
+# Keep trying until timeout_at, maybe die then. Returns bytes.
 def post_task(args, task_json, timeout_at):
   try:
     url = args.url.rstrip("/") + "/druid/indexer/v1/task"
@@ -155,7 +156,7 @@ def main():
     datasource = task_json["spec"]["dataSchema"]["dataSource"]
   sys.stderr.write("Beginning indexing data for {0}\n".format(datasource))
 
-  task_id = json.loads(post_task(args, task_contents.encode(), submit_timeout_at))["task"]
+  task_id = json.loads(post_task(args, task_contents.encode(), submit_timeout_at).decode('utf-8'))["task"]
 
   sys.stderr.write('\033[1m' + "Task started: " + '\033[0m' + "{0}\n".format(task_id))
   sys.stderr.write('\033[1m' + "Task log:     " + '\033[0m' + "{0}/druid/indexer/v1/task/{1}/log\n".format(args.url.rstrip("/"),task_id))
