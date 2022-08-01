@@ -92,11 +92,13 @@ public abstract class OrderedSequenceNumber<SequenceOffsetType>
    * there is more left to read. Used in pre-read checks to determine if there is anything left to read.
    *
    * @param end the end offset of the partition for a given task
+   * @param isEndOffsetExclusive indicates if the TaskRunner considers the end offsets to be exclusive
    * @return true if more records need to be read given that this is the current sequence number
    */
-  public boolean isMoreToReadBeforeReadingRecord(OrderedSequenceNumber<SequenceOffsetType> end)
+  public boolean isMoreToReadBeforeReadingRecord(OrderedSequenceNumber<SequenceOffsetType> end,
+                                                 boolean isEndOffsetExclusive)
   {
     final int compareToEnd = this.compareTo(end);
-    return isExclusive ? compareToEnd < 0 : compareToEnd <= 0;
+    return isEndOffsetExclusive ? compareToEnd < 0 : compareToEnd <= 0;
   }
 }
