@@ -3918,7 +3918,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     StreamPartition<PartitionIdType> streamPartition = StreamPartition.of(ioConfig.getStream(), partition);
     OrderedSequenceNumber<SequenceOffsetType> sequenceNumber = makeSequenceNumber(offsetFromMetadata);
-    return recordSupplier.isOffsetAvailable(streamPartition, sequenceNumber);
+    recordSupplierLock.lock();
+    try {
+      return recordSupplier.isOffsetAvailable(streamPartition, sequenceNumber);
+    }
+    finally {
+      recordSupplierLock.unlock();
+    }
   }
 
   protected void emitNoticeProcessTime(String noticeType, long timeInMillis)

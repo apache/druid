@@ -683,14 +683,54 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
       return false;
     }
     // The first record using AT_SEQUENCE_NUMBER should match the offset
-    String shardIterator = kinesis.getShardIterator(partition.getStream(),
-                                                    partition.getPartitionId(),
-                                                    ShardIteratorType.AT_SEQUENCE_NUMBER.name(),
-                                                    kinesisSequence.get())
-                                  .getShardIterator();
+    String shardIterator = RetryUtils.retry(
+        () -> kinesis.getShardIterator(partition.getStream(),
+                                       partition.getPartitionId(),
+                                       ShardIteratorType.AT_SEQUENCE_NUMBER.name(),
+                                       kinesisSequence.get())
+                     .getShardIterator(),
+        (throwable) -> {
+          if (throwable instanceof ProvisionedThroughputExceededException) {
+            log.warn(
+                throwable,
+                "encountered ProvisionedThroughputExceededException while fetching records, this means "
+                + "that the request rate for the stream is too high, or the requested data is too large for "
+                + "the available throughput. Reduce the frequency or size of your requests. Consider increasing "
+                + "the number of shards to increase throughput."
+            );
+            return true;
+          }
+          if (throwable instanceof AmazonClientException) {
+            AmazonClientException ase = (AmazonClientException) throwable;
+            return AWSClientUtil.isClientExceptionRecoverable(ase);
+          }
+          return false;
+        },
+        GET_SEQUENCE_NUMBER_RETRY_COUNT
+    );
     GetRecordsRequest getRecordsRequest = new GetRecordsRequest().withShardIterator(shardIterator);
-    List<Record> records = kinesis.getRecords(getRecordsRequest)
-                                  .getRecords();
+    List<Record> records = RetryUtils.retry(
+        () -> kinesis.getRecords(getRecordsRequest)
+                     .getRecords(),
+        (throwable) -> {
+          if (throwable instanceof ProvisionedThroughputExceededException) {
+            log.warn(
+                throwable,
+                "encountered ProvisionedThroughputExceededException while fetching records, this means "
+                + "that the request rate for the stream is too high, or the requested data is too large for "
+                + "the available throughput. Reduce the frequency or size of your requests. Consider increasing "
+                + "the number of shards to increase throughput."
+            );
+            return true;
+          }
+          if (throwable instanceof AmazonClientException) {
+            AmazonClientException ase = (AmazonClientException) throwable;
+            return AWSClientUtil.isClientExceptionRecoverable(ase);
+          }
+          return false;
+        },
+        GET_SEQUENCE_NUMBER_RETRY_COUNT
+    );
     return !records.isEmpty() && records.get(0).getSequenceNumber().equals(kinesisSequence.get());
   }
 
