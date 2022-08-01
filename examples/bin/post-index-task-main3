@@ -35,7 +35,7 @@ def read_task_file(args):
     except Exception as e:
       sys.stderr.write('Invalid JSON in task file "{0}": {1}\n'.format(args.file, repr(e)))
       sys.exit(1)
-    return contents.encode()
+    return contents
 
 def add_basic_auth_header(args, req):
   if (args.user is not None):
@@ -155,7 +155,7 @@ def main():
     datasource = json.loads(task_contents)["spec"]["dataSchema"]["dataSource"]
   sys.stderr.write("Beginning indexing data for {0}\n".format(datasource))
 
-  task_id = json.loads(post_task(args, task_contents, submit_timeout_at))["task"]
+  task_id = json.loads(post_task(args, task_contents.encode(), submit_timeout_at))["task"]
 
   sys.stderr.write('\033[1m' + "Task started: " + '\033[0m' + "{0}\n".format(task_id))
   sys.stderr.write('\033[1m' + "Task log:     " + '\033[0m' + "{0}/druid/indexer/v1/task/{1}/log\n".format(args.url.rstrip("/"),task_id))
