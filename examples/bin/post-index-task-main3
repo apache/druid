@@ -35,7 +35,7 @@ def read_task_file(args):
     except Exception as e:
       sys.stderr.write('Invalid JSON in task file "{0}": {1}\n'.format(args.file, repr(e)))
       sys.exit(1)
-    return contents
+    return contents.encode()
 
 def add_basic_auth_header(args, req):
   if (args.user is not None):
