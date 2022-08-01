@@ -125,6 +125,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
                               Long maxBackoffIntervalNanos)
   {
     try {
+      this.client = getPulsarClient();
       this.serviceUrl = serviceUrl;
       this.readerName = readerName;
       this.maxRecordsInSinglePoll = maxRecordsInSinglePoll;
@@ -149,17 +150,19 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
       this.requestTimeoutMs = requestTimeoutMs;
       this.maxBackoffIntervalNanos = maxBackoffIntervalNanos;
 
-      client = PulsarClient.builder()
-          .serviceUrl(
-              "pulsar+ssl://pulsar-proxy.dev.attentivemobile.com:6651"
-          ).authentication(
-              "org.apache.pulsar.client.impl.auth.AuthenticationToken",
-              "token:OTA5MTQwYmEtMTllYS1kMjdjLTQyMWMtYjQ4MGI1ODFkYzk4OmViOTY3N2M2LWUwYjgtODkwMi04ZTY1LTgwYTEyZjhiMTY5ZQ==")
-          .build();
-
     } catch (PulsarClientException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private PulsarClient getPulsarClient() throws PulsarClientException {
+    return PulsarClient.builder()
+        .serviceUrl(
+            "pulsar+ssl://pulsar-proxy.dev.attentivemobile.com:6651"
+        ).authentication(
+            "org.apache.pulsar.client.impl.auth.AuthenticationToken",
+            "token:OTA5MTQwYmEtMTllYS1kMjdjLTQyMWMtYjQ4MGI1ODFkYzk4OmViOTY3N2M2LWUwYjgtODkwMi04ZTY1LTgwYTEyZjhiMTY5ZQ==")
+        .build();
   }
 
   @VisibleForTesting
