@@ -239,6 +239,12 @@ public class SqlSegmentsMetadataQuery
           sb.append(" OR ");
         }
       }
+
+      // Add a special case for a single partition with eternity. Since we are using string comparison, a partition with
+      // this start and end will be incorrectly not returned.
+      if (matchMode.equals(IntervalMode.OVERLAPS)) {
+        sb.append(" OR (start = '-146136543-09-08T08:23:32.096Z' AND \"end\" = '146140482-04-24T15:36:27.903Z')");
+      }
     }
 
     final Query<Map<String, Object>> sql = handle

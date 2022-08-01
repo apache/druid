@@ -97,6 +97,18 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       100
   );
 
+  private final DataSegment eternitySegment = new DataSegment(
+      "eternity",
+      Intervals.ETERNITY,
+      "version",
+      ImmutableMap.of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new LinearShardSpec(0),
+      9,
+      100
+  );
+
   private final DataSegment defaultSegment2 = new DataSegment(
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
@@ -1196,6 +1208,28 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             coordinator.retrieveUsedSegmentsForInterval(
                 hugeTimeRangeSegment1.getDataSource(),
                 Intervals.of("2993/2995"),
+                Segments.ONLY_VISIBLE
+            )
+        )
+    );
+  }
+
+
+  @Test
+  public void testEternitySegmentWithStringComparison() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(
+            eternitySegment
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(eternitySegment),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                hugeTimeRangeSegment1.getDataSource(),
+                Intervals.of("2020/2021"),
                 Segments.ONLY_VISIBLE
             )
         )
