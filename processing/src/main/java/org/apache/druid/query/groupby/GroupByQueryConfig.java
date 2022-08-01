@@ -70,8 +70,6 @@ public class GroupByQueryConfig
   private static final long MIN_AUTOMATIC_DICTIONARY_SIZE = 1;
   private static final long MAX_AUTOMATIC_DICTIONARY_SIZE = 1_000_000_000;
 
-
-
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
 
