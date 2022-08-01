@@ -82,24 +82,24 @@ public class PulsarIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Int
     );
 
     this.serviceUrl = (String) consumerProperties.getOrDefault(PulsarSupervisorIOConfig.SERVICE_URL_KEY, "");
-    this.authPluginClassName = (String) consumerProperties.getOrDefault("authPluginClassName", "");
-    this.authParams = (String) consumerProperties.getOrDefault("authParams", "");
-    this.operationTimeoutMs = Long.getLong((String) consumerProperties.getOrDefault("operationTimeoutMs", 100000L));
-    this.statsIntervalSeconds = Long.getLong((String) consumerProperties.getOrDefault("statsIntervalSeconds", 100000L));
-    this.numIoThreads = (Integer) consumerProperties.getOrDefault("numIoThreads", 2);
-    this.numListenerThreads = (Integer) consumerProperties.getOrDefault("numListenerThreads", 1);
-    this.useTcpNoDelay = (Boolean) consumerProperties.getOrDefault("useTcpNoDelay", false);
-    this.useTls = (Boolean) consumerProperties.getOrDefault("useTls", false);
-    this.tlsTrustCertsFilePath = (String) consumerProperties.getOrDefault("tlsTrustCertsFilePath", "");
-    this.tlsAllowInsecureConnection = (Boolean) consumerProperties.getOrDefault("tlsAllowInsecureConnection", false);
-    this.tlsHostnameVerificationEnable = (Boolean) consumerProperties.getOrDefault("tlsHostnameVerificationEnable", false);
-    this.concurrentLookupRequest = (Integer) consumerProperties.getOrDefault("concurrentLookupRequest", 2);
-    this.maxLookupRequest = (Integer) consumerProperties.getOrDefault("maxLookupRequest", 2);
-    this.maxNumberOfRejectedRequestPerConnection = (Integer) consumerProperties.getOrDefault("maxNumberOfRejectedRequestPerConnection", 2);
-    this.connectionTimeoutMs = (Integer) consumerProperties.getOrDefault("keepAliveIntervalSeconds", 60000);
-    this.requestTimeoutMs = (Integer) consumerProperties.getOrDefault("requestTimeoutMs", 600000);
-    this.keepAliveIntervalSeconds = (Integer) consumerProperties.getOrDefault("keepAliveIntervalSeconds", 600000);
-    this.maxBackoffIntervalNanos = Long.getLong((String) consumerProperties.getOrDefault("maxBackoffIntervalNanos", "1000"));
+    this.authPluginClassName = (String) consumerProperties.getOrDefault("authPluginClassName", ConsumerConfigDefaults.DEFAULT_AUTH_PLUGIN_CLASS_NAME);
+    this.authParams = (String) consumerProperties.getOrDefault("authParams", ConsumerConfigDefaults.DEFAULT_AUTH_PARAMS);
+    this.operationTimeoutMs = Long.parseLong((String) consumerProperties.getOrDefault("operationTimeoutMs", ConsumerConfigDefaults.DEFAULT_OPERATION_TIMEOUT_MS));
+    this.statsIntervalSeconds = Long.parseLong((String) consumerProperties.getOrDefault("statsIntervalSeconds", ConsumerConfigDefaults.DEFAULT_STATS_INTERVAL_SECONDS));
+    this.numIoThreads = (Integer) consumerProperties.getOrDefault("numIoThreads", ConsumerConfigDefaults.DEFAULT_NUM_IO_THREADS);
+    this.numListenerThreads = (Integer) consumerProperties.getOrDefault("numListenerThreads", ConsumerConfigDefaults.DEFAULT_NUM_LISTENER_THREADS);
+    this.useTcpNoDelay = (Boolean) consumerProperties.getOrDefault("useTcpNoDelay", ConsumerConfigDefaults.DEFAULT_USE_TCP_NO_DELAY);
+    this.useTls = (Boolean) consumerProperties.getOrDefault("useTls", ConsumerConfigDefaults.DEFAULT_USE_TLS);
+    this.tlsTrustCertsFilePath = (String) consumerProperties.getOrDefault("tlsTrustCertsFilePath", ConsumerConfigDefaults.DEFAULT_TLS_TRUST_CERTS_FILE_PATH);
+    this.tlsAllowInsecureConnection = (Boolean) consumerProperties.getOrDefault("tlsAllowInsecureConnection", ConsumerConfigDefaults.DEFAULT_TLS_ALLOW_INSECURE_CONNECTION);
+    this.tlsHostnameVerificationEnable = (Boolean) consumerProperties.getOrDefault("tlsHostnameVerificationEnable", ConsumerConfigDefaults.DEFAULT_TLS_HOSTNAME_VERIFICATION_ENABLE);
+    this.concurrentLookupRequest = (Integer) consumerProperties.getOrDefault("concurrentLookupRequest", ConsumerConfigDefaults.DEFAULT_CONCURRENT_LOOKUP_REQUEST);
+    this.maxLookupRequest = (Integer) consumerProperties.getOrDefault("maxLookupRequest", ConsumerConfigDefaults.DEFAULT_MAX_LOOKUP_REQUEST);
+    this.maxNumberOfRejectedRequestPerConnection = (Integer) consumerProperties.getOrDefault("maxNumberOfRejectedRequestPerConnection", ConsumerConfigDefaults.DEFAULT_MAX_NUMBER_OF_REJECTED_REQUEST_PER_CONNECTION);
+    this.connectionTimeoutMs = (Integer) consumerProperties.getOrDefault("connectionTimeoutMs", ConsumerConfigDefaults.DEFAULT_CONNECTION_TIMEOUT_MS);
+    this.requestTimeoutMs = (Integer) consumerProperties.getOrDefault("requestTimeoutMs", ConsumerConfigDefaults.DEFAULT_REQUEST_TIMEOUT_MS);
+    this.keepAliveIntervalSeconds = (Integer) consumerProperties.getOrDefault("keepAliveIntervalSeconds", ConsumerConfigDefaults.DEFAULT_KEEP_ALIVE_INTERVAL_SECONDS);
+    this.maxBackoffIntervalNanos = Long.parseLong((String) consumerProperties.getOrDefault("maxBackoffIntervalNanos", ConsumerConfigDefaults.DEFAULT_MAX_BACKOFF_INTERVAL_NANOS));
 
     final SeekableStreamEndSequenceNumbers<Integer, Long> myEndSequenceNumbers = getEndSequenceNumbers();
     for (int partition : myEndSequenceNumbers.getPartitionSequenceNumberMap().keySet()) {

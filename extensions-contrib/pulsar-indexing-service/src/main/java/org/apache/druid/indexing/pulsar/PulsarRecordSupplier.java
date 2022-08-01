@@ -125,7 +125,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
                               Long maxBackoffIntervalNanos)
   {
     try {
-      this.client = getPulsarClient();
+
       this.serviceUrl = serviceUrl;
       this.readerName = readerName;
       this.maxRecordsInSinglePoll = maxRecordsInSinglePoll;
@@ -149,19 +149,20 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
       this.connectionTimeoutMs = connectionTimeoutMs;
       this.requestTimeoutMs = requestTimeoutMs;
       this.maxBackoffIntervalNanos = maxBackoffIntervalNanos;
-
+      client = getPulsarClient();
     } catch (PulsarClientException e) {
       throw new RuntimeException(e);
     }
   }
 
   private PulsarClient getPulsarClient() throws PulsarClientException {
+
     return PulsarClient.builder()
         .serviceUrl(
-            "pulsar+ssl://pulsar-proxy.dev.attentivemobile.com:6651"
+            this.getServiceUrl()
         ).authentication(
-            "org.apache.pulsar.client.impl.auth.AuthenticationToken",
-            "token:OTA5MTQwYmEtMTllYS1kMjdjLTQyMWMtYjQ4MGI1ODFkYzk4OmViOTY3N2M2LWUwYjgtODkwMi04ZTY1LTgwYTEyZjhiMTY5ZQ==")
+            this.authPluginClassName,
+            this.authParams)
         .build();
   }
 
