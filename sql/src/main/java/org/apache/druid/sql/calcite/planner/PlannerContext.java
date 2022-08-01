@@ -88,7 +88,7 @@ public class PlannerContext
   // result of authentication, providing identity to authorize set of resources produced by validation
   private AuthenticationResult authenticationResult;
   // set of datasources and views which must be authorized, initialized to null so we can detect if it has been set.
-  private Set<ResourceAction> resourceActions = null;
+  private Set<ResourceAction> resourceActions;
   // result of authorizing set of resources against authentication identity
   private Access authorizationResult;
   // error messages encountered while planning the query

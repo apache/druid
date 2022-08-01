@@ -46,7 +46,6 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -80,13 +79,13 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 
   TestClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
-      JoinableFactory joinableFactory,
+      JoinableFactoryWrapper joinableFactoryWrapper,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler
   )
   {
     this.timelines = timelines;
-    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
+    this.joinableFactoryWrapper = joinableFactoryWrapper;
     this.conglomerate = conglomerate;
     this.scheduler = scheduler;
   }

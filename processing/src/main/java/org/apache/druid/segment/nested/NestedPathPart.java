@@ -17,32 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.segment.nested;
 
-import com.google.common.collect.ImmutableSet;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-import java.util.Set;
+import javax.annotation.Nullable;
 
-/**
- * If an SQL query can be validated by {@link DruidPlanner}, the resulting artifact is the set of {@link Resource}
- * corresponding to the datasources and views which an authenticated request must be authorized for to process the
- * query.
- */
-public class ValidationResult
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "field", value = NestedPathField.class),
+    @JsonSubTypes.Type(name = "arrayElement", value = NestedPathArrayElement.class)
+})
+public interface NestedPathPart
 {
-  private final Set<ResourceAction> resourceActions;
+  @Nullable
+  Object find(@Nullable Object input);
 
-  public ValidationResult(
-      final Set<ResourceAction> resourceActions
-  )
-  {
-    this.resourceActions = ImmutableSet.copyOf(resourceActions);
-  }
-
-  public Set<ResourceAction> getResourceActions()
-  {
-    return resourceActions;
-  }
+  @JsonIgnore
+  String getPartIdentifier();
 }

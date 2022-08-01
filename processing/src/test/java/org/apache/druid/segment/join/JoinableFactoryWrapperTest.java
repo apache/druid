@@ -36,6 +36,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.TestQuery;
 import org.apache.druid.query.extraction.MapLookupExtractor;
@@ -46,6 +47,8 @@ import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -54,12 +57,15 @@ import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.join.table.RowBasedIndexedTable;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -73,8 +79,9 @@ import java.util.stream.Collectors;
 
 public class JoinableFactoryWrapperTest extends NullHandlingTest
 {
-  private static final JoinableFactoryWrapper NOOP_JOINABLE_FACTORY_WRAPPER = new JoinableFactoryWrapper(
-      NoopJoinableFactory.INSTANCE);
+  public static final JoinableFactoryWrapper NOOP_JOINABLE_FACTORY_WRAPPER = new JoinableFactoryWrapper(
+      NoopJoinableFactory.INSTANCE
+  );
 
   private static final Map<String, String> TEST_LOOKUP =
       ImmutableMap.<String, String>builder()
@@ -125,6 +132,9 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
   );
 
   @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
   @Test
@@ -143,12 +153,11 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
   @Test
   public void test_createSegmentMapFn_unusableClause()
   {
-    final LookupDataSource lookupDataSource = new LookupDataSource("lookyloo");
-    final PreJoinableClause clause = new PreJoinableClause(
+    final PreJoinableClause clause = makePreJoinableClause(
+        INDEXED_TABLE_DS,
+        "country == \"j.country\"",
         "j.",
-        lookupDataSource,
-        JoinType.LEFT,
-        JoinConditionAnalysis.forExpression("x == \"j.x\"", "j.", ExprMacroTable.nil())
+        JoinType.LEFT
     );
 
     expectedException.expect(IllegalStateException.class);
@@ -165,39 +174,14 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
   @Test
   public void test_createSegmentMapFn_usableClause()
   {
-    final LookupDataSource lookupDataSource = new LookupDataSource("lookyloo");
-    final JoinConditionAnalysis conditionAnalysis = JoinConditionAnalysis.forExpression(
-        "x == \"j.x\"",
+    final PreJoinableClause clause = makePreJoinableClause(
+        INDEXED_TABLE_DS,
+        "country == \"j.country\"",
         "j.",
-        ExprMacroTable.nil()
-    );
-    final PreJoinableClause clause = new PreJoinableClause(
-        "j.",
-        lookupDataSource,
-        JoinType.LEFT,
-        conditionAnalysis
+        JoinType.LEFT
     );
 
-    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactory()
-    {
-      @Override
-      public boolean isDirectlyJoinable(DataSource dataSource)
-      {
-        return dataSource.equals(lookupDataSource);
-      }
-
-      @Override
-      public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
-      {
-        if (dataSource.equals(lookupDataSource) && condition.equals(conditionAnalysis)) {
-          return Optional.of(
-              LookupJoinable.wrap(new MapLookupExtractor(ImmutableMap.of("k", "v"), false))
-          );
-        } else {
-          return Optional.empty();
-        }
-      }
-    });
+    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new InlineJoinableFactory());
     final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
         null,
         ImmutableList.of(clause),
@@ -206,11 +190,62 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
             new TableDataSource("test"),
             new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
             false,
-            new HashMap()
+            new HashMap<>()
         )
     );
 
     Assert.assertNotSame(Function.identity(), segmentMapFn);
+  }
+
+  @Test
+  public void test_createSegmentMapFn_usableClause_joinToFilterEnabled() throws IOException
+  {
+    final PreJoinableClause clause = makePreJoinableClause(
+        INDEXED_TABLE_DS,
+        "country == \"j.country\"",
+        "j.",
+        JoinType.INNER
+    );
+    // required columns are necessary for the rewrite
+    final TestQuery queryWithRequiredColumnsAndJoinFilterRewrite = (TestQuery) new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        new HashMap<>()
+    ).withOverriddenContext(ImmutableMap.of(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, "true"));
+    queryWithRequiredColumnsAndJoinFilterRewrite.setRequiredColumns(ImmutableSet.of("country"));
+
+    final JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new InlineJoinableFactory());
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        null,
+        ImmutableList.of(clause),
+        new AtomicLong(),
+        queryWithRequiredColumnsAndJoinFilterRewrite
+    );
+
+    // dummy segment
+    final SegmentReference baseSegmentReference = ReferenceCountingSegment.wrapRootGenerationSegment(
+        new QueryableIndexSegment(
+            JoinTestHelper.createFactIndexBuilder(temporaryFolder.newFolder()).buildMMappedIndex(),
+            SegmentId.dummy("facts")
+        )
+    );
+
+    // check the output contains the conversion filter
+    Assert.assertNotSame(Function.identity(), segmentMapFn);
+    final SegmentReference joinSegmentReference = segmentMapFn.apply(baseSegmentReference);
+    Assert.assertTrue(joinSegmentReference instanceof HashJoinSegment);
+    HashJoinSegment hashJoinSegment = (HashJoinSegment) joinSegmentReference;
+    Assert.assertEquals(
+        hashJoinSegment.getBaseFilter(),
+        new InDimFilter(
+            "country",
+            INDEXED_TABLE_DS.getRowsAsList().stream().map(row -> row[0].toString()).collect(Collectors.toSet())
+        )
+    );
+    // the returned clause list is not comparable with an expected clause list since the Joinable
+    // class member in JoinableClause doesn't implement equals method in its implementations
+    Assert.assertEquals(hashJoinSegment.getClauses().size(), 1);
   }
 
   @Test

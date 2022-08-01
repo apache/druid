@@ -173,14 +173,12 @@ async function validateQuery(page: playwright.Page, datasourceName: string) {
   expect(results.length).toBeGreaterThan(0);
   expect(results[0]).toStrictEqual([
     /* __time */ '2015-09-12T00:46:58.772Z',
-    /* added */ '36',
+    /* time */ '2015-09-12T00:46:58.771Z',
     /* channel */ '#en.wikipedia',
     /* cityName */ 'null',
     /* comment */ 'added project',
     /* countryIsoCode */ 'null',
     /* countryName */ 'null',
-    /* deleted */ '0',
-    /* delta */ '36',
     /* isAnonymous */ 'false',
     /* isMinor */ 'false',
     /* isNew */ 'false',
@@ -191,7 +189,9 @@ async function validateQuery(page: playwright.Page, datasourceName: string) {
     /* page */ 'Talk:Oswald Tilghman',
     /* regionIsoCode */ 'null',
     /* regionName */ 'null',
-    /* time */ '2015-09-12T00:46:58.771Z',
     /* user */ 'GELongstreet',
+    /* added */ '36',
+    /* delta */ '36',
+    /* deleted */ '0',
   ]);
 }

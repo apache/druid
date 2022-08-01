@@ -88,6 +88,7 @@ import org.apache.druid.sql.calcite.expression.builtin.LikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MillisToTimestampOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringOperatorConversions;
 import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringToArrayOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.NestedDataOperatorConversions;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
@@ -296,6 +297,21 @@ public class DruidOperatorTable implements SqlOperatorTable
                    )
                    .build();
 
+  private static final List<SqlOperatorConversion> NESTED_DATA_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+                   .add(new NestedDataOperatorConversions.GetPathOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonGetPathAliasOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonKeysOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonPathsOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonQueryOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueAnyOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonObjectOperatorConversion())
+                   .add(new NestedDataOperatorConversions.ToJsonOperatorConversion())
+                   .add(new NestedDataOperatorConversions.ToJsonStringOperatorConversion())
+                   .add(new NestedDataOperatorConversions.ParseJsonOperatorConversion())
+                   .build();
+
   private static final List<SqlOperatorConversion> STANDARD_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.ABS, "abs"))
@@ -369,6 +385,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .addAll(FORMAT_OPERATOR_CONVERSIONS)
                    .addAll(BITWISE_OPERATOR_CONVERSIONS)
                    .addAll(CUSTOM_MATH_OPERATOR_CONVERSIONS)
+                   .addAll(NESTED_DATA_OPERATOR_CONVERSIONS)
                    .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.

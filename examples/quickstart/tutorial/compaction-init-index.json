@@ -53,7 +53,10 @@
     },
     "tuningConfig" : {
       "type" : "index_parallel",
-      "maxRowsPerSegment" : 1000
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment" : 1000
+    }
     }
   }
 }
