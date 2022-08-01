@@ -106,7 +106,7 @@ public class GroupByQueryConfig
   private long maxOnDiskStorage = 0L;
 
   @JsonProperty
-  private long defaultOnDiskStorage = Integer.MAX_VALUE;
+  private long defaultOnDiskStorage = -1L;
 
   @JsonProperty
   private boolean forcePushDownLimit = false;
@@ -279,7 +279,7 @@ public class GroupByQueryConfig
    */
   public long getDefaultOnDiskStorage()
   {
-    return defaultOnDiskStorage == Integer.MAX_VALUE ? getMaxOnDiskStorage() : defaultOnDiskStorage;
+    return defaultOnDiskStorage < 0L ? getMaxOnDiskStorage() : defaultOnDiskStorage;
   }
 
   public boolean isForcePushDownLimit()
