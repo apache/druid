@@ -43,17 +43,15 @@ If you need updates to populate as promptly as possible, it is possible to plug 
 |`connectTimeout`|How long to wait for an initial connection|No|`0` (do not wait)|
 |`isOneToOne`|The map is a one-to-one (see [Lookup DimensionSpecs](../../querying/dimensionspecs.md))|No|`false`|
 
-The extension `kafka-extraction-namespace` enables reading from a Kafka feed which has name/key pairs to allow renaming of dimension values. An example use case would be to rename an ID to a human readable format.
-
-The consumer properties `group.id` and `auto.offset.reset` CANNOT be set in `kafkaProperties` as they are set by the extension as `UUID.randomUUID().toString()` and `smallest` respectively.
+The extension `kafka-extraction-namespace` enables reading from a Kafka feed which has name/key pairs to allow renaming of dimension values. An example use case would be to rename an ID to a human-readable format.
 
 See [lookups](../../querying/lookups.md) for how to configure and use lookups.
 
 ## Limitations
 
-Currently the Kafka lookup extractor feeds the entire Kafka stream into a local cache. If you are using on-heap caching, this can easily clobber your java heap if the Kafka stream spews a lot of unique keys.
-off-heap caching should alleviate these concerns, but there is still a limit to the quantity of data that can be stored.
-There is currently no eviction policy.
+The consumer properties `group.id`, `auto.offset.reset` and `enable.auto.commit` CANNOT be set in `kafkaProperties` as they are set by the extension as `UUID.randomUUID().toString()`, `earliest` and `false` respectively. This is because the entire topic must be consumed by the Druid service from the very beginning so that a complete map of lookup values can be built.
+
+Currently the Kafka lookup extractor feeds the entire Kafka topic into a local cache. If you are using on-heap caching, this can easily clobber your java heap if the Kafka stream spews a lot of unique keys. Off-heap caching should alleviate these concerns, but there is still a limit to the quantity of data that can be stored.  There is currently no eviction policy.
 
 ## Testing the Kafka rename functionality
 
