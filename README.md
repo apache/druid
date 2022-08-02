@@ -32,7 +32,7 @@
 [Download](https://druid.apache.org/downloads.html) |
 [Get Started](#getting-started) |
 [Documentation](https://druid.apache.org/docs/latest/design/) |
-[Community](https://druid.apache.org/community/) |
+[Community](#community) |
 [Build](#building-from-source) |
 [Contribute](#contributing) |
 [License](#license)
@@ -77,6 +77,17 @@ the [project website](https://druid.apache.org).
 
 If you would like to contribute documentation, please do so under
 `/docs` in this repository and submit a pull request.
+
+### Community
+
+Visit the official project [community](https://druid.apache.org/community/) page to read about getting involved in contributing to Apache Druid, and how we help one another use and operate Druid.
+
+* Druid users can find help in the [`druid-user`](https://groups.google.com/forum/#!forum/druid-user) mailing list on Google Groups, and have more technical conversations in `#troubleshooting` on Slack.
+* Druid development discussions take place in the [`druid-dev`](https://lists.apache.org/list.html?dev@druid.apache.org) mailing list ([dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org)).  Subscribe by emailing [dev-subscribe@druid.apache.org](mailto:dev-subscribe@druid.apache.org).  For live conversations, join the `#dev` channel on Slack.
+
+Check out the official [community](https://druid.apache.org/community/) page for details of how to join the community Slack channels.
+
+Find articles written by community members and a calendar of upcoming events on the [project site](https://druid.apache.org/) - contribute your own events and articles by submitting a PR in the [`apache/druid-website-src`](https://github.com/apache/druid-website-src/tree/master/_data) repository.
 
 ### Building from source
 
