@@ -103,10 +103,10 @@ public class GroupByQueryConfig
 
   @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
-  private long maxOnDiskStorage = 0L;
+  private HumanReadableBytes maxOnDiskStorage = HumanReadableBytes.valueOf(0);
 
   @JsonProperty
-  private long defaultOnDiskStorage = -1L;
+  private HumanReadableBytes defaultOnDiskStorage = HumanReadableBytes.valueOf(-1);
 
   @JsonProperty
   private boolean forcePushDownLimit = false;
@@ -264,7 +264,7 @@ public class GroupByQueryConfig
     );
   }
 
-  public long getMaxOnDiskStorage()
+  public HumanReadableBytes getMaxOnDiskStorage()
   {
     return maxOnDiskStorage;
   }
@@ -277,9 +277,9 @@ public class GroupByQueryConfig
    *
    * @return The working value for defaultOnDiskStorage
    */
-  public long getDefaultOnDiskStorage()
+  public HumanReadableBytes getDefaultOnDiskStorage()
   {
-    return defaultOnDiskStorage < 0L ? getMaxOnDiskStorage() : defaultOnDiskStorage;
+    return defaultOnDiskStorage.getBytes() < 0L ? getMaxOnDiskStorage() : defaultOnDiskStorage;
   }
 
   public boolean isForcePushDownLimit()
@@ -360,9 +360,11 @@ public class GroupByQueryConfig
     // If the client overrides do not provide "maxOnDiskStorage" context key, the server side "defaultOnDiskStorage"
     // value is used in the calculation of the newConfig value of maxOnDiskStorage. This allows the operator to
     // choose a default value lower than the max allowed when the context key is missing in the client query.
-    newConfig.maxOnDiskStorage = Math.min(
-        ((Number) query.getContextValue(CTX_KEY_MAX_ON_DISK_STORAGE, getDefaultOnDiskStorage())).longValue(),
-        getMaxOnDiskStorage()
+    newConfig.maxOnDiskStorage = HumanReadableBytes.valueOf(
+        Math.min(
+            query.getContextHumanReadableBytes(CTX_KEY_MAX_ON_DISK_STORAGE, getDefaultOnDiskStorage()).getBytes(),
+            getMaxOnDiskStorage().getBytes()
+        )
     );
     newConfig.maxSelectorDictionarySize = maxSelectorDictionarySize; // No overrides
     newConfig.maxMergingDictionarySize = maxMergingDictionarySize; // No overrides
@@ -407,8 +409,8 @@ public class GroupByQueryConfig
            ", bufferGrouperMaxLoadFactor=" + bufferGrouperMaxLoadFactor +
            ", bufferGrouperInitialBuckets=" + bufferGrouperInitialBuckets +
            ", maxMergingDictionarySize=" + maxMergingDictionarySize +
-           ", maxOnDiskStorage=" + maxOnDiskStorage +
-           ", defaultOnDiskStorage=" + getDefaultOnDiskStorage() + // use the getter because of special behavior for mirroring maxOnDiskStorage if defaultOnDiskStorage not explicitly set.
+           ", maxOnDiskStorage=" + maxOnDiskStorage.getBytes() +
+           ", defaultOnDiskStorage=" + getDefaultOnDiskStorage().getBytes() + // use the getter because of special behavior for mirroring maxOnDiskStorage if defaultOnDiskStorage not explicitly set.
            ", forcePushDownLimit=" + forcePushDownLimit +
            ", forceHashAggregation=" + forceHashAggregation +
            ", intermediateCombineDegree=" + intermediateCombineDegree +

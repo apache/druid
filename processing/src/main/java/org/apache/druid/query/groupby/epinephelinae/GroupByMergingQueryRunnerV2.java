@@ -175,7 +175,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
             try {
               final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
                   temporaryStorageDirectory,
-                  querySpecificConfig.getMaxOnDiskStorage()
+                  querySpecificConfig.getMaxOnDiskStorage().getBytes()
               );
               final ReferenceCountingResourceHolder<LimitedTemporaryStorage> temporaryStorageHolder =
                   ReferenceCountingResourceHolder.fromCloseable(temporaryStorage);

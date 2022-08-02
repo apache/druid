@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.filter.DimFilter;
@@ -128,6 +129,8 @@ public interface Query<T>
   <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
 
   boolean getContextBoolean(String key, boolean defaultValue);
+
+  HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue);
 
   boolean isDescending();
 
