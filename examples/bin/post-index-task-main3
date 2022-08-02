@@ -88,7 +88,7 @@ def await_task_completion(args, task_id, timeout_at):
     timeleft = timeout_at - time.time()
     response_timeout = min(max(timeleft, 5), 10)
     response = urllib.request.urlopen(req, None, response_timeout)
-    response_obj = json.loads(response.read())
+    response_obj = json.loads(response.read().decode('utf-8'))
     response_status_code = response_obj["status"]["statusCode"]
     if response_status_code in ['SUCCESS', 'FAILED']:
       return response_status_code
@@ -118,7 +118,7 @@ def await_load_completion(args, datasource, timeout_at):
     timeleft = timeout_at - time.time()
     response_timeout = min(max(timeleft, 5), 10)
     response = urllib.request.urlopen(req, None, response_timeout)
-    response_obj = json.loads(response.read())
+    response_obj = json.loads(response.read().decode('utf-8'))
     load_status = response_obj.get(datasource, 0.0)
     if load_status >= 100.0:
       sys.stderr.write("{0} loading complete! You may now query your data\n".format(datasource))
