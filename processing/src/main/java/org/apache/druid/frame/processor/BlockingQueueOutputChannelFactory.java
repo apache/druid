@@ -22,6 +22,9 @@ package org.apache.druid.frame.processor;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 
+/**
+ * An {@link OutputChannelFactory} that generates {@link BlockingQueueFrameChannel}.
+ */
 public class BlockingQueueOutputChannelFactory implements OutputChannelFactory
 {
   private final int frameSize;

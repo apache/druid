@@ -114,6 +114,8 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
    */
   public static ReadableByteChunksFrameChannel create(final String id)
   {
+    // Set byte limit to 1, so backpressure will be exerted as soon as we have a full frame buffered.
+    // (The bytesLimit is soft: it will be exceeded if needed to store a complete frame.)
     return new ReadableByteChunksFrameChannel(id, 1);
   }
 

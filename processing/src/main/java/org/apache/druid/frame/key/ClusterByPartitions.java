@@ -32,8 +32,8 @@ import java.util.Objects;
  * Holder object for a set of {@link ClusterByPartition}. There are no preconditions put upon the partitions, except
  * that there is at least one of them.
  *
- * In particular, they are not required to abut each other. See {@link #allAbutting()} to check if this particular list
- * of partitions is in fact all abutting.
+ * In particular, they are not required to abut each other or to be non-overlapping. Use {@link #allAbutting()} to
+ * check if this particular list of partitions is in fact all abutting (and, therefore, also non-overlapping).
  */
 public class ClusterByPartitions implements Iterable<ClusterByPartition>
 {

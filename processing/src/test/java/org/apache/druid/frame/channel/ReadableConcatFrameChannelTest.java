@@ -51,6 +51,9 @@ public class ReadableConcatFrameChannelTest extends InitializedNullHandlingTest
       channel.write(frame);
       channel.doneWriting();
       channels.add(channel);
+
+      // Sprinkle in some empty channels too, to make sure they work.
+      channels.add(ReadableNilFrameChannel.INSTANCE);
     }
 
     final ReadableConcatFrameChannel concatChannel = ReadableConcatFrameChannel.open(channels.iterator());

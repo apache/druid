@@ -39,7 +39,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 /**
- * Output channel factory implementation backed by a local file.
+ * An {@link OutputChannelFactory} that generates {@link WritableStreamFrameChannel} backed by {@link FrameFileWriter}.
  */
 public class FileOutputChannelFactory implements OutputChannelFactory
 {

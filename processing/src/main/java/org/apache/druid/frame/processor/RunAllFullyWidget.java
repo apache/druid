@@ -43,7 +43,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
 /**
- * Helper for {@link FrameProcessorExecutor#runAllFully}.
+ * Helper for {@link FrameProcessorExecutor#runAllFully}. See the javadoc for that method for details about the
+ * expected behavior of this class.
+ *
+ * One instance of this class is created for each call to {@link FrameProcessorExecutor#runAllFully}. It gradually
+ * executes all processors from the provided sequence using the {@link FrameProcessorExecutor#runFully} method.
+ * The {@code bouncer} and {@code maxOutstandingProcessors} parameters are used to control how many processors are
+ * executed on the {@link FrameProcessorExecutor} concurrently.
  */
 public class RunAllFullyWidget<T, ResultType>
 {

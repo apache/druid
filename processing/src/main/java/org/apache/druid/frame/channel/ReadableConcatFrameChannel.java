@@ -74,10 +74,11 @@ public class ReadableConcatFrameChannel implements ReadableFrameChannel
   @Override
   public Frame read()
   {
-    if (!canRead() || currentChannel == null) {
+    if (!canRead()) {
       throw new NoSuchElementException();
     }
 
+    assert currentChannel != null; // True because canRead() was true.
     return currentChannel.read();
   }
 

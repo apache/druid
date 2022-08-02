@@ -61,7 +61,7 @@ import java.util.function.Supplier;
  */
 public class FrameChannelMerger implements FrameProcessor<Long>
 {
-  static final long UNLIMITED = -1;
+  private static final long UNLIMITED = -1;
 
   private final List<ReadableFrameChannel> inputChannels;
   private final WritableFrameChannel outputChannel;

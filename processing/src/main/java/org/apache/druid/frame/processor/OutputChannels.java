@@ -29,7 +29,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
+ * A list of {@link OutputChannel}.
  *
+ * The advantage of this class over {@code List<OutputChannel>} is that it has extra convenience methods
+ * like {@link #getChannelsForPartition} and {@link #readOnly()}.
  */
 public class OutputChannels
 {

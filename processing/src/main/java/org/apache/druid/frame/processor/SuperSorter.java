@@ -210,7 +210,8 @@ public class SuperSorter
    *                                   {@link FrameProcessorExecutor}
    * @param maxChannelsPerProcessor    maximum number of channels to merge at once per merging processor
    * @param rowLimit                   limit to apply during sorting. The limit is merely advisory: the actual number
-   *                                   of rows returned may be larger than the limit.
+   *                                   of rows returned may be larger than the limit. The limit is applied across
+   *                                   all partitions, not to each partition individually.
    * @param cancellationId             cancellation id to use when running processors in the provided
    *                                   {@link FrameProcessorExecutor}.
    * @param superSorterProgressTracker progress tracker
