@@ -19,7 +19,6 @@
 
 package org.apache.druid.rpc.guice;
 
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
@@ -41,20 +40,12 @@ import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClientImpl;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 
 public class ServiceClientModule implements DruidModule
 {
   private static final int CONNECT_EXEC_THREADS = 4;
   private static final int OVERLORD_ATTEMPTS = 6;
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.emptyList();
-  }
 
   @Override
   public void configure(Binder binder)

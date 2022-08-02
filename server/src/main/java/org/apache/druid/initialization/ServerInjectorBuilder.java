@@ -36,6 +36,12 @@ import java.util.Set;
 /**
  * Initialize Guice for a server. Clients and tests should use
  * the individual builders to create a non-server environment.
+ * <p>
+ * This class is in this package for historical reasons. The proper
+ * place is in the same module as {@code GuiceRunnable} since this
+ * class should only ever be used by servers. It is here until
+ * tests are converted to use the builders, and @{link Initialization}
+ * is deleted.
  */
 public class ServerInjectorBuilder
 {
@@ -52,8 +58,6 @@ public class ServerInjectorBuilder
    * @param modules modules for this server
    * @return the injector for the server
    */
-  // TODO: Move to the CLI package, perhaps GuiceRunnable, once
-  // tests are cleaned up.
   @VisibleForTesting
   public static Injector makeServerInjector(
       final Injector baseInjector,

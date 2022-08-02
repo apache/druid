@@ -22,19 +22,22 @@ package org.apache.druid.initialization;
 import com.fasterxml.jackson.databind.Module;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
  * A Guice module which also provides Jackson modules.
- * There is generally no need to implement this interface unless
- * you want to define Jackson modules: use the Guice
- * {@code Module} otherwise.
- * <p>
- * Extension modules extend this interface rather than from
- * the Guice {@code Module} interface.
+ * Extension modules must implement this interface.
+ * (Enforced in {@code ExtensionInjectorBuilder}).
+ * Built-in implementations that do not provide Jackson modules can
+ * implement the simpler {@link com.google.inject.Module Guice Module}
+ * interface instead.
  */
 @ExtensionPoint
 public interface DruidModule extends com.google.inject.Module
 {
-  List<? extends Module> getJacksonModules();
+  default List<? extends Module> getJacksonModules()
+  {
+    return Collections.emptyList();
+  }
 }

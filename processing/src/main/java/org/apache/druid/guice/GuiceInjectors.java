@@ -25,7 +25,7 @@ import com.google.inject.Module;
 import java.util.Collections;
 
 /**
- * Creates the startup injector. Regained for backward compatibility.
+ * Creates the startup injector. Retained for backward compatibility.
  * New code should prefer using {@link StartupInjectorBuilder}
  */
 public class GuiceInjectors

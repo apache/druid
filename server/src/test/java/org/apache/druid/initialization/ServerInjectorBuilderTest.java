@@ -48,8 +48,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-// See ExtensionsLoaderTest for tests formerly in this file related
-// to extension loading itself.
 public class ServerInjectorBuilderTest
 {
   @Rule

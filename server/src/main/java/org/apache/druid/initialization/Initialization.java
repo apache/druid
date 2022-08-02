@@ -24,13 +24,36 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 
 /**
- * Initialize Guice for a server. Clients and tests should use
+ * Initialize Guice for a server. This is a legacy version, kept for
+ * compatibility with existing tests. Clients and tests should use
  * the individual builders to create a non-server environment.
+ * Clients (and tests) never load extensions, and so do not need
+ * (and, in fact, should not use) the
+ * {@link ExtensionInjectorBuilder}. Instead, simple tests can use
+ * {@link org.apache.druid.guice.StartupInjectorBuilder
+ * StartupInjectorBuilder} directly, passing in any needed modules.
+ * <p>
+ * Some tests use modules that rely on the "startup injector" to
+ * inject values into a module. In that case, tests should use two
+ * builders: the {@link StartupInjectorBuilder} followed by
+ * the {@link CoreInjectorBuilder} class to hold extra modules.
+ * Look for references to {@link CoreInjectorBuilder} to find examples
+ * of this pattern.
+ * <p>
+ * In both cases, the injector builders have options to add the full
+ * set of server modules. Tests should not load those modules. Instead,
+ * let the injector builders provide just the required set, and then
+ * explicitly list the (small subset) of modules needed by any given test.
+ * <p>
+ * The server initialization formerly done here is now done in
+ * {@link org.apache.druid.cli.GuiceRunnable GuiceRunnable} by way of
+ * the {@link ServerInjectorBuilder}.
  */
 public class Initialization
 {
   // Use individual builders for testing: this method brings in
   // server-only dependencies, which is generally not desired.
+  // See class comment for more information.
   @Deprecated
   public static Injector makeInjectorWithModules(
       final Injector baseInjector,

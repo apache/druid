@@ -37,6 +37,7 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -46,6 +47,13 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+/**
+ * Manages the loading of Druid extensions. Used in two cases: for
+ * CLI extensions from {@code Main}, and for {@code DruidModule}
+ * extensions during initialization. The design, however, should support
+ * any kind of extension that may be needed in the future.
+ * The extensions are cached so that they can be reported by various REST APIs.
+ */
 public class ExtensionsLoader
 {
   private static final Logger log = new Logger(ExtensionsLoader.class);
@@ -75,23 +83,23 @@ public class ExtensionsLoader
   }
 
   /**
+   * Returns a collection of implementations loaded.
+   *
    * @param clazz service class
    * @param <T>   the service type
-   *
-   * @return Returns a collection of implementations loaded.
    */
   public <T> Collection<T> getLoadedImplementations(Class<T> clazz)
   {
     @SuppressWarnings("unchecked")
     Collection<T> retVal = (Collection<T>) extensions.get(clazz);
     if (retVal == null) {
-      return new HashSet<>();
+      return Collections.emptySet();
     }
     return retVal;
   }
 
   /**
-   * @return Returns a collection of implementations loaded.
+   * @return a collection of implementations loaded.
    */
   public Collection<DruidModule> getLoadedModules()
   {
@@ -118,7 +126,7 @@ public class ExtensionsLoader
   @SuppressWarnings("unchecked")
   public <T> Collection<T> getFromExtensions(Class<T> serviceClass)
   {
-    // Classes classes are loaded once upon first request. Since the class path does
+    // Classes are loaded once upon first request. Since the class path does
     // not change during a run, the set of extension classes cannot change once
     // computed.
     //
