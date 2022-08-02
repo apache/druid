@@ -35,7 +35,7 @@ import com.google.inject.Module;
  * <p>
  * Some tests use modules that rely on the "startup injector" to
  * inject values into a module. In that case, tests should use two
- * builders: the {@link StartupInjectorBuilder} followed by
+ * builders: the {@code StartupInjectorBuilder} followed by
  * the {@link CoreInjectorBuilder} class to hold extra modules.
  * Look for references to {@link CoreInjectorBuilder} to find examples
  * of this pattern.
