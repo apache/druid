@@ -247,9 +247,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
-      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
-          ingestionSchema.getDataSchema().getParser()
-      );
+      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
 
       final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
           supervisorTaskId,
@@ -307,8 +305,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return findInputSegments(
         getDataSource(),
         taskActionClient,
-        intervals,
-        ingestionSchema.getIOConfig().getFirehoseFactory()
+        intervals
     );
   }
 

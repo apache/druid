@@ -25,13 +25,8 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.segment.realtime.firehose.ClippedFirehoseFactory;
-import org.apache.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.FixedCountFirehoseFactory;
-import org.apache.druid.segment.realtime.firehose.HttpFirehoseFactory;
-import org.apache.druid.segment.realtime.firehose.InlineFirehoseFactory;
-import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
-import org.apache.druid.segment.realtime.firehose.SqlFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 
 import java.util.Collections;
@@ -52,13 +47,8 @@ public class FirehoseModule implements DruidModule
             .registerSubtypes(
                 new NamedType(ClippedFirehoseFactory.class, "clipped"),
                 new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
-                new NamedType(LocalFirehoseFactory.class, "local"),
-                new NamedType(HttpFirehoseFactory.class, "http"),
                 new NamedType(EventReceiverFirehoseFactory.class, "receiver"),
-                new NamedType(CombiningFirehoseFactory.class, "combining"),
-                new NamedType(FixedCountFirehoseFactory.class, "fixedCount"),
-                new NamedType(SqlFirehoseFactory.class, "sql"),
-                new NamedType(InlineFirehoseFactory.class, "inline")
+                new NamedType(FixedCountFirehoseFactory.class, "fixedCount")
             )
     );
   }

@@ -43,6 +43,7 @@ import java.io.IOException;
  * and {@link #nextRow()}.
  * </p>
  */
+@Deprecated
 @ExtensionPoint
 public interface Firehose extends Closeable
 {

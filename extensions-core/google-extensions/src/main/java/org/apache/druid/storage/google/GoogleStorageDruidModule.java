@@ -34,7 +34,6 @@ import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.data.input.google.GoogleCloudStorageInputSource;
-import org.apache.druid.firehose.google.StaticGoogleBlobStoreFirehoseFactory;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -77,7 +76,6 @@ public class GoogleStorageDruidModule implements DruidModule
           }
         },
         new SimpleModule().registerSubtypes(
-            new NamedType(StaticGoogleBlobStoreFirehoseFactory.class, "static-google-blobstore"),
             new NamedType(GoogleCloudStorageInputSource.class, SCHEME)
         )
     );

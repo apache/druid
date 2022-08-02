@@ -34,8 +34,6 @@ import java.util.function.Function;
  * want to give some hints to control the amount of data each sub task will read. SplitHintSpec can be used for this
  * purpose. Implementations can ignore the given hint.
  *
- * @see FiniteFirehoseFactory#getSplits(SplitHintSpec)
- * @see FiniteFirehoseFactory#getNumSplits(SplitHintSpec)
  * @see SplittableInputSource#createSplits
  * @see SplittableInputSource#estimateNumSplits
  */

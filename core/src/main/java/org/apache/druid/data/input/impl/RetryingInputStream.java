@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.io.CountingInputStream;
-import org.apache.druid.data.input.impl.prefetch.Fetcher;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -36,7 +35,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * This class is used by {@link Fetcher} when prefetch is disabled. It's responsible for re-opening the underlying input
+ * This class is responsible for re-opening the underlying input
  * stream for the input object on the given {@link #retryCondition}.
  *
  * @param <T> object type

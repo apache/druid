@@ -24,7 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.Firehose;
+import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -49,7 +52,6 @@ import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.hamcrest.CoreMatchers;
@@ -402,7 +404,7 @@ public class TaskSerdeTest
                 jsonMapper
             ),
             new RealtimeIOConfig(
-                new LocalFirehoseFactory(new File("lol"), "rofl", null),
+                new MockFirehoseFactory(),
                 (schema, config, metrics) -> null
             ),
 
@@ -432,6 +434,9 @@ public class TaskSerdeTest
         null
     );
 
+    jsonMapper.registerSubtypes(
+        new NamedType(MockFirehoseFactory.class, "mockFirehoseFactory")
+    );
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
@@ -586,5 +591,14 @@ public class TaskSerdeTest
     );
     Assert.assertEquals("blah", task.getClasspathPrefix());
     Assert.assertEquals("blah", task2.getClasspathPrefix());
+  }
+
+  private static class MockFirehoseFactory implements FirehoseFactory
+  {
+    @Override
+    public Firehose connect(InputRowParser parser, File temporaryDirectory)
+    {
+      return null;
+    }
   }
 }

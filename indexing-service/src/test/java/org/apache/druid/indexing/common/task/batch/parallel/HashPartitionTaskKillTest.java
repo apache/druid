@@ -47,7 +47,6 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -267,8 +266,11 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     } else {
       Preconditions.checkArgument(inputFormat == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          new LocalFirehoseFactory(inputDir, filter, null),
-          appendToExisting
+          null,
+          new LocalInputSource(inputDir, filter),
+          createInputFormatFromParseSpec(parseSpec),
+          appendToExisting,
+          null
       );
       //noinspection unchecked
       ingestionSpec = new ParallelIndexIngestionSpec(

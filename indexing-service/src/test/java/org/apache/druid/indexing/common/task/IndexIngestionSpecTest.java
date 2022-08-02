@@ -20,11 +20,8 @@
 package org.apache.druid.indexing.common.task;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.NoopFirehoseFactory;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.NoopInputSource;
-import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -85,58 +82,6 @@ public class IndexIngestionSpecTest
             null,
             new NoopInputSource(),
             null,
-            null,
-            null
-        ),
-        null
-    );
-  }
-
-  @Test
-  public void testFirehoseAndInputSource()
-  {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(
-        "At most one of [Property{name='firehose', value=NoopFirehoseFactory{}}, Property{name='inputSource'"
-    );
-    final IndexIngestionSpec spec = new IndexIngestionSpec(
-        new DataSchema(
-            "dataSource",
-            new TimestampSpec(null, null, null),
-            DimensionsSpec.EMPTY,
-            new AggregatorFactory[0],
-            new ArbitraryGranularitySpec(Granularities.NONE, null),
-            null
-        ),
-        new IndexIOConfig(
-            new NoopFirehoseFactory(),
-            new NoopInputSource(),
-            null,
-            null,
-            null
-        ),
-        null
-    );
-  }
-
-  @Test
-  public void testFirehoseAndInputFormat()
-  {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Cannot use firehose and inputFormat together.");
-    final IndexIngestionSpec spec = new IndexIngestionSpec(
-        new DataSchema(
-            "dataSource",
-            new TimestampSpec(null, null, null),
-            DimensionsSpec.EMPTY,
-            new AggregatorFactory[0],
-            new ArbitraryGranularitySpec(Granularities.NONE, null),
-            null
-        ),
-        new IndexIOConfig(
-            new NoopFirehoseFactory(),
-            null,
-            new NoopInputFormat(),
             null,
             null
         ),

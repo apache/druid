@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableSet;
 import net.thisptr.jackson.jq.internal.misc.Lists;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerResponse.SamplerResponseRow;
-import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
@@ -59,7 +58,6 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.realtime.firehose.InlineFirehoseFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -1249,11 +1247,8 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     // first n rows are related to the first json block which fails to parse
     //
     String parseExceptionMessage;
-    if (useInputFormatApi) {
-      parseExceptionMessage = "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
-    } else {
-      parseExceptionMessage = "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
-    }
+    parseExceptionMessage = "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
+
     for (; index < illegalRows; index++) {
       assertEqualsSamplerResponseRow(
           new SamplerResponseRow(
@@ -1426,39 +1421,19 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   private InputSource createInputSource(List<String> rows, DataSchema dataSchema)
   {
     final String data = String.join("\n", rows);
-    if (useInputFormatApi) {
-      return new InlineInputSource(data);
-    } else {
-      return new FirehoseFactoryToInputSourceAdaptor(
-          new InlineFirehoseFactory(data),
-          createInputRowParser(
-              dataSchema == null ? new TimestampSpec(null, null, null) : dataSchema.getTimestampSpec(),
-              dataSchema == null ? new DimensionsSpec(null) : dataSchema.getDimensionsSpec()
-          )
-      );
-    }
+    return new InlineInputSource(data);
   }
 
   private String getUnparseableTimestampString()
   {
-    if (useInputFormatApi) {
-      return ParserType.STR_CSV.equals(parserType)
-             ? "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6} (Line: 6)"
-             : "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6} (Line: 6)";
-    } else {
-      return ParserType.STR_CSV.equals(parserType)
-             ? "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
-             : "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
-    }
+    return ParserType.STR_CSV.equals(parserType)
+           ? "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6} (Line: 6)"
+           : "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6} (Line: 6)";
   }
 
   private String unparseableTimestampErrorString(Map<String, Object> rawColumns, int line)
   {
-    if (useInputFormatApi) {
-      return StringUtils.format("Timestamp[null] is unparseable! Event: %s (Line: %d)", rawColumns, line);
-    } else {
-      return StringUtils.format("Timestamp[null] is unparseable! Event: %s", rawColumns);
-    }
+    return StringUtils.format("Timestamp[null] is unparseable! Event: %s (Line: %d)", rawColumns, line);
   }
 
   @Nullable
