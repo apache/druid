@@ -1955,7 +1955,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"[\"$.\"]", 5L},
+            new Object[]{"[\"$\"]", 5L},
             new Object[]{"[\"$.n.x\",\"$.array[0]\",\"$.array[1]\"]", 2L}
         )
     );

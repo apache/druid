@@ -309,9 +309,14 @@ public class NestedPathFinderTest
         NestedPathFinder.toNormalizedJqPath(pathParts)
     );
     Assert.assertEquals(
-        "$.['x.y.z][\\']][]'].['13234.12[]][23'].['fo.o'].['.b.a.r.']",
+        "$['x.y.z][\\']][]']['13234.12[]][23']['fo.o']['.b.a.r.']",
         NestedPathFinder.toNormalizedJsonPath(pathParts)
     );
+
+    pathParts = NestedPathFinder.parseJsonPath("$['hell'o']");
+    Assert.assertEquals(1, pathParts.size());
+    Assert.assertEquals("hell'o", pathParts.get(0).getPartIdentifier());
+    Assert.assertEquals("$['hell'o']", NestedPathFinder.toNormalizedJsonPath(pathParts));
   }
 
   @Test

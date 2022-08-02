@@ -33,21 +33,20 @@ public class NestedPathFinder
   public static String toNormalizedJsonPath(List<NestedPathPart> paths)
   {
     if (paths.isEmpty()) {
-      return "$.";
+      return "$";
     }
     StringBuilder bob = new StringBuilder();
     boolean first = true;
     for (NestedPathPart partFinder : paths) {
       if (partFinder instanceof NestedPathField) {
         if (first) {
-          bob.append("$.");
-        } else {
-          bob.append(".");
+          bob.append("$");
         }
         final String id = partFinder.getPartIdentifier();
         if (id.contains(".") || id.contains("'") || id.contains("\"") || id.contains("[") || id.contains("]")) {
           bob.append("['").append(id).append("']");
         } else {
+          bob.append(".");
           bob.append(id);
         }
       } else if (partFinder instanceof NestedPathArrayElement) {
@@ -124,15 +123,19 @@ public class NestedPathFinder
         quoteMark = i;
         partMark = i + 1;
       } else if (current == '\'' && quoteMark >= 0 && path.charAt(i - 1) != '\\') {
+        if (path.charAt(i + 1) != ']') {
+          if (arrayMark >= 0) {
+            continue;
+          }
+          badFormatJsonPath(path, "closing ' must immediately precede ']'");
+        }
+
         parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
         dotMark = -1;
         quoteMark = -1;
         // chomp to next char to eat closing array
         if (++i == path.length()) {
           break;
-        }
-        if (path.charAt(i) != ']') {
-          badFormatJsonPath(path, "closing ' must immediately precede ']'");
         }
         partMark = i + 1;
         arrayMark = -1;
