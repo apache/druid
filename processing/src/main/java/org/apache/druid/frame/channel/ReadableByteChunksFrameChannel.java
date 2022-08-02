@@ -203,7 +203,7 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
   public boolean isFinished()
   {
     synchronized (lock) {
-      return chunks.isEmpty() && noMoreWrites;
+      return chunks.isEmpty() && noMoreWrites && !canRead();
     }
   }
 
@@ -288,7 +288,7 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
   public boolean isErrorOrFinished()
   {
     synchronized (lock) {
-      return isFinished() || canReadError();
+      return isFinished() || (canRead() && !canReadFrame());
     }
   }
 
@@ -442,7 +442,7 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
         positionInFirstChunk = 0;
         chunks.remove(0);
       } else {
-        positionInFirstChunk += toDelete;
+        positionInFirstChunk = Ints.checkedCast(positionInFirstChunk + toDelete);
         toDelete = 0;
       }
     }

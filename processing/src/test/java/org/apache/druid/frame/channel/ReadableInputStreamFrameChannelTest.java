@@ -31,9 +31,12 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
@@ -121,13 +124,19 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
 
     readableInputStreamFrameChannel.startReading();
 
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Incomplete or missing frame at end of stream");
+    final IllegalStateException e = Assert.assertThrows(
+        IllegalStateException.class,
+        () ->
+            FrameTestUtil.readRowsFromFrameChannel(
+                readableInputStreamFrameChannel,
+                FrameReader.create(adapter.getRowSignature())
+            ).toList()
+    );
 
-    FrameTestUtil.readRowsFromFrameChannel(
-        readableInputStreamFrameChannel,
-        FrameReader.create(adapter.getRowSignature())
-    ).toList();
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Incomplete or missing frame at end of stream"))
+    );
   }
 
   @Test

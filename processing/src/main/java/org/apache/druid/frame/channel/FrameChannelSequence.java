@@ -19,13 +19,13 @@
 
 package org.apache.druid.frame.channel;
 
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 
 import java.io.Closeable;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Adapter that converts a {@link ReadableFrameChannel} into a {@link org.apache.druid.java.util.common.guava.Sequence}
@@ -70,12 +70,13 @@ public class FrameChannelSequence extends BaseSequence<Frame, FrameChannelSequen
     {
       // Blocking read.
       await();
-      return channel.canRead();
+      return !channel.isFinished();
     }
 
     @Override
     public Frame next()
     {
+      // Side effect of hasNext(): we also call await() to ensure the next frame is available.
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
@@ -91,16 +92,7 @@ public class FrameChannelSequence extends BaseSequence<Frame, FrameChannelSequen
 
     private void await()
     {
-      try {
-        channel.readabilityFuture().get();
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
-      }
-      catch (ExecutionException e) {
-        throw new RuntimeException(e);
-      }
+      FutureUtils.getUnchecked(channel.readabilityFuture(), false);
     }
   }
 }

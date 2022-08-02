@@ -74,6 +74,8 @@ public class ReadableByteChunksFrameChannelTest
       channel.doneWriting();
 
       Assert.assertTrue(channel.canRead());
+      Assert.assertFalse(channel.isFinished());
+      Assert.assertTrue(channel.isErrorOrFinished());
 
       expectedException.expect(IllegalStateException.class);
       expectedException.expectMessage("Incomplete or missing frame at end of stream (id = test, position = 0)");
@@ -89,6 +91,8 @@ public class ReadableByteChunksFrameChannelTest
       channel.doneWriting();
 
       Assert.assertTrue(channel.canRead());
+      Assert.assertFalse(channel.isFinished());
+      Assert.assertTrue(channel.isErrorOrFinished());
 
       expectedException.expect(IllegalArgumentException.class);
       expectedException.expectMessage("test error");
@@ -99,6 +103,7 @@ public class ReadableByteChunksFrameChannelTest
     @Test
     public void testEmptyFrameFile() throws IOException
     {
+      // File with no frames (but still well-formed).
       final File file = FrameTestUtil.writeFrameFile(Sequences.empty(), temporaryFolder.newFile());
 
       final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test");
@@ -106,6 +111,8 @@ public class ReadableByteChunksFrameChannelTest
       channel.doneWriting();
 
       while (channel.canRead()) {
+        Assert.assertFalse(channel.isFinished());
+        Assert.assertFalse(channel.isErrorOrFinished());
         channel.read();
       }
 
@@ -141,12 +148,18 @@ public class ReadableByteChunksFrameChannelTest
       channel.doneWriting();
 
       Assert.assertTrue(channel.canRead());
+      Assert.assertFalse(channel.isFinished());
+      Assert.assertFalse(channel.isErrorOrFinished());
       channel.read(); // Throw away value.
 
       Assert.assertTrue(channel.canRead());
+      Assert.assertFalse(channel.isFinished());
+      Assert.assertFalse(channel.isErrorOrFinished());
       channel.read(); // Throw away value.
 
       Assert.assertTrue(channel.canRead());
+      Assert.assertFalse(channel.isFinished());
+      Assert.assertTrue(channel.isErrorOrFinished());
 
       expectedException.expect(IllegalStateException.class);
       expectedException.expectMessage(CoreMatchers.startsWith("Incomplete or missing frame at end of stream"));

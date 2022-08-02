@@ -386,7 +386,7 @@ public class FrameProcessorExecutorTest
     }
   }
 
-  public static abstract class BaseFrameProcessorExecutorTestSuite extends InitializedNullHandlingTest
+  public abstract static class BaseFrameProcessorExecutorTestSuite extends InitializedNullHandlingTest
   {
     @Rule
     public final TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -439,30 +439,31 @@ public class FrameProcessorExecutorTest
         }
 
         // Write to input files.
-        FrameSequenceBuilder.fromAdapter(adapter)
-                            .frameType(FrameType.ROW_BASED)
-                            .allocator(ArenaMemoryAllocator.createOnHeap(1_000_000))
-                            .maxRowsPerFrame(3)
-                            .frames()
-                            .forEach(
-                                new Consumer<Frame>()
-                                {
-                                  private int j = 0;
+        FrameSequenceBuilder
+            .fromAdapter(adapter)
+            .frameType(FrameType.ROW_BASED)
+            .allocator(ArenaMemoryAllocator.createOnHeap(1_000_000))
+            .maxRowsPerFrame(3)
+            .frames()
+            .forEach(
+                new Consumer<Frame>()
+                {
+                  private int j = 0;
 
-                                  @Override
-                                  public void accept(Frame frame)
-                                  {
-                                    try {
-                                      writers.get(j % writers.size()).writeFrame(frame, FrameFileWriter.NO_PARTITION);
-                                    }
-                                    catch (IOException e) {
-                                      throw new RuntimeException(e);
-                                    }
+                  @Override
+                  public void accept(Frame frame)
+                  {
+                    try {
+                      writers.get(j % writers.size()).writeFrame(frame, FrameFileWriter.NO_PARTITION);
+                    }
+                    catch (IOException e) {
+                      throw new RuntimeException(e);
+                    }
 
-                                    j++;
-                                  }
-                                }
-                            );
+                    j++;
+                  }
+                }
+            );
       }
       finally {
         CloseableUtils.closeAll(writers);

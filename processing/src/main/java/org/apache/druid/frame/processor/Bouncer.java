@@ -61,6 +61,11 @@ public class Bouncer
     return new Bouncer(Integer.MAX_VALUE);
   }
 
+  public int getMaxCount()
+  {
+    return maxCount;
+  }
+
   public ListenableFuture<Ticket> ticket()
   {
     synchronized (lock) {

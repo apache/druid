@@ -68,6 +68,8 @@ public class FrameFilePartialFetch
 
   /**
    * Future that resolves when it is a good time to request the next chunk of the frame file.
+   *
+   * Must only be called once, because the future is cleared once it is returned.
    */
   public ListenableFuture<?> backpressureFuture()
   {

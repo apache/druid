@@ -21,6 +21,7 @@ package org.apache.druid.frame.file;
 
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
@@ -127,12 +128,18 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     Assert.assertFalse(response2.getObj().isExceptionCaught());
     Assert.assertFalse(response2.getObj().isEmptyFetch());
 
+    final ListenableFuture<?> backpressureFuture = response2.getObj().backpressureFuture();
+    Assert.assertFalse(backpressureFuture.isDone());
+
     channel.doneWriting();
 
     FrameTestUtil.assertRowsEqual(
         FrameTestUtil.readRowsFromAdapter(adapter, null, false),
         FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(adapter.getRowSignature()))
     );
+
+    // Backpressure future resolves once channel is read.
+    Assert.assertTrue(backpressureFuture.isDone());
   }
 
   @Test
@@ -154,6 +161,7 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     Assert.assertTrue(response2.isContinueReading());
     Assert.assertFalse(response2.getObj().isExceptionCaught());
     Assert.assertTrue(response2.getObj().isEmptyFetch());
+    Assert.assertTrue(response2.getObj().backpressureFuture().isDone());
   }
 
   @Test
@@ -188,12 +196,18 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     Assert.assertFalse(response.getObj().isExceptionCaught());
     Assert.assertFalse(response.getObj().isEmptyFetch());
 
+    final ListenableFuture<?> backpressureFuture = response.getObj().backpressureFuture();
+    Assert.assertFalse(backpressureFuture.isDone());
+
     channel.doneWriting();
 
     FrameTestUtil.assertRowsEqual(
         FrameTestUtil.readRowsFromAdapter(adapter, null, false),
         FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(adapter.getRowSignature()))
     );
+
+    // Backpressure future resolves after channel is read.
+    Assert.assertTrue(backpressureFuture.isDone());
   }
 
   @Test

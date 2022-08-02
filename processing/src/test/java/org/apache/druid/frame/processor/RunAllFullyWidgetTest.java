@@ -86,7 +86,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     final List<Object[]> constructors = new ArrayList<>();
 
     for (int numThreads : new int[]{1, 3, 12}) {
-      for (int bouncerPoolSize : new int[]{1, 3, 12}) {
+      for (int bouncerPoolSize : new int[]{1, 3, 12, Integer.MAX_VALUE}) {
         for (int maxOutstandingProcessors : new int[]{1, 3, 12}) {
           constructors.add(new Object[]{numThreads, bouncerPoolSize, maxOutstandingProcessors});
         }
@@ -101,7 +101,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   public void setUp() throws Exception
   {
     super.setUp();
-    bouncer = new Bouncer(bouncerPoolSize);
+    bouncer = bouncerPoolSize == Integer.MAX_VALUE ? Bouncer.unlimited() : new Bouncer(bouncerPoolSize);
 
     synchronized (this) {
       concurrentNow = 0;
@@ -122,6 +122,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     }
 
     Assert.assertEquals(0, bouncer.getCurrentCount());
+    Assert.assertEquals(bouncerPoolSize, bouncer.getMaxCount());
   }
 
   @Test
@@ -228,7 +229,9 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                            .iterator()
         ),
         0L,
-        (x, y) -> {throw new ISE("error!");},
+        (x, y) -> {
+          throw new ISE("error!");
+        },
         maxOutstandingProcessors,
         bouncer,
         null
@@ -326,8 +329,10 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   @SuppressWarnings("BusyWait")
   public void test_runAllFully_futureCancel() throws InterruptedException
   {
+    final int expectedRunningProcessors = Math.min(Math.min(bouncerPoolSize, maxOutstandingProcessors), numThreads);
+
     final List<SleepyFrameProcessor> processors =
-        IntStream.range(0, bouncerPoolSize * maxOutstandingProcessors * numThreads * 2)
+        IntStream.range(0, 10 * expectedRunningProcessors)
                  .mapToObj(i -> new SleepyFrameProcessor())
                  .collect(Collectors.toList());
 
@@ -339,8 +344,6 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
         bouncer,
         "xyzzy"
     );
-
-    final int expectedRunningProcessors = Math.min(Math.min(bouncerPoolSize, maxOutstandingProcessors), numThreads);
 
     for (int i = 0; i < expectedRunningProcessors; i++) {
       processors.get(i).awaitRun();
