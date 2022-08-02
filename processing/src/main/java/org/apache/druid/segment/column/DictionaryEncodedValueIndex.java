@@ -22,10 +22,15 @@ package org.apache.druid.segment.column;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 
 /**
- * This exposes a 'raw' view into a bitmap value indexes, allowing operation via dictionaryIds
+ * This exposes a 'raw' view into bitmap value indexes for {@link DictionaryEncodedColumn}. This allows callers
+ * to directly retrieve bitmaps via dictionary ids.
  *
- * This interface should only be used when it is beneficial to operate in such a manner, most filter implementations
- * should likely be using higher level index instead.
+ * This interface should only be used when it is beneficial to operate in such a manner; callers of this class must
+ * either already know what value the dictionary id represents, not care at all, or have some other means to know
+ * exactly which bitmaps to retrieve.
+ *
+ * Most filter implementations should likely be using higher level index instead, such as {@link StringValueSetIndex},
+ * {@link LexicographicalRangeIndex}, {@link NumericRangeIndex}, or {@link DruidPredicateIndex}.
  */
 public interface DictionaryEncodedValueIndex
 {

@@ -22,23 +22,21 @@ package org.apache.druid.segment.column;
 import javax.annotation.Nullable;
 
 /**
- * This exposes a 'raw' view into bitmap value indexes of a string {@link DictionaryEncodedColumn}. This allows callers
- * to directly retrieve bitmaps via dictionary ids, as well as access to lower level details of such a column like
- * value lookup and value cardinality.
- *
- * Most filter implementations should likely be using higher level index instead, such as {@link StringValueSetIndex},
- * {@link LexicographicalRangeIndex}, {@link NumericRangeIndex}, or {@link DruidPredicateIndex}
+ * An optimized column value {@link BitmapColumnIndex} provider for specialized processing of numeric value ranges.
+ * This index does not match null values, union the results of this index with {@link NullValueIndex} if null values
+ * should be considered part of the value range.
  */
-public interface DictionaryEncodedStringValueIndex extends DictionaryEncodedValueIndex
+public interface NumericRangeIndex
 {
   /**
-   * Get the cardinality of the underlying value dictionary
+   * Get a {@link BitmapColumnIndex} corresponding to the values supplied in the specified range. If supplied starting
+   * value is null, the range will begin at the first non-null value in the underlying value dictionary. If the end
+   * value is null, the range will extend to the last value in the underlying value dictionary.
    */
-  int getCardinality();
-
-  /**
-   * Get the value in the underlying value dictionary of the specified dictionary id
-   */
-  @Nullable
-  String getValue(int index);
+  BitmapColumnIndex forRange(
+      @Nullable Number startValue,
+      boolean startStrict,
+      @Nullable Number endValue,
+      boolean endStrict
+  );
 }

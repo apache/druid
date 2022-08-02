@@ -852,7 +852,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L}
         )
     );
@@ -954,6 +953,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L}
         )
     );
@@ -1052,7 +1052,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"2.02", 2L}
         )
     );
@@ -1154,6 +1153,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"2.02", 2L}
         )
     );
@@ -1955,7 +1955,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"[\"$.\"]", 5L},
+            new Object[]{"[\"$\"]", 5L},
             new Object[]{"[\"$.n.x\",\"$.array[0]\",\"$.array[1]\"]", 2L}
         )
     );

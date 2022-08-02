@@ -36,8 +36,8 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
+import org.apache.calcite.prepare.BaseDruidSqlValidator;
 import org.apache.calcite.prepare.CalciteCatalogReader;
-import org.apache.calcite.prepare.DruidSqlValidator;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
@@ -237,7 +237,7 @@ public class CalcitePlanner implements Planner, ViewExpander
     final SqlConformance conformance = conformance();
     final CalciteCatalogReader catalogReader = createCatalogReader();
     this.validator =
-        new DruidSqlValidator(operatorTable, catalogReader, typeFactory,
+        new BaseDruidSqlValidator(operatorTable, catalogReader, typeFactory,
             conformance);
     this.validator.setIdentifierExpansion(true);
     try {
@@ -324,7 +324,7 @@ public class CalcitePlanner implements Planner, ViewExpander
     final CalciteCatalogReader catalogReader =
         createCatalogReader().withSchemaPath(schemaPath);
     final SqlValidator validator =
-        new DruidSqlValidator(operatorTable, catalogReader, typeFactory,
+        new BaseDruidSqlValidator(operatorTable, catalogReader, typeFactory,
             conformance);
     validator.setIdentifierExpansion(true);
 
