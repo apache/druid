@@ -109,6 +109,30 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       100
   );
 
+
+  private final DataSegment firstHalfEternityRangeSegment = new DataSegment(
+      "halfEternity",
+      new Interval(DateTimes.MIN, DateTimes.of("3000")),
+      "version",
+      ImmutableMap.of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new LinearShardSpec(0),
+      9,
+      100
+  );
+
+  private final DataSegment secondHalfEternityRangeSegment = new DataSegment(
+      "halfEternity",
+      new Interval(DateTimes.of("1970"), DateTimes.MAX),
+      "version",
+      ImmutableMap.of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new LinearShardSpec(0),
+      9,
+      100
+  );
   private final DataSegment defaultSegment2 = new DataSegment(
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
@@ -1228,7 +1252,49 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.of(eternitySegment),
         ImmutableSet.copyOf(
             coordinator.retrieveUsedSegmentsForInterval(
-                hugeTimeRangeSegment1.getDataSource(),
+                eternitySegment.getDataSource(),
+                Intervals.of("2020/2021"),
+                Segments.ONLY_VISIBLE
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testFirstHalfEternitySegmentWithStringComparison() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(
+            firstHalfEternityRangeSegment
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(firstHalfEternityRangeSegment),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                firstHalfEternityRangeSegment.getDataSource(),
+                Intervals.of("2020/2021"),
+                Segments.ONLY_VISIBLE
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testSecondHalfSegmentWithStringComparison() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(
+            secondHalfEternityRangeSegment
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(secondHalfEternityRangeSegment),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                secondHalfEternityRangeSegment.getDataSource(),
                 Intervals.of("2020/2021"),
                 Segments.ONLY_VISIBLE
             )

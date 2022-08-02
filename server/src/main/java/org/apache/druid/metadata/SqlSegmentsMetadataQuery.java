@@ -233,18 +233,24 @@ public class SqlSegmentsMetadataQuery
             )
         );
 
-        if (i == intervals.size() - 1) {
-          sb.append(")");
-        } else {
+        // Add a special check for a segment which have one end at eternity and the other at some finite value. Since
+        // we are using string comparison, a segment with this start or end will not be returned otherwise.
+        if (matchMode.equals(IntervalMode.OVERLAPS)) {
+          sb.append(StringUtils.format(" OR (start = '%s' AND \"end\" != '%s' AND \"end\" > :start%d)", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i));
+          sb.append(StringUtils.format(" OR (start != '%s' AND \"end\" = '%s' AND start < :end%d)", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i));
+        }
+
+        if (i != intervals.size() - 1) {
           sb.append(" OR ");
         }
       }
 
-      // Add a special case for a single partition with eternity. Since we are using string comparison, a partition with
-      // this start and end will be incorrectly not returned.
+      // Add a special check for a single segment with eternity. Since we are using string comparison, a segment with
+      // this start and end will not be returned otherwise.
       if (matchMode.equals(IntervalMode.OVERLAPS)) {
-        sb.append(" OR (start = '-146136543-09-08T08:23:32.096Z' AND \"end\" = '146140482-04-24T15:36:27.903Z')");
+        sb.append(StringUtils.format(" OR (start = '%s' AND \"end\" = '%s')", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd()));
       }
+      sb.append(")");
     }
 
     final Query<Map<String, Object>> sql = handle
