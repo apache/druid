@@ -29,6 +29,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
@@ -56,6 +57,12 @@ import java.util.List;
 
 public class NestedDataOperatorConversions
 {
+  public static SqlReturnTypeInference NESTED_RETURN_TYPE_INFERENCE = opBinding -> RowSignatures.makeComplexType(
+      opBinding.getTypeFactory(),
+      NestedDataComplexTypeSerde.TYPE,
+      true
+  );
+
   public static class GetPathOperatorConversion implements SqlOperatorConversion
   {
     private static final String FUNCTION_NAME = StringUtils.toUpperCase("get_path");
@@ -236,13 +243,7 @@ public class NestedDataOperatorConversions
     private static final SqlFunction SQL_FUNCTION = OperatorConversions
         .operatorBuilder(FUNCTION_NAME)
         .operandTypeChecker(OperandTypes.family(new SqlTypeFamily[]{SqlTypeFamily.ANY, SqlTypeFamily.CHARACTER, SqlTypeFamily.ANY, SqlTypeFamily.ANY, SqlTypeFamily.ANY}))
-        .returnTypeCascadeNullable(
-            new RowSignatures.ComplexSqlType(
-                SqlTypeName.OTHER,
-                NestedDataComplexTypeSerde.TYPE,
-                true
-            ).getSqlTypeName()
-        )
+        .returnTypeInference(NESTED_RETURN_TYPE_INFERENCE)
         .functionCategory(SqlFunctionCategory.SYSTEM)
         .build();
 
@@ -429,16 +430,12 @@ public class NestedDataOperatorConversions
               continue;
             }
             operandTypes[i] = typeFactory.createTypeWithNullability(
-                typeFactory.createSqlType(SqlTypeName.ANY), true);
+                typeFactory.createSqlType(SqlTypeName.ANY),
+                true
+            );
           }
         })
-        .returnTypeCascadeNullable(
-            new RowSignatures.ComplexSqlType(
-                SqlTypeName.OTHER,
-                NestedDataComplexTypeSerde.TYPE,
-                true
-            ).getSqlTypeName()
-        )
+        .returnTypeInference(NESTED_RETURN_TYPE_INFERENCE)
         .functionCategory(SqlFunctionCategory.SYSTEM)
         .build();
 
@@ -484,13 +481,7 @@ public class NestedDataOperatorConversions
     private static final SqlFunction SQL_FUNCTION = OperatorConversions
         .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
         .operandTypes(SqlTypeFamily.ANY)
-        .returnTypeCascadeNullable(
-            new RowSignatures.ComplexSqlType(
-                SqlTypeName.OTHER,
-                NestedDataComplexTypeSerde.TYPE,
-                true
-            ).getSqlTypeName()
-        )
+        .returnTypeInference(NESTED_RETURN_TYPE_INFERENCE)
         .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
         .build();
 
@@ -566,13 +557,7 @@ public class NestedDataOperatorConversions
     private static final SqlFunction SQL_FUNCTION = OperatorConversions
         .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
         .operandTypes(SqlTypeFamily.ANY)
-        .returnTypeCascadeNullable(
-            new RowSignatures.ComplexSqlType(
-                SqlTypeName.OTHER,
-                NestedDataComplexTypeSerde.TYPE,
-                true
-            ).getSqlTypeName()
-        )
+        .returnTypeInference(NESTED_RETURN_TYPE_INFERENCE)
         .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
         .build();
 
