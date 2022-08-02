@@ -71,9 +71,9 @@ Use the built-in query workbench to prototype [DruidSQL](https://druid.apache.or
 
 ### Documentation
 
-Contribute documentation and tutorials updates to [`/docs`](https://github.com/apache/druid/tree/master/docs) using [MarkDown](https://www.markdownguide.org/) and submit a them using a Pull Request.
-
 The [latest documentation](https://druid.apache.org/docs/latest/) is published with each official release to the [project website](https://druid.apache.org), where documentation for [previous releases](https://druid.apache.org/docs/) is also made available.
+
+Make documentation and tutorials updates in [`/docs`](https://github.com/apache/druid/tree/master/docs) using [MarkDown](https://www.markdownguide.org/) and contribute them using a Pull Request.
 
 ### Community
 
