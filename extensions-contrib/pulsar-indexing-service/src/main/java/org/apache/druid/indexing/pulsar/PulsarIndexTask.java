@@ -54,7 +54,7 @@ public class PulsarIndexTask extends SeekableStreamIndexTask<Integer, Long, Byte
   @Override
   public String getType()
   {
-    return null;
+    return TYPE;
   }
 
   @Override
