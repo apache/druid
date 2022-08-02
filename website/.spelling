@@ -883,7 +883,11 @@ gcs-connector
 hadoop2
 hdfs
  - ../docs/development/extensions-core/kafka-extraction-namespace.md
+Aotearoa
+Czechia
+KTable
 LookupExtractorFactory
+Zeelund
 zookeeper.connect
  - ../docs/development/extensions-core/kafka-ingestion.md
 0.11.x.
@@ -2107,3 +2111,7 @@ TIMESTAMPDIFF
 TRUNC 
 VAR_POP 
 VAR_SAMP
+KTable
+Aotearoa
+Czechia
+Zeelund
