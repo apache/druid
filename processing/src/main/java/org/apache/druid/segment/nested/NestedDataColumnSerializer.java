@@ -52,8 +52,9 @@ import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.FixedIndexedDoubleWriter;
 import org.apache.druid.segment.data.FixedIndexedIntWriter;
-import org.apache.druid.segment.data.FixedIndexedWriter;
+import org.apache.druid.segment.data.FixedIndexedLongWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.ObjectStrategy;
@@ -115,8 +116,8 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   private GenericIndexedWriter<String> fieldsWriter;
   private NestedLiteralTypeInfo.Writer fieldsInfoWriter;
   private GenericIndexedWriter<String> dictionaryWriter;
-  private FixedIndexedWriter<Long> longDictionaryWriter;
-  private FixedIndexedWriter<Double> doubleDictionaryWriter;
+  private FixedIndexedLongWriter longDictionaryWriter;
+  private FixedIndexedDoubleWriter doubleDictionaryWriter;
   private CompressedVariableSizedBlobColumnSerializer rawWriter;
   private ByteBufferWriter<ImmutableBitmap> nullBitmapWriter;
   private MutableBitmap nullRowsBitmap;
@@ -146,19 +147,13 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     fieldsInfoWriter = new NestedLiteralTypeInfo.Writer(segmentWriteOutMedium);
     fieldsInfoWriter.open();
     dictionaryWriter = createGenericIndexedWriter(GenericIndexed.STRING_STRATEGY, segmentWriteOutMedium);
-    longDictionaryWriter = new FixedIndexedWriter<>(
+    longDictionaryWriter = new FixedIndexedLongWriter(
         segmentWriteOutMedium,
-        ColumnType.LONG.getStrategy(),
-        ByteOrder.nativeOrder(),
-        Long.BYTES,
         true
     );
     longDictionaryWriter.open();
-    doubleDictionaryWriter = new FixedIndexedWriter<>(
+    doubleDictionaryWriter = new FixedIndexedDoubleWriter(
         segmentWriteOutMedium,
-        ColumnType.DOUBLE.getStrategy(),
-        ByteOrder.nativeOrder(),
-        Double.BYTES,
         true
     );
     doubleDictionaryWriter.open();

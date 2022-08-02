@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.data;
 
-import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.doubles.DoubleIterator;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.serde.Serializer;
@@ -33,14 +33,14 @@ import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Specialized version of {@link FixedIndexedWriter} for writing int value types, with no support for null values,
+ * Specialized version of {@link FixedIndexedWriter} for writing double value types, with no support for null values,
  * and no verification that data is actually sorted. The resulting data can be read into either
- * {@link FixedIndexedInts} or a {@link FixedIndexed<Integer>}, since the format is identical.
+ * {@link FixedIndexedDoubles} or a {@link FixedIndexed<Double>}, since the format is identical.
  *
  * Callers should be certain that the data written is in fact sorted if specifying it as such. If null values need
  * to be stored then the generic {@link FixedIndexedWriter} should be used instead.
  */
-public final class FixedIndexedIntWriter implements Serializer
+public class FixedIndexedDoubleWriter implements Serializer
 {
   private static final int PAGE_SIZE = 4096;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
@@ -51,12 +51,12 @@ public final class FixedIndexedIntWriter implements Serializer
 
   private final boolean isSorted;
 
-  public FixedIndexedIntWriter(SegmentWriteOutMedium segmentWriteOutMedium, boolean sorted)
+  public FixedIndexedDoubleWriter(SegmentWriteOutMedium segmentWriteOutMedium, boolean sorted)
   {
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     // this is a matter of faith, nothing checks
     this.isSorted = sorted;
-    this.scratch = ByteBuffer.allocate(Integer.BYTES).order(ByteOrder.nativeOrder());
+    this.scratch = ByteBuffer.allocate(Double.BYTES).order(ByteOrder.nativeOrder());
   }
 
   public void open() throws IOException
@@ -70,10 +70,10 @@ public final class FixedIndexedIntWriter implements Serializer
     return Byte.BYTES + Byte.BYTES + Integer.BYTES + valuesOut.size();
   }
 
-  public void write(int objectToWrite) throws IOException
+  public void write(double objectToWrite) throws IOException
   {
     scratch.clear();
-    scratch.putInt(objectToWrite);
+    scratch.putDouble(objectToWrite);
     scratch.flip();
     Channels.writeFully(valuesOut, scratch);
     numWritten++;
@@ -103,24 +103,25 @@ public final class FixedIndexedIntWriter implements Serializer
     valuesOut.writeTo(channel);
   }
 
-  public IntIterator getIterator()
+  public DoubleIterator getIterator()
   {
-    final ByteBuffer iteratorBuffer = ByteBuffer.allocate(Integer.BYTES * PAGE_SIZE).order(ByteOrder.nativeOrder());
+    final ByteBuffer iteratorBuffer = ByteBuffer.allocate(Double.BYTES * PAGE_SIZE).order(ByteOrder.nativeOrder());
 
-    return new IntIterator()
+    return new DoubleIterator()
     {
       @Override
-      public int nextInt()
+      public double nextDouble()
       {
         if (pos == 0 || iteratorBuffer.position() >= iteratorBuffer.limit()) {
           readPage();
         }
-        final int value = iteratorBuffer.getInt();
+        final double value = iteratorBuffer.getDouble();
         pos++;
         return value;
       }
 
       int pos = 0;
+
       @Override
       public boolean hasNext()
       {
@@ -132,11 +133,11 @@ public final class FixedIndexedIntWriter implements Serializer
         iteratorBuffer.clear();
         try {
           if (numWritten - pos < PAGE_SIZE) {
-            int size = (numWritten - pos) * Integer.BYTES;
+            int size = (numWritten - pos) * Double.BYTES;
             iteratorBuffer.limit(size);
-            valuesOut.readFully((long) pos * Integer.BYTES, iteratorBuffer);
+            valuesOut.readFully((long) pos * Double.BYTES, iteratorBuffer);
           } else {
-            valuesOut.readFully((long) pos * Integer.BYTES, iteratorBuffer);
+            valuesOut.readFully((long) pos * Double.BYTES, iteratorBuffer);
           }
           iteratorBuffer.flip();
         }
