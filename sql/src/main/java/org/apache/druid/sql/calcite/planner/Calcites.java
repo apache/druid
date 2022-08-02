@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
@@ -72,6 +73,7 @@ import java.util.regex.Pattern;
  */
 public class Calcites
 {
+  private static final EmittingLogger log = new EmittingLogger(Calcites.class);
   private static final DateTimes.UtcFormatter CALCITE_DATE_PARSER = DateTimes.wrapFormatter(ISODateTimeFormat.dateParser());
   private static final DateTimes.UtcFormatter CALCITE_TIMESTAMP_PARSER = DateTimes.wrapFormatter(
       new DateTimeFormatterBuilder()
@@ -105,6 +107,11 @@ public class Calcites
     // These properties control the charsets used for SQL literals. I don't see a way to change this except through
     // system properties, so we'll have to set those...
 
+    // Properties are set here dynamically. There have been race conditions where Calcite
+    // seems to initialize (with default properties) before this code runs. To work around
+    // that, there is also a saffron.properties file in /src/main/resources. If that works,
+    // then this code can be retired.
+
     final String charset = ConversionUtil.NATIVE_UTF16_CHARSET_NAME;
 
     // Deprecated in Calcite 1.19. See:
@@ -118,6 +125,11 @@ public class Calcites
     System.setProperty("calcite.default.charset", Calcites.defaultCharset().name());
     System.setProperty("calcite.default.nationalcharset", Calcites.defaultCharset().name());
     System.setProperty("calcite.default.collation.name", StringUtils.format("%s$en_US", charset));
+
+    log.info("Calcite system properties initialized");
+    log.info("%s=%s", "calcite.default.charset", System.getProperty("calcite.default.charset"));
+    log.info("%s=%s", "calcite.default.nationalcharset", System.getProperty("calcite.default.nationalcharset"));
+    log.info("%s=%s", "calcite.default.collation.name", System.getProperty("calcite.default.collation.name"));
   }
 
   public static Charset defaultCharset()
@@ -144,7 +156,6 @@ public class Calcites
     }
     builder.append("'");
     return isPlainAscii ? builder.toString() : "U&" + builder;
-
   }
 
   /**
@@ -273,8 +284,6 @@ public class Calcites
       final boolean nullable
   )
   {
-
-
     final RelDataType dataType = typeFactory.createArrayType(
         createSqlTypeWithNullability(typeFactory, elementTypeName, nullable),
         -1

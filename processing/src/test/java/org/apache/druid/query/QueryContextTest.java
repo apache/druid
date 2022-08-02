@@ -251,14 +251,14 @@ public class QueryContextTest
   @Test
   public void testLegacyReturnsLegacy()
   {
-    Query legacy = new LegacyContextQuery(ImmutableMap.of("foo", "bar"));
+    Query<?> legacy = new LegacyContextQuery(ImmutableMap.of("foo", "bar"));
     Assert.assertNull(legacy.getQueryContext());
   }
 
   @Test
   public void testNonLegacyIsNotLegacyContext()
   {
-    Query timeseries = Druids.newTimeseriesQueryBuilder()
+    Query<?> timeseries = Druids.newTimeseriesQueryBuilder()
                              .dataSource("test")
                              .intervals("2015-01-02/2015-01-03")
                              .granularity(Granularities.DAY)
@@ -266,6 +266,31 @@ public class QueryContextTest
                              .context(ImmutableMap.of("foo", "bar"))
                              .build();
     Assert.assertNotNull(timeseries.getQueryContext());
+  }
+
+  @Test
+  public void testWithOverrides()
+  {
+    final QueryContext context = new QueryContext(
+        ImmutableMap.of(
+            "a", "fred",
+            "b", "wilma"
+        )
+    );
+    final QueryContext overridden = context.withOverrides(
+        ImmutableMap.of(
+            "b", "pebbles",
+            "c", "barney"
+        )
+    );
+    final Map<String, Object> expected =
+        ImmutableMap.of(
+            "a", "fred",
+            "b", "pebbles",
+            "c", "barney"
+        );
+
+    Assert.assertEquals(expected, overridden.getMergedParams());
   }
 
   public static class LegacyContextQuery implements Query
