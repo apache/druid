@@ -24,9 +24,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -34,11 +37,6 @@ import org.apache.druid.java.util.http.client.response.ObjectOrErrorResponseHand
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -55,8 +53,6 @@ import org.mockito.stubbing.OngoingStubbing;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -611,11 +607,7 @@ public class ServiceClientImplTest
       }
     }
 
-    if (content != null) {
-      response.setContent(ChannelBuffers.wrappedBuffer(ByteBuffer.wrap(StringUtils.toUtf8(content))));
-    }
-
-    final StringFullResponseHolder errorHolder = new StringFullResponseHolder(response, StandardCharsets.UTF_8);
+    final StringFullResponseHolder errorHolder = new StringFullResponseHolder(response, content);
     return Futures.immediateFuture(Either.error(errorHolder));
   }
 

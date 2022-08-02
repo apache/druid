@@ -19,7 +19,7 @@
 
 package org.apache.druid.rpc;
 
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
 
 /**
  * Used by {@link ServiceClient} to decide whether to retry requests.

@@ -19,10 +19,10 @@
 
 package org.apache.druid.rpc;
 
+import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.IAE;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.io.IOException;
 
@@ -91,14 +91,14 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
   @Override
   public boolean retryHttpResponse(final HttpResponse response)
   {
-    final int code = response.getStatus().getCode();
+    final int code = response.status().code();
 
-    return code == HttpResponseStatus.BAD_GATEWAY.getCode()
-           || code == HttpResponseStatus.SERVICE_UNAVAILABLE.getCode()
-           || code == HttpResponseStatus.GATEWAY_TIMEOUT.getCode()
+    return code == HttpResponseStatus.BAD_GATEWAY.code()
+           || code == HttpResponseStatus.SERVICE_UNAVAILABLE.code()
+           || code == HttpResponseStatus.GATEWAY_TIMEOUT.code()
 
            // Technically shouldn't retry this last one, but servers sometimes return HTTP 500 for retryable errors.
-           || code == HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode();
+           || code == HttpResponseStatus.INTERNAL_SERVER_ERROR.code();
   }
 
   @Override

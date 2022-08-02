@@ -20,12 +20,12 @@
 package org.apache.druid.rpc.indexing;
 
 import com.google.common.base.Preconditions;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 /**
  * Retry policy for tasks. Meant to be used together with {@link SpecificTaskServiceLocator}.
@@ -80,8 +80,8 @@ public class SpecificTaskRetryPolicy implements ServiceRetryPolicy
   private boolean isTaskMismatch(final HttpResponse response)
   {
     // See class-level javadocs for details on why we do this.
-    if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)
-        || response.getStatus().equals(HttpResponseStatus.BAD_REQUEST)) {
+    if (response.status().equals(HttpResponseStatus.NOT_FOUND)
+        || response.status().equals(HttpResponseStatus.BAD_REQUEST)) {
       final String headerTaskId = StringUtils.urlDecode(response.headers().get(ChatHandlerResource.TASK_ID_HEADER));
       return headerTaskId != null && !headerTaskId.equals(taskId);
     } else {
