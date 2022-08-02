@@ -57,7 +57,7 @@ import java.util.List;
 
 public class NestedDataOperatorConversions
 {
-  public static SqlReturnTypeInference NESTED_RETURN_TYPE_INFERENCE = opBinding -> RowSignatures.makeComplexType(
+  public static final SqlReturnTypeInference NESTED_RETURN_TYPE_INFERENCE = opBinding -> RowSignatures.makeComplexType(
       opBinding.getTypeFactory(),
       NestedDataComplexTypeSerde.TYPE,
       true
