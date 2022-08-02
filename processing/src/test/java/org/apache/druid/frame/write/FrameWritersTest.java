@@ -132,30 +132,27 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   @Test
   public void test_rowBased_unsupportedSortColumnType()
   {
+    // Register, but don't unregister, because many other tests out there expect this to exist even though they
+    // don't explicitly register it.
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
-    try {
-      final IllegalArgumentException e = Assert.assertThrows(
-          IllegalArgumentException.class,
-          () ->
-              FrameWriters.makeFrameWriterFactory(
-                  FrameType.ROW_BASED,
-                  ArenaMemoryAllocator.createOnHeap(ALLOCATOR_CAPACITY),
-                  RowSignature.builder().add("x", HyperUniquesAggregatorFactory.TYPE).build(),
-                  Collections.singletonList(new SortColumn("x", false))
-              )
-      );
+    final IllegalArgumentException e = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            FrameWriters.makeFrameWriterFactory(
+                FrameType.ROW_BASED,
+                ArenaMemoryAllocator.createOnHeap(ALLOCATOR_CAPACITY),
+                RowSignature.builder().add("x", HyperUniquesAggregatorFactory.TYPE).build(),
+                Collections.singletonList(new SortColumn("x", false))
+            )
+    );
 
-      MatcherAssert.assertThat(
-          e,
-          ThrowableMessageMatcher.hasMessage(
-              CoreMatchers.containsString("Sort column [x] is not comparable (type = COMPLEX<hyperUnique>)")
-          )
-      );
-    }
-    finally {
-      ComplexMetrics.unregisterSerde("hyperUnique");
-    }
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString("Sort column [x] is not comparable (type = COMPLEX<hyperUnique>)")
+        )
+    );
   }
 
   @Test
