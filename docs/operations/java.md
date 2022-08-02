@@ -27,14 +27,15 @@ a Java runtime for Druid.
 
 ## Selecting a Java runtime
 
-Druid fully supports Java 8 and 11. The project team recommends Java 11.
+Druid fully supports Java 8 and 11. The project team recommends Java 11. The project team does not recommend running
+with Java 17, because certain Druid functionality is not currently compatible with Java 17.
 
-The project team does not recommend running with Java 17, because certain Druid functionality is not currently
-compatible with Java 17.
-
-There are many free and actively-supported Java runtime environments available, such as
-[Corretto](https://aws.amazon.com/corretto/) and [Zulu](https://www.azul.com/downloads/?package=jdk#download-openjdk).
-The project team does not recommend any specific runtime over any other.
+The project team recommends using an OpenJDK-based Java distribution. There are many free and actively-supported
+distributions available, including
+[Amazon Corretto](https://docs.aws.amazon.com/corretto/latest/corretto-11-ug/what-is-corretto-11.html),
+[Azul Zulu](https://www.azul.com/downloads/?version=java-11-lts&package=jdk), and
+[Eclipse Temurin](https://adoptium.net/temurin/releases?version=11).
+The project team does not recommend any specific distribution over any other.
 
 Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to find Java on the machine. You can set
 `DRUID_JAVA_HOME` if there is more than one instance of Java. To verify Java requirements for your environment, run the
@@ -42,8 +43,8 @@ Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to fi
 
 ## Garbage collection
 
-In general, we recommend using the G1 collector with default settings. This is the default collector in Java 11.
-To enable G1 on Java 8, use `-XX:+UseG1GC`. There is no harm in explicitly specifying this on Java 11 as well.
+In general, the project team recommends using the G1 collector with default settings. This is the default collector in
+Java 11. To enable G1 on Java 8, use `-XX:+UseG1GC`. There is no harm in explicitly specifying this on Java 11 as well.
 
 Garbage collector selection and tuning is a form of sport in the Java community. There may be situations where adjusting
 garbage collection configuration improves or worsens performance. The project team's guidance is that most people do
