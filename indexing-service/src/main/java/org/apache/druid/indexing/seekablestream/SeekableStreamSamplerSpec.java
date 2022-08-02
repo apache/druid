@@ -44,6 +44,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
   @Nullable
   private final DataSchema dataSchema;
   private final InputSourceSampler inputSourceSampler;
+  private final InputFormat inputFormat;
 
   protected final SeekableStreamSupervisorIOConfig ioConfig;
   @Nullable
@@ -58,6 +59,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
   {
     this.dataSchema = Preconditions.checkNotNull(ingestionSpec, "[spec] is required").getDataSchema();
     this.ioConfig = Preconditions.checkNotNull(ingestionSpec.getIoConfig(), "[spec.ioConfig] is required");
+    this.inputFormat = Preconditions.checkNotNull(ioConfig.getInputFormat(), "[spec.ioConfig.inputFormat] is required");
     this.tuningConfig = ingestionSpec.getTuningConfig();
     this.samplerConfig = samplerConfig == null ? SamplerConfig.empty() : samplerConfig;
     this.inputSourceSampler = inputSourceSampler;
@@ -67,7 +69,6 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
   public SamplerResponse sample()
   {
     final InputSource inputSource;
-    final InputFormat inputFormat;
 
     RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
 
@@ -82,10 +83,6 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
         ioConfig.getStream(),
         recordSupplier,
         ioConfig.isUseEarliestSequenceNumber()
-    );
-    inputFormat = Preconditions.checkNotNull(
-        ioConfig.getInputFormat(),
-        "[spec.ioConfig.inputFormat] is required"
     );
 
     return inputSourceSampler.sample(inputSource, inputFormat, dataSchema, samplerConfig);
