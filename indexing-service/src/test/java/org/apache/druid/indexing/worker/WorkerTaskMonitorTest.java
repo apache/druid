@@ -145,7 +145,7 @@ public class WorkerTaskMonitorTest
     // Start a task monitor
     workerTaskMonitor = createTaskMonitor();
     TestTasks.registerSubtypes(jsonMapper);
-    jsonMapper.registerSubtypes(new NamedType(TestIndexTask.class, "test_realtime"));
+    jsonMapper.registerSubtypes(new NamedType(TestIndexTask.class, "test_index"));
     workerTaskMonitor.start();
 
     task = TestTasks.immediateSuccess("test");
