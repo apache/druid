@@ -43,6 +43,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
@@ -202,10 +203,15 @@ public class SqlStatementTest
   //-----------------------------------------------------------------
   // Direct statements: using an auth result for verification.
 
+  private SqlQueryPlus queryPlus(final String sql, final AuthenticationResult authResult)
+  {
+    return SqlQueryPlus.builder(sql).auth(authResult).build();
+  }
+
   @Test
   public void testDirectHappyPath()
   {
-    SqlQueryPlus sqlReq = new SqlQueryPlus(
+    SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
     DirectStatement stmt = sqlLifecycleFactory.directStatement(sqlReq);
@@ -218,7 +224,7 @@ public class SqlStatementTest
   @Test
   public void testDirectSyntaxError()
   {
-    SqlQueryPlus sqlReq = new SqlQueryPlus(
+    SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
     DirectStatement stmt = sqlLifecycleFactory.directStatement(sqlReq);
@@ -235,7 +241,7 @@ public class SqlStatementTest
   @Test
   public void testDirectValidationError()
   {
-    SqlQueryPlus sqlReq = new SqlQueryPlus(
+    SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
     DirectStatement stmt = sqlLifecycleFactory.directStatement(sqlReq);
@@ -252,7 +258,7 @@ public class SqlStatementTest
   @Test
   public void testDirectPermissionError()
   {
-    SqlQueryPlus sqlReq = new SqlQueryPlus(
+    SqlQueryPlus sqlReq = queryPlus(
         "select count(*) from forbiddenDatasource",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
     DirectStatement stmt = sqlLifecycleFactory.directStatement(sqlReq);
@@ -350,7 +356,7 @@ public class SqlStatementTest
   @Test
   public void testJdbcHappyPath()
   {
-    SqlQueryPlus sqlReq = new SqlQueryPlus(
+    SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
     PreparedStatement stmt = sqlLifecycleFactory.preparedStatement(sqlReq);
@@ -379,7 +385,7 @@ public class SqlStatementTest
   @Test
   public void testJdbcSyntaxError()
   {
-    SqlQueryPlus sqlReq = new SqlQueryPlus(
+    SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
     PreparedStatement stmt = sqlLifecycleFactory.preparedStatement(sqlReq);
@@ -396,7 +402,7 @@ public class SqlStatementTest
   @Test
   public void testJdbcValidationError()
   {
-    SqlQueryPlus sqlReq = new SqlQueryPlus(
+    SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
     PreparedStatement stmt = sqlLifecycleFactory.preparedStatement(sqlReq);
@@ -413,7 +419,7 @@ public class SqlStatementTest
   @Test
   public void testJdbcPermissionError()
   {
-    SqlQueryPlus sqlReq = new SqlQueryPlus(
+    SqlQueryPlus sqlReq = queryPlus(
         "select count(*) from forbiddenDatasource",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
     PreparedStatement stmt = sqlLifecycleFactory.preparedStatement(sqlReq);
@@ -432,12 +438,11 @@ public class SqlStatementTest
   @Test
   public void testIgnoredQueryContextParametersAreIgnored()
   {
-    SqlQueryPlus sqlReq = SqlQueryPlus.from(
-        "select 1 + ?",
-        ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"),
-        null,
-        CalciteTests.REGULAR_USER_AUTH_RESULT
-    );
+    SqlQueryPlus sqlReq = SqlQueryPlus
+        .builder("select 1 + ?")
+        .context(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"))
+        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .build();
     DirectStatement stmt = sqlLifecycleFactory.directStatement(sqlReq);
     Map<String, Object> context = stmt.sqlRequest().context().getMergedParams();
     Assert.assertEquals(2, context.size());
@@ -448,12 +453,11 @@ public class SqlStatementTest
   @Test
   public void testDefaultQueryContextIsApplied()
   {
-    SqlQueryPlus sqlReq = SqlQueryPlus.from(
-        "select 1 + ?",
-        ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"),
-        null,
-        CalciteTests.REGULAR_USER_AUTH_RESULT
-    );
+    SqlQueryPlus sqlReq = SqlQueryPlus
+        .builder("select 1 + ?")
+        .context(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"))
+        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .build();
     DirectStatement stmt = sqlLifecycleFactory.directStatement(sqlReq);
     Map<String, Object> context = stmt.sqlRequest().context().getMergedParams();
     Assert.assertEquals(2, context.size());

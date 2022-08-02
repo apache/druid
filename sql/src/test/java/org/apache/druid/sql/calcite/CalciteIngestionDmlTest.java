@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -278,7 +277,12 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       );
 
       DirectStatement stmt = sqlLifecycleFactory.directStatement(
-          new SqlQueryPlus(sql, new QueryContext(queryContext), authenticationResult));
+          SqlQueryPlus
+              .builder(sql)
+              .context(queryContext)
+              .auth(authenticationResult)
+              .build()
+      );
 
       final Throwable e = Assert.assertThrows(
           Throwable.class,
@@ -306,7 +310,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           ? Collections.emptyList()
           : Collections.singletonList(recursivelyOverrideContext(expectedQuery, queryContext));
 
-      SqlQueryPlus queryPlus = SqlQueryPlus.fromSqlParameters(
+      SqlQueryPlus queryPlus = queryPlus(
           sql,
           queryContext,
           DEFAULT_PARAMETERS,

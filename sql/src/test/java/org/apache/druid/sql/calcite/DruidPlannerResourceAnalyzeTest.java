@@ -348,7 +348,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
     Set<ResourceAction> requiredResources = analyzeResources(
         PLANNER_CONFIG_DEFAULT,
         AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build(),
-        SqlQueryPlus.fromSqlParameters(
+        queryPlus(
           sql,
           ImmutableMap.of("baz", "fo", "nested-bar", ImmutableMap.of("nested-key", "nested-val")),
           null,

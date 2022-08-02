@@ -51,10 +51,9 @@ public class HttpStatement extends DirectStatement
   {
     super(
         lifecycleToolbox,
-        SqlQueryPlus.fromQuery(
-            sqlQuery,
-            AuthorizationUtils.authenticationResultFromRequest(req)
-        ),
+        SqlQueryPlus.builder(sqlQuery)
+          .auth(AuthorizationUtils.authenticationResultFromRequest(req))
+          .build(),
         req.getRemoteAddr()
     );
     this.req = req;

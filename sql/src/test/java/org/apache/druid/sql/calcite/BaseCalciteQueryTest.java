@@ -604,6 +604,19 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
+  static SqlQueryPlus queryPlus(
+      final String sql,
+      final Map<String, Object> queryContext,
+      final List<SqlParameter> parameters,
+      final AuthenticationResult authenticationResult
+  )
+  {
+    return SqlQueryPlus.builder(sql)
+        .context(queryContext)
+        .sqlParameters(parameters)
+        .auth(authenticationResult)
+        .build();
+  }
 
   public void testQuery(
       final String sql,
@@ -613,7 +626,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        SqlQueryPlus.fromSqlParameters(
+        queryPlus(
             sql,
             QUERY_CONTEXT_DEFAULT,
             DEFAULT_PARAMETERS,
@@ -653,7 +666,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        SqlQueryPlus.fromSqlParameters(
+        queryPlus(
             sql,
             context,
             DEFAULT_PARAMETERS,
@@ -674,7 +687,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        SqlQueryPlus.fromSqlParameters(
+        queryPlus(
             sql,
             QUERY_CONTEXT_DEFAULT,
             parameters,
@@ -696,7 +709,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     testQuery(
         plannerConfig,
-        SqlQueryPlus.fromSqlParameters(
+        queryPlus(
             sql,
             QUERY_CONTEXT_DEFAULT,
             DEFAULT_PARAMETERS,
@@ -717,7 +730,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        SqlQueryPlus.fromSqlParameters(
+        queryPlus(
             sql,
             context,
             DEFAULT_PARAMETERS,
@@ -740,7 +753,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     log.info("SQL: %s", sql);
     queryLogHook.clearRecordedQueries();
-    SqlQueryPlus queryPlus = SqlQueryPlus.fromSqlParameters(
+    SqlQueryPlus queryPlus = queryPlus(
         sql,
         queryContext,
         DEFAULT_PARAMETERS,
@@ -762,7 +775,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     testQuery(
         plannerConfig,
-        SqlQueryPlus.fromSqlParameters(
+        queryPlus(
             sql,
             queryContext,
             parameters,
@@ -826,7 +839,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     testQuery(
         plannerConfig,
-        SqlQueryPlus.fromSqlParameters(
+        queryPlus(
             sql,
             queryContext,
             parameters,
@@ -1033,12 +1046,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return analyzeResources(
         plannerConfig,
         new AuthConfig(),
-        SqlQueryPlus.fromSqlParameters(
-            sql,
-            null,
-            null,
-            authenticationResult
-        ));
+        SqlQueryPlus.builder(sql)
+            .auth(authenticationResult)
+            .build()
+    );
   }
 
   public Set<ResourceAction> analyzeResources(
