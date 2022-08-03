@@ -108,7 +108,7 @@ public class ReadableFileFrameChannel implements ReadableFrameChannel
    * Returns a new reference to the {@link FrameFile} that this channel is reading from. Callers should close this
    * reference when done reading.
    */
-  public FrameFile getFrameFileReference()
+  public FrameFile newFrameFileReference()
   {
     return frameFile.newReference();
   }

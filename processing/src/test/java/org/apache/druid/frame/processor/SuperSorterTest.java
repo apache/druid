@@ -651,7 +651,7 @@ public class SuperSorterTest
 
   private static ReadableFrameChannel duplicateOutputChannel(final ReadableFrameChannel channel)
   {
-    return new ReadableFileFrameChannel(((ReadableFileFrameChannel) channel).getFrameFileReference());
+    return new ReadableFileFrameChannel(((ReadableFileFrameChannel) channel).newFrameFileReference());
   }
 
   private static <T> long countSequence(final Sequence<T> sequence)
