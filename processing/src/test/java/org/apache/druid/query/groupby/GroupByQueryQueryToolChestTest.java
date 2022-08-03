@@ -36,6 +36,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -126,6 +127,109 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assert.assertFalse(Arrays.equals(
+        strategy1.computeResultLevelCacheKey(query1),
+        strategy2.computeResultLevelCacheKey(query2)
+    ));
+  }
+
+  @Test
+  public void testCacheKeyWithDifferentAggNames()
+  {
+    final GroupByQuery query1 = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("dim0", "d0"),
+            new DefaultDimensionSpec("dim1", "d1")
+        )
+        .setAggregatorSpecs(
+            new LongSumAggregatorFactory("a0", "metric1"),
+            new DoubleMaxAggregatorFactory("a1", "metric2")
+        )
+        .setLimitSpec(new DefaultLimitSpec(ImmutableList.of(OrderByColumnSpec.asc("a1")), 10))
+        .setGranularity(Granularities.ALL)
+        .build();
+
+    final GroupByQuery query2 = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("dim0", "d0"),
+            new DefaultDimensionSpec("dim1", "d1")
+        )
+        .setAggregatorSpecs(
+            new LongSumAggregatorFactory("a1", "metric1"),
+            new DoubleMaxAggregatorFactory("a0", "metric2")
+        )
+        .setLimitSpec(new DefaultLimitSpec(ImmutableList.of(OrderByColumnSpec.asc("a1")), 10))
+        .setGranularity(Granularities.ALL)
+        .build();
+
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
+        null
+    ).getCacheStrategy(query1);
+
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
+        null
+    ).getCacheStrategy(query2);
+
+    // without limit pushdown, the limit isn't considered
+    Assert.assertArrayEquals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2));
+    Assert.assertFalse(Arrays.equals(
+        strategy1.computeResultLevelCacheKey(query1),
+        strategy2.computeResultLevelCacheKey(query2)
+    ));
+  }
+
+  @Test
+  public void testCacheKeyWithDifferentNamesLimitPushdown()
+  {
+    final GroupByQuery query1 = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("dim0", "d0"),
+            new DefaultDimensionSpec("dim1", "d1")
+        )
+        .setAggregatorSpecs(
+            new LongSumAggregatorFactory("a0", "metric1"),
+            new DoubleMaxAggregatorFactory("a1", "metric2")
+        )
+        .setLimitSpec(new DefaultLimitSpec(ImmutableList.of(OrderByColumnSpec.asc("d0")), 10))
+        .setGranularity(Granularities.ALL)
+        .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, "true"))
+        .build();
+
+    final GroupByQuery query2 = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("dim0", "d1"),
+            new DefaultDimensionSpec("dim1", "d0")
+        )
+        .setAggregatorSpecs(
+            new LongSumAggregatorFactory("a1", "metric1"),
+            new DoubleMaxAggregatorFactory("a0", "metric2")
+        )
+        .setLimitSpec(new DefaultLimitSpec(ImmutableList.of(OrderByColumnSpec.asc("d0")), 10))
+        .setGranularity(Granularities.ALL)
+        .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, "true"))
+        .build();
+
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
+        null
+    ).getCacheStrategy(query1);
+
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
+        null
+    ).getCacheStrategy(query2);
+
+    Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)

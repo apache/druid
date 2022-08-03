@@ -60,6 +60,8 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.query.groupby.strategy.GroupByStrategy;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
@@ -533,6 +535,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             .appendCacheable(query.getVirtualColumns());
         if (query.isApplyLimitPushDown()) {
           builder.appendCacheable(query.getLimitSpec());
+          if (query.getLimitSpec() instanceof DefaultLimitSpec) {
+            DefaultLimitSpec limitSpec = (DefaultLimitSpec) query.getLimitSpec();
+            for (OrderByColumnSpec column : limitSpec.getColumns()) {
+              appendOrderingColumnCacheable(query, builder, column.getDimension());
+            }
+          }
         }
         return builder.build();
       }
@@ -556,7 +564,35 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             builder.appendStrings(subTotalSpec);
           }
         }
+        if (query.getLimitSpec() instanceof DefaultLimitSpec) {
+          DefaultLimitSpec limitSpec = (DefaultLimitSpec) query.getLimitSpec();
+          for (OrderByColumnSpec column : limitSpec.getColumns()) {
+            appendOrderingColumnCacheable(query, builder, column.getDimension());
+          }
+        }
         return builder.build();
+      }
+
+      private void appendOrderingColumnCacheable(GroupByQuery query, CacheKeyBuilder builder, String sortColumn)
+      {
+        for (DimensionSpec dim : query.getDimensions()) {
+          if (sortColumn.equals(dim.getOutputName())) {
+            builder.appendCacheable(dim);
+            return;
+          }
+        }
+        for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
+          if (sortColumn.equals(aggregatorFactory.getName())) {
+            builder.appendCacheable(aggregatorFactory);
+            return;
+          }
+        }
+        for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
+          if (sortColumn.equals(postAggregator.getName())) {
+            builder.appendCacheable(postAggregator);
+            return;
+          }
+        }
       }
 
       @Override

@@ -42,6 +42,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.TestQueryRunners;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregator;
@@ -104,6 +105,51 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
     doTestCacheStrategyOrderByPost(ColumnType.FLOAT, 2.1f);
     doTestCacheStrategyOrderByPost(ColumnType.DOUBLE, 2.1d);
     doTestCacheStrategyOrderByPost(ColumnType.LONG, 2L);
+  }
+
+  @Test
+  public void testComputeCacheKeyOrderByAggsWithDifferentNames()
+  {
+    final TopNQuery query1 = new TopNQueryBuilder().dataSource("dummy")
+                                                   .dimension("dim1")
+                                                   .granularity(Granularities.ALL)
+                                                   .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                                   .aggregators(
+                                                       new LongSumAggregatorFactory("a0", "metric1"),
+                                                       new DoubleMaxAggregatorFactory("a1", "metric2")
+                                                   )
+                                                   .metric(new NumericTopNMetricSpec("a0"))
+                                                   .threshold(10)
+                                                   .build();
+
+    final TopNQuery query2 = new TopNQueryBuilder().dataSource("dummy")
+                                                   .dimension("dim1")
+                                                   .granularity(Granularities.ALL)
+                                                   .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                                   .aggregators(
+                                                       new LongSumAggregatorFactory("a1", "metric1"),
+                                                       new DoubleMaxAggregatorFactory("a0", "metric2")
+                                                   )
+                                                   .metric(new NumericTopNMetricSpec("a0"))
+                                                   .threshold(10)
+                                                   .build();
+
+
+    final CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> strategy1 = new TopNQueryQueryToolChest(
+        null,
+        null
+    ).getCacheStrategy(query1);
+
+    final CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> strategy2 = new TopNQueryQueryToolChest(
+        null,
+        null
+    ).getCacheStrategy(query2);
+
+    Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assert.assertFalse(Arrays.equals(
+        strategy1.computeResultLevelCacheKey(query1),
+        strategy2.computeResultLevelCacheKey(query2)
+    ));
   }
 
   @Test
@@ -254,6 +300,8 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
         strategy2.computeResultLevelCacheKey(query2)
     ));
   }
+
+
 
   @Test
   public void testMinTopNThreshold()

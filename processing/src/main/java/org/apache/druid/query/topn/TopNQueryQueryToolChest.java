@@ -292,19 +292,13 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       {
         final CacheKeyBuilder builder = new CacheKeyBuilder(TOPN_QUERY)
             .appendCacheable(query.getDimensionSpec())
-            .appendCacheable(query.getTopNMetricSpec())
             .appendInt(query.getThreshold())
             .appendCacheable(query.getGranularity())
             .appendCacheable(query.getDimensionsFilter())
             .appendCacheables(query.getAggregatorSpecs())
-            .appendCacheable(query.getVirtualColumns());
-
-        final List<PostAggregator> postAggregators = prunePostAggregators(query);
-        if (!postAggregators.isEmpty()) {
-          // Append post aggregators only when they are used as sort keys.
-          // Note that appending an empty list produces a different cache key from not appending it.
-          builder.appendCacheablesIgnoringOrder(postAggregators);
-        }
+            .appendCacheable(query.getVirtualColumns())
+            .appendCacheable(query.getTopNMetricSpec());
+        appendOrderingCachable(query, builder);
 
         return builder.build();
       }
@@ -314,13 +308,14 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       {
         final CacheKeyBuilder builder = new CacheKeyBuilder(TOPN_QUERY)
             .appendCacheable(query.getDimensionSpec())
-            .appendCacheable(query.getTopNMetricSpec())
             .appendInt(query.getThreshold())
             .appendCacheable(query.getGranularity())
             .appendCacheable(query.getDimensionsFilter())
             .appendCacheables(query.getAggregatorSpecs())
             .appendCacheable(query.getVirtualColumns())
-            .appendCacheables(query.getPostAggregatorSpecs());
+            .appendCacheables(query.getPostAggregatorSpecs())
+            .appendCacheable(query.getTopNMetricSpec());
+        appendOrderingCachable(query, builder);
         return builder.build();
       }
 
@@ -416,6 +411,28 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             return new Result<>(timestamp, new TopNResultValue(retVal));
           }
         };
+      }
+
+      private void appendOrderingCachable(TopNQuery query, CacheKeyBuilder builder)
+      {
+        // append the sort column cacheable since the metricspec itself only considers the column name
+        final String sortColumn = query.getTopNMetricSpec().getMetricName(query.getDimensionSpec());
+        if (sortColumn.equals(query.getDimensionSpec().getOutputName())) {
+          builder.appendCacheable(query.getDimensionSpec());
+          return;
+        }
+        for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
+          if (sortColumn.equals(aggregatorFactory.getName())) {
+            builder.appendCacheable(aggregatorFactory);
+            return;
+          }
+        }
+        final List<PostAggregator> postAggregators = prunePostAggregators(query);
+        if (!postAggregators.isEmpty()) {
+          // Append post aggregators only when they are used as sort keys.
+          // Note that appending an empty list produces a different cache key from not appending it.
+          builder.appendCacheablesIgnoringOrder(postAggregators);
+        }
       }
     };
   }
