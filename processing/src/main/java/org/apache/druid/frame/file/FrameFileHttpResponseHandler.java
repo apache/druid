@@ -30,8 +30,6 @@ import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import java.util.Optional;
-
 /**
  * An {@link HttpResponseHandler} that streams data into a {@link ReadableByteChunksFrameChannel}.
  *
@@ -111,8 +109,12 @@ public class FrameFileHttpResponseHandler implements HttpResponseHandler<FrameFi
     content.getBytes(content.readerIndex(), chunk);
 
     try {
-      final Optional<ListenableFuture<?>> backpressureFuture = channel.addChunk(chunk);
-      backpressureFuture.ifPresent(clientResponseObj::setBackpressureFuture);
+      final ListenableFuture<?> backpressureFuture = channel.addChunk(chunk);
+
+      if (backpressureFuture != null) {
+        clientResponseObj.setBackpressureFuture(backpressureFuture);
+      }
+
       clientResponseObj.addBytesRead(chunk.length);
     }
     catch (Exception e) {

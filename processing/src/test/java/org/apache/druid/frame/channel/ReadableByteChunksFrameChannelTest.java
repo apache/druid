@@ -51,7 +51,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 @RunWith(Enclosed.class)
 public class ReadableByteChunksFrameChannelTest
@@ -249,7 +248,7 @@ public class ReadableByteChunksFrameChannelTest
       );
 
       final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test");
-      ListenableFuture<?> backpressureFuture = null;
+      ListenableFuture<?> firstBackpressureFuture = null;
 
       Assert.assertEquals(0, channel.getBytesBuffered());
 
@@ -257,23 +256,23 @@ public class ReadableByteChunksFrameChannelTest
         byte[] chunk;
 
         while ((chunk = chunker.nextChunk()) != null) {
-          final Optional<ListenableFuture<?>> addVal = channel.addChunk(chunk);
+          final ListenableFuture<?> backpressureFuture = channel.addChunk(chunk);
 
           // Minimally-sized channel means backpressure is exerted as soon as a single frame is available.
-          Assert.assertEquals(channel.canRead(), addVal.isPresent());
+          Assert.assertEquals(channel.canRead(), backpressureFuture != null);
 
-          if (addVal.isPresent()) {
-            if (backpressureFuture == null) {
-              backpressureFuture = addVal.get();
+          if (backpressureFuture != null) {
+            if (firstBackpressureFuture == null) {
+              firstBackpressureFuture = backpressureFuture;
             } else {
-              Assert.assertSame(backpressureFuture, addVal.get());
+              Assert.assertSame(firstBackpressureFuture, backpressureFuture);
             }
           }
         }
 
         // Backpressure should be exerted right now, since this is a minimal channel with at least one full frame in it.
-        Assert.assertNotNull(backpressureFuture);
-        Assert.assertFalse(backpressureFuture.isDone());
+        Assert.assertNotNull(firstBackpressureFuture);
+        Assert.assertFalse(firstBackpressureFuture.isDone());
 
         channel.doneWriting();
       }
@@ -330,16 +329,16 @@ public class ReadableByteChunksFrameChannelTest
           iteration++;
 
           // Write next chunk.
-          final Optional<ListenableFuture<?>> addVal = channel.addChunk(chunk);
+          final ListenableFuture<?> addVal = channel.addChunk(chunk);
 
           // Minimally-sized channel means backpressure is exerted as soon as a single frame is available.
-          Assert.assertEquals(channel.canRead(), addVal.isPresent());
+          Assert.assertEquals(channel.canRead(), addVal != null);
 
-          if (addVal.isPresent()) {
+          if (addVal != null) {
             if (backpressureFuture == null) {
-              backpressureFuture = addVal.get();
+              backpressureFuture = addVal;
             } else {
-              Assert.assertSame(backpressureFuture, addVal.get());
+              Assert.assertSame(backpressureFuture, addVal);
             }
           }
         }

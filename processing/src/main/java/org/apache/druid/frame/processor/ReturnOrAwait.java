@@ -28,6 +28,9 @@ import org.apache.druid.java.util.common.ISE;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+/**
+ * Return value from {@link FrameProcessor#runIncrementally}.
+ */
 public class ReturnOrAwait<T>
 {
   private static final IntSet RANGE_SET_ONE = IntSets.singleton(0);

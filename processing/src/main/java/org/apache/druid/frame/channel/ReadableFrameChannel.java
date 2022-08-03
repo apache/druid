@@ -27,6 +27,8 @@ import org.apache.druid.frame.Frame;
  * {@link #readabilityFuture()} methods.
  *
  * May be implemented using an in-memory queue, disk file, stream, etc.
+ *
+ * Channels implementing this interface are used by a single reader; they do not support concurrent reads.
  */
 public interface ReadableFrameChannel
 {

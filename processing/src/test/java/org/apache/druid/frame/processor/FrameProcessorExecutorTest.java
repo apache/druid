@@ -439,31 +439,31 @@ public class FrameProcessorExecutorTest
         }
 
         // Write to input files.
+        final Consumer<Frame> writer = new Consumer<Frame>()
+        {
+          private int j = 0;
+
+          @Override
+          public void accept(Frame frame)
+          {
+            try {
+              writers.get(j % writers.size()).writeFrame(frame, FrameFileWriter.NO_PARTITION);
+            }
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+
+            j++;
+          }
+        };
+
         FrameSequenceBuilder
             .fromAdapter(adapter)
             .frameType(FrameType.ROW_BASED)
             .allocator(ArenaMemoryAllocator.createOnHeap(1_000_000))
             .maxRowsPerFrame(3)
             .frames()
-            .forEach(
-                new Consumer<Frame>()
-                {
-                  private int j = 0;
-
-                  @Override
-                  public void accept(Frame frame)
-                  {
-                    try {
-                      writers.get(j % writers.size()).writeFrame(frame, FrameFileWriter.NO_PARTITION);
-                    }
-                    catch (IOException e) {
-                      throw new RuntimeException(e);
-                    }
-
-                    j++;
-                  }
-                }
-            );
+            .forEach(writer);
       }
       finally {
         CloseableUtils.closeAll(writers);

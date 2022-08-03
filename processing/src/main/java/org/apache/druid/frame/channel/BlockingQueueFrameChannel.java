@@ -34,6 +34,8 @@ import java.util.Optional;
 
 /**
  * In-memory channel backed by a limited-capacity {@link java.util.Deque}.
+ *
+ * This channel is used by a single writer and single reader. The writer and reader may run concurrently.
  */
 public class BlockingQueueFrameChannel implements WritableFrameChannel, ReadableFrameChannel
 {

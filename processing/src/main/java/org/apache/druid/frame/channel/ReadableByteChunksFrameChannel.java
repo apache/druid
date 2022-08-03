@@ -36,11 +36,11 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
 /**
  * Channel backed by a byte stream that is continuously streamed in using {@link #addChunk}. The byte stream
@@ -57,7 +57,7 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
    * Largest supported frame. Limit exists as a safeguard against streams with huge frame sizes. It is not expected
    * that any legitimate frame will be this large: typical usage involves frames an order of magnitude smaller.
    */
-  private static final long MAX_FRAME_SIZE = 100_000_000;
+  private static final long MAX_FRAME_SIZE_BYTES = 100_000_000;
 
   private static final int UNKNOWN_LENGTH = -1;
   private static final int FRAME_MARKER_BYTES = Byte.BYTES;
@@ -123,14 +123,14 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
    * Adds a chunk of bytes. If this chunk forms a full frame, it will immediately become available for reading.
    * Otherwise, the bytes will be buffered until a full frame is encountered.
    *
-   * Returns an Optional that is absent if the amount of queued bytes is below this channel's limit accept, or present
-   * if the amount of queued bytes is at or above this channel's limit. If the Optional is present, you are politely
-   * requested to wait for the future to resolve before adding additional chunks. (This is not enforced; addChunk will
-   * continue to accept new chunks even if the channel is over its limit.)
+   * Returns a backpressure future if the amount of queued bytes is at or above this channel's limit. If the return
+   * future is nonnull, callers are politely requested to wait for the future to resolve before adding additional
+   * chunks. (This is not enforced; addChunk will continue to accept new chunks even if the channel is over its limit.)
    *
    * When done adding chunks call {@code doneWriting}.
    */
-  public Optional<ListenableFuture<?>> addChunk(final byte[] chunk)
+  @Nullable
+  public ListenableFuture<?> addChunk(final byte[] chunk)
   {
     synchronized (lock) {
       if (noMoreWrites) {
@@ -159,12 +159,12 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
           addChunkBackpressureFuture = SettableFuture.create();
         }
 
-        return Optional.ofNullable(addChunkBackpressureFuture);
+        return addChunkBackpressureFuture;
       }
       catch (Throwable e) {
         // The channel is in an inconsistent state if any of this logic throws an error. Shut it down.
         setError(e);
-        return Optional.empty();
+        return null;
       }
     }
   }
@@ -357,7 +357,7 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
             nextCompressedFrameLength = copyFromQueuedChunks(bytesRequiredToReadLength)
                 .getLong(FRAME_MARKER_BYTES + Byte.BYTES /* Compression strategy byte */);
 
-            if (nextCompressedFrameLength <= 0 || nextCompressedFrameLength >= MAX_FRAME_SIZE) {
+            if (nextCompressedFrameLength <= 0 || nextCompressedFrameLength >= MAX_FRAME_SIZE_BYTES) {
               throw new ISE("Invalid frame size (size = %,d B)", nextCompressedFrameLength);
             }
           }

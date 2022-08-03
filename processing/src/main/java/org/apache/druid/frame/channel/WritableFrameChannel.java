@@ -29,6 +29,8 @@ import java.io.IOException;
  * method.
  *
  * May be implemented using an in-memory queue, disk file, stream, etc.
+ *
+ * Channels implementing this interface are used by a single writer; they do not support concurrent writes.
  */
 public interface WritableFrameChannel
 {

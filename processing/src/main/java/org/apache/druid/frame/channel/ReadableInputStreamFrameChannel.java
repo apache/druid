@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 
 import java.io.InputStream;
 import java.util.Arrays;
-import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -130,16 +129,11 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
                   delegate.doneWriting();
                   break;
                 } else {
-                  Optional<ListenableFuture<?>> futureOptional = delegate.addChunk(Arrays.copyOfRange(
-                      buffer,
-                      0,
-                      bytesRead
-                  ));
+                  ListenableFuture<?> backpressureFuture = delegate.addChunk(Arrays.copyOfRange(buffer, 0, bytesRead));
                   totalInputStreamBytesRead += bytesRead;
-                  if (futureOptional.isPresent()) {
-                    // backpressure handling
+                  if (backpressureFuture != null) {
                     keepReading = false;
-                    futureOptional.get().addListener(() -> keepReading = true, Execs.directExecutor());
+                    backpressureFuture.addListener(() -> keepReading = true, Execs.directExecutor());
                   } else {
                     keepReading = true;
                     // continue adding data to delegate
