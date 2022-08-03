@@ -58,6 +58,7 @@ import org.joda.time.format.DateTimeFormatterBuilder;
 import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nullable;
+
 import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.sql.Date;
@@ -70,6 +71,9 @@ import java.util.regex.Pattern;
 
 /**
  * Utility functions for Calcite.
+ * <p>
+ * See also the file {@code saffron.properties} which holds the
+ * character set system properties formerly set in this file.
  */
 public class Calcites
 {
@@ -100,36 +104,6 @@ public class Calcites
   private Calcites()
   {
     // No instantiation.
-  }
-
-  public static void setSystemProperties()
-  {
-    // These properties control the charsets used for SQL literals. I don't see a way to change this except through
-    // system properties, so we'll have to set those...
-
-    // Properties are set here dynamically. There have been race conditions where Calcite
-    // seems to initialize (with default properties) before this code runs. To work around
-    // that, there is also a saffron.properties file in /src/main/resources. If that works,
-    // then this code can be retired.
-
-    final String charset = ConversionUtil.NATIVE_UTF16_CHARSET_NAME;
-
-    // Deprecated in Calcite 1.19. See:
-    // https://calcite.apache.org/javadocAggregate/org/apache/calcite/util/SaffronProperties.html
-    System.setProperty("saffron.default.charset", Calcites.defaultCharset().name());
-    System.setProperty("saffron.default.nationalcharset", Calcites.defaultCharset().name());
-    System.setProperty("saffron.default.collation.name", StringUtils.format("%s$en_US", charset));
-
-    // The following are the current names. See org.apache.calcite.config.CalciteSystemProperty
-    // https://github.com/apache/calcite/blob/master/core/src/main/java/org/apache/calcite/config/CalciteSystemProperty.java
-    System.setProperty("calcite.default.charset", Calcites.defaultCharset().name());
-    System.setProperty("calcite.default.nationalcharset", Calcites.defaultCharset().name());
-    System.setProperty("calcite.default.collation.name", StringUtils.format("%s$en_US", charset));
-
-    log.info("Calcite system properties initialized");
-    log.info("%s=%s", "calcite.default.charset", System.getProperty("calcite.default.charset"));
-    log.info("%s=%s", "calcite.default.nationalcharset", System.getProperty("calcite.default.nationalcharset"));
-    log.info("%s=%s", "calcite.default.collation.name", System.getProperty("calcite.default.collation.name"));
   }
 
   public static Charset defaultCharset()

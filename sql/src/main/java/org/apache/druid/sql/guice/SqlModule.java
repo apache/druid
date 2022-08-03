@@ -31,7 +31,6 @@ import org.apache.druid.sql.avatica.AvaticaModule;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalcitePlannerModule;
-import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.schema.DruidCalciteSchemaModule;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
@@ -72,7 +71,6 @@ public class SqlModule implements Module
     if (!isEnabled()) {
       return;
     }
-    Calcites.setSystemProperties();
 
     PolyBind.optionBinder(binder, Key.get(ViewManager.class))
             .addBinding(NoopViewManager.TYPE)
