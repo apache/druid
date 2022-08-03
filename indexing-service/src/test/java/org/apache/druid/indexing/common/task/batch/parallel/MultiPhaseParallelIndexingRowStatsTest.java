@@ -108,7 +108,7 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
   }
 
   @Test
-  @Ignore("assumes record rates, to be fixed in separate PR")
+  @Ignore("assumes record rates, to be fixed PR #12852")
   public void testHashPartitionRowStats_concurrentSubTasks_1()
   {
     testHashPartitionRowStats(1);

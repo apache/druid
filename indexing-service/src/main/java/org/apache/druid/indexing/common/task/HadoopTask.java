@@ -50,8 +50,6 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
 {
   private static final Logger log = new Logger(HadoopTask.class);
 
-  // Note: static variables mean that this task cannot run in a shared JVM,
-  // such as the Indexer.
   static final Injector INJECTOR = new StartupInjectorBuilder().withExtensions().build();
   private static final ExtensionsLoader EXTENSIONS_LOADER = ExtensionsLoader.instance(INJECTOR);
 

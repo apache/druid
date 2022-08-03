@@ -24,6 +24,7 @@ import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.inject.Inject;
@@ -59,7 +60,7 @@ public class ExtensionsLoader
   private static final Logger log = new Logger(ExtensionsLoader.class);
 
   private final ExtensionsConfig extensionsConfig;
-  private final ConcurrentHashMap<File, URLClassLoader> loaders = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Pair<File, Boolean>, URLClassLoader> loaders = new ConcurrentHashMap<>();
 
   /**
    * Map of loaded extensions, keyed by class (or interface).
@@ -107,7 +108,7 @@ public class ExtensionsLoader
   }
 
   @VisibleForTesting
-  public Map<File, URLClassLoader> getLoadersMap()
+  public Map<Pair<File, Boolean>, URLClassLoader> getLoadersMap()
   {
     return loaders;
   }
@@ -196,8 +197,8 @@ public class ExtensionsLoader
   public URLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst)
   {
     return loaders.computeIfAbsent(
-        extension,
-        theExtension -> makeClassLoaderForExtension(theExtension, useExtensionClassloaderFirst)
+        Pair.of(extension, useExtensionClassloaderFirst),
+        k -> makeClassLoaderForExtension(k.lhs, k.rhs)
     );
   }
 
@@ -213,7 +214,7 @@ public class ExtensionsLoader
       int i = 0;
       for (File jar : jars) {
         final URL url = jar.toURI().toURL();
-        log.debug("added URL[%s] for extension[%s]", url, extension.getName());
+        log.debug("added URL [%s] for extension [%s]", url, extension.getName());
         urls[i++] = url;
       }
     }

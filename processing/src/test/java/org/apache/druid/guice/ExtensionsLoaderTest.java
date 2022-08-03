@@ -25,6 +25,7 @@ import com.google.common.collect.Sets;
 import com.google.inject.Injector;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -66,7 +67,6 @@ public class ExtensionsLoaderTest
     Assert.assertSame(extnLoader, ExtensionsLoader.instance(startupInjector));
   }
 
-
   @Test
   public void test04DuplicateClassLoaderExtensions() throws Exception
   {
@@ -74,8 +74,9 @@ public class ExtensionsLoaderTest
     Injector startupInjector = startupInjector();
     ExtensionsLoader extnLoader = ExtensionsLoader.instance(startupInjector);
 
+    Pair<File, Boolean> key = Pair.of(extensionDir, true);
     extnLoader.getLoadersMap()
-                  .put(extensionDir, new URLClassLoader(new URL[]{}, ExtensionsLoader.class.getClassLoader()));
+                  .put(key, new URLClassLoader(new URL[]{}, ExtensionsLoader.class.getClassLoader()));
 
     Collection<DruidModule> modules = extnLoader.getFromExtensions(DruidModule.class);
 
