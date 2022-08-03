@@ -72,8 +72,8 @@ public class OutputChannelTest
     );
 
     Assert.assertEquals(1, channel.getPartitionNumber());
-    Assert.assertSame(theChannel, channel.getReadableChannel());
-    Assert.assertSame(theChannel, channel.getWritableChannel());
+    Assert.assertSame(theChannel.readable(), channel.getReadableChannel());
+    Assert.assertSame(theChannel.writable(), channel.getWritableChannel());
     Assert.assertSame(allocator, channel.getFrameMemoryAllocator());
 
     // Use mapWritableChannel to replace the writable channel.
@@ -81,7 +81,7 @@ public class OutputChannelTest
     final OutputChannel mappedChannel = channel.mapWritableChannel(c -> otherWritableChannel);
 
     Assert.assertEquals(1, mappedChannel.getPartitionNumber());
-    Assert.assertSame(theChannel, mappedChannel.getReadableChannel());
+    Assert.assertSame(theChannel.readable(), mappedChannel.getReadableChannel());
     Assert.assertSame(otherWritableChannel, mappedChannel.getWritableChannel());
     Assert.assertSame(allocator, mappedChannel.getFrameMemoryAllocator());
   }
