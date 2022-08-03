@@ -119,16 +119,16 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 |Field|Description|Required|
 |-----|-----------|--------|
 |`type`|Task type. Set the value to `compact`.|Yes|
-|`id`|Task ID.|No|
-|`dataSource`|Data source name to compact.|Yes|
+|`id`|Task ID|No|
+|`dataSource`|Data source name to compact|Yes|
 |`ioConfig`|I/O configuration for compaction task. See [Compaction I/O configuration](#compaction-io-configuration) for details.|Yes|
-|`dimensionsSpec`|Custom `dimensionsSpec`. The compaction task uses the specified `dimensionsSpec` if it exists instead of generating one. See [Compaction dimensionsSpec](#compaction-dimensions-spec) for details.|No|
-|`transformSpec`|Custom `transformSpec`. The compaction task uses the specified `transformSpec` rather than using `null`. See [Compaction transformSpec](#compaction-transform-spec) for details.|No|
-|`metricsSpec`|Custom `metricsSpec`. The compaction task uses the specified `metricsSpec` rather than generating one.|No|
-|`segmentGranularity`|When set, the compaction task changes the segment granularity for the given interval. Deprecated. Use `granularitySpec`. |No|
-|`tuningConfig`|[Parallel indexing task tuningConfig](native-batch.md#tuningconfig). `awaitSegmentAvailabilityTimeoutMillis` in the tuning config is not supported for compaction tasks. Leave this parameter at the default value, 0.|No|
-|`granularitySpec`|Custom `granularitySpec`. The compaction task uses the specified `granularitySpec` rather than generating one. See [Compaction `granularitySpec`](#compaction-granularity-spec) for details.|No|
-|`context`|[Task context](./tasks.md#context).|No|
+|`dimensionsSpec`|When set, the compaction task uses the specified `dimensionsSpec` instead of generating one. See [Compaction dimensionsSpec](#compaction-dimensions-spec) for details.|No|
+|`transformSpec`|When set, the compaction task uses the specified `transformSpec` rather than using `null`. See [Compaction transformSpec](#compaction-transform-spec) for details.|No|
+|`metricsSpec`|When set, the compaction task uses the specified `metricsSpec` rather than generating one.|No|
+|`segmentGranularity`|Deprecated. Use `granularitySpec`.|No|
+|`tuningConfig`|[Tuning configuration](native-batch.md#tuningconfig) for parallel indexing. `awaitSegmentAvailabilityTimeoutMillis` value is not supported for compaction tasks. Leave this parameter at the default value, 0.|No|
+|`granularitySpec`|When set, the compaction task uses the specified `granularitySpec` rather than generating one. See [Compaction `granularitySpec`](#compaction-granularity-spec) for details.|No|
+|`context`|[Task context](./tasks.md#context)|No|
 
 > Note: Use `granularitySpec` over `segmentGranularity` and only set one of these values. If you specify different values for these in the same compaction spec, the task fails.
 
@@ -217,7 +217,7 @@ Druid supports two supported `inputSpec` formats:
 |-----|-----------|--------|
 |`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null', which preserves the original segment granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
 |`queryGranularity`|The resolution of timestamp storage within each segment. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
-|`rollup`|Set the value to `true` to enable compaction-time rollup. Once the data is rolled up, you can no longer recover individual records. Defaults to 'null', which preserves the original setting.|No|
+|`rollup`|Enables compaction-time rollup. To preserve the original setting, keep the default value. To enable compaction-time rollup, set the value to `true`. Once the data is rolled up, you can no longer recover individual records.|No|
 
 ## Learn more
 
