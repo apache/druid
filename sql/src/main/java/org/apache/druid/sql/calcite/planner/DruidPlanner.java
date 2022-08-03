@@ -409,7 +409,8 @@ public class DruidPlanner implements Closeable
     // because no values were provided. (Values are not required in the PREPARE case
     // but now that we're planning, we require them.)
     RelNode parameterized = possiblyLimitedRoot.rel.accept(
-        new RelParameterizerShuttle(plannerContext));
+        new RelParameterizerShuttle(plannerContext)
+    );
     final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
         CalciteRulesManager.DRUID_CONVENTION_RULES,
         planner.getEmptyTraitSet()
