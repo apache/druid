@@ -301,8 +301,6 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
     ));
   }
 
-
-
   @Test
   public void testMinTopNThreshold()
   {
