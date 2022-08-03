@@ -281,7 +281,7 @@ public class TestKafkaExtractionCluster
 
       long start = System.currentTimeMillis();
       while (events == factory.getCompletedEventCount()) {
-        Thread.sleep(100);
+        Thread.sleep(10);
         if (System.currentTimeMillis() > start + 60_000) {
           throw new ISE("Took too long to update event");
         }
