@@ -146,6 +146,7 @@ public class FrameProcessorExecutor
           if (result.isReturn()) {
             succeed(result.value());
           } else {
+            // Don't retain a reference to this set: it may be mutated the next time the processor runs.
             final IntSet await = result.awaitSet();
 
             if (await.isEmpty()) {

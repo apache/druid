@@ -21,7 +21,7 @@ package org.apache.druid.frame.processor;
 
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
-import org.apache.druid.frame.channel.WritableStreamFrameChannel;
+import org.apache.druid.frame.channel.WritableFrameFileChannel;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -77,7 +77,7 @@ public class OutputChannelTest
     Assert.assertSame(allocator, channel.getFrameMemoryAllocator());
 
     // Use mapWritableChannel to replace the writable channel.
-    final WritableStreamFrameChannel otherWritableChannel = new WritableStreamFrameChannel(null);
+    final WritableFrameFileChannel otherWritableChannel = new WritableFrameFileChannel(null);
     final OutputChannel mappedChannel = channel.mapWritableChannel(c -> otherWritableChannel);
 
     Assert.assertEquals(1, mappedChannel.getPartitionNumber());

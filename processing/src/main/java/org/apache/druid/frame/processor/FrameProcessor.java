@@ -55,6 +55,8 @@ public interface FrameProcessor<T>
    * frame to each output channel.
    *
    * @param readableInputs channels from {@link #inputChannels()} that are either finished or ready to read.
+   *                       That is: either {@link ReadableFrameChannel#isFinished()} or
+   *                       {@link ReadableFrameChannel#canRead()} are true.
    *
    * @return either a final return value or a set of input channels to wait for. Must be nonnull.
    */

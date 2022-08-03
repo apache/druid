@@ -29,7 +29,15 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Return value from {@link FrameProcessor#runIncrementally}.
+ * Instances of this class are returned by {@link FrameProcessor#runIncrementally}, and are used by
+ * {@link FrameProcessorExecutor} to manage execution.
+ *
+ * An instance can be a "return" with a result, which means that the {@link FrameProcessor} is done working.
+ * In this case {@link #isReturn()} is true and {@link #value()} contains the result.
+ *
+ * An instance can also be an "await", which means that the {@link FrameProcessor} wants to be scheduled again
+ * in the future. In this case {@link #isAwait()} is true, {@link #awaitSet()} contains the set of input channels to
+ * wait for, and {@link #isAwaitAll()} is whether the processor wants to wait for all channels, or any channel.
  */
 public class ReturnOrAwait<T>
 {
@@ -54,47 +62,74 @@ public class ReturnOrAwait<T>
     }
   }
 
+  /**
+   * Wait for nothing; that is: run again as soon as possible.
+   */
   public static <T> ReturnOrAwait<T> runAgain()
   {
     return new ReturnOrAwait<>(null, IntSets.emptySet(), true);
   }
 
   /**
-   * Wait for all of the provided channels to become readable. It is OK to pass in a mutable set.
+   * Wait for all provided channels to become readable (or finished).
+   *
+   * Numbers in this set correspond to positions in the {@link FrameProcessor#inputChannels()} list.
+   *
+   * It is OK to pass in a mutable set, because this method does not modify the set or retain a reference to it.
    */
   public static <T> ReturnOrAwait<T> awaitAll(final IntSet await)
   {
     return new ReturnOrAwait<>(null, await, true);
   }
 
+  /**
+   * Wait for all of a certain number of channels.
+   */
   public static <T> ReturnOrAwait<T> awaitAll(final int count)
   {
     return new ReturnOrAwait<>(null, rangeSet(count), true);
   }
 
   /**
-   * Wait for any of the provided channels to become readable. It is OK to pass in a mutable set.
+   * Wait for any of the provided channels to become readable (or finished). When using this, callers should consider
+   * removing any fully-processed and finished channels from the await-set, because if any channels in the await-set
+   * are finished, the processor will run again immediately.
+   *
+   * Numbers in this set correspond to positions in the {@link FrameProcessor#inputChannels()} list.
+   *
+   * It is OK to pass in a mutable set, because this method does not modify the set or retain a reference to it.
    */
   public static <T> ReturnOrAwait<T> awaitAny(final IntSet await)
   {
     return new ReturnOrAwait<>(null, await, false);
   }
 
+  /**
+   * Return a result.
+   */
   public static <T> ReturnOrAwait<T> returnObject(final T o)
   {
     return new ReturnOrAwait<>(o, null, false);
   }
 
+  /**
+   * The returned result. Valid if {@link #isReturn()} is true.
+   */
   @Nullable
   public T value()
   {
-    if (isContinue()) {
+    if (isAwait()) {
       throw new ISE("No value yet");
     }
 
     return retVal;
   }
 
+  /**
+   * The set of channels the processors wants to wait for. Valid if {@link #isAwait()} is true.
+   *
+   * Numbers in this set correspond to positions in the {@link FrameProcessor#inputChannels()} list.
+   */
   public IntSet awaitSet()
   {
     if (isReturn()) {
@@ -104,19 +139,32 @@ public class ReturnOrAwait<T>
     return await;
   }
 
-  public boolean isAwaitAll()
-  {
-    return awaitAll;
-  }
-
+  /**
+   * Whether the processor has returned a value.
+   *
+   * This is the opposite of {@link #isAwait()}.
+   */
   public boolean isReturn()
   {
     return await == null;
   }
 
-  public boolean isContinue()
+  /**
+   * Whether the processor wants to be scheduled again.
+   *
+   * This is the opposite of {@link #isReturn()}.
+   */
+  public boolean isAwait()
   {
     return await != null;
+  }
+
+  /**
+   * Whether the processor wants to wait for all channels in {@link #awaitSet()} (true), or any channel (false)
+   */
+  public boolean isAwaitAll()
+  {
+    return awaitAll;
   }
 
   @Override
@@ -129,10 +177,7 @@ public class ReturnOrAwait<T>
       return false;
     }
     ReturnOrAwait<?> that = (ReturnOrAwait<?>) o;
-    return awaitAll == that.awaitAll && Objects.equals(retVal, that.retVal) && Objects.equals(
-        await,
-        that.await
-    );
+    return awaitAll == that.awaitAll && Objects.equals(retVal, that.retVal) && Objects.equals(await, that.await);
   }
 
   @Override
@@ -144,7 +189,7 @@ public class ReturnOrAwait<T>
   @Override
   public String toString()
   {
-    if (isContinue()) {
+    if (isAwait()) {
       return "await=" + (awaitAll ? "all" : "any") + await;
     } else {
       return "return=" + retVal;

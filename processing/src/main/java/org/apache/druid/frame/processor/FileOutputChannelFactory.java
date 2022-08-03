@@ -24,7 +24,7 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
-import org.apache.druid.frame.channel.WritableStreamFrameChannel;
+import org.apache.druid.frame.channel.WritableFrameFileChannel;
 import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.java.util.common.FileUtils;
@@ -39,7 +39,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 /**
- * An {@link OutputChannelFactory} that generates {@link WritableStreamFrameChannel} backed by {@link FrameFileWriter}.
+ * An {@link OutputChannelFactory} that generates {@link WritableFrameFileChannel} backed by {@link FrameFileWriter}.
  */
 public class FileOutputChannelFactory implements OutputChannelFactory
 {
@@ -60,8 +60,8 @@ public class FileOutputChannelFactory implements OutputChannelFactory
     final String fileName = StringUtils.format("part_%06d_%s", partitionNumber, UUID.randomUUID().toString());
     final File file = new File(fileChannelsDirectory, fileName);
 
-    final WritableStreamFrameChannel writableChannel =
-        new WritableStreamFrameChannel(
+    final WritableFrameFileChannel writableChannel =
+        new WritableFrameFileChannel(
             FrameFileWriter.open(
                 Files.newByteChannel(
                     file.toPath(),

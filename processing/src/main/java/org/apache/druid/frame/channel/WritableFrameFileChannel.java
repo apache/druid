@@ -28,11 +28,11 @@ import java.io.IOException;
 /**
  * Frame channel backed by a {@link FrameFileWriter}.
  */
-public class WritableStreamFrameChannel implements WritableFrameChannel
+public class WritableFrameFileChannel implements WritableFrameChannel
 {
   private final FrameFileWriter writer;
 
-  public WritableStreamFrameChannel(final FrameFileWriter writer)
+  public WritableFrameFileChannel(final FrameFileWriter writer)
   {
     this.writer = writer;
   }

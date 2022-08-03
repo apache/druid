@@ -30,7 +30,7 @@ import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.channel.WritableStreamFrameChannel;
+import org.apache.druid.frame.channel.WritableFrameFileChannel;
 import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.key.ClusterBy;
@@ -614,7 +614,7 @@ public class SuperSorterTest
       final File file = new File(tmpDir, StringUtils.format("channel-%d", i));
       files.add(file);
       writableChannels.add(
-          new WritableStreamFrameChannel(FrameFileWriter.open(Channels.newChannel(new FileOutputStream(file)), null))
+          new WritableFrameFileChannel(FrameFileWriter.open(Channels.newChannel(new FileOutputStream(file)), null))
       );
     }
 

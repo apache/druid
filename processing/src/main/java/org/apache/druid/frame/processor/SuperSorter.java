@@ -43,7 +43,7 @@ import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.channel.WritableStreamFrameChannel;
+import org.apache.druid.frame.channel.WritableFrameFileChannel;
 import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.key.ClusterBy;
@@ -621,7 +621,7 @@ public class SuperSorter
         frameAllocator = outputChannel.getFrameMemoryAllocator();
       } else {
         frameAllocator = innerFrameAllocatorMaker.get();
-        writableChannel = new WritableStreamFrameChannel(
+        writableChannel = new WritableFrameFileChannel(
             FrameFileWriter.open(
                 Files.newByteChannel(
                     mergerOutputFile(level, rank).toPath(),

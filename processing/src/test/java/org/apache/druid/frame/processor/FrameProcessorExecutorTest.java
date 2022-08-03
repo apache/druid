@@ -30,7 +30,7 @@ import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
-import org.apache.druid.frame.channel.WritableStreamFrameChannel;
+import org.apache.druid.frame.channel.WritableFrameFileChannel;
 import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.processor.test.ChompingFrameProcessor;
@@ -133,7 +133,7 @@ public class FrameProcessorExecutorTest
 
       final FrameChannelMuxer muxer = new FrameChannelMuxer(
           ImmutableList.of(memoryChannel1.readable(), memoryChannel2.readable()),
-          new WritableStreamFrameChannel(
+          new WritableFrameFileChannel(
               FrameFileWriter.open(
                   Channels.newChannel(Files.newOutputStream(outFile.toPath())),
                   null

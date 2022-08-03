@@ -132,8 +132,8 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   @Test
   public void test_rowBased_unsupportedSortColumnType()
   {
-    // Register, but don't unregister, because many other tests out there expect this to exist even though they
-    // don't explicitly register it.
+    // Register, but don't unregister at the end of this test, because many other tests out there expect this to exist
+    // even though they don't explicitly register it.
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     final IllegalArgumentException e = Assert.assertThrows(

@@ -41,7 +41,7 @@ public class AwaitAnyWidget
   private final List<ReadableFrameChannel> channels;
 
   @GuardedBy("listeners")
-  private final List<Listener> listeners;
+  private final List<ChannelListener> listeners;
 
   public AwaitAnyWidget(final List<ReadableFrameChannel> channels)
   {
@@ -53,9 +53,16 @@ public class AwaitAnyWidget
     }
   }
 
+  /**
+   * Returns a future that resolves when any channel in the provided set is ready for reading.
+   *
+   * Numbers in this set correspond to positions in the {@link #channels} list.
+   */
   public ListenableFuture<?> awaitAny(final IntSet awaitSet)
   {
     synchronized (listeners) {
+      // Will be set to null when any channel is ready. We use null because the specific value doesn't matter:
+      // the purpose of this future is just to allow waiting and serve as a signal.
       final SettableFuture<?> retVal = SettableFuture.create();
 
       final IntIterator awaitSetIterator = awaitSet.iterator();
@@ -67,9 +74,9 @@ public class AwaitAnyWidget
           retVal.set(null);
           return retVal;
         } else {
-          final Listener priorListener = listeners.get(channelNumber);
+          final ChannelListener priorListener = listeners.get(channelNumber);
           if (priorListener == null || !priorListener.replaceFuture(retVal)) {
-            final Listener newListener = new Listener(retVal);
+            final ChannelListener newListener = new ChannelListener(retVal);
             channel.readabilityFuture().addListener(newListener, Execs.directExecutor());
             listeners.set(channelNumber, newListener);
           }
@@ -80,12 +87,12 @@ public class AwaitAnyWidget
     }
   }
 
-  private static class Listener implements Runnable
+  private static class ChannelListener implements Runnable
   {
     @GuardedBy("this")
     private SettableFuture<?> future;
 
-    public Listener(SettableFuture<?> future)
+    public ChannelListener(SettableFuture<?> future)
     {
       this.future = future;
     }
