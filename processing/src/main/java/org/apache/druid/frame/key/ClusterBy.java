@@ -82,9 +82,11 @@ public class ClusterBy
    * rows in a given partition will have the exact same bucket key. It is most commonly used to implement
    * segment granularity during ingestion.
    *
+   * The bucket key is a prefix of the complete key.
+   *
    * Will always be less than, or equal to, the size of {@link #getColumns()}.
    *
-   * Not relevant when a ClusterBy instance is used as an ordering key.
+   * Not relevant when a ClusterBy instance is used as an ordering key rather than a partitioning key.
    */
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)

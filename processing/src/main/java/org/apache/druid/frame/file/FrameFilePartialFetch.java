@@ -28,6 +28,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Response object for {@link FrameFileHttpResponseHandler}.
+ *
+ * The handler mutates this object on each chunk of a chunked response. When the response is done, this object
+ * is returned to the caller.
  */
 public class FrameFilePartialFetch
 {

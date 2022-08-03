@@ -91,9 +91,8 @@ public class ClusterByPartition
     return Objects.hash(start, end);
   }
 
-  @Override
   public String toString()
   {
-    return "{" + start + " -> " + end + "}";
+    return "[" + start + ", " + end + ")";
   }
 }

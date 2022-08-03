@@ -56,10 +56,9 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   @GuardedBy("lock")
   private boolean inputStreamError = false;
 
-  private volatile boolean readingStarted = false;
   private volatile boolean keepReading = true;
 
-  private ExecutorService executorService;
+  private final ExecutorService executorService;
 
   /**
    * Parameter for manipulating retry sleep duration
@@ -71,92 +70,37 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
    */
   private static final int MAX_SLEEP_MILLIS = 2000;
 
-
-  public ReadableInputStreamFrameChannel(InputStream inputStream, String id, ExecutorService executorService)
+  /**
+   * Private because outside callers use {@link #open}.
+   */
+  private ReadableInputStreamFrameChannel(
+      final InputStream inputStream,
+      final ReadableByteChunksFrameChannel delegate,
+      final ExecutorService executorService
+  )
   {
     this.inputStream = inputStream;
-    this.delegate = ReadableByteChunksFrameChannel.create(id);
+    this.delegate = delegate;
     this.executorService = executorService;
   }
 
   /**
-   * Method needs to be called for reading of input streams into ByteChunksFrameChannel
+   * Create an instance of this class and immediately start reading from the provided InputStream.
    */
-  public void startReading()
+  public static ReadableInputStreamFrameChannel open(
+      InputStream inputStream,
+      String id,
+      ExecutorService executorService
+  )
   {
-    // submit the reading task to the executor service only once
-    if (readingStarted) {
-      return;
-    } else {
-      synchronized (lock) {
-        if (readingStarted) {
-          return;
-        }
-        readingStarted = true;
-      }
-      executorService.submit(() -> {
-        int nTry = 1;
-        while (true) {
-          if (!keepReading) {
-            try {
-              Thread.sleep(nextRetrySleepMillis(nTry));
-              synchronized (lock) {
-                if (inputStreamFinished || inputStreamError || delegate.isErrorOrFinished()) {
-                  return;
-                }
-              }
-              ++nTry;
-            }
-            catch (InterruptedException e) {
-              // close inputstream anyway if the thread interrups
-              IOUtils.closeQuietly(inputStream);
-              throw new ISE(e, Thread.currentThread().getName() + "interrupted");
-            }
+    final ReadableInputStreamFrameChannel channel = new ReadableInputStreamFrameChannel(
+        inputStream,
+        ReadableByteChunksFrameChannel.create(id),
+        executorService
+    );
 
-          } else {
-            synchronized (lock) {
-              nTry = 1; // Reset the value of try because we are not waiting on the data from the inputStream
-              // if done reading method is called we should not read input stream further
-              if (inputStreamFinished) {
-                delegate.doneWriting();
-                break;
-              }
-              try {
-
-                int bytesRead = inputStream.read(buffer);
-                if (bytesRead == -1) {
-                  inputStreamFinished = true;
-                  delegate.doneWriting();
-                  break;
-                } else {
-                  ListenableFuture<?> backpressureFuture = delegate.addChunk(Arrays.copyOfRange(buffer, 0, bytesRead));
-                  totalInputStreamBytesRead += bytesRead;
-                  if (backpressureFuture != null) {
-                    keepReading = false;
-                    backpressureFuture.addListener(() -> keepReading = true, Execs.directExecutor());
-                  } else {
-                    keepReading = true;
-                    // continue adding data to delegate
-                    // give up lock so that other threads have a change to do some work
-                  }
-                }
-              }
-              catch (Exception e) {
-                //handle exception
-                long currentStreamOffset = totalInputStreamBytesRead;
-                delegate.setError(new ISE(e,
-                                          "Found error while reading input stream at %d", currentStreamOffset
-                ));
-                inputStreamError = true;
-                // close the stream in case done reading is not called.
-                IOUtils.closeQuietly(inputStream);
-                break;
-              }
-            }
-          }
-        }
-      });
-    }
+    channel.startReading();
+    return channel;
   }
 
   @Override
@@ -171,9 +115,6 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   public boolean canRead()
   {
     synchronized (lock) {
-      if (!readingStarted) {
-        throw new ISE("Please call startReading method before calling canRead()");
-      }
       return delegate.canRead();
     }
   }
@@ -182,9 +123,6 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   public Frame read()
   {
     synchronized (lock) {
-      if (!readingStarted) {
-        throw new ISE("Please call startReading method before calling read");
-      }
       return delegate.read();
     }
   }
@@ -193,13 +131,9 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   public ListenableFuture<?> readabilityFuture()
   {
     synchronized (lock) {
-      if (!readingStarted) {
-        throw new ISE("Please call startReading method before calling readabilityFuture()");
-      }
       return delegate.readabilityFuture();
     }
   }
-
 
   @Override
   public void close()
@@ -209,6 +143,72 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
       delegate.close();
       IOUtils.closeQuietly(inputStream);
     }
+  }
+
+  private void startReading()
+  {
+    executorService.submit(() -> {
+      int nTry = 1;
+      while (true) {
+        if (!keepReading) {
+          try {
+            Thread.sleep(nextRetrySleepMillis(nTry));
+            synchronized (lock) {
+              if (inputStreamFinished || inputStreamError || delegate.isErrorOrFinished()) {
+                return;
+              }
+            }
+            ++nTry;
+          }
+          catch (InterruptedException e) {
+            // close inputstream anyway if the thread interrups
+            IOUtils.closeQuietly(inputStream);
+            throw new ISE(e, Thread.currentThread().getName() + "interrupted");
+          }
+
+        } else {
+          synchronized (lock) {
+            nTry = 1; // Reset the value of try because we are not waiting on the data from the inputStream
+            // if done reading method is called we should not read input stream further
+            if (inputStreamFinished) {
+              delegate.doneWriting();
+              break;
+            }
+            try {
+
+              int bytesRead = inputStream.read(buffer);
+              if (bytesRead == -1) {
+                inputStreamFinished = true;
+                delegate.doneWriting();
+                break;
+              } else {
+                ListenableFuture<?> backpressureFuture = delegate.addChunk(Arrays.copyOfRange(buffer, 0, bytesRead));
+                totalInputStreamBytesRead += bytesRead;
+                if (backpressureFuture != null) {
+                  keepReading = false;
+                  backpressureFuture.addListener(() -> keepReading = true, Execs.directExecutor());
+                } else {
+                  keepReading = true;
+                  // continue adding data to delegate
+                  // give up lock so that other threads have a change to do some work
+                }
+              }
+            }
+            catch (Exception e) {
+              //handle exception
+              long currentStreamOffset = totalInputStreamBytesRead;
+              delegate.setError(new ISE(e,
+                                        "Found error while reading input stream at %d", currentStreamOffset
+              ));
+              inputStreamError = true;
+              // close the stream in case done reading is not called.
+              IOUtils.closeQuietly(inputStream);
+              break;
+            }
+          }
+        }
+      }
+    });
   }
 
   /**
@@ -222,5 +222,4 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
                                      * fuzzyMultiplier);
     return sleepMillis;
   }
-
 }

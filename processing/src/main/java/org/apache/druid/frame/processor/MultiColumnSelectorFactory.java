@@ -37,6 +37,10 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.function.Supplier;
 
+/**
+ * A {@link ColumnSelectorFactory} that wraps multiple {@link ColumnSelectorFactory} and delegates to one of
+ * them at any given time. The identity of the delegated-to factory is changed by calling {@link #setCurrentFactory}.
+ */
 public class MultiColumnSelectorFactory implements ColumnSelectorFactory
 {
   private final List<Supplier<ColumnSelectorFactory>> factorySuppliers;

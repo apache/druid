@@ -68,13 +68,12 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
   public void testSimpleFrameFile()
   {
     InputStream inputStream = getInputStream();
-    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = new ReadableInputStreamFrameChannel(
+    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         inputStream,
         "readSimpleFrameFile",
         executorService
     );
 
-    readableInputStreamFrameChannel.startReading();
     FrameTestUtil.assertRowsEqual(
         FrameTestUtil.readRowsFromAdapter(adapter, null, false),
         FrameTestUtil.readRowsFromFrameChannel(
@@ -92,13 +91,11 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
   public void testEmptyFrameFile() throws IOException
   {
     final File file = FrameTestUtil.writeFrameFile(Sequences.empty(), temporaryFolder.newFile());
-    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = new ReadableInputStreamFrameChannel(
+    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         Files.newInputStream(file.toPath()),
         "readEmptyFrameFile",
         executorService
     );
-
-    readableInputStreamFrameChannel.startReading();
 
     Assert.assertEquals(FrameTestUtil.readRowsFromFrameChannel(
         readableInputStreamFrameChannel,
@@ -116,13 +113,11 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     outputStream.write(new byte[0]);
     outputStream.close();
 
-    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = new ReadableInputStreamFrameChannel(
+    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         Files.newInputStream(file.toPath()),
         "testZeroBytesFrameFile",
         executorService
     );
-
-    readableInputStreamFrameChannel.startReading();
 
     final IllegalStateException e = Assert.assertThrows(
         IllegalStateException.class,
@@ -163,13 +158,11 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     }
 
 
-    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = new ReadableInputStreamFrameChannel(
+    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         new ByteArrayInputStream(truncatedFile),
         "readTruncatedFrameFile",
         executorService
     );
-
-    readableInputStreamFrameChannel.startReading();
 
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Incomplete or missing frame at end of stream");
@@ -190,13 +183,11 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     outputStream.write(10);
     outputStream.close();
 
-    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = new ReadableInputStreamFrameChannel(
+    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         Files.newInputStream(file.toPath()),
         "readIncorrectFrameFile",
         executorService
     );
-
-    readableInputStreamFrameChannel.startReading();
 
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Incomplete or missing frame at end of stream");
@@ -215,13 +206,12 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
   public void closeInputStreamWhileReading() throws IOException
   {
     InputStream inputStream = getInputStream();
-    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = new ReadableInputStreamFrameChannel(
+    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         inputStream,
         "closeInputStreamWhileReading",
         executorService
     );
     inputStream.close();
-    readableInputStreamFrameChannel.startReading();
 
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Found error while reading input stream");
@@ -236,19 +226,17 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     readableInputStreamFrameChannel.close();
   }
 
-
   @Test
   public void closeInputStreamWhileReadingCheckError() throws IOException, InterruptedException
   {
     InputStream inputStream = getInputStream();
-    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = new ReadableInputStreamFrameChannel(
+    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         inputStream,
         "closeInputStreamWhileReadingCheckError",
         executorService
     );
 
     inputStream.close();
-    readableInputStreamFrameChannel.startReading();
 
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Found error while reading input stream");
@@ -261,53 +249,6 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     readableInputStreamFrameChannel.close();
   }
 
-  @Test
-  public void testInvalidStateCanRead()
-  {
-    InputStream inputStream = getInputStream();
-    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = new ReadableInputStreamFrameChannel(
-        inputStream,
-        "testInvalidStateCanRead",
-        executorService
-    );
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Please call startReading method");
-    readableInputStreamFrameChannel.canRead();
-    readableInputStreamFrameChannel.close();
-  }
-
-
-  @Test
-  public void testInvalidStateRead()
-  {
-    InputStream inputStream = getInputStream();
-    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = new ReadableInputStreamFrameChannel(
-        inputStream,
-        "testInvalidStateRead",
-        executorService
-    );
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Please call startReading method");
-    readableInputStreamFrameChannel.read();
-    readableInputStreamFrameChannel.close();
-  }
-
-
-  @Test
-  public void testInvalidStateReadabilityFuture()
-  {
-    InputStream inputStream = getInputStream();
-    ReadableInputStreamFrameChannel readableInputStreamFrameChannel = new ReadableInputStreamFrameChannel(
-        inputStream,
-        "testInvalidStateReadabilityFuture",
-        executorService
-    );
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Please call startReading method");
-    readableInputStreamFrameChannel.readabilityFuture();
-    readableInputStreamFrameChannel.close();
-  }
-
   private InputStream getInputStream()
   {
     try {
@@ -315,11 +256,10 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
           FrameSequenceBuilder.fromAdapter(adapter).maxRowsPerFrame(10).frameType(FrameType.ROW_BASED).frames(),
           temporaryFolder.newFile()
       );
-      return new FileInputStream(file);
+      return Files.newInputStream(file.toPath());
     }
     catch (IOException e) {
       throw new ISE(e, "Unable to create file input stream");
     }
   }
-
 }
