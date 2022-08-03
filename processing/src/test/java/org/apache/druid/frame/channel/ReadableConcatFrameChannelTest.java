@@ -48,9 +48,9 @@ public class ReadableConcatFrameChannelTest extends InitializedNullHandlingTest
     final List<ReadableFrameChannel> channels = new ArrayList<>();
     for (final Frame frame : frames) {
       final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();
-      channel.write(frame);
-      channel.doneWriting();
-      channels.add(channel);
+      channel.writable().write(frame);
+      channel.writable().close();
+      channels.add(channel.readable());
 
       // Sprinkle in some empty channels too, to make sure they work.
       channels.add(ReadableNilFrameChannel.INSTANCE);

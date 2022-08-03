@@ -95,10 +95,10 @@ public class ReadableConcatFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public void doneReading()
+  public void close()
   {
     if (currentChannel != null) {
-      currentChannel.doneReading();
+      currentChannel.close();
     }
   }
 

@@ -53,7 +53,10 @@ public class OutputChannelTest
     );
 
     // Mapping the writable channel of a nil channel has no effect, because there is no writable channel.
-    Assert.assertSame(channel, channel.mapWritableChannel(c -> BlockingQueueFrameChannel.minimal()));
+    Assert.assertSame(
+        channel,
+        channel.mapWritableChannel(c -> BlockingQueueFrameChannel.minimal().writable())
+    );
   }
 
   @Test
@@ -62,9 +65,9 @@ public class OutputChannelTest
     final BlockingQueueFrameChannel theChannel = BlockingQueueFrameChannel.minimal();
     final HeapMemoryAllocator allocator = HeapMemoryAllocator.unlimited();
     final OutputChannel channel = OutputChannel.pair(
-        theChannel,
+        theChannel.writable(),
         allocator,
-        () -> theChannel,
+        theChannel::readable,
         1
     );
 

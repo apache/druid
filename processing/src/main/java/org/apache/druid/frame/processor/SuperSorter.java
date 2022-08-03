@@ -418,7 +418,7 @@ public class SuperSorter
               inputChannelsToRead = keepReading;
 
               if (inputChannelsToRead.isEmpty()) {
-                inputChannels.forEach(ReadableFrameChannel::doneReading);
+                inputChannels.forEach(ReadableFrameChannel::close);
                 setTotalInputFrames(inputFramesReadSoFar);
                 runWorkersIfPossible();
               } else if (inputBuffer.size() >= maxChannelsPerProcessor) {
@@ -824,12 +824,12 @@ public class SuperSorter
     if (!inputChannelsToRead.isEmpty()) {
       for (final ReadableFrameChannel inputChannel : inputChannels) {
         CloseableUtils.closeAndSuppressExceptions(
-            inputChannel::doneReading,
+            inputChannel::close,
             e -> log.warn(e, "Could not close input channel")
         );
       }
 
-      inputChannels.forEach(ReadableFrameChannel::doneReading);
+      inputChannels.forEach(ReadableFrameChannel::close);
     }
 
     inputChannelsToRead.clear();
@@ -860,9 +860,14 @@ public class SuperSorter
 
   private static ReadableFrameChannel singleReadableFrameChannel(final FrameWithPartition frame)
   {
-    final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();
-    channel.write(frame);
-    channel.doneWriting();
-    return channel;
+    try {
+      final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();
+      channel.writable().write(frame);
+      channel.writable().close();
+      return channel.readable();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

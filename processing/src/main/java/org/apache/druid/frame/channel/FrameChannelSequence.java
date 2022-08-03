@@ -87,7 +87,7 @@ public class FrameChannelSequence extends BaseSequence<Frame, FrameChannelSequen
     @Override
     public void close()
     {
-      channel.doneReading();
+      channel.close();
     }
 
     private void await()

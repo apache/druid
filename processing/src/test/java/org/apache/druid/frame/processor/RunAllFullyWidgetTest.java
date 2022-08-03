@@ -162,15 +162,15 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                            final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();
 
                            try {
-                             channel.write(frame);
-                             channel.doneWriting();
+                             channel.writable().write(frame);
+                             channel.writable().close();
                            }
                            catch (IOException e) {
                              throw new RuntimeException(e);
                            }
 
                            return new ConcurrencyTrackingFrameProcessor<>(
-                               new ChompingFrameProcessor(Collections.singletonList(channel))
+                               new ChompingFrameProcessor(Collections.singletonList(channel.readable()))
                            );
                          }
                      )
@@ -200,7 +200,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                                    new ConcurrencyTrackingFrameProcessor<>(
                                        new FailingFrameProcessor(
                                            ReadableNilFrameChannel.INSTANCE,
-                                           BlockingQueueFrameChannel.minimal(),
+                                           BlockingQueueFrameChannel.minimal().writable(),
                                            0
                                        )
                                    )

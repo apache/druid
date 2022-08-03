@@ -116,7 +116,7 @@ public class ReadableByteChunksFrameChannelTest
       }
 
       Assert.assertTrue(channel.isFinished());
-      channel.doneReading();
+      channel.close();
     }
 
     @Test
@@ -311,14 +311,14 @@ public class ReadableByteChunksFrameChannelTest
           // Read one frame every 3 iterations. Read everything every 11 iterations. Otherwise, read nothing.
           if (iteration % 3 == 0) {
             while (channel.canRead()) {
-              outChannel.write(channel.read());
+              outChannel.writable().write(channel.read());
             }
 
             // After reading everything, backpressure should be off.
             Assert.assertTrue(backpressureFuture == null || backpressureFuture.isDone());
           } else if (iteration % 11 == 0) {
             if (channel.canRead()) {
-              outChannel.write(channel.read());
+              outChannel.writable().write(channel.read());
             }
           }
 
@@ -347,15 +347,15 @@ public class ReadableByteChunksFrameChannelTest
 
         // Get all the remaining frames.
         while (channel.canRead()) {
-          outChannel.write(channel.read());
+          outChannel.writable().write(channel.read());
         }
 
-        outChannel.doneWriting();
+        outChannel.writable().close();
       }
 
       FrameTestUtil.assertRowsEqual(
           FrameTestUtil.readRowsFromAdapter(adapter, null, false),
-          FrameTestUtil.readRowsFromFrameChannel(outChannel, FrameReader.create(adapter.getRowSignature()))
+          FrameTestUtil.readRowsFromFrameChannel(outChannel.readable(), FrameReader.create(adapter.getRowSignature()))
       );
     }
 

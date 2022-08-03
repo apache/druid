@@ -127,12 +127,12 @@ public class FrameProcessorExecutorTest
 
       final SuperBlasterFrameProcessor blaster = new SuperBlasterFrameProcessor(
           inFiles.stream().map(FrameProcessorExecutorTest::openFileChannel).collect(Collectors.toList()),
-          ImmutableList.of(memoryChannel1, memoryChannel2),
+          ImmutableList.of(memoryChannel1.writable(), memoryChannel2.writable()),
           awaitStyle
       );
 
       final FrameChannelMuxer muxer = new FrameChannelMuxer(
-          ImmutableList.of(memoryChannel1, memoryChannel2),
+          ImmutableList.of(memoryChannel1.readable(), memoryChannel2.readable()),
           new WritableStreamFrameChannel(
               FrameFileWriter.open(
                   Channels.newChannel(Files.newOutputStream(outFile.toPath())),
@@ -186,7 +186,7 @@ public class FrameProcessorExecutorTest
       final ReadableFrameChannel inChannel = openFileChannel(inFile);
       final BlockingQueueFrameChannel outChannel = BlockingQueueFrameChannel.minimal();
 
-      final FailingFrameProcessor failer = new FailingFrameProcessor(inChannel, outChannel, 0);
+      final FailingFrameProcessor failer = new FailingFrameProcessor(inChannel, outChannel.writable(), 0);
       final ListenableFuture<Long> failerFuture = exec.runFully(failer, null);
 
       final ExecutionException e = Assert.assertThrows(
@@ -199,14 +199,15 @@ public class FrameProcessorExecutorTest
           ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("failure!"))
       );
 
-      Assert.assertTrue(outChannel.canRead());
+      final ReadableFrameChannel outReadableChannel = outChannel.readable();
+      Assert.assertTrue(outReadableChannel.canRead());
 
       Assert.assertThrows(
           IllegalStateException.class,
-          outChannel::read
+          outReadableChannel::read
       );
 
-      Assert.assertTrue(outChannel.isFinished()); // Finished now that we read the error
+      Assert.assertTrue(outReadableChannel.isFinished()); // Finished now that we read the error
     }
 
     @Test
@@ -292,8 +293,8 @@ public class FrameProcessorExecutorTest
 
         for (int i = 0; i < numGeneratorsPerSystem; i++) {
           final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();
-          generators.add(new InfiniteFrameProcessor(frame, channel));
-          channels.add(channel);
+          generators.add(new InfiniteFrameProcessor(frame, channel.writable()));
+          channels.add(channel.readable());
         }
 
         final ChompingFrameProcessor chomper = new ChompingFrameProcessor(channels);

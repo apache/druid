@@ -62,8 +62,8 @@ public interface FrameProcessor<T>
 
   /**
    * Cleans up resources used by this worker, including signalling to input and output channels that we are
-   * done reading and writing, via {@link ReadableFrameChannel#doneReading()} and
-   * {@link WritableFrameChannel#doneWriting()}.
+   * done reading and writing, via {@link ReadableFrameChannel#close()} and
+   * {@link WritableFrameChannel#close()}.
    *
    * This method may be called before the worker reports completion via {@link #runIncrementally}, especially in
    * cases of cancellation.

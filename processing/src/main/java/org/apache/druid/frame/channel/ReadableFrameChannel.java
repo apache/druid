@@ -22,6 +22,8 @@ package org.apache.druid.frame.channel;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.Frame;
 
+import java.io.Closeable;
+
 /**
  * Interface for reading a sequence of frames. Supports nonblocking reads through the {@link #canRead()} and
  * {@link #readabilityFuture()} methods.
@@ -30,12 +32,12 @@ import org.apache.druid.frame.Frame;
  *
  * Channels implementing this interface are used by a single reader; they do not support concurrent reads.
  */
-public interface ReadableFrameChannel
+public interface ReadableFrameChannel extends Closeable
 {
   /**
    * Returns whether this channel is finished. Finished channels will not generate any further frames or errors.
    *
-   * Generally, once you discover that a channel is finished, you should call {@link #doneReading()} and then
+   * Generally, once you discover that a channel is finished, you should call {@link #close()} and then
    * discard it.
    *
    * Note that it is possible for a channel to be unfinished and also have no available frames or errors. This happens
@@ -73,5 +75,6 @@ public interface ReadableFrameChannel
    * Releases any resources associated with this readable channel. After calling this, you should not call any other
    * methods on the channel.
    */
-  void doneReading();
+  @Override
+  void close();
 }

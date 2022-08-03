@@ -22,6 +22,7 @@ package org.apache.druid.frame.channel;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.Frame;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 /**
@@ -32,7 +33,7 @@ import java.io.IOException;
  *
  * Channels implementing this interface are used by a single writer; they do not support concurrent writes.
  */
-public interface WritableFrameChannel
+public interface WritableFrameChannel extends Closeable
 {
   /**
    * Writes a frame with an attached partition number.
@@ -52,16 +53,20 @@ public interface WritableFrameChannel
   }
 
   /**
-   * Finish writing to this channel, unsuccessfully. Must be followed by a call to {@link #doneWriting()}.
+   * Called prior to {@link #close()} if the writer has failed. Must be followed by a call to {@link #close()}.
    */
   void fail() throws IOException;
 
   /**
    * Finish writing to this channel.
    *
+   * When this method is called without {@link #fail()} having previously been called, the writer is understood to have
+   * completed successfully.
+   *
    * After calling this method, no additional calls to {@link #write}, {@link #fail()}, or this method are permitted.
    */
-  void doneWriting() throws IOException;
+  @Override
+  void close() throws IOException;
 
   /**
    * Returns a future that resolves when {@link #write} is able to receive a new frame without blocking or throwing

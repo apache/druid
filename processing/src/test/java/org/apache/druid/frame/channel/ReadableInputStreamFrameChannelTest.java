@@ -83,7 +83,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         )
     );
     Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
-    readableInputStreamFrameChannel.doneReading();
+    readableInputStreamFrameChannel.close();
 
   }
 
@@ -105,7 +105,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         FrameReader.create(adapter.getRowSignature())
     ).toList().size(), 0);
     Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
-    readableInputStreamFrameChannel.doneReading();
+    readableInputStreamFrameChannel.close();
   }
 
   @Test
@@ -179,7 +179,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         FrameReader.create(adapter.getRowSignature())
     ).toList().size(), 0);
     Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
-    readableInputStreamFrameChannel.doneReading();
+    readableInputStreamFrameChannel.close();
   }
 
   @Test
@@ -206,7 +206,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         FrameReader.create(adapter.getRowSignature())
     ).toList().size(), 0);
     Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
-    readableInputStreamFrameChannel.doneReading();
+    readableInputStreamFrameChannel.close();
 
   }
 
@@ -233,7 +233,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         )
     );
     Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
-    readableInputStreamFrameChannel.doneReading();
+    readableInputStreamFrameChannel.close();
   }
 
 
@@ -258,7 +258,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     }
     readableInputStreamFrameChannel.read();
     Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
-    readableInputStreamFrameChannel.doneReading();
+    readableInputStreamFrameChannel.close();
   }
 
   @Test
@@ -273,7 +273,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Please call startReading method");
     readableInputStreamFrameChannel.canRead();
-    readableInputStreamFrameChannel.doneReading();
+    readableInputStreamFrameChannel.close();
   }
 
 
@@ -289,7 +289,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Please call startReading method");
     readableInputStreamFrameChannel.read();
-    readableInputStreamFrameChannel.doneReading();
+    readableInputStreamFrameChannel.close();
   }
 
 
@@ -305,7 +305,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Please call startReading method");
     readableInputStreamFrameChannel.readabilityFuture();
-    readableInputStreamFrameChannel.doneReading();
+    readableInputStreamFrameChannel.close();
   }
 
   private InputStream getInputStream()

@@ -61,7 +61,7 @@ public class ReadableNilFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public void doneReading()
+  public void close()
   {
     // Nothing to do.
   }

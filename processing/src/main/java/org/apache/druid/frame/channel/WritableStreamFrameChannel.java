@@ -50,7 +50,7 @@ public class WritableStreamFrameChannel implements WritableFrameChannel
   }
 
   @Override
-  public void doneWriting() throws IOException
+  public void close() throws IOException
   {
     writer.close();
   }

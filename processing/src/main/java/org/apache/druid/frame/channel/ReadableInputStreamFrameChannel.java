@@ -202,11 +202,11 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
 
 
   @Override
-  public void doneReading()
+  public void close()
   {
     synchronized (lock) {
       inputStreamFinished = true;
-      delegate.doneReading();
+      delegate.close();
       IOUtils.closeQuietly(inputStream);
     }
   }

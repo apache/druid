@@ -113,13 +113,13 @@ public class SuperSorterTest
     public void testSingleEmptyInputChannel() throws Exception
     {
       final BlockingQueueFrameChannel inputChannel = BlockingQueueFrameChannel.minimal();
-      inputChannel.doneWriting();
+      inputChannel.writable().close();
 
       final SettableFuture<ClusterByPartitions> outputPartitionsFuture = SettableFuture.create();
       final SuperSorterProgressTracker superSorterProgressTracker = new SuperSorterProgressTracker();
 
       final SuperSorter superSorter = new SuperSorter(
-          Collections.singletonList(inputChannel),
+          Collections.singletonList(inputChannel.readable()),
           FrameReader.create(RowSignature.empty()),
           ClusterBy.none(),
           outputPartitionsFuture,
@@ -141,7 +141,7 @@ public class SuperSorterTest
       final ReadableFrameChannel channel = Iterables.getOnlyElement(channels.getAllChannels()).getReadableChannel();
       Assert.assertTrue(channel.isFinished());
       Assert.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
-      channel.doneReading();
+      channel.close();
     }
   }
 
@@ -642,7 +642,7 @@ public class SuperSorterTest
 
     for (int i = 0; i < writableChannels.size(); i++) {
       WritableFrameChannel writableChannel = writableChannels.get(i);
-      writableChannel.doneWriting();
+      writableChannel.close();
       retVal.add(new ReadableFileFrameChannel(FrameFile.open(files.get(i))));
     }
 

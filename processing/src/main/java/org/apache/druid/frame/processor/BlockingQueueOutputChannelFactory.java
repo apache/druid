@@ -38,7 +38,12 @@ public class BlockingQueueOutputChannelFactory implements OutputChannelFactory
   public OutputChannel openChannel(final int partitionNumber)
   {
     final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();
-    return OutputChannel.pair(channel, ArenaMemoryAllocator.createOnHeap(frameSize), () -> channel, partitionNumber);
+    return OutputChannel.pair(
+        channel.writable(),
+        ArenaMemoryAllocator.createOnHeap(frameSize),
+        channel::readable,
+        partitionNumber
+    );
   }
 
   @Override

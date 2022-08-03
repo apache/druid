@@ -94,7 +94,7 @@ public class ReadableFileFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public void doneReading()
+  public void close()
   {
     try {
       frameFile.close();

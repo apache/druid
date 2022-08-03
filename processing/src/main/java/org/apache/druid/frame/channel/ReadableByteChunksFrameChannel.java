@@ -263,7 +263,7 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public void doneReading()
+  public void close()
   {
     synchronized (lock) {
       chunks.clear();

@@ -63,9 +63,9 @@ public class OutputChannelsTest
     final OutputChannels channels = OutputChannels.wrap(
         ImmutableList.of(
             OutputChannel.pair(
-                channel,
+                channel.writable(),
                 HeapMemoryAllocator.unlimited(),
-                () -> channel,
+                channel::readable,
                 1
             )
         )
