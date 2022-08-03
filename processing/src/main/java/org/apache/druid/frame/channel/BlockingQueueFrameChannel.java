@@ -118,7 +118,7 @@ public class BlockingQueueFrameChannel implements WritableFrameChannel, Readable
   }
 
   @Override
-  public void abort()
+  public void fail()
   {
     synchronized (lock) {
       queue.clear();

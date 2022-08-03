@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -317,7 +316,7 @@ public class FrameProcessorExecutor
       {
         for (final WritableFrameChannel outputChannel : outputChannels) {
           try {
-            outputChannel.abort();
+            outputChannel.fail();
           }
           catch (Throwable e1) {
             e.addSuppressed(e1);
@@ -378,10 +377,6 @@ public class FrameProcessorExecutor
               }
               catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-              }
-              catch (Throwable e) {
-                // No point throwing. Exceptions thrown in listeners don't go anywhere.
-                log.noStackTrace().warn(e, "Exception encountered while canceling processor [%s]", processor);
               }
             }
           }
@@ -455,7 +450,7 @@ public class FrameProcessorExecutor
       future.cancel(true);
     }
 
-    // Cancel all processors. Do this before return futures, because this allows the processors to be canceled
+    // Cancel all processors. Do this before the return futures, because this allows the processors to be canceled
     // all at once, cleanly. Once we start canceling futuresToCancel, we cancel the processor continuation and return
     // futures one-by-one, which if done first would lead to a noisier cancellation.
     cancel(processorsToCancel);
@@ -510,6 +505,8 @@ public class FrameProcessorExecutor
    * Calls {@link FrameProcessor#cleanup()} on all processors.
    *
    * Callers must remove processors from {@link #cancelableProcessors} before calling this method.
+   *
+   * Logs (but does not throw) exceptions encountered while running {@link FrameProcessor#cleanup()}.
    */
   private void cancel(final Set<FrameProcessor<?>> processorsToCancel)
       throws InterruptedException
@@ -533,17 +530,23 @@ public class FrameProcessorExecutor
     // Now processorsToCancel are not running, also won't run again, because the caller removed them
     // from cancelableProcessors. (runProcessorNow checks cancelableProcessors.) Run their cleanup routines
     // outside the critical section.
-    try (final Closer closer = Closer.create()) {
-      for (final FrameProcessor<?> processor : processorsToCancel) {
-        for (final WritableFrameChannel outputChannel : processor.outputChannels()) {
-          closer.register(outputChannel::abort);
+    for (final FrameProcessor<?> processor : processorsToCancel) {
+      // Fail all output channels prior to calling cleanup.
+      for (final WritableFrameChannel outputChannel : processor.outputChannels()) {
+        try {
+          outputChannel.fail();
         }
-
-        closer.register(processor::cleanup);
+        catch (Throwable e) {
+          log.debug(e, "Exception encountered while marking output channel failed for processor [%s]", processor);
+        }
       }
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
+
+      try {
+        processor.cleanup();
+      }
+      catch (Throwable e) {
+        log.noStackTrace().warn(e, "Exception encountered while canceling processor [%s]", processor);
+      }
     }
   }
 

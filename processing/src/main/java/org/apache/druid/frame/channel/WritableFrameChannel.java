@@ -52,12 +52,12 @@ public interface WritableFrameChannel
   /**
    * Finish writing to this channel, unsuccessfully. Must be followed by a call to {@link #doneWriting()}.
    */
-  void abort() throws IOException;
+  void fail() throws IOException;
 
   /**
    * Finish writing to this channel.
    *
-   * After calling this method, no additional calls to {@link #write}, {@link #abort()}, or this method are permitted.
+   * After calling this method, no additional calls to {@link #write}, {@link #fail()}, or this method are permitted.
    */
   void doneWriting() throws IOException;
 

@@ -44,7 +44,7 @@ public class WritableStreamFrameChannel implements WritableFrameChannel
   }
 
   @Override
-  public void abort() throws IOException
+  public void fail() throws IOException
   {
     writer.abort();
   }
