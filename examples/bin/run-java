@@ -24,7 +24,7 @@ if [ -z "$JAVA_BIN" ]; then
   exit 1
 fi
 
-JAVA_MAJOR="$("$JAVA_BIN" -version 2>&1 | grep ' version ' | head -n1 | sed -E 's/.*version "([^"]+)".*/\1/' | cut -d. -f1)"
+JAVA_MAJOR="$("$JAVA_BIN" -version 2>&1 | sed -n -E 's/.* version "([^."]*).*/\1/p')"
 
 if [ "$JAVA_MAJOR" != "" ] && [ "$JAVA_MAJOR" -ge "17" ]
 then
