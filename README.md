@@ -29,7 +29,7 @@
 ---
 
 [Website](https://druid.apache.org/) |
-[Documentation](#documentation) |
+[Documentation](https://druid.apache.org/docs/latest/design/) |
 [Developer Mailing List](https://lists.apache.org/list.html?dev@druid.apache.org) |
 [User Mailing List](https://groups.google.com/forum/#!forum/druid-user) |
 [Slack](https://druid.apache.org/community/join-slack) |
