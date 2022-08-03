@@ -197,9 +197,10 @@ public class CliOverlord extends ServerRunnable
                 }
             )
                   .toProvider(
+                      // Check TaskLogs (deep storage) first, then runner, to avoid races when tasks are shutting down.
                       new ListProvider<TaskLogStreamer>()
-                          .add(TaskRunnerTaskLogStreamer.class)
                           .add(TaskLogs.class)
+                          .add(TaskRunnerTaskLogStreamer.class)
                   )
                   .in(LazySingleton.class);
 
