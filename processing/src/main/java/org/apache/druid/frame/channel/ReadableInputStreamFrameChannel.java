@@ -21,15 +21,16 @@ package org.apache.druid.frame.channel;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.utils.CloseableUtils;
 
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Channel backed by an {@link InputStream}.
@@ -42,7 +43,6 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
 {
   private final InputStream inputStream;
   private final ReadableByteChunksFrameChannel delegate;
-  private final ExecutorService executorService;
   private final Object lock = new Object();
 
   @GuardedBy("lock")
@@ -59,6 +59,19 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
 
   private volatile boolean readingStarted = false;
   private volatile boolean keepReading = true;
+
+  private ExecutorService executorService;
+
+  /**
+   * Parameter for manipulating retry sleep duration
+   */
+  private static final int BASE_SLEEP_MILLIS = 100;
+
+  /**
+   * Parameter for manipulating retry sleep duration.
+   */
+  private static final int MAX_SLEEP_MILLIS = 2000;
+
 
   public ReadableInputStreamFrameChannel(InputStream inputStream, String id, ExecutorService executorService)
   {
@@ -83,39 +96,46 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
         readingStarted = true;
       }
       executorService.submit(() -> {
+        int nTry = 1;
         while (true) {
           if (!keepReading) {
             try {
-              // Ideally, this would use exponential backoff.
-              Thread.sleep(100);
+              Thread.sleep(nextRetrySleepMillis(nTry));
               synchronized (lock) {
                 if (inputStreamFinished || inputStreamError || delegate.isErrorOrFinished()) {
                   return;
                 }
               }
+              ++nTry;
             }
             catch (InterruptedException e) {
-              // close inputstream anyway if the thread interrupts
-              throw CloseableUtils.closeAndWrapInCatch(e, inputStream);
+              // close inputstream anyway if the thread interrups
+              IOUtils.closeQuietly(inputStream);
+              throw new ISE(e, Thread.currentThread().getName() + "interrupted");
             }
+
           } else {
             synchronized (lock) {
+              nTry = 1; // Reset the value of try because we are not waiting on the data from the inputStream
               // if done reading method is called we should not read input stream further
               if (inputStreamFinished) {
                 delegate.doneWriting();
                 break;
               }
               try {
+
                 int bytesRead = inputStream.read(buffer);
                 if (bytesRead == -1) {
                   inputStreamFinished = true;
                   delegate.doneWriting();
                   break;
                 } else {
-                  Optional<ListenableFuture<?>> futureOptional =
-                      delegate.addChunk(Arrays.copyOfRange(buffer, 0, bytesRead));
+                  Optional<ListenableFuture<?>> futureOptional = delegate.addChunk(Arrays.copyOfRange(
+                      buffer,
+                      0,
+                      bytesRead
+                  ));
                   totalInputStreamBytesRead += bytesRead;
-
                   if (futureOptional.isPresent()) {
                     // backpressure handling
                     keepReading = false;
@@ -130,10 +150,12 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
               catch (Exception e) {
                 //handle exception
                 long currentStreamOffset = totalInputStreamBytesRead;
-                delegate.setError(new ISE(e, "Found error while reading input stream at %d", currentStreamOffset));
+                delegate.setError(new ISE(e,
+                                          "Found error while reading input stream at %d", currentStreamOffset
+                ));
                 inputStreamError = true;
                 // close the stream in case done reading is not called.
-                CloseableUtils.closeAndSuppressExceptions(inputStream, e2 -> {});
+                IOUtils.closeQuietly(inputStream);
                 break;
               }
             }
@@ -191,7 +213,20 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
     synchronized (lock) {
       inputStreamFinished = true;
       delegate.doneReading();
-      CloseableUtils.closeAndSuppressExceptions(inputStream, e -> {});
+      IOUtils.closeQuietly(inputStream);
     }
   }
+
+  /**
+   * Function to implement exponential backoff. The calculations are similar to the function that is being used in
+   * {@link org.apache.druid.java.util.common.RetryUtils} but with a different MAX_SLEEP_MILLIS and BASE_SLEEP_MILLIS
+   */
+  private static long nextRetrySleepMillis(final int nTry)
+  {
+    final double fuzzyMultiplier = Math.min(Math.max(1 + 0.2 * ThreadLocalRandom.current().nextGaussian(), 0), 2);
+    final long sleepMillis = (long) (Math.min(MAX_SLEEP_MILLIS, BASE_SLEEP_MILLIS * Math.pow(2, nTry - 1))
+                                     * fuzzyMultiplier);
+    return sleepMillis;
+  }
+
 }
