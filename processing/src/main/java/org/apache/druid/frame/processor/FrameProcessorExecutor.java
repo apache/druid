@@ -228,6 +228,7 @@ public class FrameProcessorExecutor
           retVal = Either.value(processor.runIncrementally(readableInputs));
         }
         catch (Throwable e) {
+          // Catch InterruptedException too: interrupt was meant for the processor, not us.
           retVal = Either.error(e);
         }
         finally {

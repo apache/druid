@@ -61,7 +61,7 @@ public class SleepyFrameProcessor implements FrameProcessor<Long>
 
   @Override
   @SuppressWarnings({"InfiniteLoopStatement", "BusyWait"})
-  public ReturnOrAwait<Long> runIncrementally(IntSet readableInputs)
+  public ReturnOrAwait<Long> runIncrementally(IntSet readableInputs) throws InterruptedException
   {
     didRun.countDown();
 
@@ -71,8 +71,7 @@ public class SleepyFrameProcessor implements FrameProcessor<Long>
       }
       catch (InterruptedException e) {
         didGetInterrupt.set(true);
-        Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
+        throw e;
       }
     }
   }

@@ -389,7 +389,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     }
 
     @Override
-    public ReturnOrAwait<T> runIncrementally(IntSet readableInputs) throws IOException
+    public ReturnOrAwait<T> runIncrementally(IntSet readableInputs) throws InterruptedException, IOException
     {
       if (didRun.compareAndSet(false, true)) {
         synchronized (RunAllFullyWidgetTest.this) {

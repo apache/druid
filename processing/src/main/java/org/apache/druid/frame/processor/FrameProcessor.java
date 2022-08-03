@@ -58,7 +58,7 @@ public interface FrameProcessor<T>
    *
    * @return either a final return value or a set of input channels to wait for. Must be nonnull.
    */
-  ReturnOrAwait<T> runIncrementally(IntSet readableInputs) throws IOException;
+  ReturnOrAwait<T> runIncrementally(IntSet readableInputs) throws InterruptedException, IOException;
 
   /**
    * Cleans up resources used by this worker, including signalling to input and output channels that we are
