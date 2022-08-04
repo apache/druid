@@ -48,6 +48,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
@@ -70,8 +71,14 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
+import org.apache.druid.sql.http.SqlResource;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.HttpResponse;
+import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.client.api.Result;
+import org.eclipse.jetty.http.HttpField;
+import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -491,7 +498,6 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   ) throws Exception
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    final HttpServletRequest requestMock = EasyMock.createMock(HttpServletRequest.class);
     final ByteArrayInputStream inputStream = new ByteArrayInputStream(jsonMapper.writeValueAsBytes(query));
     final ServletInputStream servletInputStream = new ServletInputStream()
     {
@@ -525,11 +531,14 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         return b;
       }
     };
+    final HttpServletRequest requestMock = EasyMock.createMock(HttpServletRequest.class);
     EasyMock.expect(requestMock.getContentType()).andReturn("application/json").times(2);
     requestMock.setAttribute("org.apache.druid.proxy.objectMapper", jsonMapper);
     EasyMock.expectLastCall();
     EasyMock.expect(requestMock.getRequestURI()).andReturn(isSql ? "/druid/v2/sql" : "/druid/v2/");
     EasyMock.expect(requestMock.getMethod()).andReturn("POST");
+    EasyMock.expect(requestMock.getAttribute("org.apache.druid.proxy.query")).andReturn(isSql ? null : query);
+    EasyMock.expect(requestMock.getRemoteAddr()).andReturn("0.0.0.0:0").times(isSql ? 1 : 2);
     EasyMock.expect(requestMock.getInputStream()).andReturn(servletInputStream);
     requestMock.setAttribute(
         isSql ? "org.apache.druid.proxy.sqlQuery" : "org.apache.druid.proxy.query",
@@ -541,6 +550,24 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     EasyMock.replay(requestMock);
 
     final AtomicLong didService = new AtomicLong();
+    final Request proxyRequestMock = Mockito.spy(Request.class);
+    final Result result = new Result(
+        proxyRequestMock,
+        new HttpResponse(proxyRequestMock, ImmutableList.of())
+        {
+          @Override
+          public HttpFields getHeaders()
+          {
+            HttpFields httpFields = new HttpFields();
+            httpFields.add(new HttpField(QueryResource.QUERY_ID_RESPONSE_HEADER, "dummy"));
+            if (isSql) {
+              httpFields.add(new HttpField(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER, "sql"));
+            }
+            return httpFields;
+          }
+        }
+    );
+    final StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         jsonMapper,
@@ -548,7 +575,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         hostFinder,
         null,
         null,
-        new NoopServiceEmitter(),
+        stubServiceEmitter,
         new NoopRequestLogger(),
         new DefaultGenericQueryMetricsFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
@@ -567,6 +594,18 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     };
 
     servlet.service(requestMock, null);
+
+    // NPE is expected since the listener's onComplete calls the parent class' onComplete which fails due to
+    // partial state of the servlet. Hence, checking the exact exception to avoid possible errors.
+    // Further, the metric assertions are also done to ensure that the metrics have emitted.
+    Assert.assertThrows(
+        NullPointerException.class,
+        () -> servlet.newProxyResponseListener(requestMock, null).onComplete(result)
+    );
+    Assert.assertEquals("query/time", stubServiceEmitter.getEvents().get(0).toMap().get("metric"));
+    if (!isSql) {
+      Assert.assertEquals("dummy", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
+    }
 
     // This test is mostly about verifying that the servlet calls the right methods the right number of times.
     EasyMock.verify(hostFinder, requestMock);

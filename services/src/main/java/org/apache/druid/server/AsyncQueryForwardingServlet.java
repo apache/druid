@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
@@ -56,6 +57,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.http.SqlQuery;
+import org.apache.druid.sql.http.SqlResource;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
@@ -65,6 +67,7 @@ import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.proxy.AsyncProxyServlet;
 
+import javax.annotation.Nullable;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -449,12 +452,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   @Override
   protected Response.Listener newProxyResponseListener(HttpServletRequest request, HttpServletResponse response)
   {
-    final Query query = (Query) request.getAttribute(QUERY_ATTRIBUTE);
-    if (query != null) {
-      return newMetricsEmittingProxyResponseListener(request, response, query, System.nanoTime());
-    } else {
-      return super.newProxyResponseListener(request, response);
-    }
+    return newMetricsEmittingProxyResponseListener(
+        request,
+        response,
+        (Query) request.getAttribute(QUERY_ATTRIBUTE),
+        System.nanoTime()
+    );
   }
 
   @Override
@@ -500,7 +503,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private Response.Listener newMetricsEmittingProxyResponseListener(
       HttpServletRequest request,
       HttpServletResponse response,
-      Query query,
+      @Nullable Query query,
       long startNs
   )
   {
@@ -661,13 +664,14 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   {
     private final HttpServletRequest req;
     private final HttpServletResponse res;
+    @Nullable
     private final Query<T> query;
     private final long startNs;
 
     public MetricsEmittingProxyResponseListener(
         HttpServletRequest request,
         HttpServletResponse response,
-        Query<T> query,
+        @Nullable Query<T> query,
         long startNs
     )
     {
@@ -683,14 +687,31 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     public void onComplete(Result result)
     {
       final long requestTimeNs = System.nanoTime() - startNs;
+      final String queryId = result.getResponse().getHeaders().get(QueryResource.QUERY_ID_RESPONSE_HEADER);
+      final String sqlQueryId = result.getResponse().getHeaders().get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
+      // not a native or SQL query, no need to emit metrics and logs
+      if (queryId == null && sqlQueryId == null) {
+        super.onComplete(result);
+        return;
+      }
+
+      boolean success = result.isSucceeded();
+      if (success) {
+        successfulQueryCount.incrementAndGet();
+      } else {
+        failedQueryCount.incrementAndGet();
+      }
+      emitQueryTime(requestTimeNs, success, sqlQueryId);
+
+      if (sqlQueryId != null) {
+        // SQL query doesn't have a native query translation in router. Hence, not logging the native query.
+        // Logging SQL query would need deserialization which can be time consuming. Hence, skipping it unless needed.
+        // Further for JDBC queries, it might even be hard to deserialize the query.
+        super.onComplete(result);
+        return;
+      }
+
       try {
-        boolean success = result.isSucceeded();
-        if (success) {
-          successfulQueryCount.incrementAndGet();
-        } else {
-          failedQueryCount.incrementAndGet();
-        }
-        emitQueryTime(requestTimeNs, success);
         requestLogger.logNativeQuery(
             RequestLogLine.forNative(
                 query,
@@ -718,10 +739,29 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     @Override
     public void onFailure(Response response, Throwable failure)
     {
+      final long requestTimeNs = System.nanoTime() - startNs;
+      final String queryId = response.getHeaders().get(QueryResource.QUERY_ID_RESPONSE_HEADER);
+      final String sqlQueryId = response.getHeaders().get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
+      // not a native or SQL query, no need to emit metrics and logs
+      if (queryId == null && sqlQueryId == null) {
+        super.onFailure(response, failure);
+        return;
+      }
+
+      failedQueryCount.incrementAndGet();
+      emitQueryTime(requestTimeNs, false, sqlQueryId);
+
+      if (sqlQueryId != null) {
+        // SQL query doesn't have a native query translation in router. Hence, not logging the native query.
+        // Logging SQL query would need deserialization which can be time consuming. Hence, skipping it unless needed.
+        // Further for JDBC queries, it might even be hard to deserialize the query.
+        super.onFailure(response, failure);
+        return;
+      }
+
       try {
         final String errorMessage = failure.getMessage();
-        failedQueryCount.incrementAndGet();
-        emitQueryTime(System.nanoTime() - startNs, false);
+
         requestLogger.logNativeQuery(
             RequestLogLine.forNative(
                 query,
@@ -751,14 +791,32 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       super.onFailure(response, failure);
     }
 
-    private void emitQueryTime(long requestTimeNs, boolean success)
+    private void emitQueryTime(long requestTimeNs, boolean success, @Nullable String sqlQueryId)
     {
-      QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
-          queryMetricsFactory,
-          warehouse.getToolChest(query),
-          query,
-          req.getRemoteAddr()
-      );
+      QueryMetrics queryMetrics;
+      if (sqlQueryId != null) {
+        queryMetrics = queryMetricsFactory.makeMetrics();
+        if (queryMetrics == null) {
+          return;
+        }
+        queryMetrics.remoteAddress(req.getRemoteAddr());
+        // Setting sqlQueryId dimension to the metric. Using a dummy query since SQL is translated to a native query
+        // only at a broker.
+        queryMetrics.sqlQueryId(
+            Druids.newScanQueryBuilder()
+                  .dataSource("__dummy__")
+                  .eternityInterval()
+                  .build()
+                  .withSqlQueryId(sqlQueryId)
+        );
+      } else {
+        queryMetrics = DruidMetrics.makeRequestMetrics(
+            queryMetricsFactory,
+            warehouse.getToolChest(query),
+            query,
+            req.getRemoteAddr()
+        );
+      }
       queryMetrics.success(success);
       queryMetrics.reportQueryTime(requestTimeNs).emit(emitter);
     }
