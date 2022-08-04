@@ -63,12 +63,18 @@ public interface FrameProcessor<T>
   ReturnOrAwait<T> runIncrementally(IntSet readableInputs) throws InterruptedException, IOException;
 
   /**
-   * Cleans up resources used by this worker, including signalling to input and output channels that we are
-   * done reading and writing, via {@link ReadableFrameChannel#close()} and
-   * {@link WritableFrameChannel#close()}.
+   * Closes resources used by this worker.
    *
-   * This method may be called before the worker reports completion via {@link #runIncrementally}, especially in
-   * cases of cancellation.
+   * Exact same concept as {@link java.io.Closeable#close()}. This interface does not extend Closeable, in order to
+   * make it easier to find all places where cleanup happens. (Static analysis tools can lose the thread when Closeables
+   * are closed in generic ways.)
+   *
+   * Implementations typically call {@link ReadableFrameChannel#close()} and
+   * {@link WritableFrameChannel#close()} on all input and output channels, as well as releasing any additional
+   * resources that may be held.
+   *
+   * In cases of cancellation, this method may be called even if {@link #runIncrementally} has not yet returned a
+   * result via {@link ReturnOrAwait#returnObject}.
    */
   void cleanup() throws IOException;
 }

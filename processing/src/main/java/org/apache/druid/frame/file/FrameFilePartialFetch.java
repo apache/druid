@@ -23,8 +23,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.ISE;
 
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
+import javax.annotation.Nullable;
 
 /**
  * Response object for {@link FrameFileHttpResponseHandler}.
@@ -34,9 +33,13 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class FrameFilePartialFetch
 {
-  private final AtomicLong bytesRead = new AtomicLong(0L);
-  private final AtomicReference<Throwable> exceptionCaught = new AtomicReference<>();
-  private final AtomicReference<ListenableFuture<?>> backpressureFuture = new AtomicReference<>();
+  private long bytesRead;
+
+  @Nullable
+  private Throwable exceptionCaught;
+
+  @Nullable
+  private ListenableFuture<?> backpressureFuture;
 
   FrameFilePartialFetch()
   {
@@ -44,7 +47,7 @@ public class FrameFilePartialFetch
 
   public boolean isEmptyFetch()
   {
-    return exceptionCaught.get() == null && bytesRead.get() == 0L;
+    return exceptionCaught == null && bytesRead == 0L;
   }
 
   /**
@@ -58,7 +61,7 @@ public class FrameFilePartialFetch
       throw new ISE("No exception caught");
     }
 
-    return exceptionCaught.get();
+    return exceptionCaught;
   }
 
   /**
@@ -66,7 +69,7 @@ public class FrameFilePartialFetch
    */
   public boolean isExceptionCaught()
   {
-    return exceptionCaught.get() != null;
+    return exceptionCaught != null;
   }
 
   /**
@@ -76,7 +79,9 @@ public class FrameFilePartialFetch
    */
   public ListenableFuture<?> backpressureFuture()
   {
-    final ListenableFuture<?> future = backpressureFuture.getAndSet(null);
+    final ListenableFuture<?> future = backpressureFuture;
+    backpressureFuture = null;
+
     if (future != null) {
       return future;
     } else {
@@ -86,16 +91,20 @@ public class FrameFilePartialFetch
 
   void setBackpressureFuture(final ListenableFuture<?> future)
   {
-    backpressureFuture.compareAndSet(null, future);
+    if (backpressureFuture == null) {
+      backpressureFuture = future;
+    }
   }
 
   void exceptionCaught(final Throwable t)
   {
-    exceptionCaught.compareAndSet(null, t);
+    if (exceptionCaught == null) {
+      exceptionCaught = t;
+    }
   }
 
   void addBytesRead(final long n)
   {
-    bytesRead.addAndGet(n);
+    bytesRead += n;
   }
 }
