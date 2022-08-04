@@ -50,6 +50,7 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
@@ -61,7 +62,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.StringTokenizer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -319,8 +319,7 @@ public class FrameTestUtil
    */
   public static boolean jdkCanDataSketchesMemoryMap()
   {
-    final StringTokenizer st = new StringTokenizer(System.getProperty("java.specification.version"), ".");
-    return Integer.parseInt(st.nextToken()) < 14;
+    return JvmUtils.majorVersion() < 14;
   }
 
   private static Supplier<Object> dimensionSelectorReader(final DimensionSelector selector)

@@ -34,8 +34,10 @@ import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -73,6 +75,7 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.QueryStackTests;
@@ -652,7 +655,27 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         expectedQueries,
-        expectedResults
+        expectedResults,
+        null
+    );
+  }
+
+  public void testQuery(
+      final String sql,
+      final List<Query> expectedQueries,
+      final List<Object[]> expectedResults,
+      final RowSignature expectedResultRowSignature
+  ) throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        sql,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        expectedQueries,
+        expectedResults,
+        expectedResultRowSignature
     );
   }
 
@@ -670,7 +693,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         expectedQueries,
-        expectedResults
+        expectedResults,
+        null
     );
   }
 
@@ -688,7 +712,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         expectedQueries,
-        expectedResults
+        expectedResults,
+        null
     );
   }
 
@@ -707,7 +732,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         sql,
         authenticationResult,
         expectedQueries,
-        expectedResults
+        expectedResults,
+        null
     );
   }
 
@@ -741,7 +767,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     log.info("SQL: %s", sql);
     queryLogHook.clearRecordedQueries();
-    final List<Object[]> plannerResults =
+    final Pair<RowSignature, List<Object[]>> plannerResults =
         getResults(plannerConfig, queryContext, DEFAULT_PARAMETERS, sql, authenticationResult);
     verifyResults(sql, expectedQueries, expectedResults, plannerResults);
   }
@@ -763,7 +789,30 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         sql,
         authenticationResult,
         expectedQueries,
-        new DefaultResultsVerifier(expectedResults),
+        expectedResults,
+        null
+    );
+  }
+
+  public void testQuery(
+      final PlannerConfig plannerConfig,
+      final Map<String, Object> queryContext,
+      final List<SqlParameter> parameters,
+      final String sql,
+      final AuthenticationResult authenticationResult,
+      final List<Query> expectedQueries,
+      final List<Object[]> expectedResults,
+      final RowSignature expectedResultSignature
+  ) throws Exception
+  {
+    testQuery(
+        plannerConfig,
+        queryContext,
+        parameters,
+        sql,
+        authenticationResult,
+        expectedQueries,
+        new DefaultResultsVerifier(expectedResults, expectedResultSignature),
         null
     );
   }
@@ -812,12 +861,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         expectedExceptionInitializer.accept(expectedException);
       }
 
-      final List<Object[]> plannerResults = getResults(plannerConfig, theQueryContext, parameters, sql, authenticationResult);
+      final Pair<RowSignature, List<Object[]>> plannerResults = getResults(plannerConfig, theQueryContext, parameters, sql, authenticationResult);
       verifyResults(sql, theQueries, plannerResults, expectedResultsVerifier);
     }
   }
 
-  public List<Object[]> getResults(
+  public Pair<RowSignature, List<Object[]>> getResults(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
       final List<SqlParameter> parameters,
@@ -838,7 +887,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     );
   }
 
-  public List<Object[]> getResults(
+  public Pair<RowSignature, List<Object[]>> getResults(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
       final List<SqlParameter> parameters,
@@ -858,32 +907,43 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         authorizerMapper,
         objectMapper
     );
+    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
 
-    return sqlLifecycleFactory.factorize().runSimple(sql, queryContext, parameters, authenticationResult).toList();
+    Pair<RowSignature, Sequence<Object[]>> result = lifecycle.runSimple(
+        sql,
+        queryContext,
+        parameters,
+        authenticationResult
+    );
+    return new Pair<>(
+        result.lhs,
+        result.rhs.toList()
+    );
   }
 
   public void verifyResults(
       final String sql,
       final List<Query> expectedQueries,
       final List<Object[]> expectedResults,
-      final List<Object[]> results
+      final Pair<RowSignature, List<Object[]>> results
   )
   {
-    verifyResults(sql, expectedQueries, results, new DefaultResultsVerifier(expectedResults));
+    verifyResults(sql, expectedQueries, results, new DefaultResultsVerifier(expectedResults, null));
   }
 
   public void verifyResults(
       final String sql,
       final List<Query> expectedQueries,
-      final List<Object[]> results,
+      final Pair<RowSignature, List<Object[]>> results,
       final ResultsVerifier expectedResultsVerifier
   )
   {
-    for (int i = 0; i < results.size(); i++) {
-      log.info("row #%d: %s", i, Arrays.toString(results.get(i)));
+    for (int i = 0; i < results.rhs.size(); i++) {
+      log.info("row #%d: %s", i, Arrays.toString(results.rhs.get(i)));
     }
 
-    expectedResultsVerifier.verify(sql, results);
+    expectedResultsVerifier.verifyRowSignature(results.lhs);
+    expectedResultsVerifier.verify(sql, results.rhs);
 
     verifyQueries(sql, expectedQueries);
   }
@@ -1222,16 +1282,32 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @FunctionalInterface
   public interface ResultsVerifier
   {
+    default void verifyRowSignature(RowSignature rowSignature)
+    {
+      // do nothing
+    }
+
     void verify(String sql, List<Object[]> results);
   }
 
   public class DefaultResultsVerifier implements ResultsVerifier
   {
     protected final List<Object[]> expectedResults;
+    @Nullable
+    protected final RowSignature expectedResultRowSignature;
 
-    public DefaultResultsVerifier(List<Object[]> expectedResults)
+    public DefaultResultsVerifier(List<Object[]> expectedResults, RowSignature expectedSignature)
     {
       this.expectedResults = expectedResults;
+      this.expectedResultRowSignature = expectedSignature;
+    }
+
+    @Override
+    public void verifyRowSignature(RowSignature rowSignature)
+    {
+      if (expectedResultRowSignature != null) {
+        Assert.assertEquals(expectedResultRowSignature, rowSignature);
+      }
     }
 
     @Override
