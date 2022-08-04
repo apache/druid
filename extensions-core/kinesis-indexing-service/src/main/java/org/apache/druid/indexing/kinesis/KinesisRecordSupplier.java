@@ -732,7 +732,28 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
           },
           GET_SEQUENCE_NUMBER_RETRY_COUNT
       );
-      return !records.isEmpty() && records.get(0).getSequenceNumber().equals(kinesisSequence.get());
+      boolean available = !records.isEmpty() && records.get(0).getSequenceNumber().equals(kinesisSequence.get());
+      if (!available) {
+        KinesisSequenceNumber earliest = KinesisSequenceNumber.of(getEarliestSequenceNumber(partition));
+        String availbilityCheckSequence = records.isEmpty() ? "no_sequence" : records.get(0).getSequenceNumber();
+        // If earliest sequence number is valid and less than the current sequence number,
+        // the previous check was false negative
+        if (!earliest.isUnread() && earliest.compareTo(kinesisSequence) <= 0) {
+          // This should ideally not happen
+          log.info("Offset [%s] is available with earliest sequence number [%s] for partition [%s], "
+                   + "but primary check failed. "
+                   + "[%d] records were returned using AT_SEQUENCE_NUMBER with availabilityCheckSequence [%s].",
+                   kinesisSequence.get(), earliest.get(), partition.getPartitionId(),
+                   records.size(), availbilityCheckSequence);
+          available = true;
+        } else {
+          log.warn("Offset [%s] is unavailable with earliest sequence number [%s] for partition [%s]. "
+                   + "[%d] records were returned using AT_SEQUENCE_NUMBER with availabilityCheckSequence [%s].",
+                   kinesisSequence.get(), earliest.get(), partition.getPartitionId(),
+                   records.size(), availbilityCheckSequence);
+        }
+      }
+      return available;
     });
   }
 

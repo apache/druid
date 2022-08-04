@@ -1162,7 +1162,13 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
                                                              true,
                                                              false
     );
-    StreamPartition<String> partition = new StreamPartition<>(STREAM, SHARD_ID0);
+    StreamPartition<String> partition0 = new StreamPartition<>(STREAM, SHARD_ID0);
+
+    // earliestSequenceNumber = TRIM_HORIZON
+    // set limit to GET_SEQUENCE_NUMBER_RECORD_COUNT
+    setupMockKinesisForShardId(mockKinesis, SHARD_ID0, 1000,
+                               ShardIteratorType.TRIM_HORIZON, null,
+                               Collections.emptyList(), "whatever");
 
     setupMockKinesisForShardId(mockKinesis, SHARD_ID0, null,
                                ShardIteratorType.AT_SEQUENCE_NUMBER, "-1",
@@ -1178,17 +1184,42 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
                                ShardIteratorType.AT_SEQUENCE_NUMBER, "10",
                                Collections.singletonList(record10), "whatever");
 
+    StreamPartition<String> partition1 = new StreamPartition<>(STREAM, SHARD_ID1);
+
+    Record record200 = new Record().withSequenceNumber("200");
+
+    // earliestSequenceNumber = "B"
+    // set limit to GET_SEQUENCE_NUMBER_RECORD_COUNT
+    setupMockKinesisForShardId(mockKinesis, SHARD_ID1, 1000,
+                               ShardIteratorType.TRIM_HORIZON, null,
+                               Collections.singletonList(record200), "whatever");
+
+    // Primary check fails, and secondary check confirms it
+    setupMockKinesisForShardId(mockKinesis, SHARD_ID1, null,
+                               ShardIteratorType.AT_SEQUENCE_NUMBER, "100",
+                               Collections.emptyList(), "whatever");
+
+    // Primary check fails, but it was a false negative
+    setupMockKinesisForShardId(mockKinesis, SHARD_ID1, null,
+                               ShardIteratorType.AT_SEQUENCE_NUMBER, "300",
+                               Collections.emptyList(), "whatever");
+
+
     EasyMock.replay(mockKinesis);
 
-    Assert.assertTrue(target.isOffsetAvailable(partition, KinesisSequenceNumber.of(UNREAD_TRIM_HORIZON)));
+    Assert.assertTrue(target.isOffsetAvailable(partition0, KinesisSequenceNumber.of(UNREAD_TRIM_HORIZON)));
 
-    Assert.assertFalse(target.isOffsetAvailable(partition, KinesisSequenceNumber.of(END_OF_SHARD_MARKER)));
+    Assert.assertFalse(target.isOffsetAvailable(partition0, KinesisSequenceNumber.of(END_OF_SHARD_MARKER)));
 
-    Assert.assertFalse(target.isOffsetAvailable(partition, KinesisSequenceNumber.of("-1")));
+    Assert.assertFalse(target.isOffsetAvailable(partition0, KinesisSequenceNumber.of("-1")));
 
-    Assert.assertFalse(target.isOffsetAvailable(partition, KinesisSequenceNumber.of("0")));
+    Assert.assertFalse(target.isOffsetAvailable(partition0, KinesisSequenceNumber.of("0")));
 
-    Assert.assertTrue(target.isOffsetAvailable(partition, KinesisSequenceNumber.of("10")));
+    Assert.assertTrue(target.isOffsetAvailable(partition0, KinesisSequenceNumber.of("10")));
+
+    Assert.assertFalse(target.isOffsetAvailable(partition1, KinesisSequenceNumber.of("100")));
+
+    Assert.assertTrue(target.isOffsetAvailable(partition1, KinesisSequenceNumber.of("300")));
   }
 
   private void setupMockKinesisForShardId(AmazonKinesis kinesis, String shardId,
@@ -1210,16 +1241,16 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     if (sequenceNumber == null) {
       EasyMock.expect(kinesis.getShardIterator(STREAM, shardId, shardIteratorType))
               .andReturn(shardIteratorResult)
-              .once();
+              .anyTimes();
     } else {
       EasyMock.expect(kinesis.getShardIterator(STREAM, shardId, shardIteratorType, sequenceNumber))
               .andReturn(shardIteratorResult)
-              .once();
+              .anyTimes();
     }
     GetRecordsRequest request = new GetRecordsRequest().withShardIterator(shardIterator)
                                                        .withLimit(limit);
     GetRecordsResult result = new GetRecordsResult().withRecords(records)
                                                     .withNextShardIterator(nextIterator);
-    EasyMock.expect(kinesis.getRecords(request)).andReturn(result);
+    EasyMock.expect(kinesis.getRecords(request)).andReturn(result).anyTimes();
   }
 }
