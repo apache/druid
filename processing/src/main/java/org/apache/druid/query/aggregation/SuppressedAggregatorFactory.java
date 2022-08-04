@@ -170,6 +170,12 @@ public class SuppressedAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return delegate.withName(newName);
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     CacheKeyBuilder cacheKeyBuilder = new CacheKeyBuilder(AggregatorUtil.SUPPRESSED_AGG_CACHE_TYPE_ID);

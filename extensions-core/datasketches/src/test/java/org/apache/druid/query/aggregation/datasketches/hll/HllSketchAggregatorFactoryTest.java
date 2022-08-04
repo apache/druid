@@ -362,5 +362,11 @@ public class HllSketchAggregatorFactoryTest
     {
       return DUMMY_SIZE;
     }
+
+    @Override
+    public AggregatorFactory withName(String newName)
+    {
+      return new TestHllSketchAggregatorFactory(newName, getFieldName(), getLgK(), getTgtHllType(), isRound());
+    }
   }
 }

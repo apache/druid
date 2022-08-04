@@ -101,6 +101,12 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new DoubleMeanAggregatorFactory(newName, getFieldName());
+  }
+
+  @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new DoubleMeanAggregator(metricFactory.makeColumnValueSelector(fieldName));

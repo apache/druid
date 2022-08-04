@@ -181,4 +181,10 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
   {
     throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new AveragerFactoryWrapper(af, newName);
+  }
 }
