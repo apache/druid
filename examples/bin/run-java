@@ -40,6 +40,11 @@ then
     --add-opens=java.base/java.lang=ALL-UNNAMED \
     --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
     "$@"
+elif [ "$JAVA_MAJOR" != "" ] && [ "$JAVA_MAJOR" -ge "11" ]
+then
+  exec "$JAVA_BIN" \
+    --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED \
+    "$@"
 else
   exec "$JAVA_BIN" "$@"
 fi
