@@ -108,7 +108,7 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
     if (bytes > 0) {
       try {
         // input streams will be closed by the consumer as we iterate through them in SequenceInputStream
-        queue.put(new ByteBufInputStream(byteBuf)); // lgtm [java/input-resource-leak]
+        queue.put(new ByteBufInputStream(byteBuf.retain(), true)); // lgtm [java/input-resource-leak]
         // Queue.size() can be expensive in some implementations, but LinkedBlockingQueue.size is just an AtomicLong
         log.debug("Added stream. Queue length %d", queue.size());
       }

@@ -83,7 +83,7 @@ public class Request
     // since we sometimes read the buffer after it has been dispatched to Netty
     // (e.g. when calling withUrl or copy, which might happen after Netty has handled it already)
     //
-    // Since we always create unbooled heap buffers they shouldn't impact existing pools and
+    // Since we always create unpooled heap buffers they shouldn't impact existing pools and
     // will get garbage collected with the request object itself.
     return content.retainedDuplicate();
   }
