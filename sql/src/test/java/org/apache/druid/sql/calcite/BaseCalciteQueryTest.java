@@ -633,17 +633,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             CalciteTests.REGULAR_USER_AUTH_RESULT
         ),
         expectedQueries,
-        expectedResults,
-        null
+        expectedResults
     );
   }
 
   public void testQuery(
       final String sql,
-      final List<Query>?>> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults,
       final RowSignature expectedResultRowSignature
-  ) throws Exception
+  )
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -673,8 +672,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             CalciteTests.REGULAR_USER_AUTH_RESULT
         ),
         expectedQueries,
-        expectedResults,
-        null
+        expectedResults
     );
   }
 
@@ -694,8 +692,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             CalciteTests.REGULAR_USER_AUTH_RESULT
         ),
         expectedQueries,
-        expectedResults,
-        null
+        expectedResults
     );
   }
 
@@ -716,8 +713,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             authenticationResult
         ),
         expectedQueries,
-        expectedResults,
-        null
+        expectedResults
     );
   }
 
@@ -782,7 +778,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             authenticationResult
         ),
         expectedQueries,
-        new DefaultResultsVerifier(expectedResults),
+        new DefaultResultsVerifier(expectedResults, null),
         null
     );
   }
@@ -798,7 +794,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         plannerConfig,
         queryPlus,
         expectedQueries,
-        expectedResults,
+        new DefaultResultsVerifier(expectedResults, null),
         null
     );
   }
@@ -809,17 +805,19 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final List<SqlParameter> parameters,
       final String sql,
       final AuthenticationResult authenticationResult,
-      final List<Query> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults,
       final RowSignature expectedResultSignature
-  ) throws Exception
+  )
   {
     testQuery(
         plannerConfig,
-        queryContext,
-        parameters,
-        sql,
-        authenticationResult,
+        queryPlus(
+            sql,
+            queryContext,
+            parameters,
+            authenticationResult
+        ),
         expectedQueries,
         new DefaultResultsVerifier(expectedResults, expectedResultSignature),
         null
