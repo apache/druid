@@ -1173,15 +1173,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
           }
 
           @Override
-          public List<? extends Module> getJacksonModules()
-          {
-            return Collections.emptyList();
-          }
-
-          @Override
           public void configure(Binder binder)
           {
-
           }
         }
     );

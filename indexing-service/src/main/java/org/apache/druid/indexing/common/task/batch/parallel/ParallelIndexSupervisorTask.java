@@ -140,7 +140,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   // reproduce but looking at the code around where the following constant is used one
   // possibility is that the sketch's estimate is negative. If that case happens
   // code has been added to log it and to set the estimate to the value of the
-  // following constant. It is not necessary to parametize this value since if this
+  // following constant. It is not necessary to parameterize this value since if this
   // happens it is a bug and the new logging may now provide some evidence to reproduce
   // and fix
   private static final long DEFAULT_NUM_SHARDS_WHEN_ESTIMATE_GOES_NEGATIVE = 7L;
