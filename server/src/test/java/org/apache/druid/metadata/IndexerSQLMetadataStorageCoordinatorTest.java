@@ -53,6 +53,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -281,6 +282,18 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   private final DataSegment hugeTimeRangeSegment3 = new DataSegment(
       "hugeTimeRangeDataSource",
       Intervals.of("29940-01-02T00Z/29940-01-03T00Z"),
+      "zversion",
+      ImmutableMap.of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(0, 1),
+      9,
+      100
+  );
+
+  private final DataSegment hugeTimeRangeSegment4 = new DataSegment(
+      "hugeTimeRangeDataSource",
+      Intervals.of("1990-01-01T00Z/19940-01-01T00Z"),
       "zversion",
       ImmutableMap.of(),
       ImmutableList.of("dim1"),
@@ -1339,6 +1352,29 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUsedSegmentsForInterval(
                 secondHalfEternityRangeSegment.getDataSource(),
+                Intervals.of("2020/2021"),
+                Segments.ONLY_VISIBLE
+            )
+        )
+    );
+  }
+
+  // Known Issue: https://github.com/apache/druid/issues/12860
+  @Ignore
+  @Test
+  public void testLargeIntervalWithStringComparison() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(
+            hugeTimeRangeSegment4
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(hugeTimeRangeSegment4),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                hugeTimeRangeSegment4.getDataSource(),
                 Intervals.of("2020/2021"),
                 Segments.ONLY_VISIBLE
             )

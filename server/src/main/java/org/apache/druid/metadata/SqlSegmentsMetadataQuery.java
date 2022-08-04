@@ -247,6 +247,7 @@ public class SqlSegmentsMetadataQuery
 
       // Add a special check for a single segment with eternity. Since we are using string comparison, a segment with
       // this start and end will not be returned otherwise.
+      // Known Issue: https://github.com/apache/druid/issues/12860
       if (matchMode.equals(IntervalMode.OVERLAPS)) {
         sb.append(StringUtils.format(" OR (start = '%s' AND \"end\" = '%s')", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd()));
       }
