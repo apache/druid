@@ -214,4 +214,20 @@ public class GroupByQueryConfigTest
     );
     Assert.assertEquals(500_000_000, config2.getMaxOnDiskStorage().getBytes());
   }
+
+  @Test
+  public void testGetDefaultOnDiskStorageReturnsCorrectValue()
+  {
+    final GroupByQueryConfig config = MAPPER.convertValue(
+        ImmutableMap.of("maxOnDiskStorage", "500M"),
+        GroupByQueryConfig.class
+    );
+    final GroupByQueryConfig config2 = MAPPER.convertValue(
+        ImmutableMap.of("maxOnDiskStorage", "500M",
+                        "defaultOnDiskStorage", "100M"),
+        GroupByQueryConfig.class
+    );
+    Assert.assertEquals(500_000_000, config.getDefaultOnDiskStorage().getBytes());
+    Assert.assertEquals(100_000_000, config2.getDefaultOnDiskStorage().getBytes());
+  }
 }

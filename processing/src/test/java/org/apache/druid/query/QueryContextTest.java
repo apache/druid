@@ -134,6 +134,17 @@ public class QueryContextTest
   }
 
   @Test
+  public void testGetHumanReadableBytes()
+  {
+    final QueryContext context = new QueryContext(
+        ImmutableMap.of(
+            "maxOnDiskStorage", "500M"
+        )
+    );
+    Assert.assertEquals(500_000_000, context.getAsHumanReadableBytes("maxOnDiskStorage", HumanReadableBytes.ZERO).getBytes());
+  }
+
+  @Test
   public void testAddSystemParamOverrideUserParam()
   {
     final QueryContext context = new QueryContext(
