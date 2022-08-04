@@ -53,6 +53,12 @@ public class BlockingQueueFrameChannel
   @GuardedBy("lock")
   private final ArrayDeque<Optional<Either<Throwable, FrameWithPartition>>> queue;
 
+  @GuardedBy("lock")
+  private SettableFuture<?> readyForWritingFuture = null;
+
+  @GuardedBy("lock")
+  private SettableFuture<?> readyForReadingFuture = null;
+
   /**
    * Create a channel with a particular buffer size (expressed in number of frames).
    */
@@ -99,11 +105,28 @@ public class BlockingQueueFrameChannel
     }
   }
 
+  @GuardedBy("lock")
+  private void notifyWriter()
+  {
+    if (readyForWritingFuture != null) {
+      final SettableFuture<?> tmp = readyForWritingFuture;
+      this.readyForWritingFuture = null;
+      tmp.set(null);
+    }
+  }
+
+  @GuardedBy("lock")
+  private void notifyReader()
+  {
+    if (readyForReadingFuture != null) {
+      final SettableFuture<?> tmp = readyForReadingFuture;
+      this.readyForReadingFuture = null;
+      tmp.set(null);
+    }
+  }
+
   private class Writable implements WritableFrameChannel
   {
-    @GuardedBy("lock")
-    private SettableFuture<?> readyForWritingFuture = null;
-
     @Override
     public void write(FrameWithPartition frame)
     {
@@ -120,7 +143,7 @@ public class BlockingQueueFrameChannel
           }
         }
 
-        readable.notifyReader();
+        notifyReader();
       }
     }
 
@@ -166,26 +189,13 @@ public class BlockingQueueFrameChannel
           throw new ISE("Channel had capacity, but could not add end marker");
         }
 
-        readable.notifyReader();
-      }
-    }
-
-    @GuardedBy("lock")
-    private void notifyWriter()
-    {
-      if (readyForWritingFuture != null) {
-        final SettableFuture<?> tmp = readyForWritingFuture;
-        this.readyForWritingFuture = null;
-        tmp.set(null);
+        notifyReader();
       }
     }
   }
 
   private class Readable implements ReadableFrameChannel
   {
-    @GuardedBy("lock")
-    private SettableFuture<?> readyForReadingFuture = null;
-
     @Override
     public boolean isFinished()
     {
@@ -216,7 +226,7 @@ public class BlockingQueueFrameChannel
           throw new NoSuchElementException();
         }
 
-        writable.notifyWriter();
+        notifyWriter();
       }
 
       return next.get().valueOrThrow().frame();
@@ -241,17 +251,7 @@ public class BlockingQueueFrameChannel
     {
       synchronized (lock) {
         queue.clear();
-        writable.notifyWriter();
-      }
-    }
-
-    @GuardedBy("lock")
-    private void notifyReader()
-    {
-      if (readyForReadingFuture != null) {
-        final SettableFuture<?> tmp = readyForReadingFuture;
-        this.readyForReadingFuture = null;
-        tmp.set(null);
+        notifyWriter();
       }
     }
   }
