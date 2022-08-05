@@ -684,6 +684,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
         return false;
       }
       // The first record using AT_SEQUENCE_NUMBER should match the offset
+      // Should not return empty records provided the record is present
+      // Reference: https://docs.aws.amazon.com/streams/latest/dev/troubleshooting-consumers.html
+      // Section: GetRecords Returns Empty Records Array Even When There is Data in the Stream
       String shardIterator = RetryUtils.retry(
           () -> kinesis.getShardIterator(partition.getStream(),
                                          partition.getPartitionId(),
@@ -961,6 +964,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
         return KinesisSequenceNumber.UNREAD_LATEST;
       }
 
+      // Even if there are records in the shard, they may not be returned on the first call to getRecords with TRIM_HORIZON
+      // Reference: https://docs.aws.amazon.com/streams/latest/dev/troubleshooting-consumers.html
+      // Section: GetRecords Returns Empty Records Array Even When There is Data in the Stream
       if (iteratorEnum.equals(ShardIteratorType.TRIM_HORIZON)) {
         log.info("Partition[%s] has no records at TRIM_HORIZON offset", partition.getPartitionId());
         return KinesisSequenceNumber.UNREAD_TRIM_HORIZON;
