@@ -100,7 +100,7 @@ public class MomentSketchAggregatorFactoryTest
     MomentSketchMergeAggregatorFactory sketchMergeAggregatorFactory = new MomentSketchMergeAggregatorFactory(
         "name", 128, true
     );
-    Assert.assertEquals(sketchAggFactory, sketchMergeAggregatorFactory.withName("name"));
+    Assert.assertEquals(sketchMergeAggregatorFactory, sketchMergeAggregatorFactory.withName("name"));
     Assert.assertEquals("newTest", sketchMergeAggregatorFactory.withName("newTest").getName());
   }
 }
