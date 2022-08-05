@@ -80,7 +80,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         null,
         null,
         null,
-        null,
         null
     );
   }
@@ -110,7 +109,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("recordBufferSize") Integer recordBufferSize,
       @JsonProperty("recordBufferOfferTimeout") Integer recordBufferOfferTimeout,
       @JsonProperty("recordBufferFullWait") Integer recordBufferFullWait,
-      @JsonProperty("fetchSequenceNumberTimeout") Integer fetchSequenceNumberTimeout,
       @JsonProperty("fetchThreads") Integer fetchThreads,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
@@ -142,7 +140,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         recordBufferSize,
         recordBufferOfferTimeout,
         recordBufferFullWait,
-        fetchSequenceNumberTimeout,
         fetchThreads,
         segmentWriteOutMediumFactory,
         logParseExceptions,
@@ -257,7 +254,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", recordBufferSize=" + getRecordBufferSize() +
            ", recordBufferOfferTimeout=" + getRecordBufferOfferTimeout() +
            ", recordBufferFullWait=" + getRecordBufferFullWait() +
-           ", fetchSequenceNumberTimeout=" + getFetchSequenceNumberTimeout() +
            ", fetchThreads=" + getFetchThreads() +
            ", segmentWriteOutMediumFactory=" + getSegmentWriteOutMediumFactory() +
            ", logParseExceptions=" + isLogParseExceptions() +
@@ -293,7 +289,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getRecordBufferSize(),
         getRecordBufferOfferTimeout(),
         getRecordBufferFullWait(),
-        getFetchSequenceNumberTimeout(),
         getFetchThreads(),
         getSegmentWriteOutMediumFactory(),
         isLogParseExceptions(),

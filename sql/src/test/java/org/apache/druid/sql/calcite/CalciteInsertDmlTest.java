@@ -22,6 +22,8 @@ package org.apache.druid.sql.calcite;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -35,9 +37,11 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlPlanningException;
+import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
+import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -701,10 +705,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO t SELECT dim1, dim2 || '-lol' FROM foo PARTITIONED BY ALL")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest expressions that do not have an alias "
-            + "or columns with names like EXPR$[digit]."
-            + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
-            + "\"func(X) as myColumn\""
+            DruidPlanner.UNNAMED_INGESTION_COLUMN_ERROR
         )
         .verify();
   }
@@ -716,10 +717,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO t SELECT __time, dim1 AS EXPR$0 FROM foo PARTITIONED BY ALL")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest expressions that do not have an alias "
-            + "or columns with names like EXPR$[digit]."
-            + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
-            + "\"func(X) as myColumn\""
+            DruidPlanner.UNNAMED_INGESTION_COLUMN_ERROR
         )
         .verify();
   }
@@ -733,10 +731,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
              + "(SELECT __time, LOWER(dim1) FROM foo) PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest expressions that do not have an alias "
-            + "or columns with names like EXPR$[digit]."
-            + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
-            + "\"func(X) as myColumn\""
+            DruidPlanner.UNNAMED_INGESTION_COLUMN_ERROR
         )
         .verify();
   }
@@ -753,6 +748,31 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                     "The granularity specified in PARTITIONED BY is not supported. "
                     + "Please use an equivalent of these granularities: second, minute, five_minute, ten_minute, "
                     + "fifteen_minute, thirty_minute, hour, six_hour, eight_hour, day, week, month, quarter, year, all."))
+            )
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertOnExternalDataSourceWithIncompatibleTimeColumnSignature()
+  {
+    ExternalDataSource restrictedSignature = new ExternalDataSource(
+        new InlineInputSource("100\nc200\n"),
+        new CsvInputFormat(ImmutableList.of("__time"), null, false, false, 0),
+        RowSignature.builder()
+                    .add("__time", ColumnType.STRING)
+                    .build()
+    );
+    testIngestionQuery()
+        .sql(
+            "INSERT INTO dst SELECT __time FROM %s PARTITIONED BY ALL TIME",
+            externSql(restrictedSignature)
+        )
+        .expectValidationError(
+            CoreMatchers.allOf(
+                CoreMatchers.instanceOf(SqlPlanningException.class),
+                ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                    "EXTERN function with __time column can be used when __time column is of type long"))
             )
         )
         .verify();

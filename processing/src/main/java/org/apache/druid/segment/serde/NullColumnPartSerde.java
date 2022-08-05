@@ -33,6 +33,8 @@ import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.channels.WritableByteChannel;
@@ -204,7 +206,19 @@ public class NullColumnPartSerde implements ColumnPartSerde
         ReadableVectorOffset vectorOffset
     )
     {
-      throw new RuntimeException("This method should not be called for null-only columns");
+      throw new UnsupportedOperationException("This method should not be called for null-only columns");
+    }
+
+    @Override
+    public VectorValueSelector makeVectorValueSelector(ReadableVectorOffset offset)
+    {
+      return NilVectorSelector.create(offset);
+    }
+
+    @Override
+    public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
+    {
+      return NilVectorSelector.create(offset);
     }
 
     @Override

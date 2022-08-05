@@ -26,6 +26,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -155,6 +156,14 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
     Long nextPos = getPosition(partition);
     seek(partition, currPos);
     return nextPos;
+  }
+
+  @Override
+  public boolean isOffsetAvailable(StreamPartition<Integer> partition, OrderedSequenceNumber<Long> offset)
+  {
+    final Long earliestOffset = getEarliestSequenceNumber(partition);
+    return earliestOffset != null
+           && offset.isAvailableWithEarliest(KafkaSequenceNumber.of(earliestOffset));
   }
 
   @Override

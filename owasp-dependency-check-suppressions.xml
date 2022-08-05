@@ -73,6 +73,18 @@
     <cve>CVE-2021-27568</cve>
     <cve>CVE-2021-31684</cve>
   </suppress>
+  <suppress>
+    <!--
+      accessors-smart-1.2 is a dependency of json-smart-2.3.
+      owasp seems to flag this too against CVE-2021-27568 for some reason.
+      This can be fixed only when json-smart is upgraded.
+      -->
+    <notes><![CDATA[
+   file name: accessors-smart-1.2.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/net\.minidev/accessors\-smart@.*$</packageUrl>
+    <cve>CVE-2021-27568</cve>
+  </suppress>
 
 
   <suppress>
@@ -146,6 +158,7 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.hibernate/hibernate\-validator@.*$</packageUrl>
     <cve>CVE-2017-7536</cve>
+    <cve>CVE-2020-25638</cve>
   </suppress>
   <suppress>
     <!-- TODO: Fix by updating curator-x-discovery to > 4.2.0 and updating hadoop -->
@@ -429,12 +442,16 @@
     <cve>CVE-2020-13949</cve>
   </suppress>
   <suppress>
-    <!-- hive-storage-api has the thrift vulnerability too -->
+    <!--
+      1. hive-storage-api has the thrift vulnerability too
+      2. CVE-2021-34538 pertains to Hive server.
+     -->
     <notes><![CDATA[
      file name: hive-storage-api-2.8.1.jar
      ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.hive/hive-storage-api@2.8.1$</packageUrl>
     <cve>CVE-2020-13949</cve>
+    <cve>CVE-2021-34538</cve>
   </suppress>
   <suppress>
     <!--
@@ -509,6 +526,16 @@
     <packageUrl regex="true">^pkg:maven/org\.asynchttpclient/async-http-client-netty-utils@2.5.3$</packageUrl>
     <cve>CVE-2021-43138</cve>
   </suppress>
+
+  <suppress>
+    <!-- False alarm for the Async javascript library (https://github.com/caolan/async) which is a dev dependency for the web console -->
+    <notes><![CDATA[
+   file name: async-http-client-2.5.3.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.asynchttpclient/async-http-client@2.5.3$</packageUrl>
+    <cve>CVE-2021-43138</cve>
+  </suppress>
+
 
   <suppress>
     <!-- Jackson CVEs when processing objects of large depth. Consider updating -->

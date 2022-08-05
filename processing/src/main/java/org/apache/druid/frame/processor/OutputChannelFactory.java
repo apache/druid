@@ -17,28 +17,25 @@
  * under the License.
  */
 
-//CHECKSTYLE.OFF: PackageName - Must be in Calcite
+package org.apache.druid.frame.processor;
 
-package org.apache.calcite.prepare;
-
-import org.apache.calcite.adapter.java.JavaTypeFactory;
-import org.apache.calcite.sql.SqlOperatorTable;
-import org.apache.calcite.sql.validate.SqlConformance;
+import java.io.IOException;
 
 /**
- * Extend {@link CalciteSqlValidator} to make it visible to Druid.
- * {code CalciteSqlValidator} itself is protected which is why
- * this class is in a Calcite name space.
+ * Factory for generating channel pairs for output data from processors.
  */
-public class DruidSqlValidator extends CalciteSqlValidator
+public interface OutputChannelFactory
 {
-  public DruidSqlValidator(
-      SqlOperatorTable opTab,
-      CalciteCatalogReader catalogReader,
-      JavaTypeFactory typeFactory,
-      SqlConformance conformance)
-  {
-    super(opTab, catalogReader, typeFactory, conformance);
-  }
+  /**
+   * Create a channel pair tagged with a particular partition number.
+   */
+  OutputChannel openChannel(int partitionNumber) throws IOException;
 
+  /**
+   * Create a non-writable, always-empty channel pair tagged with a particular partition number.
+   *
+   * Calling {@link OutputChannel#getWritableChannel()} on this nil channel pair will result in an error. Calling
+   * {@link OutputChannel#getReadableChannel()} will return an empty channel.
+   */
+  OutputChannel openNilChannel(int partitionNumber);
 }

@@ -22,15 +22,11 @@ package org.apache.druid.common.aws;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
-import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
-
-import java.util.Collections;
-import java.util.List;
 
 public class AWSModule implements DruidModule
 {
@@ -55,11 +51,5 @@ public class AWSModule implements DruidModule
   public AmazonEC2 getEc2Client(AWSCredentialsProvider credentials)
   {
     return new AmazonEC2Client(credentials);
-  }
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.emptyList();
   }
 }
