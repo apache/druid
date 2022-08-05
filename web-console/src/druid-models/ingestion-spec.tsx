@@ -1377,7 +1377,6 @@ export interface TuningConfig {
   recordBufferSize?: number;
   recordBufferOfferTimeout?: number;
   recordBufferFullWait?: number;
-  fetchSequenceNumberTimeout?: number;
   fetchThreads?: number;
 }
 
@@ -2020,21 +2019,6 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
       <>
         Length of time in milliseconds to wait for the buffer to drain before attempting to fetch
         records from Kinesis again.
-      </>
-    ),
-  },
-  {
-    name: 'spec.tuningConfig.fetchSequenceNumberTimeout',
-    type: 'number',
-    defaultValue: 60000,
-    defined: typeIs('kinesis'),
-    hideInMore: true,
-    info: (
-      <>
-        Length of time in milliseconds to wait for Kinesis to return the earliest or latest sequence
-        number for a shard. Kinesis will not return the latest sequence number if no data is
-        actively being written to that shard. In this case, this fetch call will repeatedly timeout
-        and retry until fresh data is written to the stream.
       </>
     ),
   },
