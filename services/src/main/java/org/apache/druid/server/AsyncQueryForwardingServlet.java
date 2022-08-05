@@ -40,7 +40,6 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
@@ -796,19 +795,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       QueryMetrics queryMetrics;
       if (sqlQueryId != null) {
         queryMetrics = queryMetricsFactory.makeMetrics();
-        if (queryMetrics == null) {
-          return;
-        }
         queryMetrics.remoteAddress(req.getRemoteAddr());
-        // Setting sqlQueryId dimension to the metric. Using a dummy query since SQL is translated to a native query
-        // only at a broker.
-        queryMetrics.sqlQueryId(
-            Druids.newScanQueryBuilder()
-                  .dataSource("__dummy__")
-                  .eternityInterval()
-                  .build()
-                  .withSqlQueryId(sqlQueryId)
-        );
+        // Setting sqlQueryId dimension to the metric
+        queryMetrics.sqlQueryId(sqlQueryId);
       } else {
         queryMetrics = DruidMetrics.makeRequestMetrics(
             queryMetricsFactory,

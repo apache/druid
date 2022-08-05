@@ -145,6 +145,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public void sqlQueryId(String sqlQueryId)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
   public void context(QueryType query)
   {
     setDimension("context", query.getContext() == null ? ImmutableMap.of() : query.getContext());

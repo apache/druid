@@ -100,6 +100,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public void sqlQueryId(String sqlQueryId)
+  {
+    throw new ISE("Unsupported method in default query metrics implementation.");
+  }
+
+  @Override
   public void granularity(SearchQuery query)
   {
     // Don't emit by default

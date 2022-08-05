@@ -21,8 +21,6 @@ package org.apache.druid.query;
 
 import org.apache.druid.guice.annotations.PublicApi;
 
-import javax.annotation.Nullable;
-
 /**
  * This factory is used for DI of custom {@link QueryMetrics} implementations for all query types, which don't (yet)
  * need to emit custom dimensions and/or metrics, i. e. they are good with the generic {@link QueryMetrics} interface.
@@ -52,11 +50,7 @@ public interface GenericQueryMetricsFactory
   /**
    * Creates a {@link QueryMetrics} which doesn't have predefined QueryMetrics subclass. This method is used
    * by the router to build a {@link QueryMetrics} for SQL queries. It is needed since at router, there is no native
-   * query linked to a SQL query. By default, it returns null to maintain backward compatibility.
+   * query linked to a SQL query.
    */
-  @Nullable
-  default QueryMetrics<Query<?>> makeMetrics()
-  {
-    return null;
-  }
+  QueryMetrics<Query<?>> makeMetrics();
 }
