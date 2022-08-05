@@ -198,11 +198,8 @@ public class IndexMergerNullHandlingTest
               }
             }
 
-            Assert.assertEquals(subsetList.toString(), expectedNullRows.size() > 0, valueIndex.hasNulls());
 
             if (expectedNullRows.size() > 0) {
-              Assert.assertEquals(subsetList.toString(), 0, valueIndex.getIndex(null));
-
               final ImmutableBitmap nullBitmap = valueSetIndex.forValue(null)
                                                               .computeBitmapResult(
                                                                   new DefaultBitmapResultFactory(
@@ -217,8 +214,6 @@ public class IndexMergerNullHandlingTest
               }
 
               Assert.assertEquals(subsetList.toString(), expectedNullRows, actualNullRows);
-            } else {
-              Assert.assertEquals(-1, valueIndex.getIndex(null));
             }
           }
         }

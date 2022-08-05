@@ -95,11 +95,11 @@
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.47.v20220610</jetty.version>
+        <jetty.version>9.4.48.v20220622</jetty.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.10.5.20201202</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
-        <log4j.version>2.17.1</log4j.version>
+        <log4j.version>2.18.0</log4j.version>
         <mysql.version>5.1.49</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
@@ -815,12 +815,12 @@
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm</artifactId>
-                <version>7.1</version>
+                <version>9.3</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm-commons</artifactId>
-                <version>7.1</version>
+                <version>9.3</version>
             </dependency>
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
@@ -1122,7 +1122,7 @@
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>3.5.5</version>
+                <version>3.10.1</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1672,7 +1672,7 @@
             </activation>
             <properties>
                 <jdk.surefire.argLine>
-                    <!-- required for JvmMonitor tests on Java 11+ -->
+                    <!-- required for JvmMonitor on Java 11+ -->
                     --add-exports=java.base/jdk.internal.perf=ALL-UNNAMED
                     --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
 
@@ -1682,6 +1682,16 @@
                     --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
                     --add-opens=java.base/java.nio=ALL-UNNAMED
                     --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+
+                    <!-- required for NativeIO#getfd -->
+                    --add-opens=java.base/java.io=ALL-UNNAMED
+
+                    <!-- required for Guice -->
+                    --add-opens=java.base/java.lang=ALL-UNNAMED
+
+                    <!-- required for certain EqualsVerifier tests -->
+                    <!-- (not required in production) -->
+                    --add-opens=java.base/java.util=ALL-UNNAMED
                 </jdk.surefire.argLine>
             </properties>
             <build>

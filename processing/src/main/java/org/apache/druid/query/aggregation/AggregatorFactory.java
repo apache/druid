@@ -267,7 +267,6 @@ public abstract class AggregatorFactory implements Cacheable
     return ColumnTypeFactory.ofValueType(finalized);
   }
 
-
   /**
    * This method is deprecated and will be removed soon. Use {@link #getIntermediateType()} instead. Do not call this
    * method, it will likely produce incorrect results, it exists for backwards compatibility.

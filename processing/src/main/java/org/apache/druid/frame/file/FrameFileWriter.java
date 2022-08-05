@@ -171,7 +171,7 @@ public class FrameFileWriter implements Closeable
   public void close() throws IOException
   {
     if (closed) {
-      // Already closed things in abort().
+      // Already closed in abort() or a prior call to close().
       return;
     }
 

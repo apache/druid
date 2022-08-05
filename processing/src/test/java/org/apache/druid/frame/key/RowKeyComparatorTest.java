@@ -20,6 +20,7 @@
 package org.apache.druid.frame.key;
 
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -132,6 +133,12 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
         sortUsingObjectComparator(sortColumns, ALL_KEY_OBJECTS),
         sortUsingKeyComparator(sortColumns, ALL_KEY_OBJECTS)
     );
+  }
+
+  @Test
+  public void test_equals()
+  {
+    EqualsVerifier.forClass(RowKeyComparator.class).usingGetClass().verify();
   }
 
   private List<RowKey> sortUsingKeyComparator(final List<SortColumn> sortColumns, final List<Object[]> objectss)

@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.initialization;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import com.google.inject.Binder;
@@ -34,13 +33,11 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +47,6 @@ import java.util.Set;
 public class AuthenticatorMapperModule implements DruidModule
 {
   private static final String AUTHENTICATOR_PROPERTIES_FORMAT_STRING = "druid.auth.authenticator.%s";
-  private static Logger log = new Logger(AuthenticatorMapperModule.class);
 
   @Override
   public void configure(Binder binder)
@@ -60,12 +56,6 @@ public class AuthenticatorMapperModule implements DruidModule
           .in(LazySingleton.class);
 
     LifecycleModule.register(binder, AuthenticatorMapper.class);
-  }
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.emptyList();
   }
 
   private static class AuthenticatorMapperProvider implements Provider<AuthenticatorMapper>

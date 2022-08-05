@@ -17,31 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.sql.avatica;
+package org.apache.druid.java.util.metrics;
 
-import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.server.DruidNode;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Test;
+import org.mockito.Mockito;
 
-public class DruidAvaticaJsonHandlerTest extends DruidAvaticaHandlerTest
+public class NoopSysMonitorTest
 {
-  @Override
-  protected String getJdbcConnectionString(final int port)
-  {
-    return StringUtils.format(
-            "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
-            port,
-            DruidAvaticaJsonHandler.AVATICA_PATH
-    );
-  }
+  private static final String CPU_ARCH = System.getProperty("os.arch");
 
-  @Override
-  protected AbstractAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
+  @Test
+  public void testDoMonitor()
   {
-    return new DruidAvaticaJsonHandler(
-            druidMeta,
-            new DruidNode("dummy", "dummy", false, 1, null, true, false),
-            new AvaticaMonitor()
-    );
+    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
+
+    ServiceEmitter serviceEmitter = Mockito.mock(ServiceEmitter.class);
+    NoopSysMonitor noopSysMonitor = new NoopSysMonitor();
+
+    Assert.assertFalse(noopSysMonitor.doMonitor(serviceEmitter));
   }
 }
