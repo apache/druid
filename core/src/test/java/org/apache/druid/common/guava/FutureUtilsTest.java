@@ -20,6 +20,7 @@
 package org.apache.druid.common.guava;
 
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -37,6 +38,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class FutureUtilsTest
@@ -162,11 +164,70 @@ public class FutureUtilsTest
   }
 
   @Test
+  public void test_getUncheckedImmediately_ok()
+  {
+    final String s = FutureUtils.getUncheckedImmediately(Futures.immediateFuture("x"));
+    Assert.assertEquals("x", s);
+  }
+
+  @Test
+  public void test_getUncheckedImmediately_failed()
+  {
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
+        () -> FutureUtils.getUncheckedImmediately(Futures.immediateFailedFuture(new ISE("oh no")))
+    );
+
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IllegalStateException.class));
+    MatcherAssert.assertThat(e.getCause(), ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("oh no")));
+  }
+
+  @Test
+  public void test_getUncheckedImmediately_notResolved()
+  {
+    Assert.assertThrows(
+        IllegalStateException.class,
+        () -> FutureUtils.getUncheckedImmediately(SettableFuture.create())
+    );
+  }
+
+  @Test
   public void test_transform() throws Exception
   {
     Assert.assertEquals(
         "xy",
         FutureUtils.transform(Futures.immediateFuture("x"), s -> s + "y").get()
     );
+  }
+
+  @Test
+  public void test_futureWithBaggage_ok() throws ExecutionException, InterruptedException
+  {
+    final AtomicLong baggageHandled = new AtomicLong(0);
+    final SettableFuture<Long> future = SettableFuture.create();
+    final ListenableFuture<Long> futureWithBaggage = FutureUtils.futureWithBaggage(
+        future,
+        baggageHandled::incrementAndGet
+    );
+    future.set(3L);
+    Assert.assertEquals(3L, (long) futureWithBaggage.get());
+    Assert.assertEquals(1, baggageHandled.get());
+  }
+
+  @Test
+  public void test_futureWithBaggage_failure()
+  {
+    final AtomicLong baggageHandled = new AtomicLong(0);
+    final SettableFuture<Long> future = SettableFuture.create();
+    final ListenableFuture<Long> futureWithBaggage = FutureUtils.futureWithBaggage(
+        future,
+        baggageHandled::incrementAndGet
+    );
+    future.setException(new ISE("error!"));
+
+    final ExecutionException e = Assert.assertThrows(ExecutionException.class, futureWithBaggage::get);
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IllegalStateException.class));
+    MatcherAssert.assertThat(e.getCause(), ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("error!")));
+    Assert.assertEquals(1, baggageHandled.get());
   }
 }

@@ -17,32 +17,52 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.frame.channel;
 
-import com.google.common.collect.ImmutableSet;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.frame.Frame;
 
-import java.util.Set;
+import java.util.NoSuchElementException;
 
 /**
- * If an SQL query can be validated by {@link DruidPlanner}, the resulting artifact is the set of {@link Resource}
- * corresponding to the datasources and views which an authenticated request must be authorized for to process the
- * query.
+ * Empty channel.
  */
-public class ValidationResult
+public class ReadableNilFrameChannel implements ReadableFrameChannel
 {
-  private final Set<ResourceAction> resourceActions;
+  public static final ReadableNilFrameChannel INSTANCE = new ReadableNilFrameChannel();
 
-  public ValidationResult(
-      final Set<ResourceAction> resourceActions
-  )
+  private ReadableNilFrameChannel()
   {
-    this.resourceActions = ImmutableSet.copyOf(resourceActions);
   }
 
-  public Set<ResourceAction> getResourceActions()
+  @Override
+  public boolean isFinished()
   {
-    return resourceActions;
+    return true;
+  }
+
+  @Override
+  public boolean canRead()
+  {
+    return false;
+  }
+
+  @Override
+  public Frame read()
+  {
+    throw new NoSuchElementException();
+  }
+
+  @Override
+  public ListenableFuture<?> readabilityFuture()
+  {
+    return Futures.immediateFuture(null);
+  }
+
+  @Override
+  public void close()
+  {
+    // Nothing to do.
   }
 }

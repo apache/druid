@@ -64,6 +64,13 @@
             <Class name="org.apache.druid.sql.calcite.planner.CapturedState" />
         </And>
     </Match>
+    <Match>
+        <!-- Spotbugs doesn't like the MAGIC array -->
+        <And>
+            <Bug pattern="MS_MUTABLE_ARRAY" />
+            <Class name="org.apache.druid.frame.file.FrameFileWriter" />
+        </And>
+    </Match>
 
     <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION"/>
     <Bug pattern="BC_UNCONFIRMED_CAST"/>

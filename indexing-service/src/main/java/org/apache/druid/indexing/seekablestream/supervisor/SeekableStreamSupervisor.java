@@ -3916,9 +3916,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       @NotNull SequenceOffsetType offsetFromMetadata
   )
   {
-    final SequenceOffsetType earliestOffset = getOffsetFromStreamForPartition(partition, true);
-    return earliestOffset != null
-           && makeSequenceNumber(earliestOffset).compareTo(makeSequenceNumber(offsetFromMetadata)) <= 0;
+    StreamPartition<PartitionIdType> streamPartition = StreamPartition.of(ioConfig.getStream(), partition);
+    OrderedSequenceNumber<SequenceOffsetType> sequenceNumber = makeSequenceNumber(offsetFromMetadata);
+    recordSupplierLock.lock();
+    if (!recordSupplier.getAssignment().contains(streamPartition)) {
+      // this shouldn't happen, but in case it does...
+      throw new IllegalStateException("Record supplier does not match current known partitions");
+    }
+    try {
+      return recordSupplier.isOffsetAvailable(streamPartition, sequenceNumber);
+    }
+    finally {
+      recordSupplierLock.unlock();
+    }
   }
 
   protected void emitNoticeProcessTime(String noticeType, long timeInMillis)

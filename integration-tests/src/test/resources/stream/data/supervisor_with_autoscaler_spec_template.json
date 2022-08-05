@@ -66,7 +66,7 @@
     },
     "taskCount": 1,
     "replicas": 1,
-    "taskDuration": "PT30S",
+    "taskDuration": "PT120S",
     "%%USE_EARLIEST_KEY%%": true,
     "inputFormat" : %%INPUT_FORMAT%%
   }

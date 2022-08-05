@@ -233,12 +233,25 @@ public class SqlSegmentsMetadataQuery
             )
         );
 
-        if (i == intervals.size() - 1) {
-          sb.append(")");
-        } else {
+        // Add a special check for a segment which have one end at eternity and the other at some finite value. Since
+        // we are using string comparison, a segment with this start or end will not be returned otherwise.
+        if (matchMode.equals(IntervalMode.OVERLAPS)) {
+          sb.append(StringUtils.format(" OR (start = '%s' AND \"end\" != '%s' AND \"end\" > :start%d)", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i));
+          sb.append(StringUtils.format(" OR (start != '%s' AND \"end\" = '%s' AND start < :end%d)", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i));
+        }
+
+        if (i != intervals.size() - 1) {
           sb.append(" OR ");
         }
       }
+
+      // Add a special check for a single segment with eternity. Since we are using string comparison, a segment with
+      // this start and end will not be returned otherwise.
+      // Known Issue: https://github.com/apache/druid/issues/12860
+      if (matchMode.equals(IntervalMode.OVERLAPS)) {
+        sb.append(StringUtils.format(" OR (start = '%s' AND \"end\" = '%s')", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd()));
+      }
+      sb.append(")");
     }
 
     final Query<Map<String, Object>> sql = handle

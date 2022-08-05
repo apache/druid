@@ -100,6 +100,7 @@ public class FrameStorageAdapterTest
     @Before
     public void setUp()
     {
+
       queryableAdapter = new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex());
       frameSegment = FrameTestUtil.adapterToFrameSegment(queryableAdapter, frameType);
       frameAdapter = frameSegment.asStorageAdapter();

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.initialization;
+package org.apache.druid.guice;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;

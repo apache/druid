@@ -199,7 +199,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        5000,
         null,
         null,
         null,
@@ -831,6 +830,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.isOffsetAvailable(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(true)
+            .anyTimes();
 
     Capture<KinesisIndexTask> captured = Capture.newInstance();
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -885,6 +887,15 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
+    // Any sequence number greater than or equal to 0 must be available
+    EasyMock.expect(supervisorRecordSupplier.isOffsetAvailable(EasyMock.anyObject(),
+                                                               EasyMock.eq(KinesisSequenceNumber.of("101"))))
+            .andReturn(true)
+            .anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.isOffsetAvailable(EasyMock.anyObject(),
+                                                               EasyMock.eq(KinesisSequenceNumber.of("-1"))))
+            .andReturn(false)
+            .anyTimes();
 
 
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
@@ -2758,6 +2769,19 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("400").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
+    // Only sequence numbers >= 300 are available
+    EasyMock.expect(supervisorRecordSupplier.isOffsetAvailable(EasyMock.anyObject(),
+                                                               EasyMock.eq(KinesisSequenceNumber.of("400"))))
+            .andReturn(true)
+            .anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.isOffsetAvailable(EasyMock.anyObject(),
+                                                               EasyMock.eq(KinesisSequenceNumber.of("200"))))
+            .andReturn(false)
+            .anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.isOffsetAvailable(EasyMock.anyObject(),
+                                                               EasyMock.eq(KinesisSequenceNumber.of("100"))))
+            .andReturn(false)
+            .anyTimes();
 
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -3938,7 +3962,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        5000,
         null,
         null,
         null,
@@ -4073,6 +4096,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.isOffsetAvailable(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(true)
+            .anyTimes();
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -4356,6 +4382,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.isOffsetAvailable(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(true)
+            .anyTimes();
 
     Capture<Task> postSplitCaptured = Capture.newInstance(CaptureType.ALL);
 
@@ -4789,6 +4818,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(new StreamPartition<>(STREAM, SHARD_ID2)))
             .andReturn("200").anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.isOffsetAvailable(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(true)
+            .anyTimes();
 
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
@@ -5043,7 +5075,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        5000,
         null,
         null,
         null,

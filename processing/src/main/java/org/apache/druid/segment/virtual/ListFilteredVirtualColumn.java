@@ -46,6 +46,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;
@@ -229,7 +230,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
           return (T) new ListFilteredDruidPredicateIndex(underlyingIndex, idMapping);
         } else if (clazz.equals(LexicographicalRangeIndex.class)) {
           return (T) new ListFilteredLexicographicalRangeIndex(underlyingIndex, idMapping);
-        } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)) {
+        } else if (clazz.equals(DictionaryEncodedStringValueIndex.class) || clazz.equals(DictionaryEncodedValueIndex.class)) {
           return (T) new ListFilteredDictionaryEncodedStringValueIndex(underlyingIndex, idMapping);
         }
         return null;
@@ -607,12 +608,6 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     }
 
     @Override
-    public boolean hasNulls()
-    {
-      return delegate.hasNulls();
-    }
-
-    @Override
     public int getCardinality()
     {
       return idMapping.getValueCardinality();
@@ -623,12 +618,6 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     public String getValue(int index)
     {
       return delegate.getValue(idMapping.getReverseId(index));
-    }
-
-    @Override
-    public int getIndex(@Nullable String value)
-    {
-      return getReverseIndex(value);
     }
 
     @Override

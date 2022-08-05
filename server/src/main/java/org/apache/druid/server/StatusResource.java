@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DruidServerConfig;
+import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -39,6 +39,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -52,14 +53,18 @@ import java.util.Set;
 public class StatusResource
 {
   private final Properties properties;
-
   private final DruidServerConfig druidServerConfig;
+  private final ExtensionsLoader extnLoader;
 
   @Inject
-  public StatusResource(Properties properties, DruidServerConfig druidServerConfig)
+  public StatusResource(
+      final Properties properties,
+      final DruidServerConfig druidServerConfig,
+      final ExtensionsLoader extnLoader)
   {
     this.properties = properties;
     this.druidServerConfig = druidServerConfig;
+    this.extnLoader = extnLoader;
   }
 
   @GET
@@ -80,7 +85,7 @@ public class StatusResource
       @Context final HttpServletRequest req
   )
   {
-    return new Status(Initialization.getLoadedImplementations(DruidModule.class));
+    return new Status(extnLoader.getLoadedModules());
   }
 
   /**
