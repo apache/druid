@@ -172,7 +172,7 @@ public class SuppressedAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory withName(String newName)
   {
-    return delegate.withName(newName);
+    return new SuppressedAggregatorFactory(delegate.withName(newName));
   }
 
   @Override

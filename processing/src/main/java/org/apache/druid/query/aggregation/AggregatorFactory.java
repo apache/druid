@@ -352,7 +352,7 @@ public abstract class AggregatorFactory implements Cacheable
 
   /**
    * Used in cases where we want to change the output name of the aggregator to something else. For eg: if we have
-   * a query "select a , sum(b) as total group by table" the aggregator returned from the native group by query is "a0" set in
+   * a query `select a, sum(b) as total group by a from table` the aggregator returned from the native group by query is "a0" set in
    * {@link org.apache.druid.sql.calcite.rel.DruidQuery#computeAggregations}. We can use withName("total") to set the output name
    * of the aggregator to "total".
    *

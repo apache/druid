@@ -83,6 +83,17 @@ public class HllSketchAggregatorFactoryTest
     Assert.assertEquals(ROUND, aggregatorFactory.isRound());
   }
 
+
+  @Test
+  public void testWithName()
+  {
+    List<AggregatorFactory> aggregatorFactories = target.getRequiredColumns();
+    Assert.assertEquals(1, aggregatorFactories.size());
+    HllSketchAggregatorFactory aggregatorFactory = (HllSketchAggregatorFactory) aggregatorFactories.get(0);
+    Assert.assertEquals(aggregatorFactory, aggregatorFactory.withName(aggregatorFactory.getName()));
+    Assert.assertEquals("newTest", aggregatorFactory.withName("newTest").getName());
+  }
+
   @Test
   public void testFinalizeComputationNull()
   {

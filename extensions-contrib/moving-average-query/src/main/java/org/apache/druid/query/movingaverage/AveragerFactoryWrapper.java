@@ -29,6 +29,7 @@ import org.apache.druid.segment.column.ColumnType;
 import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * A wrapper around averagers that makes them appear to be aggregators.
@@ -186,5 +187,24 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
   public AggregatorFactory withName(String newName)
   {
     return new AveragerFactoryWrapper(af, newName);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    AveragerFactoryWrapper<?, ?> that = (AveragerFactoryWrapper<?, ?>) o;
+    return af.equals(that.af) && prefix.equals(that.prefix);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(af, prefix);
   }
 }

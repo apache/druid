@@ -120,7 +120,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory withName(String newName)
   {
-    return new VarianceAggregatorFactory(newName, getFieldName(), getEstimator(), getInputType());
+    return new VarianceAggregatorFactory(newName, getFieldName(), getEstimator(), inputType);
   }
 
   @Override

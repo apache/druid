@@ -120,7 +120,7 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   @Override
   public AggregatorFactory withName(String newName)
   {
-    return new FloatMaxAggregatorFactory(newName, getFieldName(), getFieldName(), macroTable);
+    return new FloatSumAggregatorFactory(newName, getFieldName(), getExpression(), macroTable);
   }
 
   @Override
