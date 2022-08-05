@@ -1016,7 +1016,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathNumericBoundFilterLongNoUpperNumeric() throws Exception
+  public void testGroupByPathNumericBoundFilterLongNoUpperNumeric()
   {
     testQuery(
         "SELECT "
