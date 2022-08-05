@@ -127,6 +127,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
       final ConcurrentMap<String, String> currOffsets = getCurrentOffsets();
       for (final StreamPartition<String> streamPartition : assignment) {
         String sequence = currOffsets.get(streamPartition.getPartitionId());
+        String earliestSequenceNumber = recordSupplier.getEarliestSequenceNumber(streamPartition);
         if (!recordSupplier.isOffsetAvailable(streamPartition, KinesisSequenceNumber.of(sequence))) {
           if (task.getTuningConfig().isResetOffsetAutomatically()) {
             log.info("Attempting to reset sequences automatically for all partitions");
@@ -142,9 +143,10 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
             }
           } else {
             throw new ISE(
-                "Starting sequenceNumber [%s] is no longer available for partition [%s] and resetOffsetAutomatically is not enabled",
+                "Starting sequenceNumber [%s] is no longer available for partition [%s] (earliest: [%s]) and resetOffsetAutomatically is not enabled",
                 sequence,
-                streamPartition.getPartitionId()
+                streamPartition.getPartitionId(),
+                earliestSequenceNumber
             );
           }
         }
