@@ -30,7 +30,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.ImmutableBitmapValues;
@@ -43,11 +43,9 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -182,8 +180,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
    */
   class RowIteratorImpl implements TransformableRowIterator
   {
-    private final Closer closer = Closer.create();
-    private final Map<String, BaseColumn> columnCache = new HashMap<>();
+    private final Closer closer;
+    private final ColumnCache columnCache;
 
     private final SimpleAscendingOffset offset = new SimpleAscendingOffset(numRows);
     private final int maxValidOffset = numRows - 1;
@@ -206,11 +204,12 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
     RowIteratorImpl()
     {
+      this.closer = Closer.create();
+      this.columnCache = new ColumnCache(input, closer);
+
       final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
-          input,
           VirtualColumns.EMPTY,
           false,
-          closer,
           offset,
           columnCache
       );
@@ -380,7 +379,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     if (indexSupplier == null) {
       return BitmapValues.EMPTY;
     }
-    final DictionaryEncodedStringValueIndex bitmaps = indexSupplier.as(DictionaryEncodedStringValueIndex.class);
+    final DictionaryEncodedValueIndex bitmaps = indexSupplier.as(DictionaryEncodedValueIndex.class);
     if (bitmaps == null) {
       return BitmapValues.EMPTY;
     }

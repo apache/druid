@@ -34,8 +34,8 @@ env:
     - DOCKER_IP=127.0.0.1  # for integration tests
     - MVN="mvn -B"
     - > # Various options to make execution of maven goals faster (e.g., mvn install)
-      MAVEN_SKIP="-Pskip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true"
-    - MAVEN_SKIP_TESTS="-Pskip-tests"
+      MAVEN_SKIP="-P skip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true"
+    - MAVEN_SKIP_TESTS="-P skip-tests"
 
 addons:
   apt:
@@ -46,7 +46,7 @@ addons:
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
 # output.  To compensate, use travis_wait to extend the timeout.
-install: ./check_test_suite.py && travis_terminate 0  || echo 'Running maven install...' && MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+install: ./check_test_suite.py && travis_terminate 0  || echo 'Running Maven install...' && MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
 # There are 3 stages of tests
 # 1. Tests - phase 1
@@ -188,9 +188,9 @@ jobs:
       jdk: openjdk11
 
     - <<: *package
-      name: "(openjdk15) packaging check"
+      name: "(openjdk17) packaging check"
       stage: Tests - phase 2
-      jdk: openjdk15
+      jdk: openjdk17
 
     - &test_processing_module
       name: "(openjdk8) processing module test"
@@ -259,9 +259,9 @@ jobs:
       jdk: openjdk11
 
     - <<: *test_processing_module
-      name: "(openjdk15) processing module test"
+      name: "(openjdk17) processing module test"
       stage: Tests - phase 2
-      jdk: openjdk15
+      jdk: openjdk17
 
     - &test_processing_module_sqlcompat
       <<: *test_processing_module
@@ -276,9 +276,9 @@ jobs:
       jdk: openjdk11
 
     - <<: *test_processing_module_sqlcompat
-      name: "(openjdk15) processing module test (SQL Compatibility)"
+      name: "(openjdk17) processing module test (SQL Compatibility)"
       stage: Tests - phase 2
-      jdk: openjdk15
+      jdk: openjdk17
 
     - &test_indexing_module
       <<: *test_processing_module
@@ -292,9 +292,9 @@ jobs:
       jdk: openjdk11
 
     - <<: *test_indexing_module
-      name: "(openjdk15) indexing modules test"
+      name: "(openjdk17) indexing modules test"
       stage: Tests - phase 2
-      jdk: openjdk15
+      jdk: openjdk17
 
     - &test_indexing_module_sqlcompat
       <<: *test_indexing_module
@@ -308,9 +308,9 @@ jobs:
       jdk: openjdk11
 
     - <<: *test_indexing_module_sqlcompat
-      name: "(openjdk15) indexing modules test (SQL Compatibility)"
+      name: "(openjdk17) indexing modules test (SQL Compatibility)"
       stage: Tests - phase 2
-      jdk: openjdk15
+      jdk: openjdk17
 
     - &test_server_module
       <<: *test_processing_module
@@ -324,9 +324,9 @@ jobs:
       jdk: openjdk11
 
     - <<: *test_server_module
-      name: "(openjdk15) server module test"
+      name: "(openjdk17) server module test"
       stage: Tests - phase 2
-      jdk: openjdk15
+      jdk: openjdk17
 
     - &test_server_module_sqlcompat
       <<: *test_server_module
@@ -339,9 +339,9 @@ jobs:
       jdk: openjdk11
 
     - <<: *test_server_module_sqlcompat
-      name: "(openjdk15) server module test (SQL Compatibility)"
+      name: "(openjdk17) server module test (SQL Compatibility)"
       stage: Tests - phase 2
-      jdk: openjdk15
+      jdk: openjdk17
 
     - &test_other_modules
       <<: *test_processing_module
@@ -355,9 +355,9 @@ jobs:
       jdk: openjdk11
 
     - <<: *test_other_modules
-      name: "(openjdk15) other modules test"
+      name: "(openjdk17) other modules test"
       stage: Tests - phase 2
-      jdk: openjdk15
+      jdk: openjdk17
 
     - &test_other_modules_sqlcompat
       <<: *test_other_modules
@@ -370,9 +370,9 @@ jobs:
       jdk: openjdk11
 
     - <<: *test_other_modules_sqlcompat
-      name: "(openjdk15) other modules test (SQL Compatibility)"
+      name: "(openjdk17) other modules test (SQL Compatibility)"
       stage: Tests - phase 2
-      jdk: openjdk15
+      jdk: openjdk17
 
     - name: "web console"
       install: skip
@@ -381,6 +381,35 @@ jobs:
         - ./check_test_suite.py && travis_terminate 0 || ${MVN} test -pl 'web-console'
       after_success:
         - (cd web-console && travis_retry npm run codecov)  # retry in case of network error
+
+    - name: "web console end-to-end test"
+      stage: Tests - phase 1
+      before_install: *setup_generate_license
+      install: web-console/script/druid build
+      before_script:
+        - ./check_test_suite.py && travis_terminate 0 || echo 'Starting nvm install...'
+        - nvm install 14.19.3
+        - web-console/script/druid start
+      script: (cd web-console && npm run test-e2e)
+      after_script: web-console/script/druid stop
+
+    - name: "docs"
+      stage: Tests - phase 1
+      install: ./check_test_suite.py && travis_terminate 0 || (cd website && npm install)
+      script: |-
+        (cd website && npm run lint && npm run spellcheck) || { echo "
+
+        If there are spell check errors:
+
+        1) Suppressing False Positives: Edit website/.spelling to add suppressions. Instructions
+        are at the top of the file and explain how to suppress false positives either globally or
+        within a particular file.
+
+        2) Running Spell Check Locally: cd website && npm install && npm run spellcheck
+
+        For more information, refer to: https://www.npmjs.com/package/markdown-spellcheck
+
+        " && false; }
 
     - name: "Build and test on ARM64 CPU architecture (1)"
       stage: Tests - phase 2
@@ -404,32 +433,6 @@ jobs:
         - MAVEN_PROJECTS='core,sql,server,services'
       script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Ddruid.console.skip=true -DargLine=-Xmx3000m
 
-    - name: "web console end-to-end test"
-      before_install: *setup_generate_license
-      install: web-console/script/druid build
-      before_script:
-        - ./check_test_suite.py && travis_terminate 0 || echo 'Starting nvm install...'
-        - nvm install 14.19.3
-        - web-console/script/druid start
-      script: (cd web-console && npm run test-e2e)
-      after_script: web-console/script/druid stop
-
-    - name: "docs"
-      install: ./check_test_suite.py && travis_terminate 0 || (cd website && npm install)
-      script: |-
-        (cd website && npm run lint && npm run spellcheck) || { echo "
-
-        If there are spell check errors:
-
-        1) Suppressing False Positives: Edit website/.spelling to add suppressions. Instructions
-        are at the top of the file and explain how to suppress false positives either globally or
-        within a particular file.
-
-        2) Running Spell Check Locally: cd website && npm install && npm run spellcheck
-
-        For more information, refer to: https://www.npmjs.com/package/markdown-spellcheck
-
-        " && false; }
 
     # Integration tests Java Compile version is set by the machine environment jdk (set by the jdk key)
     # Integration tests Java Runtime version is set by the JVM_RUNTIME env property (set env key to -Djvm.runtime=<JVM_RUNTIME_VERSION>)

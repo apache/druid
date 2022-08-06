@@ -35,6 +35,7 @@ import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;
@@ -105,7 +106,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
             bitmaps,
             NullHandling.isNullOrEquivalent(dictionary.get(0))
         );
-      } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)) {
+      } else if (clazz.equals(DictionaryEncodedStringValueIndex.class) || clazz.equals(DictionaryEncodedValueIndex.class)) {
         return (T) new GenericIndexedDictionaryEncodedStringValueIndex(bitmapFactory, dictionary, bitmaps);
       }
     }
@@ -156,12 +157,6 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
     }
 
     @Override
-    public boolean hasNulls()
-    {
-      return dictionary.indexOf(null) >= 0;
-    }
-
-    @Override
     public int getCardinality()
     {
       return dictionary.size();
@@ -174,11 +169,6 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
       return dictionary.get(index);
     }
 
-    @Override
-    public int getIndex(@Nullable String value)
-    {
-      return dictionary.indexOf(value);
-    }
   }
 
   public static final class GenericIndexedDictionaryEncodedStringValueSetIndex

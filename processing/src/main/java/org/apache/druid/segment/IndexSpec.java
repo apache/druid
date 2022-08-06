@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,6 +48,10 @@ public class IndexSpec
   private final CompressionFactory.StringDictionaryEncodingStrategy stringDictionaryEncoding;
   private final CompressionStrategy metricCompression;
   private final CompressionFactory.LongEncodingStrategy longEncoding;
+
+  @Nullable
+  private final CompressionStrategy jsonCompression;
+
   @Nullable
   private final SegmentizerFactory segmentLoader;
 
@@ -55,7 +60,7 @@ public class IndexSpec
    */
   public IndexSpec()
   {
-    this(null, null, null, null, null, null);
+    this(null, null, null, null, null, null, null);
   }
 
   @VisibleForTesting
@@ -66,7 +71,7 @@ public class IndexSpec
       @Nullable CompressionFactory.LongEncodingStrategy longEncoding
   )
   {
-    this(bitmapSerdeFactory, dimensionCompression, null, metricCompression, longEncoding, null);
+    this(bitmapSerdeFactory, dimensionCompression, null, metricCompression, longEncoding, null, null);
   }
 
   @VisibleForTesting
@@ -78,7 +83,7 @@ public class IndexSpec
       @Nullable SegmentizerFactory segmentLoader
   )
   {
-    this(bitmapSerdeFactory, dimensionCompression, null, metricCompression, longEncoding, segmentLoader);
+    this(bitmapSerdeFactory, dimensionCompression, null, metricCompression, longEncoding, null, segmentLoader);
   }
 
   /**
@@ -110,6 +115,7 @@ public class IndexSpec
       @JsonProperty("stringDictionaryEncoding") @Nullable CompressionFactory.StringDictionaryEncodingStrategy stringDictionaryEncoding,
       @JsonProperty("metricCompression") @Nullable CompressionStrategy metricCompression,
       @JsonProperty("longEncoding") @Nullable CompressionFactory.LongEncodingStrategy longEncoding,
+      @JsonProperty("jsonCompression") @Nullable CompressionStrategy jsonCompression,
       @JsonProperty("segmentLoader") @Nullable SegmentizerFactory segmentLoader
   )
   {
@@ -129,6 +135,7 @@ public class IndexSpec
     this.longEncoding = longEncoding == null
                         ? CompressionFactory.DEFAULT_LONG_ENCODING_STRATEGY
                         : longEncoding;
+    this.jsonCompression = jsonCompression;
     this.segmentLoader = segmentLoader;
   }
 
@@ -169,6 +176,14 @@ public class IndexSpec
     return segmentLoader;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public CompressionStrategy getJsonCompression()
+  {
+    return jsonCompression;
+  }
+
   public Map<String, Object> asMap(ObjectMapper objectMapper)
   {
     return objectMapper.convertValue(
@@ -192,13 +207,14 @@ public class IndexSpec
            stringDictionaryEncoding == indexSpec.stringDictionaryEncoding &&
            metricCompression == indexSpec.metricCompression &&
            longEncoding == indexSpec.longEncoding &&
+           Objects.equals(jsonCompression, indexSpec.jsonCompression) &&
            Objects.equals(segmentLoader, indexSpec.segmentLoader);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(bitmapSerdeFactory, dimensionCompression, stringDictionaryEncoding, metricCompression, longEncoding, segmentLoader);
+    return Objects.hash(bitmapSerdeFactory, dimensionCompression, stringDictionaryEncoding, metricCompression, longEncoding, jsonCompression, segmentLoader);
   }
 
   @Override
@@ -210,6 +226,7 @@ public class IndexSpec
            ", stringDictionaryEncoding=" + stringDictionaryEncoding +
            ", metricCompression=" + metricCompression +
            ", longEncoding=" + longEncoding +
+           ", jsonCompression=" + jsonCompression +
            ", segmentLoader=" + segmentLoader +
            '}';
   }

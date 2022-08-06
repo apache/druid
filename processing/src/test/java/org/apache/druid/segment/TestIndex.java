@@ -220,6 +220,7 @@ public class TestIndex
               CompressionFactory.StringDictionaryEncodingStrategy.FC4,
               null,
               null,
+              null,
               null
           )
       )

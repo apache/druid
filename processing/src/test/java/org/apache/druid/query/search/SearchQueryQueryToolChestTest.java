@@ -30,6 +30,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.VirtualColumns;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -48,6 +49,7 @@ public class SearchQueryQueryToolChestTest
                 1,
                 new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
                 ImmutableList.of(Druids.DIMENSION_IDENTITY.apply("dim1")),
+                VirtualColumns.EMPTY,
                 new FragmentSearchQuerySpec(ImmutableList.of("a", "b")),
                 null,
                 null

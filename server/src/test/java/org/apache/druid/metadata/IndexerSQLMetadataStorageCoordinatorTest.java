@@ -53,6 +53,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -97,6 +98,42 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       100
   );
 
+  private final DataSegment eternitySegment = new DataSegment(
+      "fooDataSource",
+      Intervals.ETERNITY,
+      "version",
+      ImmutableMap.of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new LinearShardSpec(0),
+      9,
+      100
+  );
+
+
+  private final DataSegment firstHalfEternityRangeSegment = new DataSegment(
+      "fooDataSource",
+      new Interval(DateTimes.MIN, DateTimes.of("3000")),
+      "version",
+      ImmutableMap.of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new LinearShardSpec(0),
+      9,
+      100
+  );
+
+  private final DataSegment secondHalfEternityRangeSegment = new DataSegment(
+      "fooDataSource",
+      new Interval(DateTimes.of("1970"), DateTimes.MAX),
+      "version",
+      ImmutableMap.of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new LinearShardSpec(0),
+      9,
+      100
+  );
   private final DataSegment defaultSegment2 = new DataSegment(
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
@@ -254,33 +291,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       100
   );
 
-  private final DataSegment eternityRangeSegment1 = new DataSegment(
-      "eternity1",
-      Intervals.ETERNITY,
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(0, 1),
-      9,
-      100
-  );
-
-  private final DataSegment halfEternityRangeSegment1 = new DataSegment(
-      "halfEternity",
-      new Interval(DateTimes.MIN, DateTimes.of("1970")),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(0, 1),
-      9,
-      100
-  );
-
-  private final DataSegment halfEternityRangeSegment2 = new DataSegment(
-      "halfEternity",
-      new Interval(DateTimes.of("1970"), DateTimes.MAX),
+  private final DataSegment hugeTimeRangeSegment4 = new DataSegment(
+      "hugeTimeRangeDataSource",
+      Intervals.of("1990-01-01T00Z/19940-01-01T00Z"),
       "zversion",
       ImmutableMap.of(),
       ImmutableList.of("dim1"),
@@ -1170,74 +1183,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testUsedEternitySegmentEternityFilter() throws IOException
-  {
-    coordinator.announceHistoricalSegments(ImmutableSet.of(eternityRangeSegment1));
-
-    Assert.assertEquals(
-        ImmutableSet.of(eternityRangeSegment1),
-        ImmutableSet.copyOf(
-            coordinator.retrieveUsedSegmentsForIntervals(
-                eternityRangeSegment1.getDataSource(),
-                Intervals.ONLY_ETERNITY,
-                Segments.ONLY_VISIBLE
-            )
-        )
-    );
-  }
-
-  @Test
-  public void testUsedEternitySegment2000Filter() throws IOException
-  {
-    coordinator.announceHistoricalSegments(ImmutableSet.of(eternityRangeSegment1));
-
-    Assert.assertEquals(
-        ImmutableSet.of(eternityRangeSegment1),
-        ImmutableSet.copyOf(
-            coordinator.retrieveUsedSegmentsForIntervals(
-                eternityRangeSegment1.getDataSource(),
-                Collections.singletonList(Intervals.of("2000/2030")),
-                Segments.ONLY_VISIBLE
-            )
-        )
-    );
-  }
-
-  @Test
-  public void testUsedHalfEternitySegmentEternityFilter() throws IOException
-  {
-    coordinator.announceHistoricalSegments(ImmutableSet.of(halfEternityRangeSegment1, halfEternityRangeSegment2));
-
-    Assert.assertEquals(
-        ImmutableSet.of(halfEternityRangeSegment1, halfEternityRangeSegment2),
-        ImmutableSet.copyOf(
-            coordinator.retrieveUsedSegmentsForIntervals(
-                halfEternityRangeSegment1.getDataSource(),
-                Intervals.ONLY_ETERNITY,
-                Segments.ONLY_VISIBLE
-            )
-        )
-    );
-  }
-
-  @Test
-  public void testUsedHalfEternitySegment2000Filter() throws IOException
-  {
-    coordinator.announceHistoricalSegments(ImmutableSet.of(halfEternityRangeSegment1, halfEternityRangeSegment2));
-
-    Assert.assertEquals(
-        ImmutableSet.of(halfEternityRangeSegment2),
-        ImmutableSet.copyOf(
-            coordinator.retrieveUsedSegmentsForIntervals(
-                halfEternityRangeSegment1.getDataSource(),
-                Collections.singletonList(Intervals.of("2000/2030")),
-                Segments.ONLY_VISIBLE
-            )
-        )
-    );
-  }
-
-  @Test
   public void testUsedHugeTimeRangeEternityFilter() throws IOException
   {
     coordinator.announceHistoricalSegments(
@@ -1300,6 +1245,159 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             coordinator.retrieveUsedSegmentsForInterval(
                 hugeTimeRangeSegment1.getDataSource(),
                 Intervals.of("2993/2995"),
+                Segments.ONLY_VISIBLE
+            )
+        )
+    );
+  }
+
+
+  @Test
+  public void testEternitySegmentWithStringComparison() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(
+            eternitySegment
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(eternitySegment),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                eternitySegment.getDataSource(),
+                Intervals.of("2020/2021"),
+                Segments.ONLY_VISIBLE
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testEternityMultipleSegmentWithStringComparison() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(
+            numberedSegment0of0,
+            eternitySegment
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(eternitySegment, numberedSegment0of0),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                eternitySegment.getDataSource(),
+                Intervals.of("2015/2016"),
+                Segments.ONLY_VISIBLE
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testFirstHalfEternitySegmentWithStringComparison() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(
+            firstHalfEternityRangeSegment
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(firstHalfEternityRangeSegment),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                firstHalfEternityRangeSegment.getDataSource(),
+                Intervals.of("2020/2021"),
+                Segments.ONLY_VISIBLE
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testFirstHalfEternityMultipleSegmentWithStringComparison() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(
+            numberedSegment0of0,
+            firstHalfEternityRangeSegment
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(numberedSegment0of0, firstHalfEternityRangeSegment),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                firstHalfEternityRangeSegment.getDataSource(),
+                Intervals.of("2015/2016"),
+                Segments.ONLY_VISIBLE
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testSecondHalfEternitySegmentWithStringComparison() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(
+            secondHalfEternityRangeSegment
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(secondHalfEternityRangeSegment),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                secondHalfEternityRangeSegment.getDataSource(),
+                Intervals.of("2020/2021"),
+                Segments.ONLY_VISIBLE
+            )
+        )
+    );
+  }
+
+  // Known Issue: https://github.com/apache/druid/issues/12860
+  @Ignore
+  @Test
+  public void testLargeIntervalWithStringComparison() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(
+            hugeTimeRangeSegment4
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(hugeTimeRangeSegment4),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                hugeTimeRangeSegment4.getDataSource(),
+                Intervals.of("2020/2021"),
+                Segments.ONLY_VISIBLE
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testSecondHalfEternityMultipleSegmentWithStringComparison() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(
+            numberedSegment0of0,
+            secondHalfEternityRangeSegment
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(numberedSegment0of0, secondHalfEternityRangeSegment),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                secondHalfEternityRangeSegment.getDataSource(),
+                Intervals.of("2015/2016"),
                 Segments.ONLY_VISIBLE
             )
         )

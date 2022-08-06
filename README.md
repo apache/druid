@@ -92,7 +92,7 @@ Chat with Druid committers and users in real-time on the Apache Druid Slack chan
 
 Please note that JDK 8 or JDK 11 is required to build Druid.
 
-For instructions on building Druid from source, see [docs/development/build.md](docs/development/build.md)
+See the latest [build guide](https://druid.apache.org/docs/latest/development/build.html) for instructions on building Apache Druid from source.
 
 ### Contributing
 

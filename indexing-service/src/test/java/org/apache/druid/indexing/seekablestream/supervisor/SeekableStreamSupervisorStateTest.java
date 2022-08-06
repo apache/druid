@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -1371,17 +1372,22 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
   private static class TestEmitter extends NoopServiceEmitter
   {
+    @GuardedBy("events")
     private final List<Event> events = new ArrayList<>();
 
     @Override
     public void emit(Event event)
     {
-      events.add(event);
+      synchronized (events) {
+        events.add(event);
+      }
     }
 
     public List<Event> getEvents()
     {
-      return events;
+      synchronized (events) {
+        return ImmutableList.copyOf(events);
+      }
     }
   }
 }

@@ -65,9 +65,10 @@ export interface SampleResponse {
 export type CacheRows = Record<string, any>[];
 
 export interface SampleResponseWithExtraInfo extends SampleResponse {
-  rollup?: boolean;
-  columns?: Record<string, any>;
+  columns?: string[];
+  columnInfo?: Record<string, any>;
   aggregators?: Record<string, any>;
+  rollup?: boolean;
 }
 
 export interface SampleEntry {
@@ -280,23 +281,41 @@ export async function sampleForConnect(
   if (!samplerResponse.data.length) return samplerResponse;
 
   if (reingestMode) {
+    const dataSource = deepGet(ioConfig, 'inputSource.dataSource');
+    const intervals = deepGet(ioConfig, 'inputSource.interval');
+
+    const scanResponse = await queryDruidRune({
+      queryType: 'scan',
+      dataSource,
+      intervals,
+      resultFormat: 'compactedList',
+      limit: 1,
+      columns: [],
+      granularity: 'all',
+    });
+
+    const columns = deepGet(scanResponse, '0.columns');
+    if (!Array.isArray(columns)) {
+      throw new Error(`unexpected response from scan query`);
+    }
+    samplerResponse.columns = columns;
+
     const segmentMetadataResponse = await queryDruidRune({
       queryType: 'segmentMetadata',
-      dataSource: deepGet(ioConfig, 'inputSource.dataSource'),
-      intervals: [deepGet(ioConfig, 'inputSource.interval')],
+      dataSource,
+      intervals,
       merge: true,
       lenientAggregatorMerge: true,
       analysisTypes: ['aggregators', 'rollup'],
     });
 
-    if (Array.isArray(segmentMetadataResponse) && segmentMetadataResponse.length === 1) {
-      const segmentMetadataResponse0 = segmentMetadataResponse[0];
-      samplerResponse.rollup = segmentMetadataResponse0.rollup;
-      samplerResponse.columns = segmentMetadataResponse0.columns;
-      samplerResponse.aggregators = segmentMetadataResponse0.aggregators;
-    } else {
+    if (!Array.isArray(segmentMetadataResponse) || segmentMetadataResponse.length !== 1) {
       throw new Error(`unexpected response from segmentMetadata query`);
     }
+    const segmentMetadataResponse0 = segmentMetadataResponse[0];
+    samplerResponse.rollup = segmentMetadataResponse0.rollup;
+    samplerResponse.columnInfo = segmentMetadataResponse0.columns;
+    samplerResponse.aggregators = segmentMetadataResponse0.aggregators;
   }
 
   return samplerResponse;

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -130,6 +131,7 @@ public class VectorGroupByEngine
       @Nullable final Filter filter,
       final Interval interval,
       final GroupByQueryConfig config,
+      final DruidProcessingConfig processingConfig,
       @Nullable final GroupByQueryMetrics groupByQueryMetrics
   )
   {
@@ -190,6 +192,7 @@ public class VectorGroupByEngine
               return new VectorGroupByEngineIterator(
                   query,
                   config,
+                  processingConfig,
                   storageAdapter,
                   cursor,
                   interval,
@@ -228,6 +231,7 @@ public class VectorGroupByEngine
   {
     private final GroupByQuery query;
     private final GroupByQueryConfig querySpecificConfig;
+    private final DruidProcessingConfig processingConfig;
     private final StorageAdapter storageAdapter;
     private final VectorCursor cursor;
     private final List<GroupByVectorColumnSelector> selectors;
@@ -258,7 +262,8 @@ public class VectorGroupByEngine
 
     VectorGroupByEngineIterator(
         final GroupByQuery query,
-        final GroupByQueryConfig config,
+        final GroupByQueryConfig querySpecificConfig,
+        final DruidProcessingConfig processingConfig,
         final StorageAdapter storageAdapter,
         final VectorCursor cursor,
         final Interval queryInterval,
@@ -268,7 +273,8 @@ public class VectorGroupByEngine
     )
     {
       this.query = query;
-      this.querySpecificConfig = config;
+      this.querySpecificConfig = querySpecificConfig;
+      this.processingConfig = processingConfig;
       this.storageAdapter = storageAdapter;
       this.cursor = cursor;
       this.selectors = selectors;
@@ -433,7 +439,7 @@ public class VectorGroupByEngine
           // Advance bucketInterval.
           bucketInterval = bucketIterator.hasNext() ? bucketIterator.next() : null;
           break;
-        } else if (selectorInternalFootprint > querySpecificConfig.getMaxSelectorDictionarySize()) {
+        } else if (selectorInternalFootprint > querySpecificConfig.getActualMaxSelectorDictionarySize(processingConfig)) {
           break;
         }
       }

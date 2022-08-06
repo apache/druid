@@ -87,6 +87,7 @@ public class ServerConfig
     this.allowedHttpMethods = allowedHttpMethods;
     this.showDetailedJettyErrors = showDetailedJettyErrors;
     this.errorResponseTransformStrategy = errorResponseTransformStrategy;
+    this.contentSecurityPolicy = contentSecurityPolicy;
   }
 
   public ServerConfig()

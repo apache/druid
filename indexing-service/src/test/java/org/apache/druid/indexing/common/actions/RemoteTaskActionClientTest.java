@@ -20,9 +20,6 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.discovery.DruidLeaderClient;
-import org.apache.druid.indexing.common.RetryPolicyConfig;
-import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
@@ -30,13 +27,19 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.rpc.ServiceClient;
 import org.easymock.EasyMock;
 import org.jboss.netty.buffer.BigEndianHeapChannelBuffer;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -44,36 +47,32 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 public class RemoteTaskActionClientTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private DruidLeaderClient druidLeaderClient;
+  private ServiceClient directOverlordClient;
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
 
   @Before
   public void setUp()
   {
-    druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
+    directOverlordClient = EasyMock.createMock(ServiceClient.class);
   }
 
   @Test
   public void testSubmitSimple() throws Exception
   {
-    Request request = new Request(HttpMethod.POST, new URL("http://localhost:1234/xx"));
-    EasyMock.expect(druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/action"))
-            .andReturn(request);
-
-    // return status code 200 and a list with size equals 1
-    Map<String, Object> responseBody = new HashMap<>();
+    // return OK response and a list with size equals 1
+    final Map<String, Object> expectedResponse = new HashMap<>();
     final List<TaskLock> expectedLocks = Collections.singletonList(new TimeChunkLock(
         TaskLockType.SHARED,
         "groupId",
@@ -82,68 +81,71 @@ public class RemoteTaskActionClientTest
         "version",
         0
     ));
-    responseBody.put("result", expectedLocks);
-    String strResult = objectMapper.writeValueAsString(responseBody);
-    final HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
-    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
-    EasyMock.replay(response);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        response,
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
+    expectedResponse.put("result", expectedLocks);
 
-    // set up mocks
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    final DefaultHttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    final BytesFullResponseHolder responseHolder = new BytesFullResponseHolder(httpResponse);
+    responseHolder.addChunk(objectMapper.writeValueAsBytes(expectedResponse));
 
-    Task task = NoopTask.create("id", 0);
-    RemoteTaskActionClient client = new RemoteTaskActionClient(
-        task,
-        druidLeaderClient,
-        new RetryPolicyFactory(new RetryPolicyConfig()),
-        objectMapper
-    );
-    final List<TaskLock> locks = client.submit(new LockListAction());
+    final Task task = NoopTask.create("id", 0);
+    final LockListAction action = new LockListAction();
+
+    EasyMock.expect(
+                directOverlordClient.request(
+                    EasyMock.eq(
+                        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/action")
+                            .jsonContent(objectMapper, new TaskActionHolder(task, action))),
+                    EasyMock.anyObject(BytesFullResponseHandler.class)
+                )
+            )
+            .andReturn(responseHolder);
+
+    EasyMock.replay(directOverlordClient);
+
+    RemoteTaskActionClient client = new RemoteTaskActionClient(task, directOverlordClient, objectMapper);
+    final List<TaskLock> locks = client.submit(action);
 
     Assert.assertEquals(expectedLocks, locks);
-    EasyMock.verify(druidLeaderClient);
+    EasyMock.verify(directOverlordClient);
   }
 
   @Test
   public void testSubmitWithIllegalStatusCode() throws Exception
   {
-    // return status code 400 and a list with size equals 1
-    Request request = new Request(HttpMethod.POST, new URL("http://localhost:1234/xx"));
-    EasyMock.expect(druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/action"))
-            .andReturn(request);
-
-    // return status code 200 and a list with size equals 1
+    // return status code 400
     final HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
     EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.BAD_REQUEST).anyTimes();
     EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
     EasyMock.replay(response);
+
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         response,
         StandardCharsets.UTF_8
     ).addChunk("testSubmitWithIllegalStatusCode");
 
-    // set up mocks
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    final Task task = NoopTask.create("id", 0);
+    final LockListAction action = new LockListAction();
+    EasyMock.expect(
+                directOverlordClient.request(
+                    EasyMock.eq(
+                        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/action")
+                            .jsonContent(objectMapper, new TaskActionHolder(task, action))
+                    ),
+                    EasyMock.anyObject(BytesFullResponseHandler.class)
+                )
+            )
+            .andThrow(new ExecutionException(new HttpResponseException(responseHolder)));
 
-    Task task = NoopTask.create("id", 0);
-    RemoteTaskActionClient client = new RemoteTaskActionClient(
-        task,
-        druidLeaderClient,
-        new RetryPolicyFactory(objectMapper.readValue("{\"maxRetryCount\":0}", RetryPolicyConfig.class)),
-        objectMapper
-    );
+    EasyMock.replay(directOverlordClient);
+
+    RemoteTaskActionClient client = new RemoteTaskActionClient(task, directOverlordClient, objectMapper);
     expectedException.expect(IOException.class);
     expectedException.expectMessage(
         "Error with status[400 Bad Request] and message[testSubmitWithIllegalStatusCode]. "
         + "Check overlord logs for details."
     );
-    client.submit(new LockListAction());
+    client.submit(action);
+
+    EasyMock.verify(directOverlordClient, response);
   }
 }

@@ -34,7 +34,7 @@ public class TestQueryMakerFactory implements QueryMakerFactory
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final ObjectMapper jsonMapper;
 
-  TestQueryMakerFactory(
+  public TestQueryMakerFactory(
       final QueryLifecycleFactory queryLifecycleFactory,
       final ObjectMapper jsonMapper
   )

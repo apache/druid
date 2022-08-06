@@ -52,7 +52,6 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryUnsupportedException;
-import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
@@ -326,7 +325,7 @@ public class QueryResource implements QueryCountStatsProvider
       queryLifecycle.emitLogsAndMetrics(unsupported, req.getRemoteAddr(), -1);
       return ioReaderWriter.getResponseWriter().gotUnsupported(unsupported);
     }
-    catch (BadJsonQueryException | ResourceLimitExceededException e) {
+    catch (BadQueryException e) {
       interruptedQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
       return ioReaderWriter.getResponseWriter().gotBadQuery(e);

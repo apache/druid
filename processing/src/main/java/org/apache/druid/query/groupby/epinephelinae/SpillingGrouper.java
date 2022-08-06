@@ -79,6 +79,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   private final List<File> dictionaryFiles = new ArrayList<>();
   private final boolean sortHasNonGroupingFields;
 
+  private boolean diskFull = false;
   private boolean spillingAllowed;
 
   public SpillingGrouper(
@@ -171,6 +172,13 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public AggregateResult aggregate(KeyType key, int keyHash)
   {
+    if (diskFull) {
+      // If the prior return was DISK_FULL, then return it again. When we return DISK_FULL to a processing thread,
+      // it skips the rest of the segment and the query is canceled. However, it's possible that the next segment
+      // starts processing before cancellation can kick in. We want that one, if it occurs, to see DISK_FULL too.
+      return DISK_FULL;
+    }
+
     final AggregateResult result = grouper.aggregate(key, keyHash);
 
     if (result.isOk() || !spillingAllowed || temporaryStorage.maxSize() <= 0) {
@@ -184,6 +192,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
         spill();
       }
       catch (TemporaryStorageFullException e) {
+        diskFull = true;
         return DISK_FULL;
       }
       catch (IOException e) {

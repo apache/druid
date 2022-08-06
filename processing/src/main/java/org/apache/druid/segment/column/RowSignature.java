@@ -235,11 +235,14 @@ public class RowSignature implements ColumnInspector
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    return getColumnType(column).map(valueType -> {
-      if (valueType.isNumeric()) {
-        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
+    return getColumnType(column).map(columnType -> {
+      if (columnType.isNumeric()) {
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(columnType);
+      } else if (columnType.is(ValueType.COMPLEX)) {
+        return new ColumnCapabilitiesImpl().setType(columnType).setHasMultipleValues(false);
+      } else {
+        return new ColumnCapabilitiesImpl().setType(columnType);
       }
-      return new ColumnCapabilitiesImpl().setType(valueType);
     }).orElse(null);
   }
 

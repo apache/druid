@@ -318,6 +318,7 @@ public class Druids
     private int limit;
     private QuerySegmentSpec querySegmentSpec;
     private List<DimensionSpec> dimensions;
+    private VirtualColumns virtualColumns;
     private SearchQuerySpec querySpec;
     private SearchSortSpec sortSpec;
     private Map<String, Object> context;
@@ -330,6 +331,7 @@ public class Druids
       limit = 0;
       querySegmentSpec = null;
       dimensions = null;
+      virtualColumns = null;
       querySpec = null;
       sortSpec = null;
       context = null;
@@ -344,6 +346,7 @@ public class Druids
           limit,
           querySegmentSpec,
           dimensions,
+          virtualColumns,
           querySpec,
           sortSpec,
           context
@@ -359,6 +362,7 @@ public class Druids
           .limit(query.getLimit())
           .intervals(query.getQuerySegmentSpec())
           .dimensions(query.getDimensions())
+          .virtualColumns(query.getVirtualColumns())
           .query(query.getQuery())
           .sortSpec(query.getSort())
           .context(query.getContext());
@@ -433,6 +437,18 @@ public class Druids
     public SearchQueryBuilder dimensions(DimensionSpec d)
     {
       dimensions = Collections.singletonList(d);
+      return this;
+    }
+
+    public SearchQueryBuilder virtualColumns(VirtualColumn... vc)
+    {
+      virtualColumns = VirtualColumns.create(Arrays.asList(vc));
+      return this;
+    }
+
+    public SearchQueryBuilder virtualColumns(VirtualColumns vc)
+    {
+      virtualColumns = vc;
       return this;
     }
 

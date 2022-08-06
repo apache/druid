@@ -233,24 +233,24 @@ public class SqlSegmentsMetadataQuery
             )
         );
 
+        // Add a special check for a segment which have one end at eternity and the other at some finite value. Since
+        // we are using string comparison, a segment with this start or end will not be returned otherwise.
+        if (matchMode.equals(IntervalMode.OVERLAPS)) {
+          sb.append(StringUtils.format(" OR (start = '%s' AND \"end\" != '%s' AND \"end\" > :start%d)", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i));
+          sb.append(StringUtils.format(" OR (start != '%s' AND \"end\" = '%s' AND start < :end%d)", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i));
+        }
+
         if (i != intervals.size() - 1) {
           sb.append(" OR ");
         }
       }
 
-      if (matchMode == IntervalMode.OVERLAPS) {
-        // Segments with both endpoints outside 0000/10000 may overlap the search intervals but not match the
-        // generated SQL conditions. We need to add one more OR condition to catch all of these.
-        sb.append(
-            StringUtils.format(
-                " OR start < %2$s OR %1$send%1$s >= %3$s",
-                connector.getQuoteString(),
-                ":minmatch",
-                ":maxmatch"
-            )
-        );
+      // Add a special check for a single segment with eternity. Since we are using string comparison, a segment with
+      // this start and end will not be returned otherwise.
+      // Known Issue: https://github.com/apache/druid/issues/12860
+      if (matchMode.equals(IntervalMode.OVERLAPS)) {
+        sb.append(StringUtils.format(" OR (start = '%s' AND \"end\" = '%s')", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd()));
       }
-
       sb.append(")");
     }
 
@@ -260,17 +260,12 @@ public class SqlSegmentsMetadataQuery
         .bind("used", used)
         .bind("dataSource", dataSource);
 
-    if (compareAsString && !intervals.isEmpty()) {
+    if (compareAsString) {
       final Iterator<Interval> iterator = intervals.iterator();
       for (int i = 0; iterator.hasNext(); i++) {
-        final Interval interval = iterator.next();
-        sql.bind(StringUtils.format("start%d", i), interval.getStart().toString());
-        sql.bind(StringUtils.format("end%d", i), interval.getEnd().toString());
-      }
-
-      if (matchMode == IntervalMode.OVERLAPS) {
-        sql.bind("minmatch", "0000-"); // '-' is lexicographically lower than '0' so this catches negative-year starts
-        sql.bind("maxmatch", "10000-"); // Catches end points at 10000 or after
+        Interval interval = iterator.next();
+        sql.bind(StringUtils.format("start%d", i), interval.getStart().toString())
+           .bind(StringUtils.format("end%d", i), interval.getEnd().toString());
       }
     }
 
@@ -287,8 +282,7 @@ public class SqlSegmentsMetadataQuery
               } else {
                 // Must re-check that the interval matches, even if comparing as string, because the *segment interval*
                 // might not be string-comparable. (Consider a query interval like "2000-01-01/3000-01-01" and a
-                // segment interval like "20010/20011". Consider also a segment interval with endpoints prior to
-                // year 0000 or after year 9999.)
+                // segment interval like "20010/20011".)
                 for (Interval interval : intervals) {
                   if (matchMode.apply(interval, dataSegment.getInterval())) {
                     return true;
