@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.common.parsers;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.BinaryNode;
 import com.google.common.collect.FluentIterable;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
@@ -79,14 +80,14 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   @Override
   public Object getRootField(final JsonNode obj, final String key)
   {
-    return valueConversionFunction(obj.get(key));
+    return finalizeConversionForMap(obj.get(key));
   }
 
   @Override
   public Function<JsonNode, Object> makeJsonPathExtractor(final String expr)
   {
     final JsonPath jsonPath = JsonPath.compile(expr);
-    return node -> valueConversionFunction(jsonPath.read(node, JSONPATH_CONFIGURATION));
+    return node -> finalizeConversionForMap(jsonPath.read(node, JSONPATH_CONFIGURATION));
   }
 
   @Override
@@ -96,7 +97,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
       final JsonQuery jsonQuery = JsonQuery.compile(expr);
       return jsonNode -> {
         try {
-          return valueConversionFunction(jsonQuery.apply(jsonNode).get(0));
+          return finalizeConversionForMap(jsonQuery.apply(jsonNode).get(0));
         }
         catch (JsonQueryException e) {
           throw new RuntimeException(e);
@@ -114,14 +115,13 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
     return JSON_PROVIDER;
   }
 
-  @Nullable
-  private Object valueConversionFunction(Object val)
+  @Override
+  public Object finalizeConversionForMap(Object o)
   {
-    if (val instanceof JsonNode) {
-      return convertJsonNode((JsonNode) val);
-    } else {
-      return val;
+    if (o instanceof JsonNode) {
+      return convertJsonNode((JsonNode) o);
     }
+    return o;
   }
 
   @Nullable
@@ -143,11 +143,19 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
       return charsetFix(val.asText());
     }
 
+    if (val.isBoolean()) {
+      return val.asBoolean();
+    }
+
+    if (val.isBinary() && val instanceof BinaryNode) {
+      return ((BinaryNode) val).binaryValue();
+    }
+
     if (val.isArray()) {
       List<Object> newList = new ArrayList<>();
       for (JsonNode entry : val) {
         if (!entry.isNull()) {
-          newList.add(valueConversionFunction(entry));
+          newList.add(finalizeConversionForMap(entry));
         }
       }
       return newList;
@@ -157,12 +165,13 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
       Map<String, Object> newMap = new LinkedHashMap<>();
       for (Iterator<Map.Entry<String, JsonNode>> it = val.fields(); it.hasNext(); ) {
         Map.Entry<String, JsonNode> entry = it.next();
-        newMap.put(entry.getKey(), valueConversionFunction(entry.getValue()));
+        newMap.put(entry.getKey(), finalizeConversionForMap(entry.getValue()));
       }
       return newMap;
     }
 
-    return val;
+    // turn anything else into a string value so that we don't leak JsonNode into rows
+    return val.asText();
   }
 
   @Nullable
