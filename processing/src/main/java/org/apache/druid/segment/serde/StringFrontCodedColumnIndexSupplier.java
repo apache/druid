@@ -22,9 +22,20 @@ package org.apache.druid.segment.serde;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
+import org.apache.druid.segment.column.DruidPredicateIndex;
+import org.apache.druid.segment.column.LexicographicalRangeIndex;
+import org.apache.druid.segment.column.NullValueIndex;
+import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
+import org.apache.druid.segment.column.SpatialIndex;
+import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
 
@@ -56,6 +67,47 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
   @Override
   public <T> T as(Class<T> clazz)
   {
+    if (bitmaps != null) {
+      final Indexed<ImmutableBitmap> singleThreadedBitmaps = bitmaps.singleThreaded();
+      if (clazz.equals(NullValueIndex.class)) {
+        final BitmapColumnIndex nullIndex;
+        if (NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+          nullIndex = new SimpleImmutableBitmapIndex(bitmaps.get(0));
+        } else {
+          nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
+        }
+        return (T) (NullValueIndex) () -> nullIndex;
+      } else if (clazz.equals(StringValueSetIndex.class)) {
+        return (T) new DictionaryEncodedStringIndexSupplier.IndexedStringValueSetIndex<>(
+            bitmapFactory,
+            dictionary,
+            singleThreadedBitmaps
+        );
+      } else if (clazz.equals(DruidPredicateIndex.class)) {
+        return (T) new DictionaryEncodedStringIndexSupplier.IndexedStringDruidPredicateIndex<>(
+            bitmapFactory,
+            dictionary,
+            singleThreadedBitmaps
+        );
+      } else if (clazz.equals(LexicographicalRangeIndex.class)) {
+        return (T) new DictionaryEncodedStringIndexSupplier.IndexedStringLexicographicalRangeIndex<>(
+            bitmapFactory,
+            dictionary,
+            singleThreadedBitmaps,
+            NullHandling.isNullOrEquivalent(dictionary.get(0))
+        );
+      } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
+                 || clazz.equals(DictionaryEncodedValueIndex.class)) {
+        return (T) new DictionaryEncodedStringIndexSupplier.IndexedStringDictionaryEncodedStringValueIndex<>(
+            bitmapFactory,
+            dictionary,
+            bitmaps
+        );
+      }
+    }
+    if (indexedTree != null && clazz.equals(SpatialIndex.class)) {
+      return (T) (SpatialIndex) () -> indexedTree;
+    }
     return null;
   }
 }

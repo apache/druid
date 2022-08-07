@@ -85,6 +85,9 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
   public <T> T as(Class<T> clazz)
   {
     if (bitmaps != null) {
+      final Indexed<String> singleThreadedStrings = dictionary.singleThreaded();
+      final Indexed<ByteBuffer> singleThreadedUtf8 = dictionaryUtf8.singleThreaded();
+      final Indexed<ImmutableBitmap> singleThreadedBitmaps = bitmaps.singleThreaded();
       if (clazz.equals(NullValueIndex.class)) {
         final BitmapColumnIndex nullIndex;
         if (NullHandling.isNullOrEquivalent(dictionary.get(0))) {
@@ -94,20 +97,24 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
         }
         return (T) (NullValueIndex) () -> nullIndex;
       } else if (clazz.equals(StringValueSetIndex.class)) {
-        return (T) new GenericIndexedDictionaryEncodedStringValueSetIndex(bitmapFactory, dictionaryUtf8, bitmaps);
+        return (T) new IndexedUtf8ValueSetIndex<>(bitmapFactory, singleThreadedUtf8, singleThreadedBitmaps);
       } else if (clazz.equals(Utf8ValueSetIndex.class)) {
-        return (T) new GenericIndexedDictionaryEncodedStringValueSetIndex(bitmapFactory, dictionaryUtf8, bitmaps);
+        return (T) new IndexedUtf8ValueSetIndex<>(bitmapFactory, singleThreadedUtf8, singleThreadedBitmaps);
       } else if (clazz.equals(DruidPredicateIndex.class)) {
-        return (T) new GenericIndexedDictionaryEncodedStringDruidPredicateIndex(bitmapFactory, dictionary, bitmaps);
+        return (T) new IndexedStringDruidPredicateIndex<>(bitmapFactory, singleThreadedStrings, singleThreadedBitmaps);
       } else if (clazz.equals(LexicographicalRangeIndex.class)) {
-        return (T) new GenericIndexedDictionaryEncodedColumnLexicographicalRangeIndex(
+        return (T) new IndexedUtf8LexicographicalRangeIndex<>(
             bitmapFactory,
-            dictionaryUtf8,
-            bitmaps,
+            singleThreadedUtf8,
+            singleThreadedBitmaps,
             NullHandling.isNullOrEquivalent(dictionary.get(0))
         );
       } else if (clazz.equals(DictionaryEncodedStringValueIndex.class) || clazz.equals(DictionaryEncodedValueIndex.class)) {
-        return (T) new GenericIndexedDictionaryEncodedStringValueIndex(bitmapFactory, dictionary, bitmaps);
+        return (T) new IndexedStringDictionaryEncodedStringValueIndex<>(
+            bitmapFactory,
+            singleThreadedStrings,
+            bitmaps
+        );
       }
     }
     if (indexedTree != null && clazz.equals(SpatialIndex.class)) {
@@ -116,21 +123,21 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
     return null;
   }
 
-  private abstract static class BaseGenericIndexedDictionaryEncodedIndex<T>
+  public abstract static class BaseIndexedDictionaryEncodedIndex<T, TIndexed extends Indexed<T>>
   {
     protected final BitmapFactory bitmapFactory;
-    protected final Indexed<T> dictionary;
+    protected final TIndexed dictionary;
     protected final Indexed<ImmutableBitmap> bitmaps;
 
-    protected BaseGenericIndexedDictionaryEncodedIndex(
+    protected BaseIndexedDictionaryEncodedIndex(
         BitmapFactory bitmapFactory,
-        GenericIndexed<T> dictionary,
-        GenericIndexed<ImmutableBitmap> bitmaps
+        TIndexed dictionary,
+        Indexed<ImmutableBitmap> bitmaps
     )
     {
       this.bitmapFactory = bitmapFactory;
-      this.dictionary = dictionary.singleThreaded();
-      this.bitmaps = bitmaps.singleThreaded();
+      this.dictionary = dictionary;
+      this.bitmaps = bitmaps;
     }
 
     public ImmutableBitmap getBitmap(int idx)
@@ -143,14 +150,13 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
       return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
     }
   }
-
-  public static final class GenericIndexedDictionaryEncodedStringValueIndex
-      extends BaseGenericIndexedDictionaryEncodedIndex<String> implements DictionaryEncodedStringValueIndex
+  public static final class IndexedStringDictionaryEncodedStringValueIndex<TIndex extends Indexed<String>>
+      extends BaseIndexedDictionaryEncodedIndex<String, TIndex> implements DictionaryEncodedStringValueIndex
   {
-    public GenericIndexedDictionaryEncodedStringValueIndex(
+    public IndexedStringDictionaryEncodedStringValueIndex(
         BitmapFactory bitmapFactory,
-        GenericIndexed<String> dictionary,
-        GenericIndexed<ImmutableBitmap> bitmaps
+        TIndex dictionary,
+        Indexed<ImmutableBitmap> bitmaps
     )
     {
       super(bitmapFactory, dictionary, bitmaps);
@@ -168,18 +174,114 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
     {
       return dictionary.get(index);
     }
-
   }
 
-  public static final class GenericIndexedDictionaryEncodedStringValueSetIndex
-      extends BaseGenericIndexedDictionaryEncodedIndex<ByteBuffer> implements StringValueSetIndex, Utf8ValueSetIndex
+  public static final class IndexedStringValueSetIndex<TIndex extends Indexed<String>>
+      extends BaseIndexedDictionaryEncodedIndex<String, TIndex> implements StringValueSetIndex
+  {
+
+    public IndexedStringValueSetIndex(
+        BitmapFactory bitmapFactory,
+        TIndex dictionary,
+        Indexed<ImmutableBitmap> bitmaps
+    )
+    {
+      super(bitmapFactory, dictionary, bitmaps);
+    }
+
+    @Override
+    public BitmapColumnIndex forValue(@Nullable String value)
+    {
+      return new SimpleBitmapColumnIndex()
+      {
+        @Override
+        public double estimateSelectivity(int totalRows)
+        {
+          return Math.min(1, (double) getBitmapForValue().size() / totalRows);
+        }
+
+        @Override
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        {
+
+          return bitmapResultFactory.wrapDimensionValue(getBitmapForValue());
+        }
+
+        private ImmutableBitmap getBitmapForValue()
+        {
+          final int idx = dictionary.indexOf(value);
+          return getBitmap(idx);
+        }
+      };
+    }
+
+    @Override
+    public BitmapColumnIndex forSortedValues(SortedSet<String> values)
+    {
+      return new SimpleImmutableBitmapIterableIndex()
+      {
+        @Override
+        public Iterable<ImmutableBitmap> getBitmapIterable()
+        {
+          final int dictionarySize = dictionary.size();
+
+          return () -> new Iterator<ImmutableBitmap>()
+          {
+            final Iterator<String> iterator = values.iterator();
+            int next = -1;
+
+            @Override
+            public boolean hasNext()
+            {
+              if (next < 0) {
+                findNext();
+              }
+              return next >= 0;
+            }
+
+            @Override
+            public ImmutableBitmap next()
+            {
+              if (next < 0) {
+                findNext();
+                if (next < 0) {
+                  throw new NoSuchElementException();
+                }
+              }
+              final int swap = next;
+              next = -1;
+              return getBitmap(swap);
+            }
+
+            private void findNext()
+            {
+              while (next < 0 && iterator.hasNext()) {
+                String nextValue = iterator.next();
+                next = dictionary.indexOf(nextValue);
+
+                if (next == -dictionarySize - 1) {
+                  // nextValue is past the end of the dictionary.
+                  // Note: we can rely on indexOf returning (-(insertion point) - 1), even though Indexed doesn't
+                  // guarantee it, because "dictionary" comes from GenericIndexed singleThreaded().
+                  break;
+                }
+              }
+            }
+          };
+        }
+      };
+    }
+  }
+
+  public static final class IndexedUtf8ValueSetIndex<TIndex extends Indexed<ByteBuffer>>
+      extends BaseIndexedDictionaryEncodedIndex<ByteBuffer, TIndex> implements StringValueSetIndex, Utf8ValueSetIndex
   {
     private static final int SIZE_WORTH_CHECKING_MIN = 8;
 
-    public GenericIndexedDictionaryEncodedStringValueSetIndex(
+    public IndexedUtf8ValueSetIndex(
         BitmapFactory bitmapFactory,
-        GenericIndexed<ByteBuffer> dictionary,
-        GenericIndexed<ImmutableBitmap> bitmaps
+        TIndex dictionary,
+        Indexed<ImmutableBitmap> bitmaps
     )
     {
       super(bitmapFactory, dictionary, bitmaps);
@@ -298,13 +400,13 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
     }
   }
 
-  public static final class GenericIndexedDictionaryEncodedStringDruidPredicateIndex
-      extends BaseGenericIndexedDictionaryEncodedIndex<String> implements DruidPredicateIndex
+  public static final class IndexedStringDruidPredicateIndex<T extends Indexed<String>>
+      extends BaseIndexedDictionaryEncodedIndex<String, T> implements DruidPredicateIndex
   {
-    public GenericIndexedDictionaryEncodedStringDruidPredicateIndex(
+    public IndexedStringDruidPredicateIndex(
         BitmapFactory bitmapFactory,
-        GenericIndexed<String> dictionary,
-        GenericIndexed<ImmutableBitmap> bitmaps
+        T dictionary,
+        Indexed<ImmutableBitmap> bitmaps
     )
     {
       super(bitmapFactory, dictionary, bitmaps);
@@ -370,15 +472,165 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
     }
   }
 
-  public static final class GenericIndexedDictionaryEncodedColumnLexicographicalRangeIndex
-      extends BaseGenericIndexedDictionaryEncodedIndex<ByteBuffer> implements LexicographicalRangeIndex
+  public static final class IndexedStringLexicographicalRangeIndex<T extends Indexed<String>>
+      extends BaseIndexedDictionaryEncodedIndex<String, T> implements LexicographicalRangeIndex
   {
     private final boolean hasNull;
 
-    public GenericIndexedDictionaryEncodedColumnLexicographicalRangeIndex(
+    public IndexedStringLexicographicalRangeIndex(
         BitmapFactory bitmapFactory,
-        GenericIndexed<ByteBuffer> dictionary,
-        GenericIndexed<ImmutableBitmap> bitmaps,
+        T dictionary,
+        Indexed<ImmutableBitmap> bitmaps,
+        boolean hasNull
+    )
+    {
+      super(bitmapFactory, dictionary, bitmaps);
+      this.hasNull = hasNull;
+    }
+
+    @Override
+    public BitmapColumnIndex forRange(
+        @Nullable String startValue,
+        boolean startStrict,
+        @Nullable String endValue,
+        boolean endStrict
+    )
+    {
+      return new SimpleImmutableBitmapIterableIndex()
+      {
+        @Override
+        public Iterable<ImmutableBitmap> getBitmapIterable()
+        {
+          final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
+          final int start = range.leftInt(), end = range.rightInt();
+          return () -> new Iterator<ImmutableBitmap>()
+          {
+            final IntIterator rangeIterator = IntListUtils.fromTo(start, end).iterator();
+
+            @Override
+            public boolean hasNext()
+            {
+              return rangeIterator.hasNext();
+            }
+
+            @Override
+            public ImmutableBitmap next()
+            {
+              return getBitmap(rangeIterator.nextInt());
+            }
+          };
+        }
+      };
+    }
+
+    @Override
+    public BitmapColumnIndex forRange(
+        @Nullable String startValue,
+        boolean startStrict,
+        @Nullable String endValue,
+        boolean endStrict,
+        Predicate<String> matcher
+    )
+    {
+      return new SimpleImmutableBitmapIterableIndex()
+      {
+        @Override
+        public Iterable<ImmutableBitmap> getBitmapIterable()
+        {
+          final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
+          final int start = range.leftInt(), end = range.rightInt();
+          return () -> new Iterator<ImmutableBitmap>()
+          {
+            int currIndex = start;
+            int found;
+
+            {
+              found = findNext();
+            }
+
+            private int findNext()
+            {
+              while (currIndex < end && !matcher.apply(dictionary.get(currIndex))) {
+                currIndex++;
+              }
+
+              if (currIndex < end) {
+                return currIndex++;
+              } else {
+                return -1;
+              }
+            }
+
+            @Override
+            public boolean hasNext()
+            {
+              return found != -1;
+            }
+
+            @Override
+            public ImmutableBitmap next()
+            {
+              int cur = found;
+
+              if (cur == -1) {
+                throw new NoSuchElementException();
+              }
+
+              found = findNext();
+              return getBitmap(cur);
+            }
+          };
+        }
+      };
+    }
+
+    private IntIntPair getRange(
+        @Nullable String startValue,
+        boolean startStrict,
+        @Nullable String endValue,
+        boolean endStrict
+    )
+    {
+      final int firstValue = hasNull ? 1 : 0;
+      int startIndex, endIndex;
+      if (startValue == null) {
+        startIndex = firstValue;
+      } else {
+        final String startValueToUse = NullHandling.emptyToNullIfNeeded(startValue);
+        final int found = dictionary.indexOf(startValueToUse);
+        if (found >= firstValue) {
+          startIndex = startStrict ? found + 1 : found;
+        } else {
+          startIndex = -(found + 1);
+        }
+      }
+
+      if (endValue == null) {
+        endIndex = dictionary.size();
+      } else {
+        final String endValueToUse = NullHandling.emptyToNullIfNeeded(endValue);
+        final int found = dictionary.indexOf(endValueToUse);
+        if (found >= firstValue) {
+          endIndex = endStrict ? found : found + 1;
+        } else {
+          endIndex = -(found + 1);
+        }
+      }
+
+      endIndex = Math.max(startIndex, endIndex);
+      return new IntIntImmutablePair(startIndex, endIndex);
+    }
+  }
+
+  public static final class IndexedUtf8LexicographicalRangeIndex<T extends Indexed<ByteBuffer>>
+      extends BaseIndexedDictionaryEncodedIndex<ByteBuffer, T> implements LexicographicalRangeIndex
+  {
+    private final boolean hasNull;
+
+    public IndexedUtf8LexicographicalRangeIndex(
+        BitmapFactory bitmapFactory,
+        T dictionary,
+        Indexed<ImmutableBitmap> bitmaps,
         boolean hasNull
     )
     {

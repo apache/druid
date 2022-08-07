@@ -34,7 +34,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * {@link Indexed} specialized for storing string values, which all must be sorted and unique, using 'front coding'.
+ * {@link Indexed} specialized for storing utf8 string values, which must be sorted and unique, using 'front coding'.
  *
  * Front coding is a type of delta encoding for strings, where values are grouped into buckets. The first value of
  * the bucket is written entirely, and remaining values are stored as pairs of an integer which indicates how much
