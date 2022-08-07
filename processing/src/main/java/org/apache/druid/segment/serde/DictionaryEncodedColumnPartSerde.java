@@ -40,6 +40,7 @@ import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.CompressedVSizeColumnarMultiIntsSupplier;
 import org.apache.druid.segment.data.FrontCodedIndexed;
+import org.apache.druid.segment.data.FrontCodedIndexedUtf8;
 import org.apache.druid.segment.data.FrontCodedIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
@@ -329,7 +330,10 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         final boolean frontCoded = Feature.FRONT_CODED_DICTIONARY.isSet(rFlags);
 
         if (frontCoded) {
+          int pos = buffer.position();
           final FrontCodedIndexed rDictionary = FrontCodedIndexed.read(buffer, byteOrder);
+          buffer.position(pos);
+          final FrontCodedIndexedUtf8 rUtf8Dictionary = FrontCodedIndexedUtf8.read(buffer, byteOrder);
 
           final WritableSupplier<ColumnarInts> rSingleValuedColumn;
           final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
@@ -348,6 +352,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           StringFrontCodedDictionaryEncodedColumnSupplier dictionaryEncodedColumnSupplier =
               new StringFrontCodedDictionaryEncodedColumnSupplier(
                   rDictionary,
+                  rUtf8Dictionary,
                   rSingleValuedColumn,
                   rMultiValuedColumn
               );
@@ -376,6 +381,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
                 new StringFrontCodedColumnIndexSupplier(
                     bitmapSerdeFactory.getBitmapFactory(),
                     rDictionary,
+                    rUtf8Dictionary,
                     rBitmaps,
                     rSpatialIndex
                 ),

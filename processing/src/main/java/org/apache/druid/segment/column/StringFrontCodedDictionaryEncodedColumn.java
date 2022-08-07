@@ -30,6 +30,7 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.FrontCodedIndexed;
+import org.apache.druid.segment.data.FrontCodedIndexedUtf8;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.SingleIndexedInt;
@@ -45,6 +46,7 @@ import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.BitSet;
 
 /**
@@ -64,16 +66,19 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   @Nullable
   private final ColumnarMultiInts multiValueColumn;
   private final FrontCodedIndexed dictionary;
+  private final FrontCodedIndexedUtf8 utf8Dictionary;
 
   public StringFrontCodedDictionaryEncodedColumn(
       @Nullable ColumnarInts singleValueColumn,
       @Nullable ColumnarMultiInts multiValueColumn,
-      FrontCodedIndexed dictionary
+      FrontCodedIndexed dictionary,
+      FrontCodedIndexedUtf8 utf8Dictionary
   )
   {
     this.column = singleValueColumn;
     this.multiValueColumn = multiValueColumn;
     this.dictionary = dictionary;
+    this.utf8Dictionary = utf8Dictionary;
   }
 
   @Override
@@ -147,6 +152,19 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
       {
         final String value = StringFrontCodedDictionaryEncodedColumn.this.lookupName(id);
         return extractionFn == null ? value : extractionFn.apply(value);
+      }
+
+      @Nullable
+      @Override
+      public ByteBuffer lookupNameUtf8(int id)
+      {
+        return utf8Dictionary.get(id);
+      }
+
+      @Override
+      public boolean supportsLookupNameUtf8()
+      {
+        return true;
       }
 
       @Override
@@ -377,6 +395,19 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
         return StringFrontCodedDictionaryEncodedColumn.this.lookupName(id);
       }
 
+      @Nullable
+      @Override
+      public ByteBuffer lookupNameUtf8(int id)
+      {
+        return utf8Dictionary.get(id);
+      }
+
+      @Override
+      public boolean supportsLookupNameUtf8()
+      {
+        return true;
+      }
+
       @Override
       public boolean nameLookupPossibleInAdvance()
       {
@@ -460,6 +491,19 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
       public String lookupName(final int id)
       {
         return StringFrontCodedDictionaryEncodedColumn.this.lookupName(id);
+      }
+
+      @Nullable
+      @Override
+      public ByteBuffer lookupNameUtf8(int id)
+      {
+        return utf8Dictionary.get(id);
+      }
+
+      @Override
+      public boolean supportsLookupNameUtf8()
+      {
+        return true;
       }
 
       @Override

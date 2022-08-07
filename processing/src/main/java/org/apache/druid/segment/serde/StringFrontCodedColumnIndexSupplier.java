@@ -28,12 +28,16 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.column.DruidPredicateIndex;
+import org.apache.druid.segment.column.IndexedStringDictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.IndexedStringDruidPredicateIndex;
+import org.apache.druid.segment.column.IndexedUtf8ValueSetIndex;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.column.SpatialIndex;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.FrontCodedIndexed;
+import org.apache.druid.segment.data.FrontCodedIndexedUtf8;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 
@@ -43,6 +47,7 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
 {
   private final BitmapFactory bitmapFactory;
   private final FrontCodedIndexed dictionary;
+  private final FrontCodedIndexedUtf8 utf8Dictionary;
 
   @Nullable
   private final GenericIndexed<ImmutableBitmap> bitmaps;
@@ -53,6 +58,7 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
   public StringFrontCodedColumnIndexSupplier(
       BitmapFactory bitmapFactory,
       FrontCodedIndexed dictionary,
+      FrontCodedIndexedUtf8 utf8Dictionary,
       @Nullable GenericIndexed<ImmutableBitmap> bitmaps,
       @Nullable ImmutableRTree indexedTree
   )
@@ -60,6 +66,7 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
     this.bitmapFactory = bitmapFactory;
     this.bitmaps = bitmaps;
     this.dictionary = dictionary;
+    this.utf8Dictionary = utf8Dictionary;
     this.indexedTree = indexedTree;
   }
 
@@ -78,27 +85,27 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
         }
         return (T) (NullValueIndex) () -> nullIndex;
       } else if (clazz.equals(StringValueSetIndex.class)) {
-        return (T) new DictionaryEncodedStringIndexSupplier.IndexedStringValueSetIndex<>(
+        return (T) new IndexedUtf8ValueSetIndex<>(
             bitmapFactory,
-            dictionary,
+            utf8Dictionary,
             singleThreadedBitmaps
         );
       } else if (clazz.equals(DruidPredicateIndex.class)) {
-        return (T) new DictionaryEncodedStringIndexSupplier.IndexedStringDruidPredicateIndex<>(
+        return (T) new IndexedStringDruidPredicateIndex<>(
             bitmapFactory,
             dictionary,
             singleThreadedBitmaps
         );
       } else if (clazz.equals(LexicographicalRangeIndex.class)) {
-        return (T) new DictionaryEncodedStringIndexSupplier.IndexedStringLexicographicalRangeIndex<>(
+        return (T) new IndexedUtf8LexicographicalRangeIndex<>(
             bitmapFactory,
-            dictionary,
+            utf8Dictionary,
             singleThreadedBitmaps,
             NullHandling.isNullOrEquivalent(dictionary.get(0))
         );
       } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
                  || clazz.equals(DictionaryEncodedValueIndex.class)) {
-        return (T) new DictionaryEncodedStringIndexSupplier.IndexedStringDictionaryEncodedStringValueIndex<>(
+        return (T) new IndexedStringDictionaryEncodedStringValueIndex<>(
             bitmapFactory,
             dictionary,
             bitmaps
