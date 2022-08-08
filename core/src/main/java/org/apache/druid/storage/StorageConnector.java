@@ -26,8 +26,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * Low level interface for interacting with different storage providers like s3,GCS,Azure blob, local file system.
- * For adding a new implementation of this interface in  your extension extend {@link StorageConnectorProvider}.
+ * Low level interface for interacting with different storage providers like S3, GCS, Azure ,local file system.
+ * For adding a new implementation of this interface in your extension extend {@link StorageConnectorProvider}.
  * For using the interface in your extension as a consumer, used JsonConfigProvider like:
  * 1. JsonConfigProvider.bind(binder, "druid,extension.custom.type", StorageConnectorProvider.class, Custom.class);
  * // bind the storage config provider
