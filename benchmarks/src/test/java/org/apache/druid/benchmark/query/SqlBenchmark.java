@@ -548,19 +548,19 @@ public class SqlBenchmark
     }
   }
 
-//  @Benchmark
-//  @BenchmarkMode(Mode.AverageTime)
-//  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-//  public void planSql(Blackhole blackhole) throws Exception
-//  {
-//    final Map<String, Object> context = ImmutableMap.of(
-//        QueryContexts.VECTORIZE_KEY, vectorize,
-//        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
-//    );
-//    final String sql = QUERIES.get(Integer.parseInt(query));
-//    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
-//      final PlannerResult plannerResult = planner.plan();
-//      blackhole.consume(plannerResult);
-//    }
-//  }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void planSql(Blackhole blackhole) throws Exception
+  {
+    final Map<String, Object> context = ImmutableMap.of(
+        QueryContexts.VECTORIZE_KEY, vectorize,
+        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+    );
+    final String sql = QUERIES.get(Integer.parseInt(query));
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
+      final PlannerResult plannerResult = planner.plan();
+      blackhole.consume(plannerResult);
+    }
+  }
 }
