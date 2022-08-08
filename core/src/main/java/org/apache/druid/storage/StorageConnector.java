@@ -32,7 +32,7 @@ import java.io.OutputStream;
  * 1. JsonConfigProvider.bind(binder, "druid,extension.custom.type", StorageConnectorProvider.class, Custom.class);
  * // bind the storage config provider
  * 2. binder.bind(Key.get(StorageConnector.class, Custom.class)).toProvider(Key.get(StorageConnectorProvider.class, Custom.class)).in(LazySingleton.class);
- * // Used Named annotations to access the storageConnector instance in your custom extension.
+ * // Use Named annotations to access the storageConnector instance in your custom extension.
  * 3. @Custom StorageConnector storageConnector
  * <p>
  * The final state of this inteface would have
