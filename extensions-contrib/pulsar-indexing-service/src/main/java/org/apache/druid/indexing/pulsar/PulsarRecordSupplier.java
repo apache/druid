@@ -159,10 +159,10 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
 
     return PulsarClient.builder()
         .serviceUrl(
-            "pulsar+ssl://pulsar-proxy.dev.attentivemobile.com:6651"
+            getServiceUrl()
         ).authentication(
-            "org.apache.pulsar.client.impl.auth.AuthenticationToken",
-            "token:OTA5MTQwYmEtMTllYS1kMjdjLTQyMWMtYjQ4MGI1ODFkYzk4OmViOTY3N2M2LWUwYjgtODkwMi04ZTY1LTgwYTEyZjhiMTY5ZQ==")
+            getAuthPluginClassName(),
+            getAuthParams())
         .build();
   }
 
