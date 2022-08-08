@@ -453,6 +453,27 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new ExpressionLambdaAggregatorFactory(
+        newName,
+        fields,
+        accumulatorId,
+        initialValueExpressionString,
+        initialCombineValueExpressionString,
+        isNullUnlessAggregated,
+        shouldAggregateNullInputs,
+        shouldCombineAggregateNullInputs,
+        foldExpressionString,
+        combineExpressionString,
+        compareExpressionString,
+        finalizeExpressionString,
+        maxSizeBytes,
+        macroTable
+    );
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

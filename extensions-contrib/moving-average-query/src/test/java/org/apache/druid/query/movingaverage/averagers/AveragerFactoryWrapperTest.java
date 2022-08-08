@@ -17,30 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.theta.oldapi;
+package org.apache.druid.query.movingaverage.averagers;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
+import org.apache.druid.query.movingaverage.AveragerFactoryWrapper;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- */
-public class OldSketchBuildAggregatorFactory extends SketchMergeAggregatorFactory
+public class AveragerFactoryWrapperTest
 {
-  @JsonCreator
-  public OldSketchBuildAggregatorFactory(
-      @JsonProperty("name") String name,
-      @JsonProperty("fieldName") String fieldName,
-      @JsonProperty("size") Integer size
-  )
+  @Test
+  public void testWithName()
   {
-    super(name, fieldName, size, true, false, null);
-  }
-
-  @Override
-  public AggregatorFactory withName(String newName)
-  {
-    return new OldSketchBuildAggregatorFactory(newName, getFieldName(), getSize());
+    AveragerFactoryWrapper factoryWrapper = new AveragerFactoryWrapper(
+        new DoubleMaxAveragerFactory("double", 1, 1, "test"),
+        "test"
+    );
+    Assert.assertEquals(factoryWrapper, factoryWrapper.withName("test"));
+    Assert.assertEquals("newTestdouble", factoryWrapper.withName("newTest").getName());
   }
 }
