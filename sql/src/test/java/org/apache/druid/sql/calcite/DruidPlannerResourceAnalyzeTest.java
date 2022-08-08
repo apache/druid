@@ -26,7 +26,6 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Assert;
@@ -284,13 +283,9 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
     Set<ResourceAction> requiredResources = analyzeResources(
         plannerConfig,
         authConfig,
-        SqlQueryPlus.builder(sql)
-            .context(context)
-            // Use superuser because, in tests, only the superuser has
-            // permission on system tables, and we must do authorization to
-            // obtain resources.
-            .auth(CalciteTests.SUPER_USER_AUTH_RESULT)
-            .build()
+        sql,
+        context,
+        CalciteTests.REGULAR_USER_AUTH_RESULT
     );
     final Set<ResourceAction> expectedResources = new HashSet<>();
     if (name != null) {
@@ -346,12 +341,9 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
     Set<ResourceAction> requiredResources = analyzeResources(
         PLANNER_CONFIG_DEFAULT,
         AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build(),
-        queryPlus(
-          sql,
-          ImmutableMap.of("baz", "fo", "nested-bar", ImmutableMap.of("nested-key", "nested-val")),
-          null,
-          CalciteTests.REGULAR_USER_AUTH_RESULT
-        )
+        sql,
+        ImmutableMap.of("baz", "fo", "nested-bar", ImmutableMap.of("nested-key", "nested-val")),
+        CalciteTests.REGULAR_USER_AUTH_RESULT
     );
 
     Assert.assertEquals(

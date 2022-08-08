@@ -310,17 +310,13 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           ? Collections.emptyList()
           : Collections.singletonList(recursivelyOverrideContext(expectedQuery, queryContext));
 
-      SqlQueryPlus queryPlus = queryPlus(
-          sql,
-          queryContext,
-          DEFAULT_PARAMETERS,
-          authenticationResult);
       Assert.assertEquals(
           ImmutableSet.copyOf(expectedResources),
-          analyzeResources(plannerConfig, new AuthConfig(), queryPlus)
+          analyzeResources(plannerConfig, new AuthConfig(), sql, queryContext, authenticationResult)
       );
 
-      final Pair<RowSignature, List<Object[]>> results = getResults(plannerConfig, queryPlus);
+      final Pair<RowSignature, List<Object[]>> results =
+          getResults(plannerConfig, queryContext, Collections.emptyList(), sql, authenticationResult);
 
       verifyResults(
           sql,

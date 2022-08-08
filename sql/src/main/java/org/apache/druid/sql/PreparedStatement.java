@@ -92,9 +92,9 @@ public class PreparedStatement extends AbstractStatement
    * <a href="https://github.com/apache/druid/pull/6974">
    * "query optimized"</a> parameters, which means we do not reuse the statement
    * prepared above, but rather plan anew with the actual parameter values. The
-   * same statement can be execute many times, including concurrently. It is
-   * easier and safer to create a new planner for each execution than to try to
-   * share the parse tree across executions.
+   * same statement can be execute many times, including concurrently. Each
+   * execution repeats the parse, validate, authorize and plan steps since
+   * data, permissions, views and other dependencies may have changed.
    */
   public DirectStatement execute(List<TypedValue> parameters)
   {

@@ -89,10 +89,10 @@ public class SqlExecutionReporter
         metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
         metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
       }
-      if (stmt.resourceActions != null) {
+      if (stmt.fullResourceActions != null) {
         metricBuilder.setDimension(
             "dataSource",
-            stmt.resourceActions
+            stmt.fullResourceActions
                             .stream()
                             .map(action -> action.getResource().getName())
                             .collect(Collectors.toList())

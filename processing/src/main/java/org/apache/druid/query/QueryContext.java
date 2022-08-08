@@ -68,19 +68,6 @@ public class QueryContext
     invalidateMergedParams();
   }
 
-  public QueryContext(QueryContext from, @Nullable Map<String, Object> userParams)
-  {
-    this.defaultParams = new TreeMap<>(from.defaultParams);
-    this.userParams = userParams == null ? new TreeMap<>() : new TreeMap<>(userParams);
-    this.systemParams = new TreeMap<>(from.systemParams);
-    invalidateMergedParams();
-  }
-
-  public QueryContext withOverrides(Map<String, Object> overrides)
-  {
-    return new QueryContext(this, QueryContexts.override(userParams, overrides));
-  }
-
   private void invalidateMergedParams()
   {
     this.mergedParams = null;

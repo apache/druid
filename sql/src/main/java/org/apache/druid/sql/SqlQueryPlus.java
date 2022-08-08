@@ -114,15 +114,6 @@ public class SqlQueryPlus
     return new SqlQueryPlus(sql, queryContext, parameters, authResult);
   }
 
-  public SqlQueryPlus withOverrides(Map<String, Object> overrides)
-  {
-    return new SqlQueryPlus(
-        sql,
-        queryContext.withOverrides(overrides),
-        parameters,
-        authResult);
-  }
-
   public static class Builder
   {
     private String sql;

@@ -46,7 +46,7 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlExecutionReporter;
 import org.apache.druid.sql.SqlLifecycleManager;
-import org.apache.druid.sql.SqlLifecycleManager.Cancellable;
+import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.SqlRowTransformer;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -268,7 +268,7 @@ public class SqlResource
   {
     log.debug("Received cancel request for query [%s]", sqlQueryId);
 
-    List<Cancellable> lifecycles = sqlLifecycleManager.getAll(sqlQueryId);
+    List<Cancelable> lifecycles = sqlLifecycleManager.getAll(sqlQueryId);
     if (lifecycles.isEmpty()) {
       return Response.status(Status.NOT_FOUND).build();
     }
@@ -290,7 +290,7 @@ public class SqlResource
     if (access.isAllowed()) {
       // should remove only the lifecycles in the snapshot.
       sqlLifecycleManager.removeAll(sqlQueryId, lifecycles);
-      lifecycles.forEach(Cancellable::cancel);
+      lifecycles.forEach(Cancelable::cancel);
       return Response.status(Status.ACCEPTED).build();
     } else {
       return Response.status(Status.FORBIDDEN).build();

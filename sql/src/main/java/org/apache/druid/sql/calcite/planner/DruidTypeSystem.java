@@ -29,8 +29,7 @@ public class DruidTypeSystem implements RelDataTypeSystem
   public static final DruidTypeSystem INSTANCE = new DruidTypeSystem();
 
   /**
-   * Druid uses millisecond precision for timestamps internally. This is also
-   * the default at the SQL layer.
+   * Druid uses millisecond precision for timestamps internally. This is also the default at the SQL layer.
    */
   public static final int DEFAULT_TIMESTAMP_PRECISION = 3;
 

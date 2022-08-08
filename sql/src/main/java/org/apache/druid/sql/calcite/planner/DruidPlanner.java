@@ -242,7 +242,7 @@ public class DruidPlanner implements Closeable
     return prepareResult;
   }
 
-  private void doPrepare(QueryMaker queryMaker) throws ValidationException
+  private void doPrepare(@Nullable QueryMaker queryMaker) throws ValidationException
   {
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
     final SqlValidator validator = planner.getValidator();

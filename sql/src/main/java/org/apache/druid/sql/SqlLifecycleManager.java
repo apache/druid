@@ -50,7 +50,7 @@ import java.util.Set;
 @LazySingleton
 public class SqlLifecycleManager
 {
-  public interface Cancellable
+  public interface Cancelable
   {
     Set<ResourceAction> resources();
     void cancel();
@@ -59,9 +59,9 @@ public class SqlLifecycleManager
   private final Object lock = new Object();
 
   @GuardedBy("lock")
-  private final Map<String, List<Cancellable>> sqlLifecycles = new HashMap<>();
+  private final Map<String, List<Cancelable>> sqlLifecycles = new HashMap<>();
 
-  public void add(String sqlQueryId, Cancellable lifecycle)
+  public void add(String sqlQueryId, Cancelable lifecycle)
   {
     synchronized (lock) {
       sqlLifecycles.computeIfAbsent(sqlQueryId, k -> new ArrayList<>())
@@ -73,10 +73,10 @@ public class SqlLifecycleManager
    * Removes the given lifecycle of the given query ID.
    * This method uses {@link Object#equals} to find the lifecycle matched to the given parameter.
    */
-  public void remove(String sqlQueryId, Cancellable lifecycle)
+  public void remove(String sqlQueryId, Cancelable lifecycle)
   {
     synchronized (lock) {
-      List<Cancellable> lifecycles = sqlLifecycles.get(sqlQueryId);
+      List<Cancelable> lifecycles = sqlLifecycles.get(sqlQueryId);
       if (lifecycles != null) {
         lifecycles.remove(lifecycle);
         if (lifecycles.isEmpty()) {
@@ -90,10 +90,10 @@ public class SqlLifecycleManager
    * For the given sqlQueryId, this method removes all lifecycles that match to the given list of lifecycles.
    * This method uses {@link Object#equals} for matching lifecycles.
    */
-  public void removeAll(String sqlQueryId, List<Cancellable> lifecyclesToRemove)
+  public void removeAll(String sqlQueryId, List<Cancelable> lifecyclesToRemove)
   {
     synchronized (lock) {
-      List<Cancellable> lifecycles = sqlLifecycles.get(sqlQueryId);
+      List<Cancelable> lifecycles = sqlLifecycles.get(sqlQueryId);
       if (lifecycles != null) {
         lifecycles.removeAll(lifecyclesToRemove);
         if (lifecycles.isEmpty()) {
@@ -106,10 +106,10 @@ public class SqlLifecycleManager
   /**
    * Returns a snapshot of the lifecycles for the given sqlQueryId.
    */
-  public List<Cancellable> getAll(String sqlQueryId)
+  public List<Cancelable> getAll(String sqlQueryId)
   {
     synchronized (lock) {
-      List<Cancellable> lifecycles = sqlLifecycles.get(sqlQueryId);
+      List<Cancelable> lifecycles = sqlLifecycles.get(sqlQueryId);
       return lifecycles == null ? Collections.emptyList() : ImmutableList.copyOf(lifecycles);
     }
   }

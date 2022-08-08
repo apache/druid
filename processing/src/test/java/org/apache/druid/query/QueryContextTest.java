@@ -268,31 +268,6 @@ public class QueryContextTest
     Assert.assertNotNull(timeseries.getQueryContext());
   }
 
-  @Test
-  public void testWithOverrides()
-  {
-    final QueryContext context = new QueryContext(
-        ImmutableMap.of(
-            "a", "fred",
-            "b", "wilma"
-        )
-    );
-    final QueryContext overridden = context.withOverrides(
-        ImmutableMap.of(
-            "b", "pebbles",
-            "c", "barney"
-        )
-    );
-    final Map<String, Object> expected =
-        ImmutableMap.of(
-            "a", "fred",
-            "b", "pebbles",
-            "c", "barney"
-        );
-
-    Assert.assertEquals(expected, overridden.getMergedParams());
-  }
-
   public static class LegacyContextQuery implements Query
   {
     private final Map<String, Object> context;

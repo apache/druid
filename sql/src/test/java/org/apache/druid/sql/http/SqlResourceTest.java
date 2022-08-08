@@ -238,7 +238,7 @@ public class SqlResourceTest extends CalciteTestBase
     lifecycleManager = new SqlLifecycleManager()
     {
       @Override
-      public void add(String sqlQueryId, Cancellable lifecycle)
+      public void add(String sqlQueryId, Cancelable lifecycle)
       {
         super.add(sqlQueryId, lifecycle);
         if (lifecycleAddLatch != null) {
@@ -1537,7 +1537,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
     QueryException exception = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
     Assert.assertEquals(
-        QueryInterruptedException.QUERY_CANCELLED,
+        QueryInterruptedException.QUERY_CANCELED,
         exception.getErrorCode()
     );
   }
@@ -1567,7 +1567,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
     QueryException exception = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
     Assert.assertEquals(
-        QueryInterruptedException.QUERY_CANCELLED,
+        QueryInterruptedException.QUERY_CANCELED,
         exception.getErrorCode()
     );
   }

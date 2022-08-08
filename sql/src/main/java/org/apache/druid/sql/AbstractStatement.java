@@ -51,25 +51,36 @@ public abstract class AbstractStatement implements Closeable
   protected final SqlQueryPlus queryPlus;
   protected final SqlExecutionReporter reporter;
   protected PlannerContext plannerContext;
-  protected Set<ResourceAction> queryResource;
-  protected Set<ResourceAction> resourceActions;
+
+  /**
+   * Resource actions used with authorizing a cancellation request. These actions
+   * include only the data-level actions (i.e. the datasource.)
+   */
+  protected Set<ResourceAction> cancelationResourceActions;
+
+  /**
+   * Full resource actions authorized as part of this request. Used when logging
+   * resource actions. Includes the query context, if query context authorization
+   * is enabled.
+   */
+  protected Set<ResourceAction> fullResourceActions;
 
   public AbstractStatement(
       final SqlToolbox sqlToolbox,
-      final SqlQueryPlus sqlRequest,
+      final SqlQueryPlus queryPlus,
       final String remoteAddress
   )
   {
     this.sqlToolbox = sqlToolbox;
-    this.queryPlus = sqlRequest;
+    this.queryPlus = queryPlus;
     this.reporter = new SqlExecutionReporter(this, remoteAddress);
 
     // Context is modified, not copied.
-    contextWithSqlId(sqlRequest.context())
+    contextWithSqlId(queryPlus.context())
       .addDefaultParams(sqlToolbox.defaultQueryConfig.getContext());
   }
 
-  private QueryContext contextWithSqlId(QueryContext queryContext)
+  private static QueryContext contextWithSqlId(QueryContext queryContext)
   {
     // "bySegment" results are never valid to use with SQL because the result format is incompatible
     // so, overwrite any user specified context to avoid exceptions down the line
@@ -127,8 +138,12 @@ public abstract class AbstractStatement implements Closeable
       throw new ForbiddenException(authorizationResult.toString());
     }
 
-    queryResource = planner.resourceActions(false);
-    resourceActions = planner.resourceActions(authorizeContextParams);
+    // Capture the query resources twice. The first is used to validate the request
+    // to cancel the query, and includes only the query-level resources. The second
+    // is used to report the resources actually authorized and includes the
+    // query context variables, if we are authorizing them.
+    cancelationResourceActions = planner.resourceActions(false);
+    fullResourceActions = planner.resourceActions(authorizeContextParams);
   }
 
   /**
@@ -165,12 +180,12 @@ public abstract class AbstractStatement implements Closeable
    */
   public Set<ResourceAction> resources()
   {
-    return queryResource;
+    return cancelationResourceActions;
   }
 
   public Set<ResourceAction> allResources()
   {
-    return resourceActions;
+    return fullResourceActions;
   }
 
   public SqlQueryPlus sqlRequest()
@@ -190,7 +205,12 @@ public abstract class AbstractStatement implements Closeable
   @Override
   public void close()
   {
-    closeQuietly();
+    try {
+      closeQuietly();
+    }
+    catch (Exception e) {
+      reporter.failed(e);
+    }
     reporter.emit();
   }
 

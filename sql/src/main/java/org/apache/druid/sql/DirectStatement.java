@@ -23,7 +23,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryInterruptedException;
-import org.apache.druid.sql.SqlLifecycleManager.Cancellable;
+import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
@@ -58,13 +58,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Use this class for tests and JDBC execution. Use the HTTP variant,
  * {@link HttpStatement} for HTTP requests.
  */
-public class DirectStatement extends AbstractStatement implements Cancellable
+public class DirectStatement extends AbstractStatement implements Cancelable
 {
   private static final Logger log = new Logger(DirectStatement.class);
 
   protected PrepareResult prepareResult;
   protected PlannerResult plannerResult;
-  private volatile boolean cancelled;
+  private volatile boolean canceled;
 
   public DirectStatement(
       final SqlToolbox lifecycleToolbox,
@@ -113,7 +113,7 @@ public class DirectStatement extends AbstractStatement implements Cancellable
       // Tests cancel during this call; real clients might do so if the plan
       // or execution prep stages take too long for some unexpected reason.
       sqlToolbox.sqlLifecycleManager.add(sqlQueryId(), this);
-      checkCancelled();
+      checkCanceled();
       plannerResult = plan(planner);
       prepareResult = planner.prepareResult();
       return doExecute();
@@ -137,7 +137,7 @@ public class DirectStatement extends AbstractStatement implements Cancellable
   {
     // Check cancellation here and not in execute() above:
     // required for SqlResourceTest to work.
-    checkCancelled();
+    checkCanceled();
     try {
       return plannerResult.run();
     }
@@ -153,11 +153,11 @@ public class DirectStatement extends AbstractStatement implements Cancellable
    * a query ID, which won't happen until after the {@link #execute())}
    * call.
    */
-  private void checkCancelled()
+  private void checkCanceled()
   {
-    if (cancelled) {
+    if (canceled) {
       throw new QueryInterruptedException(
-          QueryInterruptedException.QUERY_CANCELLED,
+          QueryInterruptedException.QUERY_CANCELED,
           StringUtils.format("Query is canceled [%s]", sqlQueryId()),
           null,
           null
@@ -168,7 +168,7 @@ public class DirectStatement extends AbstractStatement implements Cancellable
   @Override
   public void cancel()
   {
-    cancelled = true;
+    canceled = true;
     final CopyOnWriteArrayList<String> nativeQueryIds = plannerContext.getNativeQueryIds();
 
     for (String nativeQueryId : nativeQueryIds) {
