@@ -398,6 +398,7 @@ public class SqlBenchmark
       // 21, 22: stringy stuff
       "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimUniform NOT LIKE '%3' GROUP BY 1, 2",
       "SELECT dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential = '311' GROUP BY 1 ORDER BY 1",
+      // 23: full scan
       "SELECT * from foo"
 
 
@@ -406,13 +407,13 @@ public class SqlBenchmark
   @Param({"5000000"})
   private int rowsPerSegment;
 
-  @Param({"force"})
+  @Param({"false", "force"})
   private String vectorize;
-
+g
   @Param({"none", "fc4", "fc16"})
   private String stringEncoding;
 
-  @Param({"4", "5", "6", "7", "10", "11", "12", "19", "21", "22", "23"})
+  @Param({"4", "5", "6", "7", "8", "10", "11", "12", "19", "21", "22", "23"})
   private String query;
 
   @Param({STORAGE_MMAP, STORAGE_FRAME_ROW, STORAGE_FRAME_COLUMNAR})
@@ -548,19 +549,19 @@ public class SqlBenchmark
     }
   }
 
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void planSql(Blackhole blackhole) throws Exception
-  {
-    final Map<String, Object> context = ImmutableMap.of(
-        QueryContexts.VECTORIZE_KEY, vectorize,
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
-    );
-    final String sql = QUERIES.get(Integer.parseInt(query));
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
-      final PlannerResult plannerResult = planner.plan();
-      blackhole.consume(plannerResult);
-    }
-  }
+//  @Benchmark
+//  @BenchmarkMode(Mode.AverageTime)
+//  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+//  public void planSql(Blackhole blackhole) throws Exception
+//  {
+//    final Map<String, Object> context = ImmutableMap.of(
+//        QueryContexts.VECTORIZE_KEY, vectorize,
+//        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+//    );
+//    final String sql = QUERIES.get(Integer.parseInt(query));
+//    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
+//      final PlannerResult plannerResult = planner.plan();
+//      blackhole.consume(plannerResult);
+//    }
+//  }
 }

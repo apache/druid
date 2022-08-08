@@ -30,6 +30,7 @@ import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.IndexedStringDictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.IndexedStringDruidPredicateIndex;
+import org.apache.druid.segment.column.IndexedUtf8LexicographicalRangeIndex;
 import org.apache.druid.segment.column.IndexedUtf8ValueSetIndex;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;

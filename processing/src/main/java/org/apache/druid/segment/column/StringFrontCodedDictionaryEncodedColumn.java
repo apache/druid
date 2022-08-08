@@ -21,6 +21,7 @@ package org.apache.druid.segment.column;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -115,7 +116,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   @Override
   public int lookupId(String name)
   {
-    return dictionary.indexOf(name);
+    return utf8Dictionary.indexOf(StringUtils.toUtf8ByteBuffer(name));
   }
 
   @Override
