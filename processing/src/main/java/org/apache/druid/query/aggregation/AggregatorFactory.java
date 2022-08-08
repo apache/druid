@@ -355,6 +355,8 @@ public abstract class AggregatorFactory implements Cacheable
    * a query `select a, sum(b) as total group by a from table` the aggregator returned from the native group by query is "a0" set in
    * {@link org.apache.druid.sql.calcite.rel.DruidQuery#computeAggregations}. We can use withName("total") to set the output name
    * of the aggregator to "total".
+   * <p>
+   * As all implementations of this interface method may not exist, callers of this method are advised to handle such a case.
    *
    * @param newName newName of the output for aggregator factory
    * @return AggregatorFactory with the output name set as the input param.
