@@ -147,6 +147,8 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
       return val.asBoolean();
     }
 
+    // this is a jackson specific type, and is unlikely to occur in the wild. But, in the event we do encounter it,
+    // handle it since it is a ValueNode
     if (val.isBinary() && val instanceof BinaryNode) {
       return ((BinaryNode) val).binaryValue();
     }
@@ -170,8 +172,10 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
       return newMap;
     }
 
-    // turn anything else into a string value so that we don't leak JsonNode into rows
-    return val.asText();
+    // All ValueNode implementations, as well as ArrayNode and ObjectNode will be handled by this point, so we should
+    // only be dealing with jackson specific types if we end up here (MissingNode, POJONode) so we can just return null
+    // so that we don't leak unhadled JsonNode objects
+    return null;
   }
 
   @Nullable
