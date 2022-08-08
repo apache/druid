@@ -21,6 +21,7 @@ package org.apache.druid.guice;
 
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.math.expr.ExpressionProcessingModule;
+import org.apache.druid.storage.StorageConnectorModule;
 
 import java.util.Arrays;
 import java.util.Properties;
@@ -47,18 +48,15 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
         new JacksonModule(),
         new ConfigModule(),
         new NullHandlingModule(),
+        new StorageConnectorModule(),
         new ExpressionProcessingModule(),
-        binder -> {
-          binder.bind(DruidSecondaryModule.class);
-        }
+        binder -> binder.bind(DruidSecondaryModule.class)
     );
   }
 
   public StartupInjectorBuilder withProperties(Properties properties)
   {
-    add(binder -> {
-      binder.bind(Properties.class).toInstance(properties);
-    });
+    add(binder -> binder.bind(Properties.class).toInstance(properties));
     return this;
   }
 
