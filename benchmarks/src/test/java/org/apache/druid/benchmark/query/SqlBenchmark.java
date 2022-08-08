@@ -409,7 +409,6 @@ public class SqlBenchmark
 
   @Param({"false", "force"})
   private String vectorize;
-g
   @Param({"none", "fc4", "fc16"})
   private String stringEncoding;
 
