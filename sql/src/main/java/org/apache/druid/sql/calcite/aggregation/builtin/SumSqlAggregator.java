@@ -95,7 +95,8 @@ public class SumSqlAggregator extends SimpleSqlAggregator
    */
   private static class DruidSumAggFunction extends SqlAggFunction
   {
-    public DruidSumAggFunction() {
+    public DruidSumAggFunction()
+    {
       super(
           "SUM",
           null,
