@@ -56,7 +56,7 @@ public abstract class AbstractStatement implements Closeable
    * Resource actions used with authorizing a cancellation request. These actions
    * include only the data-level actions (i.e. the datasource.)
    */
-  protected Set<ResourceAction> cancelationResourceActions;
+  protected Set<ResourceAction> cancellationResourceActions;
 
   /**
    * Full resource actions authorized as part of this request. Used when logging
@@ -142,7 +142,7 @@ public abstract class AbstractStatement implements Closeable
     // to cancel the query, and includes only the query-level resources. The second
     // is used to report the resources actually authorized and includes the
     // query context variables, if we are authorizing them.
-    cancelationResourceActions = planner.resourceActions(false);
+    cancellationResourceActions = planner.resourceActions(false);
     fullResourceActions = planner.resourceActions(authorizeContextParams);
   }
 
@@ -180,7 +180,7 @@ public abstract class AbstractStatement implements Closeable
    */
   public Set<ResourceAction> resources()
   {
-    return cancelationResourceActions;
+    return cancellationResourceActions;
   }
 
   public Set<ResourceAction> allResources()

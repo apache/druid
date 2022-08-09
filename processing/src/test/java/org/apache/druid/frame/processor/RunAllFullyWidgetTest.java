@@ -352,7 +352,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     Assert.assertTrue(future.cancel(true));
     Assert.assertTrue(future.isCancelled());
 
-    // We don't have a good way to wait for future cancelation to truly finish. Resort to a waiting-loop.
+    // We don't have a good way to wait for future cancellation to truly finish. Resort to a waiting-loop.
     while (exec.cancelableProcessorCount() > 0) {
       Thread.sleep(10);
     }
