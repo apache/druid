@@ -57,7 +57,8 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
     try {
-      // add empty initial buffer since SequenceInputStream will peek the first element right away
+      // SequenceInputStream constructor blocks if the queue is empty, however no content will be queued until
+      // the first chunk comes in. Adding an empty initial buffer to unblock.
       queue.put(new ByteBufInputStream(Unpooled.EMPTY_BUFFER)); // lgtm [java/input-resource-leak]
     }
     catch (InterruptedException e) {
