@@ -48,7 +48,7 @@
             <artifactId>druid-gcp-common</artifactId>
             <version>${project.parent.version}</version>
             <scope>runtime</scope>
-        </dependency>        
+        </dependency>
         <dependency>
             <!-- This is needed to bundle the web console -->
             <groupId>org.apache.druid</groupId>
@@ -311,10 +311,6 @@
         <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.aether</groupId>
-            <artifactId>aether-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

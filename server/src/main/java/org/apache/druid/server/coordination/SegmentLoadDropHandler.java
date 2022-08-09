@@ -351,11 +351,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
       result = Status.SUCCESS;
     }
-    catch (Exception e) {
+    catch (Throwable e) {
       log.makeAlert(e, "Failed to load segment for dataSource")
          .addData("segment", segment)
          .emit();
-      result = Status.failed(e.getMessage());
+      result = Status.failed(e.toString());
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestLoad(segment), result);

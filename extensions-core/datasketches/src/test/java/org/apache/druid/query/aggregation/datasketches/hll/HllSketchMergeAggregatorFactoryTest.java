@@ -156,4 +156,12 @@ public class HllSketchMergeAggregatorFactoryTest
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(targetRound);
     Assert.assertTrue(result.isRound());
   }
+
+  @Test
+  public void testWithName() throws Exception
+  {
+    HllSketchAggregatorFactory factory = (HllSketchAggregatorFactory) targetRound.getMergingFactory(targetRound);
+    Assert.assertEquals(factory, factory.withName(targetRound.getName()));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
 }

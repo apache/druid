@@ -119,4 +119,16 @@ public class TimestampMinMaxAggregatorFactoryTest
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
   }
+
+  @Test
+  public void testWithName()
+  {
+    TimestampMaxAggregatorFactory maxAgg = new TimestampMaxAggregatorFactory("timeMax", "__time", null);
+    Assert.assertEquals(maxAgg, maxAgg.withName("timeMax"));
+    Assert.assertEquals("newTest", maxAgg.withName("newTest").getName());
+
+    TimestampMinAggregatorFactory minAgg = new TimestampMinAggregatorFactory("timeMin", "__time", null);
+    Assert.assertEquals(minAgg, minAgg.withName("timeMin"));
+    Assert.assertEquals("newTest", minAgg.withName("newTest").getName());
+  }
 }

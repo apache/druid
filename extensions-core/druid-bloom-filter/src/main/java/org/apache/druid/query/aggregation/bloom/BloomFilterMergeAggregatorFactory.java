@@ -71,6 +71,12 @@ public class BloomFilterMergeAggregatorFactory extends BloomFilterAggregatorFact
         .build();
   }
 
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new BloomFilterMergeAggregatorFactory(newName, fieldName, getMaxNumEntries());
+  }
+
   private BloomFilterMergeAggregator makeMergeAggregator(ColumnSelectorFactory metricFactory)
   {
     final BaseNullableColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);

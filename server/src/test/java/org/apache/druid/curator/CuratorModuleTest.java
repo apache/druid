@@ -19,11 +19,7 @@
 
 package org.apache.druid.curator;
 
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Module;
-import com.google.inject.util.Modules;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.ensemble.EnsembleProvider;
 import org.apache.curator.ensemble.exhibitor.ExhibitorEnsembleProvider;
@@ -31,8 +27,8 @@ import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.retry.ExponentialBackoffRetry;
-import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.testing.junit.LoggerCaptureRule;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
@@ -178,14 +174,13 @@ public final class CuratorModuleTest
 
   private Injector newInjector(final Properties props)
   {
-    List<Module> modules = ImmutableList.<Module>builder()
-        .addAll(GuiceInjectors.makeDefaultStartupModules())
-        .add(new LifecycleModule())
-        .add(new CuratorModule())
+    return new StartupInjectorBuilder()
+        .add(
+            new LifecycleModule(),
+            new CuratorModule(),
+            binder -> binder.bind(Properties.class).toInstance(props)
+         )
         .build();
-    return Guice.createInjector(
-        Modules.override(modules).with(binder -> binder.bind(Properties.class).toInstance(props))
-    );
   }
 
   private static CuratorFramework createCuratorFramework(Injector injector, int maxRetries)

@@ -56,6 +56,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -230,7 +231,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -263,7 +268,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -296,7 +305,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -329,7 +342,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{NullHandling.defaultStringValue(), 5L},
             new Object[]{"2", 1L},
             new Object[]{"hello", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -371,7 +388,13 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             },
             new Object[]{"100", "100", "100", 2L},
             new Object[]{"200", "200", "200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.STRING)
+                    .add("EXPR$2", ColumnType.STRING)
+                    .add("EXPR$3", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -413,7 +436,13 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             },
             new Object[]{"100", "100", "100", 2L},
             new Object[]{"200", "200", "200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.STRING)
+                    .add("EXPR$2", ColumnType.STRING)
+                    .add("EXPR$3", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -448,7 +477,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{NullHandling.defaultStringValue(), NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", "100", 2L},
             new Object[]{"200", "200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.STRING)
+                    .add("EXPR$2", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -483,7 +517,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "100",
                 2L
             }
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -519,7 +557,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "100",
                 2L
             }
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -555,7 +597,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "100",
                 2L
             }
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -591,7 +637,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "100",
                 1L
             }
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -622,7 +672,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(new Object[]{"100", 1L})
+        ImmutableList.of(new Object[]{"100", 1L}),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -656,7 +710,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"100", 1L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -690,7 +748,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -721,7 +783,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of()
+        ImmutableList.of(),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -755,7 +821,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -788,7 +858,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -821,7 +895,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -853,7 +931,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"100", 2L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -887,7 +969,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -921,7 +1007,48 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByPathNumericBoundFilterLongNoUpperNumeric() throws Exception
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, '$.x' RETURNING BIGINT),"
+        + "SUM(cnt) "
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.x' RETURNING BIGINT) >= 100 GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.LONG)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setDimFilter(bound("v0", "100", null, false, false, null, StringComparators.NUMERIC))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{100L, 2L},
+            new Object[]{200L, 1L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -955,7 +1082,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -988,7 +1119,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"2.02", 2L},
             new Object[]{"3.03", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1021,7 +1156,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"2.02", 2L},
             new Object[]{"3.03", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1053,7 +1192,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"2.02", 2L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1087,7 +1230,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"2.02", 2L},
             new Object[]{"3.03", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1121,7 +1268,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"2.02", 2L},
             new Object[]{"3.03", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1155,7 +1306,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"2.02", 2L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1188,7 +1343,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1222,7 +1381,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"100", 1L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1256,7 +1419,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1288,7 +1455,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"100", 2L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1321,7 +1492,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"100", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1354,7 +1529,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"100", 2L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1387,7 +1566,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"100", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1421,7 +1604,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1455,7 +1642,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1489,7 +1680,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"100", 1L},
             new Object[]{"200", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1522,7 +1717,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"100", 2L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1545,7 +1744,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{400.0}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .build()
     );
   }
 
@@ -1581,7 +1783,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{200.0}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .build()
     );
   }
 
@@ -1615,7 +1820,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{100.0}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .build()
     );
   }
 
@@ -1640,7 +1848,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{2.1}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .build()
     );
   }
 
@@ -1677,7 +1888,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{2.1}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .build()
     );
   }
 
@@ -1710,7 +1924,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{1.1}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .build()
     );
   }
 
@@ -1733,7 +1950,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{400L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1757,7 +1977,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{700L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1780,7 +2003,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{400L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1804,7 +2030,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{700L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1842,7 +2071,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{null, 5L},
             new Object[]{"[\"array\",\"n\"]", 2L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING_ARRAY)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1880,7 +2113,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{null, 5L},
             new Object[]{"[\"array\",\"n\"]", 2L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING_ARRAY)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1919,7 +2156,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{null, 4L},
             new Object[]{"[\"x\",\"y\",\"z\",\"mixed\",\"mixed2\"]", 2L},
             new Object[]{"[\"x\",\"y\",\"z\",\"mixed2\"]", 1L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING_ARRAY)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1955,9 +2196,13 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"[\"$.\"]", 5L},
+            new Object[]{"[\"$\"]", 5L},
             new Object[]{"[\"$.n.x\",\"$.array[0]\",\"$.array[1]\"]", 2L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING_ARRAY)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -1989,7 +2234,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 5L},
             new Object[]{"b", 2L}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 
@@ -2052,7 +2301,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{null, null},
             new Object[]{"{\"x\":1}", "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"},
             new Object[]{null, "2"}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", NestedDataComplexTypeSerde.TYPE)
+                    .add("EXPR$1", NestedDataComplexTypeSerde.TYPE)
+                    .build()
+
     );
   }
 
@@ -2097,7 +2351,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{"{\"x\":null,\"n\":null}"},
             new Object[]{"{\"x\":\"100\",\"n\":{\"x\":1}}"},
             new Object[]{"{\"x\":null,\"n\":null}"}
-        )
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", NestedDataComplexTypeSerde.TYPE)
+                    .build()
     );
   }
 
@@ -2156,7 +2413,14 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{"eee", "\"eee\"", "\"eee\"", "{\"foo\":1}", null},
             new Object[]{"aaa", "\"aaa\"", "\"aaa\"", "{\"foo\":1}", "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"},
             new Object[]{"ddd", "\"ddd\"", "\"ddd\"", "{\"foo\":1}", "2"}
-        )
+        ),
+        RowSignature.builder()
+                    .add("string", ColumnType.STRING)
+                    .add("EXPR$1", NestedDataComplexTypeSerde.TYPE)
+                    .add("EXPR$2", NestedDataComplexTypeSerde.TYPE)
+                    .add("EXPR$3", NestedDataComplexTypeSerde.TYPE)
+                    .add("EXPR$4", NestedDataComplexTypeSerde.TYPE)
+                    .build()
     );
   }
 }

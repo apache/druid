@@ -1253,10 +1253,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       final SequenceOffsetType endSequenceNumber
   )
   {
-    final int compareToEnd = createSequenceNumber(recordSequenceNumber)
-        .compareTo(createSequenceNumber(endSequenceNumber));
-
-    return isEndOffsetExclusive() ? compareToEnd < 0 : compareToEnd <= 0;
+    return createSequenceNumber(recordSequenceNumber).isMoreToReadBeforeReadingRecord(
+        createSequenceNumber(endSequenceNumber),
+        isEndOffsetExclusive()
+    );
   }
 
   /**
