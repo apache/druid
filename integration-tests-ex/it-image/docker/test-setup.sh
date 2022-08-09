@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#-------------------------------------------------------------------------
 
 # This script runs inside the container to prepare the Druid test image.
 
@@ -23,15 +24,15 @@ set -e
 set -u
 
 # Enable for tracing
-set -x
+#set -x
 
 # For debugging: verify environment
-env
+#env
 
 # Druid system user
-
 adduser --system --group --no-create-home druid
 
+# Adjust ownership of the Druid launch script.
 cd /
 chmod +x launch.sh
 chown druid:druid launch.sh druid.sh
@@ -55,13 +56,13 @@ chmod a+x /run-druid.sh
 # The original Druid directory contains only
 # libraries. No extensions should be present: those
 # should be added in this step.
-
 cd /usr/local/
 
 tar -xzf apache-druid-${DRUID_VERSION}-bin.tar.gz
 rm apache-druid-${DRUID_VERSION}-bin.tar.gz
 
 ls -l /tmp/druid
+
 # Add extra libraries and extensions.
 mv /tmp/druid/lib/* apache-druid-${DRUID_VERSION}/lib
 mv /tmp/druid/extensions/* apache-druid-${DRUID_VERSION}/extensions
@@ -74,6 +75,5 @@ ln -s apache-druid-${DRUID_VERSION} $DRUID_HOME
 
 # Clean up time
 # Should be nothing to clean...
-
 rm -rf /tmp/*
 rm -rf /var/tmp/*

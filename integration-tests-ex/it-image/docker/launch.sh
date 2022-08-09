@@ -14,14 +14,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#-------------------------------------------------------------------------
+
+# Launch script which runs inside the container to set up configuration
+# and then launch Druid itself.
 
 # Fail fast on any error
 set -e
 
 # Enable for tracing
-set -x
+#set -x
 
-env
+# Dump the environment for debugging.
+#env
 
 # Launch Druid within the container.
 cd /

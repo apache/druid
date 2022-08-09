@@ -14,7 +14,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#-------------------------------------------------------------------------
 
+# Launches Druid within the container. Based on the script in the original
+# ITs, which in turn is based the distribution/docker/druid.sh script.
+#
+# The key bit of functionality is to translate config passed in as
+# environment variables (from the Docker compose file) to a runtime.properties
+# file which Druid will load. When run in Docker, there is just one server
+# per container, so we put the runtime.properties file in the same location,
+# /tmp/druid/conf, in each container, and we omit the common.runtime.properties
+# file.
+
+# Fail fast on any error
 set -e
 
 getConfPath()

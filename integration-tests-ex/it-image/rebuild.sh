@@ -16,11 +16,17 @@
 # limitations under the License.
 #--------------------------------------------------------------------
 
-# Rebuilds the docker image outside of Maven for
-# debugging. Maven sets environment variables, then calls
-# build-image.sh which creates the target/env.sh file.
-# Here we reuse those environment variables by
-# hand.
+# Rebuilds the docker image outside of Maven for debugging. Use Maven
+# to build the image the first time within a branch. Maven sets
+# the required environment variables, then calls build-image.sh which
+# creates the target/env.sh file which captures the environment
+# variables. env.sh is used to launch tests, but it also allows you to
+# take a faster shortcut if you need to rebuild the image, such as when
+# debugging changes to the image. This script reuses those environment
+# variables and then invokes the Docker build script.
+#
+# You only need to run from Maven if you switch branches or otherwise
+# change the software versions recorded in env.sh.
 
 SCRIPT_DIR=$(cd $(dirname $0) && pwd)
 

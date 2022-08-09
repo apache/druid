@@ -14,9 +14,16 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#-------------------------------------------------------------------------
 
 # Builds the Druid image for testing. Does not include dependent
-# tools: those reside in their own images.
+# tools such as MySQL, Zookeeper or Kafka: those reside in their own images.
+#
+# The script assumes that Maven as placed a Druid distribution and the
+# required extra jars in the same location as this file: in the target/docker
+# directory. You must run Maven once to populate these files after each
+# build. After that first image build, you can use rebuild.sh to do follow-on
+# image builds.
 
 # This Dockerfile prefers to use the COPY command over ADD.
 # See: https://phoenixnap.com/kb/docker-add-vs-copy
@@ -53,12 +60,11 @@ COPY test-setup.sh /
 COPY druid.sh /
 COPY launch.sh /
 
-# Do the setup tasks
+# Do the setup tasks. The tasks are done within a script, rather than
+# here, so they are easier to describe and debug. Turn on the "-x" flag
+# within the script to trace the steps if needed for debugging.
 
 RUN bash /test-setup.sh
-
-# Fill in dependencies. The names are at the mercy of the
-# upstream providers.
 
 # Start in the Druid directory.
 
