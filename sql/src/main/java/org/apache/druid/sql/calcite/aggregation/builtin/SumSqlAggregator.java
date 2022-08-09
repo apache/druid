@@ -44,6 +44,12 @@ import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 
 public class SumSqlAggregator extends SimpleSqlAggregator
 {
+  /**
+   * We are using a custom SUM function instead of {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#SUM} to
+   * work around the issue described in https://issues.apache.org/jira/browse/CALCITE-4609. Once we upgrade Calcite
+   * to 1.27.0+ we can return to using the built-in SUM function, and {@link DruidSumAggFunction and
+   * {@link DruidSumSplitter} can be removed.
+   */
   private static final SqlAggFunction DRUID_SUM = new DruidSumAggFunction();
 
   @Override
