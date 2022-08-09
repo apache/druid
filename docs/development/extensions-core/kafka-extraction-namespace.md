@@ -49,6 +49,10 @@ The consumer properties `group.id` and `auto.offset.reset` CANNOT be set in `kaf
 
 See [lookups](../../querying/lookups.md) for how to configure and use lookups.
 
+## Tombstones and Deleting Records
+
+The Kafka lookup extractor treats `null` Kafka messages as tombstones. This means that a record on the input topic with a `null` message payload on Kafka will remove the associated key from the lookup map, effectively deleting it.
+
 ## Limitations
 
 Currently the Kafka lookup extractor feeds the entire Kafka stream into a local cache. If you are using on-heap caching, this can easily clobber your java heap if the Kafka stream spews a lot of unique keys.
