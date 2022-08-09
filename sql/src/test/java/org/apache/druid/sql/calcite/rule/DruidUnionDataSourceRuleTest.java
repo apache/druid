@@ -33,7 +33,7 @@ import org.apache.druid.sql.calcite.rel.DruidRelsTest;
 import org.apache.druid.sql.calcite.rel.DruidUnionDataSourceRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
-import org.apache.druid.sql.calcite.table.DatasourceTable.DatasourceMetadata;
+import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -46,7 +46,7 @@ import java.util.Optional;
 public class DruidUnionDataSourceRuleTest
 {
   private final DruidTable fooDruidTable = new DatasourceTable(
-      new DatasourceMetadata(
+      new PhysicalDatasourceMetadata(
           new TableDataSource("foo"),
           RowSignature.builder()
                       .addTimeColumn()

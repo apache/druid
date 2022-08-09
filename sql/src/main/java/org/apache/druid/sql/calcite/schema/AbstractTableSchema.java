@@ -32,8 +32,16 @@ import java.util.Collections;
 import java.util.Set;
 
 /**
- * Useful form of an abstract schema that does not lock down the
- * {@link #getTable} method.
+ * Calcite provides two "schema" abstractions. {@link Schema} is an interface,
+ * while {@link org.apache.calcite.schema.impl.AbstractSchema} is a base class
+ * that "locks down" the {@link #getTable} method to obtain the table from a
+ * map. This forces the extensions of that class to materialize all tables in
+ * the schema, so that Calcite can pick the one it wants. This class, by
+ * contrast, provides the same defaults as {@link AbstractSchema}, but assumes
+ * its subslasses will implement {@code getTable()} to directly look up that
+ * one table, ignoring all others. Doing so lowers the cost of table resolution,
+ * especially when the system has to fetch catalog information for the table:
+ * we only fetch the information we need, not information for all tables.
  */
 public abstract class AbstractTableSchema implements Schema
 {

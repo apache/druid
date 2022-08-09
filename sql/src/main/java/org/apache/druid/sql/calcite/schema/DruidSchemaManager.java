@@ -37,6 +37,17 @@ import java.util.Set;
 @UnstableApi
 public interface DruidSchemaManager
 {
+  /**
+   * Return all tables known to this schema manager. Deprecated because getting
+   * all tables is never actually needed in the current code. Calcite asks for
+   * the information for a single table (via {@link #getTable(String)}, or
+   * the list of all table <i>names</i> (via {@link #getTableNames()}.
+   * This method was originally used to allow Calcite's {@link AbstractSchema}
+   * class to do the lookup. The current code implements the operations
+   * directly. For backward compatibility, the default methods emulate
+   * the old behavior. Newer implementations should omit this method and
+   * implement the other two.
+   */
   @Deprecated
   Map<String, DruidTable> getTables();
 

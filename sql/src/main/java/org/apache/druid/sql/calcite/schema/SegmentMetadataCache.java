@@ -86,6 +86,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+/**
+ * Broker-side cache of segment metadata which combines segments to identify
+ * datasources which become "tables" in Calcite. This cache provides the "physical"
+ * metadata about a datasource which is blended with catalog "logical" metadata
+ * to provide the final user-view of each datasource.
+ */
 @ManageLifecycle
 public class SegmentMetadataCache
 {
@@ -112,7 +118,7 @@ public class SegmentMetadataCache
    * Map of DataSource -> DruidTable.
    * This map can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
-  private final ConcurrentMap<String, DatasourceTable.DatasourceMetadata> tables = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, DatasourceTable.PhysicalDatasourceMetadata> tables = new ConcurrentHashMap<>();
 
   private static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
 
@@ -398,13 +404,13 @@ public class SegmentMetadataCache
 
     // Rebuild the dataSources.
     for (String dataSource : dataSourcesToRebuild) {
-      final DatasourceTable.DatasourceMetadata druidTable = buildDruidTable(dataSource);
+      final DatasourceTable.PhysicalDatasourceMetadata druidTable = buildDruidTable(dataSource);
       if (druidTable == null) {
         log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
         tables.remove(dataSource);
         continue;
       }
-      final DatasourceTable.DatasourceMetadata oldTable = tables.put(dataSource, druidTable);
+      final DatasourceTable.PhysicalDatasourceMetadata oldTable = tables.put(dataSource, druidTable);
       final String description = druidTable.dataSource().isGlobal() ? "global dataSource" : "dataSource";
       if (oldTable == null || !oldTable.rowSignature().equals(druidTable.rowSignature())) {
         log.info("%s [%s] has new signature: %s.", description, dataSource, druidTable.rowSignature());
@@ -426,7 +432,7 @@ public class SegmentMetadataCache
     initialized.await();
   }
 
-  protected DatasourceTable.DatasourceMetadata getDatasource(String name)
+  protected DatasourceTable.PhysicalDatasourceMetadata getDatasource(String name)
   {
     return tables.get(name);
   }
@@ -776,7 +782,7 @@ public class SegmentMetadataCache
 
   @VisibleForTesting
   @Nullable
-  DatasourceTable.DatasourceMetadata buildDruidTable(final String dataSource)
+  DatasourceTable.PhysicalDatasourceMetadata buildDruidTable(final String dataSource)
   {
     ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> segmentsMap = segmentMetadataInfo.get(dataSource);
 
@@ -820,7 +826,7 @@ public class SegmentMetadataCache
     } else {
       tableDataSource = new TableDataSource(dataSource);
     }
-    return new DatasourceTable.DatasourceMetadata(tableDataSource, builder.build(), isJoinable, isBroadcast);
+    return new DatasourceTable.PhysicalDatasourceMetadata(tableDataSource, builder.build(), isJoinable, isBroadcast);
   }
 
   @VisibleForTesting

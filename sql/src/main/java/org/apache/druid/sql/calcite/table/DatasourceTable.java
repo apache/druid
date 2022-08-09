@@ -29,16 +29,29 @@ import org.apache.druid.segment.column.RowSignature;
 
 import java.util.Objects;
 
+/**
+ * Represents a SQL table that models a Druid datasource.
+ * <p>
+ * Once the catalog code is merged, this class will combine physical information
+ * from the segment cache with logical information from the catalog to produce
+ * the SQL-user's view of the table. The resulting merged view is used to plan
+ * queries and is the source of table information in the {@code INFORMATION_SCHEMA}.
+ */
 public class DatasourceTable extends DruidTable
 {
-  public static class DatasourceMetadata
+  /**
+   * The physical metadata for a datasource, derived from the list of segments
+   * published in the Coordinator. Used only for datasources, since only
+   * datasources are computed from segments.
+   */
+  public static class PhysicalDatasourceMetadata
   {
     private final TableDataSource dataSource;
     private final RowSignature rowSignature;
     private final boolean joinable;
     private final boolean broadcast;
 
-    public DatasourceMetadata(
+    public PhysicalDatasourceMetadata(
         final TableDataSource dataSource,
         final RowSignature rowSignature,
         final boolean isJoinable,
@@ -81,7 +94,7 @@ public class DatasourceTable extends DruidTable
         return false;
       }
 
-      DatasourceMetadata that = (DatasourceMetadata) o;
+      PhysicalDatasourceMetadata that = (PhysicalDatasourceMetadata) o;
 
       if (!Objects.equals(dataSource, that.dataSource)) {
         return false;
@@ -107,10 +120,10 @@ public class DatasourceTable extends DruidTable
     }
   }
 
-  private final DatasourceMetadata physicalMetadata;
+  private final PhysicalDatasourceMetadata physicalMetadata;
 
   public DatasourceTable(
-      final DatasourceMetadata physicalMetadata
+      final PhysicalDatasourceMetadata physicalMetadata
   )
   {
     super(physicalMetadata.rowSignature());

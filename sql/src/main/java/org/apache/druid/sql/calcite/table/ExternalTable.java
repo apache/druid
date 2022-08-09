@@ -31,8 +31,11 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.external.ExternalTableScan;
 
 /**
- * Represents an source of data external to Druid: a CSV file, an HTTP
- * request, etc.
+ * Represents an source of data external to Druid: a CSV file, an HTTP request, etc.
+ * Each such table represents one of Druid's {@link DataSource} types. Since SQL
+ * requires knowledge of the schema of that input source, the user must provide
+ * that information in SQL (via the `EXTERN` or up-coming `STAGED` function) or
+ * from the upcoming Druid Catalog.
  */
 public class ExternalTable extends DruidTable
 {

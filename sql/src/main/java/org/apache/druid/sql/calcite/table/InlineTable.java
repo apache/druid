@@ -28,6 +28,12 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
 
+/**
+ * Represents a specialized table used within Druid's Calcite-based planner.
+ * Used in {@link org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule DruidLogicalValuesRule}
+ * to implement trivial {@code SELECT 1} style queries that return constant values represented
+ * by this inline table.
+ */
 public class InlineTable extends DruidTable
 {
   private final DataSource dataSource;

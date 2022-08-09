@@ -187,9 +187,9 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      protected DatasourceTable.DatasourceMetadata buildDruidTable(String dataSource)
+      protected DatasourceTable.PhysicalDatasourceMetadata buildDruidTable(String dataSource)
       {
-        DatasourceTable.DatasourceMetadata table = super.buildDruidTable(dataSource);
+        DatasourceTable.PhysicalDatasourceMetadata table = super.buildDruidTable(dataSource);
         buildTableLatch.countDown();
         return table;
       }
@@ -218,9 +218,9 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
       boolean throwException = true;
 
       @Override
-      protected DatasourceTable.DatasourceMetadata buildDruidTable(String dataSource)
+      protected DatasourceTable.PhysicalDatasourceMetadata buildDruidTable(String dataSource)
       {
-        DatasourceTable.DatasourceMetadata table = super.buildDruidTable(dataSource);
+        DatasourceTable.PhysicalDatasourceMetadata table = super.buildDruidTable(dataSource);
         buildTableLatch.countDown();
         return table;
       }
@@ -276,7 +276,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testGetTableMapFoo()
   {
-    final DatasourceTable.DatasourceMetadata fooDs = schema.getDatasource("foo");
+    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource("foo");
     final DruidTable fooTable = new DatasourceTable(fooDs);
     final RelDataType rowType = fooTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
@@ -305,7 +305,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testGetTableMapFoo2()
   {
-    final DatasourceTable.DatasourceMetadata fooDs = schema.getDatasource("foo2");
+    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource("foo2");
     final DruidTable fooTable = new DatasourceTable(fooDs);
     final RelDataType rowType = fooTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
@@ -905,7 +905,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testLocalSegmentCacheSetsDataSourceAsGlobalAndJoinable() throws InterruptedException
   {
-    DatasourceTable.DatasourceMetadata fooTable = schema.getDatasource("foo");
+    DatasourceTable.PhysicalDatasourceMetadata fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
     Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
@@ -969,7 +969,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testLocalSegmentCacheSetsDataSourceAsBroadcastButNotJoinable() throws InterruptedException
   {
-    DatasourceTable.DatasourceMetadata fooTable = schema.getDatasource("foo");
+    DatasourceTable.PhysicalDatasourceMetadata fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
     Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);

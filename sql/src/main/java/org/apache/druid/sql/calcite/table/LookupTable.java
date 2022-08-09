@@ -28,6 +28,9 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.segment.column.RowSignature;
 
+/**
+ * Represents a Druid lookup as a Calcite table, allowing queries to read from a lookup.
+ */
 public class LookupTable extends DruidTable
 {
   private final DataSource dataSource;
