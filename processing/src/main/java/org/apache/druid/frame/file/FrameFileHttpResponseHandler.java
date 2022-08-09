@@ -21,14 +21,16 @@ package org.apache.druid.frame.file;
 
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
+import javax.annotation.Nullable;
 
 /**
  * An {@link HttpResponseHandler} that streams data into a {@link ReadableByteChunksFrameChannel}.
@@ -55,24 +57,24 @@ public class FrameFileHttpResponseHandler implements HttpResponseHandler<FrameFi
   {
     final ClientResponse<FrameFilePartialFetch> clientResponse = ClientResponse.unfinished(new FrameFilePartialFetch());
 
-    if (response.getStatus().getCode() != HttpResponseStatus.OK.getCode()) {
+    if (response.status().code() != HttpResponseStatus.OK.code()) {
       // Note: if the error body is chunked, we will discard all future chunks due to setting exceptionCaught here.
       // This is OK because we don't need the body; just the HTTP status code.
       exceptionCaught(clientResponse, new ISE("Server for [%s] returned [%s]", channel.getId(), response.getStatus()));
       return clientResponse;
     } else {
-      return response(clientResponse, response.getContent());
+      return response(clientResponse, null);
     }
   }
 
   @Override
   public ClientResponse<FrameFilePartialFetch> handleChunk(
       final ClientResponse<FrameFilePartialFetch> clientResponse,
-      final HttpChunk chunk,
+      final HttpContent chunk,
       final long chunkNum
   )
   {
-    return response(clientResponse, chunk.getContent());
+    return response(clientResponse, chunk.content());
   }
 
   @Override
@@ -92,7 +94,7 @@ public class FrameFileHttpResponseHandler implements HttpResponseHandler<FrameFi
 
   private ClientResponse<FrameFilePartialFetch> response(
       final ClientResponse<FrameFilePartialFetch> clientResponse,
-      final ChannelBuffer content
+      @Nullable final ByteBuf content
   )
   {
     final FrameFilePartialFetch clientResponseObj = clientResponse.getObj();
@@ -105,20 +107,22 @@ public class FrameFileHttpResponseHandler implements HttpResponseHandler<FrameFi
       return ClientResponse.finished(clientResponseObj);
     }
 
-    final byte[] chunk = new byte[content.readableBytes()];
-    content.getBytes(content.readerIndex(), chunk);
+    if (content != null) {
+      final byte[] chunk = new byte[content.readableBytes()];
+      content.getBytes(content.readerIndex(), chunk);
 
-    try {
-      final ListenableFuture<?> backpressureFuture = channel.addChunk(chunk);
+      try {
+        final ListenableFuture<?> backpressureFuture = channel.addChunk(chunk);
 
-      if (backpressureFuture != null) {
-        clientResponseObj.setBackpressureFuture(backpressureFuture);
+        if (backpressureFuture != null) {
+          clientResponseObj.setBackpressureFuture(backpressureFuture);
+        }
+
+        clientResponseObj.addBytesRead(chunk.length);
       }
-
-      clientResponseObj.addBytesRead(chunk.length);
-    }
-    catch (Exception e) {
-      clientResponseObj.exceptionCaught(e);
+      catch (Exception e) {
+        clientResponseObj.exceptionCaught(e);
+      }
     }
 
     return ClientResponse.unfinished(clientResponseObj);
