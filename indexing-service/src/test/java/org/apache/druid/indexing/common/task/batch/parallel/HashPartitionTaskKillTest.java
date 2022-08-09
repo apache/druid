@@ -26,7 +26,6 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.ParseSpec;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -276,16 +275,13 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
       ingestionSpec = new ParallelIndexIngestionSpec(
           new DataSchema(
               "dataSource",
-              getObjectMapper().convertValue(
-                  new StringInputRowParser(parseSpec, null),
-                  Map.class
-              ),
+              parseSpec.getTimestampSpec(),
+              parseSpec.getDimensionsSpec(),
               new AggregatorFactory[]{
                   new LongSumAggregatorFactory("val", "val")
               },
               granularitySpec,
-              null,
-              getObjectMapper()
+              null
           ),
           ioConfig,
           tuningConfig

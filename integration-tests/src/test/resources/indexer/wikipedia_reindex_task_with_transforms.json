@@ -3,6 +3,24 @@
     "spec": {
         "dataSchema": {
             "dataSource": "%%REINDEX_DATASOURCE%%",
+            "timestampSpec": {
+                "column": "timestamp",
+                "format": "iso"
+            },
+            "dimensionsSpec": {
+                "dimensions": [
+                    {"type": "string", "name": "language", "createBitmapIndex": false},
+                    "user",
+                    "unpatrolled",
+                    "page",
+                    "newPage",
+                    "anonymous",
+                    "namespace",
+                    "country",
+                    "region",
+                    "city"
+                ]
+            },
             "metricsSpec": [
                 {
                     "type": "doubleSum",
@@ -40,65 +58,45 @@
                 "queryGranularity": "second",
                 "intervals" : [ "2013-08-31/2013-09-01" ]
             },
-            "parser": {
-                "parseSpec": {
-                    "format" : "json",
-                    "timestampSpec": {
-                        "column": "timestamp",
-                        "format": "iso"
+            "transformSpec": {
+                "transforms": [
+                    {
+                        "type": "expression",
+                        "name": "newPage",
+                        "expression": "page"
                     },
-                    "dimensionsSpec": {
-                        "dimensions": [
-                            {"type": "string", "name": "language", "createBitmapIndex": false},
-                            "user",
-                            "unpatrolled",
-                            "page",
-                            "newPage",
-                            "anonymous",
-                            "namespace",
-                            "country",
-                            "region",
-                            "city"
-                        ]
+                    {
+                        "type": "expression",
+                        "name": "city",
+                        "expression": "concat('city-', city)"
                     },
-                    "transformSpec": {
-                        "transforms": [
-                            {
-                                "type": "expression",
-                                "name": "newPage",
-                                "expression": "page"
-                            },
-                            {
-                                "type": "expression",
-                                "name": "city",
-                                "expression": "concat('city-', city)"
-                            },
-                            {
-                                "type": "expression",
-                                "name": "one-plus-triple-added",
-                                "expression": "\"triple-added\" + 1"
-                            },
-                            {
-                                "type": "expression",
-                                "name": "delta",
-                                "expression": "\"delta\" / 2"
-                            },
-                            {
-                                "type": "expression",
-                                "name": "double-deleted",
-                                "expression": "deleted * 2"
-                            }
-                        ]
+                    {
+                        "type": "expression",
+                        "name": "one-plus-triple-added",
+                        "expression": "\"triple-added\" + 1"
+                    },
+                    {
+                        "type": "expression",
+                        "name": "delta",
+                        "expression": "\"delta\" / 2"
+                    },
+                    {
+                        "type": "expression",
+                        "name": "double-deleted",
+                        "expression": "deleted * 2"
                     }
-                }
+                ]
             }
         },
         "ioConfig": {
             "type": "index",
-            "firehose": {
-                "type": "ingestSegment",
+            "inputSource": {
+                "type": "druid",
                 "dataSource": "%%DATASOURCE%%",
                 "interval": "2013-08-31/2013-09-01"
+            },
+            "inputFormat": {
+                "format" : "json"
             }
         },
         "tuningConfig": {

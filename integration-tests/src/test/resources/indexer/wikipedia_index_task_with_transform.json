@@ -3,6 +3,24 @@
     "spec": {
         "dataSchema": {
             "dataSource": "%%DATASOURCE%%",
+            "timestampSpec": {
+                "column": "timestamp"
+            },
+            "dimensionsSpec": {
+                "dimensions": [
+                    "page",
+                    {"type": "string", "name": "language", "createBitmapIndex": false},
+                    "user",
+                    "unpatrolled",
+                    "robot",
+                    "anonymous",
+                    "namespace",
+                    "continent",
+                    "country",
+                    "region",
+                    "city"
+                ]
+            },
             "metricsSpec": [
                 {
                     "type": "count",
@@ -49,29 +67,6 @@
                 "queryGranularity": "second",
                 "intervals" : [ "2013-08-31/2013-09-02" ]
             },
-            "parser": {
-                "parseSpec": {
-                    "format" : "json",
-                    "timestampSpec": {
-                        "column": "timestamp"
-                    },
-                    "dimensionsSpec": {
-                        "dimensions": [
-                            "page",
-                            {"type": "string", "name": "language", "createBitmapIndex": false},
-                            "user",
-                            "unpatrolled",
-                            "robot",
-                            "anonymous",
-                            "namespace",
-                            "continent",
-                            "country",
-                            "region",
-                            "city"
-                        ]
-                    }
-                }
-            },
             "transformSpec": {
                 "transforms": [
                     {
@@ -89,10 +84,13 @@
         },
         "ioConfig": {
             "type": "index",
-            "firehose": {
+            "inputSource": {
                 "type": "local",
                 "baseDir": "/resources/data/batch_index/json",
                 "filter": "wikipedia_index_data*"
+            },
+            "inputFormat": {
+                "format" : "json"
             }
         },
         "tuningConfig": {
