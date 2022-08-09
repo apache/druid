@@ -357,6 +357,13 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return future;
   }
 
+  /**
+   * Check that the user has not set forbidden Kafka consumer props
+   *
+   * Some consumer properties must be set in order to guarantee that
+   * the consumer will consume the entire topic from the beginning.
+   * Otherwise, lookup data may not be loaded completely.
+   */
   private void verifyKafkaProperties()
   {
     if (kafkaProperties.containsKey(ConsumerConfig.GROUP_ID_CONFIG)) {
@@ -367,8 +374,15 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     }
     if (kafkaProperties.containsKey(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)) {
       throw new IAE(
-              "Cannot set kafka property [auto.offset.reset]. Property will be forced to [smallest]. Found [%s]",
+              "Cannot set kafka property [auto.offset.reset]. Property will be forced to [earliest]. Found [%s]",
               kafkaProperties.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)
+      );
+    }
+    if (kafkaProperties.containsKey(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG) &&
+          !kafkaProperties.get(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG).equals("false")) {
+      throw new IAE(
+          "Cannot set kafka property [enable.auto.commit]. Property will be forced to [false]. Found [%s]",
+          kafkaProperties.get(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG)
       );
     }
     Preconditions.checkNotNull(
@@ -398,9 +412,10 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   {
     final Properties properties = new Properties();
     properties.putAll(kafkaProperties);
-    // Enable publish-subscribe
+    // Set the consumer to consume everything and never commit offsets
     properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
     properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, factoryId);
+    properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
     return properties;
   }
 }
