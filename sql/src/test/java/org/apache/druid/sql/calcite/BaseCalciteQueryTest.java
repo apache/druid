@@ -1011,6 +1011,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     );
 
     PreparedStatement stmt = lifecycleFactory.preparedStatement(SqlQueryPlus.builder(sql)
+        .context(contexts)
         .auth(authenticationResult)
         .build()
     );
