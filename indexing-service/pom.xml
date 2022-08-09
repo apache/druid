@@ -212,6 +212,10 @@
             <artifactId>commons-collections4</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.eclipse.aether</groupId>
+            <artifactId>aether-api</artifactId>
+        </dependency>
         <!-- Tests -->
         <dependency>
             <groupId>junit</groupId>

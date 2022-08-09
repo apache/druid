@@ -28,6 +28,7 @@ import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
@@ -40,6 +41,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
@@ -55,7 +57,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
-import org.apache.druid.sql.calcite.planner.ValidationResult;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
 
@@ -69,6 +71,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -106,14 +109,20 @@ public class SqlLifecycle
   @GuardedBy("stateLock")
   private State state = State.NEW;
 
-  // init during intialize
+  // init during initialize
   private String sql;
   private QueryContext queryContext;
   private List<TypedValue> parameters;
+
   // init during plan
+  /**
+   * The Druid planner follows the SQL statement through the lifecycle.
+   * The planner's state is start --> validate --> (prepare | plan).
+   */
+  private DruidPlanner planner;
   private PlannerContext plannerContext;
-  private ValidationResult validationResult;
   private PrepareResult prepareResult;
+  private Set<ResourceAction> resourceActions;
   private PlannerResult plannerResult;
 
   public SqlLifecycle(
@@ -196,14 +205,13 @@ public class SqlLifecycle
     }
     transition(State.INITIALIZED, State.AUTHORIZING);
     validate(authenticationResult);
-    Access access = doAuthorize(
+    doAuthorize(resourceActions ->
         AuthorizationUtils.authorizeAllResourceActions(
             authenticationResult,
-            validationResult.getResourceActions(),
+            resourceActions,
             plannerFactory.getAuthorizerMapper()
         )
     );
-    checkAccess(access);
   }
 
   /**
@@ -218,26 +226,33 @@ public class SqlLifecycle
     transition(State.INITIALIZED, State.AUTHORIZING);
     AuthenticationResult authResult = AuthorizationUtils.authenticationResultFromRequest(req);
     validate(authResult);
-    Access access = doAuthorize(
+    doAuthorize(resourceActions ->
         AuthorizationUtils.authorizeAllResourceActions(
             req,
-            validationResult.getResourceActions(),
+            resourceActions,
             plannerFactory.getAuthorizerMapper()
         )
     );
-    checkAccess(access);
   }
 
-  private ValidationResult validate(AuthenticationResult authenticationResult)
+  /**
+   * Perform the validation step on the Druid planner, leaving the planner
+   * ready to perform either prepare or plan.
+   */
+  private void validate(AuthenticationResult authenticationResult)
   {
-    try (DruidPlanner planner = plannerFactory.createPlanner(sql, queryContext)) {
+    try {
+      planner = plannerFactory.createPlanner(sql, queryContext);
       // set planner context for logs/metrics in case something explodes early
-      this.plannerContext = planner.getPlannerContext();
-      this.plannerContext.setAuthenticationResult(authenticationResult);
+      plannerContext = planner.getPlannerContext();
+      plannerContext.setAuthenticationResult(authenticationResult);
       // set parameters on planner context, if parameters have already been set
-      this.plannerContext.setParameters(parameters);
-      this.validationResult = planner.validate(authConfig.authorizeQueryContextParams());
-      return validationResult;
+      plannerContext.setParameters(parameters);
+      planner.validate();
+
+      // Capture the resource actions as these are reference past the
+      // life of the planner itself.
+      resourceActions = planner.resourceActions(authConfig.authorizeQueryContextParams());
     }
     // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
     catch (SqlParseException e) {
@@ -248,45 +263,43 @@ public class SqlLifecycle
     }
   }
 
-  private Access doAuthorize(final Access authorizationResult)
+  private void doAuthorize(Function<Set<ResourceAction>, Access> authorizer)
   {
+    Access authorizationResult = planner.authorize(
+        authorizer,
+        authConfig.authorizeQueryContextParams()
+    );
     if (!authorizationResult.isAllowed()) {
       // Not authorized; go straight to Jail, do not pass Go.
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {
       transition(State.AUTHORIZING, State.AUTHORIZED);
     }
-    return authorizationResult;
-  }
-
-  private void checkAccess(Access access)
-  {
-    plannerContext.setAuthorizationResult(access);
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(access.toString());
+    if (!authorizationResult.isAllowed()) {
+      throw new ForbiddenException(authorizationResult.toString());
     }
   }
 
   /**
-   * Prepare the query lifecycle for execution, without completely planning into something that is executable, but
-   * including some initial parsing and validation and any dyanmic parameter type resolution, to support prepared
+   * Prepare the query lifecycle for execution, without completely planning into
+   * something that is executable, but including some initial parsing and
+   * validation and any dynamic parameter type resolution, to support prepared
    * statements via JDBC.
+   *
+   * The planner must have already performed the validation step: the planner
+   * state is reused here.
    */
-  public PrepareResult prepare() throws RelConversionException
+  public PrepareResult prepare()
   {
     synchronized (stateLock) {
       if (state != State.AUTHORIZED) {
-        throw new ISE("Cannot prepare because current state[%s] is not [%s].", state, State.AUTHORIZED);
+        throw new ISE("Cannot prepare because current state [%s] is not [%s].", state, State.AUTHORIZED);
       }
     }
     Preconditions.checkNotNull(plannerContext, "Cannot prepare, plannerContext is null");
-    try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
+    try {
       this.prepareResult = planner.prepare();
       return prepareResult;
-    }
-    // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
-    catch (SqlParseException e) {
-      throw new SqlPlanningException(e);
     }
     catch (ValidationException e) {
       throw new SqlPlanningException(e);
@@ -296,21 +309,26 @@ public class SqlLifecycle
   /**
    * Plan the query to enable execution.
    *
-   * If successful, the lifecycle will first transition from {@link State#AUTHORIZED} to {@link State#PLANNED}.
+   * The planner must have already performed the validation step: the planner
+   * state is reused here.
+   *
+   * If successful, the lifecycle will first transition from
+   * {@link State#AUTHORIZED} to {@link State#PLANNED}.
    */
   public void plan() throws RelConversionException
   {
     transition(State.AUTHORIZED, State.PLANNED);
     Preconditions.checkNotNull(plannerContext, "Cannot plan, plannerContext is null");
-    try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
+    try {
       this.plannerResult = planner.plan();
-    }
-    // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
-    catch (SqlParseException e) {
-      throw new SqlPlanningException(e);
     }
     catch (ValidationException e) {
       throw new SqlPlanningException(e);
+    }
+    finally {
+      // Done with the planner, close it.
+      planner.close();
+      planner = null;
     }
   }
 
@@ -342,8 +360,11 @@ public class SqlLifecycle
     return plannerResult.run();
   }
 
+  /**
+   * Only for testing... returns result row signature and sequence of results
+   */
   @VisibleForTesting
-  public Sequence<Object[]> runSimple(
+  public Pair<RowSignature, Sequence<Object[]>> runSimple(
       String sql,
       Map<String, Object> queryContext,
       List<SqlParameter> parameters,
@@ -366,30 +387,36 @@ public class SqlLifecycle
       throw e;
     }
 
-    return Sequences.wrap(result, new SequenceWrapper()
-    {
-      @Override
-      public void after(boolean isDone, Throwable thrown)
-      {
-        finalizeStateAndEmitLogsAndMetrics(thrown, null, -1);
-      }
-    });
+    return new Pair<>(
+        RowSignatures.fromRelDataType(plannerResult.rowType().getFieldNames(), plannerResult.rowType()),
+        Sequences.wrap(
+            result,
+            new SequenceWrapper()
+            {
+              @Override
+              public void after(boolean isDone, Throwable thrown)
+              {
+                finalizeStateAndEmitLogsAndMetrics(thrown, null, -1);
+              }
+            }
+        )
+    );
   }
 
-
   @VisibleForTesting
-  public ValidationResult runAnalyzeResources(AuthenticationResult authenticationResult)
+  public Set<ResourceAction> runAnalyzeResources(AuthenticationResult authenticationResult)
   {
-    return validate(authenticationResult);
+    validate(authenticationResult);
+    return getRequiredResourceActions();
   }
 
   public Set<ResourceAction> getRequiredResourceActions()
   {
-    return Preconditions.checkNotNull(validationResult, "validationResult").getResourceActions();
+    return resourceActions;
   }
 
   /**
-   * Cancel all native queries associated to this lifecycle.
+   * Cancel all native queries associated with this lifecycle.
    *
    * This method is thread-safe.
    */
@@ -405,7 +432,7 @@ public class SqlLifecycle
     final CopyOnWriteArrayList<String> nativeQueryIds = plannerContext.getNativeQueryIds();
 
     for (String nativeQueryId : nativeQueryIds) {
-      log.debug("canceling native query [%s]", nativeQueryId);
+      log.debug("Canceling native query [%s]", nativeQueryId);
       queryScheduler.cancelQuery(nativeQueryId);
     }
   }
@@ -433,11 +460,20 @@ public class SqlLifecycle
 
       if (state != State.CANCELLED) {
         if (state == State.DONE) {
-          log.warn("Tried to emit logs and metrics twice for query[%s]!", sqlQueryId());
+          log.warn("Tried to emit logs and metrics twice for query [%s]!", sqlQueryId());
         }
 
         state = State.DONE;
       }
+    }
+
+    final Set<ResourceAction> actions;
+    if (planner != null) {
+      actions = getRequiredResourceActions();
+      planner.close();
+      planner = null;
+    } else {
+      actions = null;
     }
 
     final boolean success = e == null;
@@ -449,10 +485,10 @@ public class SqlLifecycle
         metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
         metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
       }
-      if (validationResult != null) {
+      if (actions != null) {
         metricBuilder.setDimension(
             "dataSource",
-            validationResult.getResourceActions()
+            actions
                             .stream()
                             .map(action -> action.getResource().getName())
                             .collect(Collectors.toList())
@@ -527,7 +563,7 @@ public class SqlLifecycle
       }
       if (state != from) {
         throw new ISE(
-            "Cannot transition from[%s] to[%s] because current state[%s] is not [%s].",
+            "Cannot transition from [%s] to [%s] because current state [%s] is not [%s].",
             from,
             to,
             state,

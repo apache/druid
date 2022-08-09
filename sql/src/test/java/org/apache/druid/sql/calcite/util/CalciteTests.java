@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.util;
 
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.base.Suppliers;
@@ -28,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.calcite.jdbc.CalciteSchema;
@@ -81,14 +79,10 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.expression.LookupExprMacro;
-import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
-import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -119,9 +113,6 @@ import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlLifecycleFactory;
-import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
-import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
-import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -143,7 +134,6 @@ import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.ViewManager;
-import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
@@ -152,6 +142,7 @@ import org.joda.time.Duration;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -263,41 +254,7 @@ public class CalciteTests
 
   private static final String TIMESTAMP_COLUMN = "t";
 
-  public static final Injector INJECTOR = Guice.createInjector(
-      binder -> {
-        final LookupExtractorFactoryContainerProvider lookupProvider =
-            LookupEnabledTestExprMacroTable.createTestLookupProvider(
-                ImmutableMap.of(
-                    "a", "xa",
-                    "abc", "xabc",
-                    "nosuchkey", "mysteryvalue",
-                    "6", "x6"
-                )
-            );
-
-        ObjectMapper mapper = TestHelper.makeJsonMapper().registerModules(
-            new LookupSerdeModule().getJacksonModules()
-        );
-        mapper.setInjectableValues(
-            new InjectableValues.Std()
-                .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
-                .addValue(ObjectMapper.class.getName(), mapper)
-                .addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT)
-                .addValue(LookupExtractorFactoryContainerProvider.class.getName(), lookupProvider)
-        );
-        binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(
-            mapper
-        );
-
-        // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
-        binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
-        SqlBindings.addOperatorConversion(binder, QueryLookupOperatorConversion.class);
-
-        // Add "EXTERN" table macro, for CalciteInsertDmlTest.
-        SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
-      },
-      new SqlAggregationModule()
-  );
+  public static final Injector INJECTOR = new CalciteTestInjectorBuilder().build();
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(

@@ -303,6 +303,12 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new DoubleFirstAggregatorFactory(newName, getFieldName(), getTimeColumn());
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

@@ -17,32 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.frame.processor;
 
-import com.google.common.collect.ImmutableSet;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
-
-import java.util.Set;
+import java.io.IOException;
 
 /**
- * If an SQL query can be validated by {@link DruidPlanner}, the resulting artifact is the set of {@link Resource}
- * corresponding to the datasources and views which an authenticated request must be authorized for to process the
- * query.
+ * Factory for generating channel pairs for output data from processors.
  */
-public class ValidationResult
+public interface OutputChannelFactory
 {
-  private final Set<ResourceAction> resourceActions;
+  /**
+   * Create a channel pair tagged with a particular partition number.
+   */
+  OutputChannel openChannel(int partitionNumber) throws IOException;
 
-  public ValidationResult(
-      final Set<ResourceAction> resourceActions
-  )
-  {
-    this.resourceActions = ImmutableSet.copyOf(resourceActions);
-  }
-
-  public Set<ResourceAction> getResourceActions()
-  {
-    return resourceActions;
-  }
+  /**
+   * Create a non-writable, always-empty channel pair tagged with a particular partition number.
+   *
+   * Calling {@link OutputChannel#getWritableChannel()} on this nil channel pair will result in an error. Calling
+   * {@link OutputChannel#getReadableChannel()} will return an empty channel.
+   */
+  OutputChannel openNilChannel(int partitionNumber);
 }

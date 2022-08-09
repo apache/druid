@@ -372,7 +372,7 @@ These metrics are only available if the SysMonitor module is included.
 |`sys/net/write/size`|Bytes written to the network.|netName, netAddress, netHwaddr|Varies.|
 |`sys/net/read/size`|Bytes read from the network.|netName, netAddress, netHwaddr|Varies.|
 |`sys/fs/used`|Filesystem bytes used.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|< max|
-|`sys/fs/max`|Filesystesm bytes max.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
+|`sys/fs/max`|Filesystem bytes max.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
 |`sys/mem/used`|Memory used.||< max|
 |`sys/mem/max`|Memory max.||Varies.|
 |`sys/storage/used`|Disk space used.|fsDirName.|Varies.|

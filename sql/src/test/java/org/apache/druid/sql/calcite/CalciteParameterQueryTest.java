@@ -47,10 +47,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * This class has copied a subset of the tests in {@link CalciteQueryTest} and replaced various parts of queries with
- * dynamic parameters. It is NOT important that this file remains in sync with {@link CalciteQueryTest}, the tests
- * were merely chosen to produce a selection of parameter types and positions within query expressions and have been
- * renamed to reflect this
+ * This class has copied a subset of the tests in {@link CalciteQueryTest} and
+ * replaced various parts of queries with dynamic parameters. It is NOT
+ * important that this file remains in sync with {@link CalciteQueryTest}, the
+ * tests were merely chosen to produce a selection of parameter types and
+ * positions within query expressions and have been renamed to reflect this
  */
 public class CalciteParameterQueryTest extends BaseCalciteQueryTest
 {
@@ -577,7 +578,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   public void testMissingParameter() throws Exception
   {
     expectedException.expect(SqlPlanningException.class);
-    expectedException.expectMessage("Parameter at position[0] is not bound");
+    expectedException.expectMessage("Parameter at position [0] is not bound");
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -592,7 +593,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   public void testPartiallyMissingParameter() throws Exception
   {
     expectedException.expect(SqlPlanningException.class);
-    expectedException.expectMessage("Parameter at position[1] is not bound");
+    expectedException.expectMessage("Parameter at position [1] is not bound");
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -610,7 +611,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
     params.add(null);
     params.add(new SqlParameter(SqlType.INTEGER, 1));
     expectedException.expect(SqlPlanningException.class);
-    expectedException.expectMessage("Parameter at position[0] is not bound");
+    expectedException.expectMessage("Parameter at position [0] is not bound");
     testQuery(
         "SELECT 1 + ?, dim1 FROM foo LIMIT ?",
         ImmutableList.of(),

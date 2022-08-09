@@ -165,7 +165,13 @@ public class SqlNestedDataBenchmark
       "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) IN (1, 19, 21, 23, 25, 26, 46)",
       // 24, 25
       "SELECT long2 FROM foo WHERE long2 IN (1, 19, 21, 23, 25, 26, 46) GROUP BY 1",
-      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) IN (1, 19, 21, 23, 25, 26, 46) GROUP BY 1"
+      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) IN (1, 19, 21, 23, 25, 26, 46) GROUP BY 1",
+      // 26, 27
+      "SELECT SUM(long1) FROM foo WHERE double3 < 1005.0 AND double3 > 1000.0",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 1005.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
+      // 28, 29
+      "SELECT SUM(long1) FROM foo WHERE double3 < 2000.0 AND double3 > 1000.0",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 2000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0"
   );
 
   @Param({"5000000"})
@@ -203,7 +209,11 @@ public class SqlNestedDataBenchmark
       "22",
       "23",
       "24",
-      "25"
+      "25",
+      "26",
+      "27",
+      "28",
+      "29"
   })
   private String query;
 

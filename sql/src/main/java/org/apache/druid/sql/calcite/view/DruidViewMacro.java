@@ -58,7 +58,8 @@ public class DruidViewMacro implements TableMacro
   {
     final RelDataType rowType;
     try (final DruidPlanner planner = plannerFactory.createPlanner(viewSql, new QueryContext())) {
-      rowType = planner.plan().rowType();
+      planner.validate();
+      rowType = planner.prepare().getRowType();
     }
     catch (Exception e) {
       throw new RuntimeException(e);

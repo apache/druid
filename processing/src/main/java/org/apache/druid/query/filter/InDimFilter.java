@@ -482,7 +482,21 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     final LongOpenHashSet longHashSet = new LongOpenHashSet(longs);
-    return longHashSet::contains;
+    final boolean matchNull = values.contains(null);
+    return new DruidLongPredicate()
+    {
+      @Override
+      public boolean applyLong(long n)
+      {
+        return longHashSet.contains(n);
+      }
+
+      @Override
+      public boolean applyNull()
+      {
+        return matchNull;
+      }
+    };
   }
 
   private static DruidFloatPredicate createFloatPredicate(final Set<String> values)
@@ -496,7 +510,21 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     final IntOpenHashSet floatBitsHashSet = new IntOpenHashSet(floatBits);
-    return input -> floatBitsHashSet.contains(Float.floatToIntBits(input));
+    final boolean matchNull = values.contains(null);
+    return new DruidFloatPredicate()
+    {
+      @Override
+      public boolean applyFloat(float n)
+      {
+        return floatBitsHashSet.contains(Float.floatToIntBits(n));
+      }
+
+      @Override
+      public boolean applyNull()
+      {
+        return matchNull;
+      }
+    };
   }
 
   private static DruidDoublePredicate createDoublePredicate(final Set<String> values)
@@ -510,7 +538,21 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     final LongOpenHashSet doubleBitsHashSet = new LongOpenHashSet(doubleBits);
-    return input -> doubleBitsHashSet.contains(Double.doubleToLongBits(input));
+    final boolean matchNull = values.contains(null);
+    return new DruidDoublePredicate()
+    {
+      @Override
+      public boolean applyDouble(double n)
+      {
+        return doubleBitsHashSet.contains(Double.doubleToLongBits(n));
+      }
+
+      @Override
+      public boolean applyNull()
+      {
+        return matchNull;
+      }
+    };
   }
 
   @VisibleForTesting
@@ -523,7 +565,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
     private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
 
-    InFilterDruidPredicateFactory(
+    public InFilterDruidPredicateFactory(
         final ExtractionFn extractionFn,
         final ValuesSet values
     )

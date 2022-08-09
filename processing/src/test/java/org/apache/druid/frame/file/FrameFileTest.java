@@ -41,12 +41,15 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
@@ -370,6 +373,52 @@ public class FrameFileTest extends InitializedNullHandlingTest
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("Frame file is closed");
     frameFile1.newReference();
+  }
+
+  @Test
+  public void test_handleMemoryMapError_java11()
+  {
+    @SuppressWarnings("ThrowableNotThrown")
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
+        () -> FrameFile.handleMemoryMapError(new IllegalAccessError("foo"), 11)
+    );
+
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("Could not map frame file"))
+    );
+
+    // Include the original error, since we don't have a better explanation.
+    MatcherAssert.assertThat(
+        e.getCause(),
+        CoreMatchers.instanceOf(IllegalAccessError.class)
+    );
+  }
+
+  @Test
+  public void test_handleMemoryMapError_java17()
+  {
+    @SuppressWarnings("ThrowableNotThrown")
+    final IllegalStateException e = Assert.assertThrows(
+        IllegalStateException.class,
+        () -> FrameFile.handleMemoryMapError(new IllegalAccessError("foo"), 17)
+    );
+
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString(
+                StringUtils.format(
+                    "Cannot read frame files larger than %,d bytes with Java 17.",
+                    Integer.MAX_VALUE
+                )
+            )
+        )
+    );
+
+    // Cause not included; we want to keep logs relatively cleaner and highlight the actual issue.
+    Assert.assertNull(e.getCause());
   }
 
   private int computeExpectedNumFrames()

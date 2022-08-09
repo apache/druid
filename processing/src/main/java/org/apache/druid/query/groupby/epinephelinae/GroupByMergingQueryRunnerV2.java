@@ -390,5 +390,4 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
       throw new RuntimeException(e);
     }
   }
-
 }

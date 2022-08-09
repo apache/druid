@@ -32,10 +32,12 @@ When you disable rollup, Druid loads each row as-is without doing any form of pr
 
 Use roll-up when creating a table datasource if both:
 - You want optimal performance or you have strict space constraints.
-- You don't need raw values from [high-cardinality dimensions](schema-design.md#sketches). 
+- You don't need raw values from [high-cardinality dimensions](schema-design.md#sketches).
+
 Conversely, disable roll-up if either:
 - You need results for individual rows.
 - You need to execute `GROUP BY` or `WHERE` queries on _any_ column.
+
 If you have conflicting needs for different use cases, you can create multiple tables with different roll-up configurations on each table.
 
 ## Maximizing rollup ratio

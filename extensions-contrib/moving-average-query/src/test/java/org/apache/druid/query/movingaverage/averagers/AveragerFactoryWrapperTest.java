@@ -17,28 +17,22 @@
  * under the License.
  */
 
-//CHECKSTYLE.OFF: PackageName - Must be in Calcite
+package org.apache.druid.query.movingaverage.averagers;
 
-package org.apache.calcite.prepare;
+import org.apache.druid.query.movingaverage.AveragerFactoryWrapper;
+import org.junit.Assert;
+import org.junit.Test;
 
-import org.apache.calcite.adapter.java.JavaTypeFactory;
-import org.apache.calcite.sql.SqlOperatorTable;
-import org.apache.calcite.sql.validate.SqlConformance;
-
-/**
- * Extend {@link CalciteSqlValidator} to make it visible to Druid.
- * {code CalciteSqlValidator} itself is protected which is why
- * this class is in a Calcite name space.
- */
-public class DruidSqlValidator extends CalciteSqlValidator
+public class AveragerFactoryWrapperTest
 {
-  public DruidSqlValidator(
-      SqlOperatorTable opTab,
-      CalciteCatalogReader catalogReader,
-      JavaTypeFactory typeFactory,
-      SqlConformance conformance)
+  @Test
+  public void testWithName()
   {
-    super(opTab, catalogReader, typeFactory, conformance);
+    AveragerFactoryWrapper factoryWrapper = new AveragerFactoryWrapper(
+        new DoubleMaxAveragerFactory("double", 1, 1, "test"),
+        "test"
+    );
+    Assert.assertEquals(factoryWrapper, factoryWrapper.withName("test"));
+    Assert.assertEquals("newTestdouble", factoryWrapper.withName("newTest").getName());
   }
-
 }

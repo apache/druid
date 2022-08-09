@@ -925,7 +925,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       this.transientApiCallFailureRate = transientApiCallFailureRate;
     }
 
-
     @Override
     public ParallelIndexSupervisorTaskClient build(String supervisorTaskId, Duration httpTimeout, long numRetries)
     {
