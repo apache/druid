@@ -19,9 +19,14 @@
 
 package org.apache.druid.common.guava;
 
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.java.util.common.ISE;
 
+import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
@@ -75,6 +80,22 @@ public class FutureUtils
   }
 
   /**
+   * Gets the result of a given future immediately.
+   *
+   * Equivalent to {@link #getUnchecked} if the future is ready. Otherwise, throws an {@link IllegalStateException}.
+   */
+  public static <T> T getUncheckedImmediately(final ListenableFuture<T> future)
+  {
+    if (future.isDone()) {
+      return getUnchecked(future, false);
+    } else if (future.isCancelled()) {
+      throw new ISE("Canceled");
+    } else {
+      throw new ISE("Not yet done");
+    }
+  }
+
+  /**
    * Like {@link Futures#transform}, but works better with lambdas due to not having overloads.
    *
    * One can write {@code FutureUtils.transform(future, v -> ...)} instead of
@@ -83,5 +104,50 @@ public class FutureUtils
   public static <T, R> ListenableFuture<R> transform(final ListenableFuture<T> future, final Function<T, R> fn)
   {
     return Futures.transform(future, fn::apply);
+  }
+
+  /**
+   * Returns a future that resolves when "future" resolves and "baggage" has been closed. If the baggage is closed
+   * successfully, the returned future will have the same value (or exception status) as the input future. If the
+   * baggage is not closed successfully, the returned future will resolve to an exception.
+   */
+  public static <T> ListenableFuture<T> futureWithBaggage(final ListenableFuture<T> future, final Closeable baggage)
+  {
+    final SettableFuture<T> retVal = SettableFuture.create();
+
+    Futures.addCallback(
+        future,
+        new FutureCallback<T>()
+        {
+          @Override
+          public void onSuccess(@Nullable T result)
+          {
+            try {
+              baggage.close();
+            }
+            catch (Exception e) {
+              retVal.setException(e);
+              return;
+            }
+
+            retVal.set(result);
+          }
+
+          @Override
+          public void onFailure(Throwable e)
+          {
+            try {
+              baggage.close();
+            }
+            catch (Exception e2) {
+              e.addSuppressed(e2);
+            }
+
+            retVal.setException(e);
+          }
+        }
+    );
+
+    return retVal;
   }
 }

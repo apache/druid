@@ -86,14 +86,15 @@ public class Frame
       Integer.BYTES /* number of columns */ +
       Byte.BYTES /* permuted flag */;
 
+  // Compression type, compressed length, uncompressed length
+  public static final int COMPRESSED_FRAME_HEADER_SIZE = Byte.BYTES + Long.BYTES * 2;
+  public static final int COMPRESSED_FRAME_TRAILER_SIZE = Long.BYTES; // Checksum
+  public static final int COMPRESSED_FRAME_ENVELOPE_SIZE = COMPRESSED_FRAME_HEADER_SIZE
+                                                           + COMPRESSED_FRAME_TRAILER_SIZE;
+
   private static final LZ4Compressor LZ4_COMPRESSOR = LZ4Factory.fastestInstance().fastCompressor();
   private static final LZ4SafeDecompressor LZ4_DECOMPRESSOR = LZ4Factory.fastestInstance().safeDecompressor();
 
-  // Compression type, compressed length, uncompressed length
-  private static final int COMPRESSED_FRAME_HEADER_SIZE = Byte.BYTES + Long.BYTES * 2;
-  private static final int COMPRESSED_FRAME_TRAILER_SIZE = Long.BYTES; // Checksum
-  private static final int COMPRESSED_FRAME_ENVELOPE_SIZE = COMPRESSED_FRAME_HEADER_SIZE
-                                                            + COMPRESSED_FRAME_TRAILER_SIZE;
   private static final int CHECKSUM_SEED = 0;
 
   private final Memory memory;

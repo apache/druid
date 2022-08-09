@@ -19,11 +19,10 @@
 
 package org.apache.druid.guice;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
-import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.CaseInsensitiveContainsExprMacro;
 import org.apache.druid.query.expression.ContainsExprMacro;
@@ -46,7 +45,7 @@ import org.apache.druid.query.expression.TrimExprMacro;
 
 import java.util.List;
 
-public class ExpressionModule implements DruidModule
+public class ExpressionModule implements Module
 {
   public static final List<Class<? extends ExprMacroTable.ExprMacro>> EXPR_MACROS =
       ImmutableList.<Class<? extends ExprMacroTable.ExprMacro>>builder()
@@ -92,12 +91,6 @@ public class ExpressionModule implements DruidModule
     for (Class<? extends ExprMacroTable.ExprMacro> exprMacroClass : EXPR_MACROS) {
       addExprMacro(binder, exprMacroClass);
     }
-  }
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return ImmutableList.of();
   }
 
   public static void addExprMacro(final Binder binder, final Class<? extends ExprMacroTable.ExprMacro> clazz)

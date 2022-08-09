@@ -21,10 +21,12 @@ package org.apache.druid.segment.transform;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -72,6 +74,68 @@ public class TransformerTest extends InitializedNullHandlingTest
     final InputRow actual = transformer.transform(row);
     Assert.assertNotNull(actual);
     Assert.assertEquals(now.minusDays(2), actual.getTimestamp());
+  }
+
+  @Test
+  public void testTransformTimeColumnWithInvalidTimeValue()
+  {
+    final Transformer transformer = new Transformer(
+        new TransformSpec(
+            null,
+            ImmutableList.of(
+                new ExpressionTransform("__time", "timestamp_parse(ts, null, 'UTC')", TestExprMacroTable.INSTANCE)
+            )
+        )
+    );
+    final DateTime now = DateTimes.nowUtc();
+    final InputRow row = new MapBasedInputRow(
+        now,
+        ImmutableList.of("ts", "dim"),
+        ImmutableMap.of("ts", "not_a_timestamp", "dim", false)
+    );
+    if (NullHandling.replaceWithDefault()) {
+      final InputRow actual = transformer.transform(row);
+      Assert.assertNotNull(actual);
+      Assert.assertEquals(DateTimes.of("1970-01-01T00:00:00.000Z"), actual.getTimestamp());
+    } else {
+      expectedException.expectMessage("Could not transform value for __time.");
+      expectedException.expect(ParseException.class);
+      transformer.transform(row);
+    }
+  }
+
+  @Test
+  public void testTransformTimeColumnWithInvalidTimeValueInputRowListPlusRawValues()
+  {
+    final Transformer transformer = new Transformer(
+        new TransformSpec(
+            null,
+            ImmutableList.of(
+                new ExpressionTransform("__time", "timestamp_parse(ts, null, 'UTC')", TestExprMacroTable.INSTANCE)
+            )
+        )
+    );
+    final DateTime now = DateTimes.nowUtc();
+    final InputRow row = new MapBasedInputRow(
+        now,
+        ImmutableList.of("ts", "dim"),
+        ImmutableMap.of("ts", "not_a_timestamp", "dim", false)
+    );
+    final InputRowListPlusRawValues actual = transformer.transform(
+        InputRowListPlusRawValues.of(
+            row,
+            ImmutableMap.of("ts", "not_a_timestamp", "dim", false)
+        )
+    );
+    Assert.assertNotNull(actual);
+    Assert.assertEquals(1, actual.getRawValuesList().size());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(1, actual.getInputRows().size());
+      Assert.assertEquals(DateTimes.of("1970-01-01T00:00:00.000Z"), actual.getInputRows().get(0).getTimestamp());
+    } else {
+      Assert.assertNull(actual.getInputRows());
+      Assert.assertEquals("Could not transform value for __time.", actual.getParseException().getMessage());
+    }
   }
 
   @Test

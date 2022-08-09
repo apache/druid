@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.Query;
@@ -310,7 +311,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           analyzeResources(plannerConfig, new AuthConfig(), sql, queryContext, authenticationResult)
       );
 
-      final List<Object[]> results =
+      final Pair<RowSignature, List<Object[]>> results =
           getResults(plannerConfig, queryContext, Collections.emptyList(), sql, authenticationResult);
 
       verifyResults(

@@ -34,7 +34,6 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.ArraySqlType;
 import org.apache.calcite.sql.type.BasicSqlType;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -72,8 +71,10 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       .operandTypes(SqlTypeFamily.ANY)
       .requiredOperands(0)
       .returnTypeInference(
-          ReturnTypes.explicit(
-              new RowSignatures.ComplexSqlType(SqlTypeName.OTHER, ColumnType.ofComplex("hyperUnique"), true)
+          opBinding -> RowSignatures.makeComplexType(
+              opBinding.getTypeFactory(),
+              ColumnType.ofComplex("hyperUnique"),
+              true
           )
       )
       .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)

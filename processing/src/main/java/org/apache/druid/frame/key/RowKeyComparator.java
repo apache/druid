@@ -24,8 +24,10 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.frame.read.FrameReaderUtils;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Comparator for {@link RowKey} instances.
@@ -140,5 +142,36 @@ public class RowKeyComparator implements Comparator<RowKey>
     }
 
     return 0;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    RowKeyComparator that = (RowKeyComparator) o;
+    return firstFieldPosition == that.firstFieldPosition
+           && Arrays.equals(ascDescRunLengths, that.ascDescRunLengths);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = Objects.hash(firstFieldPosition);
+    result = 31 * result + Arrays.hashCode(ascDescRunLengths);
+    return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "RowKeyComparator{" +
+           "firstFieldPosition=" + firstFieldPosition +
+           ", ascDescRunLengths=" + Arrays.toString(ascDescRunLengths) +
+           '}';
   }
 }

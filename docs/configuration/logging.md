@@ -104,16 +104,8 @@ WARNING: Use --illegal-access=warn to enable warnings of further illegal reflect
 WARNING: All illegal access operations will be denied in a future release
 ```
 
-These messages do not cause harm, but you can avoid them by adding the following lines to your `jvm.config` files. These
-lines are not part of the default JVM configs that ship with Druid, because Java 8 will not recognize these options and
-will fail to start up.
-
-```
---add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
---add-exports=java.base/jdk.internal.perf=ALL-UNNAMED
---add-opens=java.base/java.lang=ALL-UNNAMED
---add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
-```
+To avoid these, add the `--add-exports` and `--add-opens` command line parameters described in the documentation section
+about [Java strong encapsulation](../operations/java.md#strong-encapsulation).
 
 ## My logs are really chatty, can I set them to asynchronously write?
 

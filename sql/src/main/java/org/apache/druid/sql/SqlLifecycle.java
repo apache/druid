@@ -28,6 +28,7 @@ import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
@@ -40,6 +41,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
@@ -55,6 +57,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
 
@@ -357,8 +360,11 @@ public class SqlLifecycle
     return plannerResult.run();
   }
 
+  /**
+   * Only for testing... returns result row signature and sequence of results
+   */
   @VisibleForTesting
-  public Sequence<Object[]> runSimple(
+  public Pair<RowSignature, Sequence<Object[]>> runSimple(
       String sql,
       Map<String, Object> queryContext,
       List<SqlParameter> parameters,
@@ -381,14 +387,20 @@ public class SqlLifecycle
       throw e;
     }
 
-    return Sequences.wrap(result, new SequenceWrapper()
-    {
-      @Override
-      public void after(boolean isDone, Throwable thrown)
-      {
-        finalizeStateAndEmitLogsAndMetrics(thrown, null, -1);
-      }
-    });
+    return new Pair<>(
+        RowSignatures.fromRelDataType(plannerResult.rowType().getFieldNames(), plannerResult.rowType()),
+        Sequences.wrap(
+            result,
+            new SequenceWrapper()
+            {
+              @Override
+              public void after(boolean isDone, Throwable thrown)
+              {
+                finalizeStateAndEmitLogsAndMetrics(thrown, null, -1);
+              }
+            }
+        )
+    );
   }
 
   @VisibleForTesting
