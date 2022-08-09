@@ -37,7 +37,8 @@ import java.util.Set;
  * that "locks down" the {@link #getTable} method to obtain the table from a
  * map. This forces the extensions of that class to materialize all tables in
  * the schema, so that Calcite can pick the one it wants. This class, by
- * contrast, provides the same defaults as {@link AbstractSchema}, but assumes
+ * contrast, provides the same defaults as {@link
+ * org.apache.calcite.schema.impl.AbstractSchema AbstractSchema}, but assumes
  * its subslasses will implement {@code getTable()} to directly look up that
  * one table, ignoring all others. Doing so lowers the cost of table resolution,
  * especially when the system has to fetch catalog information for the table:
