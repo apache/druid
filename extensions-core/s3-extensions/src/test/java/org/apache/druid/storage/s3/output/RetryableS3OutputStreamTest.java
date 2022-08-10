@@ -51,7 +51,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class RetriableS3OutputStreamTest
+public class RetryableS3OutputStreamTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -103,40 +103,40 @@ public class RetriableS3OutputStreamTest
   @Test
   public void testTooSmallChunkSize() throws IOException
   {
-    maxResultsSize = 100000000000L;
-    chunkSize = 9000000L;
+    maxResultsSize = 100_000_000_000L;
+    chunkSize = 9000_000L;
 
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage(
         "chunkSize[9000000] is too small for maxResultsSize[100000000000]. chunkSize should be at least [10000000]"
     );
-    new RetriableS3OutputStream(config, s3, path).close();
+    new RetryableS3OutputStream(config, s3, path).close();
   }
 
   @Test
   public void testTooSmallChunkSizeMaxResultsSizeIsNotRetionalToMaxPartNum() throws IOException
   {
-    maxResultsSize = 274877906944L;
-    chunkSize = 27487790;
+    maxResultsSize = 274_877_906_944L;
+    chunkSize = 2_7487_790;
 
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage(
         "chunkSize[27487790] is too small for maxResultsSize[274877906944]. chunkSize should be at least [27487791]"
     );
-    new RetriableS3OutputStream(config, s3, path).close();
+    new RetryableS3OutputStream(config, s3, path).close();
   }
 
   @Test
   public void testTooLargeChunkSize() throws IOException
   {
     maxResultsSize = 1024L * 1024 * 1024 * 1024;
-    chunkSize = RetriableS3OutputStream.S3_MULTIPART_UPLOAD_MAX_PART_SIZE + 1;
+    chunkSize = S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES + 1;
 
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage(
         "chunkSize[5368709121] should be smaller than [5368709120]"
     );
-    new RetriableS3OutputStream(config, s3, path).close();
+    new RetryableS3OutputStream(config, s3, path).close();
   }
 
   @Test
@@ -145,7 +145,7 @@ public class RetriableS3OutputStreamTest
     maxResultsSize = 1000;
     chunkSize = 10;
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
-    try (RetriableS3OutputStream out = new RetriableS3OutputStream(
+    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
         path,
@@ -168,7 +168,7 @@ public class RetriableS3OutputStreamTest
     maxResultsSize = 1000;
     chunkSize = 10;
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES * 3);
-    try (RetriableS3OutputStream out = new RetriableS3OutputStream(
+    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
         path,
@@ -190,7 +190,7 @@ public class RetriableS3OutputStreamTest
   {
     maxResultsSize = 1000;
     chunkSize = 128;
-    try (RetriableS3OutputStream out = new RetriableS3OutputStream(
+    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
         path,
@@ -210,7 +210,7 @@ public class RetriableS3OutputStreamTest
   {
     maxResultsSize = 50;
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
-    try (RetriableS3OutputStream out = new RetriableS3OutputStream(
+    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
         path,
@@ -244,7 +244,7 @@ public class RetriableS3OutputStreamTest
     maxResultsSize = 1000;
     chunkSize = 10;
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
-    try (RetriableS3OutputStream out = new RetriableS3OutputStream(
+    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
         path,
@@ -268,7 +268,7 @@ public class RetriableS3OutputStreamTest
 
     maxResultsSize = 1000;
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
-    try (RetriableS3OutputStream out = new RetriableS3OutputStream(
+    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
         path,

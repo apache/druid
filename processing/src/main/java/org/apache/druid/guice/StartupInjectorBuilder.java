@@ -21,7 +21,6 @@ package org.apache.druid.guice;
 
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.math.expr.ExpressionProcessingModule;
-import org.apache.druid.storage.StorageConnectorModule;
 
 import java.util.Arrays;
 import java.util.Properties;
@@ -38,6 +37,8 @@ import java.util.Properties;
  * <p>
  * Tests and clients must provide
  * properties via another mechanism.
+ * <p>
+ * If every test and client needs a module, it should be present here.
  */
 public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorBuilder>
 {
@@ -48,7 +49,6 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
         new JacksonModule(),
         new ConfigModule(),
         new NullHandlingModule(),
-        new StorageConnectorModule(),
         new ExpressionProcessingModule(),
         binder -> binder.bind(DruidSecondaryModule.class)
     );

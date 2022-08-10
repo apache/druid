@@ -20,6 +20,8 @@
 package org.apache.druid.storage;
 
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,10 +30,14 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+/**
+ * Implementation that uses local filesystem. All paths are appended with the base path, in such a way that its not visible
+ * to the users of this class.
+ */
 public class LocalFileStorageConnector implements StorageConnector
 {
 
-  public final String basePath;
+  private final String basePath;
 
   public LocalFileStorageConnector(String basePath) throws IOException
   {
@@ -42,38 +48,72 @@ public class LocalFileStorageConnector implements StorageConnector
   @Override
   public boolean pathExists(String path)
   {
-    return new File(objectPath(path)).exists();
+    return fileWithBasePath(path).exists();
   }
 
+  /**
+   * Reads the file present as basePath + path. Will throw an IO exception in case the file is not present.
+   * Closing of the stream is the responsibility of the caller.
+   *
+   * @param path
+   * @return
+   * @throws IOException
+   */
   @Override
   public InputStream read(String path) throws IOException
   {
-    return Files.newInputStream(new File(objectPath(path)).toPath());
+    return Files.newInputStream(fileWithBasePath(path).toPath());
   }
 
+  /**
+   * Writes the file present with the materialized location as basePath + path.
+   * In case the parent directory does not exist, we create the parent dir recursively.
+   * Closing of the stream is the responsibility of the caller.
+   *
+   * @param path
+   * @return
+   * @throws IOException
+   */
   @Override
   public OutputStream write(String path) throws IOException
   {
-    File toWrite = new File(objectPath(path));
+    File toWrite = fileWithBasePath(path);
     FileUtils.mkdirp(toWrite.getParentFile());
     return Files.newOutputStream(toWrite.toPath());
   }
 
+  /**
+   * Deletes the file present at the location basePath + path. Throws an excecption in case a dir is encountered.
+   *
+   * @param path
+   * @throws IOException
+   */
   @Override
-  public void delete(String path) throws IOException
+  public void deleteFile(String path) throws IOException
   {
-    Files.delete(new File(objectPath(path)).toPath());
+    File toDelete = fileWithBasePath(path);
+    if (toDelete.isDirectory()) {
+      throw new IAE(StringUtils.format(
+          "Found a directory on path[%s]. Please use deleteRecusively to delete dirs", path));
+    }
+    Files.delete(fileWithBasePath(path).toPath());
   }
 
+  /**
+   * Deletes the files and sub dirs present at the basePath + dirName. Also removes the dirName
+   *
+   * @param dirName path
+   * @throws IOException
+   */
   @Override
   public void deleteRecursively(String dirName) throws IOException
   {
-    FileUtils.deleteDirectory(new File(objectPath(dirName)));
+    FileUtils.deleteDirectory(fileWithBasePath(dirName));
   }
 
-  private String objectPath(String path)
+  private File fileWithBasePath(String path)
   {
-    return Paths.get(basePath, path).toString();
+    return new File(Paths.get(basePath, path).toString());
   }
 
 }

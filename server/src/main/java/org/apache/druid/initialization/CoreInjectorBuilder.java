@@ -135,7 +135,8 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new AuthorizerMapperModule(),
         new StartupLoggingModule(),
         new ExternalStorageAccessSecurityModule(),
-        new ServiceClientModule()
+        new ServiceClientModule(),
+        new LocalDataStorageDruidModule()
     );
     return this;
   }

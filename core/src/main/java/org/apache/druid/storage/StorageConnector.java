@@ -45,7 +45,8 @@ public interface StorageConnector
 {
 
   /**
-   * Check if the relative path exists in the underlying storage layer.
+   * Check if the path exists in the underlying storage layer. Most implementations prepend the input path
+   * with a basePath.
    *
    * @param path
    * @return true if path exists else false.
@@ -55,7 +56,8 @@ public interface StorageConnector
   boolean pathExists(String path) throws IOException;
 
   /**
-   * Reads the data present at the relative path from the underlying storage system.
+   * Reads the data present at the path the underlying storage system. Most implementations prepend the input path
+   * with a basePath.
    * The caller should take care of closing the stream when done or in case of error.
    *
    * @param path
@@ -65,7 +67,9 @@ public interface StorageConnector
   InputStream read(String path) throws IOException;
 
   /**
-   * Open an {@link OutputStream} for writing data to the relative path in the underlying storage system.
+   * Open an {@link OutputStream} for writing data to the path in the underlying storage system.
+   * Most implementations prepend the input path with a basePath.
+   * Callers are adivised to namespace there files as there might be race conditions.
    * The caller should take care of closing the stream when done or in case of error.
    *
    * @param path
@@ -75,16 +79,19 @@ public interface StorageConnector
   OutputStream write(String path) throws IOException;
 
   /**
-   * Delete file present at the relative path.
+   * Delete file present at the input path. Most implementations prepend the input path
+   * with a basePath.
+   * If the path is a directory, this method throws an exception.
    *
    * @param path
    * @throws IOException
    */
   @SuppressWarnings("all")
-  void delete(String path) throws IOException;
+  void deleteFile(String path) throws IOException;
 
   /**
-   * Delete a directory pointed to by the path and also recursively deletes all files in said directory.
+   * Delete a directory pointed to by the path and also recursively deletes all files/directories in said directory.
+   * Most implementations prepend the input path with a basePath.
    *
    * @param path path
    * @throws IOException

@@ -29,7 +29,6 @@ import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.io.CountingOutputStream;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
@@ -54,14 +53,16 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.druid.storage.s3.output.S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES;
+
 /**
- * A retriable output stream for s3. How it works is,
+ * A retryable output stream for s3. How it works is,
  * <p>
  * 1) When new data is written, it first creates a chunk in local disk.
  * 2) New data is written to the local chunk until it is full.
  * 3) When the chunk is full, it uploads the chunk to s3 using the multipart upload API.
  * Since this happens synchronously, {@link #write(byte[], int, int)} can be blocked until the upload is done.
- * The upload can be retries when it fails with transient errors.
+ * The upload can be retried when it fails with transient errors.
  * 4) Once the upload succeeds, it creates a new chunk and continue.
  * 5) When the stream is closed, it uploads the last chunk and finalize the multipart upload.
  * {@link #close()} can be blocked until upload is done.
@@ -71,17 +72,10 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * This class is not thread-safe.
  * <p>
- * This class can be moved to the s3 extension as a low-level API,
- * whereas it currently provides only high-level APIs such as S3DataSegmentPuller.
  */
-public class RetriableS3OutputStream extends OutputStream
+public class RetryableS3OutputStream extends OutputStream
 {
-  public static final long S3_MULTIPART_UPLOAD_MIN_PART_SIZE = 5L * 1024 * 1024;
-  public static final long S3_MULTIPART_UPLOAD_MAX_PART_SIZE = 5L * 1024 * 1024 * 1024L;
-
-  private static final Logger LOG = new Logger(RetriableS3OutputStream.class);
-  private static final Joiner JOINER = Joiner.on("/").skipNulls();
-  private static final int S3_MULTIPART_UPLOAD_MAX_NUM_PARTS = 10_000;
+  private static final Logger LOG = new Logger(RetryableS3OutputStream.class);
 
   private final S3OutputConfig config;
   private final ServerSideEncryptingAmazonS3 s3;
@@ -113,7 +107,7 @@ public class RetriableS3OutputStream extends OutputStream
   private boolean error;
   private boolean closed;
 
-  public RetriableS3OutputStream(
+  public RetryableS3OutputStream(
       S3OutputConfig config,
       ServerSideEncryptingAmazonS3 s3,
       String s3Key
@@ -124,7 +118,7 @@ public class RetriableS3OutputStream extends OutputStream
   }
 
   @VisibleForTesting
-  protected RetriableS3OutputStream(
+  protected RetryableS3OutputStream(
       S3OutputConfig config,
       ServerSideEncryptingAmazonS3 s3,
       String s3Key,
@@ -141,7 +135,7 @@ public class RetriableS3OutputStream extends OutputStream
     this.uploadId = result.getUploadId();
     this.chunkStorePath = new File(config.getTempDir(), uploadId + UUID.randomUUID());
     FileUtils.mkdirp(this.chunkStorePath);
-    this.chunkSize = config.getChunkSize() == null ? computeChunkSize(config) : config.getChunkSize();
+    this.chunkSize = config.getChunkSize();
     if (chunkValidation) {
       validateChunkSize(config.getMaxResultsSize(), chunkSize);
     }
@@ -151,46 +145,25 @@ public class RetriableS3OutputStream extends OutputStream
     this.currentChunk = new Chunk(nextChunkId, new File(chunkStorePath, String.valueOf(nextChunkId++)));
   }
 
-  private static long computeChunkSize(S3OutputConfig config)
-  {
-    return computeMinChunkSize(config.getMaxResultsSize());
-  }
 
   private static void validateChunkSize(long maxResultsSize, long chunkSize)
   {
-    if (computeMinChunkSize(maxResultsSize) > chunkSize) {
+    if (S3OutputConfig.computeMinChunkSize(maxResultsSize) > chunkSize) {
       throw new IAE(
-          "chunkSize[%s] is too small for maxResultsSize[%s]. chunkSize should be at least [%s]",
+          "chunkSize[%d] is too small for maxResultsSize[%d]. chunkSize should be at least [%d]",
           chunkSize,
           maxResultsSize,
-          computeMinChunkSize(maxResultsSize)
+          S3OutputConfig.computeMinChunkSize(maxResultsSize)
       );
     }
-    if (S3_MULTIPART_UPLOAD_MAX_PART_SIZE < chunkSize) {
+    if (S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES < chunkSize) {
       throw new IAE(
-          "chunkSize[%s] should be smaller than [%s]",
+          "chunkSize[%d] should be smaller than [%d]",
           chunkSize,
-          S3_MULTIPART_UPLOAD_MAX_PART_SIZE
+          S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES
       );
     }
   }
-
-  private static long computeMinChunkSize(long maxResultsSize)
-  {
-    return Math.max(
-        (long) Math.ceil(maxResultsSize / (double) S3_MULTIPART_UPLOAD_MAX_NUM_PARTS),
-        S3_MULTIPART_UPLOAD_MIN_PART_SIZE
-    );
-  }
-
-  public static String getS3KeyForQuery(String prefix, String asyncResultId)
-  {
-    return JOINER.join(
-        prefix,
-        asyncResultId
-    );
-  }
-
   @Override
   public void write(int b) throws IOException
   {
@@ -318,7 +291,7 @@ public class RetriableS3OutputStream extends OutputStream
     // Closeables are closed in LIFO order
     closer.register(() -> {
       // This should be emitted as a metric
-      LOG.info("Total push time: [%s] ms", pushStopwatch.elapsed(TimeUnit.MILLISECONDS));
+      LOG.info("Total push time: [%d] ms", pushStopwatch.elapsed(TimeUnit.MILLISECONDS));
     });
 
     closer.register(() -> org.apache.commons.io.FileUtils.forceDelete(chunkStorePath));

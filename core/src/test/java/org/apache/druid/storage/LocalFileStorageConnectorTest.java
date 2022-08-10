@@ -55,7 +55,7 @@ public class LocalFileStorageConnectorTest
     checkContents(uuid);
 
     // delete file
-    storageConnector.delete(uuid);
+    storageConnector.deleteFile(uuid);
     Assert.assertFalse(new File(tempDir.getAbsolutePath() + "/" + uuid).exists());
   }
 
@@ -87,16 +87,16 @@ public class LocalFileStorageConnectorTest
 
   private void checkContents(String uuid) throws IOException
   {
-    InputStream inputStream = storageConnector.read(uuid);
-    Assert.assertEquals(1, inputStream.read());
-    Assert.assertEquals(0, inputStream.available());
-    inputStream.close();
+    try (InputStream inputStream = storageConnector.read(uuid)) {
+      Assert.assertEquals(1, inputStream.read());
+      Assert.assertEquals(0, inputStream.available());
+    }
   }
 
   private void createFile(String uuid) throws IOException
   {
-    OutputStream os = storageConnector.write(uuid);
-    os.write(1);
-    os.close();
+    try (OutputStream os = storageConnector.write(uuid)) {
+      os.write(1);
+    }
   }
 }

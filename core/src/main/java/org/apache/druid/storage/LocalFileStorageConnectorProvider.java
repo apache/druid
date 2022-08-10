@@ -22,7 +22,7 @@ package org.apache.druid.storage;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 
 import java.io.IOException;
 
@@ -45,9 +45,9 @@ public class LocalFileStorageConnectorProvider implements StorageConnectorProvid
       return new LocalFileStorageConnector(basePath);
     }
     catch (IOException e) {
-      throw new ISE(
+      throw new RE(
           e,
-          "Unable to create storageConnector[%s] for basepath[%s]",
+          "Unable to create storage connector[%s] for basepath[%s]",
           LocalFileStorageConnector.class.getSimpleName(),
           basePath
       );

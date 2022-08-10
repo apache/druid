@@ -29,6 +29,10 @@ import java.io.File;
 
 public class S3OutputConfig
 {
+  public static final long S3_MULTIPART_UPLOAD_MIN_PART_SIZE_BYTES = 5L * 1024 * 1024;
+  public static final long S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES = 5L * 1024 * 1024 * 1024L;
+  private static final int S3_MULTIPART_UPLOAD_MAX_NUM_PARTS = 10_000;
+
   @JsonProperty
   private String bucket;
 
@@ -41,16 +45,16 @@ public class S3OutputConfig
   @Nullable
   @JsonProperty
   @HumanReadableBytesRange(
-      min = RetriableS3OutputStream.S3_MULTIPART_UPLOAD_MIN_PART_SIZE,
-      max = RetriableS3OutputStream.S3_MULTIPART_UPLOAD_MAX_PART_SIZE
+      min = S3_MULTIPART_UPLOAD_MIN_PART_SIZE_BYTES,
+      max = S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES
   ) // limits of s3 multipart upload
   private HumanReadableBytes chunkSize;
 
   /**
-   * Max size for each query results. This limit relies on the s3 multipart upload limits.
+   * Max size for each object. This limit relies on the s3 multipart upload limits.
    * See https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html for more details.
    *
-   * @see RetriableS3OutputStream
+   * @see RetryableS3OutputStream
    */
   @JsonProperty
   @HumanReadableBytesRange(min = 5L * 1024 * 1024, max = 5L * 1024 * 1024 * 1024 * 1024)
@@ -77,10 +81,9 @@ public class S3OutputConfig
     return tempDir;
   }
 
-  @Nullable
   public Long getChunkSize()
   {
-    return chunkSize == null ? null : chunkSize.getBytes();
+    return chunkSize == null ? computeMinChunkSize(getMaxResultsSize()) : chunkSize.getBytes();
   }
 
   public long getMaxResultsSize()
@@ -92,4 +95,14 @@ public class S3OutputConfig
   {
     return maxTriesOnTransientErrors;
   }
+
+
+  public static long computeMinChunkSize(long maxResultsSize)
+  {
+    return Math.max(
+        (long) Math.ceil(maxResultsSize / (double) S3_MULTIPART_UPLOAD_MAX_NUM_PARTS),
+        S3_MULTIPART_UPLOAD_MIN_PART_SIZE_BYTES
+    );
+  }
+
 }

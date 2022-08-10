@@ -108,7 +108,7 @@ public class S3StorageConnectorTest
     EasyMock.reset(S3_CLIENT);
     S3_CLIENT.deleteObject(BUCKET, PREFIX + "/" + TEST_FILE);
     EasyMock.expectLastCall();
-    storageConnector.delete(TEST_FILE);
+    storageConnector.deleteFile(TEST_FILE);
     EasyMock.reset(S3_CLIENT);
   }
 

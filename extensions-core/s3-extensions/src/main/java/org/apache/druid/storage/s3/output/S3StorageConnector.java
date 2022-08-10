@@ -90,11 +90,11 @@ public class S3StorageConnector implements StorageConnector
   @Override
   public OutputStream write(String path) throws IOException
   {
-    return new RetriableS3OutputStream(config, s3Client, objectPath(path));
+    return new RetryableS3OutputStream(config, s3Client, objectPath(path));
   }
 
   @Override
-  public void delete(String path)
+  public void deleteFile(String path)
   {
     s3Client.deleteObject(config.getBucket(), objectPath(path));
   }
