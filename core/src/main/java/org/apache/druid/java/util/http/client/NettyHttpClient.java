@@ -254,8 +254,7 @@ public class NettyHttpClient extends AbstractHttpClient
               if (!retVal.isDone()) {
                 retVal.set(null);
               }
-              channel.close();
-              channelResourceContainer.returnResource();
+              channel.close().addListener(f -> channelResourceContainer.returnResource());
 
               throw ex;
             }
@@ -325,20 +324,17 @@ public class NettyHttpClient extends AbstractHttpClient
             if (response != null) {
               handler.exceptionCaught(response, cause);
             }
-            try {
-              if (channel.isOpen()) {
-                channel.close();
-              }
-            }
-            catch (Exception e) {
-              log.warn(e, "Error while closing channel");
-            }
-            finally {
-              if (channelResourceContainer.isPresent()) {
-                // exceptionCaught can be called multiple times: we only want to return the channel if it hasn't
-                // already been returned.
-                channelResourceContainer.returnResource();
-              }
+            if (channel.isOpen()) {
+              channel.close().addListener(f -> {
+                if (!f.isSuccess()) {
+                  log.warn(f.cause(), "Error while closing channel");
+                }
+                if (channelResourceContainer.isPresent()) {
+                  // exceptionCaught can be called multiple times: we only want to return the channel if it hasn't
+                  // already been returned.
+                  channelResourceContainer.returnResource();
+                }
+              });
             }
           }
 
@@ -352,8 +348,8 @@ public class NettyHttpClient extends AbstractHttpClient
             if (response != null && response.isContinueReading()) {
               handler.exceptionCaught(response, new ChannelException("Channel disconnected"));
             }
-            channel.close();
-            channelResourceContainer.returnResource();
+            channel.close()
+                   .addListener(f -> channelResourceContainer.returnResource());
             if (!retVal.isDone()) {
               log.warn("[%s] Channel disconnected before response complete", requestDesc);
               retVal.setException(new ChannelException("Channel disconnected"));
@@ -375,8 +371,7 @@ public class NettyHttpClient extends AbstractHttpClient
           if (future.isSuccess()) {
             channel.read();
           } else {
-            channel.close();
-            channelResourceContainer.returnResource();
+            channel.close().addListener(f -> channelResourceContainer.returnResource());
             if (!retVal.isDone()) {
               retVal.setException(
                   new ChannelException(
