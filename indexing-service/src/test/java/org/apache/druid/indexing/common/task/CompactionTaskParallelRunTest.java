@@ -810,7 +810,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   {
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     TaskStatus status = getIndexingServiceClient().runAndWait(task);
-    Assert.assertEquals(status.toString(), TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
+    Assert.assertEquals(status.toString(), TaskState.SUCCESS, status.getStatusCode());
     return getIndexingServiceClient().getPublishedSegments(task);
   }
 }
