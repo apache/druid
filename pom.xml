@@ -212,6 +212,9 @@
         <module>extensions-contrib/opentelemetry-emitter</module>
         <!-- distribution packaging -->
         <module>distribution</module>
+        <!-- Revised integration tests -->
+        <module>integration-tests-ex/it-tools</module>
+        <module>integration-tests-ex/it-image</module>
     </modules>
 
     <repositories>
@@ -1870,6 +1873,7 @@
                                 <exclude>target/**</exclude>
                                 <exclude>licenses/**</exclude>
                                 <exclude>**/test/resources/**</exclude> <!-- test data for "old" ITs. -->
+                                <exclude>**/data/data/**</exclude> <!-- test data for "new" ITs. -->
                                 <exclude>**/derby.log</exclude>
                                 <exclude>**/jvm.config</exclude>
                                 <exclude>**/*.avsc</exclude>
