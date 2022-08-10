@@ -17,11 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.storage;
+package org.apache.druid.storage.local;
 
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.storage.StorageConnector;
 
 import java.io.File;
 import java.io.IOException;

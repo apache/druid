@@ -17,9 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.storage;
+package org.apache.druid.storage.local;
 
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.storage.StorageConnector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -62,7 +63,8 @@ public class LocalFileStorageConnectorTest
   @Test
   public void deleteRecursivelyTest() throws IOException
   {
-    String uuid_base = UUID.randomUUID().toString();
+    String topLeveldir = "top" + UUID.randomUUID();
+    String uuid_base = topLeveldir + "/" + UUID.randomUUID();
     String uuid1 = uuid_base + "/" + UUID.randomUUID();
     String uuid2 = uuid_base + "/" + UUID.randomUUID();
 
@@ -82,6 +84,7 @@ public class LocalFileStorageConnectorTest
 
     storageConnector.deleteRecursively(uuid_base);
     Assert.assertFalse(baseFile.exists());
+    Assert.assertTrue(new File(tempDir.getAbsolutePath() + "/" + topLeveldir).exists());
 
   }
 

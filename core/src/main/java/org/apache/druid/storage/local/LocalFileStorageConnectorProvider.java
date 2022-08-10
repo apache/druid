@@ -17,12 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.storage;
+package org.apache.druid.storage.local;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.io.IOException;
 

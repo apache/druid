@@ -27,17 +27,20 @@ import java.io.OutputStream;
 
 /**
  * Low level interface for interacting with different storage providers like S3, GCS, Azure and local file system.
- * For adding a new implementation of this interface in your extension extend {@link StorageConnectorProvider}.
- * For using the interface in your extension as a consumer, use JsonConfigProvider like:
- * 1. JsonConfigProvider.bind(binder, "druid,extension.custom.type", StorageConnectorProvider.class, Custom.class);
- * // bind the storage config provider
- * 2. binder.bind(Key.get(StorageConnector.class, Custom.class)).toProvider(Key.get(StorageConnectorProvider.class, Custom.class)).in(LazySingleton.class);
- * // Use Named annotations to access the storageConnector instance in your custom extension.
- * 3. @Custom StorageConnector storageConnector
  * <p>
+ * For adding a new implementation of this interface in your extension extend {@link StorageConnectorProvider}.
+ * <p>
+ * For using the interface in your extension as a consumer, use JsonConfigProvider like:
+ * <ol>
+ * <li>{@code JsonConfigProvider.bind(binder, "druid,extension.custom.type", StorageConnectorProvider.class, Custom.class);}</li>
+ * <li>// bind the storage config provider {@code binder.bind(Key.get(StorageConnector.class, Custom.class)).toProvider(Key.get(StorageConnectorProvider.class, Custom.class)).in(LazySingleton.class);} </li>
+ * <li>// Use Named annotations to access the storageConnector instance in your custom extension.{@code @Custom StorageConnector storageConnector} </li>
+ * </ol>
  * The final state of this inteface would have
- * * 1. Future Non blocking API's
- * * 2. Offset based fetch
+ * <ol>
+ * <li>Future Non blocking API's</li>
+ * <li>Offset based fetch</li>
+ * </ol>
  */
 
 @UnstableApi

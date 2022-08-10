@@ -56,17 +56,18 @@ import java.util.concurrent.TimeUnit;
 import static org.apache.druid.storage.s3.output.S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES;
 
 /**
- * A retryable output stream for s3. How it works is,
+ * A retryable output stream for s3. How it works is:
  * <p>
- * 1) When new data is written, it first creates a chunk in local disk.
- * 2) New data is written to the local chunk until it is full.
- * 3) When the chunk is full, it uploads the chunk to s3 using the multipart upload API.
+ * <ol>
+ * <li>When new data is written, it first creates a chunk in local disk.</li>
+ * <li>New data is written to the local chunk until it is full.</li>
+ * <li>When the chunk is full, it uploads the chunk to s3 using the multipart upload API.
  * Since this happens synchronously, {@link #write(byte[], int, int)} can be blocked until the upload is done.
- * The upload can be retried when it fails with transient errors.
- * 4) Once the upload succeeds, it creates a new chunk and continue.
- * 5) When the stream is closed, it uploads the last chunk and finalize the multipart upload.
- * {@link #close()} can be blocked until upload is done.
- * <p>
+ * The upload can be retried when it fails with transient errors.</li>
+ * <li>Once the upload succeeds, it creates a new chunk and continue.</li>
+ * <li>When the stream is closed, it uploads the last chunk and finalize the multipart upload.
+ * {@link #close()} can be blocked until upload is done.</li>
+ *   </ol>
  * For compression format support, this output stream supports compression formats if they are <i>concatenatable</i>,
  * such as ZIP or GZIP.
  * <p>
@@ -95,8 +96,7 @@ public class RetryableS3OutputStream extends OutputStream
   private int numChunksPushed;
   /**
    * Total size of all chunks. This size is updated whenever the chunk is ready for push,
-   * not when {@link #write(byte[], int, int)} is called. This is because
-   * it will be hard to know the increase of chunk size in write() when the chunk is compressed.
+   * not when {@link #write(byte[], int, int)} is called.
    */
   private long resultsSize;
 
@@ -164,6 +164,7 @@ public class RetryableS3OutputStream extends OutputStream
       );
     }
   }
+
   @Override
   public void write(int b) throws IOException
   {
