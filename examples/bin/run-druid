@@ -34,7 +34,7 @@ else
   CONFDIR="$2"
 fi
 
-CONFDIR="$(cd "$CONFDIR">NUL && pwd)"
+CONFDIR="$(cd "$CONFDIR">/dev/null && pwd)"
 WHEREAMI="$(cd "$WHEREAMI">NUL && pwd)"
 
 LOG_DIR="${DRUID_LOG_DIR:=${WHEREAMI}/../log}"
