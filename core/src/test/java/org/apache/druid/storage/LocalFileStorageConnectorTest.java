@@ -45,7 +45,7 @@ public class LocalFileStorageConnectorTest
     String uuid = UUID.randomUUID().toString();
 
     //create file
-    createFile(uuid);
+    createAndPopulateFile(uuid);
 
     // check if file is created
     Assert.assertTrue(storageConnector.pathExists(uuid));
@@ -66,8 +66,8 @@ public class LocalFileStorageConnectorTest
     String uuid1 = uuid_base + "/" + UUID.randomUUID();
     String uuid2 = uuid_base + "/" + UUID.randomUUID();
 
-    createFile(uuid1);
-    createFile(uuid2);
+    createAndPopulateFile(uuid1);
+    createAndPopulateFile(uuid2);
 
     Assert.assertTrue(storageConnector.pathExists(uuid1));
     Assert.assertTrue(storageConnector.pathExists(uuid2));
@@ -93,7 +93,7 @@ public class LocalFileStorageConnectorTest
     }
   }
 
-  private void createFile(String uuid) throws IOException
+  private void createAndPopulateFile(String uuid) throws IOException
   {
     try (OutputStream os = storageConnector.write(uuid)) {
       os.write(1);
