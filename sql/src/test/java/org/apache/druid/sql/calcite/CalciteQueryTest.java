@@ -14047,7 +14047,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSubqueryTypeMismatchWithLiterals() throws Exception
+  public void testSubqueryTypeMismatchWithLiterals()
   {
     testQuery(
         "SELECT \n"
