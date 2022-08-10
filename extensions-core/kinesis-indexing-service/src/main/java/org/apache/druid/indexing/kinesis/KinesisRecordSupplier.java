@@ -229,7 +229,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
             if (!records.offer(currRecord, recordBufferOfferTimeout, TimeUnit.MILLISECONDS)) {
               log.warn("OrderedPartitionableRecord buffer full, retrying in [%,dms]. "
-                       + "Kinesis record processing has become slow or recordsPerFetch is too high.",
+                       + "Kinesis records are being processed slower than they are fetched.",
                        recordBufferFullWait);
               scheduleBackgroundFetch(recordBufferFullWait);
             }
@@ -296,7 +296,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
             if (!records.offer(currRecord, recordBufferOfferTimeout, TimeUnit.MILLISECONDS)) {
               log.warn(
                   "OrderedPartitionableRecord buffer full, storing iterator and retrying in [%,dms]. "
-                  + "Kinesis record processing has become slow or recordsPerFetch is too high.",
+                  + "Kinesis records are being processed slower than they are fetched.",
                   recordBufferFullWait
               );
 
