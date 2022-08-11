@@ -138,13 +138,12 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
 
     @Override
     public Stream<InputSplit> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
-        throws IOException
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException
+    public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
     {
       throw new UnsupportedOperationException();
     }
@@ -189,7 +188,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     }
 
     @Override
-    public CloseableIterator<InputRow> read() throws IOException
+    public CloseableIterator<InputRow> read()
     {
       return new CloseableIterator<InputRow>()
       {
@@ -215,7 +214,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     }
 
     @Override
-    public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
+    public CloseableIterator<InputRowListPlusRawValues> sample()
     {
       return new CloseableIterator<InputRowListPlusRawValues>()
       {
@@ -243,6 +242,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
           }
 
           try {
+            bb.position(0);
             final List<InputRow> rows = parser.parseBatch(bb);
             return InputRowListPlusRawValues.of(rows.isEmpty() ? null : rows, rawColumns);
           }

@@ -66,21 +66,6 @@ public class TransformSpec
     }
   }
 
-  public static <T> TransformSpec fromInputRowParser(final InputRowParser<T> parser)
-  {
-    // Hack: some firehoses and input specs must extract transformSpec from the parser, since they do not
-    // actually use the parser, but still must respect the transformSpec. This method should extract whatever
-    // transformSpec "decorate" had put in.
-
-    if (parser instanceof TransformingInputRowParser) {
-      return ((TransformingInputRowParser) parser).getTransformSpec();
-    } else if (parser instanceof TransformingStringInputRowParser) {
-      return ((TransformingStringInputRowParser) parser).getTransformSpec();
-    } else {
-      throw new ISE("Parser was not decorated, but should have been");
-    }
-  }
-
   @JsonProperty
   @Nullable
   public DimFilter getFilter()
