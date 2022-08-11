@@ -33,7 +33,6 @@ import com.google.common.base.Stopwatch;
 import com.google.common.io.CountingOutputStream;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -52,8 +51,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import static org.apache.druid.storage.s3.output.S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES;
 
 /**
  * A retryable output stream for s3. How it works is:
@@ -136,34 +133,12 @@ public class RetryableS3OutputStream extends OutputStream
     this.chunkStorePath = new File(config.getTempDir(), uploadId + UUID.randomUUID());
     FileUtils.mkdirp(this.chunkStorePath);
     this.chunkSize = config.getChunkSize();
-    if (chunkValidation) {
-      validateChunkSize(config.getMaxResultsSize(), chunkSize);
-    }
     this.pushStopwatch = Stopwatch.createUnstarted();
     this.pushStopwatch.reset();
 
     this.currentChunk = new Chunk(nextChunkId, new File(chunkStorePath, String.valueOf(nextChunkId++)));
   }
 
-
-  private static void validateChunkSize(long maxResultsSize, long chunkSize)
-  {
-    if (S3OutputConfig.computeMinChunkSize(maxResultsSize) > chunkSize) {
-      throw new IAE(
-          "chunkSize[%d] is too small for maxResultsSize[%d]. chunkSize should be at least [%d]",
-          chunkSize,
-          maxResultsSize,
-          S3OutputConfig.computeMinChunkSize(maxResultsSize)
-      );
-    }
-    if (S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES < chunkSize) {
-      throw new IAE(
-          "chunkSize[%d] should be smaller than [%d]",
-          chunkSize,
-          S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES
-      );
-    }
-  }
 
   @Override
   public void write(int b) throws IOException
@@ -245,7 +220,7 @@ public class RetryableS3OutputStream extends OutputStream
       return RetryUtils.retry(
           () -> uploadPartIfPossible(uploadId, config.getBucket(), s3Key, chunk),
           S3Utils.S3RETRY,
-          config.getMaxTriesOnTransientError()
+          config.getMaxRetry()
       );
     }
     catch (AmazonServiceException e) {
@@ -305,7 +280,7 @@ public class RetryableS3OutputStream extends OutputStream
                   new CompleteMultipartUploadRequest(config.getBucket(), s3Key, uploadId, pushResults)
               ),
               S3Utils.S3RETRY,
-              config.getMaxTriesOnTransientError()
+              config.getMaxRetry()
           );
         } else {
           RetryUtils.retry(
@@ -314,7 +289,7 @@ public class RetryableS3OutputStream extends OutputStream
                 return null;
               },
               S3Utils.S3RETRY,
-              config.getMaxTriesOnTransientError()
+              config.getMaxRetry()
           );
         }
       }

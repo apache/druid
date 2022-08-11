@@ -83,7 +83,7 @@ public class S3StorageConnector implements StorageConnector
           }
         },
         S3Utils.S3RETRY,
-        config.getMaxTriesOnTransientError()
+        config.getMaxRetry()
     );
   }
 

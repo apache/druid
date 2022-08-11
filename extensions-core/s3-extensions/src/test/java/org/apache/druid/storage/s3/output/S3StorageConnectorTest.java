@@ -32,7 +32,9 @@ import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -54,22 +56,30 @@ public class S3StorageConnectorTest
   private static final String PREFIX = "P/R/E/F/I/X";
   public static final String TEST_FILE = "test.csv";
 
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   public static final ListObjectsV2Result TEST_RESULT = EasyMock.createMock(ListObjectsV2Result.class);
 
-  private final StorageConnector storageConnector = new S3StorageConnector(new S3OutputConfig()
-  {
-    @Override
-    public String getBucket()
-    {
-      return BUCKET;
-    }
 
-    @Override
-    public String getPrefix()
-    {
-      return PREFIX;
+  private final StorageConnector storageConnector;
+
+  {
+    try {
+      storageConnector = new S3StorageConnector(new S3OutputConfig(
+          BUCKET,
+          PREFIX,
+          temporaryFolder.newFolder(),
+          null,
+          null,
+          null,
+          true
+      ), SERVICE);
     }
-  }, SERVICE);
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
 
 
   @Test

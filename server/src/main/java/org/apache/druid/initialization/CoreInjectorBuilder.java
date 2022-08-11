@@ -59,6 +59,7 @@ import org.apache.druid.server.initialization.ExternalStorageAccessSecurityModul
 import org.apache.druid.server.initialization.jetty.JettyServerModule;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.security.TLSCertificateCheckerModule;
+import org.apache.druid.storage.StorageConnectorModule;
 
 import java.util.Collections;
 import java.util.Set;
@@ -136,7 +137,7 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new StartupLoggingModule(),
         new ExternalStorageAccessSecurityModule(),
         new ServiceClientModule(),
-        new LocalDataStorageDruidModule()
+        new StorageConnectorModule()
     );
     return this;
   }

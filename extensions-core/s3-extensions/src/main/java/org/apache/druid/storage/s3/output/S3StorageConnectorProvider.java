@@ -28,14 +28,17 @@ import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
 @JsonTypeName(S3StorageDruidModule.SCHEME)
-public class S3StorageConnectorProvider extends S3OutputConfig implements StorageConnectorProvider
+public class S3StorageConnectorProvider implements StorageConnectorProvider
 {
   @JacksonInject
   ServerSideEncryptingAmazonS3 s3;
 
+  @JacksonInject
+  S3OutputConfig s3OutputConfig;
+
   @Override
   public StorageConnector get()
   {
-    return new S3StorageConnector(this, s3);
+    return new S3StorageConnector(s3OutputConfig, s3);
   }
 }

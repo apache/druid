@@ -30,6 +30,7 @@ import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
@@ -72,7 +73,15 @@ public class RetryableS3OutputStreamTest
   {
     final File tempDir = temporaryFolder.newFolder();
     chunkSize = 10L;
-    config = new S3OutputConfig()
+    config = new S3OutputConfig(
+        "TEST",
+        "TEST",
+        tempDir,
+        HumanReadableBytes.valueOf(chunkSize),
+        HumanReadableBytes.valueOf(maxResultsSize),
+        2,
+        false
+    )
     {
       @Override
       public File getTempDir()
@@ -93,50 +102,11 @@ public class RetryableS3OutputStreamTest
       }
 
       @Override
-      public int getMaxTriesOnTransientError()
+      public int getMaxRetry()
       {
         return 2;
       }
     };
-  }
-
-  @Test
-  public void testTooSmallChunkSize() throws IOException
-  {
-    maxResultsSize = 100_000_000_000L;
-    chunkSize = 9000_000L;
-
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(
-        "chunkSize[9000000] is too small for maxResultsSize[100000000000]. chunkSize should be at least [10000000]"
-    );
-    new RetryableS3OutputStream(config, s3, path).close();
-  }
-
-  @Test
-  public void testTooSmallChunkSizeMaxResultsSizeIsNotRetionalToMaxPartNum() throws IOException
-  {
-    maxResultsSize = 274_877_906_944L;
-    chunkSize = 2_7487_790;
-
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(
-        "chunkSize[27487790] is too small for maxResultsSize[274877906944]. chunkSize should be at least [27487791]"
-    );
-    new RetryableS3OutputStream(config, s3, path).close();
-  }
-
-  @Test
-  public void testTooLargeChunkSize() throws IOException
-  {
-    maxResultsSize = 1024L * 1024 * 1024 * 1024;
-    chunkSize = S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES + 1;
-
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(
-        "chunkSize[5368709121] should be smaller than [5368709120]"
-    );
-    new RetryableS3OutputStream(config, s3, path).close();
   }
 
   @Test
