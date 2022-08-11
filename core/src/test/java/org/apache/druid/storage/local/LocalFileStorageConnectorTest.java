@@ -50,7 +50,7 @@ public class LocalFileStorageConnectorTest
 
     // check if file is created
     Assert.assertTrue(storageConnector.pathExists(uuid));
-    Assert.assertTrue(new File(tempDir.getAbsolutePath() + "/" + uuid).exists());
+    Assert.assertTrue(new File(tempDir.getAbsolutePath(), uuid).exists());
 
     // check contents
     checkContents(uuid);
