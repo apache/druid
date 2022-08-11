@@ -203,7 +203,7 @@ public class RetryableS3OutputStreamTest
       );
     }
 
-    s3.assertAborted();
+    s3.assertCancelled();
   }
 
   @Test
@@ -258,7 +258,7 @@ public class RetryableS3OutputStreamTest
       out.write(bb.array());
     }
 
-    s3.assertAborted();
+    s3.assertCancelled();
   }
 
   private static class TestAmazonS3 extends ServerSideEncryptingAmazonS3
@@ -266,7 +266,7 @@ public class RetryableS3OutputStreamTest
     private final List<UploadPartRequest> partRequests = new ArrayList<>();
 
     private int uploadFailuresLeft;
-    private boolean aborted = false;
+    private boolean cancelled = false;
     @Nullable
     private CompleteMultipartUploadRequest completeRequest;
 
@@ -301,9 +301,9 @@ public class RetryableS3OutputStreamTest
     }
 
     @Override
-    public void abortMultipartUpload(AbortMultipartUploadRequest request) throws SdkClientException
+    public void cancelMultiPartUpload(AbortMultipartUploadRequest request) throws SdkClientException
     {
-      aborted = true;
+      cancelled = true;
     }
 
     @Override
@@ -317,7 +317,7 @@ public class RetryableS3OutputStreamTest
     private void assertCompleted(long chunkSize, long expectedFileSize)
     {
       Assert.assertNotNull(completeRequest);
-      Assert.assertFalse(aborted);
+      Assert.assertFalse(cancelled);
 
       for (int i = 0; i < partRequests.size(); i++) {
         Assert.assertEquals(i + 1, partRequests.get(i).getPartNumber());
@@ -343,9 +343,9 @@ public class RetryableS3OutputStreamTest
       );
     }
 
-    private void assertAborted()
+    private void assertCancelled()
     {
-      Assert.assertTrue(aborted);
+      Assert.assertTrue(cancelled);
       Assert.assertNull(completeRequest);
     }
   }

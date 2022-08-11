@@ -19,10 +19,11 @@
 
 package org.apache.druid.storage.local;
 
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.storage.StorageConnector;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,13 +33,12 @@ import java.util.UUID;
 
 public class LocalFileStorageConnectorTest
 {
-  private File tempDir = FileUtils.createTempDir();
-  private StorageConnector storageConnector = new LocalFileStorageConnectorProvider(tempDir.getPath()).get();
+  @Rule
+  TemporaryFolder temporaryFolder = new TemporaryFolder();
+  private File tempDir = temporaryFolder.newFolder();
+  private StorageConnector storageConnector = new LocalFileStorageConnectorProvider(tempDir).get();
 
-  public LocalFileStorageConnectorTest()
-  {
-    tempDir.deleteOnExit();
-  }
+  public LocalFileStorageConnectorTest() throws IOException {}
 
   @Test
   public void sanityCheck() throws IOException
@@ -57,14 +57,14 @@ public class LocalFileStorageConnectorTest
 
     // delete file
     storageConnector.deleteFile(uuid);
-    Assert.assertFalse(new File(tempDir.getAbsolutePath() + "/" + uuid).exists());
+    Assert.assertFalse(new File(tempDir.getAbsolutePath(), uuid).exists());
   }
 
   @Test
   public void deleteRecursivelyTest() throws IOException
   {
-    String topLeveldir = "top" + UUID.randomUUID();
-    String uuid_base = topLeveldir + "/" + UUID.randomUUID();
+    String topLevelDir = "top" + UUID.randomUUID();
+    String uuid_base = topLevelDir + "/" + UUID.randomUUID();
     String uuid1 = uuid_base + "/" + UUID.randomUUID();
     String uuid2 = uuid_base + "/" + UUID.randomUUID();
 
@@ -77,14 +77,14 @@ public class LocalFileStorageConnectorTest
     checkContents(uuid1);
     checkContents(uuid2);
 
-    File baseFile = new File(tempDir.getAbsolutePath() + "/" + uuid_base);
+    File baseFile = new File(tempDir.getAbsolutePath(), uuid_base);
     Assert.assertTrue(baseFile.exists());
     Assert.assertTrue(baseFile.isDirectory());
     Assert.assertEquals(2, baseFile.listFiles().length);
 
     storageConnector.deleteRecursively(uuid_base);
     Assert.assertFalse(baseFile.exists());
-    Assert.assertTrue(new File(tempDir.getAbsolutePath() + "/" + topLeveldir).exists());
+    Assert.assertTrue(new File(tempDir.getAbsolutePath(), topLevelDir).exists());
 
   }
 

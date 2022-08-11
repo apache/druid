@@ -156,7 +156,7 @@ public class ServerSideEncryptingAmazonS3
     return amazonS3.uploadPart(serverSideEncryption.decorate(request));
   }
 
-  public void abortMultipartUpload(AbortMultipartUploadRequest request)
+  public void cancelMultiPartUpload(AbortMultipartUploadRequest request)
       throws SdkClientException
   {
     amazonS3.abortMultipartUpload(request);

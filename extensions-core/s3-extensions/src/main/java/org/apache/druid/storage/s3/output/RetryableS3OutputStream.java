@@ -285,7 +285,7 @@ public class RetryableS3OutputStream extends OutputStream
         } else {
           RetryUtils.retry(
               () -> {
-                s3.abortMultipartUpload(new AbortMultipartUploadRequest(config.getBucket(), s3Key, uploadId));
+                s3.cancelMultiPartUpload(new AbortMultipartUploadRequest(config.getBucket(), s3Key, uploadId));
                 return null;
               },
               S3Utils.S3RETRY,

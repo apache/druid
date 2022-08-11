@@ -32,10 +32,15 @@ import java.io.OutputStream;
  * <p>
  * For using the interface in your extension as a consumer, use JsonConfigProvider like:
  * <ol>
- * <li>{@code JsonConfigProvider.bind(binder, "druid,extension.custom.type", StorageConnectorProvider.class, Custom.class);}</li>
+ * <li>{@code JsonConfigProvider.bind(binder, "druid.extension.custom.type", StorageConnectorProvider.class, Custom.class);}</li>
  * <li>// bind the storage config provider {@code binder.bind(Key.get(StorageConnector.class, Custom.class)).toProvider(Key.get(StorageConnectorProvider.class, Custom.class)).in(LazySingleton.class);} </li>
  * <li>// Use Named annotations to access the storageConnector instance in your custom extension.{@code @Custom StorageConnector storageConnector} </li>
  * </ol>
+ * For end users, the runtime.properties file would look like
+ * <ul>
+ * <li>{@code druid.extension.custom.type="s3"}
+ * <li>{@code druid.extension.custom.bucket="myBucket"}
+ * </ul>
  * The final state of this inteface would have
  * <ol>
  * <li>Future Non blocking API's</li>
@@ -89,7 +94,6 @@ public interface StorageConnector
    * @param path
    * @throws IOException
    */
-  @SuppressWarnings("all")
   void deleteFile(String path) throws IOException;
 
   /**

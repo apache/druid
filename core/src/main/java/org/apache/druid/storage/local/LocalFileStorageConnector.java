@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 
 /**
  * Implementation that uses local filesystem. All paths are appended with the base path, in such a way that its not visible
@@ -38,12 +37,12 @@ import java.nio.file.Paths;
 public class LocalFileStorageConnector implements StorageConnector
 {
 
-  private final String basePath;
+  private final File basePath;
 
-  public LocalFileStorageConnector(String basePath) throws IOException
+  public LocalFileStorageConnector(File basePath) throws IOException
   {
     this.basePath = basePath;
-    FileUtils.mkdirp(new File(basePath));
+    FileUtils.mkdirp(basePath);
   }
 
   @Override
@@ -114,7 +113,7 @@ public class LocalFileStorageConnector implements StorageConnector
 
   private File fileWithBasePath(String path)
   {
-    return new File(Paths.get(basePath, path).toString());
+    return new File(basePath, path);
   }
 
 }
