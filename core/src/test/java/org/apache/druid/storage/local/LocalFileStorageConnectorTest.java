@@ -35,10 +35,13 @@ public class LocalFileStorageConnectorTest
 {
   @Rule
   TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private File tempDir = temporaryFolder.newFolder();
+  private File tempDir;
   private StorageConnector storageConnector = new LocalFileStorageConnectorProvider(tempDir).get();
 
-  public LocalFileStorageConnectorTest() throws IOException {}
+  public LocalFileStorageConnectorTest() throws IOException
+  {
+    tempDir = temporaryFolder.newFolder();
+  }
 
   @Test
   public void sanityCheck() throws IOException
