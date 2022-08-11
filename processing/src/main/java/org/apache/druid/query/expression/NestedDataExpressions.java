@@ -38,6 +38,7 @@ import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.StructuredDataProcessor;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -80,7 +81,7 @@ public class NestedDataExpressions
             ExprEval value = args.get(i + 1).eval(bindings);
 
             Preconditions.checkArgument(field.type().is(ExprType.STRING), "field name must be a STRING");
-            theMap.put(field.asString(), value.value());
+            theMap.put(field.asString(), maybeUnwrapStructuredData(value.value()));
           }
 
           return ExprEval.ofComplex(TYPE, theMap);
@@ -612,12 +613,21 @@ public class NestedDataExpressions
   @Nullable
   static Object maybeUnwrapStructuredData(ExprEval input)
   {
-    if (input.value() instanceof StructuredData) {
-      StructuredData data = (StructuredData) input.value();
+    return maybeUnwrapStructuredData(input.value());
+  }
+
+  static Object maybeUnwrapStructuredData(Object input)
+  {
+    if (input instanceof StructuredData) {
+      StructuredData data = (StructuredData) input;
       return data.getValue();
     }
-    return input.value();
+    if (input instanceof Object[]) {
+      return Arrays.stream((Object[]) input).map(x -> maybeUnwrapStructuredData(x)).toArray();
+    }
+    return input;
   }
+
 
   static List<NestedPathPart> getArg1PathPartsFromLiteral(String fnName, List<Expr> args)
   {
