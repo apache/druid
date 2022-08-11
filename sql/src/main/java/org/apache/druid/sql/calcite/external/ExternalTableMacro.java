@@ -36,6 +36,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.table.DruidTable;
+import org.apache.druid.sql.calcite.table.ExternalTable;
 
 import java.util.List;
 import java.util.Optional;
@@ -73,12 +74,10 @@ public class ExternalTableMacro implements TableMacro
                       + "Please change the column name to something other than __time");
       }
 
-      return new DruidTable(
-          new ExternalDataSource(inputSource, inputFormat, signature),
-          signature,
-          jsonMapper,
-          false,
-          false
+      return new ExternalTable(
+            new ExternalDataSource(inputSource, inputFormat, signature),
+            signature,
+            jsonMapper
       );
     }
     catch (JsonProcessingException e) {

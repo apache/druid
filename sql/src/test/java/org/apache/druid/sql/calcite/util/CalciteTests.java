@@ -130,6 +130,7 @@ import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.schema.NamedSystemSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
+import org.apache.druid.sql.calcite.schema.SegmentMetadataCache;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
@@ -1228,34 +1229,33 @@ public class CalciteTests
       final DruidSchemaManager druidSchemaManager
   )
   {
-    final DruidSchema schema = new DruidSchema(
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+    final SegmentMetadataCache cache = new SegmentMetadataCache(
+        createMockQueryLifecycleFactory(walker, conglomerate),
         new TestServerInventoryView(walker.getSegments()),
         new SegmentManager(EasyMock.createMock(SegmentLoader.class))
         {
           @Override
           public Set<String> getDataSourceNames()
           {
-            return ImmutableSet.of(BROADCAST_DATASOURCE);
+            return ImmutableSet.of(CalciteTests.BROADCAST_DATASOURCE);
           }
         },
         createDefaultJoinableFactory(),
         plannerConfig,
-        TEST_AUTHENTICATOR_ESCALATOR,
-        new BrokerInternalQueryConfig(),
-        druidSchemaManager
+        CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,
+        new BrokerInternalQueryConfig()
     );
 
     try {
-      schema.start();
-      schema.awaitInitialization();
+      cache.start();
+      cache.awaitInitialization();
     }
     catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
 
-    schema.stop();
-    return schema;
+    cache.stop();
+    return new DruidSchema(cache, druidSchemaManager);
   }
 
   /**

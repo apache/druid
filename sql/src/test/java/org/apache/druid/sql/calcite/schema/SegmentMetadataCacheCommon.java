@@ -50,7 +50,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
-public abstract class DruidSchemaTestCommon extends CalciteTestBase
+public abstract class SegmentMetadataCacheCommon extends CalciteTestBase
 {
   static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig()
   {

@@ -5221,6 +5221,38 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSqlIsNullToInFilter() throws Exception
+  {
+    testQuery(
+        "SELECT dim1, COUNT(*) FROM druid.foo WHERE dim1 IS NULL OR dim1 = 'abc' OR dim1 = 'def' OR dim1 = 'ghi' "
+        + "GROUP BY dim1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setDimFilter(new InDimFilter("dim1", Arrays.asList("abc", "def", "ghi", null), null))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new CountAggregatorFactory("a0")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible() ? ImmutableList.of(
+            new Object[]{"abc", 1L},
+            new Object[]{"def", 1L}
+        ) : ImmutableList.of(
+            new Object[]{"", 1L},
+            new Object[]{"abc", 1L},
+            new Object[]{"def", 1L}
+        )
+    );
+  }
+
+  @Test
   public void testInFilterWith23Elements() throws Exception
   {
     // Regression test for https://github.com/apache/druid/issues/4203.
@@ -14009,6 +14041,52 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{0L, false},
             new Object[]{7L, true},
             new Object[]{325323L, false}
+        )
+    );
+  }
+
+  @Test
+  public void testSubqueryTypeMismatchWithLiterals() throws Exception
+  {
+    testQuery(
+        "SELECT \n"
+        + "  dim1,\n"
+        + "  SUM(CASE WHEN sum_l1 = 0 THEN 1 ELSE 0 END) AS outer_l1\n"
+        + "from (\n"
+        + "  select \n"
+        + "    dim1,\n"
+        + "    SUM(l1) as sum_l1\n"
+        + "  from numfoo\n"
+        + "  group by dim1\n"
+        + ")\n"
+        + "group by 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                        .setGranularity(Granularities.ALL)
+                        .addDimension(new DefaultDimensionSpec("dim1", "_d0", ColumnType.STRING))
+                        .addAggregator(new LongSumAggregatorFactory("a0", "l1"))
+                        .setPostAggregatorSpecs(ImmutableList.of(
+                            expressionPostAgg("p0", "case_searched((\"a0\" == 0),1,0)")
+                        ))
+                        .build()
+        ),
+        useDefault ? ImmutableList.of(
+            new Object[]{"", 0L},
+            new Object[]{"1", 1L},
+            new Object[]{"10.1", 0L},
+            new Object[]{"2", 1L},
+            new Object[]{"abc", 1L},
+            new Object[]{"def", 1L}
+        ) : ImmutableList.of(
+            // in sql compatible mode, null does not equal 0 so the values which were 1 previously are not in this mode
+            new Object[]{"", 0L},
+            new Object[]{"1", 0L},
+            new Object[]{"10.1", 0L},
+            new Object[]{"2", 1L},
+            new Object[]{"abc", 0L},
+            new Object[]{"def", 0L}
         )
     );
   }

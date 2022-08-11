@@ -45,6 +45,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -156,5 +157,17 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
         )
     );
     TestHelper.assertExpectedObjects(expectedResults, results, "distinct-count");
+  }
+
+  @Test
+  public void testWithName()
+  {
+    DistinctCountAggregatorFactory aggregatorFactory = new DistinctCountAggregatorFactory(
+        "distinct",
+        "visitor_id",
+        null
+    );
+    Assert.assertEquals(aggregatorFactory, aggregatorFactory.withName("distinct"));
+    Assert.assertEquals("newTest", aggregatorFactory.withName("newTest").getName());
   }
 }

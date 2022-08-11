@@ -153,4 +153,17 @@ public class DoublesSketchAggregatorFactoryTest
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
   }
+
+  @Test
+  public void testWithName()
+  {
+    final DoublesSketchAggregatorFactory factory = new DoublesSketchAggregatorFactory(
+        "myFactory",
+        "myField",
+        1024,
+        1000L
+    );
+    Assert.assertEquals(factory, factory.withName("myFactory"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
 }

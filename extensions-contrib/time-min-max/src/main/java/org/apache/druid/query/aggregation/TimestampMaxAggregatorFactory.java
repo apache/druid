@@ -56,6 +56,12 @@ public class TimestampMaxAggregatorFactory extends TimestampAggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new TimestampMaxAggregatorFactory(newName, getFieldName(), getTimeFormat());
+  }
+
+  @Override
   public String toString()
   {
     return "TimestampMaxAggregatorFactory{" +

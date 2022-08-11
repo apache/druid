@@ -72,7 +72,7 @@ the [{{DRUIDVERSION}} release](https://www.apache.org/dyn/closer.cgi?path=/druid
    ```
 In the directory, you'll find `LICENSE` and `NOTICE` files and subdirectories for executable files, configuration files, sample data and more.
 
-## Step 2: Start up Druid services
+## Step 2. Start up Druid services
 
 Start up Druid services using the `micro-quickstart` single-machine configuration. 
 
