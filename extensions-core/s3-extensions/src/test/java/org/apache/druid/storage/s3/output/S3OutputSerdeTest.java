@@ -35,7 +35,7 @@ import java.io.IOException;
 
 public class S3OutputSerdeTest
 {
-  private static final ObjectMapper mapper = new ObjectMapper();
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -64,10 +64,10 @@ public class S3OutputSerdeTest
 
     Assert.assertEquals(
         json,
-        mapper.writeValueAsString(s3OutputConfig)
+        MAPPER.writeValueAsString(s3OutputConfig)
     );
 
-    Assert.assertEquals(s3OutputConfig, mapper.readValue(json, S3OutputConfig.class));
+    Assert.assertEquals(s3OutputConfig, MAPPER.readValue(json, S3OutputConfig.class));
   }
 
   @Test
@@ -82,7 +82,7 @@ public class S3OutputSerdeTest
                    + "}\n").replaceAll("\n", "").replaceAll(" ", "");
     expectedException.expect(MismatchedInputException.class);
     expectedException.expectMessage("Missing required creator property 'prefix'");
-    mapper.readValue(json, S3OutputConfig.class);
+    MAPPER.readValue(json, S3OutputConfig.class);
   }
 
   @Test
@@ -97,7 +97,7 @@ public class S3OutputSerdeTest
                    + "}\n").replaceAll("\n", "").replaceAll(" ", "");
     expectedException.expect(MismatchedInputException.class);
     expectedException.expectMessage("Missing required creator property 'bucket'");
-    mapper.readValue(json, S3OutputConfig.class);
+    MAPPER.readValue(json, S3OutputConfig.class);
   }
 
   @Test
@@ -112,7 +112,7 @@ public class S3OutputSerdeTest
                    + "}\n").replaceAll("\n", "").replaceAll(" ", "");
     expectedException.expect(MismatchedInputException.class);
     expectedException.expectMessage("Missing required creator property 'tempDir'");
-    mapper.readValue(json, S3OutputConfig.class);
+    MAPPER.readValue(json, S3OutputConfig.class);
   }
 
   @Test
@@ -132,7 +132,7 @@ public class S3OutputSerdeTest
         null,
         null
     );
-    Assert.assertEquals(s3OutputConfig, mapper.readValue(json, S3OutputConfig.class));
+    Assert.assertEquals(s3OutputConfig, MAPPER.readValue(json, S3OutputConfig.class));
   }
 
 
@@ -150,7 +150,7 @@ public class S3OutputSerdeTest
                    + "}\n").replaceAll("\n", "").replaceAll(" ", "");
     expectedException.expect(ValueInstantiationException.class);
     expectedException.expectMessage("chunkSize[104] should be >=");
-    mapper.readValue(json, S3OutputConfig.class);
+    MAPPER.readValue(json, S3OutputConfig.class);
   }
 
 
