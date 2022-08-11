@@ -14044,4 +14044,50 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testSubqueryTypeMismatchWithLiterals() throws Exception
+  {
+    testQuery(
+        "SELECT \n"
+        + "  dim1,\n"
+        + "  SUM(CASE WHEN sum_l1 = 0 THEN 1 ELSE 0 END) AS outer_l1\n"
+        + "from (\n"
+        + "  select \n"
+        + "    dim1,\n"
+        + "    SUM(l1) as sum_l1\n"
+        + "  from numfoo\n"
+        + "  group by dim1\n"
+        + ")\n"
+        + "group by 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                        .setGranularity(Granularities.ALL)
+                        .addDimension(new DefaultDimensionSpec("dim1", "_d0", ColumnType.STRING))
+                        .addAggregator(new LongSumAggregatorFactory("a0", "l1"))
+                        .setPostAggregatorSpecs(ImmutableList.of(
+                            expressionPostAgg("p0", "case_searched((\"a0\" == 0),1,0)")
+                        ))
+                        .build()
+        ),
+        useDefault ? ImmutableList.of(
+            new Object[]{"", 0L},
+            new Object[]{"1", 1L},
+            new Object[]{"10.1", 0L},
+            new Object[]{"2", 1L},
+            new Object[]{"abc", 1L},
+            new Object[]{"def", 1L}
+        ) : ImmutableList.of(
+            // in sql compatible mode, null does not equal 0 so the values which were 1 previously are not in this mode
+            new Object[]{"", 0L},
+            new Object[]{"1", 0L},
+            new Object[]{"10.1", 0L},
+            new Object[]{"2", 1L},
+            new Object[]{"abc", 0L},
+            new Object[]{"def", 0L}
+        )
+    );
+  }
 }

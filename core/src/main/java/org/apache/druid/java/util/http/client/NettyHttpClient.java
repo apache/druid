@@ -41,6 +41,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.timeout.ReadTimeoutException;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.druid.java.util.common.IAE;
@@ -59,8 +60,10 @@ import java.net.URL;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
+ * Implementation of {@link HttpClient} built using Netty.
  */
 public class NettyHttpClient extends AbstractHttpClient
 {
@@ -156,6 +159,11 @@ public class NettyHttpClient extends AbstractHttpClient
     final long readTimeout = getReadTimeout(requestReadTimeout);
     final SettableFuture<Final> retVal = SettableFuture.create();
 
+    // Pipeline can hand us chunks even after exceptionCaught is called. This has the potential to confuse
+    // HttpResponseHandler implementations, which expect exceptionCaught to be the final method called. So, we
+    // use this boolean to ensure that handlers do not see any chunks after exceptionCaught fires.
+    final AtomicBoolean didEncounterException = new AtomicBoolean();
+
     if (readTimeout > 0) {
       channel.pipeline().addLast(
           READ_TIMEOUT_HANDLER_NAME,
@@ -190,12 +198,17 @@ public class NettyHttpClient extends AbstractHttpClient
                 HttpObject httpObject = (HttpObject) msg;
                 final DecoderResult decoderResult = httpObject.decoderResult();
                 if (decoderResult.isFailure()) {
-                  sendError(decoderResult.cause());
+                  handleExceptionAndCloseChannel(decoderResult.cause(), false);
                   return;
                 }
               }
 
               if (msg instanceof HttpResponse) {
+                if (didEncounterException.get()) {
+                  // Don't process HttpResponse after encountering an exception.
+                  return;
+                }
+
                 HttpResponse httpResponse = (HttpResponse) msg;
                 if (log.isDebugEnabled()) {
                   log.debug("[%s] Got response: %s", requestDesc, httpResponse.status());
@@ -224,6 +237,11 @@ public class NettyHttpClient extends AbstractHttpClient
                 assert currentChunkNum == 0;
                 possiblyRead(response);
               } else if (msg instanceof HttpContent) {
+                if (didEncounterException.get()) {
+                  // Don't process HttpContent after encountering an exception.
+                  return;
+                }
+
                 HttpContent httpChunk = (HttpContent) msg;
                 if (log.isDebugEnabled()) {
                   log.debug(
@@ -303,56 +321,58 @@ public class NettyHttpClient extends AbstractHttpClient
           @Override
           public void exceptionCaught(ChannelHandlerContext context, Throwable cause)
           {
-            if (log.isDebugEnabled()) {
-              if (cause == null) {
-                log.debug("[%s] Caught exception", requestDesc);
-              } else {
-                log.debug(cause, "[%s] Caught exception", requestDesc);
-              }
-            }
-
-            sendError(cause);
-          }
-
-          private void sendError(Throwable cause)
-          {
-            // Ignore return value of setException, since exceptionCaught can be called multiple times and we
-            // only want to report the first one.
-            retVal.setException(cause);
-
-            // response is non-null if we received initial chunk and then exception occurs
-            if (response != null) {
-              handler.exceptionCaught(response, cause);
-            }
-            if (channel.isOpen()) {
-              channel.close().addListener(f -> {
-                if (!f.isSuccess()) {
-                  log.warn(f.cause(), "Error while closing channel");
-                }
-                if (channelResourceContainer.isPresent()) {
-                  // exceptionCaught can be called multiple times: we only want to return the channel if it hasn't
-                  // already been returned.
-                  channelResourceContainer.returnResource();
-                }
-              });
-            }
+            handleExceptionAndCloseChannel(cause, false);
           }
 
           @Override
           public void channelInactive(ChannelHandlerContext context)
           {
+            handleExceptionAndCloseChannel(new ChannelException("Channel disconnected"), true);
+          }
+
+          /**
+           * Handle an exception by logging it, possibly calling {@link SettableFuture#setException} on {@code retVal},
+           * possibly calling {@link HttpResponseHandler#exceptionCaught}, and possibly closing the channel.
+           *
+           * No actions will be taken (other than logging) if an exception has already been handled for this request.
+           *
+           * @param cause          exception
+           * @param closeIfNotOpen Call {@link Channel#close()} even if {@link Channel#isOpen()} returns false.
+           *                       Provided to retain existing behavior of two different chunks of code that were
+           *                       merged into this single method.
+           */
+          private void handleExceptionAndCloseChannel(final Throwable cause, final boolean closeIfNotOpen)
+          {
             if (log.isDebugEnabled()) {
-              log.debug("[%s] Channel disconnected", requestDesc);
+              log.debug(cause, "[%s] Caught exception", requestDesc);
             }
-            // response is non-null if we received initial chunk and then exception occurs
-            if (response != null && response.isContinueReading()) {
-              handler.exceptionCaught(response, new ChannelException("Channel disconnected"));
+
+            // Only process the first exception encountered.
+            if (!didEncounterException.compareAndSet(false, true)) {
+              return;
             }
-            channel.close()
-                   .addListener(f -> channelResourceContainer.returnResource());
+
             if (!retVal.isDone()) {
-              log.warn("[%s] Channel disconnected before response complete", requestDesc);
-              retVal.setException(new ChannelException("Channel disconnected"));
+              if (cause instanceof ReadTimeoutException) {
+                // ReadTimeoutException thrown by ReadTimeoutHandler is a singleton with a misleading stack trace.
+                // No point including it: instead, we replace it with a fresh exception.
+                retVal.setException(new ChannelException(StringUtils.format("[%s] Read timed out", requestDesc)));
+              } else {
+                retVal.setException(cause);
+              }
+            }
+
+            // response is non-null if we received initial chunk and then exception occurs
+            if (response != null) {
+              handler.exceptionCaught(response, cause);
+            }
+            if (closeIfNotOpen || channel.isOpen()) {
+              channel.close().addListener(f -> {
+                if (!f.isSuccess()) {
+                  log.warn(f.cause(), "[%s] Error while closing channel", requestDesc);
+                }
+                channelResourceContainer.returnResource();
+              });
             }
           }
 

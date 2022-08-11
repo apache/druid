@@ -245,18 +245,18 @@ public class SystemSchemaTest extends CalciteTestBase
         .add(segment2, index2)
         .add(segment3, index3);
 
-    druidSchema = new DruidSchema(
+    SegmentMetadataCache cache = new SegmentMetadataCache(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         new TestServerInventoryView(walker.getSegments(), realtimeSegments),
         new SegmentManager(EasyMock.createMock(SegmentLoader.class)),
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
-        null
+        new BrokerInternalQueryConfig()
     );
-    druidSchema.start();
-    druidSchema.awaitInitialization();
+    cache.start();
+    cache.awaitInitialization();
+    druidSchema = new DruidSchema(cache, null);
     metadataView = EasyMock.createMock(MetadataSegmentView.class);
     druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     serverInventoryView = EasyMock.createMock(FilteredServerInventoryView.class);
