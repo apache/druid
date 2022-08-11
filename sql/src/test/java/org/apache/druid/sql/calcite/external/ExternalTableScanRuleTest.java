@@ -44,7 +44,6 @@ public class ExternalTableScanRuleTest
   @Test
   public void testMatchesWhenExternalScanUnsupported() throws ValidationException
   {
-
     final PlannerContext plannerContext = PlannerContext.create(
         "DUMMY", // The actual query isn't important for this test
         CalciteTests.createOperatorTable(),
