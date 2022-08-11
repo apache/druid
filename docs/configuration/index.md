@@ -734,6 +734,12 @@ In current Druid, multiple data segments may be announced under the same Znode.
 |`druid.announcer.skipDimensionsAndMetrics`|Skip Dimensions and Metrics list from segment announcements. NOTE: Enabling this will also remove the dimensions and metrics list from Coordinator and Broker endpoints.|false|
 |`druid.announcer.skipLoadSpec`|Skip segment LoadSpec from segment announcements. NOTE: Enabling this will also remove the loadspec from Coordinator and Broker endpoints.|false|
 
+If you want to turn off batch data segment announcer, you can add a runtime.property to skip announcing semgents. **You do not want to enable this config if you have any services using `batch` for `druid.serverview.type`**
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.announcer.skipSegmentAnnouncementOnZk`|Skip announcing segments to zookeeper|false|
+
 ### JavaScript
 
 Druid supports dynamic runtime extension through JavaScript functions. This functionality can be configured through
