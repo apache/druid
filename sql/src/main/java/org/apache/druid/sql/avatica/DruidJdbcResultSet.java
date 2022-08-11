@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement;
 
 import java.io.Closeable;
@@ -194,6 +195,9 @@ public class DruidJdbcResultSet implements Closeable
     // Avoid unnecessary wrapping.
     if (t instanceof RuntimeException) {
       return (RuntimeException) t;
+    }
+    if (t instanceof ForbiddenException) {
+      return (ForbiddenException) t;
     }
     return new RuntimeException(t);
   }

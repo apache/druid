@@ -23,6 +23,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.PreparedStatement;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
@@ -68,14 +69,18 @@ public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
       );
       state = State.PREPARED;
     }
-    catch (RuntimeException e) {
-      sqlStatement.close();
-      state = State.CLOSED;
+    // Preserve the type of forbidden and runtime exceptions.
+    catch (ForbiddenException e) {
+      close();
       throw e;
     }
+    catch (RuntimeException e) {
+      close();
+      throw e;
+    }
+    // Wrap everything else
     catch (Throwable t) {
-      sqlStatement.close();
-      state = State.CLOSED;
+      close();
       throw new RuntimeException(t);
     }
   }
