@@ -588,7 +588,7 @@ An example of the result is
           "filter": "lineitem.tbl.5"
         },
         "inputFormat": {
-          "format": "tsv",
+          "type": "tsv",
           "delimiter": "|",
           "columns": [
             "l_orderkey",

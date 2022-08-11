@@ -52,7 +52,7 @@
         "filter": "wikiticker-2015-09-12-sampled.json.gz"
       },
       "inputFormat": {
-        "format": "json"
+        "type": "json"
       }
     },
     "tuningConfig": {

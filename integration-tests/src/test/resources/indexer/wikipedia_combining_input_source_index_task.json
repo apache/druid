@@ -82,7 +82,7 @@
         ]
       },
       "inputFormat": {
-        "format" : "json"
+        "type" : "json"
       }
     },
     "tuningConfig": {

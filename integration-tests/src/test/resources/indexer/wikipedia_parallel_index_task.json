@@ -57,7 +57,7 @@
                 "filter": "wikipedia_index_data*"
             },
             "inputFormat": {
-                "format" : "json"
+                "type" : "json"
             }
         },
         "tuningConfig": {

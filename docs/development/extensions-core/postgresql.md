@@ -139,7 +139,7 @@ The PostgreSQL extension provides an implementation of an [SQL input source](../
         ]
       },
       "inputFormat": {
-        "format": "json"
+        "type": "json"
       }
     },
     "tuningConfig": {

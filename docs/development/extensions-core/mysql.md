@@ -177,7 +177,7 @@ If using the MariaDB connector library, set `druid.metadata.mysql.driver.driverC
         ]
       },
       "inputFormat": {
-        "format": "json"
+        "type": "json"
       }
     },
     "tuningConfig": {
