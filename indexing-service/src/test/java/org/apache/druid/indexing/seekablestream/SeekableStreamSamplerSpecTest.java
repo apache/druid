@@ -71,53 +71,8 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final String STREAM = "sampling";
   private static final String SHARD_ID = "1";
-  private static final DataSchema DATA_SCHEMA = new DataSchema(
-      "test_ds",
-      OBJECT_MAPPER.convertValue(
-          new StringInputRowParser(
-              new JSONParseSpec(
-                  new TimestampSpec("timestamp", "iso", null),
-                  new DimensionsSpec(
-                      Arrays.asList(
-                          new StringDimensionSchema("dim1"),
-                          new StringDimensionSchema("dim1t"),
-                          new StringDimensionSchema("dim2"),
-                          new LongDimensionSchema("dimLong"),
-                          new FloatDimensionSchema("dimFloat")
-                      )
-                  ),
-                  new JSONPathSpec(true, ImmutableList.of()),
-                  ImmutableMap.of(),
-                  false
-              )
-          ),
-          Map.class
-      ),
-      new AggregatorFactory[]{
-          new DoubleSumAggregatorFactory("met1sum", "met1"),
-          new CountAggregatorFactory("rows")
-      },
-      new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-      null,
-      OBJECT_MAPPER
-  );
 
   private final SeekableStreamSupervisorSpec supervisorSpec = mock(SeekableStreamSupervisorSpec.class);
-  private final SeekableStreamSupervisorIOConfig supervisorIOConfig = new TestableSeekableStreamSupervisorIOConfig(
-      STREAM,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      true,
-      null,
-      null,
-      null,
-      null,
-      null
-  );
 
   static {
     NullHandling.initializeForTests();
@@ -148,10 +103,57 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
   }
 
   @Test(timeout = 10_000L)
-  public void testSample() throws Exception
+  public void testSampleWithInputRowParser() throws Exception
   {
+    final DataSchema dataSchema = new DataSchema(
+        "test_ds",
+        OBJECT_MAPPER.convertValue(
+            new StringInputRowParser(
+                new JSONParseSpec(
+                    new TimestampSpec("timestamp", "iso", null),
+                    new DimensionsSpec(
+                        Arrays.asList(
+                            new StringDimensionSchema("dim1"),
+                            new StringDimensionSchema("dim1t"),
+                            new StringDimensionSchema("dim2"),
+                            new LongDimensionSchema("dimLong"),
+                            new FloatDimensionSchema("dimFloat")
+                        )
+                    ),
+                    new JSONPathSpec(true, ImmutableList.of()),
+                    ImmutableMap.of(),
+                    false
+                )
+            ),
+            Map.class
+        ),
+        new AggregatorFactory[]{
+            new DoubleSumAggregatorFactory("met1sum", "met1"),
+            new CountAggregatorFactory("rows")
+        },
+        new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+        null,
+        OBJECT_MAPPER
+    );
+
+    final SeekableStreamSupervisorIOConfig supervisorIOConfig = new TestableSeekableStreamSupervisorIOConfig(
+        STREAM,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        true,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).once();
-    EasyMock.expect(supervisorSpec.getDataSchema()).andReturn(DATA_SCHEMA).once();
+    EasyMock.expect(supervisorSpec.getDataSchema()).andReturn(dataSchema).once();
     EasyMock.expect(supervisorSpec.getIoConfig()).andReturn(supervisorIOConfig).once();
     EasyMock.expect(supervisorSpec.getTuningConfig()).andReturn(null).once();
 
@@ -267,7 +269,7 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
         null,
         null,
         true,
-        "Unable to parse row [unparseable] into JSON"
+        "Unable to parse row [unparseable]"
     ), it.next());
 
     Assert.assertFalse(it.hasNext());
