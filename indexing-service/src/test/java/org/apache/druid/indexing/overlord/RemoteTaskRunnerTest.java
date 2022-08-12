@@ -817,10 +817,10 @@ public class RemoteTaskRunnerTest
     makeRemoteTaskRunner(rtrConfig);
 
     TestIndexTask task1 = new TestIndexTask(
-        "realtime1",
-        new TaskResource("realtime1", 1),
+        "test_index1",
+        new TaskResource("test_index1", 1),
         "foo",
-        TaskStatus.success("realtime1"),
+        TaskStatus.success("test_index1"),
         jsonMapper
     );
     Future<TaskStatus> taskFuture1 = remoteTaskRunner.run(task1);
@@ -835,10 +835,10 @@ public class RemoteTaskRunnerTest
     );
 
     TestIndexTask task2 = new TestIndexTask(
-        "realtime2",
-        new TaskResource("realtime2", 1),
+        "test_index2",
+        new TaskResource("test_index2", 1),
         "foo",
-        TaskStatus.running("realtime2"),
+        TaskStatus.running("test_index2"),
         jsonMapper
     );
     Future<TaskStatus> taskFuture2 = remoteTaskRunner.run(task2);
@@ -870,10 +870,10 @@ public class RemoteTaskRunnerTest
     );
 
     TestIndexTask task3 = new TestIndexTask(
-        "realtime3",
-        new TaskResource("realtime3", 1),
+        "test_index3",
+        new TaskResource("test_index3", 1),
         "foo",
-        TaskStatus.running("realtime3"),
+        TaskStatus.running("test_index3"),
         jsonMapper
     );
     Future<TaskStatus> taskFuture3 = remoteTaskRunner.run(task3);
@@ -1009,13 +1009,13 @@ public class RemoteTaskRunnerTest
     makeRemoteTaskRunner(rtrConfig);
 
     TestIndexTask task1 = new TestIndexTask(
-        "realtime1", new TaskResource("realtime1", 1), "foo", TaskStatus.success("realtime1"), jsonMapper
+        "test_index1", new TaskResource("test_index1", 1), "foo", TaskStatus.success("test_index1"), jsonMapper
     );
     TestIndexTask task2 = new TestIndexTask(
-        "realtime2", new TaskResource("realtime2", 1), "foo", TaskStatus.success("realtime2"), jsonMapper
+        "test_index2", new TaskResource("test_index2", 1), "foo", TaskStatus.success("test_index2"), jsonMapper
     );
     TestIndexTask task3 = new TestIndexTask(
-        "realtime3", new TaskResource("realtime3", 1), "foo", TaskStatus.success("realtime3"), jsonMapper
+        "test_index3", new TaskResource("test_index3", 1), "foo", TaskStatus.success("test_index3"), jsonMapper
     );
 
     Future<TaskStatus> taskFuture1 = remoteTaskRunner.run(task1);

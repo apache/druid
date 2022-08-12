@@ -78,6 +78,7 @@ import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 
+@Deprecated
 public class RealtimeIndexTask extends AbstractTask
 {
   public static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
