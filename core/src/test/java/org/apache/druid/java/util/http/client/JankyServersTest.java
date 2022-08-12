@@ -27,12 +27,15 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Duration;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 
 import javax.net.ssl.SSLContext;
@@ -148,7 +151,11 @@ public class JankyServersTest
           );
 
       final ExecutionException e = Assert.assertThrows(ExecutionException.class, future::get);
-      Assert.assertTrue("ReadTimeoutException thrown by 'get'", e.getCause() instanceof ReadTimeoutException);
+      MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(ChannelException.class));
+      MatcherAssert.assertThat(
+          e.getCause(),
+          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Read timed out"))
+      );
     }
     finally {
       lifecycle.stop();
@@ -170,7 +177,11 @@ public class JankyServersTest
           );
 
       final ExecutionException e = Assert.assertThrows(ExecutionException.class, future::get);
-      Assert.assertTrue("ReadTimeoutException thrown by 'get'", e.getCause() instanceof ReadTimeoutException);
+      MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(ChannelException.class));
+      MatcherAssert.assertThat(
+          e.getCause(),
+          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Read timed out"))
+      );
     }
     finally {
       lifecycle.stop();
