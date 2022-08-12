@@ -212,9 +212,9 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   @Override
   public boolean hasBuiltInFilters()
   {
-    // empty clause means that the join has been converted to a filter (captured in baseFilter). So, if the baseFilter
-    // non-null, then the adapter can potentially filter rows.
-    return (clauses.isEmpty() && baseFilter != null) || clauses.stream().anyMatch(
+    // if the baseFilter is not null, then rows from underlying storage adapter can be potentially filtered.
+    // otherwise, a filtering inner join can also filter rows.
+    return baseFilter != null || clauses.stream().anyMatch(
         clause -> clause.getJoinType() == JoinType.INNER && !clause.getCondition().isAlwaysTrue()
     );
   }
