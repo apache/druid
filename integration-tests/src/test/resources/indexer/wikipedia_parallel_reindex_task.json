@@ -50,7 +50,7 @@
         },
         "ioConfig": {
             "type": "index_parallel",
-            "inputsource": {
+            "inputSource": {
                 "type": "local",
                 "baseDir": "/resources/data/batch_index/json",
                 "filter": "wikipedia_index_data2*"
