@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,14 +45,14 @@ public class S3OutputSerdeTest
   @Test
   public void sanity() throws IOException
   {
-    String json = ("{\n"
-                   + "  \"bucket\": \"TEST\",\n"
-                   + "  \"prefix\": \"abc\",\n"
-                   + "  \"tempDir\": \"/tmp\",\n"
-                   + "  \"chunkSize\":104857600,\n"
-                   + "  \"maxResultsSize\":209715200,\n"
-                   + "  \"maxRetry\": 2\n"
-                   + "}\n").replaceAll("\n", "").replaceAll(" ", "");
+    String json = jsonStringReadyForAssert("{\n"
+                                           + "  \"bucket\": \"TEST\",\n"
+                                           + "  \"prefix\": \"abc\",\n"
+                                           + "  \"tempDir\": \"/tmp\",\n"
+                                           + "  \"chunkSize\":104857600,\n"
+                                           + "  \"maxResultsSize\":209715200,\n"
+                                           + "  \"maxRetry\": 2\n"
+                                           + "}\n");
 
     S3OutputConfig s3OutputConfig = new S3OutputConfig(
         "TEST",
@@ -73,13 +74,13 @@ public class S3OutputSerdeTest
   @Test
   public void noPrefix() throws JsonProcessingException
   {
-    String json = ("{\n"
-                   + "  \"bucket\": \"TEST\",\n"
-                   + "  \"tempDir\": \"/tmp\",\n"
-                   + "  \"chunkSize\":104857600,\n"
-                   + "  \"maxResultsSize\":209715200,\n"
-                   + "  \"maxRetry\": 2\n"
-                   + "}\n").replaceAll("\n", "").replaceAll(" ", "");
+    String json = jsonStringReadyForAssert("{\n"
+                                           + "  \"bucket\": \"TEST\",\n"
+                                           + "  \"tempDir\": \"/tmp\",\n"
+                                           + "  \"chunkSize\":104857600,\n"
+                                           + "  \"maxResultsSize\":209715200,\n"
+                                           + "  \"maxRetry\": 2\n"
+                                           + "}\n");
     expectedException.expect(MismatchedInputException.class);
     expectedException.expectMessage("Missing required creator property 'prefix'");
     MAPPER.readValue(json, S3OutputConfig.class);
@@ -88,13 +89,13 @@ public class S3OutputSerdeTest
   @Test
   public void noBucket() throws JsonProcessingException
   {
-    String json = ("{\n"
-                   + "  \"prefix\": \"abc\",\n"
-                   + "  \"tempDir\": \"/tmp\",\n"
-                   + "  \"chunkSize\":104857600,\n"
-                   + "  \"maxResultsSize\":209715200,\n"
-                   + "  \"maxRetry\": 2\n"
-                   + "}\n").replaceAll("\n", "").replaceAll(" ", "");
+    String json = jsonStringReadyForAssert("{\n"
+                                           + "  \"prefix\": \"abc\",\n"
+                                           + "  \"tempDir\": \"/tmp\",\n"
+                                           + "  \"chunkSize\":104857600,\n"
+                                           + "  \"maxResultsSize\":209715200,\n"
+                                           + "  \"maxRetry\": 2\n"
+                                           + "}\n");
     expectedException.expect(MismatchedInputException.class);
     expectedException.expectMessage("Missing required creator property 'bucket'");
     MAPPER.readValue(json, S3OutputConfig.class);
@@ -103,13 +104,13 @@ public class S3OutputSerdeTest
   @Test
   public void noTempDir() throws JsonProcessingException
   {
-    String json = ("{\n"
-                   + "  \"prefix\": \"abc\",\n"
-                   + "  \"bucket\": \"TEST\",\n"
-                   + "  \"chunkSize\":104857600,\n"
-                   + "  \"maxResultsSize\":209715200,\n"
-                   + "  \"maxRetry\": 2\n"
-                   + "}\n").replaceAll("\n", "").replaceAll(" ", "");
+    String json = jsonStringReadyForAssert("{\n"
+                                           + "  \"prefix\": \"abc\",\n"
+                                           + "  \"bucket\": \"TEST\",\n"
+                                           + "  \"chunkSize\":104857600,\n"
+                                           + "  \"maxResultsSize\":209715200,\n"
+                                           + "  \"maxRetry\": 2\n"
+                                           + "}\n");
     expectedException.expect(MismatchedInputException.class);
     expectedException.expectMessage("Missing required creator property 'tempDir'");
     MAPPER.readValue(json, S3OutputConfig.class);
@@ -118,11 +119,11 @@ public class S3OutputSerdeTest
   @Test
   public void leastArguments() throws JsonProcessingException
   {
-    String json = ("{\n"
-                   + "  \"tempDir\": \"/tmp\",\n"
-                   + "  \"prefix\": \"abc\",\n"
-                   + "  \"bucket\": \"TEST\"\n"
-                   + "}\n").replaceAll("\n", "").replaceAll(" ", "");
+    String json = jsonStringReadyForAssert("{\n"
+                                           + "  \"tempDir\": \"/tmp\",\n"
+                                           + "  \"prefix\": \"abc\",\n"
+                                           + "  \"bucket\": \"TEST\"\n"
+                                           + "}\n");
 
     S3OutputConfig s3OutputConfig = new S3OutputConfig(
         "TEST",
@@ -140,18 +141,21 @@ public class S3OutputSerdeTest
   public void testChunkValidation() throws JsonProcessingException
   {
 
-    String json = ("{\n"
-                   + "  \"prefix\": \"abc\",\n"
-                   + "  \"bucket\": \"TEST\",\n"
-                   + "  \"tempDir\": \"/tmp\",\n"
-                   + "  \"chunkSize\":104,\n"
-                   + "  \"maxResultsSize\":209715200,\n"
-                   + "  \"maxRetry\": 2\n"
-                   + "}\n").replaceAll("\n", "").replaceAll(" ", "");
+    String json = jsonStringReadyForAssert("{\n"
+                                           + "  \"prefix\": \"abc\",\n"
+                                           + "  \"bucket\": \"TEST\",\n"
+                                           + "  \"tempDir\": \"/tmp\",\n"
+                                           + "  \"chunkSize\":104,\n"
+                                           + "  \"maxResultsSize\":209715200,\n"
+                                           + "  \"maxRetry\": 2\n"
+                                           + "}\n");
     expectedException.expect(ValueInstantiationException.class);
     expectedException.expectMessage("chunkSize[104] should be >=");
     MAPPER.readValue(json, S3OutputConfig.class);
   }
 
-
+  private static String jsonStringReadyForAssert(String input)
+  {
+    return StringUtils.removeChar(StringUtils.removeChar(input, '\n'), ' ');
+  }
 }

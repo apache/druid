@@ -111,6 +111,11 @@ public class LocalFileStorageConnector implements StorageConnector
     FileUtils.deleteDirectory(fileWithBasePath(dirName));
   }
 
+  public File getBasePath()
+  {
+    return basePath;
+  }
+
   private File fileWithBasePath(String path)
   {
     return new File(basePath, path);

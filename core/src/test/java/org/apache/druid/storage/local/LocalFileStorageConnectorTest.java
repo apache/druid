@@ -19,10 +19,14 @@
 
 package org.apache.druid.storage.local;
 
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorProvider;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -34,13 +38,18 @@ import java.util.UUID;
 public class LocalFileStorageConnectorTest
 {
   @Rule
-  TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private File tempDir;
-  private StorageConnector storageConnector = new LocalFileStorageConnectorProvider(tempDir).get();
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  public LocalFileStorageConnectorTest() throws IOException
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+  private File tempDir;
+  private StorageConnector storageConnector;
+
+  @Before
+  public void init() throws IOException
   {
     tempDir = temporaryFolder.newFolder();
+    storageConnector = new LocalFileStorageConnectorProvider(tempDir).get();
   }
 
   @Test
@@ -89,6 +98,15 @@ public class LocalFileStorageConnectorTest
     Assert.assertFalse(baseFile.exists());
     Assert.assertTrue(new File(tempDir.getAbsolutePath(), topLevelDir).exists());
 
+  }
+
+  @Test
+  public void incorrectBasePath() throws IOException
+  {
+    File file = temporaryFolder.newFile();
+    expectedException.expect(IAE.class);
+    StorageConnectorProvider storageConnectorProvider = new LocalFileStorageConnectorProvider(file);
+    storageConnectorProvider.get();
   }
 
   private void checkContents(String uuid) throws IOException
