@@ -30,7 +30,8 @@ public interface QueryMaker
 {
   /**
    * Executes a given Druid query, which is expected to correspond to the SQL query that this QueryMaker was originally
-   * created for. The returned arrays match the row type given by {@link SqlEngine#getResultType()}.
+   * created for. The returned arrays match the row type given by {@link SqlEngine#resultTypeForSelect} or
+   * {@link SqlEngine#resultTypeForInsert}, depending on the nature of the statement.
    */
   Sequence<Object[]> runQuery(DruidQuery druidQuery);
 }

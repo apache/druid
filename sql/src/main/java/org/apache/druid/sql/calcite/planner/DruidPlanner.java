@@ -261,7 +261,7 @@ public class DruidPlanner implements Closeable
    * {@link org.apache.druid.sql.calcite.view.DruidViewMacro} prepares
    * a view while having no information about the user of that view.
    */
-  public PrepareResult prepare() throws ValidationException
+  public PrepareResult prepare()
   {
     Preconditions.checkState(state == State.VALIDATED);
 

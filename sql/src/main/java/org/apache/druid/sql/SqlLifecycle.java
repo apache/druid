@@ -301,13 +301,8 @@ public class SqlLifecycle
       }
     }
     Preconditions.checkNotNull(plannerContext, "Cannot prepare, plannerContext is null");
-    try {
-      this.prepareResult = planner.prepare();
-      return prepareResult;
-    }
-    catch (ValidationException e) {
-      throw new SqlPlanningException(e);
-    }
+    this.prepareResult = planner.prepare();
+    return prepareResult;
   }
 
   /**

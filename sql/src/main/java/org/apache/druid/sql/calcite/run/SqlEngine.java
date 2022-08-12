@@ -78,6 +78,7 @@ public interface SqlEngine extends EngineFeatureInspector
    *
    * @throws ValidationException if this engine cannot build an executor for the provided query
    */
+  @SuppressWarnings("RedundantThrows")
   QueryMaker buildQueryMakerForInsert(
       String targetDataSource,
       RelRoot relRoot,

@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -43,7 +42,7 @@ import org.junit.Test;
 public class ExternalTableScanRuleTest
 {
   @Test
-  public void testMatchesWhenExternalScanUnsupported() throws ValidationException
+  public void testMatchesWhenExternalScanUnsupported()
   {
     final PlannerContext plannerContext = PlannerContext.create(
         "DUMMY", // The actual query isn't important for this test
