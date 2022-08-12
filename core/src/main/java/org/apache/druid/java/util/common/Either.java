@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
