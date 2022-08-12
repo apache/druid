@@ -32,6 +32,7 @@ import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -62,8 +63,10 @@ public class S3StorageConnectorTest
   public static final ListObjectsV2Result TEST_RESULT = EasyMock.createMock(ListObjectsV2Result.class);
 
 
-  private final StorageConnector storageConnector;
+  private StorageConnector storageConnector;
 
+  @Before
+  public void setup()
   {
     try {
       storageConnector = new S3StorageConnector(new S3OutputConfig(
