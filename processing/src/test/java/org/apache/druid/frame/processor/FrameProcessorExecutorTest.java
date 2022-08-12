@@ -195,16 +195,21 @@ public class FrameProcessorExecutorTest
       );
 
       MatcherAssert.assertThat(
-          e.getCause(),
+          e.getCause().getCause(),
           ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("failure!"))
       );
 
       final ReadableFrameChannel outReadableChannel = outChannel.readable();
       Assert.assertTrue(outReadableChannel.canRead());
 
-      Assert.assertThrows(
-          IllegalStateException.class,
+      final RuntimeException readException = Assert.assertThrows(
+          RuntimeException.class,
           outReadableChannel::read
+      );
+
+      MatcherAssert.assertThat(
+          readException.getCause(),
+          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("failure!"))
       );
 
       Assert.assertTrue(outReadableChannel.isFinished()); // Finished now that we read the error
