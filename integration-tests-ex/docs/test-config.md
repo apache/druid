@@ -22,9 +22,9 @@
 Tests typically need to understand how the cluster is structured.
 To create a test, you must supply at least three key components:
 
-* A `druid-cluster/docker-compose.yaml` file that launches the desired cluster.
-  (The folder name `druid-cluster` becomes the application name in Docker.)
-* A `src/test/resources/yaml/docker.yaml` file that describes the cluster
+* A `cluster/<category>/docker-compose.yaml` file that launches the desired cluster.
+  (The folder name `<category>` becomes the application name in Docker.)
+* A `src/test/resources/cluster/<category>/docker.yaml` file that describes the cluster
   for tests. This file can also include Metastore SQL statements needed to
   populate the metastore.
 * The test itself, as a JUnit test that uses the `Initializer` class to
@@ -155,7 +155,7 @@ Merging occurs as follows:
 * Properties: newer values replace values defined by earlier files.
 
 The files are assumed to be resources (on the class path) and require
-the full path name. Example: `/yaml/base.yaml`
+the full path name. Example: `/cluster/Commmon/base.yaml`
 
 ### `proxyHost`
 

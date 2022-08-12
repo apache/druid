@@ -24,12 +24,30 @@ test defines its own cluster
 depending on what is to be tested. Since a large amount of the definition is
 common, we use inheritance to simplify cluster definition.
 
+Tests are split into categories so that they can run in parallel. Some of
+these categories use the same cluster configuration. To further reduce
+redundancy, test categories can share cluster configurations.
+
 See also:
 
 * [Druid configuration](druid-config.md) which is done via Compose.
 * [Test configuration](test-config.md) which tells tests about the
   cluster configuration.
 * [Docker compose specification](https://github.com/compose-spec/compose-spec/blob/master/spec.md)
+
+## File Structure
+
+Docker Compose files live in the `druid-integration-test-cases` module (`test-cases` folder)
+in the `cluster` directory. There is a separate subdirectory for each cluster type
+(subset of test categories), plus a `Common` folder for shared files.
+
+## Shared Directory
+
+Each test has a "shared" directory that is mounted into each container to hold things
+like logs, security files, etc. The directory is known as `/shared` within the container,
+and resides in `target/<category>`. Even if two categories share a cluster configuration,
+they will have separate local versions of the shared directory. This is important to
+keep log files separate for each category.
 
 ## Base Configurations
 
@@ -40,16 +58,15 @@ provides [an inheritance feature](
 https://github.com/compose-spec/compose-spec/blob/master/spec.md#extends)
 that we use to define base configurations.
 
-* `compose/dependencies.yaml` defines external dependencis (MySQL, Kafka, ZK
+* `cluster/Common/dependencies.yaml` defines external dependencis (MySQL, Kafka, ZK
   etc.)
-* `compose/druid.yaml` defines typical settings for each Druid service.
+* `cluster/Common/druid.yaml` defines typical settings for each Druid service.
 
 Test-specific configurations extend and customize the above.
 
-
 ## Test-Specific Cluster
 
-Each test has a directory named `druid-cluster`. Docker Compose uses this name
+Each test has a directory named `cluster/<category>`. Docker Compose uses this name
 as the cluster name which appears in the Docker desktop UI. The folder contains
 the `docker-compose.yaml` file that defines the test cluster.
 
@@ -60,14 +77,13 @@ of the base services:
 services:
   zookeeper:
     extends:
-      file: ../../compose/dependencies.yaml
+      file: ../Common/dependencies.yaml
       service: zookeeper
 
   broker:
     extends:
-      file: ../../compose/druid.yaml
+      file: ../Common/compose/druid.yaml
       service: broker
-
 ...
 ```
 
@@ -76,13 +92,13 @@ services:
 If a test wants to run two of some service (say Coordinator), then it
 can use the "standard" definition for only one of them and must fill in
 the details (especially distinct port numbers) for the second.
-(See `high-avilability` for an example.)
+(See `HighAvilability` for an example.)
 
 By default, the container and internal host name is the same as the service
 name. Thus, a `broker` service resides in a `broker` container known as
 host `broker` on the Docker overlay network.
 The service name is also usually the log file name. Thus `broker` logs
-to `/target/shared/logs/broker.log`.
+to `/target/<category>/logs/broker.log`.
 
 An environment variable `DRUID_INSTANCE` adds a suffix to the service
 name and causes the log file to be `broker-one.log` if the instance

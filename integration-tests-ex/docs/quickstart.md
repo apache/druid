@@ -23,17 +23,13 @@ If you just need to know how to build, run and use the tests, this
 is the place. You can refer to the detailed material later as you
 add new tests or work to improve the tests.
 
-At present, two of the test groups are converted to the new format as
-a proof-of-concept. We'll expand this set later once finalize the
-framework.
-
 ## Run all Tests
 
 Run the new ITs with:
 
 ```bash
-mvn clean install -P dist,test-image,docker-tests,skip-static-checks \
-    -Ddruid.console.skip=true -Dmaven.javadoc.skip=true -DskipUTs=true
+mvn clean install -P dist,test-image,integration-tests-ex,skip-static-checks \
+    -Dmaven.javadoc.skip=true -DskipUTs=true
 ```
 
 This will build Druid, create the distribution tarball, build the
@@ -61,7 +57,25 @@ which you can build using your preferred Maven command line. For example:
 
 ```bash
 mvn clean install -P dist,skip-static-checks -Ddruid.console.skip=true \
-    -Dmaven.javadoc.skip=true -DskipTests -T1.0C
+    -Dmaven.javadoc.skip=true -P skip-tests -T1.0C
+```
+
+Hint: put this into a script somewhere, such as a `~/bin` directory and
+add that to your `PATH`. A good name is `bdru` (Build DRUid).
+Here is the full script:
+
+```bash
+#! /bin/bash
+
+mvn clean package -P dist,skip-static-checks,skip-tests \
+    -Dmaven.javadoc.skip=true -T1.0C $*
+```
+
+Now you can run the any Druid build with the above script. To resume a
+build:
+
+```bash
+> bdru -rf :foo
 ```
 
 ## Build the Docker Image
@@ -74,7 +88,7 @@ Assuming `DRUID_DEV` points to your Druid build directory,
 to build the image (only):
 
 ```bash
-cd $DRUID_DEV/docker-tests/it-image
+cd $DRUID_DEV/integration-tests-ex/it-image
 mvn -P test-image install
 ```
 
@@ -86,14 +100,14 @@ See [this page](docker.md) for more information.
 ## Start a Cluster
 
 The previous generation of tests were organized into TestNG groups. This
-iteration moves those groups into Maven modules. Each group has a distinct
+revision moves those groups into Maven modules. Each group has a distinct
 cluster configuration. (In fact, it is the cluster configuration which defines
 the group: we combine all tests with the same configuration into the same module.)
 So, to start a cluster, you have to pick a group to run. See
 [this list](maven.md#Modules) for the list of groups.
 
 ```bash
-cd $DRUID_DEV/docker-tests/<group>
+cd $DRUID_DEV/integration-tests-ex/<group>
 ./cluster.sh up
 ```
 
@@ -112,8 +126,8 @@ You can run a test group from the command line any number of times against
 a test cluster.
 
 ```bash
-cd $DRUID_DEV
-mvn install -P docker-tests
+cd $DRUID_DEV/integration-tests-ex/<group>
+mvn verify -P integration-tests-ex
 ```
 
 If the test fails, find the Druid logs in `target/shared/logs` within the
@@ -134,7 +148,7 @@ just run them directly.
 Once you are done with your cluster, you can stop it as follows:
 
 ```bash
-cd $DRUID_DEV/docker-tests/<group>
+cd $DRUID_DEV/integration-tests-ex/<group>
 ./cluster.sh down
 ```
 
@@ -147,5 +161,5 @@ cd $DRUID_DEV
 mvn clean -P test-image
 ```
 
-It us usally fine to skip this step: the next image build will replace
+It is usually fine to skip this step: the next image build will replace
 the current one anyway.

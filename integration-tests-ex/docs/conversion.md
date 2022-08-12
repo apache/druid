@@ -22,19 +22,25 @@
 Here is the process to convert an existing `integration-test`
 group to this new structure.
 
-## Sub-Project
-
-Create a sub-module here that corresponds to a test group in the
-previous version. Handle the fiddly bits of creating the `pom.xml`
-file and adding the new module to the `docker-tests/pom.xml` file.
-
-Copy the execution plugin bit from another test. (Perhaps this can
-be put in the `docker-tests/pom.xml` file and referenced in each
-test group?
+The tests all go into the `druid-integration-test-cases` module
+(sub-directory `test-cases`). Move the tests into the existing
+`testsEx` name space so they do not collide with the existing
+integration test namespace.
 
 ## Cluster Definition
 
-Create a `druid-cluster/docker-compose.yaml` file by converting the
+Define a category for your tests. See [tests](tests.md) for the
+details. The category is the name of the cluster definition by
+default.
+
+Determine if you can use an existing cluster definition, or if you
+need to define a new one. See [tests](tests.md) for how to share a
+cluster definition. If you share a definition, update `cluster.sh`
+to map from your category name to the shared cluster definition
+name.
+
+To create a new defnition,
+create a `druid-cluster/docker-compose.yaml` file by converting the
 previous `docker/docker-compose-<group>.yml` file. Carefully review
 each service. Use existing files as a guide.
 
@@ -43,9 +49,6 @@ conditionals to work out what is to be done. In this system, each
 test group stands alone: its Docker Compose file defines the cluster
 for that one test. There is some detangling of the existing conditionals
 to determine the setup used by each test group.
-
-Copy the `cluster.sh` script from an existing test. Add lines to copy
-any test-specific files into the `target/shared` folder.
 
 Create the `yaml/docker.yaml` resource in `/src/test/resources` to
 define your cluster for the Java tests.
@@ -63,6 +66,7 @@ ITs require a large amount of setup. All that code is encapsulated in the
 
 ```java
 @RunWith(DruidTestRunner.class)
+@Category(MyCategory.class)
 public class ITMyTest
 ```
 
@@ -71,7 +75,7 @@ It is helpful to know what the test runner does:
 * Loads the cluster configuration from the `docker.yaml` file, and
   resolves any includes.
 * Builds up the set of Guice modules needed for the test.
-* Create the Guice injector.
+* Creates the Guice injector.
 * Uses the injector to inject dependencies into your test class.
 * Starts the Druid lifecycle.
 * Waits for each Druid service defined in `docker.yaml` to become
@@ -79,32 +83,8 @@ It is helpful to know what the test runner does:
 * Runs your test methods.
 * Ends the Druid lifecycle.
 
-At present, the `DruidTestRunner` assumes which modules are needed based
-on the test converted thus far. The `Initializer` class does most of the
-work above via a `Builder`. It may be that some tests require custom setup.
-In that case, we'll work out a way to provide custom configuration via the
-`Builder`. For now, if you need this functionality, you can remove the
-`@RunsWith` annotation and do your own setup:
-
-```java
-public class ITMyTest
-{
-  @AfterClass
-  public static void shutdown()
-  {
-    Initializer.shutdown();
-  }
-
-  public ITMyTest()
-  {
-    Initializer
-        .builder()
-        .test(this)
-        // Custom config here
-        .validateCluster()
-        .build();
-  }
-```
+You can customize the configuration for non-standard cases. See
+[tests](tests.md) for details.
 
 ## Tests
 
@@ -112,9 +92,8 @@ Convert the individual tests.
 
 ### Basics
 
-Create a new `src/test/java` directory.
-Copy the existing tests for the target group into the new directory.
-For sanity, you may want to do one by one.
+Copy the existing tests for the target group into the
+`druid-it-cases`. For sanity, you may want to do one by one.
 
 When adding tests, leave the original tests in `integration-tests` for
 now. (Until we have the new system running in Travis.) Once Travis
@@ -123,19 +102,9 @@ runs, you can move, rather than copy, the tests.
 While we are copying, copy to the `org.apache.druid.testsEx` package to
 prevent name conficts with `org.apache.druid.tests`.
 
-### Maven Configuration
-
-Create a Maven `pom.xml` file for your tests. Start by adapting an existing
-file, such as the one for `it-high-availability`. Several things to note:
-
-* Add the Surefire plugin section to *exclude* the ITs. Without this, Surefire
-  will notice that your test names with "Test" and will try to run them as
-  regular unit tests, which won't end well.
-* Add the profile section which runs the ITs via Failsafe only if the given
-  profile is enabled. This profile is the equivalent of the test group in the
-  old ITs.
-
 ### Maven Dependencies
+
+You may need to add dependencies to `pom.xml`.
 
 The `docker-tests/pom.xml` file includes Maven dependencies for the most
 common Druid modules, which transitiviely include the third-party modules

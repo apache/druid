@@ -107,40 +107,17 @@ points to your Druid development area.
 If you need to rebuild Druid (because you fixed something), do:
 
 * Do a distribution build of Druid:
-
-```bash
-cd $DRUID_DEV
-mvn clean package -P dist,skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -T1.0C
-```
-
 * Build the test image.
 
-```bash
-cd $DRUID_DEV/docker/test-image
-mvn -P test-image install
-```
+See [quickstart](quickstart.md) for the commands.
 
 ### Start the Test Cluster
 
-* Pick a test "group" to use. Each is in a separate Maven project.
-
-```bash
-cd $DRUID_DEV/docker-tests/<test group>
-```
-
+* Pick a test "group" to use.
 * Start a test cluster configured for this test.
-
-```bash
-./cluster.sh up
-```
-
 * Run a test from the command line:
 
-```bash
-mvn install -P docker-tests \
-    -P skip-static-checks -Ddruid.console.skip=true \
-    -Dmaven.javadoc.skip=true -DskipUTs=true -rf :<test group>
-```
+Again, see [quickstart](quickstart.md) for the commands.
 
 ### Debug the Test
 
@@ -161,11 +138,7 @@ will wait as needed.
 
 ### Stop the Test Cluster
 
-When done, stop the cluster.
-
-```bash
-./cluster.sh down
-```
+When done, stop the cluster: [quickstart](quickstart.md) again for details.
 
 ## Typical Issues
 
@@ -178,7 +151,7 @@ can lead to trouble, however.
   directory: services can't survive that.
 * Metastore failure: The metastore container will recreate the DB on
   each restart. This will fail if your shared directory already contains
-  a DB. Do a `rm -r target/shared/db` before restarting the DB container.
+  a DB. Do a `rm -r target/<category>/db` before restarting the DB container.
 * Coordinator fails with DB errors. The Coordinator will create the Druid
   tables when it starts. This means the DB has to be created. If the DB
   is removed after the Coordinator starts (to fix the above issue, say)

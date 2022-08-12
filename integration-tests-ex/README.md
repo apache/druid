@@ -21,7 +21,55 @@
 
 This directory builds a Docker image for Druid, then uses that image, along
 with test configuration to run tests. This version greatly evolves the
-integration tests from the earlier form. See the last section for details.
+integration tests from the earlier form. See the [History](docs/history.md)
+section for details.
+
+## Shortcuts
+
+List of the most common commands once you're familiar with the framework.
+If you are new to the framework, see [Quickstart](docs/quickstart.md) for
+an explanation.
+
+### Build Druid
+
+```bash
+mvn clean package -P dist,skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -T1.0C
+```
+
+### Build the Test Image
+
+```bash
+cd $DRUID_DEV/integration-tests-ex/image
+mvn -P test-image install
+```
+
+### Run an IT from the Command Line
+
+```bash
+mvn install -P IT-<category> -pl :druid-it-cases
+```
+
+Where `<category>` is one of the test categories.
+
+Or
+
+```bash
+cd $DRUID_DEV/integration-tests-ex/it-cases
+mvn verify -P skip-static-checks,docker-tests,IT-<category> \
+    -Dmaven.javadoc.skip=true -DskipUTs=true
+```
+
+### Run an IT from the IDE
+
+Start the cluster:
+
+```bash
+cd $DRUID_DEV/integration-tests-ex/it-cases
+./cluster.sh <category> up
+```
+
+Where `<category>` is one of the test categories. Then launch the
+test as a JUnit test.
 
 ## Contents
 
@@ -35,6 +83,7 @@ integration tests from the earlier form. See the last section for details.
 * [Test configuration](docs/test-config.md)
 * [Test structure](docs/tests.md)
 * [Test runtime semantics](docs/runtime.md)
+* [Scripts](docs/scripts.md)
 * [Dependencies](docs/dependencies.md)
 * [Debugging](docs/debugging.md)
 
@@ -42,7 +91,7 @@ Background information
 
 * [Next steps](docs/next-steps.md)
 * [Test conversion](docs/conversion.md) - How to convert existing tests.
-* [History](docs/history.md) - Comparison of prior integration tests.
+* [History](docs/history.md) - Comparison with prior integration tests.
 
 ## Goals
 
@@ -53,7 +102,7 @@ The goal of the present version is to simplify development.
   Maven and reside in the local build cache.)
 * Use official images for dependencies to avoid the need to
   download, install, and manage those dependencies.
-* Ensure that it is easy to manually build the image, launch
+* Make it is easy to manually build the image, launch
   a cluster, and run a test against the cluster.
 * Convert tests to JUnit so that they will easily run in your
   favorite IDE, just like other Druid tests.
@@ -76,13 +125,3 @@ feature is:
 * Create a normal unit test and run it to verify your code.
 * Create an integration test that double-checks the code in
   a live cluster.
-
-The result should also speed up Travis builds because a single
-Maven run can produce the Druid artifacts and run all integration tests.
-
-We can have the option to run the integration tests using different
-settings: one with the MariaDB connector, say, another with MySQL.
-Each of these might be a separate Travis run, since the tests run
-with different configurations (as given by a Maven profile). But,
-we won't have to run a separte Travis job for each integration test
-group.

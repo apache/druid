@@ -111,9 +111,10 @@ details.
 ## Shared Directory
 
 Druid configuration includes not just the config files, but also items
-on the Druid class path. Thse are provided via a `shared` directory mounted
+on the Druid class path. These are provided via a `shared` directory mounted
 into the container at `/shared`.
-The shared directory is built in the `target` folder for each test.
+The shared directory is built in the `target/<category>` folder for each test
+category.
 
 The `launch.sh` script fills in a number of implicit configuration items:
 
@@ -135,4 +136,3 @@ the prior integration tests enabled security for all tests.)
 
 * `auth.env` - Additional definitions to create a secure cluster. Also requires that
   the client certificates be created. Add this to tests which test security.
-

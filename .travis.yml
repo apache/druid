@@ -75,16 +75,16 @@ jobs:
 
     # Experimental run of the revised ITs. Done early to debug issues
     # Disabled for now. Integrating this into the build will come in a later PR.
-    #- name: "experimental docker tests"
-    #  stage: Tests - phase 1
+    - name: "experimental docker tests"
+      stage: Tests - phase 1
       # Uses the install defined above. Then, builds the test tools and docker image,
       # and run the various IT tests. If tests fail, echos log lines of any of
       # the Druid services that did not exit normally.
       # Run though install to ensure the test tools are installed, and the docker
       # image is built. The tests only need verify.
-    #  script: ${MVN} install -P dist,test-image,docker-tests -rf :distribution ${MAVEN_SKIP} -DskipUTs=true
-    #  after_failure:
-    #    - docker-tests/check-results.sh 
+      script: ${MVN} install -P dist,test-image,docker-tests,IT-HighAvailability -rf :distribution ${MAVEN_SKIP} -DskipUTs=true
+      #after_failure:
+      #  - docker-tests/check-results.sh 
       
     - name: "checkstyle"
       script: ${MVN} checkstyle:checkstyle --fail-at-end
@@ -360,7 +360,7 @@ jobs:
       <<: *test_processing_module
       name: "(openjdk8) other modules test"
       env:
-        - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!:it-tools,!:it-image,!:it-base,!:it-high-availability,!:it-batch-index'
+        - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases'
 
     - <<: *test_other_modules
       name: "(openjdk11) other modules test"

@@ -215,10 +215,7 @@
         <!-- Revised integration tests -->
         <module>integration-tests-ex/it-tools</module>
         <module>integration-tests-ex/it-image</module>
-        <module>integration-tests-ex/it-base</module>
-        <module>integration-tests-ex/it-high-availability</module>
-        <module>integration-tests-ex/it-batch-index</module>
-        <module>integration-tests-ex/it-input-format</module>
+        <module>integration-tests-ex/it-cases</module>
     </modules>
 
     <repositories>
@@ -1520,7 +1517,7 @@
               <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.0.0-M6</version>
+                    <version>3.0.0-M7</version>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set default options -->
