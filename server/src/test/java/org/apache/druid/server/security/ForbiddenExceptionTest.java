@@ -45,7 +45,7 @@ public class ForbiddenExceptionTest
     ForbiddenException forbiddenException = new ForbiddenException(ERROR_MESSAGE_ORIGINAL);
     ForbiddenException actual = forbiddenException.sanitize(trasformFunction);
     Assert.assertNotNull(actual);
-    Assert.assertEquals(actual.getMessage(), ForbiddenException.DEFAULT_ERROR_MESSAGE);
+    Assert.assertEquals(actual.getMessage(), Access.DEFAULT_ERROR_MESSAGE);
     Mockito.verify(trasformFunction).apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL));
     Mockito.verifyNoMoreInteractions(trasformFunction);
   }

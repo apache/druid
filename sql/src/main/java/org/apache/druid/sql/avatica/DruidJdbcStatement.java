@@ -22,7 +22,6 @@ package org.apache.druid.sql.avatica;
 import com.google.common.base.Preconditions;
 import org.apache.calcite.avatica.Meta;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -57,12 +56,6 @@ public class DruidJdbcStatement extends AbstractDruidJdbcStatement
     resultSet = new DruidJdbcResultSet(this, stmt, Long.MAX_VALUE);
     try {
       resultSet.execute();
-    }
-    catch (ForbiddenException e) {
-      // Don't log security exceptions.
-      stmt.closeQuietly();
-      resultSet = null;
-      throw e;
     }
     catch (Throwable t) {
       closeResultSet();

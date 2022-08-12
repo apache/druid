@@ -29,11 +29,14 @@ import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import org.apache.calcite.avatica.AvaticaSeverity;
 import org.apache.calcite.avatica.MetaImpl;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchConnectionException;
 import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.calcite.avatica.QueryState;
+import org.apache.calcite.avatica.remote.AvaticaRuntimeException;
+import org.apache.calcite.avatica.remote.Service.ErrorResponse;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -169,7 +172,7 @@ public class DruidMeta extends MetaImpl
     catch (Throwable t) {
       // we want to avoid sanitizing Avatica specific exceptions as the Avatica code can rely on them to handle issues
       // differently
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -187,7 +190,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -203,7 +206,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -223,7 +226,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -259,7 +262,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -306,7 +309,9 @@ public class DruidMeta extends MetaImpl
       final DruidJdbcStatement druidStatement = getDruidStatement(statement, DruidJdbcStatement.class);
       final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
       AuthenticationResult authenticationResult = doAuthenticate(druidConnection);
-      SqlQueryPlus sqlRequest = new SqlQueryPlus(sql, null, null, authenticationResult);
+      SqlQueryPlus sqlRequest = SqlQueryPlus.builder(sql)
+          .auth(authenticationResult)
+          .build();
       druidStatement.execute(sqlRequest, maxRowCount);
       ExecuteResult result = doFetch(druidStatement, maxRowsInFirstFrame);
       LOG.debug("Successfully prepared statement [%s] and started execution", druidStatement.getStatementId());
@@ -317,8 +322,30 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
+  }
+
+  /**
+   * Convert a Druid exception to an Avatica exception. Avatica can pass
+   * along things like an error code and SQL state. There are defined
+   * values for security failures, so map to those.
+   */
+  private RuntimeException mapException(Throwable t)
+  {
+    // BasicSecurityAuthenticationException is not visible here.
+    String className = t.getClass().getSimpleName();
+    if (t instanceof ForbiddenException ||
+        "BasicSecurityAuthenticationException".equals(className)) {
+      throw new AvaticaRuntimeException(
+          t.getMessage(),
+          ErrorResponse.UNAUTHORIZED_ERROR_CODE,
+          ErrorResponse.UNAUTHORIZED_SQL_STATE,
+          AvaticaSeverity.ERROR);
+    }
+
+    // Let Avatica do its default mapping.
+    throw errorHandler.sanitize(t);
   }
 
   private ExecuteResult doFetch(AbstractDruidJdbcStatement druidStatement, int maxRows)
@@ -378,7 +405,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -415,7 +442,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -446,7 +473,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -474,7 +501,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -513,7 +540,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -550,7 +577,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -609,7 +636,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -679,7 +706,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -700,7 +727,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 

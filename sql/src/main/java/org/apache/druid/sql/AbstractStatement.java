@@ -135,7 +135,7 @@ public abstract class AbstractStatement implements Closeable
     // here. The planner ensures that this step is done before planning.
     Access authorizationResult = planner.authorize(authorizer, authorizeContextParams);
     if (!authorizationResult.isAllowed()) {
-      throw new ForbiddenException(authorizationResult.toString());
+      throw new ForbiddenException(authorizationResult.toMessage());
     }
 
     // Capture the query resources twice. The first is used to validate the request

@@ -61,6 +61,8 @@ class ErrorHandler
     if (error instanceof ForbiddenException) {
       return (ForbiddenException) errorResponseTransformStrategy.transformIfNeeded((ForbiddenException) error);
     }
+    // Should map BasicSecurityAuthenticationException also, but the class is not
+    // visible here.
     if (error instanceof ISE) {
       return (ISE) errorResponseTransformStrategy.transformIfNeeded((ISE) error);
     }

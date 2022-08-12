@@ -652,15 +652,13 @@ public abstract class AbstractAuthConfigurationTest
   protected void testAvaticaQuery(Properties connectionProperties, String url)
   {
     LOG.info("URL: " + url);
-    try {
-      Connection connection = DriverManager.getConnection(url, connectionProperties);
-      Statement statement = connection.createStatement();
+    try (
+        Connection connection = DriverManager.getConnection(url, connectionProperties);
+        Statement statement = connection.createStatement()) {
       statement.setMaxRows(450);
       String query = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS";
       ResultSet resultSet = statement.executeQuery(query);
       Assert.assertTrue(resultSet.next());
-      statement.close();
-      connection.close();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -681,9 +679,9 @@ public abstract class AbstractAuthConfigurationTest
       throws Exception
   {
     LOG.info("URL: " + url);
-    try {
-      Connection connection = DriverManager.getConnection(url, connectionProperties);
-      Statement statement = connection.createStatement();
+    try (
+        Connection connection = DriverManager.getConnection(url, connectionProperties);
+        Statement statement = connection.createStatement()) {
       statement.setMaxRows(450);
       String query = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS";
       statement.executeQuery(query);

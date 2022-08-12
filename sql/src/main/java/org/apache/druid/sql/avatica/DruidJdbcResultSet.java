@@ -28,13 +28,13 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
-import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement;
 
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -117,6 +117,9 @@ public class DruidJdbcResultSet implements Closeable
           stmt.sqlRequest().sql()
       );
     }
+    catch (ExecutionException e) {
+      throw closeAndPropagateThrowable(e.getCause());
+    }
     catch (Throwable t) {
       throw closeAndPropagateThrowable(t);
     }
@@ -195,9 +198,6 @@ public class DruidJdbcResultSet implements Closeable
     // Avoid unnecessary wrapping.
     if (t instanceof RuntimeException) {
       return (RuntimeException) t;
-    }
-    if (t instanceof ForbiddenException) {
-      return (ForbiddenException) t;
     }
     return new RuntimeException(t);
   }

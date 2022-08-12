@@ -29,9 +29,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
@@ -42,9 +40,9 @@ import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.initialization.Initialization;
+import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -194,46 +192,39 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, CalciteTests.TEST_AUTHORIZER_MAPPER);
     testRequestLogger = new TestRequestLogger();
 
-    injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(),
-        ImmutableList.of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
-                binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-                binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
-                binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
-                binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
-                binder.bind(RequestLogger.class).toInstance(testRequestLogger);
-                binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
-                for (NamedSchema schema : rootSchema.getNamedSchemas().values()) {
-                  Multibinder.newSetBinder(binder, NamedSchema.class).addBinding().toInstance(schema);
-                }
-                binder.bind(QueryLifecycleFactory.class)
-                      .toInstance(CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate));
-                binder.bind(DruidOperatorTable.class).toInstance(operatorTable);
-                binder.bind(ExprMacroTable.class).toInstance(macroTable);
-                binder.bind(PlannerConfig.class).toInstance(plannerConfig);
-                binder.bind(String.class)
-                      .annotatedWith(DruidSchemaName.class)
-                      .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
-                binder.bind(AvaticaServerConfig.class).toInstance(AVATICA_CONFIG);
-                binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
-                binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
-                binder.bind(QueryScheduler.class)
-                      .toProvider(QuerySchedulerProvider.class)
-                      .in(LazySingleton.class);
-                binder.bind(QueryMakerFactory.class).to(NativeQueryMakerFactory.class);
-                binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
-                binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
-              }
+    injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build())
+        .addModule(binder -> {
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+            binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
+            binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
+            binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
+            binder.bind(RequestLogger.class).toInstance(testRequestLogger);
+            binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
+            for (NamedSchema schema : rootSchema.getNamedSchemas().values()) {
+              Multibinder.newSetBinder(binder, NamedSchema.class).addBinding().toInstance(schema);
             }
-        )
-    );
+            binder.bind(QueryLifecycleFactory.class)
+                  .toInstance(CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate));
+            binder.bind(DruidOperatorTable.class).toInstance(operatorTable);
+            binder.bind(ExprMacroTable.class).toInstance(macroTable);
+            binder.bind(PlannerConfig.class).toInstance(plannerConfig);
+            binder.bind(String.class)
+                  .annotatedWith(DruidSchemaName.class)
+                  .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
+            binder.bind(AvaticaServerConfig.class).toInstance(AVATICA_CONFIG);
+            binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
+            binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
+            binder.bind(QueryScheduler.class)
+                  .toProvider(QuerySchedulerProvider.class)
+                  .in(LazySingleton.class);
+            binder.bind(QueryMakerFactory.class).to(NativeQueryMakerFactory.class);
+            binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
+            binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
+          }
+         )
+        .build();
 
     druidMeta = injector.getInstance(DruidMeta.class);
     final AbstractAvaticaHandler handler = this.getAvaticaHandler(druidMeta);
@@ -1519,6 +1510,28 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         Assert.assertArrayEquals(new Object[]{1.0f, 0.1f, 0.0f, 0.0f, 0.0f, 0.0f}, (Object[]) rows.get(0).get("arr4"));
       }
     }
+  }
+
+  /**
+   * Verify that a security exception is mapped to the correct Avatica SQL error codes.
+   */
+  @Test
+  public void testUnauthorizedTable()
+  {
+    final String query = "SELECT * FROM " + CalciteTests.FORBIDDEN_DATASOURCE;
+    final String expectedError = "Error 2 (00002) : Error while executing SQL \"" +
+            query + "\": Remote driver error: Unauthorized";
+    try (Statement statement = client.createStatement()) {
+      statement.executeQuery(query);
+    }
+    catch (SQLException e) {
+      Assert.assertEquals(
+          e.getMessage(),
+          expectedError
+      );
+      return;
+    }
+    Assert.fail("Test failed, did not get SQLException");
   }
 
   // Default implementation is for JSON to allow debugging of tests.
