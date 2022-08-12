@@ -57,6 +57,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
@@ -92,6 +93,7 @@ public class SqlLifecycle
 {
   private static final Logger log = new Logger(SqlLifecycle.class);
 
+  private final SqlEngine engine;
   private final PlannerFactory plannerFactory;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
@@ -126,6 +128,7 @@ public class SqlLifecycle
   private PlannerResult plannerResult;
 
   public SqlLifecycle(
+      SqlEngine engine,
       PlannerFactory plannerFactory,
       ServiceEmitter emitter,
       RequestLogger requestLogger,
@@ -136,6 +139,7 @@ public class SqlLifecycle
       long startNs
   )
   {
+    this.engine = engine;
     this.plannerFactory = plannerFactory;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
@@ -242,7 +246,7 @@ public class SqlLifecycle
   private void validate(AuthenticationResult authenticationResult)
   {
     try {
-      planner = plannerFactory.createPlanner(sql, queryContext);
+      planner = plannerFactory.createPlanner(engine, sql, queryContext);
       // set planner context for logs/metrics in case something explodes early
       plannerContext = planner.getPlannerContext();
       plannerContext.setAuthenticationResult(authenticationResult);

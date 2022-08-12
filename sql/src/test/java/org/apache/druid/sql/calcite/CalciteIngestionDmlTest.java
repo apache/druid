@@ -92,6 +92,11 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
   protected boolean didTest = false;
 
+  public CalciteIngestionDmlTest()
+  {
+    super(TestInsertSqlEngine.INSTANCE);
+  }
+
   @After
   @Override
   public void tearDown() throws Exception
@@ -276,7 +281,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           queryJsonMapper
       );
 
-      final SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+      final SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize(engine);
       sqlLifecycle.initialize(sql, new QueryContext(queryContext));
 
       final Throwable e = Assert.assertThrows(

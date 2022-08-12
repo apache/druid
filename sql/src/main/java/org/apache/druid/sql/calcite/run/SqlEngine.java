@@ -20,14 +20,40 @@
 package org.apache.druid.sql.calcite.run;
 
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 /**
- * Interface for creating {@link QueryMaker}, which in turn are used to execute Druid queries.
+ * Engine for running SQL queries.
  */
-public interface QueryMakerFactory
+public interface SqlEngine extends EngineFeatureInspector
 {
+  /**
+   * Whether a given query context parameter is an internal parameter used by the engine. Internal context
+   * parameters cannot be set by end users.
+   */
+  boolean isSystemContextParameter(String contextParameterName);
+
+  /**
+   * Returns the SQL row type that would be emitted by the {@link QueryMaker} from {@link #buildQueryMakerForSelect}.
+   * Called for SELECT. Not called for EXPLAIN, which is handled by the planner itself.
+   *
+   * @param typeFactory      type factory
+   * @param validatedRowType row type from Calcite's validator
+   */
+  RelDataType resultTypeForSelect(RelDataTypeFactory typeFactory, RelDataType validatedRowType);
+
+  /**
+   * Returns the SQL row type that would be emitted by the {@link QueryMaker} from {@link #buildQueryMakerForInsert}.
+   * Called for INSERT and REPLACE. Not called for EXPLAIN, which is handled by the planner itself.
+   *
+   * @param typeFactory      type factory
+   * @param validatedRowType row type from Calcite's validator
+   */
+  RelDataType resultTypeForInsert(RelDataTypeFactory typeFactory, RelDataType validatedRowType);
+
   /**
    * Create a {@link QueryMaker} for a SELECT query.
    *
@@ -36,10 +62,10 @@ public interface QueryMakerFactory
    *
    * @return an executor for the provided query
    *
-   * @throws ValidationException if this factory cannot build an executor for the provided query
+   * @throws ValidationException if this engine cannot build an executor for the provided query
    */
   @SuppressWarnings("RedundantThrows")
-  QueryMaker buildForSelect(RelRoot relRoot, PlannerContext plannerContext) throws ValidationException;
+  QueryMaker buildQueryMakerForSelect(RelRoot relRoot, PlannerContext plannerContext) throws ValidationException;
 
   /**
    * Create a {@link QueryMaker} for an INSERT ... SELECT query.
@@ -50,9 +76,9 @@ public interface QueryMakerFactory
    *
    * @return an executor for the provided query
    *
-   * @throws ValidationException if this factory cannot build an executor for the provided query
+   * @throws ValidationException if this engine cannot build an executor for the provided query
    */
-  QueryMaker buildForInsert(
+  QueryMaker buildQueryMakerForInsert(
       String targetDataSource,
       RelRoot relRoot,
       PlannerContext plannerContext

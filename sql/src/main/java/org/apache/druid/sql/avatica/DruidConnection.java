@@ -31,6 +31,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -95,7 +96,7 @@ public class DruidConnection
     return queryContext;
   }
 
-  public DruidJdbcStatement createStatement(SqlLifecycleFactory sqlLifecycleFactory)
+  public DruidJdbcStatement createStatement(SqlEngine engine, SqlLifecycleFactory sqlLifecycleFactory)
   {
     final int statementId = statementCounter.incrementAndGet();
 
@@ -114,6 +115,7 @@ public class DruidConnection
       final DruidJdbcStatement statement = new DruidJdbcStatement(
           this,
           statementId,
+          engine,
           sqlLifecycleFactory
       );
 
@@ -124,6 +126,7 @@ public class DruidConnection
   }
 
   public DruidJdbcPreparedStatement createPreparedStatement(
+      SqlEngine engine,
       SqlLifecycleFactory sqlLifecycleFactory,
       SqlQueryPlus queryPlus,
       final long maxRowCount)
@@ -145,6 +148,7 @@ public class DruidConnection
           this,
           statementId,
           queryPlus,
+          engine,
           sqlLifecycleFactory,
           maxRowCount
       );

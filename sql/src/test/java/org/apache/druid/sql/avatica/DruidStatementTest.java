@@ -41,6 +41,7 @@ import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -93,6 +94,7 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   private SpecificSegmentsQuerySegmentWalker walker;
+  private SqlEngine engine;
   private SqlLifecycleFactory sqlLifecycleFactory;
   private DruidConnection conn;
 
@@ -107,7 +109,6 @@ public class DruidStatementTest extends CalciteTestBase
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         operatorTable,
         macroTable,
         plannerConfig,
@@ -116,6 +117,7 @@ public class DruidStatementTest extends CalciteTestBase
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of())
     );
+    engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
     sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory);
     conn = new DruidConnection("dummy", 4, ImmutableMap.of(), ImmutableMap.of());
   }
@@ -141,6 +143,7 @@ public class DruidStatementTest extends CalciteTestBase
     return new DruidJdbcStatement(
         conn,
         0,
+        engine,
         sqlLifecycleFactory
     );
   }
@@ -523,6 +526,7 @@ public class DruidStatementTest extends CalciteTestBase
         conn,
         0,
         queryPlus,
+        engine,
         sqlLifecycleFactory,
         Long.MAX_VALUE
     );

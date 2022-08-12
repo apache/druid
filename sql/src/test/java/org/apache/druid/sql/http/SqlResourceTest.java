@@ -81,6 +81,8 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -144,6 +146,7 @@ public class SqlResourceTest extends CalciteTestBase
   private HttpServletRequest req;
   private ListeningExecutorService executorService;
   private SqlLifecycleManager lifecycleManager;
+  private NativeSqlEngine engine;
   private SqlLifecycleFactory sqlLifecycleFactory;
 
   private CountDownLatch lifecycleAddLatch;
@@ -239,7 +242,6 @@ public class SqlResourceTest extends CalciteTestBase
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         operatorTable,
         macroTable,
         plannerConfig,
@@ -263,6 +265,7 @@ public class SqlResourceTest extends CalciteTestBase
     final ServiceEmitter emitter = new NoopServiceEmitter();
     final AuthConfig authConfig = new AuthConfig();
     final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of());
+    engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
     sqlLifecycleFactory = new SqlLifecycleFactory(
         plannerFactory,
         emitter,
@@ -273,9 +276,10 @@ public class SqlResourceTest extends CalciteTestBase
     )
     {
       @Override
-      public SqlLifecycle factorize()
+      public SqlLifecycle factorize(final SqlEngine engine)
       {
         return new TestSqlLifecycle(
+            engine,
             plannerFactory,
             emitter,
             testRequestLogger,
@@ -293,6 +297,7 @@ public class SqlResourceTest extends CalciteTestBase
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
+        engine,
         sqlLifecycleFactory,
         lifecycleManager,
         new ServerConfig()
@@ -688,7 +693,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testArrayResultFormatWithHeader_nullColumnType() throws Exception
   {
     // Test a query that returns null header for some of the columns
-    final String query = "SELECT (1, 2)";
+    final String query = "SELECT (1, 2) FROM INFORMATION_SCHEMA.COLUMNS LIMIT 1";
     Assert.assertEquals(
         ImmutableList.of(
             Collections.singletonList("EXPR$0"),
@@ -804,7 +809,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testArrayLinesResultFormatWithHeader_nullColumnType() throws Exception
   {
-    final String query = "SELECT (1, 2)";
+    final String query = "SELECT (1, 2) FROM INFORMATION_SCHEMA.COLUMNS LIMIT 1";
     final Pair<QueryException, String> pair = doPostRaw(
         new SqlQuery(query, ResultFormat.ARRAYLINES, true, true, true, null, null)
     );
@@ -1061,7 +1066,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testObjectLinesResultFormatWithFullHeader_nullColumnType() throws Exception
   {
-    final String query = "SELECT (1, 2)";
+    final String query = "SELECT (1, 2) FROM INFORMATION_SCHEMA.COLUMNS LIMIT 1";
     final Pair<QueryException, String> pair =
         doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, true, true, true, null, null));
     Assert.assertNull(pair.lhs);
@@ -1137,7 +1142,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testCsvResultFormatWithHeaders_nullColumnType() throws Exception
   {
-    final String query = "SELECT (1, 2)";
+    final String query = "SELECT (1, 2) FROM INFORMATION_SCHEMA.COLUMNS LIMIT 1";
     final Pair<QueryException, String> pair = doPostRaw(
         new SqlQuery(query, ResultFormat.CSV, true, true, true, null, null)
     );
@@ -1230,8 +1235,8 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(
         exception.getMessage()
-                 .contains("Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1. " +
-                     "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.")
+                 .contains("Cannot build plan for query. " +
+                           "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.")
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
@@ -1255,8 +1260,8 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(
         exception.getMessage()
-            .contains("Cannot build plan for query: SELECT max(dim1) FROM druid.foo. " +
-                "Possible error: Max aggregation is not supported for 'STRING' type")
+                 .contains("Cannot build plan for query. " +
+                           "Possible error: Max aggregation is not supported for 'STRING' type")
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
@@ -1342,6 +1347,7 @@ public class SqlResourceTest extends CalciteTestBase
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
+        engine,
         sqlLifecycleFactory,
         lifecycleManager,
         new ServerConfig()
@@ -1382,6 +1388,7 @@ public class SqlResourceTest extends CalciteTestBase
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
+        engine,
         sqlLifecycleFactory,
         lifecycleManager,
         new ServerConfig()
@@ -1475,7 +1482,12 @@ public class SqlResourceTest extends CalciteTestBase
   public void testQueryTimeoutException() throws Exception
   {
     final String sqlQueryId = "timeoutTest";
-    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1, BaseQuery.SQL_QUERY_ID, sqlQueryId);
+    Map<String, Object> queryContext = ImmutableMap.of(
+        QueryContexts.TIMEOUT_KEY,
+        1,
+        BaseQuery.SQL_QUERY_ID,
+        sqlQueryId
+    );
     final QueryException timeoutException = doPost(
         new SqlQuery(
             "SELECT CAST(__time AS DATE), dim1, dim2, dim3 FROM druid.foo GROUP by __time, dim1, dim2, dim3 ORDER BY dim2 DESC",
@@ -1610,7 +1622,12 @@ public class SqlResourceTest extends CalciteTestBase
   public void testQueryContextException() throws Exception
   {
     final String sqlQueryId = "badQueryContextTimeout";
-    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, "2000'", BaseQuery.SQL_QUERY_ID, sqlQueryId);
+    Map<String, Object> queryContext = ImmutableMap.of(
+        QueryContexts.TIMEOUT_KEY,
+        "2000'",
+        BaseQuery.SQL_QUERY_ID,
+        sqlQueryId
+    );
     final QueryException queryContextException = doPost(
         new SqlQuery(
             "SELECT 1337",
@@ -1796,6 +1813,7 @@ public class SqlResourceTest extends CalciteTestBase
     private final SettableSupplier<Function<Sequence<Object[]>, Sequence<Object[]>>> sequenceMapFnSupplier;
 
     private TestSqlLifecycle(
+        SqlEngine engine,
         PlannerFactory plannerFactory,
         ServiceEmitter emitter,
         RequestLogger requestLogger,
@@ -1809,7 +1827,17 @@ public class SqlResourceTest extends CalciteTestBase
         SettableSupplier<Function<Sequence<Object[]>, Sequence<Object[]>>> sequenceMapFnSupplier
     )
     {
-      super(plannerFactory, emitter, requestLogger, queryScheduler, authConfig, new DefaultQueryConfig(ImmutableMap.of()), startMs, startNs);
+      super(
+          engine,
+          plannerFactory,
+          emitter,
+          requestLogger,
+          queryScheduler,
+          authConfig,
+          new DefaultQueryConfig(ImmutableMap.of()),
+          startMs,
+          startNs
+      );
       this.validateAndAuthorizeLatchSupplier = validateAndAuthorizeLatchSupplier;
       this.planLatchSupplier = planLatchSupplier;
       this.executeLatchSupplier = executeLatchSupplier;

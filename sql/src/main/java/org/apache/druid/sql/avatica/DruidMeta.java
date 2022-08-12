@@ -47,11 +47,12 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -100,6 +101,7 @@ public class DruidMeta extends MetaImpl
       "user", "password"
   );
 
+  private final SqlEngine engine;
   private final SqlLifecycleFactory sqlLifecycleFactory;
   private final ScheduledExecutorService exec;
   private final AvaticaServerConfig config;
@@ -119,6 +121,7 @@ public class DruidMeta extends MetaImpl
 
   @Inject
   public DruidMeta(
+      final NativeSqlEngine engine,
       final SqlLifecycleFactory sqlLifecycleFactory,
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
@@ -126,6 +129,7 @@ public class DruidMeta extends MetaImpl
   )
   {
     super(null);
+    this.engine = engine;
     this.sqlLifecycleFactory = Preconditions.checkNotNull(sqlLifecycleFactory, "sqlLifecycleFactory");
     this.config = config;
     this.errorHandler = errorHandler;
@@ -211,7 +215,7 @@ public class DruidMeta extends MetaImpl
   public StatementHandle createStatement(final ConnectionHandle ch)
   {
     try {
-      final DruidJdbcStatement druidStatement = getDruidConnection(ch.id).createStatement(sqlLifecycleFactory);
+      final DruidJdbcStatement druidStatement = getDruidConnection(ch.id).createStatement(engine, sqlLifecycleFactory);
       return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
     }
     catch (NoSuchConnectionException e) {
@@ -243,6 +247,7 @@ public class DruidMeta extends MetaImpl
           doAuthenticate(druidConnection)
       );
       DruidJdbcPreparedStatement stmt = druidConnection.createPreparedStatement(
+          engine,
           sqlLifecycleFactory,
           sqlReq,
           maxRowCount);

@@ -26,6 +26,7 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.SqlQueryPlus;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 
 /**
  * Represents Druid's version of the JDBC {@code Statement} class:
@@ -34,23 +35,26 @@ import org.apache.druid.sql.SqlQueryPlus;
  */
 public class DruidJdbcStatement extends AbstractDruidJdbcStatement
 {
+  private final SqlEngine engine;
   private final SqlLifecycleFactory lifecycleFactory;
   protected boolean closed;
 
   public DruidJdbcStatement(
       final DruidConnection connection,
       final int statementId,
+      final SqlEngine engine,
       final SqlLifecycleFactory lifecycleFactory
   )
   {
     super(connection, statementId);
+    this.engine = engine;
     this.lifecycleFactory = Preconditions.checkNotNull(lifecycleFactory, "lifecycleFactory");
   }
 
   public synchronized void execute(SqlQueryPlus sqlRequest, long maxRowCount) throws RelConversionException
   {
     closeResultSet();
-    SqlLifecycle stmt = lifecycleFactory.factorize();
+    SqlLifecycle stmt = lifecycleFactory.factorize(engine);
     stmt.initialize(sqlRequest.sql(), connection.makeContext());
     try {
       stmt.validateAndAuthorize(sqlRequest.authResult());

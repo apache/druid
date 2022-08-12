@@ -12909,6 +12909,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinWithTimeDimension() throws Exception
   {
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
@@ -13889,15 +13891,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(new Object[]{"A", "10.1"})
-    );
-  }
-
-  @Test
-  public void testSurfaceErrorsWhenInsertingThroughIncorrectSelectStatment()
-  {
-    assertQueryIsUnplannable(
-        "INSERT INTO druid.dst SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo PARTITIONED BY ALL TIME",
-        "Possible error: SQL requires 'UNION' but only 'UNION ALL' is supported."
     );
   }
 

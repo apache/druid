@@ -54,7 +54,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
-
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
@@ -91,7 +90,7 @@ public class SqlLifecycleTest
   @Test
   public void testIgnoredQueryContextParametersAreIgnored()
   {
-    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
+    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize(null);
     final String sql = "select 1 + ?";
     final Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true");
     lifecycle.initialize(sql, new QueryContext(queryContext));
@@ -104,7 +103,7 @@ public class SqlLifecycleTest
   @Test
   public void testDefaultQueryContextIsApplied()
   {
-    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
+    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize(null);
     // lifecycle should not have a query context is there on it when created/factorized
     Assert.assertNull(lifecycle.getQueryContext());
     final String sql = "select 1 + ?";
@@ -127,7 +126,7 @@ public class SqlLifecycleTest
   public void testStateTransition()
       throws ValidationException, SqlParseException, RelConversionException, IOException
   {
-    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
+    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize(null);
     final String sql = "select 1 + ?";
     Assert.assertEquals(SqlLifecycle.State.NEW, lifecycle.getState());
 
@@ -142,7 +141,9 @@ public class SqlLifecycleTest
     // test authorization
     DruidPlanner mockPlanner = EasyMock.createMock(DruidPlanner.class);
     PlannerContext mockPlannerContext = EasyMock.createMock(PlannerContext.class);
-    EasyMock.expect(plannerFactory.createPlanner(EasyMock.eq(sql), EasyMock.anyObject())).andReturn(mockPlanner).once();
+    EasyMock.expect(plannerFactory.createPlanner(EasyMock.anyObject(), EasyMock.eq(sql), EasyMock.anyObject()))
+            .andReturn(mockPlanner)
+            .once();
     EasyMock.expect(mockPlanner.getPlannerContext()).andReturn(mockPlannerContext).once();
     mockPlannerContext.setAuthenticationResult(CalciteTests.REGULAR_USER_AUTH_RESULT);
     EasyMock.expectLastCall();
@@ -221,7 +222,7 @@ public class SqlLifecycleTest
   {
     // this test is a duplicate of testStateTransition except with a slight
     // variation of how validate and authorize is run
-    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
+    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize(null);
     final String sql = "select 1 + ?";
     Assert.assertEquals(SqlLifecycle.State.NEW, lifecycle.getState());
 
@@ -236,7 +237,9 @@ public class SqlLifecycleTest
     // test authorization
     DruidPlanner mockPlanner = EasyMock.createMock(DruidPlanner.class);
     PlannerContext mockPlannerContext = EasyMock.createMock(PlannerContext.class);
-    EasyMock.expect(plannerFactory.createPlanner(EasyMock.eq(sql), EasyMock.anyObject())).andReturn(mockPlanner).once();
+    EasyMock.expect(plannerFactory.createPlanner(EasyMock.anyObject(), EasyMock.eq(sql), EasyMock.anyObject()))
+            .andReturn(mockPlanner)
+            .once();
     EasyMock.expect(mockPlanner.getPlannerContext()).andReturn(mockPlannerContext).once();
     mockPlannerContext.setAuthenticationResult(CalciteTests.REGULAR_USER_AUTH_RESULT);
     EasyMock.expectLastCall();

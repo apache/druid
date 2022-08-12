@@ -28,6 +28,7 @@ import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 
 @LazySingleton
 public class SqlLifecycleFactory
@@ -57,9 +58,10 @@ public class SqlLifecycleFactory
     this.defaultQueryConfig = defaultQueryConfig.get();
   }
 
-  public SqlLifecycle factorize()
+  public SqlLifecycle factorize(final SqlEngine engine)
   {
     return new SqlLifecycle(
+        engine,
         plannerFactory,
         emitter,
         requestLogger,

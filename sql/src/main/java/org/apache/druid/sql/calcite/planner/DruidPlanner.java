@@ -37,15 +37,19 @@ import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
@@ -81,13 +85,14 @@ import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidUnionRel;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
-import org.apache.druid.sql.calcite.run.QueryMakerFactory;
+import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.utils.Throwables;
 import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -127,7 +132,7 @@ public class DruidPlanner implements Closeable
   private final FrameworkConfig frameworkConfig;
   private final CalcitePlanner planner;
   private final PlannerContext plannerContext;
-  private final QueryMakerFactory queryMakerFactory;
+  private final SqlEngine engine;
   private State state = State.START;
   private ParsedNodes parsed;
   private SqlNode validatedQueryNode;
@@ -139,13 +144,13 @@ public class DruidPlanner implements Closeable
   DruidPlanner(
       final FrameworkConfig frameworkConfig,
       final PlannerContext plannerContext,
-      final QueryMakerFactory queryMakerFactory
+      final SqlEngine engine
   )
   {
     this.frameworkConfig = frameworkConfig;
     this.planner = new CalcitePlanner(frameworkConfig);
     this.plannerContext = plannerContext;
-    this.queryMakerFactory = queryMakerFactory;
+    this.engine = engine;
   }
 
   private ParsedNodes parse() throws SqlParseException, ValidationException
@@ -165,8 +170,25 @@ public class DruidPlanner implements Closeable
   {
     Preconditions.checkState(state == State.START);
     resetPlanner();
+
+    // Validate SQL query context parameters.
+    for (String contextParameterName : plannerContext.getQueryContext().getMergedParams().keySet()) {
+      if (engine.isSystemContextParameter(contextParameterName)) {
+        throw new ValidationException(
+            StringUtils.format(
+                "Cannot execute query with context parameter [%s]",
+                contextParameterName
+            )
+        );
+      }
+    }
+
     SqlNode root = planner.parse(plannerContext.getSql());
     parsed = ParsedNodes.create(root, plannerContext.getTimeZone());
+
+    if (parsed.getInsertOrReplace() != null && !plannerContext.engineHasFeature(EngineFeature.CAN_INSERT)) {
+      throw new ValidationException("Cannot execute INSERT queries with the current SQL engine.");
+    }
 
     try {
       if (parsed.getIngestionGranularity() != null) {
@@ -252,12 +274,15 @@ public class DruidPlanner implements Closeable
 
     if (parsed.getExplainNode() != null) {
       returnedRowType = getExplainStructType(typeFactory);
+    } else if (parsed.isSelect()) {
+      returnedRowType = engine.resultTypeForSelect(typeFactory, rootQueryRel.validatedRowType);
     } else {
-      returnedRowType = buildQueryMaker(rootQueryRel, parsed.getInsertOrReplace()).getResultType();
+      assert parsed.insertOrReplace != null;
+      returnedRowType = engine.resultTypeForInsert(typeFactory, rootQueryRel.validatedRowType);
     }
 
     state = State.PREPARED;
-    return new PrepareResult(returnedRowType, parameterTypes);
+    return new PrepareResult(rootQueryRel.validatedRowType, returnedRowType, parameterTypes);
   }
 
   /**
@@ -265,6 +290,7 @@ public class DruidPlanner implements Closeable
    * step within the planner's state machine.
    *
    * @param authorizer a function from resource actions to a {@link Access} result.
+   *
    * @return the return value from the authorizer
    */
   public Access authorize(Function<Set<ResourceAction>, Access> authorizer, boolean authorizeContextParams)
@@ -319,31 +345,34 @@ public class DruidPlanner implements Closeable
       rootQueryRel = planner.rel(validatedQueryNode);
     }
 
+    final boolean hasBindableTables = hasBindableTables(rootQueryRel.rel);
+
     // the planner's type factory is not available until after parsing
     this.rexBuilder = new RexBuilder(planner.getTypeFactory());
     state = State.PLANNED;
 
     try {
-      return planWithDruidConvention(rootQueryRel, parsed.getExplainNode(), parsed.getInsertOrReplace());
+      if (hasBindableTables) {
+        // Consider BINDABLE convention if necessary. Used for metadata tables.
+        if (!parsed.isSelect()) {
+          throw new ValidationException("Cannot INSERT or REPLACE into metadata tables.");
+        } else if (!plannerContext.engineHasFeature(EngineFeature.ALLOW_BINDABLE_PLAN)) {
+          throw new ValidationException("Cannot query metadata tables with the current SQL engine.");
+        } else {
+          return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
+        }
+      } else {
+        // DRUID convention is used whenever there are no tables that require BINDABLE.
+        return planWithDruidConvention(rootQueryRel, parsed.getExplainNode(), parsed.getInsertOrReplace());
+      }
     }
     catch (Exception e) {
       Throwable cannotPlanException = Throwables.getCauseOfType(e, RelOptPlanner.CannotPlanException.class);
       if (null == cannotPlanException) {
-        // Not a CannotPlanException, rethrow without trying with bindable
+        // Not a CannotPlanException, rethrow without logging.
         throw e;
       }
 
-      // If there isn't any ingestion clause, then we should try again with BINDABLE convention. And return without
-      // any error, if it is plannable by the bindable convention
-      if (parsed.getInsertOrReplace() == null) {
-        // Try again with BINDABLE convention. Used for querying Values and metadata tables.
-        try {
-          return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
-        }
-        catch (Exception e2) {
-          e.addSuppressed(e2);
-        }
-      }
       Logger logger = log;
       if (!plannerContext.getQueryContext().isDebug()) {
         logger = log.noStackTrace();
@@ -422,8 +451,19 @@ public class DruidPlanner implements Closeable
     if (explain != null) {
       return planExplanation(druidRel, explain, true);
     } else {
-      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
+      // Compute row type.
+      final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
+      final RelDataType rowType;
 
+      if (parsed.isSelect()) {
+        rowType = engine.resultTypeForSelect(typeFactory, rootQueryRel.validatedRowType);
+      } else {
+        assert parsed.insertOrReplace != null;
+        rowType = engine.resultTypeForInsert(typeFactory, rootQueryRel.validatedRowType);
+      }
+
+      // Start the query.
+      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
         // sanity check
         final Set<ResourceAction> readResourceActions =
             plannerContext.getResourceActions()
@@ -442,7 +482,7 @@ public class DruidPlanner implements Closeable
         return druidRel.runQuery();
       };
 
-      return new PlannerResult(resultsSupplier, queryMaker.getResultType());
+      return new PlannerResult(resultsSupplier, rowType);
     }
   }
 
@@ -708,9 +748,9 @@ public class DruidPlanner implements Closeable
     if (insertOrReplace != null) {
       final String targetDataSource = validateAndGetDataSourceForIngest(insertOrReplace);
       validateColumnsForIngestion(rootQueryRel);
-      return queryMakerFactory.buildForInsert(targetDataSource, rootQueryRel, plannerContext);
+      return engine.buildQueryMakerForInsert(targetDataSource, rootQueryRel, plannerContext);
     } else {
-      return queryMakerFactory.buildForSelect(rootQueryRel, plannerContext);
+      return engine.buildQueryMakerForSelect(rootQueryRel, plannerContext);
     }
   }
 
@@ -790,13 +830,39 @@ public class DruidPlanner implements Closeable
       errorMessage = exception.getMessage();
     }
     if (null == errorMessage) {
-      errorMessage = "Please check broker logs for more details";
+      errorMessage = "Please check Broker logs for more details.";
     } else {
       // Re-phrase since planning errors are more like hints
       errorMessage = "Possible error: " + errorMessage;
     }
     // Finally, add the query itself to error message that user will get.
-    return StringUtils.format("Cannot build plan for query: %s. %s", plannerContext.getSql(), errorMessage);
+    return StringUtils.format("Cannot build plan for query. %s", errorMessage);
+  }
+
+  private static boolean hasBindableTables(final RelNode relNode)
+  {
+    class HasBindableVisitor extends RelVisitor
+    {
+      private boolean found;
+
+      @Override
+      public void visit(RelNode node, int ordinal, RelNode parent)
+      {
+        if (node instanceof TableScan) {
+          RelOptTable table = node.getTable();
+          if (table.unwrap(ScannableTable.class) != null && table.unwrap(DruidTable.class) == null) {
+            found = true;
+            return;
+          }
+        }
+
+        super.visit(node, ordinal, parent);
+      }
+    }
+
+    final HasBindableVisitor visitor = new HasBindableVisitor();
+    visitor.go(relNode);
+    return visitor.found;
   }
 
   private static class EnumeratorIterator<T> implements Iterator<T>
@@ -939,6 +1005,11 @@ public class DruidPlanner implements Closeable
     public SqlExplain getExplainNode()
     {
       return explain;
+    }
+
+    public boolean isSelect()
+    {
+      return insertOrReplace == null;
     }
 
     @Nullable

@@ -94,6 +94,8 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -120,6 +122,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -296,6 +299,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static Closer resourceCloser;
   public static int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
 
+  public final ObjectMapper queryJsonMapper;
+  @Nullable
+  public final SqlEngine engine0;
   final boolean useDefault = NullHandling.replaceWithDefault();
 
   @Rule
@@ -308,9 +314,20 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public boolean cannotVectorize = false;
   public boolean skipVectorize = false;
 
-  public ObjectMapper queryJsonMapper;
   public SpecificSegmentsQuerySegmentWalker walker = null;
+  public SqlEngine engine = null;
   public QueryLogHook queryLogHook;
+
+  public BaseCalciteQueryTest()
+  {
+    this(null);
+  }
+
+  public BaseCalciteQueryTest(@Nullable final SqlEngine engine)
+  {
+    this.queryJsonMapper = createQueryJsonMapper();
+    this.engine0 = engine;
+  }
 
   static {
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID);
@@ -507,7 +524,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Rule
   public QueryLogHook getQueryLogHook()
   {
-    queryJsonMapper = createQueryJsonMapper();
     return queryLogHook = QueryLogHook.create(queryJsonMapper);
   }
 
@@ -515,6 +531,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void setUp() throws Exception
   {
     walker = createQuerySegmentWalker();
+    engine = createEngine();
 
     // also register the static injected mapper, though across multiple test runs
     ObjectMapper mapper = CalciteTests.getJsonMapper();
@@ -527,6 +544,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     walker.close();
     walker = null;
+    engine = null;
   }
 
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
@@ -535,6 +553,18 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         conglomerate,
         temporaryFolder.newFolder()
     );
+  }
+
+  public SqlEngine createEngine() throws IOException
+  {
+    if (engine0 == null) {
+      return new NativeSqlEngine(
+          CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+          queryJsonMapper
+      );
+    } else {
+      return engine0;
+    }
   }
 
   public ObjectMapper createQueryJsonMapper()
@@ -570,15 +600,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         CalciteTests.INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class);
     mapper.setInjectableValues(new InjectableValues.Std(injectables)
                                    .addValue(ExprMacroTable.class.getName(), createMacroTable())
-                                                .addValue(ObjectMapper.class.getName(), mapper)
-                                                .addValue(
-                                                    DataSegment.PruneSpecsHolder.class,
-                                                    DataSegment.PruneSpecsHolder.DEFAULT
-                                                )
-                                                .addValue(
-                                                    LookupExtractorFactoryContainerProvider.class.getName(),
-                                                    lookupProvider
-                                                )
+                                   .addValue(ObjectMapper.class.getName(), mapper)
+                                   .addValue(
+                                       DataSegment.PruneSpecsHolder.class,
+                                       DataSegment.PruneSpecsHolder.DEFAULT
+                                   )
+                                   .addValue(
+                                       LookupExtractorFactoryContainerProvider.class.getName(),
+                                       lookupProvider
+                                   )
     );
   }
 
@@ -608,9 +638,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       log.error(e, "Expected CannotPlanException for query: %s", sql);
       Assert.fail(sql);
     }
-    Assert.assertEquals(sql,
-        StringUtils.format("Cannot build plan for query: %s. %s", sql, expectedError),
-        e.getMessage());
+    Assert.assertEquals(
+        sql,
+        StringUtils.format("Cannot build plan for query. %s", expectedError),
+        e.getMessage()
+    );
   }
 
   /**
@@ -765,11 +797,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final List<Object[]> expectedResults
   ) throws Exception
   {
-    log.info("SQL: %s", sql);
-    queryLogHook.clearRecordedQueries();
-    final Pair<RowSignature, List<Object[]>> plannerResults =
-        getResults(plannerConfig, queryContext, DEFAULT_PARAMETERS, sql, authenticationResult);
-    verifyResults(sql, expectedQueries, expectedResults, plannerResults);
+    testQuery(
+        plannerConfig,
+        queryContext,
+        Collections.emptyList(),
+        sql,
+        authenticationResult,
+        expectedQueries,
+        expectedResults,
+        null
+    );
   }
 
   public void testQuery(
@@ -817,6 +854,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     );
   }
 
+  /**
+   * All testQuery roads lead to this method.
+   */
   public void testQuery(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
@@ -861,7 +901,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         expectedExceptionInitializer.accept(expectedException);
       }
 
-      final Pair<RowSignature, List<Object[]>> plannerResults = getResults(plannerConfig, theQueryContext, parameters, sql, authenticationResult);
+      final Pair<RowSignature, List<Object[]>> plannerResults =
+          getResults(plannerConfig, theQueryContext, parameters, sql, authenticationResult);
       verifyResults(sql, theQueries, plannerResults, expectedResultsVerifier);
     }
   }
@@ -887,7 +928,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     );
   }
 
-  public Pair<RowSignature, List<Object[]>> getResults(
+  private Pair<RowSignature, List<Object[]>> getResults(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
       final List<SqlParameter> parameters,
@@ -907,7 +948,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         authorizerMapper,
         objectMapper
     );
-    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
+    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize(engine);
 
     Pair<RowSignature, Sequence<Object[]>> result = lifecycle.runSimple(
         sql,
@@ -1047,7 +1088,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         queryJsonMapper
     );
 
-    SqlLifecycle lifecycle = lifecycleFactory.factorize();
+    SqlLifecycle lifecycle = lifecycleFactory.factorize(engine);
     lifecycle.initialize(sql, new QueryContext(contexts));
     return lifecycle.runAnalyzeResources(authenticationResult);
   }
@@ -1073,10 +1114,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
-        new TestQueryMakerFactory(
-            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-            objectMapper
-        ),
         operatorTable,
         macroTable,
         plannerConfig,
@@ -1254,7 +1291,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   /**
-   * Reset the walker and conglomerate with required number of merge buffers. Default value is 2.
+   * Reset the conglomerate, walker, and engine with required number of merge buffers. Default value is 2.
    */
   protected void requireMergeBuffers(int numMergeBuffers) throws IOException
   {
@@ -1262,7 +1299,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         resourceCloser,
         QueryStackTests.getProcessingConfig(true, numMergeBuffers)
     );
-    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
+    walker = createQuerySegmentWalker();
+    engine = createEngine();
   }
 
   protected Map<String, Object> withTimestampResultContext(

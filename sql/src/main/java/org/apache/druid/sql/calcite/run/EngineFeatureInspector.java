@@ -19,14 +19,15 @@
 
 package org.apache.druid.sql.calcite.run;
 
+import org.apache.druid.sql.calcite.planner.PlannerContext;
+
 /**
- * Gives the SQL-to-Druid query translator information about what features are supporetd by the {@link QueryMaker}
- * that will execute the query.
+ * Inspector for {@link EngineFeature} supported by a {@link SqlEngine}.
  */
-public interface QueryFeatureInspector
+public interface EngineFeatureInspector
 {
   /**
-   * Returns whether a feature is present or not.
+   * Returns whether a feature applies to this engine or not.
    */
-  boolean feature(QueryFeature feature);
+  boolean feature(EngineFeature feature, PlannerContext plannerContext);
 }

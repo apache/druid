@@ -77,7 +77,7 @@ public abstract class AbstractDruidJdbcStatement implements Closeable
       params.add(createParameter(field, type));
     }
     return Meta.Signature.create(
-        createColumnMetaData(prepareResult.getRowType()),
+        createColumnMetaData(prepareResult.getReturnedRowType()),
         sql,
         params,
         Meta.CursorFactory.ARRAY,

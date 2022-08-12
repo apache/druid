@@ -28,6 +28,7 @@ import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 
 import java.util.List;
 
@@ -44,6 +45,7 @@ public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
 {
   private final SqlLifecycle sqlStatement;
   private final SqlQueryPlus queryPlus;
+  private final SqlEngine engine;
   private final SqlLifecycleFactory lifecycleFactory;
   private final long maxRowCount;
   private Meta.Signature signature;
@@ -53,15 +55,17 @@ public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
       final DruidConnection connection,
       final int statementId,
       final SqlQueryPlus queryPlus,
+      final SqlEngine engine,
       final SqlLifecycleFactory lifecycleFactory,
       final long maxRowCount
   )
   {
     super(connection, statementId);
+    this.engine = engine;
     this.lifecycleFactory = lifecycleFactory;
     this.queryPlus = queryPlus;
     this.maxRowCount = maxRowCount;
-    this.sqlStatement = lifecycleFactory.factorize();
+    this.sqlStatement = lifecycleFactory.factorize(engine);
     sqlStatement.initialize(queryPlus.sql(), connection.makeContext());
   }
 
@@ -78,7 +82,7 @@ public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
       state = State.PREPARED;
     }
     catch (ForbiddenException e) {
-      // Can't finalize statement in in this case. Call will fail with an
+      // Can't finalize statement in this case. Call will fail with an
       // assertion error.
       DruidMeta.logFailure(e);
       state = State.CLOSED;
@@ -106,7 +110,7 @@ public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
     ensure(State.PREPARED);
     closeResultSet();
     try {
-      SqlLifecycle directStmt = lifecycleFactory.factorize();
+      SqlLifecycle directStmt = lifecycleFactory.factorize(engine);
       directStmt.initialize(queryPlus.sql(), connection.makeContext());
       directStmt.setParameters(parameters);
       resultSet = new DruidJdbcResultSet(this, queryPlus, directStmt, maxRowCount);

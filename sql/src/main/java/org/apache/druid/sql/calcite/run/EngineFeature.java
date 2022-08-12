@@ -20,12 +20,18 @@
 package org.apache.druid.sql.calcite.run;
 
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 /**
- * Arguments to {@link QueryFeatureInspector#feature(QueryFeature)}.
+ * Arguments to {@link EngineFeatureInspector#feature(EngineFeature, PlannerContext)}.
  */
-public enum QueryFeature
+public enum EngineFeature
 {
+  /**
+   * Can execute INSERT and REPLACE statements.
+   */
+  CAN_INSERT,
+
   /**
    * Queries of type {@link org.apache.druid.query.timeseries.TimeseriesQuery} are usable.
    */
@@ -35,6 +41,11 @@ public enum QueryFeature
    * Queries of type {@link org.apache.druid.query.topn.TopNQuery} are usable.
    */
   CAN_RUN_TOPN,
+
+  /**
+   * Queries of type {@link org.apache.druid.query.timeboundary.TimeBoundaryQuery} are usable.
+   */
+  CAN_RUN_TIME_BOUNDARY,
 
   /**
    * Queries can use {@link ExternalDataSource}.
@@ -48,7 +59,14 @@ public enum QueryFeature
   SCAN_CAN_ORDER_BY_NON_TIME,
 
   /**
-   * Queries of type {@link org.apache.druid.query.timeboundary.TimeBoundaryQuery} are usable.
+   * Scan queries must have {@link org.apache.druid.sql.calcite.rel.DruidQuery#CTX_SCAN_SIGNATURE} set in their
+   * query contexts.
    */
-  CAN_RUN_TIME_BOUNDARY
+  SCAN_NEEDS_SIGNATURE,
+
+  /**
+   * Planner is permitted to use a {@link org.apache.calcite.runtime.Bindable} plan on local resources, instead
+   * of {@link QueryMaker}, for SELECT query implementation. Used for system tables and the like.
+   */
+  ALLOW_BINDABLE_PLAN
 }

@@ -49,6 +49,7 @@ import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.SqlRowTransformer;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -78,6 +79,7 @@ public class SqlResource
 
   private final ObjectMapper jsonMapper;
   private final AuthorizerMapper authorizerMapper;
+  private final NativeSqlEngine engine;
   private final SqlLifecycleFactory sqlLifecycleFactory;
   private final SqlLifecycleManager sqlLifecycleManager;
   private final ServerConfig serverConfig;
@@ -86,6 +88,7 @@ public class SqlResource
   public SqlResource(
       @Json ObjectMapper jsonMapper,
       AuthorizerMapper authorizerMapper,
+      NativeSqlEngine engine,
       SqlLifecycleFactory sqlLifecycleFactory,
       SqlLifecycleManager sqlLifecycleManager,
       ServerConfig serverConfig
@@ -93,6 +96,7 @@ public class SqlResource
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
+    this.engine = Preconditions.checkNotNull(engine, "engine");
     this.sqlLifecycleFactory = Preconditions.checkNotNull(sqlLifecycleFactory, "sqlLifecycleFactory");
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
     this.serverConfig = serverConfig;
@@ -106,8 +110,9 @@ public class SqlResource
       @Context final HttpServletRequest req
   ) throws IOException
   {
-    final SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
-    final String sqlQueryId = lifecycle.initialize(sqlQuery.getQuery(), new QueryContext(sqlQuery.getContext()));
+    final SqlLifecycle lifecycle = sqlLifecycleFactory.factorize(engine);
+    final String sqlQueryId =
+        lifecycle.initialize(sqlQuery.getQuery(), new QueryContext(sqlQuery.getContext()));
     final String remoteAddr = req.getRemoteAddr();
     final String currThreadName = Thread.currentThread().getName();
 
@@ -206,8 +211,10 @@ public class SqlResource
     }
     catch (RelOptPlanner.CannotPlanException e) {
       endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
-      SqlPlanningException spe = new SqlPlanningException(SqlPlanningException.PlanningError.UNSUPPORTED_SQL_ERROR,
-          e.getMessage());
+      SqlPlanningException spe = new SqlPlanningException(
+          SqlPlanningException.PlanningError.UNSUPPORTED_SQL_ERROR,
+          e.getMessage()
+      );
       return buildNonOkResponse(BadQueryException.STATUS_CODE, spe, sqlQueryId);
     }
     // calcite throws a java.lang.AssertionError which is type error not exception. using throwable will catch all

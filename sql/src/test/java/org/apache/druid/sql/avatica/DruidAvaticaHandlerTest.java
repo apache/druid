@@ -73,8 +73,8 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
-import org.apache.druid.sql.calcite.run.QueryMakerFactory;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
@@ -227,7 +227,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 binder.bind(QueryScheduler.class)
                       .toProvider(QuerySchedulerProvider.class)
                       .in(LazySingleton.class);
-                binder.bind(QueryMakerFactory.class).to(NativeQueryMakerFactory.class);
+                binder.bind(SqlEngine.class).to(NativeSqlEngine.class);
                 binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
                 binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
               }
@@ -936,10 +936,10 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
+        CalciteTests.createMockSqlEngine(walker, conglomerate),
         CalciteTests.createSqlLifecycleFactory(
           new PlannerFactory(
               rootSchema,
-              CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
               operatorTable,
               macroTable,
               plannerConfig,
@@ -1026,10 +1026,10 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
+        CalciteTests.createMockSqlEngine(walker, conglomerate),
         CalciteTests.createSqlLifecycleFactory(
             new PlannerFactory(
                 rootSchema,
-                CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
                 operatorTable,
                 macroTable,
                 plannerConfig,
