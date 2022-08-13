@@ -19,12 +19,15 @@
 
 package org.apache.druid.query.expression;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.math.expr.ExprMacroTable;
 
 public class TestExprMacroTable extends ExprMacroTable
 {
   public static final ExprMacroTable INSTANCE = new TestExprMacroTable();
+  private static final ObjectMapper DEFAULT_JSON_MAPPER = new DefaultObjectMapper();
 
   private TestExprMacroTable()
   {
@@ -56,8 +59,8 @@ public class TestExprMacroTable extends ExprMacroTable
             new NestedDataExpressions.JsonValueExprMacro(),
             new NestedDataExpressions.JsonQueryExprMacro(),
             new NestedDataExpressions.ToJsonExprMacro(),
-            new NestedDataExpressions.ToJsonStringExprMacro(),
-            new NestedDataExpressions.ParseJsonExprMacro()
+            new NestedDataExpressions.ToJsonStringExprMacro(DEFAULT_JSON_MAPPER),
+            new NestedDataExpressions.ParseJsonExprMacro(DEFAULT_JSON_MAPPER)
         )
     );
   }
