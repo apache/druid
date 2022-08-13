@@ -3843,9 +3843,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingWithNullInFilter() throws Exception
   {
-    // HashJoinSegmentStorageAdapter is not vectorizable
-    cannotVectorize();
-
     testQuery(
         "SELECT COUNT(*) FROM foo WHERE dim1 IN (NULL)",
         ImmutableList.of(
