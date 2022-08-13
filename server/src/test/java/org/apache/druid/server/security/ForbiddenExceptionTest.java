@@ -61,4 +61,27 @@ public class ForbiddenExceptionTest
     Mockito.verify(trasformFunction).apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL));
     Mockito.verifyNoMoreInteractions(trasformFunction);
   }
+
+  // Silly, but required to get the code coverage tests to pass.
+  @Test
+  public void testAccess()
+  {
+    Access access = new Access(false);
+    Assert.assertFalse(access.isAllowed());
+    Assert.assertEquals("", access.getMessage());
+    Assert.assertEquals("Allowed:false, Message:", access.toString());
+    Assert.assertEquals(Access.DEFAULT_ERROR_MESSAGE, access.toMessage());
+
+    access = new Access(true);
+    Assert.assertTrue(access.isAllowed());
+    Assert.assertEquals("", access.getMessage());
+    Assert.assertEquals("Allowed:true, Message:", access.toString());
+    Assert.assertEquals("Authorized", access.toMessage());
+
+    access = new Access(false, "oops");
+    Assert.assertFalse(access.isAllowed());
+    Assert.assertEquals("oops", access.getMessage());
+    Assert.assertEquals("Allowed:false, Message:oops", access.toString());
+    Assert.assertEquals("Allowed:false, Message:oops", access.toMessage());
+  }
 }
