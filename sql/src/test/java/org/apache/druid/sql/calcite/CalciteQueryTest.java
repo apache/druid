@@ -12947,8 +12947,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinWithTimeDimension() throws Exception
   {
-    cannotVectorize();
-
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
