@@ -40,7 +40,6 @@ import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
-import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -111,7 +110,6 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   @BeforeClass
   public static void setupClass()
   {
-    Calcites.setSystemProperties();
     ExpressionProcessing.initializeForStrictBooleansTests(true);
     CLOSER = Closer.create();
 
