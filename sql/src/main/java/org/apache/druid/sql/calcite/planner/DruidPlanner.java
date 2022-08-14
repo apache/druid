@@ -138,6 +138,7 @@ public class DruidPlanner implements Closeable
   private ParsedNodes parsed;
   private SqlNode validatedQueryNode;
   private boolean authorized;
+  private PrepareResult prepareResult;
   private Set<ResourceAction> resourceActions;
   private RelRoot rootQueryRel;
   private RexBuilder rexBuilder;
@@ -154,13 +155,6 @@ public class DruidPlanner implements Closeable
     this.engine = engine;
   }
 
-  private ParsedNodes parse() throws SqlParseException, ValidationException
-  {
-    resetPlanner();
-    SqlNode root = planner.parse(plannerContext.getSql());
-    return ParsedNodes.create(root, plannerContext.getTimeZone());
-  }
-
   /**
    * Validates a SQL query and populates {@link PlannerContext#getResourceActions()}.
    *
@@ -170,7 +164,6 @@ public class DruidPlanner implements Closeable
   public void validate() throws SqlParseException, ValidationException
   {
     Preconditions.checkState(state == State.START);
-    resetPlanner();
 
     // Validate query context.
     engine.validateContext(plannerContext.getQueryContext());
@@ -269,7 +262,13 @@ public class DruidPlanner implements Closeable
     Preconditions.checkState(state == State.VALIDATED);
 
     rootQueryRel = planner.rel(validatedQueryNode);
+    doPrepare();
+    state = State.PREPARED;
+    return prepareResult;
+  }
 
+  private void doPrepare()
+  {
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
     final SqlValidator validator = planner.getValidator();
     final RelDataType parameterTypes = validator.getParameterRowType(validatedQueryNode);
@@ -284,8 +283,7 @@ public class DruidPlanner implements Closeable
       returnedRowType = engine.resultTypeForInsert(typeFactory, rootQueryRel.validatedRowType);
     }
 
-    state = State.PREPARED;
-    return new PrepareResult(rootQueryRel.validatedRowType, returnedRowType, parameterTypes);
+    prepareResult = new PrepareResult(rootQueryRel.validatedRowType, returnedRowType, parameterTypes);
   }
 
   /**
@@ -314,32 +312,30 @@ public class DruidPlanner implements Closeable
    * an authenticated request must be authorized for to process the
    * query. The actions will be {@code null} if the
    * planner has not yet advanced to the validation step. This may occur if
-   * validation fails and the caller ({@code SqlLifecycle}) accesses the resource
+   * validation fails and the caller accesses the resource
    * actions as part of clean-up.
    */
   public Set<ResourceAction> resourceActions(boolean includeContext)
   {
-    Set<ResourceAction> actions;
     if (includeContext) {
-      actions = new HashSet<>(resourceActions);
+      Set<ResourceAction> actions = new HashSet<>(resourceActions);
       plannerContext.getQueryContext().getUserParams().keySet().forEach(contextParam -> actions.add(
           new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
       ));
+      return actions;
     } else {
-      actions = resourceActions;
+      return resourceActions;
     }
-    return actions;
   }
 
   /**
    * Plan an SQL query for execution, returning a {@link PlannerResult} which can be used to actually execute the query.
    *
    * Ideally, the query can be planned into a native Druid query, using {@link #planWithDruidConvention}, but will
-   * fall back to {@link #planWithBindableConvention} if this is not possible.
+   * fall-back to {@link #planWithBindableConvention} if this is not possible.
    *
    * Planning reuses the validation done in `validate()` which must be called first.
    */
-  @SuppressWarnings("RedundantThrows")
   public PlannerResult plan() throws ValidationException
   {
     Preconditions.checkState(state == State.VALIDATED || state == State.PREPARED);
@@ -404,31 +400,15 @@ public class DruidPlanner implements Closeable
     return plannerContext;
   }
 
+  public PrepareResult prepareResult()
+  {
+    return prepareResult;
+  }
+
   @Override
   public void close()
   {
     planner.close();
-  }
-
-  /**
-   * While the actual query might not have changed, if the druid planner is re-used, we still have the need to reset the
-   * {@link #planner} since we do not re-use artifacts or keep track of state between
-   * {@link #validate}, {@link #prepare}, and {@link #plan} and instead repeat parsing and validation
-   * for each step.
-   *
-   * Currently, that state tracking is done in {@link org.apache.druid.sql.SqlLifecycle}, which will create a new
-   * planner for each of the corresponding steps so this isn't strictly necessary at this time, this method is here as
-   * much to make this situation explicit and provide context for a future refactor as anything else (and some tests
-   * do re-use the planner between validate, prepare, and plan, which will run into this issue).
-   *
-   * This could be improved by tying {@link org.apache.druid.sql.SqlLifecycle} and {@link DruidPlanner} states more
-   * closely with the state of {@link #planner}, instead of repeating parsing and validation between each of these
-   * steps.
-   */
-  private void resetPlanner()
-  {
-    planner.close();
-    planner.reset();
   }
 
   /**
@@ -443,6 +423,9 @@ public class DruidPlanner implements Closeable
     final RelRoot possiblyLimitedRoot = possiblyWrapRootWithOuterLimitFromContext(root);
     final QueryMaker queryMaker = buildQueryMaker(possiblyLimitedRoot, insertOrReplace);
     plannerContext.setQueryMaker(queryMaker);
+    if (prepareResult == null) {
+      doPrepare();
+    }
 
     // Fall-back dynamic parameter substitution using {@link RelParameterizerShuttle}
     // in the event that {@link #rewriteDynamicParameters(SqlNode)} was unable to
@@ -519,6 +502,10 @@ public class DruidPlanner implements Closeable
       @Nullable final SqlExplain explain
   )
   {
+    if (prepareResult == null) {
+      doPrepare();
+    }
+
     BindableRel bindableRel = (BindableRel) planner.transform(
         CalciteRulesManager.BINDABLE_CONVENTION_RULES,
         planner.getEmptyTraitSet().replace(BindableConvention.INSTANCE).plus(root.collation),
@@ -569,10 +556,7 @@ public class DruidPlanner implements Closeable
                   @Override
                   public Object[] next()
                   {
-                    // Avoids an Intellij IteratorNextCanNotThrowNoSuchElementException
-                    // warning.
-                    Object[] temp = (Object[]) enumerator.current();
-                    return temp;
+                    return (Object[]) enumerator.current();
                   }
                 });
               }

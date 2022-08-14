@@ -52,6 +52,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -501,7 +502,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithClusteredByAndOrderBy() throws Exception
+  public void testInsertWithClusteredByAndOrderBy()
   {
     try {
       testQuery(
@@ -524,7 +525,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithPartitionedByContainingInvalidGranularity() throws Exception
+  public void testInsertWithPartitionedByContainingInvalidGranularity()
   {
     // Throws a ValidationException, which gets converted to a SqlPlanningException before throwing to end user
     try {
@@ -545,7 +546,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithOrderBy() throws Exception
+  public void testInsertWithOrderBy()
   {
     try {
       testQuery(
@@ -586,7 +587,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExplainInsertFromExternal() throws Exception
+  public void testExplainInsertFromExternal() throws IOException
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();

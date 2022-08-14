@@ -31,11 +31,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Captures the inputs to a SQL execution request: the statement,
- * the context, parameters, and the authorization result. Pass this
- * around rather than the quad of items. The request can evolve:
- * items can be filled in later as needed (except for the SQL
- * and auth result, which are required.)
+ * Captures the inputs to a SQL execution request: the statement,the context,
+ * parameters, and the authorization result. Pass this around rather than the
+ * quad of items. The request can evolve: the context and parameters can be
+ * filled in later as needed.
+ * <p>
+ * SQL requests come from a variety of sources in a variety of formats. Use
+ * the {@link Builder} class to create an instance from the information
+ * available at each point in the code.
  */
 public class SqlQueryPlus
 {
@@ -61,39 +64,19 @@ public class SqlQueryPlus
     this.authResult = Preconditions.checkNotNull(authResult);
   }
 
-  public SqlQueryPlus(final String sql, final AuthenticationResult authResult)
+  public static Builder builder()
   {
-    this(sql, (QueryContext) null, null, authResult);
+    return new Builder();
   }
 
-  public static SqlQueryPlus fromSqlParameters(
-      String sql,
-      Map<String, Object> queryContext,
-      List<SqlParameter> parameters,
-      AuthenticationResult authResult
-  )
+  public static Builder builder(String sql)
   {
-    return new SqlQueryPlus(
-        sql,
-        queryContext == null ? null : new QueryContext(queryContext),
-        parameters == null ? null : SqlQuery.getParameterList(parameters),
-        authResult
-     );
+    return new Builder().sql(sql);
   }
 
-  public static SqlQueryPlus from(
-      String sql,
-      Map<String, Object> queryContext,
-      List<TypedValue> parameters,
-      AuthenticationResult authResult
-  )
+  public static Builder builder(SqlQuery sqlQuery)
   {
-    return new SqlQueryPlus(
-        sql,
-        queryContext == null ? null : new QueryContext(queryContext),
-        parameters,
-        authResult
-    );
+    return new Builder().query(sqlQuery);
   }
 
   public String sql()
@@ -121,8 +104,75 @@ public class SqlQueryPlus
     return new SqlQueryPlus(sql, context, parameters, authResult);
   }
 
+  public SqlQueryPlus withContext(Map<String, Object> context)
+  {
+    return new SqlQueryPlus(sql, new QueryContext(context), parameters, authResult);
+  }
+
   public SqlQueryPlus withParameters(List<TypedValue> parameters)
   {
     return new SqlQueryPlus(sql, queryContext, parameters, authResult);
+  }
+
+  public static class Builder
+  {
+    private String sql;
+    private QueryContext queryContext;
+    private List<TypedValue> parameters;
+    private AuthenticationResult authResult;
+
+    public Builder sql(String sql)
+    {
+      this.sql = sql;
+      return this;
+    }
+
+    public Builder query(SqlQuery sqlQuery)
+    {
+      this.sql = sqlQuery.getQuery();
+      this.queryContext = new QueryContext(sqlQuery.getContext());
+      this.parameters = sqlQuery.getParameterList();
+      return this;
+    }
+
+    public Builder context(QueryContext queryContext)
+    {
+      this.queryContext = queryContext;
+      return this;
+    }
+
+    public Builder context(Map<String, Object> queryContext)
+    {
+      this.queryContext = queryContext == null ? null : new QueryContext(queryContext);
+      return this;
+    }
+
+    public Builder parameters(List<TypedValue> parameters)
+    {
+      this.parameters = parameters;
+      return this;
+    }
+
+    public Builder sqlParameters(List<SqlParameter> parameters)
+    {
+      this.parameters = parameters == null ? null : SqlQuery.getParameterList(parameters);
+      return this;
+    }
+
+    public Builder auth(final AuthenticationResult authResult)
+    {
+      this.authResult = authResult;
+      return this;
+    }
+
+    public SqlQueryPlus build()
+    {
+      return new SqlQueryPlus(
+          sql,
+          queryContext,
+          parameters,
+          authResult
+      );
+    }
   }
 }

@@ -19,9 +19,7 @@
 
 package org.apache.druid.sql;
 
-import com.google.common.base.Supplier;
-import com.google.inject.Inject;
-import org.apache.druid.guice.LazySingleton;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.QueryScheduler;
@@ -30,37 +28,44 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 
-@LazySingleton
-public class SqlLifecycleFactory
+/**
+ * Provides the plan and execution resources to process SQL queries.
+ */
+public class SqlToolbox
 {
-  private final PlannerFactory plannerFactory;
-  private final ServiceEmitter emitter;
-  private final RequestLogger requestLogger;
-  private final QueryScheduler queryScheduler;
-  private final AuthConfig authConfig;
-  private final DefaultQueryConfig defaultQueryConfig;
+  final SqlEngine engine;
+  final PlannerFactory plannerFactory;
+  final ServiceEmitter emitter;
+  final RequestLogger requestLogger;
+  final QueryScheduler queryScheduler;
+  final AuthConfig authConfig;
+  final DefaultQueryConfig defaultQueryConfig;
+  final SqlLifecycleManager sqlLifecycleManager;
 
-  @Inject
-  public SqlLifecycleFactory(
-      PlannerFactory plannerFactory,
-      ServiceEmitter emitter,
-      RequestLogger requestLogger,
-      QueryScheduler queryScheduler,
-      AuthConfig authConfig,
-      Supplier<DefaultQueryConfig> defaultQueryConfig
+  public SqlToolbox(
+      final SqlEngine engine,
+      final PlannerFactory plannerFactory,
+      final ServiceEmitter emitter,
+      final RequestLogger requestLogger,
+      final QueryScheduler queryScheduler,
+      final AuthConfig authConfig,
+      final DefaultQueryConfig defaultQueryConfig,
+      final SqlLifecycleManager sqlLifecycleManager
   )
   {
+    this.engine = engine;
     this.plannerFactory = plannerFactory;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.queryScheduler = queryScheduler;
     this.authConfig = authConfig;
-    this.defaultQueryConfig = defaultQueryConfig.get();
+    this.defaultQueryConfig = defaultQueryConfig;
+    this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
   }
 
-  public SqlLifecycle factorize(final SqlEngine engine)
+  public SqlToolbox withEngine(final SqlEngine engine)
   {
-    return new SqlLifecycle(
+    return new SqlToolbox(
         engine,
         plannerFactory,
         emitter,
@@ -68,8 +73,7 @@ public class SqlLifecycleFactory
         queryScheduler,
         authConfig,
         defaultQueryConfig,
-        System.currentTimeMillis(),
-        System.nanoTime()
+        sqlLifecycleManager
     );
   }
 }

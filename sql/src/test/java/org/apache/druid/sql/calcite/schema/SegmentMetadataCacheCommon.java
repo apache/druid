@@ -37,7 +37,6 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.easymock.EasyMock;
-import org.joda.time.Period;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -52,14 +51,7 @@ import java.util.concurrent.CountDownLatch;
 
 public abstract class SegmentMetadataCacheCommon extends CalciteTestBase
 {
-  static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig()
-  {
-    @Override
-    public Period getMetadataRefreshPeriod()
-    {
-      return new Period("PT1S");
-    }
-  };
+  static final PlannerConfig PLANNER_CONFIG_DEFAULT = PlannerConfig.builder().metadataRefreshPeriod("PT1S").build();
 
   static final List<InputRow> ROWS1 = ImmutableList.of(
       CalciteTests.createRow(ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "dim1", "")),

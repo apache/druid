@@ -44,6 +44,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -573,7 +574,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testReplaceWithPartitionedByContainingInvalidGranularity() throws Exception
+  public void testReplaceWithPartitionedByContainingInvalidGranularity()
   {
     // Throws a ValidationException, which gets converted to a SqlPlanningException before throwing to end user
     try {
@@ -594,7 +595,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExplainReplaceFromExternal() throws Exception
+  public void testExplainReplaceFromExternal() throws IOException
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();

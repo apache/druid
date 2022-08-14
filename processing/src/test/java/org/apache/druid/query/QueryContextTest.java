@@ -265,14 +265,14 @@ public class QueryContextTest
   @Test
   public void testLegacyReturnsLegacy()
   {
-    Query legacy = new LegacyContextQuery(ImmutableMap.of("foo", "bar"));
+    Query<?> legacy = new LegacyContextQuery(ImmutableMap.of("foo", "bar"));
     Assert.assertNull(legacy.getQueryContext());
   }
 
   @Test
   public void testNonLegacyIsNotLegacyContext()
   {
-    Query timeseries = Druids.newTimeseriesQueryBuilder()
+    Query<?> timeseries = Druids.newTimeseriesQueryBuilder()
                              .dataSource("test")
                              .intervals("2015-01-02/2015-01-03")
                              .granularity(Granularities.DAY)
