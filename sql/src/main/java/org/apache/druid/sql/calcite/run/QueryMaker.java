@@ -24,7 +24,7 @@ import org.apache.druid.sql.calcite.rel.DruidQuery;
 
 /**
  * Interface for executing Druid queries. Each one is created by a {@link SqlEngine} and is tied to a
- * specific SQL query. Extends {@link EngineFeatureInspector}, so calling code can tell what this executor supports.
+ * specific SQL query.
  */
 public interface QueryMaker
 {

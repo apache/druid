@@ -23,21 +23,32 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 /**
  * Engine for running SQL queries.
  */
-public interface SqlEngine extends EngineFeatureInspector
+public interface SqlEngine
 {
   /**
-   * Whether a given query context parameter is an internal parameter used by the engine. Internal context
-   * parameters cannot be set by end users.
+   * Name of this engine. Appears in user-visible messages.
    */
-  boolean isSystemContextParameter(String contextParameterName);
+  String name();
 
   /**
-   * Returns the SQL row type that would be emitted by the {@link QueryMaker} from {@link #buildQueryMakerForSelect}.
+   * Whether a feature applies to this engine or not.
+   */
+  boolean feature(EngineFeature feature, PlannerContext plannerContext);
+
+  /**
+   * Validates a provided query context. Returns quietly if the context is OK; throws {@link ValidationException}
+   * if the context has a problem.
+   */
+  void validateContext(QueryContext queryContext) throws ValidationException;
+
+  /**
+   * SQL row type that would be emitted by the {@link QueryMaker} from {@link #buildQueryMakerForSelect}.
    * Called for SELECT. Not called for EXPLAIN, which is handled by the planner itself.
    *
    * @param typeFactory      type factory
@@ -46,7 +57,7 @@ public interface SqlEngine extends EngineFeatureInspector
   RelDataType resultTypeForSelect(RelDataTypeFactory typeFactory, RelDataType validatedRowType);
 
   /**
-   * Returns the SQL row type that would be emitted by the {@link QueryMaker} from {@link #buildQueryMakerForInsert}.
+   * SQL row type that would be emitted by the {@link QueryMaker} from {@link #buildQueryMakerForInsert}.
    * Called for INSERT and REPLACE. Not called for EXPLAIN, which is handled by the planner itself.
    *
    * @param typeFactory      type factory

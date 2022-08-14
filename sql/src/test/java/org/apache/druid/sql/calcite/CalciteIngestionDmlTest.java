@@ -94,7 +94,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
   public CalciteIngestionDmlTest()
   {
-    super(TestInsertSqlEngine.INSTANCE);
+    super(IngestionTestSqlEngine.INSTANCE);
   }
 
   @After

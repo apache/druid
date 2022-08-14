@@ -41,7 +41,6 @@ import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
-import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
@@ -174,7 +173,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         new DefaultObjectMapper(),
         injector.getInstance(PlannerConfig.class),
         rootSchema,
-        new NativeSqlEngine(null, null)::feature,
+        null,
         new QueryContext()
     );
     boolean containsCustomRule = injector.getInstance(CalciteRulesManager.class)

@@ -222,10 +222,10 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     // TestInsertSqlEngine does not include ALLOW_BINDABLE_PLAN, so cannot query system tables.
 
     testIngestionQuery()
-        .sql("SELECT * FROM INFORMATION_SCHEMA.COLUMNS")
+        .sql("INSERT INTO dst SELECT * FROM INFORMATION_SCHEMA.COLUMNS PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot query metadata tables with the current SQL engine."
+            "Cannot query table [INFORMATION_SCHEMA.COLUMNS] with SQL engine 'ingestion-test'."
         )
         .verify();
   }
@@ -237,7 +237,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO INFORMATION_SCHEMA.COLUMNS SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot INSERT into [INFORMATION_SCHEMA.COLUMNS] because it is not a Druid datasource."
+            "Cannot INSERT into [INFORMATION_SCHEMA.COLUMNS] because it is not a Druid datasource (schema = druid)."
         )
         .verify();
   }
@@ -249,7 +249,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO view.aview SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot INSERT into [view.aview] because it is not a Druid datasource."
+            "Cannot INSERT into [view.aview] because it is not a Druid datasource (schema = druid)."
         )
         .verify();
   }
@@ -279,7 +279,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO nonexistent.dst SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot INSERT into [nonexistent.dst] because it is not a Druid datasource."
+            "Cannot INSERT into [nonexistent.dst] because it is not a Druid datasource (schema = druid)."
         )
         .verify();
   }
@@ -879,7 +879,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "sqlOuterLimit cannot be provided on INSERT or REPLACE queries."
+            "sqlOuterLimit cannot be provided with INSERT."
         )
         .verify();
   }

@@ -855,7 +855,7 @@ public class DruidQuery
   @Nullable
   private TimeBoundaryQuery toTimeBoundaryQuery()
   {
-    if (!plannerContext.engineHasFeature(EngineFeature.CAN_RUN_TIME_BOUNDARY)
+    if (!plannerContext.engineHasFeature(EngineFeature.TIME_BOUNDARY_QUERY)
         || grouping == null
         || grouping.getSubtotals().hasEffect(grouping.getDimensionSpecs())
         || grouping.getHavingFilter() != null
@@ -919,7 +919,7 @@ public class DruidQuery
   @Nullable
   private TimeseriesQuery toTimeseriesQuery()
   {
-    if (!plannerContext.engineHasFeature(EngineFeature.CAN_RUN_TIMESERIES)
+    if (!plannerContext.engineHasFeature(EngineFeature.TIMESERIES_QUERY)
         || grouping == null
         || grouping.getSubtotals().hasEffect(grouping.getDimensionSpecs())
         || grouping.getHavingFilter() != null) {
@@ -1032,7 +1032,7 @@ public class DruidQuery
   private TopNQuery toTopNQuery()
   {
     // Must be allowed by the QueryMaker.
-    if (!plannerContext.engineHasFeature(EngineFeature.CAN_RUN_TOPN)) {
+    if (!plannerContext.engineHasFeature(EngineFeature.TOPN_QUERY)) {
       return null;
     }
 
@@ -1288,7 +1288,7 @@ public class DruidQuery
       orderByColumns = Collections.emptyList();
     }
 
-    if (!plannerContext.engineHasFeature(EngineFeature.SCAN_CAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
+    if (!plannerContext.engineHasFeature(EngineFeature.SCAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
       if (orderByColumns.size() > 1 || !ColumnHolder.TIME_COLUMN_NAME.equals(orderByColumns.get(0).getColumnName())) {
         // Cannot handle this ordering.
         // Scan cannot ORDER BY non-time columns.

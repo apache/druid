@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -171,23 +172,19 @@ public class DruidPlanner implements Closeable
     Preconditions.checkState(state == State.START);
     resetPlanner();
 
-    // Validate SQL query context parameters.
-    for (String contextParameterName : plannerContext.getQueryContext().getMergedParams().keySet()) {
-      if (engine.isSystemContextParameter(contextParameterName)) {
-        throw new ValidationException(
-            StringUtils.format(
-                "Cannot execute query with context parameter [%s]",
-                contextParameterName
-            )
-        );
-      }
-    }
+    // Validate query context.
+    engine.validateContext(plannerContext.getQueryContext());
 
+    // Parse the query string.
     SqlNode root = planner.parse(plannerContext.getSql());
     parsed = ParsedNodes.create(root, plannerContext.getTimeZone());
 
-    if (parsed.getInsertOrReplace() != null && !plannerContext.engineHasFeature(EngineFeature.CAN_INSERT)) {
-      throw new ValidationException("Cannot execute INSERT queries with the current SQL engine.");
+    if (parsed.isSelect() && !plannerContext.engineHasFeature(EngineFeature.CAN_SELECT)) {
+      throw new ValidationException(StringUtils.format("Cannot execute SELECT with SQL engine '%s'.", engine.name()));
+    } else if (parsed.isInsert() && !plannerContext.engineHasFeature(EngineFeature.CAN_INSERT)) {
+      throw new ValidationException(StringUtils.format("Cannot execute INSERT with SQL engine '%s'.", engine.name()));
+    } else if (parsed.isReplace() && !plannerContext.engineHasFeature(EngineFeature.CAN_REPLACE)) {
+      throw new ValidationException(StringUtils.format("Cannot execute REPLACE with SQL engine '%s'.", engine.name()));
     }
 
     try {
@@ -234,11 +231,17 @@ public class DruidPlanner implements Closeable
 
     resourceActions = new HashSet<>(resourceCollectorShuttle.getResourceActions());
 
-    if (parsed.getInsertOrReplace() != null) {
+    if (parsed.isInsert() || parsed.isReplace()) {
       // Check if CTX_SQL_OUTER_LIMIT is specified and fail the query if it is. CTX_SQL_OUTER_LIMIT being provided causes
       // the number of rows inserted to be limited which is likely to be confusing and unintended.
       if (plannerContext.getQueryContext().get(PlannerContext.CTX_SQL_OUTER_LIMIT) != null) {
-        throw new ValidationException(PlannerContext.CTX_SQL_OUTER_LIMIT + " cannot be provided on INSERT or REPLACE queries.");
+        throw new ValidationException(
+            StringUtils.format(
+                "%s cannot be provided with %s.",
+                PlannerContext.CTX_SQL_OUTER_LIMIT,
+                parsed.getInsertOrReplace().getOperator().getName()
+            )
+        );
       }
       final String targetDataSource = validateAndGetDataSourceForIngest(parsed.getInsertOrReplace());
       resourceActions.add(new ResourceAction(new Resource(targetDataSource, ResourceType.DATASOURCE), Action.WRITE));
@@ -345,22 +348,35 @@ public class DruidPlanner implements Closeable
       rootQueryRel = planner.rel(validatedQueryNode);
     }
 
-    final boolean hasBindableTables = hasBindableTables(rootQueryRel.rel);
+    final Set<RelOptTable> bindableTables = getBindableTables(rootQueryRel.rel);
 
     // the planner's type factory is not available until after parsing
     this.rexBuilder = new RexBuilder(planner.getTypeFactory());
     state = State.PLANNED;
 
     try {
-      if (hasBindableTables) {
-        // Consider BINDABLE convention if necessary. Used for metadata tables.
-        if (!parsed.isSelect()) {
-          throw new ValidationException("Cannot INSERT or REPLACE into metadata tables.");
-        } else if (!plannerContext.engineHasFeature(EngineFeature.ALLOW_BINDABLE_PLAN)) {
-          throw new ValidationException("Cannot query metadata tables with the current SQL engine.");
-        } else {
-          return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
+      if (!bindableTables.isEmpty()) {
+        // Consider BINDABLE convention when necessary. Used for metadata tables.
+
+        if (parsed.isInsert() || parsed.isReplace()) {
+          // Throws ValidationException if the target table is itself bindable.
+          validateAndGetDataSourceForIngest(parsed.getInsertOrReplace());
         }
+
+        if (!plannerContext.engineHasFeature(EngineFeature.ALLOW_BINDABLE_PLAN)) {
+          throw new ValidationException(
+              StringUtils.format(
+                  "Cannot query table%s [%s] with SQL engine '%s'.",
+                  bindableTables.size() != 1 ? "s" : "",
+                  bindableTables.stream()
+                                .map(table -> Joiner.on(".").join(table.getQualifiedName()))
+                                .collect(Collectors.joining(", ")),
+                  engine.name()
+              )
+          );
+        }
+
+        return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
       } else {
         // DRUID convention is used whenever there are no tables that require BINDABLE.
         return planWithDruidConvention(rootQueryRel, parsed.getExplainNode(), parsed.getInsertOrReplace());
@@ -698,6 +714,7 @@ public class DruidPlanner implements Closeable
    * the web console, allowing it to apply a limit to queries without rewriting the original SQL.
    *
    * @param root root node
+   *
    * @return root node wrapped with a limiting logical sort if a limit is specified in the query context.
    */
   @Nullable
@@ -798,7 +815,12 @@ public class DruidPlanner implements Closeable
         dataSource = tableIdentifier.names.get(1);
       } else {
         throw new ValidationException(
-            StringUtils.format("Cannot %s into [%s] because it is not a Druid datasource.", operatorName, tableIdentifier)
+            StringUtils.format(
+                "Cannot %s into [%s] because it is not a Druid datasource (schema = %s).",
+                operatorName,
+                tableIdentifier,
+                defaultSchemaName
+            )
         );
       }
     }
@@ -839,11 +861,11 @@ public class DruidPlanner implements Closeable
     return StringUtils.format("Cannot build plan for query. %s", errorMessage);
   }
 
-  private static boolean hasBindableTables(final RelNode relNode)
+  private static Set<RelOptTable> getBindableTables(final RelNode relNode)
   {
     class HasBindableVisitor extends RelVisitor
     {
-      private boolean found;
+      private final Set<RelOptTable> found = new HashSet<>();
 
       @Override
       public void visit(RelNode node, int ordinal, RelNode parent)
@@ -851,7 +873,7 @@ public class DruidPlanner implements Closeable
         if (node instanceof TableScan) {
           RelOptTable table = node.getTable();
           if (table.unwrap(ScannableTable.class) != null && table.unwrap(DruidTable.class) == null) {
-            found = true;
+            found.add(table);
             return;
           }
         }
@@ -1010,6 +1032,16 @@ public class DruidPlanner implements Closeable
     public boolean isSelect()
     {
       return insertOrReplace == null;
+    }
+
+    public boolean isInsert()
+    {
+      return insertOrReplace != null && !isReplace();
+    }
+
+    public boolean isReplace()
+    {
+      return insertOrReplace instanceof DruidSqlReplace;
     }
 
     @Nullable

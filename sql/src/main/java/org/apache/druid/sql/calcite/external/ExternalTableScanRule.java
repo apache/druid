@@ -43,12 +43,13 @@ public class ExternalTableScanRule extends RelOptRule
   @Override
   public boolean matches(RelOptRuleCall call)
   {
-    if (plannerContext.engineHasFeature(EngineFeature.CAN_READ_EXTERNAL_DATA)) {
+    if (plannerContext.engineHasFeature(EngineFeature.READ_EXTERNAL_DATA)) {
       return super.matches(call);
     } else {
       plannerContext.setPlanningError(
-          "Cannot use '%s' with the current SQL engine.",
-          ExternalOperatorConversion.FUNCTION_NAME
+          "Cannot use '%s' with SQL engine '%s'.",
+          ExternalOperatorConversion.FUNCTION_NAME,
+          plannerContext.getEngine().name()
       );
 
       return false;
@@ -58,7 +59,7 @@ public class ExternalTableScanRule extends RelOptRule
   @Override
   public void onMatch(final RelOptRuleCall call)
   {
-    if (!plannerContext.engineHasFeature(EngineFeature.CAN_READ_EXTERNAL_DATA)) {
+    if (!plannerContext.engineHasFeature(EngineFeature.READ_EXTERNAL_DATA)) {
       // Not called because "matches" returns false.
       throw new UnsupportedOperationException();
     }

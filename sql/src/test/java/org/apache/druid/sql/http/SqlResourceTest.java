@@ -75,6 +75,7 @@ import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlPlanningException.PlanningError;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -89,6 +90,8 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.easymock.EasyMock;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -1645,6 +1648,31 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertTrue(queryContextException.getMessage().contains("For input string: \"2000'\""));
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
+  }
+
+  @Test
+  public void testQueryContextKeyNotAllowed() throws Exception
+  {
+    Map<String, Object> queryContext = ImmutableMap.of(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, "all");
+    final QueryException queryContextException = doPost(
+        new SqlQuery(
+            "SELECT 1337",
+            ResultFormat.OBJECT,
+            false,
+            false,
+            false,
+            queryContext,
+            null
+        )
+    ).lhs;
+    Assert.assertNotNull(queryContextException);
+    Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), queryContextException.getErrorCode());
+    MatcherAssert.assertThat(
+        queryContextException.getMessage(),
+        CoreMatchers.containsString(
+            "Cannot execute query with context parameter [sqlInsertSegmentGranularity]")
+    );
+    checkSqlRequestLog(false);
   }
 
   @SuppressWarnings("unchecked")

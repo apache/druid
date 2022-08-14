@@ -23,40 +23,50 @@ import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 /**
- * Arguments to {@link EngineFeatureInspector#feature(EngineFeature, PlannerContext)}.
+ * Arguments to {@link SqlEngine#feature(EngineFeature, PlannerContext)}.
  */
 public enum EngineFeature
 {
   /**
-   * Can execute INSERT and REPLACE statements.
+   * Can execute SELECT statements.
+   */
+  CAN_SELECT,
+
+  /**
+   * Can execute INSERT statements.
    */
   CAN_INSERT,
 
   /**
+   * Can execute REPLACE statements.
+   */
+  CAN_REPLACE,
+
+  /**
    * Queries of type {@link org.apache.druid.query.timeseries.TimeseriesQuery} are usable.
    */
-  CAN_RUN_TIMESERIES,
+  TIMESERIES_QUERY,
 
   /**
    * Queries of type {@link org.apache.druid.query.topn.TopNQuery} are usable.
    */
-  CAN_RUN_TOPN,
+  TOPN_QUERY,
 
   /**
    * Queries of type {@link org.apache.druid.query.timeboundary.TimeBoundaryQuery} are usable.
    */
-  CAN_RUN_TIME_BOUNDARY,
+  TIME_BOUNDARY_QUERY,
 
   /**
    * Queries can use {@link ExternalDataSource}.
    */
-  CAN_READ_EXTERNAL_DATA,
+  READ_EXTERNAL_DATA,
 
   /**
    * Scan queries can use {@link org.apache.druid.query.scan.ScanQuery#getOrderBys()} that are based on something
    * other than the "__time" column.
    */
-  SCAN_CAN_ORDER_BY_NON_TIME,
+  SCAN_ORDER_BY_NON_TIME,
 
   /**
    * Scan queries must have {@link org.apache.druid.sql.calcite.rel.DruidQuery#CTX_SCAN_SIGNATURE} set in their

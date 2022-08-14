@@ -44,6 +44,10 @@ public class ExternalTableScanRuleTest
   @Test
   public void testMatchesWhenExternalScanUnsupported()
   {
+    final NativeSqlEngine engine = CalciteTests.createMockSqlEngine(
+        EasyMock.createMock(QuerySegmentWalker.class),
+        EasyMock.createMock(QueryRunnerFactoryConglomerate.class)
+    );
     final PlannerContext plannerContext = PlannerContext.create(
         "DUMMY", // The actual query isn't important for this test
         CalciteTests.createOperatorTable(),
@@ -57,21 +61,17 @@ public class ExternalTableScanRuleTest
                 NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
             )
         ),
-        new NativeSqlEngine(null, null)::feature,
+        engine,
         new QueryContext()
     );
     plannerContext.setQueryMaker(
-        CalciteTests.createMockSqlEngine(
-                        EasyMock.createMock(QuerySegmentWalker.class),
-                        EasyMock.createMock(QueryRunnerFactoryConglomerate.class)
-                    )
-                    .buildQueryMakerForSelect(EasyMock.createMock(RelRoot.class), plannerContext)
+        engine.buildQueryMakerForSelect(EasyMock.createMock(RelRoot.class), plannerContext)
     );
 
     ExternalTableScanRule rule = new ExternalTableScanRule(plannerContext);
     rule.matches(EasyMock.createMock(RelOptRuleCall.class));
     Assert.assertEquals(
-        "Cannot use 'EXTERN' with the current SQL engine.",
+        "Cannot use 'EXTERN' with SQL engine 'native'.",
         plannerContext.getPlanningError()
     );
   }

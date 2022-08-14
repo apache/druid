@@ -23,17 +23,19 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 
 /**
- * Engine used for getting the row type of views. Does not do any actual execution.
+ * Engine used for getting the row type of views. Does not do any actual planning or execution of the view.
  */
 public class ViewSqlEngine implements SqlEngine
 {
   public static final ViewSqlEngine INSTANCE = new ViewSqlEngine();
+  private static final String NAME = "view";
 
   private ViewSqlEngine()
   {
@@ -41,25 +43,33 @@ public class ViewSqlEngine implements SqlEngine
   }
 
   @Override
+  public String name()
+  {
+    return NAME;
+  }
+
+  @Override
   public boolean feature(EngineFeature feature, PlannerContext plannerContext)
   {
     switch (feature) {
-      // Use most permissive set of features, since our goal is to get the row type of the view.
+      // Use most permissive set of SELECT features, since our goal is to get the row type of the view.
       // Later on, the query involving the view will be executed with an actual engine with a different set of
       // features, and planning may fail then. But we don't want it to fail now.
+      case CAN_SELECT:
       case ALLOW_BINDABLE_PLAN:
-      case CAN_READ_EXTERNAL_DATA:
-      case SCAN_CAN_ORDER_BY_NON_TIME:
+      case READ_EXTERNAL_DATA:
+      case SCAN_ORDER_BY_NON_TIME:
         return true;
 
-      // Views can't sit on top of INSERTs.
+      // Views can't sit on top of INSERT or REPLACE.
       case CAN_INSERT:
+      case CAN_REPLACE:
         return false;
 
       // Simplify planning by sticking to basic query types.
-      case CAN_RUN_TOPN:
-      case CAN_RUN_TIMESERIES:
-      case CAN_RUN_TIME_BOUNDARY:
+      case TOPN_QUERY:
+      case TIMESERIES_QUERY:
+      case TIME_BOUNDARY_QUERY:
       case SCAN_NEEDS_SIGNATURE:
         return false;
 
@@ -69,9 +79,9 @@ public class ViewSqlEngine implements SqlEngine
   }
 
   @Override
-  public boolean isSystemContextParameter(String contextParameterName)
+  public void validateContext(QueryContext queryContext)
   {
-    return false;
+    // No query context validation for view row typing.
   }
 
   @Override
@@ -90,6 +100,7 @@ public class ViewSqlEngine implements SqlEngine
   @Override
   public QueryMaker buildQueryMakerForSelect(RelRoot relRoot, PlannerContext plannerContext)
   {
+    // View engine does not execute queries.
     throw new UnsupportedOperationException();
   }
 

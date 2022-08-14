@@ -40,8 +40,8 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.run.EngineFeature;
-import org.apache.druid.sql.calcite.run.EngineFeatureInspector;
 import org.apache.druid.sql.calcite.run.QueryMaker;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -81,7 +81,7 @@ public class PlannerContext
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
   private final DruidSchemaCatalog rootSchema;
-  private final EngineFeatureInspector engineFeatureInspector;
+  private final SqlEngine engine;
   private final QueryContext queryContext;
   private final String sqlQueryId;
   private final boolean stringifyArrays;
@@ -109,7 +109,7 @@ public class PlannerContext
       final DateTime localNow,
       final boolean stringifyArrays,
       final DruidSchemaCatalog rootSchema,
-      final EngineFeatureInspector engineFeatureInspector,
+      final SqlEngine engine,
       final QueryContext queryContext
   )
   {
@@ -119,7 +119,7 @@ public class PlannerContext
     this.jsonMapper = jsonMapper;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.rootSchema = rootSchema;
-    this.engineFeatureInspector = engineFeatureInspector;
+    this.engine = engine;
     this.queryContext = queryContext;
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
@@ -139,7 +139,7 @@ public class PlannerContext
       final ObjectMapper jsonMapper,
       final PlannerConfig plannerConfig,
       final DruidSchemaCatalog rootSchema,
-      final EngineFeatureInspector engineFeatureInspector,
+      final SqlEngine engine,
       final QueryContext queryContext
   )
   {
@@ -178,7 +178,7 @@ public class PlannerContext
         utcNow.withZone(timeZone),
         stringifyArrays,
         rootSchema,
-        engineFeatureInspector,
+        engine,
         queryContext
     );
   }
@@ -390,9 +390,14 @@ public class PlannerContext
     this.queryMaker = Preconditions.checkNotNull(queryMaker, "queryMaker");
   }
 
+  public SqlEngine getEngine()
+  {
+    return engine;
+  }
+
   public boolean engineHasFeature(final EngineFeature feature)
   {
-    return engineFeatureInspector.feature(feature, this);
+    return engine.feature(feature, this);
   }
 
   public QueryMaker getQueryMaker()

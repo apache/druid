@@ -436,7 +436,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO INFORMATION_SCHEMA.COLUMNS OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot REPLACE into [INFORMATION_SCHEMA.COLUMNS] because it is not a Druid datasource."
+            "Cannot REPLACE into [INFORMATION_SCHEMA.COLUMNS] because it is not a Druid datasource (schema = druid)."
         )
         .verify();
   }
@@ -448,7 +448,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO view.aview OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot REPLACE into [view.aview] because it is not a Druid datasource."
+            "Cannot REPLACE into [view.aview] because it is not a Druid datasource (schema = druid)."
         )
         .verify();
   }
@@ -478,7 +478,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO nonexistent.dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot REPLACE into [nonexistent.dst] because it is not a Druid datasource."
+            "Cannot REPLACE into [nonexistent.dst] because it is not a Druid datasource (schema = druid)."
         )
         .verify();
   }
@@ -767,7 +767,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .context(context)
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlPlanningException.class, "sqlOuterLimit cannot be provided on INSERT or REPLACE queries.")
+        .expectValidationError(SqlPlanningException.class, "sqlOuterLimit cannot be provided with REPLACE.")
         .verify();
   }
 }

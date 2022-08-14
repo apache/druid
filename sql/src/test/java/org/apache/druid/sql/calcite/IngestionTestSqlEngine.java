@@ -25,20 +25,32 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
-import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
-public class TestInsertSqlEngine implements SqlEngine
+public class IngestionTestSqlEngine implements SqlEngine
 {
-  public static final TestInsertSqlEngine INSTANCE = new TestInsertSqlEngine();
+  public static final IngestionTestSqlEngine INSTANCE = new IngestionTestSqlEngine();
 
-  private TestInsertSqlEngine()
+  private IngestionTestSqlEngine()
   {
+  }
+
+  @Override
+  public String name()
+  {
+    return "ingestion-test";
+  }
+
+  @Override
+  public void validateContext(QueryContext queryContext)
+  {
+    // No validation.
   }
 
   @Override
@@ -64,25 +76,21 @@ public class TestInsertSqlEngine implements SqlEngine
   public boolean feature(final EngineFeature feature, final PlannerContext plannerContext)
   {
     switch (feature) {
-      case CAN_RUN_TIMESERIES:
-      case CAN_RUN_TOPN:
-      case CAN_RUN_TIME_BOUNDARY:
+      case CAN_SELECT:
       case ALLOW_BINDABLE_PLAN:
+      case TIMESERIES_QUERY:
+      case TOPN_QUERY:
+      case TIME_BOUNDARY_QUERY:
       case SCAN_NEEDS_SIGNATURE:
         return false;
       case CAN_INSERT:
-      case CAN_READ_EXTERNAL_DATA:
-      case SCAN_CAN_ORDER_BY_NON_TIME:
+      case CAN_REPLACE:
+      case READ_EXTERNAL_DATA:
+      case SCAN_ORDER_BY_NON_TIME:
         return true;
       default:
         throw new IAE("Unrecognized feature: %s", feature);
     }
-  }
-
-  @Override
-  public boolean isSystemContextParameter(String contextParameterName)
-  {
-    return NativeSqlEngine.SYSTEM_CONTEXT_PARAMETERS.contains(contextParameterName);
   }
 
   @Override

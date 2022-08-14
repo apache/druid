@@ -25,8 +25,10 @@ import com.google.inject.Inject;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
@@ -52,6 +54,8 @@ public class NativeSqlEngine implements SqlEngine
       DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS
   );
 
+  private static final String NAME = "native";
+
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final ObjectMapper jsonMapper;
 
@@ -66,9 +70,15 @@ public class NativeSqlEngine implements SqlEngine
   }
 
   @Override
-  public boolean isSystemContextParameter(String contextParameterName)
+  public String name()
   {
-    return SYSTEM_CONTEXT_PARAMETERS.contains(contextParameterName);
+    return NAME;
+  }
+
+  @Override
+  public void validateContext(QueryContext queryContext) throws ValidationException
+  {
+    SqlEngines.validateNoSpecialContextKeys(queryContext, SYSTEM_CONTEXT_PARAMETERS);
   }
 
   @Override
@@ -87,17 +97,19 @@ public class NativeSqlEngine implements SqlEngine
   public boolean feature(EngineFeature feature, PlannerContext plannerContext)
   {
     switch (feature) {
+      case CAN_SELECT:
       case ALLOW_BINDABLE_PLAN:
-      case CAN_RUN_TIMESERIES:
-      case CAN_RUN_TOPN:
+      case TIMESERIES_QUERY:
+      case TOPN_QUERY:
         return true;
+      case TIME_BOUNDARY_QUERY:
+        return QueryContexts.isTimeBoundaryPlanningEnabled(plannerContext.getQueryContext().getMergedParams());
       case CAN_INSERT:
-      case CAN_READ_EXTERNAL_DATA:
-      case SCAN_CAN_ORDER_BY_NON_TIME:
+      case CAN_REPLACE:
+      case READ_EXTERNAL_DATA:
+      case SCAN_ORDER_BY_NON_TIME:
       case SCAN_NEEDS_SIGNATURE:
         return false;
-      case CAN_RUN_TIME_BOUNDARY:
-        return QueryContexts.isTimeBoundaryPlanningEnabled(plannerContext.getQueryContext().getMergedParams());
       default:
         throw new IAE("Unrecognized feature: %s", feature);
     }
