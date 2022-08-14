@@ -503,7 +503,7 @@ public class TaskQueue
     if (existingTask == null) {
       taskLockbox.add(task);
     } else if (!existingTask.equals(task)) {
-      throw new ISE("Cannot add task ID [%s] with same ID as task that has already been added");
+      throw new ISE("Cannot add task ID [%s] with same ID as task that has already been added", task.getId());
     }
   }
 
