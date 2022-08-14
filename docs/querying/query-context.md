@@ -93,6 +93,7 @@ Some query types offer context parameters specific to that query type.
 |enableJoinFilterPushDown | `true` | Controls whether a join query will attempt filter push down, which reduces the number of rows that have to be compared in a join operation.|
 |enableJoinFilterRewrite | `true` | Controls whether filter clauses that reference non-base table columns will be rewritten into filters on base table columns.|
 |enableJoinFilterRewriteValueColumnFilters | `false` | Controls whether Druid rewrites non-base table filters on non-key columns in the non-base table. Requires a scan of the non-base table.|
+|enableRewriteJoinToFilter | `true` | Controls whether a join can be pushed partial or fully to the base table as a filter at runtime.|
 |joinFilterRewriteMaxSize | `10000` | The maximum size of the correlated value set used for filter rewrites. Set this limit to prevent excessive memory use.| 
 
 ### GroupBy

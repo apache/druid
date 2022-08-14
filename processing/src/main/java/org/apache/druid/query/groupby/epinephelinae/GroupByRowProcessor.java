@@ -106,7 +106,7 @@ public class GroupByRowProcessor
 
     final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
         temporaryStorageDirectory,
-        querySpecificConfig.getMaxOnDiskStorage()
+        querySpecificConfig.getMaxOnDiskStorage().getBytes()
     );
 
     closeOnExit.register(temporaryStorage);
