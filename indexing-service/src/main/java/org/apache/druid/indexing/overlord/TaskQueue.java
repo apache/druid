@@ -87,7 +87,7 @@ public class TaskQueue
   private static final long MANAGEMENT_WAIT_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(60);
   private static final long MIN_WAIT_TIME_MS = 100;
 
-  // Task ID -> Task that is currently running
+  // Task ID -> Task, for tasks that are active in some way (submitted, running, or finished and to-be-cleaned-up).
   @GuardedBy("giant")
   private final LinkedHashMap<String, Task> tasks = new LinkedHashMap<>();
 
