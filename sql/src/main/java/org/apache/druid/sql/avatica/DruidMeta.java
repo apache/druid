@@ -106,7 +106,7 @@ public class DruidMeta extends MetaImpl
       "user", "password"
   );
 
-  private final SqlStatementFactory sqlLifecycleFactory;
+  private final SqlStatementFactory sqlStatementFactory;
   private final ScheduledExecutorService exec;
   private final AvaticaServerConfig config;
   private final List<Authenticator> authenticators;
@@ -126,14 +126,14 @@ public class DruidMeta extends MetaImpl
   @Inject
   public DruidMeta(
       final NativeSqlEngine engine,
-      final SqlStatementFactoryFactory sqlLifecycleFactoryFactory,
+      final SqlStatementFactoryFactory sqlStatementFactoryFactory,
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
       final Injector injector
   )
   {
     this(
-        sqlLifecycleFactoryFactory.factorize(engine),
+        sqlStatementFactoryFactory.factorize(engine),
         config,
         errorHandler,
         Executors.newSingleThreadScheduledExecutor(
@@ -147,7 +147,7 @@ public class DruidMeta extends MetaImpl
   }
 
   public DruidMeta(
-      final SqlStatementFactory sqlLifecycleFactory,
+      final SqlStatementFactory sqlStatementFactory,
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
       final ScheduledExecutorService exec,
@@ -155,7 +155,7 @@ public class DruidMeta extends MetaImpl
   )
   {
     super(null);
-    this.sqlLifecycleFactory = sqlLifecycleFactory;
+    this.sqlStatementFactory = sqlStatementFactory;
     this.config = config;
     this.errorHandler = errorHandler;
     this.exec = exec;
@@ -236,7 +236,7 @@ public class DruidMeta extends MetaImpl
   public StatementHandle createStatement(final ConnectionHandle ch)
   {
     try {
-      final DruidJdbcStatement druidStatement = getDruidConnection(ch.id).createStatement(sqlLifecycleFactory);
+      final DruidJdbcStatement druidStatement = getDruidConnection(ch.id).createStatement(sqlStatementFactory);
       return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
     }
     catch (NoSuchConnectionException e) {
@@ -268,7 +268,7 @@ public class DruidMeta extends MetaImpl
           doAuthenticate(druidConnection)
       );
       DruidJdbcPreparedStatement stmt = getDruidConnection(ch.id).createPreparedStatement(
-          sqlLifecycleFactory,
+          sqlStatementFactory,
           sqlReq,
           maxRowCount);
       stmt.prepare();

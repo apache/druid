@@ -88,7 +88,7 @@ public class SqlStatementTest
   private SpecificSegmentsQuerySegmentWalker walker = null;
   private TestRequestLogger testRequestLogger;
   private ListeningExecutorService executorService;
-  private SqlStatementFactory sqlLifecycleFactory;
+  private SqlStatementFactory sqlStatementFactory;
   private final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(
       ImmutableMap.of("DEFAULT_KEY", "DEFAULT_VALUE"));
 
@@ -153,7 +153,7 @@ public class SqlStatementTest
         new CalciteRulesManager(ImmutableSet.of())
     );
 
-    this.sqlLifecycleFactory = new SqlStatementFactoryFactory(
+    this.sqlStatementFactory = new SqlStatementFactoryFactory(
         plannerFactory,
         new NoopServiceEmitter(),
         testRequestLogger,
@@ -212,7 +212,7 @@ public class SqlStatementTest
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
-    DirectStatement stmt = sqlLifecycleFactory.directStatement(sqlReq);
+    DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     List<Object[]> results = stmt.execute().toList();
     assertEquals(1, results.size());
     assertEquals(6L, results.get(0)[0]);
@@ -225,7 +225,7 @@ public class SqlStatementTest
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
-    DirectStatement stmt = sqlLifecycleFactory.directStatement(sqlReq);
+    DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     try {
       stmt.execute();
       fail();
@@ -242,7 +242,7 @@ public class SqlStatementTest
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
-    DirectStatement stmt = sqlLifecycleFactory.directStatement(sqlReq);
+    DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     try {
       stmt.execute();
       fail();
@@ -259,7 +259,7 @@ public class SqlStatementTest
     SqlQueryPlus sqlReq = queryPlus(
         "select count(*) from forbiddenDatasource",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
-    DirectStatement stmt = sqlLifecycleFactory.directStatement(sqlReq);
+    DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     try {
       stmt.execute();
       fail();
@@ -288,7 +288,7 @@ public class SqlStatementTest
   @Test
   public void testHttpHappyPath()
   {
-    HttpStatement stmt = sqlLifecycleFactory.httpStatement(
+    HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo"),
         request(true)
         );
@@ -301,7 +301,7 @@ public class SqlStatementTest
   @Test
   public void testHttpSyntaxError()
   {
-    HttpStatement stmt = sqlLifecycleFactory.httpStatement(
+    HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS"),
         request(true)
         );
@@ -318,7 +318,7 @@ public class SqlStatementTest
   @Test
   public void testHttpValidationError()
   {
-    HttpStatement stmt = sqlLifecycleFactory.httpStatement(
+    HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus"),
         request(true)
         );
@@ -335,7 +335,7 @@ public class SqlStatementTest
   @Test
   public void testHttpPermissionError()
   {
-    HttpStatement stmt = sqlLifecycleFactory.httpStatement(
+    HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("select count(*) from forbiddenDatasource"),
         request(false)
         );
@@ -357,7 +357,7 @@ public class SqlStatementTest
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
-    PreparedStatement stmt = sqlLifecycleFactory.preparedStatement(sqlReq);
+    PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
 
     PrepareResult prepareResult = stmt.prepare();
     RelDataType rowType = prepareResult.getReturnedRowType();
@@ -386,7 +386,7 @@ public class SqlStatementTest
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
-    PreparedStatement stmt = sqlLifecycleFactory.preparedStatement(sqlReq);
+    PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
     try {
       stmt.prepare();
       fail();
@@ -403,7 +403,7 @@ public class SqlStatementTest
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
-    PreparedStatement stmt = sqlLifecycleFactory.preparedStatement(sqlReq);
+    PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
     try {
       stmt.prepare();
       fail();
@@ -420,7 +420,7 @@ public class SqlStatementTest
     SqlQueryPlus sqlReq = queryPlus(
         "select count(*) from forbiddenDatasource",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
-    PreparedStatement stmt = sqlLifecycleFactory.preparedStatement(sqlReq);
+    PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
     try {
       stmt.prepare();
       fail();
@@ -441,7 +441,7 @@ public class SqlStatementTest
         .context(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"))
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
-    DirectStatement stmt = sqlLifecycleFactory.directStatement(sqlReq);
+    DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     Map<String, Object> context = stmt.sqlRequest().context().getMergedParams();
     Assert.assertEquals(2, context.size());
     // should contain only query id, not bySegment since it is not valid for SQL
@@ -456,7 +456,7 @@ public class SqlStatementTest
         .context(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"))
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
-    DirectStatement stmt = sqlLifecycleFactory.directStatement(sqlReq);
+    DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     Map<String, Object> context = stmt.sqlRequest().context().getMergedParams();
     Assert.assertEquals(2, context.size());
     // Statement should contain default query context values

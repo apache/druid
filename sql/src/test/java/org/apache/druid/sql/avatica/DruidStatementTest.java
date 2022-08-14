@@ -92,7 +92,7 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   private SpecificSegmentsQuerySegmentWalker walker;
-  private SqlStatementFactory sqlLifecycleFactory;
+  private SqlStatementFactory sqlStatementFactory;
 
   @Before
   public void setUp() throws Exception
@@ -113,7 +113,7 @@ public class DruidStatementTest extends CalciteTestBase
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of())
     );
-    this.sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
+    this.sqlStatementFactory = CalciteTests.createSqlStatementFactory(
         CalciteTests.createMockSqlEngine(walker, conglomerate),
         plannerFactory
     );
@@ -140,7 +140,7 @@ public class DruidStatementTest extends CalciteTestBase
         "",
         0,
         new QueryContext(),
-        sqlLifecycleFactory
+        sqlStatementFactory
     );
   }
 
@@ -518,7 +518,7 @@ public class DruidStatementTest extends CalciteTestBase
     return new DruidJdbcPreparedStatement(
         "",
         0,
-        sqlLifecycleFactory.preparedStatement(queryPlus),
+        sqlStatementFactory.preparedStatement(queryPlus),
         Long.MAX_VALUE
     );
   }

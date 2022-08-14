@@ -790,15 +790,15 @@ public class CalciteTests
     );
   }
 
-  public static SqlStatementFactory createSqlLifecycleFactory(
+  public static SqlStatementFactory createSqlStatementFactory(
       final SqlEngine engine,
       final PlannerFactory plannerFactory
   )
   {
-    return createSqlLifecycleFactory(engine, plannerFactory, new AuthConfig());
+    return createSqlStatementFactory(engine, plannerFactory, new AuthConfig());
   }
 
-  public static SqlStatementFactory createSqlLifecycleFactory(
+  public static SqlStatementFactory createSqlStatementFactory(
       final SqlEngine engine,
       final PlannerFactory plannerFactory,
       final AuthConfig authConfig

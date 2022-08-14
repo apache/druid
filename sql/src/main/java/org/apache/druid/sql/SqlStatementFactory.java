@@ -25,12 +25,9 @@ import javax.servlet.http.HttpServletRequest;
 
 public interface SqlStatementFactory
 {
-  HttpStatement httpStatement(
-      final SqlQuery sqlQuery,
-      final HttpServletRequest req
-  );
+  HttpStatement httpStatement(SqlQuery sqlQuery, HttpServletRequest req);
 
-  DirectStatement directStatement(final SqlQueryPlus sqlRequest);
+  DirectStatement directStatement(SqlQueryPlus sqlRequest);
 
-  PreparedStatement preparedStatement(final SqlQueryPlus sqlRequest);
+  PreparedStatement preparedStatement(SqlQueryPlus sqlRequest);
 }

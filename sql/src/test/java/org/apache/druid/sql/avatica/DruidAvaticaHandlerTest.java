@@ -922,7 +922,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
-        CalciteTests.createSqlLifecycleFactory(
+        CalciteTests.createSqlStatementFactory(
             CalciteTests.createMockSqlEngine(walker, conglomerate),
             new PlannerFactory(
                 rootSchema,
@@ -1016,7 +1016,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
-        CalciteTests.createSqlLifecycleFactory(
+        CalciteTests.createSqlStatementFactory(
             CalciteTests.createMockSqlEngine(walker, conglomerate),
             new PlannerFactory(
                 rootSchema,

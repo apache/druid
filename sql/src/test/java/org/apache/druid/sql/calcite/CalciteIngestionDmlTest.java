@@ -272,7 +272,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
         throw new ISE("Test must not have expectedQuery");
       }
 
-      final SqlStatementFactory sqlLifecycleFactory = getSqlLifecycleFactory(
+      final SqlStatementFactory sqlStatementFactory = getSqlStatementFactory(
           plannerConfig,
           new AuthConfig(),
           createOperatorTable(),
@@ -281,7 +281,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           queryJsonMapper
       );
 
-      DirectStatement stmt = sqlLifecycleFactory.directStatement(
+      DirectStatement stmt = sqlStatementFactory.directStatement(
           SqlQueryPlus
               .builder(sql)
               .context(queryContext)

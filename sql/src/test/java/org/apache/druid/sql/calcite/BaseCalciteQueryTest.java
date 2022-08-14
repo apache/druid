@@ -902,7 +902,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final ObjectMapper objectMapper
   )
   {
-    final SqlStatementFactory sqlLifecycleFactory = getSqlLifecycleFactory(
+    final SqlStatementFactory sqlStatementFactory = getSqlStatementFactory(
         plannerConfig,
         new AuthConfig(),
         operatorTable,
@@ -910,7 +910,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         authorizerMapper,
         objectMapper
     );
-    final DirectStatement stmt = sqlLifecycleFactory.directStatement(
+    final DirectStatement stmt = sqlStatementFactory.directStatement(
         SqlQueryPlus.builder(sql)
             .context(queryContext)
             .sqlParameters(parameters)
@@ -1041,7 +1041,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       AuthenticationResult authenticationResult
   )
   {
-    SqlStatementFactory lifecycleFactory = getSqlLifecycleFactory(
+    SqlStatementFactory lifecycleFactory = getSqlStatementFactory(
         plannerConfig,
         authConfig,
         createOperatorTable(),
@@ -1059,7 +1059,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return stmt.allResources();
   }
 
-  public SqlStatementFactory getSqlLifecycleFactory(
+  public SqlStatementFactory getSqlStatementFactory(
       PlannerConfig plannerConfig,
       AuthConfig authConfig,
       DruidOperatorTable operatorTable,
@@ -1088,7 +1088,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of())
     );
-    final SqlStatementFactory sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
+    final SqlStatementFactory sqlStatementFactory = CalciteTests.createSqlStatementFactory(
         engine,
         plannerFactory,
         authConfig
@@ -1137,7 +1137,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         "invalidView",
         "SELECT __time, dim1, dim2, m1 FROM druid.invalidDatasource WHERE dim2 = 'a'"
     );
-    return sqlLifecycleFactory;
+    return sqlStatementFactory;
   }
 
   protected void cannotVectorize()

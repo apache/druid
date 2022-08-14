@@ -158,7 +158,7 @@ public class SqlResourceTest extends CalciteTestBase
   private ListeningExecutorService executorService;
   private SqlLifecycleManager lifecycleManager;
   private NativeSqlEngine engine;
-  private SqlStatementFactory sqlLifecycleFactory;
+  private SqlStatementFactory sqlStatementFactory;
 
   private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
@@ -264,7 +264,7 @@ public class SqlResourceTest extends CalciteTestBase
         defaultQueryConfig,
         lifecycleManager
     );
-    sqlLifecycleFactory = new SqlStatementFactory()
+    sqlStatementFactory = new SqlStatementFactory()
     {
       @Override
       public HttpStatement httpStatement(
@@ -301,7 +301,7 @@ public class SqlResourceTest extends CalciteTestBase
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlLifecycleFactory,
+        sqlStatementFactory,
         lifecycleManager,
         new ServerConfig()
     );
@@ -1365,7 +1365,7 @@ public class SqlResourceTest extends CalciteTestBase
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlLifecycleFactory,
+        sqlStatementFactory,
         lifecycleManager,
         new ServerConfig() {
           @Override
@@ -1410,7 +1410,7 @@ public class SqlResourceTest extends CalciteTestBase
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlLifecycleFactory,
+        sqlStatementFactory,
         lifecycleManager,
         new ServerConfig()
         {

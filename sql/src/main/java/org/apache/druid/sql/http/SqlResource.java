@@ -82,7 +82,7 @@ public class SqlResource
 
   private final ObjectMapper jsonMapper;
   private final AuthorizerMapper authorizerMapper;
-  private final SqlStatementFactory sqlLifecycleFactory;
+  private final SqlStatementFactory sqlStatementFactory;
   private final SqlLifecycleManager sqlLifecycleManager;
   private final ServerConfig serverConfig;
 
@@ -91,7 +91,7 @@ public class SqlResource
       @Json ObjectMapper jsonMapper,
       AuthorizerMapper authorizerMapper,
       NativeSqlEngine engine,
-      SqlStatementFactoryFactory sqlLifecycleFactoryFactory,
+      SqlStatementFactoryFactory sqlStatementFactoryFactory,
       SqlLifecycleManager sqlLifecycleManager,
       ServerConfig serverConfig
   )
@@ -99,7 +99,7 @@ public class SqlResource
     this(
         jsonMapper,
         authorizerMapper,
-        sqlLifecycleFactoryFactory.factorize(engine),
+        sqlStatementFactoryFactory.factorize(engine),
         sqlLifecycleManager,
         serverConfig
     );
@@ -109,14 +109,14 @@ public class SqlResource
   SqlResource(
       final ObjectMapper jsonMapper,
       final AuthorizerMapper authorizerMapper,
-      final SqlStatementFactory sqlLifecycleFactory,
+      final SqlStatementFactory sqlStatementFactory,
       final SqlLifecycleManager sqlLifecycleManager,
       final ServerConfig serverConfig
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
-    this.sqlLifecycleFactory = Preconditions.checkNotNull(sqlLifecycleFactory, "sqlLifecycleFactory");
+    this.sqlStatementFactory = Preconditions.checkNotNull(sqlStatementFactory, "sqlStatementFactory");
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
     this.serverConfig = Preconditions.checkNotNull(serverConfig, "serverConfig");
   }
@@ -129,7 +129,7 @@ public class SqlResource
       @Context final HttpServletRequest req
   ) throws IOException
   {
-    final HttpStatement stmt = sqlLifecycleFactory.httpStatement(sqlQuery, req);
+    final HttpStatement stmt = sqlStatementFactory.httpStatement(sqlQuery, req);
     final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
 
