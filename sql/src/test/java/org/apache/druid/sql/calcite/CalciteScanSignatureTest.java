@@ -48,7 +48,7 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testScanSignature() throws Exception
+  public void testScanSignature()
   {
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(DruidQuery.CTX_SCAN_SIGNATURE, "[{\"name\":\"v0\",\"type\":\"STRING\"}]");
