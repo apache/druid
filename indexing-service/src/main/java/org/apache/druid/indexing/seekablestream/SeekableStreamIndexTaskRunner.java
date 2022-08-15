@@ -1771,6 +1771,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     if (status == Status.NOT_STARTED || status == Status.STARTING) {
       return Response.status(Response.Status.BAD_REQUEST)
+              .type(MediaType.TEXT_PLAIN)
               .entity(StringUtils.format("Can't pause, task state is invalid (state: [%s])", status))
               .build();
     }
