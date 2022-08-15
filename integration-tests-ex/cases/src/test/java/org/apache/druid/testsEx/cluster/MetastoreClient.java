@@ -20,14 +20,12 @@
 package org.apache.druid.testsEx.cluster;
 
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.metadata.MetadataStorageConnectorConfig;
-import org.apache.druid.metadata.storage.mysql.MySQLConnector;
-import org.apache.druid.metadata.storage.mysql.MySQLConnectorDriverConfig;
-import org.apache.druid.metadata.storage.mysql.MySQLConnectorSslConfig;
-import org.apache.druid.testsEx.config.ResolvedConfig;
-import org.apache.druid.testsEx.config.ResolvedMetastore;
+import org.apache.druid.metadata.MetadataStorageConnector;
+import org.apache.druid.metadata.SQLMetadataConnector;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+
+import javax.inject.Inject;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -48,31 +46,18 @@ public class MetastoreClient
   // That instance isn't available here, so we punt.
   public static String VALIDATION_QUERY = "SELECT 1";
 
-  private final ResolvedConfig clusterConfig;
-  private final ResolvedMetastore config;
   private DBI dbi;
   private Handle handle;
 
-  public MetastoreClient(ResolvedConfig config)
+  @Inject
+  public MetastoreClient(MetadataStorageConnector connector)
   {
-    this.clusterConfig = config;
-    this.config = config.requireMetastore();
-    prepare();
-    validate();
+    SQLMetadataConnector sqlConnector = (SQLMetadataConnector) connector;
+    this.dbi = sqlConnector.getDBI();
+    this.handle = dbi.open();
   }
 
-  private void prepare()
-  {
-    // This approach is rather overkill and is MySQL-specific.
-    // It does have the advantage of exercising the actual Druid code.
-    MetadataStorageConnectorConfig msConfig = clusterConfig.toMetadataConfig();
-    MySQLConnectorDriverConfig driverConfig = config.toDriverConfig();
-    MySQLConnectorSslConfig sslConfig = new MySQLConnectorSslConfig();
-    dbi = MySQLConnector.createDBI(msConfig, driverConfig, sslConfig, VALIDATION_QUERY);
-    handle = dbi.open();
-  }
-
-  private void validate()
+  public void validate()
   {
     boolean ok = execute(VALIDATION_QUERY);
     if (!ok) {

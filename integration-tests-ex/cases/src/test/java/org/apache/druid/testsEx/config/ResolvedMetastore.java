@@ -22,8 +22,8 @@ package org.apache.druid.testsEx.config;
 import org.apache.commons.lang3.RegExUtils;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
-import org.apache.druid.metadata.storage.mysql.MySQLConnectorDriverConfig;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -97,18 +97,27 @@ public class ResolvedMetastore extends ResolvedService
     return properties;
   }
 
-  public MetadataStorageConnectorConfig toMetadataConfig()
+  /**
+   * Create the properties Guice needs to create the connector config.
+   *
+   * @see <a href="https://druid.apache.org/docs/0.23.0/development/extensions-core/mysql.html#setting-up-mysql">
+   * Setting up MySQL</a>
+   */
+  public Map<String, Object> toProperties()
   {
-    return MetadataStorageConnectorConfig.create(
-        connectURI,
-        user,
-        password,
-        properties);
-  }
-
-  public MySQLConnectorDriverConfig toDriverConfig()
-  {
-    return MySQLConnectorDriverConfig.create(driver);
+    final String base = MetadataStorageConnectorConfig.PROPERTY_BASE + ".";
+    Map<String, Object> properties = new HashMap<>();
+    if (driver != null) {
+      properties.put("druid.metadata.mysql.driver.driverClassName", driver);
+    }
+    properties.put("druid.metadata.storage.type", "mysql");
+    properties.put(base + "connectURI", connectURI);
+    properties.put(base + "user", user);
+    properties.put(base + "password", password);
+    if (properties != null) {
+      properties.put(base + "dbcp", properties);
+    }
+    return properties;
   }
 
   public List<MetastoreStmt> initStmts()

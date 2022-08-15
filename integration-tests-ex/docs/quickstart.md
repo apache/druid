@@ -23,6 +23,12 @@ If you just need to know how to build, run and use the tests, this
 is the place. You can refer to the detailed material later as you
 add new tests or work to improve the tests.
 
+## Example Test
+
+When first learning the framework, you can try thing out using the
+`HighAvailability` test. Of the tests converted thus far, it is the
+one that runs for the shortest time (on the order of a minute or two.)
+
 ## Run all Tests
 
 Run the new ITs with:

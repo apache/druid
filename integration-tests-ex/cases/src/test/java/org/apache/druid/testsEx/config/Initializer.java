@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.cli.GuiceRunnable;
@@ -32,7 +33,11 @@ import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.DruidProcessingConfigModule;
+import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.PolyBind;
+import org.apache.druid.guice.SQLMetadataStorageDruidModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.guice.annotations.Client;
@@ -45,6 +50,7 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.DruidServiceSerializerModifier;
 import org.apache.druid.jackson.StringObjectPairList;
 import org.apache.druid.jackson.ToStringObjectPairListDeserializer;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -52,6 +58,16 @@ import org.apache.druid.java.util.emitter.core.LoggingEmitter;
 import org.apache.druid.java.util.emitter.core.LoggingEmitterConfig;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.metadata.MetadataStorageConnector;
+import org.apache.druid.metadata.MetadataStorageConnectorConfig;
+import org.apache.druid.metadata.MetadataStorageProvider;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.metadata.NoopMetadataStorageProvider;
+import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.metadata.storage.mysql.MySQLConnector;
+import org.apache.druid.metadata.storage.mysql.MySQLConnectorDriverConfig;
+import org.apache.druid.metadata.storage.mysql.MySQLConnectorSslConfig;
+import org.apache.druid.metadata.storage.mysql.MySQLMetadataStorageModule;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
@@ -117,6 +133,9 @@ public class Initializer
       binder
           .bind(IntegrationTestingConfig.class)
           .toInstance(config.toIntegrationTestingConfig());
+      binder
+          .bind(MetastoreClient.class)
+          .in(LazySingleton.class);
 
       // Dummy DruidNode instance to make Guice happy. This instance is unused.
       binder
@@ -124,6 +143,20 @@ public class Initializer
           .annotatedWith(Self.class)
           .toInstance(
               new DruidNode("integration-tests", "localhost", false, 9191, null, null, true, false));
+
+      // Reduced form of SQLMetadataStorageDruidModule
+      String prop = SQLMetadataStorageDruidModule.PROPERTY;
+      String defaultValue = MySQLMetadataStorageModule.TYPE;
+      PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageConnector.class), defaultValue);
+      PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageProvider.class), defaultValue);
+      PolyBind.createChoiceWithDefault(binder, prop, Key.get(SQLMetadataConnector.class), defaultValue);
+
+      // Reduced form of MetadataConfigModule
+      // Not actually used here (tests don't create tables), but needed by MySQLConnector constructor
+      JsonConfigProvider.bind(binder, MetadataStorageTablesConfig.PROPERTY_BASE, MetadataStorageTablesConfig.class);
+
+      // Build from properties provided in the config
+      JsonConfigProvider.bind(binder, MetadataStorageConnectorConfig.PROPERTY_BASE, MetadataStorageConnectorConfig.class);
     }
 
     @Provides
@@ -154,6 +187,43 @@ public class Initializer
               .addDeserializer(StringObjectPairList.class, new ToStringObjectPairListDeserializer())
               .setSerializerModifier(new DruidServiceSerializerModifier())
       );
+    }
+  }
+
+  /**
+   * Reduced form of MySQLMetadataStorageModule.
+   */
+  private static class TestMySqlModule implements DruidModule
+  {
+    @Override
+    public void configure(Binder binder)
+    {
+      JsonConfigProvider.bind(binder, "druid.metadata.mysql.ssl", MySQLConnectorSslConfig.class);
+      JsonConfigProvider.bind(binder, "druid.metadata.mysql.driver", MySQLConnectorDriverConfig.class);
+      String type = MySQLMetadataStorageModule.TYPE;
+      PolyBind
+          .optionBinder(binder, Key.get(MetadataStorageProvider.class))
+          .addBinding(type)
+          .to(NoopMetadataStorageProvider.class)
+          .in(LazySingleton.class);
+
+      PolyBind
+          .optionBinder(binder, Key.get(MetadataStorageConnector.class))
+          .addBinding(type)
+          .to(MySQLConnector.class)
+          .in(LazySingleton.class);
+
+      PolyBind
+          .optionBinder(binder, Key.get(SQLMetadataConnector.class))
+          .addBinding(type)
+          .to(MySQLConnector.class)
+          .in(LazySingleton.class);
+    }
+
+    @Override
+    public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+    {
+      return new MySQLMetadataStorageModule().getJacksonModules();
     }
   }
 
@@ -410,7 +480,8 @@ public class Initializer
 
             // Test-specific items, including bits copy/pasted
             // from modules that don't play well in a client setting.
-            new TestModule(clusterConfig)
+            new TestModule(clusterConfig),
+            new TestMySqlModule()
         )
         .addAll(builder.modules)
         .build();
@@ -465,7 +536,7 @@ public class Initializer
       return;
     }
     log.info("Preparing database");
-    MetastoreClient client = metastoreClient();
+    MetastoreClient client = injector.getInstance(MetastoreClient.class);
     for (MetastoreStmt stmt : stmts) {
       client.execute(stmt.toSQL());
     }
@@ -490,10 +561,10 @@ public class Initializer
 
   public MetastoreClient metastoreClient()
   {
-    if (metastoreClient == null) {
-      metastoreClient = new MetastoreClient(clusterConfig);
+    if (clusterConfig.metastore() == null) {
+      throw new IAE("Please provide a metastore section in docker.yaml");
     }
-    return metastoreClient;
+    return injector.getInstance(MetastoreClient.class);
   }
 
   public DruidClusterClient clusterClient()

@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.curator.CuratorConfig;
 import org.apache.druid.curator.ExhibitorConfig;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testsEx.config.ClusterConfig.ClusterType;
 import org.apache.druid.testsEx.config.ResolvedService.ResolvedKafka;
@@ -35,7 +34,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Properties;
 
 public class ResolvedConfig
 {
@@ -254,38 +252,28 @@ public class ResolvedConfig
     return ExhibitorConfig.create(Collections.emptyList());
   }
 
-  public MetadataStorageConnectorConfig toMetadataConfig()
-  {
-    if (metastore == null) {
-      throw new ISE("Metastore not configured");
-    }
-    return metastore.toMetadataConfig();
-  }
-
   /**
    * Convert the config in this structure the the properties
-   * structure
+   * used to configure Guice.
    */
-  public Properties toProperties()
+  public Map<String, Object> toProperties()
   {
-    Properties properties = new Properties();
+    Map<String, Object> properties = new HashMap<>();
     if (proxyHost != null) {
       properties.put("druid.test.config.dockerIp", proxyHost);
     }
 
-    /*
-     * We will use this instead of druid server's CuratorConfig, because CuratorConfig in
-     * a test cluster environment sees Zookeeper at localhost even if Zookeeper is elsewhere.
-     * We'll take the Zookeeper host from the configuration file instead.
-     */
-    properties.put(
-        CuratorConfig.CONFIG_PREFIX + ".zkHosts",
-        zk.clientHosts()
-    );
+    // Start with implicit properties from various sections.
+    if (zk != null) {
+      properties.putAll(zk.toProperties());
+    }
+    if (metastore != null) {
+      properties.putAll(metastore.toProperties());
+    }
+
+    // Add explicit properties
     if (this.properties != null) {
-      for (Entry<String, Object> entry : this.properties.entrySet()) {
-        properties.put(entry.getKey(), entry.getValue().toString());
-      }
+      properties.putAll(properties);
     }
     return properties;
   }

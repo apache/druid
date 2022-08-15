@@ -114,10 +114,7 @@ case $CMD in
 		;;
 	"up")
 		echo "Starting cluster $DRUID_INTEGRATION_TEST_GROUP"
-		# Permissions in some build setups are screwed up. See above. The user
-		# which runs Docker does not have permission to write into the /shared
-		# directory. Force ownership to allow writing.
-		chmod -R a+rwx $SHARED_DIR
+		mkdir -p $SHARED_DIR
 		# Must start with an empty DB to keep MySQL happy
 		rm -rf $SHARED_DIR/db
 		mkdir -p $SHARED_DIR/logs
@@ -126,6 +123,10 @@ case $CMD in
 		mkdir -p $SHARED_DIR/kafka
 		mkdir -p $SHARED_DIR/resources
 		cp $MODULE_DIR/assets/log4j2.xml $SHARED_DIR/resources
+		# Permissions in some build setups are screwed up. See above. The user
+		# which runs Docker does not have permission to write into the /shared
+		# directory. Force ownership to allow writing.
+		chmod -R a+rwx $SHARED_DIR
 	    cd $CLUSTER_DIR
 		docker-compose up -d
 		# Enable the following for debugging

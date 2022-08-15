@@ -54,7 +54,7 @@ Where `<category>` is one of the test categories.
 Or
 
 ```bash
-cd $DRUID_DEV/integration-tests-ex/it-cases
+cd $DRUID_DEV/integration-tests-ex/cases
 mvn verify -P skip-static-checks,docker-tests,IT-<category> \
     -Dmaven.javadoc.skip=true -DskipUTs=true
 ```
@@ -64,7 +64,7 @@ mvn verify -P skip-static-checks,docker-tests,IT-<category> \
 Start the cluster:
 
 ```bash
-cd $DRUID_DEV/integration-tests-ex/it-cases
+cd $DRUID_DEV/integration-tests-ex/cases
 ./cluster.sh <category> up
 ```
 

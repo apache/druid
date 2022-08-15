@@ -213,9 +213,9 @@
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- Revised integration tests -->
-        <module>integration-tests-ex/it-tools</module>
-        <module>integration-tests-ex/it-image</module>
-        <module>integration-tests-ex/it-cases</module>
+        <module>integration-tests-ex/tools</module>
+        <module>integration-tests-ex/image</module>
+        <module>integration-tests-ex/cases</module>
     </modules>
 
     <repositories>

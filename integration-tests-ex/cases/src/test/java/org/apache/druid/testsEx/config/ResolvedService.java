@@ -19,12 +19,15 @@
 
 package org.apache.druid.testsEx.config;
 
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.curator.CuratorConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testsEx.config.ServiceConfig.ZKConfig;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class ResolvedService
 {
@@ -180,6 +183,18 @@ public class ResolvedService
     private String formatHost(String host, int port)
     {
       return StringUtils.format("%s:%d", host, port);
+    }
+
+    public Map<? extends String, ? extends Object> toProperties()
+    {
+      /*
+       * We will use this instead of druid server's CuratorConfig, because CuratorConfig in
+       * a test cluster environment sees Zookeeper at localhost even if Zookeeper is elsewhere.
+       * We'll take the Zookeeper host from the configuration file instead.
+       */
+      return ImmutableMap.of(
+          CuratorConfig.CONFIG_PREFIX + ".zkHosts",
+          clientHosts());
     }
   }
 
