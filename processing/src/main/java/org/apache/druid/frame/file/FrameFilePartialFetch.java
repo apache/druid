@@ -33,6 +33,7 @@ import javax.annotation.Nullable;
  */
 public class FrameFilePartialFetch
 {
+  private final boolean lastFetchHeaderSet;
   private long bytesRead;
 
   @Nullable
@@ -41,13 +42,14 @@ public class FrameFilePartialFetch
   @Nullable
   private ListenableFuture<?> backpressureFuture;
 
-  FrameFilePartialFetch()
+  FrameFilePartialFetch(boolean lastFetchHeaderSet)
   {
+    this.lastFetchHeaderSet = lastFetchHeaderSet;
   }
 
-  public boolean isEmptyFetch()
+  public boolean isLastFetch()
   {
-    return exceptionCaught == null && bytesRead == 0L;
+    return exceptionCaught == null && lastFetchHeaderSet && bytesRead == 0L;
   }
 
   /**

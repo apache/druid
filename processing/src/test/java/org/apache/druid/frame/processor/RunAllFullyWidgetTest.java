@@ -216,7 +216,11 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
 
     final ExecutionException e = Assert.assertThrows(ExecutionException.class, future::get);
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(RuntimeException.class));
-    MatcherAssert.assertThat(e.getCause(), ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("failure!")));
+    MatcherAssert.assertThat(e.getCause().getCause(), CoreMatchers.instanceOf(RuntimeException.class));
+    MatcherAssert.assertThat(
+        e.getCause().getCause(),
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("failure!"))
+    );
   }
 
   @Test
