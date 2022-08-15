@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -28,6 +29,11 @@ public class TestExprMacroTable extends ExprMacroTable
   public static final ExprMacroTable INSTANCE = new TestExprMacroTable();
 
   private TestExprMacroTable()
+  {
+    this(new DefaultObjectMapper());
+  }
+
+  private TestExprMacroTable(ObjectMapper jsonMapper)
   {
     super(
         ImmutableList.of(
@@ -57,8 +63,8 @@ public class TestExprMacroTable extends ExprMacroTable
             new NestedDataExpressions.JsonValueExprMacro(),
             new NestedDataExpressions.JsonQueryExprMacro(),
             new NestedDataExpressions.ToJsonExprMacro(),
-            new NestedDataExpressions.ToJsonStringExprMacro(new DefaultObjectMapper()),
-            new NestedDataExpressions.ParseJsonExprMacro(new DefaultObjectMapper())
+            new NestedDataExpressions.ToJsonStringExprMacro(jsonMapper),
+            new NestedDataExpressions.ParseJsonExprMacro(jsonMapper)
         )
     );
   }
