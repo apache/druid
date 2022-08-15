@@ -33,7 +33,7 @@ import java.util.Map;
 public class CalciteExplainQueryTest extends BaseCalciteQueryTest
 {
   @Test
-  public void testExplainCountStarOnView() throws Exception
+  public void testExplainCountStarOnView()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -71,7 +71,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExplainInformationSchemaColumns() throws Exception
+  public void testExplainInformationSchemaColumns()
   {
     final String explanation =
         "BindableProject(COLUMN_NAME=[$3], DATA_TYPE=[$7])\n"
@@ -93,7 +93,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExplainExactCountDistinctOfSemiJoinResult() throws Exception
+  public void testExplainExactCountDistinctOfSemiJoinResult()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -142,7 +142,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   // This testcase has been added here and not in CalciteSelectQueryTests since this checks if the overrides are working
   // properly when displaying the output of "EXPLAIN PLAN FOR ..." queries
   @Test
-  public void testExplainSelectStarWithOverrides() throws Exception
+  public void testExplainSelectStarWithOverrides()
   {
     Map<String, Object> useRegularExplainContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     useRegularExplainContext.put(PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN, false);
@@ -213,7 +213,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExplainMultipleTopLevelUnionAllQueries() throws Exception
+  public void testExplainMultipleTopLevelUnionAllQueries()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -260,7 +260,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExplainSelectMvfilterExpressions() throws Exception
+  public void testExplainSelectMvfilterExpressions()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -328,7 +328,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExplainSelectTimestampExpression() throws Exception
+  public void testExplainSelectTimestampExpression()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();

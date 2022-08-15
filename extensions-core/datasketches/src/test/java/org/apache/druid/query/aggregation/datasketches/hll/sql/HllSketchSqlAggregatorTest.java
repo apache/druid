@@ -85,6 +85,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     return Iterables.concat(super.getJacksonModules(), new HllSketchModule().getJacksonModules());
   }
 
+  @SuppressWarnings("resource")
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
@@ -149,7 +150,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testApproxCountDistinctHllSketch() throws Exception
+  public void testApproxCountDistinctHllSketch()
   {
     // Can't vectorize due to SUBSTRING expression.
     cannotVectorize();
@@ -244,7 +245,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testAvgDailyCountDistinctHllSketch() throws Exception
+  public void testAvgDailyCountDistinctHllSketch()
   {
     // Can't vectorize due to outer query, which runs on an inline datasource.
     cannotVectorize();
@@ -340,7 +341,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testApproxCountDistinctHllSketchIsRounded() throws Exception
+  public void testApproxCountDistinctHllSketchIsRounded()
   {
     testQuery(
         "SELECT"
@@ -376,7 +377,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHllSketchPostAggs() throws Exception
+  public void testHllSketchPostAggs()
   {
     final String sketchSummary = "### HLL SKETCH SUMMARY: \n"
                                  + "  Log Config K   : 12\n"
@@ -528,7 +529,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testtHllSketchPostAggsPostSort() throws Exception
+  public void testtHllSketchPostAggsPostSort()
   {
     final String sketchSummary = "### HLL SKETCH SUMMARY: \n"
                                  + "  Log Config K   : 12\n"
@@ -582,7 +583,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEmptyTimeseriesResults() throws Exception
+  public void testEmptyTimeseriesResults()
   {
     // timeseries with all granularity have a single group, so should return default results for given aggregators
     testQuery(
@@ -620,7 +621,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByAggregatorDefaultValues() throws Exception
+  public void testGroupByAggregatorDefaultValues()
   {
     testQuery(
         "SELECT\n"

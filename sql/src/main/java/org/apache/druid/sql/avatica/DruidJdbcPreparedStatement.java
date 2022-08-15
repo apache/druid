@@ -24,9 +24,8 @@ import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.sql.SqlLifecycle;
-import org.apache.druid.sql.SqlLifecycleFactory;
-import org.apache.druid.sql.SqlQueryPlus;
+import org.apache.druid.sql.DirectStatement;
+import org.apache.druid.sql.PreparedStatement;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
 import java.util.List;
@@ -42,54 +41,46 @@ import java.util.List;
  */
 public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
 {
-  private final SqlLifecycle sqlStatement;
-  private final SqlQueryPlus queryPlus;
-  private final SqlLifecycleFactory lifecycleFactory;
+  private final PreparedStatement sqlStatement;
   private final long maxRowCount;
   private Meta.Signature signature;
   private State state = State.NEW;
 
   public DruidJdbcPreparedStatement(
-      final DruidConnection connection,
+      final String connectionId,
       final int statementId,
-      final SqlQueryPlus queryPlus,
-      final SqlLifecycleFactory lifecycleFactory,
+      final PreparedStatement stmt,
       final long maxRowCount
   )
   {
-    super(connection, statementId);
-    this.lifecycleFactory = lifecycleFactory;
-    this.queryPlus = queryPlus;
+    super(connectionId, statementId);
+    this.sqlStatement = stmt;
     this.maxRowCount = maxRowCount;
-    this.sqlStatement = lifecycleFactory.factorize();
-    sqlStatement.initialize(queryPlus.sql(), connection.makeContext());
   }
 
   public synchronized void prepare()
   {
     try {
       ensure(State.NEW);
-      sqlStatement.validateAndAuthorize(queryPlus.authResult());
       PrepareResult prepareResult = sqlStatement.prepare();
       signature = createSignature(
           prepareResult,
-          queryPlus.sql()
+          sqlStatement.sqlRequest().sql()
       );
       state = State.PREPARED;
     }
+    // Preserve the type of forbidden and runtime exceptions.
     catch (ForbiddenException e) {
-      // Can't finalize statement in in this case. Call will fail with an
-      // assertion error.
-      DruidMeta.logFailure(e);
-      state = State.CLOSED;
+      close();
       throw e;
     }
     catch (RuntimeException e) {
-      failed(e);
+      close();
       throw e;
     }
+    // Wrap everything else
     catch (Throwable t) {
-      failed(t);
+      close();
       throw new RuntimeException(t);
     }
   }
@@ -106,19 +97,17 @@ public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
     ensure(State.PREPARED);
     closeResultSet();
     try {
-      SqlLifecycle directStmt = lifecycleFactory.factorize();
-      directStmt.initialize(queryPlus.sql(), connection.makeContext());
-      directStmt.setParameters(parameters);
-      resultSet = new DruidJdbcResultSet(this, queryPlus, directStmt, maxRowCount);
+      DirectStatement directStmt = sqlStatement.execute(parameters);
+      resultSet = new DruidJdbcResultSet(this, directStmt, maxRowCount);
       resultSet.execute();
     }
     // Failure to execute does not close the prepared statement.
     catch (RuntimeException e) {
-      failed(e);
+      resultSet = null;
       throw e;
     }
     catch (Throwable t) {
-      failed(t);
+      resultSet = null;
       throw new RuntimeException(t);
     }
   }
@@ -134,19 +123,12 @@ public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
     throw new ISE("Invalid action for state [%s]", state);
   }
 
-  private void failed(Throwable t)
-  {
-    super.close();
-    sqlStatement.finalizeStateAndEmitLogsAndMetrics(t, null, -1);
-    state = State.CLOSED;
-  }
-
   @Override
   public synchronized void close()
   {
     if (state != State.CLOSED) {
       super.close();
-      sqlStatement.finalizeStateAndEmitLogsAndMetrics(null, null, -1);
+      sqlStatement.close();
     }
     state = State.CLOSED;
   }

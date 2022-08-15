@@ -29,7 +29,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.JSR311Resource;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
 import org.junit.Assert;
@@ -46,7 +46,7 @@ public class SqlHttpModuleTest
   @Mock
   private ObjectMapper jsonMpper;
   @Mock
-  private SqlLifecycleFactory sqlLifecycleFactory;
+  private SqlStatementFactory sqlLifecycleFactory;
 
   private SqlHttpModule target;
   private Injector injector;
@@ -60,7 +60,7 @@ public class SqlHttpModuleTest
         new DruidGuiceExtensions(),
         binder -> {
           binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(jsonMpper);
-          binder.bind(SqlLifecycleFactory.class).toInstance(sqlLifecycleFactory);
+          binder.bind(SqlStatementFactory.class).toInstance(sqlLifecycleFactory);
           binder.bind(AuthorizerMapper.class).toInstance(new AuthorizerMapper(Collections.emptyMap()));
         },
         target

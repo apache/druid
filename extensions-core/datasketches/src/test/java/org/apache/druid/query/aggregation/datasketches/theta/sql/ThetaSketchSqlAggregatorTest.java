@@ -145,7 +145,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testApproxCountDistinctThetaSketch() throws Exception
+  public void testApproxCountDistinctThetaSketch()
   {
     // Cannot vectorize due to SUBSTRING.
     cannotVectorize();
@@ -265,7 +265,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testAvgDailyCountDistinctThetaSketch() throws Exception
+  public void testAvgDailyCountDistinctThetaSketch()
   {
     // Can't vectorize due to outer query (it operates on an inlined data source, which cannot be vectorized).
     cannotVectorize();
@@ -359,7 +359,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testThetaSketchPostAggs() throws Exception
+  public void testThetaSketchPostAggs()
   {
     final List<Object[]> expectedResults;
 
@@ -529,7 +529,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testThetaSketchPostAggsPostSort() throws Exception
+  public void testThetaSketchPostAggsPostSort()
   {
     final String sql = "SELECT DS_THETA(dim2) as y FROM druid.foo ORDER BY THETA_SKETCH_ESTIMATE(DS_THETA(dim2)) DESC LIMIT 10";
 
@@ -579,7 +579,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEmptyTimeseriesResults() throws Exception
+  public void testEmptyTimeseriesResults()
   {
     testQuery(
         "SELECT\n"
@@ -638,7 +638,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByAggregatorDefaultValues() throws Exception
+  public void testGroupByAggregatorDefaultValues()
   {
     testQuery(
         "SELECT\n"

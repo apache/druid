@@ -31,6 +31,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -70,6 +71,7 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
   Expr.ObjectBinding inputBindings = InputBindings.withTypedSuppliers(
       new ImmutableMap.Builder<String, Pair<ExpressionType, Supplier<Object>>>()
           .put("nest", new Pair<>(NestedDataExpressions.TYPE, () -> NEST))
+          .put("nestWrapped", new Pair<>(NestedDataExpressions.TYPE, () -> new StructuredData(NEST)))
           .put("nester", new Pair<>(NestedDataExpressions.TYPE, () -> NESTER))
           .put("string", new Pair<>(ExpressionType.STRING, () -> "abcdef"))
           .put("long", new Pair<>(ExpressionType.LONG, () -> 1234L))
@@ -348,5 +350,13 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     eval = expr.eval(inputBindings);
     Assert.assertEquals(100L, eval.value());
     Assert.assertEquals(ExpressionType.LONG, eval.type());
+
+    expr = Parser.parse("to_json_string(json_object('x', nestWrapped))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"x\":{\"x\":100,\"y\":200,\"z\":300}}", eval.value());
+
+    expr = Parser.parse("to_json_string(json_object('xs', array(nest, nestWrapped)))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"xs\":[{\"x\":100,\"y\":200,\"z\":300},{\"x\":100,\"y\":200,\"z\":300}]}", eval.value());
   }
 }

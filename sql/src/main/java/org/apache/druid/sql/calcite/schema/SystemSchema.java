@@ -1153,7 +1153,7 @@ public class SystemSchema extends AbstractSchema
         authorizerMapper
     );
     if (!stateAccess.isAllowed()) {
-      throw new ForbiddenException("Insufficient permission to view servers : " + stateAccess);
+      throw new ForbiddenException("Insufficient permission to view servers: " + stateAccess.toMessage());
     }
   }
 }

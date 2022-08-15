@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
@@ -45,7 +46,6 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -84,8 +84,10 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.SqlLifecycle;
-import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.DirectStatement;
+import org.apache.druid.sql.PreparedStatement;
+import org.apache.druid.sql.SqlQueryPlus;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
@@ -96,6 +98,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -117,6 +120,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -149,77 +153,36 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final Logger log = new Logger(BaseCalciteQueryTest.class);
 
   public static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
-  public static final PlannerConfig PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE = new PlannerConfig()
-  {
-    @Override
-    public boolean shouldSerializeComplexValues()
-    {
-      return false;
-    }
-  };
-  public static final PlannerConfig PLANNER_CONFIG_REQUIRE_TIME_CONDITION = new PlannerConfig()
-  {
-    @Override
-    public boolean isRequireTimeCondition()
-    {
-      return true;
-    }
-  };
-  public static final PlannerConfig PLANNER_CONFIG_NO_TOPN = new PlannerConfig()
-  {
-    @Override
-    public int getMaxTopNLimit()
-    {
-      return 0;
-    }
-  };
-  public static final PlannerConfig PLANNER_CONFIG_NO_HLL = new PlannerConfig()
-  {
-    @Override
-    public boolean isUseApproximateCountDistinct()
-    {
-      return false;
-    }
-  };
-  public static final PlannerConfig PLANNER_CONFIG_LOS_ANGELES = new PlannerConfig()
-  {
-    @Override
-    public DateTimeZone getSqlTimeZone()
-    {
-      return DateTimes.inferTzFromString("America/Los_Angeles");
-    }
-  };
+  public static final PlannerConfig PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE =
+      PlannerConfig.builder().serializeComplexValues(false).build();
 
-  public static final PlannerConfig PLANNER_CONFIG_AUTHORIZE_SYS_TABLES = new PlannerConfig()
-  {
-    @Override
-    public boolean isAuthorizeSystemTablesDirectly()
-    {
-      return true;
-    }
-  };
+  public static final PlannerConfig PLANNER_CONFIG_REQUIRE_TIME_CONDITION =
+      PlannerConfig.builder().requireTimeCondition(true).build();
 
-  public static final PlannerConfig PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN = new PlannerConfig()
-  {
-    @Override
-    public boolean isUseNativeQueryExplain()
-    {
-      return true;
-    }
-  };
+  public static final PlannerConfig PLANNER_CONFIG_NO_TOPN =
+      PlannerConfig.builder().maxTopNLimit(0).build();
+
+  public static final PlannerConfig PLANNER_CONFIG_NO_HLL =
+      PlannerConfig.builder().useApproximateCountDistinct(false).build();
+
+  public static final String LOS_ANGELES = "America/Los_Angeles";
+  public static final PlannerConfig PLANNER_CONFIG_LOS_ANGELES =
+      PlannerConfig
+          .builder()
+          .sqlTimeZone(DateTimes.inferTzFromString(LOS_ANGELES))
+          .build();
+
+  public static final PlannerConfig PLANNER_CONFIG_AUTHORIZE_SYS_TABLES =
+      PlannerConfig.builder().authorizeSystemTablesDirectly(true).build();
+
+  public static final PlannerConfig PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN =
+      PlannerConfig.builder().useNativeQueryExplain(true).build();
 
   public static final int MAX_NUM_IN_FILTERS = 100;
-  public static final PlannerConfig PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER = new PlannerConfig()
-  {
-    @Override
-    public int getMaxNumericInFilters()
-    {
-      return MAX_NUM_IN_FILTERS;
-    }
-  };
+  public static final PlannerConfig PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER =
+      PlannerConfig.builder().maxNumericInFilters(MAX_NUM_IN_FILTERS).build();
 
   public static final String DUMMY_SQL_ID = "dummy";
-  public static final String LOS_ANGELES = "America/Los_Angeles";
 
   private static final ImmutableMap.Builder<String, Object> DEFAULT_QUERY_CONTEXT_BUILDER =
       ImmutableMap.<String, Object>builder()
@@ -644,9 +607,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void testQuery(
       final String sql,
-      final List<Query> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults
-  ) throws Exception
+  )
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -662,10 +625,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void testQuery(
       final String sql,
-      final List<Query> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults,
       final RowSignature expectedResultRowSignature
-  ) throws Exception
+  )
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -682,9 +645,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void testQuery(
       final String sql,
       final Map<String, Object> context,
-      final List<Query> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults
-  ) throws Exception
+  )
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -700,10 +663,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void testQuery(
       final String sql,
-      final List<Query> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults,
       final List<SqlParameter> parameters
-  ) throws Exception
+  )
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -721,9 +684,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final PlannerConfig plannerConfig,
       final String sql,
       final AuthenticationResult authenticationResult,
-      final List<Query> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults
-  ) throws Exception
+  )
   {
     testQuery(
         plannerConfig,
@@ -740,9 +703,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void testQuery(
       final String sql,
       final Map<String, Object> context,
-      final List<Query> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final ResultsVerifier expectedResultsVerifier
-  ) throws Exception
+  )
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -761,9 +724,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final Map<String, Object> queryContext,
       final String sql,
       final AuthenticationResult authenticationResult,
-      final List<Query> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults
-  ) throws Exception
+  )
   {
     log.info("SQL: %s", sql);
     queryLogHook.clearRecordedQueries();
@@ -778,9 +741,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final List<SqlParameter> parameters,
       final String sql,
       final AuthenticationResult authenticationResult,
-      final List<Query> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults
-  ) throws Exception
+  )
   {
     testQuery(
         plannerConfig,
@@ -800,10 +763,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final List<SqlParameter> parameters,
       final String sql,
       final AuthenticationResult authenticationResult,
-      final List<Query> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults,
       final RowSignature expectedResultSignature
-  ) throws Exception
+  )
   {
     testQuery(
         plannerConfig,
@@ -823,10 +786,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final List<SqlParameter> parameters,
       final String sql,
       final AuthenticationResult authenticationResult,
-      final List<Query> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final ResultsVerifier expectedResultsVerifier,
       @Nullable final Consumer<ExpectedException> expectedExceptionInitializer
-  ) throws Exception
+  )
   {
     log.info("SQL: %s", sql);
 
@@ -849,8 +812,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         theQueryContext.put(QueryContexts.VECTOR_SIZE_KEY, 2); // Small vector size to ensure we use more than one.
       }
 
-      final List<Query> theQueries = new ArrayList<>();
-      for (Query query : expectedQueries) {
+      final List<Query<?>> theQueries = new ArrayList<>();
+      for (Query<?> query : expectedQueries) {
         theQueries.add(recursivelyOverrideContext(query, theQueryContext));
       }
 
@@ -872,7 +835,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final List<SqlParameter> parameters,
       final String sql,
       final AuthenticationResult authenticationResult
-  ) throws Exception
+  )
   {
     return getResults(
         plannerConfig,
@@ -897,9 +860,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final ExprMacroTable macroTable,
       final AuthorizerMapper authorizerMapper,
       final ObjectMapper objectMapper
-  ) throws Exception
+  )
   {
-    final SqlLifecycleFactory sqlLifecycleFactory = getSqlLifecycleFactory(
+    final SqlStatementFactory sqlLifecycleFactory = getSqlLifecycleFactory(
         plannerConfig,
         new AuthConfig(),
         operatorTable,
@@ -907,23 +870,24 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         authorizerMapper,
         objectMapper
     );
-    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
-
-    Pair<RowSignature, Sequence<Object[]>> result = lifecycle.runSimple(
-        sql,
-        queryContext,
-        parameters,
-        authenticationResult
+    final DirectStatement stmt = sqlLifecycleFactory.directStatement(
+        SqlQueryPlus.builder(sql)
+            .context(queryContext)
+            .sqlParameters(parameters)
+            .auth(authenticationResult)
+            .build()
     );
+    Sequence<Object[]> results = stmt.execute();
+    RelDataType rowType = stmt.prepareResult().getRowType();
     return new Pair<>(
-        result.lhs,
-        result.rhs.toList()
+        RowSignatures.fromRelDataType(rowType.getFieldNames(), rowType),
+        results.toList()
     );
   }
 
   public void verifyResults(
       final String sql,
-      final List<Query> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults,
       final Pair<RowSignature, List<Object[]>> results
   )
@@ -933,7 +897,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void verifyResults(
       final String sql,
-      final List<Query> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final Pair<RowSignature, List<Object[]>> results,
       final ResultsVerifier expectedResultsVerifier
   )
@@ -950,7 +914,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   private void verifyQueries(
       final String sql,
-      @Nullable final List<Query> expectedQueries
+      @Nullable final List<Query<?>> expectedQueries
   )
   {
     if (expectedQueries != null) {
@@ -997,7 +961,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   public void testQueryThrows(final String sql, Consumer<ExpectedException> expectedExceptionInitializer)
-      throws Exception
   {
     testQueryThrows(sql, new HashMap<>(QUERY_CONTEXT_DEFAULT), ImmutableList.of(), expectedExceptionInitializer);
   }
@@ -1005,9 +968,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void testQueryThrows(
       final String sql,
       final Map<String, Object> queryContext,
-      final List<Query> expectedQueries,
+      final List<Query<?>> expectedQueries,
       final Consumer<ExpectedException> expectedExceptionInitializer
-  ) throws Exception
+  )
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -1038,7 +1001,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       AuthenticationResult authenticationResult
   )
   {
-    SqlLifecycleFactory lifecycleFactory = getSqlLifecycleFactory(
+    SqlStatementFactory lifecycleFactory = getSqlLifecycleFactory(
         plannerConfig,
         authConfig,
         createOperatorTable(),
@@ -1047,12 +1010,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         queryJsonMapper
     );
 
-    SqlLifecycle lifecycle = lifecycleFactory.factorize();
-    lifecycle.initialize(sql, new QueryContext(contexts));
-    return lifecycle.runAnalyzeResources(authenticationResult);
+    PreparedStatement stmt = lifecycleFactory.preparedStatement(SqlQueryPlus.builder(sql)
+        .context(contexts)
+        .auth(authenticationResult)
+        .build()
+    );
+    stmt.prepare();
+    return stmt.allResources();
   }
 
-  public SqlLifecycleFactory getSqlLifecycleFactory(
+  public SqlStatementFactory getSqlLifecycleFactory(
       PlannerConfig plannerConfig,
       AuthConfig authConfig,
       DruidOperatorTable operatorTable,
@@ -1085,7 +1052,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of())
     );
-    final SqlLifecycleFactory sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory, authConfig);
+    final SqlStatementFactory sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory, authConfig);
 
     viewManager.createView(
         plannerFactory,
@@ -1166,7 +1133,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   private static DataSource recursivelyOverrideContext(final DataSource dataSource, final Map<String, Object> context)
   {
     if (dataSource instanceof QueryDataSource) {
-      final Query subquery = ((QueryDataSource) dataSource).getQuery();
+      final Query<?> subquery = ((QueryDataSource) dataSource).getQuery();
       return new QueryDataSource(recursivelyOverrideContext(subquery, context));
     } else {
       return dataSource.withChildren(
@@ -1235,13 +1202,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
               .build(),
           };
-    }
-
-    public static Map<String, Object> withOverrides(Map<String, Object> originalContext, Map<String, Object> overrides)
-    {
-      Map<String, Object> contextWithOverrides = new HashMap<>(originalContext);
-      contextWithOverrides.putAll(overrides);
-      return contextWithOverrides;
     }
   }
 

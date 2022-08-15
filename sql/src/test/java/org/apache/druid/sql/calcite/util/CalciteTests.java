@@ -112,7 +112,8 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.SqlLifecycleManager;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -789,23 +790,24 @@ public class CalciteTests
     );
   }
 
-  public static SqlLifecycleFactory createSqlLifecycleFactory(final PlannerFactory plannerFactory)
+  public static SqlStatementFactory createSqlLifecycleFactory(final PlannerFactory plannerFactory)
   {
     return createSqlLifecycleFactory(plannerFactory, new AuthConfig());
   }
 
-  public static SqlLifecycleFactory createSqlLifecycleFactory(
+  public static SqlStatementFactory createSqlLifecycleFactory(
       final PlannerFactory plannerFactory,
       final AuthConfig authConfig
   )
   {
-    return new SqlLifecycleFactory(
+    return new SqlStatementFactory(
         plannerFactory,
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         authConfig,
-        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())),
+        new SqlLifecycleManager()
     );
   }
 
@@ -868,6 +870,7 @@ public class CalciteTests
     );
   }
 
+  @SuppressWarnings("resource")
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
       final File tmpDir,
