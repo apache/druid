@@ -26,47 +26,40 @@ import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
-import org.apache.druid.collections.spatial.ImmutableRTree;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.DimExtractionFn;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.filter.ExtractionDimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
-import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.GenericIndexed;
-import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
-import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
+import org.apache.druid.segment.serde.DictionaryEncodedStringIndexSupplier;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.Map;
 
 /**
  *
  */
 @RunWith(Parameterized.class)
-public class ExtractionDimFilterTest
+public class ExtractionDimFilterTest extends InitializedNullHandlingTest
 {
-  private static final Map<String, String[]> DIM_VALS = ImmutableMap.of(
-      "foo", new String[]{"foo1", "foo2", "foo3"},
-      "bar", new String[]{"bar1"},
-      "baz", new String[]{"foo1"}
-  );
-
   private static final Map<String, String> EXTRACTION_VALUES = ImmutableMap.of(
       "foo1", "extractDimVal"
   );
@@ -93,63 +86,18 @@ public class ExtractionDimFilterTest
   private final BitmapSerdeFactory serdeFactory;
   private final ImmutableBitmap foo1BitMap;
 
-  private final BitmapIndexSelector BITMAP_INDEX_SELECTOR = new BitmapIndexSelector()
+  private final ColumnIndexSelector BITMAP_INDEX_SELECTOR = new ColumnIndexSelector()
   {
+    @Nullable
     @Override
-    public CloseableIndexed<String> getDimensionValues(String dimension)
+    public ColumnCapabilities getColumnCapabilities(String column)
     {
-      final String[] vals = DIM_VALS.get(dimension);
-      if (vals == null) {
-        return null;
-      } else {
-        Indexed<String> indexed = new ListIndexed<>(vals);
-        return new CloseableIndexed<String>()
-        {
-
-          @Override
-          public int size()
-          {
-            return indexed.size();
-          }
-
-          @Nullable
-          @Override
-          public String get(int index)
-          {
-            return indexed.get(index);
-          }
-
-          @Override
-          public int indexOf(@Nullable String value)
-          {
-            return indexed.indexOf(value);
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("indexed", indexed);
-          }
-
-          @Override
-          public void close()
-          {
-            // close nothing
-          }
-
-          @Override
-          public Iterator<String> iterator()
-          {
-            return indexed.iterator();
-          }
-        };
-      }
-    }
-
-    @Override
-    public ColumnCapabilities.Capable hasMultipleValues(final String dimension)
-    {
-      return ColumnCapabilities.Capable.TRUE;
+      return ColumnCapabilitiesImpl.createDefault()
+                                   .setType(ColumnType.STRING)
+                                   .setHasMultipleValues(true)
+                                   .setDictionaryEncoded(true)
+                                   .setDictionaryValuesUnique(true)
+                                   .setDictionaryValuesSorted(true);
     }
 
     @Override
@@ -165,26 +113,23 @@ public class ExtractionDimFilterTest
     }
 
     @Override
-    public ImmutableBitmap getBitmapIndex(String dimension, String value)
+    public ColumnIndexSupplier getIndexSupplier(String column)
     {
-      return "foo1".equals(value) ? foo1BitMap : null;
-    }
-
-    @Override
-    public BitmapIndex getBitmapIndex(String dimension)
-    {
-      return new StringBitmapIndexColumnPartSupplier(
-          factory,
-          GenericIndexed.fromIterable(Collections.singletonList(foo1BitMap), serdeFactory.getObjectStrategy()),
-          GenericIndexed.fromIterable(Collections.singletonList("foo1"), GenericIndexed.STRING_STRATEGY)
-      ).get();
-    }
-
-    @Override
-    public ImmutableRTree getSpatialIndex(String dimension)
-    {
+      if ("foo".equals(column)) {
+        return new DictionaryEncodedStringIndexSupplier(
+            factory,
+            GenericIndexed.fromIterable(Collections.singletonList("foo1"), GenericIndexed.STRING_STRATEGY),
+            GenericIndexed.fromIterable(
+                Collections.singletonList(ByteBuffer.wrap(StringUtils.toUtf8("foo1"))),
+                GenericIndexed.BYTE_BUFFER_STRATEGY
+            ),
+            GenericIndexed.fromIterable(Collections.singletonList(foo1BitMap), serdeFactory.getObjectStrategy()),
+            null
+        );
+      }
       return null;
     }
+
   };
   private static final ExtractionFn DIM_EXTRACTION_FN = new DimExtractionFn()
   {
@@ -218,7 +163,7 @@ public class ExtractionDimFilterTest
   public void testEmpty()
   {
     Filter extractionFilter = new SelectorDimFilter("foo", "NFDJUKFNDSJFNS", DIM_EXTRACTION_FN).toFilter();
-    ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
+    ImmutableBitmap immutableBitmap = Filters.computeDefaultBitmapResults(extractionFilter, BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(0, immutableBitmap.size());
   }
 
@@ -226,7 +171,7 @@ public class ExtractionDimFilterTest
   public void testNull()
   {
     Filter extractionFilter = new SelectorDimFilter("FDHJSFFHDS", "extractDimVal", DIM_EXTRACTION_FN).toFilter();
-    ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
+    ImmutableBitmap immutableBitmap = Filters.computeDefaultBitmapResults(extractionFilter, BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(0, immutableBitmap.size());
   }
 
@@ -234,7 +179,7 @@ public class ExtractionDimFilterTest
   public void testNormal()
   {
     Filter extractionFilter = new SelectorDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN).toFilter();
-    ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
+    ImmutableBitmap immutableBitmap = Filters.computeDefaultBitmapResults(extractionFilter, BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(1, immutableBitmap.size());
   }
 
@@ -243,23 +188,23 @@ public class ExtractionDimFilterTest
   {
     Assert.assertEquals(
         1,
-        Filters
-            .toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null)))
-            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
-            .size()
+        Filters.computeDefaultBitmapResults(
+            Filters.toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null))),
+            BITMAP_INDEX_SELECTOR
+        ).size()
     );
 
     Assert.assertEquals(
         1,
-        Filters
-            .toFilter(
+        Filters.computeDefaultBitmapResults(
+            Filters.toFilter(
                 DimFilters.or(
                     new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null),
                     new ExtractionDimFilter("foo", "DOES NOT EXIST", DIM_EXTRACTION_FN, null)
                 )
-            )
-            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
-            .size()
+            ),
+            BITMAP_INDEX_SELECTOR
+        ).size()
     );
   }
 
@@ -268,23 +213,23 @@ public class ExtractionDimFilterTest
   {
     Assert.assertEquals(
         1,
-        Filters
-            .toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null)))
-            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
-            .size()
+        Filters.computeDefaultBitmapResults(
+            Filters.toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null))),
+            BITMAP_INDEX_SELECTOR
+        ).size()
     );
 
     Assert.assertEquals(
         1,
-        Filters
-            .toFilter(
+        Filters.computeDefaultBitmapResults(
+            Filters.toFilter(
                 DimFilters.and(
                     new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null),
                     new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null)
                 )
-            )
-            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
-            .size()
+            ),
+            BITMAP_INDEX_SELECTOR
+        ).size()
     );
   }
 
@@ -294,18 +239,18 @@ public class ExtractionDimFilterTest
 
     Assert.assertEquals(
         1,
-        Filters
-            .toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null)))
-            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
-            .size()
+        Filters.computeDefaultBitmapResults(
+            Filters.toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null))),
+            BITMAP_INDEX_SELECTOR
+        ).size()
     );
 
     Assert.assertEquals(
         1,
-        Filters
-            .toFilter(DimFilters.not(new ExtractionDimFilter("foo", "DOES NOT EXIST", DIM_EXTRACTION_FN, null)))
-            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
-            .size()
+        Filters.computeDefaultBitmapResults(
+            Filters.toFilter(DimFilters.not(new ExtractionDimFilter("foo", "DOES NOT EXIST", DIM_EXTRACTION_FN, null))),
+            BITMAP_INDEX_SELECTOR
+        ).size()
     );
   }
 }

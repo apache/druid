@@ -21,15 +21,17 @@ package org.apache.druid.indexing.worker.shuffle;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
-import org.apache.druid.client.indexing.TaskStatus;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.ShuffleMetrics.PerDatasourceShuffleMetrics;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
@@ -100,21 +102,22 @@ public class ShuffleResourceTest
         ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)),
         false,
         false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null
     );
-    final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient()
+    final OverlordClient overlordClient = new NoopOverlordClient()
     {
       @Override
-      public Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds)
+      public ListenableFuture<Map<String, TaskStatus>> taskStatuses(Set<String> taskIds)
       {
         final Map<String, TaskStatus> result = new HashMap<>();
         for (String taskId : taskIds) {
-          result.put(taskId, new TaskStatus(taskId, TaskState.SUCCESS, 10));
+          result.put(taskId, new TaskStatus(taskId, TaskState.SUCCESS, 10, null, null));
         }
-        return result;
+        return Futures.immediateFuture(result);
       }
     };
-    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
+    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
     shuffleMetrics = new ShuffleMetrics();
     shuffleResource = new ShuffleResource(intermediaryDataManager, Optional.of(shuffleMetrics));
   }

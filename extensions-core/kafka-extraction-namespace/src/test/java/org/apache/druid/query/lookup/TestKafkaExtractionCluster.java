@@ -157,7 +157,7 @@ public class TestKafkaExtractionCluster
   private Map<String, String> getConsumerProperties()
   {
     final Map<String, String> props = new HashMap<>(KAFKA_PROPERTIES);
-    int port = kafkaServer.socketServer().config().advertisedListeners().apply(0).port();
+    int port = kafkaServer.advertisedListeners().apply(0).port();
     props.put("bootstrap.servers", StringUtils.format("127.0.0.1:%d", port));
     return props;
   }
@@ -201,7 +201,7 @@ public class TestKafkaExtractionCluster
   {
     final Properties kafkaProducerProperties = new Properties();
     kafkaProducerProperties.putAll(KAFKA_PROPERTIES);
-    int port = kafkaServer.socketServer().config().advertisedListeners().apply(0).port();
+    int port = kafkaServer.advertisedListeners().apply(0).port();
     kafkaProducerProperties.put("bootstrap.servers", StringUtils.format("127.0.0.1:%d", port));
     kafkaProducerProperties.put("key.serializer", ByteArraySerializer.class.getName());
     kafkaProducerProperties.put("value.serializer", ByteArraySerializer.class.getName());
@@ -262,6 +262,78 @@ public class TestKafkaExtractionCluster
       log.info("-------------------------     Checking baz bat     -------------------------------");
       Assert.assertEquals("bat", factory.get().apply("baz"));
       Assert.assertEquals(Collections.singletonList("baz"), factory.get().unapply("bat"));
+    }
+  }
+
+  @Test(timeout = 60_000L)
+  public void testLookupWithTombstone() throws Exception
+  {
+    try (final Producer<byte[], byte[]> producer = new KafkaProducer(makeProducerProperties())) {
+      checkServer();
+
+      assertUpdated(null, "foo");
+      assertReverseUpdated(ImmutableList.of(), "foo");
+
+      long events = factory.getCompletedEventCount();
+
+      log.info("-------------------------     Sending foo bar     -------------------------------");
+      producer.send(new ProducerRecord<>(TOPIC_NAME, StringUtils.toUtf8("foo"), StringUtils.toUtf8("bar")));
+
+      long start = System.currentTimeMillis();
+      while (events == factory.getCompletedEventCount()) {
+        Thread.sleep(10);
+        if (System.currentTimeMillis() > start + 60_000) {
+          throw new ISE("Took too long to update event");
+        }
+      }
+
+      log.info("-------------------------     Checking foo bar     -------------------------------");
+      assertUpdated("bar", "foo");
+      assertReverseUpdated(Collections.singletonList("foo"), "bar");
+
+      checkServer();
+      events = factory.getCompletedEventCount();
+
+      log.info("-----------------------     Sending foo tombstone     -----------------------------");
+      producer.send(new ProducerRecord<>(TOPIC_NAME, StringUtils.toUtf8("foo"), null));
+      while (events == factory.getCompletedEventCount()) {
+        Thread.sleep(10);
+        if (System.currentTimeMillis() > start + 60_000) {
+          throw new ISE("Took too long to update event");
+        }
+      }
+
+      log.info("-----------------------     Checking foo removed     -----------------------------");
+      assertUpdated(null, "foo");
+      assertReverseUpdated(ImmutableList.of(), "foo");
+    }
+  }
+
+  @Test(timeout = 60_000L)
+  public void testLookupWithInitTombstone() throws Exception
+  {
+    try (final Producer<byte[], byte[]> producer = new KafkaProducer(makeProducerProperties())) {
+      checkServer();
+
+      assertUpdated(null, "foo");
+      assertReverseUpdated(ImmutableList.of(), "foo");
+
+      long events = factory.getCompletedEventCount();
+
+      long start = System.currentTimeMillis();
+
+      log.info("-----------------------     Sending foo tombstone     -----------------------------");
+      producer.send(new ProducerRecord<>(TOPIC_NAME, StringUtils.toUtf8("foo"), null));
+      while (events == factory.getCompletedEventCount()) {
+        Thread.sleep(10);
+        if (System.currentTimeMillis() > start + 60_000) {
+          throw new ISE("Took too long to update event");
+        }
+      }
+
+      log.info("-----------------------     Checking foo removed     -----------------------------");
+      assertUpdated(null, "foo");
+      assertReverseUpdated(ImmutableList.of(), "foo");
     }
   }
 

@@ -201,7 +201,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       },
     });
 
-    const queryRunner = new QueryRunner();
+    const queryRunner = new QueryRunner({
+      inflateDateStrategy: 'none',
+    });
 
     this.queryManager = new QueryManager({
       processQuery: async (

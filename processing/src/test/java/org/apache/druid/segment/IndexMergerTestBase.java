@@ -41,17 +41,21 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
+import org.apache.druid.segment.data.ImmutableBitmapValues;
 import org.apache.druid.segment.data.IncrementalIndexTest;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
@@ -127,6 +131,29 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     } else {
       return new IndexSpec();
     }
+  }
+
+  static BitmapValues getBitmapIndex(QueryableIndexIndexableAdapter adapter, String dimension, String value)
+  {
+    final ColumnHolder columnHolder = adapter.getQueryableIndex().getColumnHolder(dimension);
+
+    if (columnHolder == null) {
+      return BitmapValues.EMPTY;
+    }
+
+    final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+    if (indexSupplier == null) {
+      return BitmapValues.EMPTY;
+    }
+
+    final StringValueSetIndex index = indexSupplier.as(StringValueSetIndex.class);
+    if (index == null) {
+      return BitmapValues.EMPTY;
+    }
+
+    return new ImmutableBitmapValues(index.forValue(value).computeBitmapResult(
+        new DefaultBitmapResultFactory(adapter.getQueryableIndex().getBitmapFactoryForDimensions()))
+    );
   }
 
   private final IndexSpec indexSpec;
@@ -219,12 +246,12 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(ImmutableList.of("1", "2"), rowList.get(0).dimensionValues());
     Assert.assertEquals(Arrays.asList("3", null), rowList.get(1).dimensionValues());
 
-    checkBitmapIndex(Collections.emptyList(), adapter.getBitmapIndex("dim1", null));
-    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dim1", "1"));
-    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("dim1", "3"));
+    checkBitmapIndex(Collections.emptyList(), getBitmapIndex(adapter, "dim1", null));
+    checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "dim1", "1"));
+    checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "dim1", "3"));
 
-    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("dim2", null));
-    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dim2", "2"));
+    checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "dim2", null));
+    checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "dim2", "2"));
   }
 
   @Test
@@ -618,20 +645,20 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(Arrays.asList("50000", "200", "3000"), rowList.get(2).dimensionValues());
     Assert.assertEquals(Collections.singletonList(3L), rowList.get(2).metricValues());
 
-    checkBitmapIndex(Collections.emptyList(), adapter.getBitmapIndex("d3", null));
-    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d3", "30000"));
-    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d3", "40000"));
-    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d3", "50000"));
+    checkBitmapIndex(Collections.emptyList(), getBitmapIndex(adapter, "d3", null));
+    checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "d3", "30000"));
+    checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "d3", "40000"));
+    checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "d3", "50000"));
 
-    checkBitmapIndex(Collections.emptyList(), adapter.getBitmapIndex("d1", null));
-    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d1", "100"));
-    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d1", "200"));
-    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d1", "300"));
+    checkBitmapIndex(Collections.emptyList(), getBitmapIndex(adapter, "d1", null));
+    checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "d1", "100"));
+    checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "d1", "200"));
+    checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "d1", "300"));
 
-    checkBitmapIndex(Collections.emptyList(), adapter.getBitmapIndex("d2", null));
-    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d2", "2000"));
-    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d2", "3000"));
-    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d2", "4000"));
+    checkBitmapIndex(Collections.emptyList(), getBitmapIndex(adapter, "d2", null));
+    checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "d2", "2000"));
+    checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "d2", "3000"));
+    checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "d2", "4000"));
 
   }
 
@@ -639,11 +666,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
   public void testMergeWithDimensionsList() throws Exception
   {
     IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withDimensionsSpec(new DimensionsSpec(
-            makeDimensionSchemas(Arrays.asList("dimA", "dimB", "dimC")),
-            null,
-            null
-        ))
+        .withDimensionsSpec(new DimensionsSpec(makeDimensionSchemas(Arrays.asList("dimA", "dimB", "dimC"))))
         .withMetrics(new CountAggregatorFactory("count"))
         .build();
 
@@ -719,18 +742,18 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(useBitmapIndexes, adapter.getCapabilities("dimC").hasBitmapIndexes());
 
     if (useBitmapIndexes) {
-      checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dimA", null));
-      checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("dimA", "1"));
-      checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("dimA", "2"));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dimA", null));
+      checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "dimA", "1"));
+      checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "dimA", "2"));
 
-      checkBitmapIndex(Collections.emptyList(), adapter.getBitmapIndex("dimB", null));
+      checkBitmapIndex(Collections.emptyList(), getBitmapIndex(adapter, "dimB", null));
 
-      checkBitmapIndex(Arrays.asList(2, 3), adapter.getBitmapIndex("dimC", null));
-      checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dimC", "1"));
-      checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("dimC", "2"));
+      checkBitmapIndex(Arrays.asList(2, 3), getBitmapIndex(adapter, "dimC", null));
+      checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "dimC", "1"));
+      checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "dimC", "2"));
     }
 
-    checkBitmapIndex(Collections.emptyList(), adapter.getBitmapIndex("dimB", ""));
+    checkBitmapIndex(Collections.emptyList(), getBitmapIndex(adapter, "dimB", ""));
   }
 
 
@@ -762,6 +785,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                   Arrays.asList(indexA, indexB),
                   true,
                   new AggregatorFactory[]{new CountAggregatorFactory("count")},
+
                   tmpDirMerged,
                   indexSpec,
                   null,
@@ -793,9 +817,9 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
       // dimA always has bitmap indexes, since it has them in indexA (it comes in through discovery).
       Assert.assertTrue(adapter.getCapabilities("dimA").hasBitmapIndexes());
-      checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("dimA", null));
-      checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("dimA", "1"));
-      checkBitmapIndex(Collections.singletonList(4), adapter.getBitmapIndex("dimA", "2"));
+      checkBitmapIndex(Arrays.asList(0, 1, 2), getBitmapIndex(adapter, "dimA", null));
+      checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "dimA", "1"));
+      checkBitmapIndex(Collections.singletonList(4), getBitmapIndex(adapter, "dimA", "2"));
 
 
       // dimB may or may not have bitmap indexes, since it comes in through explicit definition in toPersistB2.
@@ -805,10 +829,10 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       }
       //noinspection ObjectEquality
       if (toPersistB != toPersistB2 || useBitmapIndexes) {
-        checkBitmapIndex(Arrays.asList(3, 4), adapter.getBitmapIndex("dimB", null));
-        checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dimB", "1"));
-        checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("dimB", "2"));
-        checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("dimB", "3"));
+        checkBitmapIndex(Arrays.asList(3, 4), getBitmapIndex(adapter, "dimB", null));
+        checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "dimB", "1"));
+        checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "dimB", "2"));
+        checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "dimB", "3"));
       }
     }
   }
@@ -933,9 +957,9 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             rowList.get(3).dimensionValues()
         );
 
-        checkBitmapIndex(Arrays.asList(0, 2, 3), adapter.getBitmapIndex("d2", null));
-        checkBitmapIndex(Arrays.asList(0, 1, 3), adapter.getBitmapIndex("d5", null));
-        checkBitmapIndex(Arrays.asList(0, 3), adapter.getBitmapIndex("d7", null));
+        checkBitmapIndex(Arrays.asList(0, 2, 3), getBitmapIndex(adapter, "d2", null));
+        checkBitmapIndex(Arrays.asList(0, 1, 3), getBitmapIndex(adapter, "d5", null));
+        checkBitmapIndex(Arrays.asList(0, 3), getBitmapIndex(adapter, "d7", null));
       } else {
         Assert.assertEquals(
             Arrays.asList("", "", "310", null, null, "", null, "910"),
@@ -953,36 +977,36 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             Arrays.asList(null, null, null, "", "621", "", "821", "921"),
             rowList.get(3).dimensionValues()
         );
-        checkBitmapIndex(Arrays.asList(2, 3), adapter.getBitmapIndex("d2", null));
-        checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("d5", null));
-        checkBitmapIndex(Collections.emptyList(), adapter.getBitmapIndex("d7", null));
+        checkBitmapIndex(Arrays.asList(2, 3), getBitmapIndex(adapter, "d2", null));
+        checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "d5", null));
+        checkBitmapIndex(Collections.emptyList(), getBitmapIndex(adapter, "d7", null));
       }
 
-      checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d2", "210"));
+      checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "d2", "210"));
 
-      checkBitmapIndex(Arrays.asList(2, 3), adapter.getBitmapIndex("d3", null));
-      checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d3", "310"));
-      checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d3", "311"));
+      checkBitmapIndex(Arrays.asList(2, 3), getBitmapIndex(adapter, "d3", null));
+      checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "d3", "310"));
+      checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "d3", "311"));
 
-      checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d5", "520"));
+      checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "d5", "520"));
 
-      checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("d6", null));
-      checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d6", "620"));
-      checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d6", "621"));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "d6", null));
+      checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "d6", "620"));
+      checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "d6", "621"));
 
-      checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d7", "710"));
-      checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d7", "720"));
+      checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "d7", "710"));
+      checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "d7", "720"));
 
-      checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d8", null));
-      checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d8", "810"));
-      checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d8", "820"));
-      checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d8", "821"));
+      checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "d8", null));
+      checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "d8", "810"));
+      checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "d8", "820"));
+      checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "d8", "821"));
 
-      checkBitmapIndex(Collections.emptyList(), adapter.getBitmapIndex("d9", null));
-      checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d9", "910"));
-      checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d9", "911"));
-      checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d9", "920"));
-      checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d9", "921"));
+      checkBitmapIndex(Collections.emptyList(), getBitmapIndex(adapter, "d9", null));
+      checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "d9", "910"));
+      checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "d9", "911"));
+      checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "d9", "920"));
+      checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "d9", "921"));
     }
   }
 
@@ -1105,18 +1129,18 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       );
     }
 
-    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d3", null));
-    checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("d3", "310"));
+    checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "d3", null));
+    checkBitmapIndex(Arrays.asList(0, 1, 2), getBitmapIndex(adapter, "d3", "310"));
 
-    checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("d6", null));
-    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d6", "621"));
+    checkBitmapIndex(Arrays.asList(0, 1, 2), getBitmapIndex(adapter, "d6", null));
+    checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "d6", "621"));
 
-    checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("d8", null));
-    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d8", "821"));
+    checkBitmapIndex(Arrays.asList(0, 1, 2), getBitmapIndex(adapter, "d8", null));
+    checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "d8", "821"));
 
-    checkBitmapIndex(Collections.emptyList(), adapter.getBitmapIndex("d9", null));
-    checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("d9", "910"));
-    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d9", "921"));
+    checkBitmapIndex(Collections.emptyList(), getBitmapIndex(adapter, "d9", null));
+    checkBitmapIndex(Arrays.asList(0, 1, 2), getBitmapIndex(adapter, "d9", "910"));
+    checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "d9", "921"));
   }
 
   private void checkBitmapIndex(List<Integer> expected, BitmapValues real)
@@ -1243,14 +1267,14 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(Arrays.asList("3", null), rowList.get(4).dimensionValues());
     Assert.assertEquals(Collections.singletonList(2L), rowList.get(4).metricValues());
 
-    checkBitmapIndex(Arrays.asList(2, 3, 4), adapter.getBitmapIndex("dimA", null));
-    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dimA", "1"));
-    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("dimA", "2"));
+    checkBitmapIndex(Arrays.asList(2, 3, 4), getBitmapIndex(adapter, "dimA", null));
+    checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "dimA", "1"));
+    checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "dimA", "2"));
 
-    checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dimB", null));
-    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("dimB", "1"));
-    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("dimB", "2"));
-    checkBitmapIndex(Collections.singletonList(4), adapter.getBitmapIndex("dimB", "3"));
+    checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dimB", null));
+    checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "dimB", "1"));
+    checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "dimB", "2"));
+    checkBitmapIndex(Collections.singletonList(4), getBitmapIndex(adapter, "dimB", "3"));
 
 
     Assert.assertEquals(ImmutableList.of("dimA", "dimB", "dimC"), ImmutableList.copyOf(adapter2.getDimensionNames()));
@@ -1285,19 +1309,19 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(Arrays.asList("2", null, null), rowList2.get(11).dimensionValues());
     Assert.assertEquals(Collections.singletonList(2L), rowList2.get(11).metricValues());
 
-    checkBitmapIndex(Arrays.asList(0, 1, 2, 3, 4, 5, 8, 9, 10), adapter2.getBitmapIndex("dimA", null));
-    checkBitmapIndex(Collections.singletonList(6), adapter2.getBitmapIndex("dimA", "1"));
-    checkBitmapIndex(Arrays.asList(7, 11), adapter2.getBitmapIndex("dimA", "2"));
+    checkBitmapIndex(Arrays.asList(0, 1, 2, 3, 4, 5, 8, 9, 10), getBitmapIndex(adapter2, "dimA", null));
+    checkBitmapIndex(Collections.singletonList(6), getBitmapIndex(adapter2, "dimA", "1"));
+    checkBitmapIndex(Arrays.asList(7, 11), getBitmapIndex(adapter2, "dimA", "2"));
 
-    checkBitmapIndex(Arrays.asList(0, 1, 2, 6, 7, 11), adapter2.getBitmapIndex("dimB", null));
-    checkBitmapIndex(Arrays.asList(3, 8), adapter2.getBitmapIndex("dimB", "1"));
-    checkBitmapIndex(Arrays.asList(4, 9), adapter2.getBitmapIndex("dimB", "2"));
-    checkBitmapIndex(Arrays.asList(5, 10), adapter2.getBitmapIndex("dimB", "3"));
+    checkBitmapIndex(Arrays.asList(0, 1, 2, 6, 7, 11), getBitmapIndex(adapter2, "dimB", null));
+    checkBitmapIndex(Arrays.asList(3, 8), getBitmapIndex(adapter2, "dimB", "1"));
+    checkBitmapIndex(Arrays.asList(4, 9), getBitmapIndex(adapter2, "dimB", "2"));
+    checkBitmapIndex(Arrays.asList(5, 10), getBitmapIndex(adapter2, "dimB", "3"));
 
-    checkBitmapIndex(Arrays.asList(3, 4, 5, 6, 7, 8, 9, 10, 11), adapter2.getBitmapIndex("dimC", null));
-    checkBitmapIndex(Collections.singletonList(0), adapter2.getBitmapIndex("dimC", "1"));
-    checkBitmapIndex(Collections.singletonList(1), adapter2.getBitmapIndex("dimC", "2"));
-    checkBitmapIndex(Collections.singletonList(2), adapter2.getBitmapIndex("dimC", "3"));
+    checkBitmapIndex(Arrays.asList(3, 4, 5, 6, 7, 8, 9, 10, 11), getBitmapIndex(adapter2, "dimC", null));
+    checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter2, "dimC", "1"));
+    checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter2, "dimC", "2"));
+    checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter2, "dimC", "3"));
 
   }
 
@@ -1344,6 +1368,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("C", "C"),
             },
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );
@@ -1394,6 +1419,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         true,
         new AggregatorFactory[]{new LongSumAggregatorFactory("A", "A"), new LongSumAggregatorFactory("C", "C")},
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );
@@ -1465,6 +1491,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("C", "C")
         },
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );
@@ -1529,6 +1556,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("D", "D")
         },
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );
@@ -1574,6 +1602,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("D", "D")
         },
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );
@@ -1689,7 +1718,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
   private IncrementalIndex getIndexWithDimsFromSchemata(List<DimensionSchema> dims)
   {
     IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withDimensionsSpec(new DimensionsSpec(dims, null, null))
+        .withDimensionsSpec(new DimensionsSpec(dims))
         .withMetrics(new CountAggregatorFactory("count"))
         .build();
 
@@ -1793,7 +1822,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
   private IncrementalIndex getIndexWithDims(List<String> dims)
   {
     IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withDimensionsSpec(new DimensionsSpec(makeDimensionSchemas(dims), null, null))
+        .withDimensionsSpec(new DimensionsSpec(makeDimensionSchemas(dims)))
         .withMetrics(new CountAggregatorFactory("count"))
         .build();
 
@@ -1863,14 +1892,14 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(useBitmapIndexes, adapter.getCapabilities("dim2").hasBitmapIndexes());
 
     if (useBitmapIndexes) {
-      checkBitmapIndex(Collections.emptyList(), adapter.getBitmapIndex("dim1", null));
-      checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dim1", "a"));
-      checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dim1", "b"));
-      checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dim1", "x"));
+      checkBitmapIndex(Collections.emptyList(), getBitmapIndex(adapter, "dim1", null));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dim1", "a"));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dim1", "b"));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dim1", "x"));
 
-      checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dim2", "a"));
-      checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dim2", "b"));
-      checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dim2", "x"));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dim2", "a"));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dim2", "b"));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dim2", "x"));
     }
 
     // xaab-axbx + abx-xab --> abx-abx + abx-abx --> abx-abx
@@ -1894,14 +1923,14 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(useBitmapIndexes, adapter.getCapabilities("dim2").hasBitmapIndexes());
 
     if (useBitmapIndexes) {
-      checkBitmapIndex(Collections.emptyList(), adapter.getBitmapIndex("dim1", null));
-      checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dim1", "a"));
-      checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dim1", "b"));
-      checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dim1", "x"));
+      checkBitmapIndex(Collections.emptyList(), getBitmapIndex(adapter, "dim1", null));
+      checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "dim1", "a"));
+      checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "dim1", "b"));
+      checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "dim1", "x"));
 
-      checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dim2", "a"));
-      checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dim2", "b"));
-      checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dim2", "x"));
+      checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "dim2", "a"));
+      checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "dim2", "b"));
+      checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "dim2", "x"));
     }
 
     // xaab-axbx + abx-xab --> abx-xab + xaab-axbx
@@ -1929,14 +1958,14 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(useBitmapIndexes, adapter.getCapabilities("dim2").hasBitmapIndexes());
 
     if (useBitmapIndexes) {
-      checkBitmapIndex(Collections.emptyList(), adapter.getBitmapIndex("dim1", null));
-      checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dim1", "a"));
-      checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dim1", "b"));
-      checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dim1", "x"));
+      checkBitmapIndex(Collections.emptyList(), getBitmapIndex(adapter, "dim1", null));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dim1", "a"));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dim1", "b"));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dim1", "x"));
 
-      checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dim2", "a"));
-      checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dim2", "b"));
-      checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dim2", "x"));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dim2", "a"));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dim2", "b"));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dim2", "x"));
     }
   }
 
@@ -2088,15 +2117,15 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(Arrays.asList("potato", Arrays.asList("0", "1", "4")), rowList.get(2).dimensionValues());
     Assert.assertEquals(1L, rowList.get(2).metricValues().get(0));
 
-    checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dimA", "leek"));
-    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("dimA", "potato"));
+    checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dimA", "leek"));
+    checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "dimA", "potato"));
 
-    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("dimMultiVal", "0"));
-    checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("dimMultiVal", "1"));
-    checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dimMultiVal", "2"));
-    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dimMultiVal", "3"));
-    checkBitmapIndex(Arrays.asList(1, 2), adapter.getBitmapIndex("dimMultiVal", "4"));
-    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dimMultiVal", "5"));
+    checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "dimMultiVal", "0"));
+    checkBitmapIndex(Arrays.asList(0, 1, 2), getBitmapIndex(adapter, "dimMultiVal", "1"));
+    checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "dimMultiVal", "2"));
+    checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "dimMultiVal", "3"));
+    checkBitmapIndex(Arrays.asList(1, 2), getBitmapIndex(adapter, "dimMultiVal", "4"));
+    checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "dimMultiVal", "5"));
   }
 
 
@@ -2346,16 +2375,16 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       Assert.assertEquals(Arrays.asList("potato", "2"), rowList.get(10).dimensionValues());
       Assert.assertEquals(4L, rowList.get(10).metricValues().get(0));
 
-      checkBitmapIndex(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8), adapter.getBitmapIndex("dimA", "leek"));
-      checkBitmapIndex(Arrays.asList(9, 10), adapter.getBitmapIndex("dimA", "potato"));
+      checkBitmapIndex(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8), getBitmapIndex(adapter, "dimA", "leek"));
+      checkBitmapIndex(Arrays.asList(9, 10), getBitmapIndex(adapter, "dimA", "potato"));
 
-      checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("dimMultiVal", null));
-      checkBitmapIndex(ImmutableList.of(), adapter.getBitmapIndex("dimMultiVal", ""));
-      checkBitmapIndex(Arrays.asList(1, 3, 4, 5, 6, 7, 9), adapter.getBitmapIndex("dimMultiVal", "1"));
-      checkBitmapIndex(Arrays.asList(1, 4, 8, 10), adapter.getBitmapIndex("dimMultiVal", "2"));
-      checkBitmapIndex(Arrays.asList(1, 2, 4, 5, 6, 9), adapter.getBitmapIndex("dimMultiVal", "3"));
-      checkBitmapIndex(Collections.singletonList(7), adapter.getBitmapIndex("dimMultiVal", "4"));
-      checkBitmapIndex(Collections.singletonList(6), adapter.getBitmapIndex("dimMultiVal", "5"));
+      checkBitmapIndex(Arrays.asList(0, 1, 2), getBitmapIndex(adapter, "dimMultiVal", null));
+      checkBitmapIndex(ImmutableList.of(), getBitmapIndex(adapter, "dimMultiVal", ""));
+      checkBitmapIndex(Arrays.asList(1, 3, 4, 5, 6, 7, 9), getBitmapIndex(adapter, "dimMultiVal", "1"));
+      checkBitmapIndex(Arrays.asList(1, 4, 8, 10), getBitmapIndex(adapter, "dimMultiVal", "2"));
+      checkBitmapIndex(Arrays.asList(1, 2, 4, 5, 6, 9), getBitmapIndex(adapter, "dimMultiVal", "3"));
+      checkBitmapIndex(Collections.singletonList(7), getBitmapIndex(adapter, "dimMultiVal", "4"));
+      checkBitmapIndex(Collections.singletonList(6), getBitmapIndex(adapter, "dimMultiVal", "5"));
     } else {
       Assert.assertEquals(14, rowList.size());
 
@@ -2401,16 +2430,16 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       Assert.assertEquals(Arrays.asList("potato", "2"), rowList.get(13).dimensionValues());
       Assert.assertEquals(4L, rowList.get(13).metricValues().get(0));
 
-      checkBitmapIndex(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11), adapter.getBitmapIndex("dimA", "leek"));
-      checkBitmapIndex(Arrays.asList(12, 13), adapter.getBitmapIndex("dimA", "potato"));
+      checkBitmapIndex(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11), getBitmapIndex(adapter, "dimA", "leek"));
+      checkBitmapIndex(Arrays.asList(12, 13), getBitmapIndex(adapter, "dimA", "potato"));
 
-      checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("dimMultiVal", null));
-      checkBitmapIndex(ImmutableList.of(3, 4, 5), adapter.getBitmapIndex("dimMultiVal", ""));
-      checkBitmapIndex(Arrays.asList(1, 4, 6, 7, 8, 9, 10, 12), adapter.getBitmapIndex("dimMultiVal", "1"));
-      checkBitmapIndex(Arrays.asList(1, 4, 7, 11, 13), adapter.getBitmapIndex("dimMultiVal", "2"));
-      checkBitmapIndex(Arrays.asList(1, 2, 4, 5, 7, 8, 9, 12), adapter.getBitmapIndex("dimMultiVal", "3"));
-      checkBitmapIndex(Collections.singletonList(10), adapter.getBitmapIndex("dimMultiVal", "4"));
-      checkBitmapIndex(Collections.singletonList(9), adapter.getBitmapIndex("dimMultiVal", "5"));
+      checkBitmapIndex(Arrays.asList(0, 1, 2), getBitmapIndex(adapter, "dimMultiVal", null));
+      checkBitmapIndex(ImmutableList.of(3, 4, 5), getBitmapIndex(adapter, "dimMultiVal", ""));
+      checkBitmapIndex(Arrays.asList(1, 4, 6, 7, 8, 9, 10, 12), getBitmapIndex(adapter, "dimMultiVal", "1"));
+      checkBitmapIndex(Arrays.asList(1, 4, 7, 11, 13), getBitmapIndex(adapter, "dimMultiVal", "2"));
+      checkBitmapIndex(Arrays.asList(1, 2, 4, 5, 7, 8, 9, 12), getBitmapIndex(adapter, "dimMultiVal", "3"));
+      checkBitmapIndex(Collections.singletonList(10), getBitmapIndex(adapter, "dimMultiVal", "4"));
+      checkBitmapIndex(Collections.singletonList(9), getBitmapIndex(adapter, "dimMultiVal", "5"));
     }
   }
 
@@ -2472,31 +2501,31 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     );
     Assert.assertEquals(3L, rowList.get(3).metricValues().get(0));
 
-    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d1", "a"));
-    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d1", "aa"));
-    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d1", "aaa"));
-    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d1", "aaa"));
-    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d1", "1"));
+    checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "d1", "a"));
+    checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "d1", "aa"));
+    checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "d1", "aaa"));
+    checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "d1", "aaa"));
+    checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "d1", "1"));
 
-    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d2", "b"));
-    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d2", "bb"));
-    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d2", "bbb"));
-    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d2", "2"));
+    checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "d2", "b"));
+    checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "d2", "bb"));
+    checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "d2", "bbb"));
+    checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "d2", "2"));
 
-    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d3", "c"));
-    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d3", "cc"));
-    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d3", "ccc"));
-    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d3", "3"));
+    checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "d3", "c"));
+    checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "d3", "cc"));
+    checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "d3", "ccc"));
+    checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "d3", "3"));
 
-    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d4", "d"));
-    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d4", "dd"));
-    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d4", "ddd"));
-    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d4", "4"));
+    checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "d4", "d"));
+    checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "d4", "dd"));
+    checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "d4", "ddd"));
+    checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "d4", "4"));
 
-    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d5", "e"));
-    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d5", "ee"));
-    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d5", "eee"));
-    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d5", "5"));
+    checkBitmapIndex(Collections.singletonList(0), getBitmapIndex(adapter, "d5", "e"));
+    checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "d5", "ee"));
+    checkBitmapIndex(Collections.singletonList(2), getBitmapIndex(adapter, "d5", "eee"));
+    checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "d5", "5"));
   }
 
   @Test
@@ -2684,7 +2713,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
   private QueryableIndex persistAndLoad(List<DimensionSchema> schema, InputRow... rows) throws IOException
   {
-    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null, new DimensionsSpec(schema, null, null));
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null, new DimensionsSpec(schema));
     for (InputRow row : rows) {
       toPersist.add(row);
     }

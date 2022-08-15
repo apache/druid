@@ -22,6 +22,7 @@ package org.apache.druid.storage.aliyun;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSException;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
@@ -37,18 +38,26 @@ public class OssDataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(OssDataSegmentKiller.class);
 
-  private final OSS client;
+  /**
+   * Any implementation of DataSegmentKiller is initialized when an ingestion job starts if the extension is loaded,
+   * even when the implementation of DataSegmentKiller is not used. As a result, if we have an OSS client instead
+   * of a supplier of it, it can cause unnecessary config validation for OSS even when it's not used at all.
+   * To perform the config validation only when it is actually used, we use a supplier.
+   *
+   * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
+   */
+  private final Supplier<OSS> clientSupplier;
   private final OssStorageConfig segmentPusherConfig;
   private final OssInputDataConfig inputDataConfig;
 
   @Inject
   public OssDataSegmentKiller(
-      OSS client,
+      Supplier<OSS> clientSupplier,
       OssStorageConfig segmentPusherConfig,
       OssInputDataConfig inputDataConfig
   )
   {
-    this.client = client;
+    this.clientSupplier = clientSupplier;
     this.segmentPusherConfig = segmentPusherConfig;
     this.inputDataConfig = inputDataConfig;
   }
@@ -61,6 +70,7 @@ public class OssDataSegmentKiller implements DataSegmentKiller
       String bucket = MapUtils.getString(loadSpec, "bucket");
       String path = MapUtils.getString(loadSpec, "key");
 
+      final OSS client = this.clientSupplier.get();
       if (client.doesObjectExist(bucket, path)) {
         log.info("Removing index file[%s://%s/%s] from aliyun OSS!", OssStorageDruidModule.SCHEME, bucket, path);
         client.deleteObject(bucket, path);
@@ -83,7 +93,7 @@ public class OssDataSegmentKiller implements DataSegmentKiller
     );
     try {
       OssUtils.deleteObjectsInPath(
-          client,
+          clientSupplier.get(),
           inputDataConfig,
           segmentPusherConfig.getBucket(),
           segmentPusherConfig.getPrefix(),

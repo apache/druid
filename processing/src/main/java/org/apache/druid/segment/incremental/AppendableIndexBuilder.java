@@ -34,6 +34,13 @@ public abstract class AppendableIndexBuilder
   protected boolean sortFacts = true;
   protected int maxRowCount = 0;
   protected long maxBytesInMemory = 0;
+  // When set to true, for any row that already has metric (with the same name defined in metricSpec),
+  // the metric aggregator in metricSpec is skipped and the existing metric is unchanged. If the row does not already have
+  // the metric, then the metric aggregator is applied on the source column as usual. This should only be set for
+  // DruidInputSource since that is the only case where we can have existing metrics.
+  // This is currently only use by auto compaction and should not be use for anything else.
+  protected boolean preserveExistingMetrics = false;
+  protected boolean useMaxMemoryEstimates = true;
 
   protected final Logger log = new Logger(this.getClass());
 
@@ -55,7 +62,7 @@ public abstract class AppendableIndexBuilder
   @VisibleForTesting
   public AppendableIndexBuilder setSimpleTestingIndexSchema(final AggregatorFactory... metrics)
   {
-    return setSimpleTestingIndexSchema(null, metrics);
+    return setSimpleTestingIndexSchema(null, null, metrics);
   }
 
 
@@ -69,10 +76,15 @@ public abstract class AppendableIndexBuilder
    * @return this
    */
   @VisibleForTesting
-  public AppendableIndexBuilder setSimpleTestingIndexSchema(@Nullable Boolean rollup, final AggregatorFactory... metrics)
+  public AppendableIndexBuilder setSimpleTestingIndexSchema(
+      @Nullable Boolean rollup,
+      @Nullable Boolean preserveExistingMetrics,
+      final AggregatorFactory... metrics
+  )
   {
     IncrementalIndexSchema.Builder builder = new IncrementalIndexSchema.Builder().withMetrics(metrics);
     this.incrementalIndexSchema = rollup != null ? builder.withRollup(rollup).build() : builder.build();
+    this.preserveExistingMetrics = preserveExistingMetrics != null ? preserveExistingMetrics : false;
     return this;
   }
 
@@ -103,6 +115,18 @@ public abstract class AppendableIndexBuilder
   public AppendableIndexBuilder setMaxBytesInMemory(final long maxBytesInMemory)
   {
     this.maxBytesInMemory = maxBytesInMemory;
+    return this;
+  }
+
+  public AppendableIndexBuilder setPreserveExistingMetrics(final boolean preserveExistingMetrics)
+  {
+    this.preserveExistingMetrics = preserveExistingMetrics;
+    return this;
+  }
+
+  public AppendableIndexBuilder setUseMaxMemoryEstimates(final boolean useMaxMemoryEstimates)
+  {
+    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
     return this;
   }
 

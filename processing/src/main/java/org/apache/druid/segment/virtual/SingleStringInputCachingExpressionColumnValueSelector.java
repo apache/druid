@@ -28,9 +28,9 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
@@ -39,7 +39,7 @@ import javax.annotation.Nullable;
  * Like {@link ExpressionColumnValueSelector}, but caches results for the first CACHE_SIZE dictionary IDs of
  * a string column. Must only be used on selectors with dictionaries.
  */
-public class SingleStringInputCachingExpressionColumnValueSelector implements ColumnValueSelector<ExprEval>
+public class SingleStringInputCachingExpressionColumnValueSelector extends BaseExpressionColumnValueSelector
 {
   private static final int CACHE_SIZE = 1000;
 
@@ -53,9 +53,12 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
 
   public SingleStringInputCachingExpressionColumnValueSelector(
       final DimensionSelector selector,
-      final Expr expression
+      final Expr expression,
+      @Nullable final RowIdSupplier rowIdSupplier
   )
   {
+    super(rowIdSupplier);
+
     // Verify expression has just one binding.
     if (expression.analyzeInputs().getRequiredBindings().size() != 1) {
       throw new ISE("Expected expression with just one binding");
@@ -64,7 +67,7 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
     this.selector = Preconditions.checkNotNull(selector, "selector");
     this.expression = Preconditions.checkNotNull(expression, "expression");
 
-    final Supplier<Object> inputSupplier = ExpressionSelectors.supplierFromDimensionSelector(selector, false);
+    final Supplier<Object> inputSupplier = ExpressionSelectors.supplierFromDimensionSelector(selector, false, false);
     this.bindings = InputBindings.singleProvider(ExpressionType.STRING, name -> inputSupplier.get());
 
     if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
@@ -81,45 +84,13 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
   @Override
   public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
   {
+    super.inspectRuntimeShape(inspector);
     inspector.visit("selector", selector);
     inspector.visit("expression", expression);
   }
 
   @Override
-  public double getDouble()
-  {
-    // No Assert for null handling as ExprEval already have it.
-    return eval().asDouble();
-  }
-
-  @Override
-  public float getFloat()
-  {
-    // No Assert for null handling as ExprEval already have it.
-    return (float) eval().asDouble();
-  }
-
-  @Override
-  public long getLong()
-  {
-    // No Assert for null handling as ExprEval already have it.
-    return eval().asLong();
-  }
-
-  @Nullable
-  @Override
-  public ExprEval getObject()
-  {
-    return eval();
-  }
-
-  @Override
-  public Class<ExprEval> classOfObject()
-  {
-    return ExprEval.class;
-  }
-
-  private ExprEval eval()
+  protected ExprEval<?> eval()
   {
     final IndexedInts row = selector.getRow();
 

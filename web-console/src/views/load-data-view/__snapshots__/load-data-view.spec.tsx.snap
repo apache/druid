@@ -5,7 +5,7 @@ exports[`LoadDataView matches snapshot 1`] = `
   className="load-data-view app-view welcome"
 >
   <div
-    className="bp3-tabs step-nav"
+    className="bp4-tabs step-nav"
   >
     <div
       className="step-section"
@@ -16,10 +16,10 @@ exports[`LoadDataView matches snapshot 1`] = `
       >
         Connect and parse raw data
       </div>
-      <Blueprint3.ButtonGroup
+      <Blueprint4.ButtonGroup
         className="step-nav-l2"
       >
-        <Blueprint3.Button
+        <Blueprint4.Button
           active={true}
           className="welcome"
           disabled={false}
@@ -28,7 +28,7 @@ exports[`LoadDataView matches snapshot 1`] = `
           onClick={[Function]}
           text="Start"
         />
-        <Blueprint3.Button
+        <Blueprint4.Button
           active={false}
           className="connect"
           disabled={true}
@@ -37,7 +37,7 @@ exports[`LoadDataView matches snapshot 1`] = `
           onClick={[Function]}
           text="Connect"
         />
-        <Blueprint3.Button
+        <Blueprint4.Button
           active={false}
           className="parser"
           disabled={true}
@@ -46,7 +46,7 @@ exports[`LoadDataView matches snapshot 1`] = `
           onClick={[Function]}
           text="Parse data"
         />
-      </Blueprint3.ButtonGroup>
+      </Blueprint4.ButtonGroup>
     </div>
     <div
       className="step-section"
@@ -57,10 +57,10 @@ exports[`LoadDataView matches snapshot 1`] = `
       >
         Transform data and configure schema
       </div>
-      <Blueprint3.ButtonGroup
+      <Blueprint4.ButtonGroup
         className="step-nav-l2"
       >
-        <Blueprint3.Button
+        <Blueprint4.Button
           active={false}
           className="timestamp"
           disabled={true}
@@ -69,7 +69,7 @@ exports[`LoadDataView matches snapshot 1`] = `
           onClick={[Function]}
           text="Parse time"
         />
-        <Blueprint3.Button
+        <Blueprint4.Button
           active={false}
           className="transform"
           disabled={true}
@@ -78,7 +78,7 @@ exports[`LoadDataView matches snapshot 1`] = `
           onClick={[Function]}
           text="Transform"
         />
-        <Blueprint3.Button
+        <Blueprint4.Button
           active={false}
           className="filter"
           disabled={true}
@@ -87,7 +87,7 @@ exports[`LoadDataView matches snapshot 1`] = `
           onClick={[Function]}
           text="Filter"
         />
-        <Blueprint3.Button
+        <Blueprint4.Button
           active={false}
           className="schema"
           disabled={true}
@@ -96,7 +96,7 @@ exports[`LoadDataView matches snapshot 1`] = `
           onClick={[Function]}
           text="Configure schema"
         />
-      </Blueprint3.ButtonGroup>
+      </Blueprint4.ButtonGroup>
     </div>
     <div
       className="step-section"
@@ -107,10 +107,10 @@ exports[`LoadDataView matches snapshot 1`] = `
       >
         Tune parameters
       </div>
-      <Blueprint3.ButtonGroup
+      <Blueprint4.ButtonGroup
         className="step-nav-l2"
       >
-        <Blueprint3.Button
+        <Blueprint4.Button
           active={false}
           className="partition"
           disabled={true}
@@ -119,7 +119,7 @@ exports[`LoadDataView matches snapshot 1`] = `
           onClick={[Function]}
           text="Partition"
         />
-        <Blueprint3.Button
+        <Blueprint4.Button
           active={false}
           className="tuning"
           disabled={true}
@@ -128,7 +128,7 @@ exports[`LoadDataView matches snapshot 1`] = `
           onClick={[Function]}
           text="Tune"
         />
-        <Blueprint3.Button
+        <Blueprint4.Button
           active={false}
           className="publish"
           disabled={true}
@@ -137,7 +137,7 @@ exports[`LoadDataView matches snapshot 1`] = `
           onClick={[Function]}
           text="Publish"
         />
-      </Blueprint3.ButtonGroup>
+      </Blueprint4.ButtonGroup>
     </div>
     <div
       className="step-section"
@@ -148,10 +148,10 @@ exports[`LoadDataView matches snapshot 1`] = `
       >
         Verify and submit
       </div>
-      <Blueprint3.ButtonGroup
+      <Blueprint4.ButtonGroup
         className="step-nav-l2"
       >
-        <Blueprint3.Button
+        <Blueprint4.Button
           active={false}
           className="spec"
           disabled={false}
@@ -160,7 +160,7 @@ exports[`LoadDataView matches snapshot 1`] = `
           onClick={[Function]}
           text="Edit spec"
         />
-      </Blueprint3.ButtonGroup>
+      </Blueprint4.ButtonGroup>
     </div>
   </div>
   <div
@@ -173,13 +173,13 @@ exports[`LoadDataView matches snapshot 1`] = `
   <div
     className="control"
   >
-    <Blueprint3.FormGroup>
-      <Blueprint3.Callout>
+    <Blueprint4.FormGroup>
+      <Blueprint4.Callout>
         <p>
           Please specify where your raw data is located
         </p>
-      </Blueprint3.Callout>
-    </Blueprint3.FormGroup>
+      </Blueprint4.Callout>
+    </Blueprint4.FormGroup>
   </div>
 </div>
 `;

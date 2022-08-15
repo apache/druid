@@ -29,7 +29,6 @@ import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -42,6 +41,7 @@ import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
@@ -63,6 +63,7 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionDictionary;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowAdapter;
@@ -101,9 +102,6 @@ import java.util.stream.IntStream;
  */
 public class RowBasedGrouperHelper
 {
-  // Entry in dictionary, node pointer in reverseDictionary, hash + k/v/next pointer in reverseDictionary nodes
-  private static final int ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY = Long.BYTES * 5 + Integer.BYTES;
-
   private static final int SINGLE_THREAD_CONCURRENCY_HINT = -1;
   private static final int UNKNOWN_THREAD_PRIORITY = -1;
   private static final long UNKNOWN_TIMEOUT = -1L;
@@ -120,6 +118,7 @@ public class RowBasedGrouperHelper
       final GroupByQuery query,
       @Nullable final GroupByQuery subquery,
       final GroupByQueryConfig config,
+      final DruidProcessingConfig processingConfig,
       final Supplier<ByteBuffer> bufferSupplier,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
@@ -130,6 +129,7 @@ public class RowBasedGrouperHelper
         query,
         subquery,
         config,
+        processingConfig,
         bufferSupplier,
         null,
         SINGLE_THREAD_CONCURRENCY_HINT,
@@ -161,6 +161,7 @@ public class RowBasedGrouperHelper
    * @param subquery            optional subquery that we are receiving results from (see combining vs. subquery
    *                            mode above)
    * @param config              groupBy query config
+   * @param processingConfig    processing config
    * @param bufferSupplier      supplier of merge buffers
    * @param combineBufferHolder holder of combine buffers. Unused if concurrencyHint = -1, and may be null in that case
    * @param concurrencyHint     -1 for single-threaded Grouper, >=1 for concurrent Grouper
@@ -177,6 +178,7 @@ public class RowBasedGrouperHelper
       final GroupByQuery query,
       @Nullable final GroupByQuery subquery,
       final GroupByQueryConfig config,
+      final DruidProcessingConfig processingConfig,
       final Supplier<ByteBuffer> bufferSupplier,
       @Nullable final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder,
       final int concurrencyHint,
@@ -238,11 +240,13 @@ public class RowBasedGrouperHelper
       aggregatorFactories = query.getAggregatorSpecs().toArray(new AggregatorFactory[0]);
     }
 
+    final long maxMergingDictionarySize = querySpecificConfig.getActualMaxMergingDictionarySize(processingConfig);
+
     final Grouper.KeySerdeFactory<RowBasedKey> keySerdeFactory = new RowBasedKeySerdeFactory(
         includeTimestamp,
         query.getContextSortByDimsFirst(),
         query.getDimensions(),
-        querySpecificConfig.getMaxMergingDictionarySize() / (concurrencyHint == -1 ? 1 : concurrencyHint),
+        maxMergingDictionarySize / (concurrencyHint == -1 ? 1 : concurrencyHint),
         valueTypes,
         aggregatorFactories,
         limitSpec
@@ -270,7 +274,7 @@ public class RowBasedGrouperHelper
           includeTimestamp,
           query.getContextSortByDimsFirst(),
           query.getDimensions(),
-          querySpecificConfig.getMaxMergingDictionarySize(), // use entire dictionary space for combining key serde
+          maxMergingDictionarySize, // use entire dictionary space for combining key serde
           valueTypes,
           aggregatorFactories,
           limitSpec
@@ -406,6 +410,7 @@ public class RowBasedGrouperHelper
         adapter,
         supplier::get,
         decoratedSignature,
+        false,
         false
     );
   }
@@ -763,7 +768,8 @@ public class RowBasedGrouperHelper
             case DOUBLE:
               return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
                   columnSelector ->
-                      () -> DimensionHandlerUtils.convertToList(columnSelector.getObject());
+                      () -> DimensionHandlerUtils.convertToList(columnSelector.getObject(),
+                                                                capabilities.getElementType().getType());
             default:
               throw new IAE(
                   "Cannot create query type helper from invalid type [%s]",
@@ -874,6 +880,15 @@ public class RowBasedGrouperHelper
           valueTypes,
           dictionary
       );
+    }
+
+    @Override
+    public RowBasedKey copyKey(RowBasedKey key)
+    {
+      final int keyLength = key.getKey().length;
+      final Object[] keyCopy = new Object[keyLength];
+      System.arraycopy(key.getKey(), 0, keyCopy, 0, keyLength);
+      return new RowBasedKey(keyCopy);
     }
 
     @Override
@@ -1043,8 +1058,10 @@ public class RowBasedGrouperHelper
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         } else if (fieldTypes.get(i - dimStart).equals(ColumnType.LONG_ARRAY)
                    || fieldTypes.get(i - dimStart).equals(ColumnType.DOUBLE_ARRAY)) {
-          final ComparableList lhs = DimensionHandlerUtils.convertToList(key1.getKey()[i]);
-          final ComparableList rhs = DimensionHandlerUtils.convertToList(key2.getKey()[i]);
+          final ComparableList lhs = DimensionHandlerUtils.convertToList(key1.getKey()[i],
+                                                                         fieldTypes.get(i - dimStart).getElementType().getType());
+          final ComparableList rhs = DimensionHandlerUtils.convertToList(key2.getKey()[i],
+                                                                         fieldTypes.get(i - dimStart).getElementType().getType());
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         } else {
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(
@@ -1122,8 +1139,8 @@ public class RowBasedGrouperHelper
 
           cmp = ComparableList.compareWithComparator(
               comparator,
-              DimensionHandlerUtils.convertToList(lhs),
-              DimensionHandlerUtils.convertToList(rhs)
+              DimensionHandlerUtils.convertToList(lhs, fieldType.getElementType().getType()),
+              DimensionHandlerUtils.convertToList(rhs, fieldType.getElementType().getType())
           );
 
         } else {
@@ -1144,14 +1161,11 @@ public class RowBasedGrouperHelper
 
   static long estimateStringKeySize(@Nullable String key)
   {
-    long length = key == null ? 0 : key.length();
-    return length * Character.BYTES + ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY;
+    return DictionaryBuilding.estimateEntryFootprint((key == null ? 0 : key.length()) * Character.BYTES);
   }
 
   private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedGrouperHelper.RowBasedKey>
   {
-    private static final int UNKNOWN_DICTIONARY_ID = -1;
-
     private final boolean includeTimestamp;
     private final boolean sortByDimsFirst;
     private final List<DimensionSpec> dimensions;
@@ -1203,20 +1217,14 @@ public class RowBasedGrouperHelper
       this.valueTypes = valueTypes;
       this.limitSpec = limitSpec;
       this.enableRuntimeDictionaryGeneration = dictionary == null;
-      this.dictionary = enableRuntimeDictionaryGeneration ? new ArrayList<>() : dictionary;
-      this.reverseDictionary = enableRuntimeDictionaryGeneration ?
-                               new Object2IntOpenHashMap<>() :
-                               new Object2IntOpenHashMap<>(dictionary.size());
+      this.dictionary = enableRuntimeDictionaryGeneration ? DictionaryBuilding.createDictionary() : dictionary;
+      this.reverseDictionary = DictionaryBuilding.createReverseDictionary();
 
-      this.arrayDictionary = new ArrayList<>();
-      this.reverseArrayDictionary = new Object2IntOpenHashMap<>();
+      this.arrayDictionary = DictionaryBuilding.createDictionary();
+      this.reverseArrayDictionary = DictionaryBuilding.createReverseDictionary();
 
-      this.listDictionary = new ArrayList<>();
-      this.reverseListDictionary = new Object2IntOpenHashMap<>();
-
-      this.reverseDictionary.defaultReturnValue(UNKNOWN_DICTIONARY_ID);
-      this.reverseArrayDictionary.defaultReturnValue(UNKNOWN_DICTIONARY_ID);
-      this.reverseListDictionary.defaultReturnValue(UNKNOWN_DICTIONARY_ID);
+      this.listDictionary = DictionaryBuilding.createDictionary();
+      this.reverseListDictionary = DictionaryBuilding.createReverseDictionary();
 
       this.maxDictionarySize = maxDictionarySize;
       this.serdeHelpers = makeSerdeHelpers(limitSpec != null, enableRuntimeDictionaryGeneration);
@@ -1297,29 +1305,30 @@ public class RowBasedGrouperHelper
     }
 
     @Override
-    public RowBasedKey fromByteBuffer(ByteBuffer buffer, int position)
+    public RowBasedKey createKey()
+    {
+      return new RowBasedKey(new Object[includeTimestamp ? dimCount + 1 : dimCount]);
+    }
+
+    @Override
+    public void readFromByteBuffer(final RowBasedKey key, final ByteBuffer buffer, final int position)
     {
       final int dimStart;
-      final Comparable[] key;
       final int dimsPosition;
 
       if (includeTimestamp) {
-        key = new Comparable[dimCount + 1];
-        key[0] = buffer.getLong(position);
+        key.getKey()[0] = buffer.getLong(position);
         dimsPosition = position + Long.BYTES;
         dimStart = 1;
       } else {
-        key = new Comparable[dimCount];
         dimsPosition = position;
         dimStart = 0;
       }
 
-      for (int i = dimStart; i < key.length; i++) {
+      for (int i = dimStart; i < key.getKey().length; i++) {
         // Writes value from buffer to key[i]
-        serdeHelpers[i - dimStart].getFromByteBuffer(buffer, dimsPosition, i, key);
+        serdeHelpers[i - dimStart].getFromByteBuffer(buffer, dimsPosition, i, key.getKey());
       }
-
-      return new RowBasedKey(key);
     }
 
     @Override
@@ -1534,7 +1543,7 @@ public class RowBasedGrouperHelper
       {
         final ComparableList comparableList = (ComparableList) key.getKey()[idx];
         int id = reverseDictionary.getInt(comparableList);
-        if (id == UNKNOWN_DICTIONARY_ID) {
+        if (id == DimensionDictionary.ABSENT_VALUE_ID) {
           id = listDictionary.size();
           reverseListDictionary.put(comparableList, id);
           listDictionary.add(comparableList);
@@ -1544,7 +1553,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
         dimValues[dimValIdx] = listDictionary.get(buffer.getInt(initialOffset + keyBufferPosition));
       }
@@ -1596,7 +1605,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
         dimValues[dimValIdx] = arrayDictionary.get(buffer.getInt(initialOffset + keyBufferPosition));
       }
@@ -1610,7 +1619,7 @@ public class RowBasedGrouperHelper
       private int addToArrayDictionary(final ComparableStringArray s)
       {
         int idx = reverseArrayDictionary.getInt(s);
-        if (idx == UNKNOWN_DICTIONARY_ID) {
+        if (idx == DimensionDictionary.ABSENT_VALUE_ID) {
           idx = arrayDictionary.size();
           reverseArrayDictionary.put(s, idx);
           arrayDictionary.add(s);
@@ -1656,7 +1665,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
         dimValues[dimValIdx] = dictionary.get(buffer.getInt(initialOffset + keyBufferPosition));
       }
@@ -1695,12 +1704,13 @@ public class RowBasedGrouperHelper
        * this returns -1.
        *
        * @param s a string
+       *
        * @return id for this string, or -1
        */
       private int addToDictionary(final String s)
       {
         int idx = reverseDictionary.getInt(s);
-        if (idx == UNKNOWN_DICTIONARY_ID) {
+        if (idx == DimensionDictionary.ABSENT_VALUE_ID) {
           final long additionalEstimatedSize = estimateStringKeySize(s);
           if (currentEstimatedSize + additionalEstimatedSize > maxDictionarySize) {
             return -1;
@@ -1732,7 +1742,7 @@ public class RowBasedGrouperHelper
         final String stringKey = (String) key.getKey()[idx];
 
         final int dictIndex = reverseDictionary.getInt(stringKey);
-        if (dictIndex == UNKNOWN_DICTIONARY_ID) {
+        if (dictIndex == DimensionDictionary.ABSENT_VALUE_ID) {
           throw new ISE("Cannot find key[%s] from dictionary", stringKey);
         }
         keyBuffer.putInt(dictIndex);
@@ -1773,7 +1783,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
         dimValues[dimValIdx] = buffer.getLong(initialOffset + keyBufferPosition);
       }
@@ -1818,7 +1828,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
         dimValues[dimValIdx] = buffer.getFloat(initialOffset + keyBufferPosition);
       }
@@ -1863,7 +1873,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
         dimValues[dimValIdx] = buffer.getDouble(initialOffset + keyBufferPosition);
       }
@@ -1915,7 +1925,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
         if (buffer.get(initialOffset + keyBufferPosition) == NullHandling.IS_NULL_BYTE) {
           dimValues[dimValIdx] = null;

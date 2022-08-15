@@ -81,6 +81,7 @@ public class HttpClientConfig
   }
 
   private final int numConnections;
+  private final boolean eagerInitialization;
   private final SSLContext sslContext;
   private final HttpClientProxyConfig proxyConfig;
   private final Duration readTimeout;
@@ -92,6 +93,7 @@ public class HttpClientConfig
 
   private HttpClientConfig(
       int numConnections,
+      boolean eagerInitialization,
       SSLContext sslContext,
       HttpClientProxyConfig proxyConfig,
       Duration readTimeout,
@@ -103,6 +105,7 @@ public class HttpClientConfig
   )
   {
     this.numConnections = numConnections;
+    this.eagerInitialization = eagerInitialization;
     this.sslContext = sslContext;
     this.proxyConfig = proxyConfig;
     this.readTimeout = readTimeout;
@@ -116,6 +119,11 @@ public class HttpClientConfig
   public int getNumConnections()
   {
     return numConnections;
+  }
+
+  public boolean isEagerInitialization()
+  {
+    return eagerInitialization;
   }
 
   public SSLContext getSslContext()
@@ -161,6 +169,7 @@ public class HttpClientConfig
   public static class Builder
   {
     private int numConnections = 1;
+    private boolean eagerInitialization = true;
     private SSLContext sslContext = null;
     private HttpClientProxyConfig proxyConfig = null;
     private Duration readTimeout = null;
@@ -177,6 +186,12 @@ public class HttpClientConfig
     public Builder withNumConnections(int numConnections)
     {
       this.numConnections = numConnections;
+      return this;
+    }
+
+    public Builder withEagerInitialization(boolean eagerInitialization)
+    {
+      this.eagerInitialization = eagerInitialization;
       return this;
     }
 
@@ -226,6 +241,7 @@ public class HttpClientConfig
     {
       return new HttpClientConfig(
           numConnections,
+          eagerInitialization,
           sslContext,
           proxyConfig,
           readTimeout,

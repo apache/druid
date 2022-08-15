@@ -29,26 +29,23 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ForwardingSortedSet;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntIterable;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
@@ -60,28 +57,29 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.IntIteratorUtils;
-import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.StringValueSetIndex;
+import org.apache.druid.segment.column.Utf8ValueSetIndex;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.TreeSet;
 
 public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 {
-  // Values can contain `null` object
-  private final Set<String> values;
+  // Values can contain `null` object. Values are sorted (nulls-first).
+  private final ValuesSet values;
+  // Computed eagerly, not lazily, because lazy computations would block all processing threads for a given query.
+  private final SortedSet<ByteBuffer> valuesUtf8;
   private final String dimension;
   @Nullable
   private final ExtractionFn extractionFn;
@@ -107,7 +105,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       @JsonProperty("dimension") String dimension,
       // This 'values' collection instance can be reused if possible to avoid copying a big collection.
       // Callers should _not_ modify the collection after it is passed to this constructor.
-      @JsonProperty("values") Set<String> values,
+      @JsonProperty("values") ValuesSet values,
       @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
       @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
@@ -125,32 +123,35 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
    * Creates a new filter without an extraction function or any special filter tuning.
    *
    * @param dimension column to search
-   * @param values    set of values to match. This collection may be reused to avoid copying a big collection.
-   *                  Therefore, callers should <b>not</b> modify the collection after it is passed to this
-   *                  constructor.
+   * @param values    set of values to match. If this collection is a {@link SortedSet}, it may be reused to avoid
+   *                  copying a big collection. Therefore, callers should <b>not</b> modify the collection after it
+   *                  is passed to this constructor.
    */
-  public InDimFilter(
-      String dimension,
-      Set<String> values
-  )
+  public InDimFilter(String dimension, Set<String> values)
   {
     this(
         dimension,
-        values,
+        values instanceof ValuesSet ? (ValuesSet) values : new ValuesSet(values),
+        null,
         null,
         null
     );
   }
 
   /**
-   * This constructor should be called only in unit tests since accepting a Collection makes copying more likely.
+   * Creates a new filter without an extraction function or any special filter tuning.
+   *
+   * @param dimension    column to search
+   * @param values       set of values to match. If this collection is a {@link SortedSet}, it may be reused to avoid
+   *                     copying a big collection. Therefore, callers should <b>not</b> modify the collection after it
+   *                     is passed to this constructor.
+   * @param extractionFn extraction function to apply to the column before checking against "values"
    */
-  @VisibleForTesting
   public InDimFilter(String dimension, Collection<String> values, @Nullable ExtractionFn extractionFn)
   {
     this(
         dimension,
-        values instanceof Set ? (Set<String>) values : new HashSet<>(values),
+        values instanceof ValuesSet ? (ValuesSet) values : new ValuesSet(values),
         extractionFn,
         null,
         null
@@ -162,7 +163,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
    */
   private InDimFilter(
       final String dimension,
-      final Set<String> values,
+      final ValuesSet values,
       @Nullable final ExtractionFn extractionFn,
       @Nullable final FilterTuning filterTuning,
       @Nullable final DruidPredicateFactory predicateFactory
@@ -170,19 +171,15 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   {
     Preconditions.checkNotNull(values, "values cannot be null");
 
-    // The values set can be huge. Try to avoid copying the set if possible.
-    // Note that we may still need to copy values to a list for caching. See getCacheKey().
+    this.values = values;
+
     if (!NullHandling.sqlCompatible() && values.contains("")) {
-      // In Non sql compatible mode, empty strings should be converted to nulls for the filter.
-      // In sql compatible mode, empty strings and nulls should be treated differently
-      this.values = Sets.newHashSetWithExpectedSize(values.size());
-      for (String v : values) {
-        this.values.add(NullHandling.emptyToNullIfNeeded(v));
-      }
-    } else {
-      this.values = values;
+      // In non-SQL-compatible mode, empty strings must be converted to nulls for the filter.
+      this.values.remove("");
+      this.values.add(null);
     }
 
+    this.valuesUtf8 = this.values.toUtf8();
     this.dimension = Preconditions.checkNotNull(dimension, "dimension cannot be null");
     this.extractionFn = extractionFn;
     this.filterTuning = filterTuning;
@@ -203,7 +200,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   }
 
   @JsonProperty
-  public Set<String> getValues()
+  public SortedSet<String> getValues()
   {
     return values;
   }
@@ -284,38 +281,38 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   }
 
   @Override
-  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  @Nullable
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    if (extractionFn == null) {
-      final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
-      return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable(values, bitmapIndex));
-    } else {
-      return Filters.matchPredicate(
-          dimension,
-          selector,
-          bitmapResultFactory,
-          predicateFactory.makeStringPredicate()
-      );
+    if (!Filters.checkFilterTuningUseIndex(dimension, selector, filterTuning)) {
+      return null;
     }
-  }
+    if (extractionFn == null) {
+      final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
 
-  @Override
-  public double estimateSelectivity(BitmapIndexSelector indexSelector)
-  {
-    if (extractionFn == null) {
-      final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
-      return Filters.estimateSelectivity(
-          bitmapIndex,
-          IntIteratorUtils.toIntList(getBitmapIndexIterable(values, bitmapIndex).iterator()),
-          indexSelector.getNumRows()
-      );
-    } else {
-      return Filters.estimateSelectivity(
-          dimension,
-          indexSelector,
-          predicateFactory.makeStringPredicate()
-      );
+      if (indexSupplier == null) {
+        // column doesn't exist, match against null
+        return Filters.makeNullIndex(
+            predicateFactory.makeStringPredicate().apply(null),
+            selector
+        );
+      }
+
+      final Utf8ValueSetIndex utf8ValueSetIndex = indexSupplier.as(Utf8ValueSetIndex.class);
+      if (utf8ValueSetIndex != null) {
+        return utf8ValueSetIndex.forSortedValuesUtf8(valuesUtf8);
+      }
+
+      final StringValueSetIndex stringValueSetIndex = indexSupplier.as(StringValueSetIndex.class);
+      if (stringValueSetIndex != null) {
+        return stringValueSetIndex.forSortedValues(values);
+      }
     }
+    return Filters.makePredicateIndex(
+        dimension,
+        selector,
+        predicateFactory
+    );
   }
 
   @Override
@@ -368,19 +365,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   }
 
   @Override
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-  {
-    return selector.getBitmapIndex(dimension) != null;
-  }
-
-  @Override
-  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-  {
-    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
   }
@@ -421,20 +406,9 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
   private byte[] computeCacheKey()
   {
-    final Collection<String> sortedValues;
-
-    if (values instanceof SortedSet && isNaturalOrder(((SortedSet<String>) values).comparator())) {
-      // Avoid copying "values" when it is already in the order we need for cache key computation.
-      sortedValues = values;
-    } else {
-      final List<String> sortedValuesList = new ArrayList<>(values);
-      sortedValuesList.sort(Comparators.naturalNullsFirst());
-      sortedValues = sortedValuesList;
-    }
-
     // Hash all values, in sorted order, as their length followed by their content.
     final Hasher hasher = Hashing.sha256().newHasher();
-    for (String v : sortedValues) {
+    for (String v : values) {
       if (v == null) {
         // Encode null as length -1, no content.
         hasher.putInt(-1);
@@ -460,7 +434,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       LookupExtractionFn exFn = (LookupExtractionFn) extractionFn;
       LookupExtractor lookup = exFn.getLookup();
 
-      final Set<String> keys = new HashSet<>();
+      final ValuesSet keys = new ValuesSet();
       for (String value : values) {
 
         // We cannot do an unapply()-based optimization if the selector value
@@ -490,65 +464,11 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     return this;
   }
 
-  /**
-   * Returns true if the comparator is null or the singleton {@link Comparators#naturalNullsFirst()}. Useful for
-   * detecting if a sorted set is in natural order or not.
-   *
-   * May return false negatives (i.e. there are naturally-ordered comparators that will return false here).
-   */
-  private static <T> boolean isNaturalOrder(@Nullable final Comparator<T> comparator)
-  {
-    return comparator == null || Comparators.naturalNullsFirst().equals(comparator);
-  }
-
-  private static Iterable<ImmutableBitmap> getBitmapIterable(final Set<String> values, final BitmapIndex bitmapIndex)
-  {
-    return Filters.bitmapsFromIndexes(getBitmapIndexIterable(values, bitmapIndex), bitmapIndex);
-  }
-
-  private static IntIterable getBitmapIndexIterable(final Set<String> values, final BitmapIndex bitmapIndex)
-  {
-    return () -> new IntIterator()
-    {
-      final Iterator<String> iterator = values.iterator();
-
-      @Override
-      public boolean hasNext()
-      {
-        return iterator.hasNext();
-      }
-
-      @Override
-      public int nextInt()
-      {
-        return bitmapIndex.getIndex(iterator.next());
-      }
-    };
-  }
-
   @SuppressWarnings("ReturnValueIgnored")
   private static Predicate<String> createStringPredicate(final Set<String> values)
   {
     Preconditions.checkNotNull(values, "values");
-
-    try {
-      // Check to see if values.contains(null) will throw a NullPointerException. Jackson JSON deserialization won't
-      // lead to this (it will create a HashSet, which can accept nulls). But when InDimFilters are created
-      // programmatically as a result of optimizations like rewriting inner joins as filters, the passed-in Set may
-      // not be able to accept nulls. We don't want to copy the Sets (since they may be large) so instead we'll wrap
-      // it in a null-checking lambda if needed.
-      values.contains(null);
-
-      // Safe to do values.contains(null).
-      return values::contains;
-    }
-    catch (NullPointerException ignored) {
-      // Fall through
-    }
-
-    // Not safe to do values.contains(null); must return a wrapper.
-    // Return false for null, since an exception means the set cannot accept null (and therefore does not include it).
-    return value -> value != null && values.contains(value);
+    return values::contains;
   }
 
   private static DruidLongPredicate createLongPredicate(final Set<String> values)
@@ -562,7 +482,21 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     final LongOpenHashSet longHashSet = new LongOpenHashSet(longs);
-    return longHashSet::contains;
+    final boolean matchNull = values.contains(null);
+    return new DruidLongPredicate()
+    {
+      @Override
+      public boolean applyLong(long n)
+      {
+        return longHashSet.contains(n);
+      }
+
+      @Override
+      public boolean applyNull()
+      {
+        return matchNull;
+      }
+    };
   }
 
   private static DruidFloatPredicate createFloatPredicate(final Set<String> values)
@@ -576,7 +510,21 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     final IntOpenHashSet floatBitsHashSet = new IntOpenHashSet(floatBits);
-    return input -> floatBitsHashSet.contains(Float.floatToIntBits(input));
+    final boolean matchNull = values.contains(null);
+    return new DruidFloatPredicate()
+    {
+      @Override
+      public boolean applyFloat(float n)
+      {
+        return floatBitsHashSet.contains(Float.floatToIntBits(n));
+      }
+
+      @Override
+      public boolean applyNull()
+      {
+        return matchNull;
+      }
+    };
   }
 
   private static DruidDoublePredicate createDoublePredicate(final Set<String> values)
@@ -590,7 +538,21 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     final LongOpenHashSet doubleBitsHashSet = new LongOpenHashSet(doubleBits);
-    return input -> doubleBitsHashSet.contains(Double.doubleToLongBits(input));
+    final boolean matchNull = values.contains(null);
+    return new DruidDoublePredicate()
+    {
+      @Override
+      public boolean applyDouble(double n)
+      {
+        return doubleBitsHashSet.contains(Double.doubleToLongBits(n));
+      }
+
+      @Override
+      public boolean applyNull()
+      {
+        return matchNull;
+      }
+    };
   }
 
   @VisibleForTesting
@@ -603,9 +565,9 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
     private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
 
-    InFilterDruidPredicateFactory(
+    public InFilterDruidPredicateFactory(
         final ExtractionFn extractionFn,
-        final Set<String> values
+        final ValuesSet values
     )
     {
       this.extractionFn = extractionFn;
@@ -683,6 +645,52 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     public int hashCode()
     {
       return Objects.hash(extractionFn, values);
+    }
+  }
+
+  public static class ValuesSet extends ForwardingSortedSet<String>
+  {
+    private final SortedSet<String> values;
+
+    public ValuesSet()
+    {
+      this.values = new TreeSet<>(Comparators.naturalNullsFirst());
+    }
+
+    /**
+     * Create a ValuesSet from another Collection. The Collection will be reused if it is a {@link SortedSet} with
+     * an appropriate comparator.
+     */
+    public ValuesSet(final Collection<String> values)
+    {
+      if (values instanceof SortedSet && Comparators.naturalNullsFirst()
+                                                    .equals(((SortedSet<String>) values).comparator())) {
+        this.values = (SortedSet<String>) values;
+      } else {
+        this.values = new TreeSet<>(Comparators.naturalNullsFirst());
+        this.values.addAll(values);
+      }
+    }
+
+    public SortedSet<ByteBuffer> toUtf8()
+    {
+      final TreeSet<ByteBuffer> valuesUtf8 = new TreeSet<>(ByteBufferUtils.unsignedComparator());
+
+      for (final String value : values) {
+        if (value == null) {
+          valuesUtf8.add(null);
+        } else {
+          valuesUtf8.add(ByteBuffer.wrap(StringUtils.toUtf8(value)));
+        }
+      }
+
+      return valuesUtf8;
+    }
+
+    @Override
+    protected SortedSet<String> delegate()
+    {
+      return values;
     }
   }
 }

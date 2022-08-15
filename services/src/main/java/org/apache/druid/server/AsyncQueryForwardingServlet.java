@@ -46,6 +46,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.StandardResponseHeaderFilterHolder;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.router.QueryHostFinder;
@@ -530,6 +531,17 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     // Query timeout metric is not relevant here and this metric is already being tracked in the Broker and the
     // data nodes using QueryResource
     return 0L;
+  }
+
+  @Override
+  protected void onServerResponseHeaders(
+      HttpServletRequest clientRequest,
+      HttpServletResponse proxyResponse,
+      Response serverResponse
+  )
+  {
+    StandardResponseHeaderFilterHolder.deduplicateHeadersInProxyServlet(proxyResponse, serverResponse);
+    super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
   }
 
   @VisibleForTesting

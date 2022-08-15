@@ -81,12 +81,12 @@ The `maxNumConcurrentSubTasks` in the `tuningConfig` determines the number of co
 #### Replacing or appending data
 By default, batch ingestion replaces all data in the intervals in your `granularitySpec`' for any segment that it writes to. If you want to add to the segment instead, set the `appendToExisting` flag in the `ioConfig`. Batch ingestion only replaces data in segments where it actively adds data. If there are segments in the intervals for your `granularitySpec` that have do not have data from a task, they remain unchanged. If any existing segments partially overlap with the intervals in the `granularitySpec`, the portion of those segments outside the interval for the new spec remain visible.
 
-#### Dropping existing segments
-You can set `dropExisting` flag in the `ioConfig` to true if you want the ingestion task to drop all existing segments that start and end within the intervals for your `granularitySpec`. This applies whether or not the new data covers all existing segments. `dropExisting` only applies when `appendToExisting` is false and the  `granularitySpec` contains an `interval`. WARNING: this functionality is still in beta and can result in temporary data unavailability for data within the specified `interval`.
+#### Fully replacing existing segments using tombstones
+You can set `dropExisting` flag in the `ioConfig` to true if you want the ingestion task to replace all existing segments that start and end within the intervals for your `granularitySpec`. This applies whether or not the new data covers all existing segments. `dropExisting` only applies when `appendToExisting` is false and the  `granularitySpec` contains an `interval`. WARNING: this functionality is still in beta.
 
 The following examples demonstrate when to set the `dropExisting` property to true in the `ioConfig`:
 
-Consider an existing segment with an interval of 2020-01-01 to 2021-01-01 and `YEAR` `segmentGranularity`. You want to overwrite the whole interval of 2020-01-01 to 2021-01-01 with new data using the finer segmentGranularity of `MONTH`. If the replacement data does not have a record within every months from 2020-01-01 to 2021-01-01 Druid cannot drop the original `YEAR` segment even if it does include all the replacement data. Set `dropExisting` to true in this case to drop the original segment at `YEAR` `segmentGranularity` since you no longer need it.<br><br>
+Consider an existing segment with an interval of 2020-01-01 to 2021-01-01 and `YEAR` `segmentGranularity`. You want to overwrite the whole interval of 2020-01-01 to 2021-01-01 with new data using the finer segmentGranularity of `MONTH`. If the replacement data does not have a record within every months from 2020-01-01 to 2021-01-01 Druid cannot drop the original `YEAR` segment even if it does include all the replacement data. Set `dropExisting` to true in this case to replace the original segment at `YEAR` `segmentGranularity` since you no longer need it.<br><br>
 Imagine you want to re-ingest or overwrite a datasource and the new data does not contain some time intervals that exist in the datasource. For example, a datasource contains the following data at `MONTH` segmentGranularity:  
 - **January**: 1 record  
 - **February**: 10 records  
@@ -102,7 +102,7 @@ Unless you set `dropExisting` to true, the result after ingestion with overwrite
 * **February**: 10 records  
 * **March**: 9 records
 
-This is incorrect since the new data has 0 records for January. Set `dropExisting` to true to drop the unneeded January segment.
+This may not be what it is expected since the new data has 0 records for January. Set `dropExisting` to true to replace the unneeded January segment with a tombstone.
    
 ## Parallel indexing example
 
@@ -136,60 +136,65 @@ The following example illustrates the configuration for a parallel indexing task
       "metricsSpec": [
         {
           "type": "count",
-              "name": "count"
-            },
-            {
-              "type": "doubleSum",
-              "name": "added",
-              "fieldName": "added"
-            },
-            {
-              "type": "doubleSum",
-              "name": "deleted",
-              "fieldName": "deleted"
-            },
-            {
-              "type": "doubleSum",
-              "name": "delta",
-              "fieldName": "delta"
-            }
-        ],
-        "granularitySpec": {
-          "segmentGranularity": "DAY",
-          "queryGranularity": "second",
-          "intervals" : [ "2013-08-31/2013-09-02" ]
+          "name": "count"
+        },
+        {
+          "type": "doubleSum",
+          "name": "added",
+          "fieldName": "added"
+        },
+        {
+          "type": "doubleSum",
+          "name": "deleted",
+          "fieldName": "deleted"
+        },
+        {
+          "type": "doubleSum",
+          "name": "delta",
+          "fieldName": "delta"
         }
+      ],
+      "granularitySpec": {
+        "segmentGranularity": "DAY",
+        "queryGranularity": "second",
+        "intervals": [
+          "2013-08-31/2013-09-02"
+        ]
+      }
     },
     "ioConfig": {
-        "type": "index_parallel",
-        "inputSource": {
-          "type": "local",
-          "baseDir": "examples/indexing/",
-          "filter": "wikipedia_index_data*"
-        },
-        "inputFormat": {
-          "type": "json"
-        }
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "local",
+        "baseDir": "examples/indexing/",
+        "filter": "wikipedia_index_data*"
+      },
+      "inputFormat": {
+        "type": "json"
+      }
     },
     "tuningConfig": {
-        "type": "index_parallel",
-        "partitionsSpec": {
-             "type": "single_dim",
-             "partitionDimension": "country",
-             "targetRowsPerSegment": 5000000
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "single_dim",
+        "partitionDimension": "country",
+        "targetRowsPerSegment": 5000000
       },
-        "maxNumConcurrentSubTasks": 2
+      "maxNumConcurrentSubTasks": 2
     }
   }
 }
 ```
+
+## Parallel indexing configuration
+
 The following table defines the primary sections of the input spec:
 |property|description|required?|
 |--------|-----------|---------|
-|type|The task type. For parallel task, set the value to `index_parallel`.|yes|
-|id|The task ID. If omitted, Druid generates the task ID using task type, data source name, interval, and date-time stamp. |no|
-|spec|The ingestion spec that defines: the data schema, IO config, and tuning config. See [`ioConfig`](#ioconfig) for more details. |yes|
-|context|Context to specify various task configuration parameters.|no|
+|type|The task type. For parallel task indexing, set the value to `index_parallel`.|yes|
+|id|The task ID. If omitted, Druid generates the task ID using the task type, data source name, interval, and date-time stamp. |no|
+|spec|The ingestion spec that defines the [data schema](#dataschema), [IO config](#ioconfig), and [tuning config](#tuningconfig).|yes|
+|context|Context to specify various task configuration parameters. See [Task context parameters](tasks.md#context-parameters) for more details.|no|
 
 ### `dataSchema`
 
@@ -208,7 +213,7 @@ When defining the `granularitySpec` for index parallel, consider the defining `i
 |type|The task type. Set to the value to `index_parallel`.|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
-|dropExisting|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task drops (mark unused) all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid does not drop or mark unused any segments. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec`, Druid does not drop any segments even if `dropExisting` is `true`. WARNING: this functionality is still in beta and can result in temporary data unavailability for data within the specified `interval`.|false|no|
+|dropExisting|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task replaces all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid does not change any existing segment. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec`, Druid does not replace any segments even if `dropExisting` is `true`. WARNING: this functionality is still in beta.|false|no|
 
 ### `tuningConfig`
 
@@ -217,12 +222,11 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The task type. Set the value to`index_parallel`.|none|yes|
-|maxRowsPerSegment|Deprecated. Use `partitionsSpec` instead. Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |maxRowsInMemory|Determines when Druid should perform intermediate persists to disk. Normally you do not need to set this. Depending on the nature of your data, if rows are short in terms of bytes. For example, you may not want to store a million rows in memory. In this case, set this value.|1000000|no|
 |maxBytesInMemory|Use to determine when Druid should perform intermediate persists to disk. Normally Druid computes this internally and you do not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists). Note that `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until next persist will decrease. Tasks fail when the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory`.|1/6 of max JVM memory|no|
 |maxColumnsToMerge|Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.|-1 (unlimited)|no|
 |maxTotalRows|Deprecated. Use `partitionsSpec` instead. Total number of rows in segments waiting to be pushed. Used to determine when intermediate pushing should occur.|20000000|no|
-|numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create when using a `hashed` `partitionsSpec`. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
+|numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create when using a `hashed` `partitionsSpec`. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data.|null|no|
 |splitHintSpec|Hint to control the amount of data that each first phase task reads. Druid may ignore the hint depending on the implementation of the input source. See [Split hint spec](#split-hint-spec) for more details.|size-based split hint spec|no|
 |partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` or `single_dim` if `forceGuaranteedRollup` = true|no|
 |indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](ingestion-spec.md#indexspec)|null|no|
@@ -339,16 +343,17 @@ In hash partitioning, the partition function is used to compute hash of partitio
 
 #### Single-dimension range partitioning
 
-> Single dimension range partitioning is currently not supported in the sequential mode of the Parallel task.
+> Single dimension range partitioning is not supported in the sequential mode of the `index_parallel` task type.
+
+Range partitioning has [several benefits](#benefits-of-range-partitioning) related to storage footprint and query
+performance.
 
 The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` to 1.
 
 When you use this technique to partition your data, segment sizes may be unequally distributed if the data in your `partitionDimension` is also unequally distributed.  Therefore, to avoid imbalance in data layout, review the distribution of values in your source data before deciding on a partitioning strategy.
 
-For segment pruning to be effective and translate into better query performance, you must use
-the `partitionDimension` at query time.  You can concatenate values from multiple
-dimensions into a new dimension to use as the `partitionDimension`. In this case, you
-must use that new dimension in your native filter `WHERE` clause.
+Range partitioning is not possible on multi-value dimensions. If the provided
+`partitionDimension` is multi-value, your ingestion job will report an error.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -387,19 +392,17 @@ them to create the final segments. Finally, they push the final segments to the 
 > the task may fail if the input changes in between the two passes.
 
 #### Multi-dimension range partitioning
-> Multiple dimension (multi-dimension) range partitioning is an experimental feature. Multi-dimension range partitioning is currently not supported in the sequential mode of the Parallel task.
 
-When you use multi-dimension partitioning for your data, Druid is able to distribute segment sizes more evenly than with single dimension partitioning.
+> Multiple dimension (multi-dimension) range partitioning is an experimental feature.
+> Multi-dimension range partitioning is not supported in the sequential mode of the
+> `index_parallel` task type.
 
-For segment pruning to be effective and translate into better query performance, you must include the first of your `partitionDimensions` in the `WHERE` clause at query time. For example, given the following `partitionDimensions`:
-```
- "partitionsSpec": {
-        "type": "range",
-        "partitionDimensions":["coutryName","cityName"],
-        "targetRowsPerSegment" : 5000
-}
-```
-Use "countryName" or both "countryName" and "cityName" in the `WHERE` clause of your query to take advantage of the performance benefits from multi-dimension partitioning.
+Range partitioning has [several benefits](#benefits-of-range-partitioning) related to storage footprint and query
+performance. Multi-dimension range partitioning improves over single-dimension range partitioning by allowing
+Druid to distribute segment sizes more evenly, and to prune on more dimensions.
+
+Range partitioning is not possible on multi-value dimensions. If one of the provided
+`partitionDimensions` is multi-value, your ingestion job will report an error.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -409,7 +412,40 @@ Use "countryName" or both "countryName" and "cityName" in the `WHERE` clause of 
 |maxRowsPerSegment|Soft max for the number of rows to include in a partition.|none|either this or `targetRowsPerSegment`|
 |assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|false|no|
 
-### HTTP status endpoints
+#### Benefits of range partitioning
+
+Range partitioning, either `single_dim` or `range`, has several benefits:
+
+1. Lower storage footprint due to combining similar data into the same segments, which improves compressibility.
+2. Better query performance due to Broker-level segment pruning, which removes segments from
+   consideration when they cannot possibly contain data matching the query filter.
+
+For Broker-level segment pruning to be effective, you must include partition dimensions in the `WHERE` clause. Each
+partition dimension can participate in pruning if the prior partition dimensions (those to its left) are also
+participating, and if the query uses filters that support pruning.
+
+Filters that support pruning include:
+
+- Equality on string literals, like `x = 'foo'` and `x IN ('foo', 'bar')` where `x` is a string.
+- Comparison between string columns and string literals, like `x < 'foo'` or other comparisons
+  involving `<`, `>`, `<=`, or `>=`.
+
+For example, if you configure the following `range` partitioning during ingestion:
+
+```json
+"partitionsSpec": {
+  "type": "range",
+  "partitionDimensions": ["coutryName", "cityName"],
+  "targetRowsPerSegment": 5000
+}
+```
+
+Then, filters like `WHERE countryName = 'United States'` or `WHERE countryName = 'United States' AND cityName = 'New York'`
+can make use of pruning. However, `WHERE cityName = 'New York'` cannot make use of pruning, because countryName is not
+involved. The clause `WHERE cityName LIKE 'New%'` cannot make use of pruning either, because LIKE filters do not
+support pruning.
+
+## HTTP status endpoints
 
 The supervisor task provides some HTTP endpoints to get running status.
 
@@ -578,7 +614,9 @@ An example of the result is
       },
       "tuningConfig": {
         "type": "index_parallel",
-        "maxRowsPerSegment": 5000000,
+        "partitionsSpec": {
+          "type": "dynamic"
+        },
         "maxRowsInMemory": 1000000,
         "maxTotalRows": 20000000,
         "numShards": null,
@@ -637,7 +675,7 @@ An example of the result is
 
 Returns the task attempt history of the worker task spec of the given id, or HTTP 404 Not Found error if the supervisor task is running in the sequential mode.
 
-### Segment pushing modes
+## Segment pushing modes
 While ingesting data using the parallel task indexing, Druid creates segments from the input data and pushes them. For segment pushing,
 the parallel task index supports the following segment pushing modes based upon your type of [rollup](./rollup.md):
 
@@ -645,7 +683,7 @@ the parallel task index supports the following segment pushing modes based upon 
 To enable bulk pushing mode, set `forceGuaranteedRollup` in your TuningConfig. You cannot use bulk pushing with `appendToExisting` in your IOConfig.
 - Incremental pushing mode: Used for best-effort rollup. Druid pushes segments are incrementally during the course of the indexing task. The index task collects data and stores created segments in the memory and disks of the services running the task until the total number of collected rows exceeds `maxTotalRows`. At that point the index task immediately pushes all segments created up until that moment, cleans up pushed segments, and continues to ingest the remaining data.
 
-### Capacity planning
+## Capacity planning
 
 The supervisor task can create up to `maxNumConcurrentSubTasks` worker tasks no matter how many task slots are currently available.
 As a result, total number of tasks which can be run at the same time is `(maxNumConcurrentSubTasks + 1)` (including the supervisor task).
@@ -680,6 +718,6 @@ For details on available input sources see:
 - [Druid input Source](./native-batch-input-source.md#druid-input-source) (`druid`) reads data from a Druid datasource.
 - [SQL input Source](./native-batch-input-source.md#sql-input-source) (`sql`) reads data from a RDBMS source.
 
-For information on how to combine input sources, see [Combining input sources](./native-batch-input-source.md#combining-input-sources).
+For information on how to combine input sources, see [Combining input source](./native-batch-input-source.md#combining-input-source).
 
 

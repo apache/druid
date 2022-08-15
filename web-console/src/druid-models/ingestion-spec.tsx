@@ -17,6 +17,7 @@
  */
 
 import { Code } from '@blueprintjs/core';
+import { range } from 'd3-array';
 import React from 'react';
 
 import { AutoForm, ExternalLink, Field } from '../components';
@@ -32,6 +33,7 @@ import {
   EMPTY_OBJECT,
   filterMap,
   oneOf,
+  parseCsvLine,
   typeIs,
 } from '../utils';
 import { SampleHeaderAndRows } from '../utils/sampler';
@@ -291,6 +293,23 @@ export function isDruidSource(spec: Partial<IngestionSpec>): boolean {
   return deepGet(spec, 'spec.ioConfig.inputSource.type') === 'druid';
 }
 
+// ---------------------------------
+// Spec cleanup and normalization
+
+/**
+ * Make sure that the ioConfig, dataSchema, e.t.c. are nested inside of spec and not just hanging out at the top level
+ * @param spec
+ */
+function nestSpecIfNeeded(spec: any): Partial<IngestionSpec> {
+  if (spec?.type && typeof spec.spec !== 'object' && (spec.ioConfig || spec.dataSchema)) {
+    return {
+      type: spec.type,
+      spec: deepDelete(spec, 'type'),
+    };
+  }
+  return spec;
+}
+
 /**
  * Make sure that the types are set in the root, ioConfig, and tuningConfig
  * @param spec
@@ -301,10 +320,7 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
     spec = {};
   }
 
-  // Make sure that if we actually get a task payload we extract the spec
-  if (typeof spec.spec !== 'object' && typeof (spec as any).ioConfig === 'object') {
-    spec = { spec: spec as any };
-  }
+  spec = nestSpecIfNeeded(spec);
 
   const specType =
     deepGet(spec, 'type') ||
@@ -332,6 +348,47 @@ export function cleanSpec(
     ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []),
   ) as IngestionSpec;
 }
+
+export function upgradeSpec(spec: any): Partial<IngestionSpec> {
+  spec = nestSpecIfNeeded(spec);
+
+  // Upgrade firehose if exists
+  if (deepGet(spec, 'spec.ioConfig.firehose')) {
+    switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
+      case 'static-s3':
+        deepSet(spec, 'spec.ioConfig.firehose.type', 's3');
+        break;
+
+      case 'static-google-blobstore':
+        deepSet(spec, 'spec.ioConfig.firehose.type', 'google');
+        deepMove(spec, 'spec.ioConfig.firehose.blobs', 'spec.ioConfig.firehose.objects');
+        break;
+    }
+
+    spec = deepMove(spec, 'spec.ioConfig.firehose', 'spec.ioConfig.inputSource');
+  }
+
+  // Decompose parser if exists
+  if (deepGet(spec, 'spec.dataSchema.parser')) {
+    spec = deepMove(
+      spec,
+      'spec.dataSchema.parser.parseSpec.timestampSpec',
+      'spec.dataSchema.timestampSpec',
+    );
+    spec = deepMove(
+      spec,
+      'spec.dataSchema.parser.parseSpec.dimensionsSpec',
+      'spec.dataSchema.dimensionsSpec',
+    );
+    spec = deepMove(spec, 'spec.dataSchema.parser.parseSpec', 'spec.ioConfig.inputFormat');
+    spec = deepDelete(spec, 'spec.dataSchema.parser');
+    spec = deepMove(spec, 'spec.ioConfig.inputFormat.format', 'spec.ioConfig.inputFormat.type');
+  }
+
+  return spec;
+}
+
+// ------------------------------------
 
 export interface GranularitySpec {
   type?: string;
@@ -1320,7 +1377,6 @@ export interface TuningConfig {
   recordBufferSize?: number;
   recordBufferOfferTimeout?: number;
   recordBufferFullWait?: number;
-  fetchSequenceNumberTimeout?: number;
   fetchThreads?: number;
 }
 
@@ -1967,21 +2023,6 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     ),
   },
   {
-    name: 'spec.tuningConfig.fetchSequenceNumberTimeout',
-    type: 'number',
-    defaultValue: 60000,
-    defined: typeIs('kinesis'),
-    hideInMore: true,
-    info: (
-      <>
-        Length of time in milliseconds to wait for Kinesis to return the earliest or latest sequence
-        number for a shard. Kinesis will not return the latest sequence number if no data is
-        actively being written to that shard. In this case, this fetch call will repeatedly timeout
-        and retry until fresh data is written to the stream.
-      </>
-    ),
-  },
-  {
     name: 'spec.tuningConfig.fetchThreads',
     type: 'number',
     placeholder: 'max(1, {numProcessors} - 1)',
@@ -2107,6 +2148,10 @@ export function fillInputFormatIfNeeded(
   return deepSet(spec, 'spec.ioConfig.inputFormat', guessInputFormat(sampleData));
 }
 
+function noNumbers(xs: string[]): boolean {
+  return xs.every(x => isNaN(Number(x)));
+}
+
 export function guessInputFormat(sampleData: string[]): InputFormat {
   let sampleDatum = sampleData[0];
   if (sampleDatum) {
@@ -2116,68 +2161,135 @@ export function guessInputFormat(sampleData: string[]): InputFormat {
 
     // Parquet 4 byte magic header: https://github.com/apache/parquet-format#file-format
     if (sampleDatum.startsWith('PAR1')) {
-      return inputFormatFromType('parquet');
+      return inputFormatFromType({ type: 'parquet' });
     }
     // ORC 3 byte magic header: https://orc.apache.org/specification/ORCv1/
     if (sampleDatum.startsWith('ORC')) {
-      return inputFormatFromType('orc');
+      return inputFormatFromType({ type: 'orc' });
     }
     // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec.html#Object+Container+Files
-    if (sampleDatum.startsWith('Obj') && sampleDatum.charCodeAt(3) === 1) {
-      return inputFormatFromType('avro_ocf');
+    if (sampleDatum.startsWith('Obj\x01')) {
+      return inputFormatFromType({ type: 'avro_ocf' });
     }
 
     // After checking for magic byte sequences perform heuristics to deduce string formats
 
     // If the string starts and ends with curly braces assume JSON
     if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
-      return inputFormatFromType('json');
+      try {
+        JSON.parse(sampleDatum);
+        return { type: 'json' };
+      } catch {
+        // If the standard JSON parse does not parse then try setting a very lax parsing style
+        return {
+          type: 'json',
+          featureSpec: {
+            ALLOW_COMMENTS: true,
+            ALLOW_YAML_COMMENTS: true,
+            ALLOW_UNQUOTED_FIELD_NAMES: true,
+            ALLOW_SINGLE_QUOTES: true,
+            ALLOW_UNQUOTED_CONTROL_CHARS: true,
+            ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER: true,
+            ALLOW_NUMERIC_LEADING_ZEROS: true,
+            ALLOW_NON_NUMERIC_NUMBERS: true,
+            ALLOW_MISSING_VALUES: true,
+            ALLOW_TRAILING_COMMA: true,
+          },
+        };
+      }
     }
+
     // Contains more than 3 tabs assume TSV
-    if (sampleDatum.split('\t').length > 3) {
-      return inputFormatFromType('tsv', !/\t\d+\t/.test(sampleDatum));
+    const lineAsTsv = sampleDatum.split('\t');
+    if (lineAsTsv.length > 3) {
+      return inputFormatFromType({
+        type: 'tsv',
+        findColumnsFromHeader: noNumbers(lineAsTsv),
+        numColumns: lineAsTsv.length,
+      });
     }
-    // Contains more than 3 commas assume CSV
-    if (sampleDatum.split(',').length > 3) {
-      return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
+
+    // Contains more than fields if parsed as CSV line
+    const lineAsCsv = parseCsvLine(sampleDatum);
+    if (lineAsCsv.length > 3) {
+      return inputFormatFromType({
+        type: 'csv',
+        findColumnsFromHeader: noNumbers(lineAsCsv),
+        numColumns: lineAsCsv.length,
+      });
     }
+
     // Contains more than 3 semicolons assume semicolon separated
-    if (sampleDatum.split(';').length > 3) {
-      return inputFormatFromType('tsv', !/;\d+;/.test(sampleDatum), ';');
+    const lineAsTsvSemicolon = sampleDatum.split(';');
+    if (lineAsTsvSemicolon.length > 3) {
+      return inputFormatFromType({
+        type: 'tsv',
+        delimiter: ';',
+        findColumnsFromHeader: noNumbers(lineAsTsvSemicolon),
+        numColumns: lineAsTsvSemicolon.length,
+      });
     }
+
     // Contains more than 3 pipes assume pipe separated
-    if (sampleDatum.split('|').length > 3) {
-      return inputFormatFromType('tsv', !/\|\d+\|/.test(sampleDatum), '|');
+    const lineAsTsvPipe = sampleDatum.split('|');
+    if (lineAsTsvPipe.length > 3) {
+      return inputFormatFromType({
+        type: 'tsv',
+        delimiter: '|',
+        findColumnsFromHeader: noNumbers(lineAsTsvPipe),
+        numColumns: lineAsTsvPipe.length,
+      });
     }
   }
 
-  return inputFormatFromType('regex');
+  return inputFormatFromType({ type: 'regex' });
 }
 
-function inputFormatFromType(
-  type: string,
-  findColumnsFromHeader?: boolean,
-  delimiter?: string,
-): InputFormat {
+interface InputFormatFromTypeOptions {
+  type: string;
+  delimiter?: string;
+  findColumnsFromHeader?: boolean;
+  numColumns?: number;
+}
+
+function inputFormatFromType(options: InputFormatFromTypeOptions): InputFormat {
+  const { type, delimiter, findColumnsFromHeader, numColumns } = options;
+
   let inputFormat: InputFormat = { type };
 
   if (type === 'regex') {
-    inputFormat = deepSet(inputFormat, 'pattern', '(.*)');
-    inputFormat = deepSet(inputFormat, 'columns', ['column1']);
-  }
+    inputFormat = deepSet(inputFormat, 'pattern', '([\\s\\S]*)');
+    inputFormat = deepSet(inputFormat, 'columns', ['line']);
+  } else {
+    if (typeof findColumnsFromHeader === 'boolean') {
+      inputFormat = deepSet(inputFormat, 'findColumnsFromHeader', findColumnsFromHeader);
 
-  if (typeof findColumnsFromHeader === 'boolean') {
-    inputFormat = deepSet(inputFormat, 'findColumnsFromHeader', findColumnsFromHeader);
-  }
+      if (!findColumnsFromHeader && numColumns) {
+        const padLength = String(numColumns).length;
+        inputFormat = deepSet(
+          inputFormat,
+          'columns',
+          range(0, numColumns).map(c => `column${String(c + 1).padStart(padLength, '0')}`),
+        );
+      }
+    }
 
-  if (delimiter) {
-    inputFormat = deepSet(inputFormat, 'delimiter', delimiter);
+    if (delimiter) {
+      inputFormat = deepSet(inputFormat, 'delimiter', delimiter);
+    }
   }
 
   return inputFormat;
 }
 
 // ------------------------
+
+export function guessIsArrayFromHeaderAndRows(
+  headerAndRows: SampleHeaderAndRows,
+  column: string,
+): boolean {
+  return headerAndRows.rows.some(r => Array.isArray(r.input?.[column]));
+}
 
 export function guessColumnTypeFromInput(
   sampleValues: any[],
@@ -2192,11 +2304,12 @@ export function guessColumnTypeFromInput(
   if (definedValues.some(v => Array.isArray(v))) return 'string';
 
   if (
-    definedValues.every(
-      v =>
-        !isNaN(v) &&
-        (typeof v === 'number' || (guessNumericStringsAsNumbers && typeof v === 'string')),
-    )
+    definedValues.every(v => {
+      return (
+        (typeof v === 'number' || (guessNumericStringsAsNumbers && typeof v === 'string')) &&
+        !isNaN(Number(v))
+      );
+    })
   ) {
     return definedValues.every(v => v % 1 === 0) ? 'long' : 'double';
   } else {
@@ -2213,6 +2326,10 @@ export function guessColumnTypeFromHeaderAndRows(
     filterMap(headerAndRows.rows, r => r.input?.[column]),
     guessNumericStringsAsNumbers,
   );
+}
+
+export function inputFormatOutputsNumericStrings(inputFormat: InputFormat | undefined): boolean {
+  return oneOf(inputFormat?.type, 'csv', 'tsv', 'regex');
 }
 
 function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, string> {
@@ -2242,7 +2359,9 @@ export function updateSchemaWithSample(
   forcePartitionInitialization = false,
 ): Partial<IngestionSpec> {
   const typeHints = getTypeHintsFromSpec(spec);
-  const guessNumericStringsAsNumbers = deepGet(spec, 'spec.ioConfig.inputFormat.type') !== 'json';
+  const guessNumericStringsAsNumbers = inputFormatOutputsNumericStrings(
+    deepGet(spec, 'spec.ioConfig.inputFormat'),
+  );
 
   let newSpec = spec;
 
@@ -2290,52 +2409,6 @@ export function updateSchemaWithSample(
 
   newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.rollup', rollup);
   return newSpec;
-}
-
-// ------------------------
-
-export function upgradeSpec(spec: any): Partial<IngestionSpec> {
-  if (deepGet(spec, 'type') && deepGet(spec, 'dataSchema')) {
-    spec = {
-      type: spec.type,
-      spec: deepDelete(spec, 'type'),
-    };
-  }
-
-  // Upgrade firehose if exists
-  if (deepGet(spec, 'spec.ioConfig.firehose')) {
-    switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
-      case 'static-s3':
-        deepSet(spec, 'spec.ioConfig.firehose.type', 's3');
-        break;
-
-      case 'static-google-blobstore':
-        deepSet(spec, 'spec.ioConfig.firehose.type', 'google');
-        deepMove(spec, 'spec.ioConfig.firehose.blobs', 'spec.ioConfig.firehose.objects');
-        break;
-    }
-
-    spec = deepMove(spec, 'spec.ioConfig.firehose', 'spec.ioConfig.inputSource');
-  }
-
-  // Decompose parser if exists
-  if (deepGet(spec, 'spec.dataSchema.parser')) {
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.parser.parseSpec.timestampSpec',
-      'spec.dataSchema.timestampSpec',
-    );
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.parser.parseSpec.dimensionsSpec',
-      'spec.dataSchema.dimensionsSpec',
-    );
-    spec = deepMove(spec, 'spec.dataSchema.parser.parseSpec', 'spec.ioConfig.inputFormat');
-    spec = deepDelete(spec, 'spec.dataSchema.parser');
-    spec = deepMove(spec, 'spec.ioConfig.inputFormat.format', 'spec.ioConfig.inputFormat.type');
-  }
-
-  return spec;
 }
 
 export function adjustId(id: string): string {

@@ -30,17 +30,19 @@ import {
   MoreButton,
   RefreshButton,
   TableColumnSelector,
+  TableFilterableCell,
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
+import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api } from '../../singletons';
 import {
-  addFilter,
   Capabilities,
   CapabilitiesMode,
   deepGet,
   formatBytes,
   formatBytesCompact,
+  hasPopoverOpen,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
@@ -50,8 +52,6 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
-  STANDARD_TABLE_PAGE_SIZE,
-  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 
@@ -63,7 +63,7 @@ const allColumns: string[] = [
   'Tier',
   'Host',
   'Port',
-  'Curr size',
+  'Current size',
   'Max size',
   'Usage',
   'Detail',
@@ -73,7 +73,7 @@ const allColumns: string[] = [
 const tableColumns: Record<CapabilitiesMode, string[]> = {
   'full': allColumns,
   'no-sql': allColumns,
-  'no-proxy': ['Service', 'Type', 'Tier', 'Host', 'Port', 'Curr size', 'Max size', 'Usage'],
+  'no-proxy': ['Service', 'Type', 'Tier', 'Host', 'Port', 'Current size', 'Max size', 'Usage'],
 };
 
 function formatQueues(
@@ -245,7 +245,7 @@ ORDER BY
           services = services.map(s => {
             const loadQueueInfo = loadQueues[s.service];
             if (loadQueueInfo) {
-              s = Object.assign(s, loadQueueInfo);
+              s = { ...s, ...loadQueueInfo };
             }
             return s;
           });
@@ -278,7 +278,7 @@ ORDER BY
           services = services.map(s => {
             const middleManagerInfo = middleManagersLookup[s.service];
             if (middleManagerInfo) {
-              s = Object.assign(s, middleManagerInfo);
+              s = { ...s, ...middleManagerInfo };
             }
             return s;
           });
@@ -301,6 +301,21 @@ ORDER BY
 
   componentWillUnmount(): void {
     this.serviceQueryManager.terminate();
+  }
+
+  private renderFilterableCell(field: string) {
+    const { serviceFilter } = this.state;
+
+    return (row: { value: any }) => (
+      <TableFilterableCell
+        field={field}
+        value={row.value}
+        filters={serviceFilter}
+        onFiltersChange={filters => this.setState({ serviceFilter: filters })}
+      >
+        {row.value}
+      </TableFilterableCell>
+    );
   }
 
   renderServicesTable() {
@@ -341,6 +356,7 @@ ORDER BY
             show: visibleColumns.shown('Service'),
             accessor: 'service',
             width: 300,
+            Cell: this.renderFilterableCell('service'),
             Aggregated: () => '',
           },
           {
@@ -348,49 +364,31 @@ ORDER BY
             show: visibleColumns.shown('Type'),
             accessor: 'service_type',
             width: 150,
-            Cell: ({ value }) => {
-              return (
-                <a
-                  onClick={() => {
-                    this.setState({
-                      serviceFilter: addFilter(serviceFilter, 'service_type', value),
-                    });
-                  }}
-                >
-                  {value}
-                </a>
-              );
-            },
+            Cell: this.renderFilterableCell('service_type'),
           },
           {
             Header: 'Tier',
             show: visibleColumns.shown('Tier'),
             id: 'tier',
+            width: 180,
             accessor: row => {
               return row.tier ? row.tier : row.worker ? row.worker.category : null;
             },
-            Cell: ({ value }) => {
-              return (
-                <a
-                  onClick={() => {
-                    this.setState({ serviceFilter: addFilter(serviceFilter, 'tier', value) });
-                  }}
-                >
-                  {value}
-                </a>
-              );
-            },
+            Cell: this.renderFilterableCell('tier'),
           },
           {
             Header: 'Host',
             show: visibleColumns.shown('Host'),
             accessor: 'host',
+            width: 200,
+            Cell: this.renderFilterableCell('host'),
             Aggregated: () => '',
           },
           {
             Header: 'Port',
             show: visibleColumns.shown('Port'),
             id: 'port',
+            width: 100,
             accessor: row => {
               const ports: string[] = [];
               if (row.plaintext_port !== -1) {
@@ -401,15 +399,17 @@ ORDER BY
               }
               return ports.join(', ') || 'No port';
             },
+            Cell: this.renderFilterableCell('port'),
             Aggregated: () => '',
           },
           {
-            Header: 'Curr size',
-            show: visibleColumns.shown('Curr size'),
+            Header: 'Current size',
+            show: visibleColumns.shown('Current size'),
             id: 'curr_size',
             width: 100,
             filterable: false,
             accessor: 'curr_size',
+            className: 'padded',
             Aggregated: row => {
               if (row.row._pivotVal !== 'historical') return '';
               const originals = row.subRows.map(r => r._original);
@@ -429,6 +429,7 @@ ORDER BY
             width: 100,
             filterable: false,
             accessor: 'max_size',
+            className: 'padded',
             Aggregated: row => {
               if (row.row._pivotVal !== 'historical') return '';
               const originals = row.subRows.map(r => r._original);
@@ -447,6 +448,7 @@ ORDER BY
             id: 'usage',
             width: 140,
             filterable: false,
+            className: 'padded',
             accessor: row => {
               if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
                 return row.worker
@@ -514,6 +516,7 @@ ORDER BY
             id: 'queue',
             width: 400,
             filterable: false,
+            className: 'padded',
             accessor: row => {
               if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
                 if (deepGet(row, 'worker.version') === '') return 'Disabled';
@@ -537,12 +540,8 @@ ORDER BY
               const { service_type } = row.original;
               switch (service_type) {
                 case 'historical': {
-                  const {
-                    segmentsToLoad,
-                    segmentsToLoadSize,
-                    segmentsToDrop,
-                    segmentsToDropSize,
-                  } = row.original;
+                  const { segmentsToLoad, segmentsToLoadSize, segmentsToDrop, segmentsToDropSize } =
+                    row.original;
                   return formatQueues(
                     segmentsToLoad,
                     segmentsToLoadSize,
@@ -553,8 +552,6 @@ ORDER BY
 
                 case 'indexer':
                 case 'middle_manager':
-                  return row.value;
-
                 case 'coordinator':
                 case 'overlord':
                   return row.value;
@@ -722,7 +719,10 @@ ORDER BY
             </Button>
           </ButtonGroup>
           <RefreshButton
-            onRefresh={auto => this.serviceQueryManager.rerunLastQuery(auto)}
+            onRefresh={auto => {
+              if (auto && hasPopoverOpen()) return;
+              this.serviceQueryManager.rerunLastQuery(auto);
+            }}
             localStorageKey={LocalStorageKeys.SERVICES_REFRESH_RATE}
           />
           {this.renderBulkServicesActions()}

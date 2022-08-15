@@ -44,6 +44,7 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.seekablestream.RecordSupplierInputSource;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -186,7 +187,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             getRawColumns().get(0),
             null,
             true,
-            unparseableTimestampErrorString(data.get(0).getInput())
+            unparseableTimestampErrorString(data.get(0).getInput(), 1)
         ),
         data.get(0)
     );
@@ -195,7 +196,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             getRawColumns().get(1),
             null,
             true,
-            unparseableTimestampErrorString(data.get(1).getInput())
+            unparseableTimestampErrorString(data.get(1).getInput(), 2)
         ),
         data.get(1)
     );
@@ -204,7 +205,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             getRawColumns().get(2),
             null,
             true,
-            unparseableTimestampErrorString(data.get(2).getInput())
+            unparseableTimestampErrorString(data.get(2).getInput(), 3)
         ),
         data.get(2)
     );
@@ -213,7 +214,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             getRawColumns().get(3),
             null,
             true,
-            unparseableTimestampErrorString(data.get(3).getInput())
+            unparseableTimestampErrorString(data.get(3).getInput(), 4)
         ),
         data.get(3)
     );
@@ -222,7 +223,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             getRawColumns().get(4),
             null,
             true,
-            unparseableTimestampErrorString(data.get(4).getInput())
+            unparseableTimestampErrorString(data.get(4).getInput(), 5)
         ),
         data.get(4)
     );
@@ -231,7 +232,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             getRawColumns().get(5),
             null,
             true,
-            unparseableTimestampErrorString(data.get(5).getInput())
+            unparseableTimestampErrorString(data.get(5).getInput(), 6)
         ),
         data.get(5)
     );
@@ -259,7 +260,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             getRawColumns().get(0),
             null,
             true,
-            unparseableTimestampErrorString(data.get(0).getInput())
+            unparseableTimestampErrorString(data.get(0).getInput(), 1)
         ),
         data.get(0)
     );
@@ -268,7 +269,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             getRawColumns().get(1),
             null,
             true,
-            unparseableTimestampErrorString(data.get(1).getInput())
+            unparseableTimestampErrorString(data.get(1).getInput(), 2)
         ),
         data.get(1)
     );
@@ -277,7 +278,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             getRawColumns().get(2),
             null,
             true,
-            unparseableTimestampErrorString(data.get(2).getInput())
+            unparseableTimestampErrorString(data.get(2).getInput(), 3)
         ),
         data.get(2)
     );
@@ -1248,7 +1249,12 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     //
     // first n rows are related to the first json block which fails to parse
     //
-    String parseExceptionMessage = "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
+    String parseExceptionMessage;
+    if (useInputFormatApi) {
+      parseExceptionMessage = "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
+    } else {
+      parseExceptionMessage = "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
+    }
     for (; index < illegalRows; index++) {
       assertEqualsSamplerResponseRow(
           new SamplerResponseRow(
@@ -1436,14 +1442,24 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
 
   private String getUnparseableTimestampString()
   {
-    return ParserType.STR_CSV.equals(parserType)
-           ? "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
-           : "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
+    if (useInputFormatApi) {
+      return ParserType.STR_CSV.equals(parserType)
+             ? "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6} (Line: 6)"
+             : "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6} (Line: 6)";
+    } else {
+      return ParserType.STR_CSV.equals(parserType)
+             ? "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
+             : "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
+    }
   }
 
-  private String unparseableTimestampErrorString(Map<String, Object> rawColumns)
+  private String unparseableTimestampErrorString(Map<String, Object> rawColumns, int line)
   {
-    return StringUtils.format("Timestamp[null] is unparseable! Event: %s", rawColumns);
+    if (useInputFormatApi) {
+      return StringUtils.format("Timestamp[null] is unparseable! Event: %s (Line: %d)", rawColumns, line);
+    } else {
+      return StringUtils.format("Timestamp[null] is unparseable! Event: %s", rawColumns);
+    }
   }
 
   @Nullable
@@ -1584,6 +1600,12 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     public Long getEarliestSequenceNumber(StreamPartition<Integer> partition)
     {
       return null;
+    }
+
+    @Override
+    public boolean isOffsetAvailable(StreamPartition<Integer> partition, OrderedSequenceNumber<Long> offset)
+    {
+      return true;
     }
 
     @Override

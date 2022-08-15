@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -39,6 +40,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -142,6 +144,8 @@ public class ExpressionSelectors
       ExpressionPlan plan
   )
   {
+    final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
+
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
       final String column = plan.getSingleInputName();
       final ColumnType inputType = plan.getSingleInputType();
@@ -149,12 +153,14 @@ public class ExpressionSelectors
         return new SingleLongInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeColumnValueSelector(column),
             plan.getExpression(),
-            !ColumnHolder.TIME_COLUMN_NAME.equals(column) // __time doesn't need an LRU cache since it is sorted.
+            !ColumnHolder.TIME_COLUMN_NAME.equals(column), // __time doesn't need an LRU cache since it is sorted.
+            rowIdSupplier
         );
       } else if (inputType.is(ValueType.STRING)) {
         return new SingleStringInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ColumnType.STRING)),
-            plan.getExpression()
+            plan.getExpression(),
+            rowIdSupplier
         );
       }
     }
@@ -168,11 +174,11 @@ public class ExpressionSelectors
     // if any unknown column input types, fall back to an expression selector that examines input bindings on a
     // per row basis
     if (plan.any(ExpressionPlan.Trait.UNKNOWN_INPUTS, ExpressionPlan.Trait.INCOMPLETE_INPUTS)) {
-      return new RowBasedExpressionColumnValueSelector(plan, bindings);
+      return new RowBasedExpressionColumnValueSelector(plan, bindings, rowIdSupplier);
     }
 
     // generic expression value selector for fully known input types
-    return new ExpressionColumnValueSelector(plan.getAppliedExpression(), bindings);
+    return new ExpressionColumnValueSelector(plan.getAppliedExpression(), bindings, rowIdSupplier);
   }
 
   /**
@@ -232,15 +238,18 @@ public class ExpressionSelectors
    * and that single column has a dictionary.
    *
    * @param bindingAnalysis       result of calling {@link Expr#analyzeInputs()} on an expression
-   * @param hasMultipleValues result of calling {@link ColumnCapabilities#hasMultipleValues()}
+   * @param columnCapabilities    {@link ColumnCapabilities} for the input binding
    */
   public static boolean canMapOverDictionary(
       final Expr.BindingAnalysis bindingAnalysis,
-      final ColumnCapabilities.Capable hasMultipleValues
+      final ColumnCapabilities columnCapabilities
   )
   {
     Preconditions.checkState(bindingAnalysis.getRequiredBindings().size() == 1, "requiredBindings.size == 1");
-    return !hasMultipleValues.isUnknown() && !bindingAnalysis.hasInputArrays() && !bindingAnalysis.isOutputArray();
+    return columnCapabilities != null &&
+           !columnCapabilities.hasMultipleValues().isUnknown() &&
+           !bindingAnalysis.hasInputArrays() &&
+           !bindingAnalysis.isOutputArray();
   }
 
   /**
@@ -256,33 +265,47 @@ public class ExpressionSelectors
     final List<String> columns = plan.getAnalysis().getRequiredBindingsList();
     final Map<String, Pair<ExpressionType, Supplier<Object>>> suppliers = new HashMap<>();
     for (String columnName : columns) {
-      final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(columnName);
-      final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
+      final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(columnName);
+      final boolean multiVal = capabilities != null && capabilities.hasMultipleValues().isTrue();
       final Supplier<Object> supplier;
-      final ExpressionType expressionType = ExpressionType.fromColumnType(columnCapabilities);
+      final ExpressionType expressionType = ExpressionType.fromColumnType(capabilities);
 
-      if (columnCapabilities == null ||
-          columnCapabilities.isArray() ||
-          (plan.is(ExpressionPlan.Trait.NON_SCALAR_OUTPUT) && !plan.is(ExpressionPlan.Trait.NEEDS_APPLIED))
-      ) {
-        // Unknown ValueType or array type. Try making an Object selector and see if that gives us anything useful.
+      final boolean useObjectSupplierForMultiValueStringArray =
+          capabilities != null
+          // if homogenizing null multi-value string arrays, or if a single valued function that must be applied across
+          // multi-value rows, we can just use the dimension selector, which has the homogenization behavior built-in
+          && ((!capabilities.is(ValueType.STRING))
+              || (capabilities.is(ValueType.STRING)
+                  && !ExpressionProcessing.isHomogenizeNullMultiValueStringArrays()
+                  && !plan.is(ExpressionPlan.Trait.NEEDS_APPLIED)
+              )
+          )
+          // expression has array output
+          && plan.is(ExpressionPlan.Trait.NON_SCALAR_OUTPUT);
+
+      final boolean homogenizeNullMultiValueStringArrays =
+          plan.is(ExpressionPlan.Trait.NEEDS_APPLIED) || ExpressionProcessing.isHomogenizeNullMultiValueStringArrays();
+
+      if (capabilities == null || capabilities.isArray() || useObjectSupplierForMultiValueStringArray) {
+        // Unknown type, array type, or output array uses an Object selector and see if that gives anything useful
         supplier = supplierFromObjectSelector(
             columnSelectorFactory.makeColumnValueSelector(columnName),
-            plan.is(ExpressionPlan.Trait.NEEDS_APPLIED)
+            homogenizeNullMultiValueStringArrays
         );
-      } else if (columnCapabilities.is(ValueType.FLOAT)) {
+      } else if (capabilities.is(ValueType.FLOAT)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getFloat);
-      } else if (columnCapabilities.is(ValueType.LONG)) {
+      } else if (capabilities.is(ValueType.LONG)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getLong);
-      } else if (columnCapabilities.is(ValueType.DOUBLE)) {
+      } else if (capabilities.is(ValueType.DOUBLE)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getDouble);
-      } else if (columnCapabilities.is(ValueType.STRING)) {
+      } else if (capabilities.is(ValueType.STRING)) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName)),
-            multiVal
+            multiVal,
+            homogenizeNullMultiValueStringArrays
         );
       } else {
         // complex type just pass straight through
@@ -335,7 +358,8 @@ public class ExpressionSelectors
    *
    * @see org.apache.druid.segment.BaseNullableColumnValueSelector#isNull() for why this only works in the numeric case
    */
-  private static <T> Supplier<T> makeNullableNumericSupplier(
+  @VisibleForTesting
+  public static <T> Supplier<T> makeNullableNumericSupplier(
       ColumnValueSelector selector,
       Supplier<T> supplier
   )
@@ -357,7 +381,7 @@ public class ExpressionSelectors
    * arrays if specified.
    */
   @VisibleForTesting
-  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector, boolean coerceArray)
+  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector, boolean coerceArray, boolean homogenize)
   {
     Preconditions.checkNotNull(selector, "selector");
     return () -> {
@@ -367,8 +391,12 @@ public class ExpressionSelectors
         return selector.lookupName(row.get(0));
       } else {
         // column selector factories hate you and use [] and [null] interchangeably for nullish data
-        if (row.size() == 0) {
-          return new Object[]{null};
+        if (row.size() == 0 || (row.size() == 1 && selector.getObject() == null)) {
+          if (homogenize) {
+            return new Object[]{null};
+          } else {
+            return null;
+          }
         }
         final Object[] strings = new Object[row.size()];
         // noinspection SSBasedInspection

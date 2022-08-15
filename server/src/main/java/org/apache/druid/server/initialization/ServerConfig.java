@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.HumanReadableBytesRange;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -65,7 +66,8 @@ public class ServerConfig
       boolean enableForwardedRequestCustomizer,
       @NotNull List<String> allowedHttpMethods,
       boolean showDetailedJettyErrors,
-      @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy
+      @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy,
+      @Nullable String contentSecurityPolicy
   )
   {
     this.numThreads = numThreads;
@@ -85,6 +87,7 @@ public class ServerConfig
     this.allowedHttpMethods = allowedHttpMethods;
     this.showDetailedJettyErrors = showDetailedJettyErrors;
     this.errorResponseTransformStrategy = errorResponseTransformStrategy;
+    this.contentSecurityPolicy = contentSecurityPolicy;
   }
 
   public ServerConfig()
@@ -154,6 +157,9 @@ public class ServerConfig
   @JsonProperty("errorResponseTransform")
   @NotNull
   private ErrorResponseTransformStrategy errorResponseTransformStrategy = NoErrorResponseTransformStrategy.INSTANCE;
+
+  @JsonProperty("contentSecurityPolicy")
+  private String contentSecurityPolicy;
 
   @JsonProperty
   private boolean showDetailedJettyErrors = true;
@@ -244,6 +250,11 @@ public class ServerConfig
     return allowedHttpMethods;
   }
 
+  public String getContentSecurityPolicy()
+  {
+    return contentSecurityPolicy;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -270,7 +281,8 @@ public class ServerConfig
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
            unannouncePropagationDelay.equals(that.unannouncePropagationDelay) &&
            allowedHttpMethods.equals(that.allowedHttpMethods) &&
-           errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy);
+           errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy) &&
+           Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy());
   }
 
   @Override
@@ -293,7 +305,8 @@ public class ServerConfig
         enableForwardedRequestCustomizer,
         allowedHttpMethods,
         errorResponseTransformStrategy,
-        showDetailedJettyErrors
+        showDetailedJettyErrors,
+        contentSecurityPolicy
     );
   }
 
@@ -318,6 +331,7 @@ public class ServerConfig
            ", allowedHttpMethods=" + allowedHttpMethods +
            ", errorResponseTransformStrategy=" + errorResponseTransformStrategy +
            ", showDetailedJettyErrors=" + showDetailedJettyErrors +
+           ", contentSecurityPolicy=" + contentSecurityPolicy +
            '}';
   }
 

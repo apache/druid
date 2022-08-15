@@ -22,6 +22,8 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.indexer.TaskIdentifier;
+import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -240,5 +242,21 @@ public interface Task
   {
     final ContextValueType value = getContextValue(key);
     return value == null ? defaultValue : value;
+  }
+
+  default TaskIdentifier getMetadata()
+  {
+    return new TaskIdentifier(this.getId(), this.getGroupId(), this.getType());
+  }
+
+  static TaskInfo<TaskIdentifier, TaskStatus> toTaskIdentifierInfo(TaskInfo<Task, TaskStatus> taskInfo)
+  {
+    return new TaskInfo<>(
+        taskInfo.getId(),
+        taskInfo.getCreatedTime(),
+        taskInfo.getStatus(),
+        taskInfo.getDataSource(),
+        taskInfo.getTask().getMetadata()
+    );
   }
 }

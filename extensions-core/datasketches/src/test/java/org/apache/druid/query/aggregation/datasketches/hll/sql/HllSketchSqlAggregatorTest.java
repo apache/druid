@@ -85,6 +85,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     return Iterables.concat(super.getJacksonModules(), new HllSketchModule().getJacksonModules());
   }
 
+  @SuppressWarnings("resource")
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
@@ -149,7 +150,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testApproxCountDistinctHllSketch() throws Exception
+  public void testApproxCountDistinctHllSketch()
   {
     // Can't vectorize due to SUBSTRING expression.
     cannotVectorize();
@@ -244,7 +245,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testAvgDailyCountDistinctHllSketch() throws Exception
+  public void testAvgDailyCountDistinctHllSketch()
   {
     // Can't vectorize due to outer query, which runs on an inline datasource.
     cannotVectorize();
@@ -340,7 +341,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testApproxCountDistinctHllSketchIsRounded() throws Exception
+  public void testApproxCountDistinctHllSketchIsRounded()
   {
     testQuery(
         "SELECT"
@@ -376,7 +377,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHllSketchPostAggs() throws Exception
+  public void testHllSketchPostAggs()
   {
     final String sketchSummary = "### HLL SKETCH SUMMARY: \n"
                                  + "  Log Config K   : 12\n"
@@ -479,14 +480,14 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           new FieldAccessPostAggregator("p1", "a1"),
                           new HllSketchToEstimatePostAggregator("p3", new FieldAccessPostAggregator("p2", "a0"), false),
                           new HllSketchToEstimatePostAggregator("p5", new FieldAccessPostAggregator("p4", "a0"), false),
-                          new ExpressionPostAggregator("p6", "(p5 + 1)", null, TestExprMacroTable.INSTANCE),
+                          new ExpressionPostAggregator("p6", "(\"p5\" + 1)", null, TestExprMacroTable.INSTANCE),
                           new HllSketchToEstimatePostAggregator("p8", new FieldAccessPostAggregator("p7", "a2"), false),
                           new HllSketchToEstimatePostAggregator(
                               "p10",
                               new FieldAccessPostAggregator("p9", "a0"),
                               false
                           ),
-                          new ExpressionPostAggregator("p11", "abs(p10)", null, TestExprMacroTable.INSTANCE),
+                          new ExpressionPostAggregator("p11", "abs(\"p10\")", null, TestExprMacroTable.INSTANCE),
                           new HllSketchToEstimateWithBoundsPostAggregator(
                               "p13",
                               new FieldAccessPostAggregator("p12", "a0"),
@@ -500,7 +501,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           new FieldAccessPostAggregator("p16", "a3"),
                           new HllSketchToStringPostAggregator("p18", new FieldAccessPostAggregator("p17", "a0")),
                           new HllSketchToStringPostAggregator("p20", new FieldAccessPostAggregator("p19", "a0")),
-                          new ExpressionPostAggregator("p21", "upper(p20)", null, TestExprMacroTable.INSTANCE),
+                          new ExpressionPostAggregator("p21", "upper(\"p20\")", null, TestExprMacroTable.INSTANCE),
                           new HllSketchToEstimatePostAggregator("p23", new FieldAccessPostAggregator("p22", "a0"), true)
                       )
                   )
@@ -528,7 +529,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testtHllSketchPostAggsPostSort() throws Exception
+  public void testtHllSketchPostAggsPostSort()
   {
     final String sketchSummary = "### HLL SKETCH SUMMARY: \n"
                                  + "  Log Config K   : 12\n"
@@ -582,7 +583,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEmptyTimeseriesResults() throws Exception
+  public void testEmptyTimeseriesResults()
   {
     // timeseries with all granularity have a single group, so should return default results for given aggregators
     testQuery(
@@ -620,7 +621,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByAggregatorDefaultValues() throws Exception
+  public void testGroupByAggregatorDefaultValues()
   {
     testQuery(
         "SELECT\n"

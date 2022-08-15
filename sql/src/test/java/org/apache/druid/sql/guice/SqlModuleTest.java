@@ -28,7 +28,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
-import org.apache.druid.client.InventoryView;
+import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
@@ -73,8 +73,6 @@ import org.junit.runner.RunWith;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -85,7 +83,7 @@ public class SqlModuleTest
   private ServiceEmitter serviceEmitter;
 
   @Mock
-  private InventoryView inventoryView;
+  private FilteredServerInventoryView inventoryView;
 
   @Mock
   private TimelineServerView timelineServerView;
@@ -148,7 +146,7 @@ public class SqlModuleTest
     Assert.assertNotNull(viewManager);
     Assert.assertTrue(viewManager instanceof NoopViewManager);
   }
-  
+
   @Test
   public void testNonDefaultViewManagerBind()
   {
@@ -183,7 +181,7 @@ public class SqlModuleTest
               binder.bind(ServiceEmitter.class).toInstance(serviceEmitter);
               binder.bind(RequestLogger.class).toInstance(new NoopRequestLogger());
               binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(null)));
-              binder.bind(InventoryView.class).toInstance(inventoryView);
+              binder.bind(FilteredServerInventoryView.class).toInstance(inventoryView);
               binder.bind(TimelineServerView.class).toInstance(timelineServerView);
               binder.bind(DruidLeaderClient.class).annotatedWith(Coordinator.class).toInstance(druidLeaderClient);
               binder.bind(DruidLeaderClient.class).annotatedWith(IndexingService.class).toInstance(druidLeaderClient);
@@ -208,12 +206,6 @@ public class SqlModuleTest
   private static class TestViewManagerModule implements DruidModule
   {
     @Override
-    public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
-    {
-      return Collections.emptyList();
-    }
-
-    @Override
     public void configure(Binder binder)
     {
       PolyBind.optionBinder(binder, Key.get(ViewManager.class))
@@ -225,7 +217,6 @@ public class SqlModuleTest
 
   private static class BindTestViewManager implements ViewManager
   {
-
     @Override
     public void createView(
         PlannerFactory plannerFactory,
@@ -233,7 +224,6 @@ public class SqlModuleTest
         String viewSql
     )
     {
-
     }
 
     @Override
@@ -243,13 +233,11 @@ public class SqlModuleTest
         String viewSql
     )
     {
-
     }
 
     @Override
     public void dropView(String viewName)
     {
-
     }
 
     @Override

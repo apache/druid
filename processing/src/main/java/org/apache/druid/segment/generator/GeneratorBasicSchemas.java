@@ -321,6 +321,13 @@ public class GeneratorBasicSchemas
         GeneratorColumnSchema.makeLazyDiscreteUniform("string4", ValueType.STRING, false, 1, null, 1, 10_000),
         GeneratorColumnSchema.makeLazyDiscreteUniform("string5", ValueType.STRING, false, 1, 0.3, 1, 1_000_000),
 
+        // multi string dims
+        GeneratorColumnSchema.makeSequential("multi-string1", ValueType.STRING, false, 8, null, 0, 10000),
+        GeneratorColumnSchema.makeLazyZipf("multi-string2", ValueType.STRING, false, 8, null, 1, 100, 1.5),
+        GeneratorColumnSchema.makeLazyZipf("multi-string3", ValueType.STRING, false, 16, 0.1, 1, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeLazyDiscreteUniform("multi-string4", ValueType.STRING, false, 4, null, 1, 10_000),
+        GeneratorColumnSchema.makeLazyDiscreteUniform("multi-string5", ValueType.STRING, false, 8, 0.3, 1, 1_000_000),
+
         // numeric dims
         GeneratorColumnSchema.makeSequential("long1", ValueType.LONG, false, 1, null, 0, 10000),
         GeneratorColumnSchema.makeLazyZipf("long2", ValueType.LONG, false, 1, null, 1, 101, 1.5),

@@ -22,6 +22,7 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 
@@ -66,10 +67,10 @@ public class TaskStatus
   }
 
   /**
-   * This method is deprecated because it does not handle the error message of failed task status properly.
+   * This method is deprecated for production because it does not handle the error message of failed task status properly.
    * Use {@link #success(String)} or {@link #failure(String, String)} instead.
    */
-  @Deprecated
+  @VisibleForTesting
   public static TaskStatus fromCode(String taskId, TaskState code)
   {
     return new TaskStatus(taskId, code, -1, null, null);
@@ -95,11 +96,11 @@ public class TaskStatus
   private final TaskLocation location;
 
   @JsonCreator
-  protected TaskStatus(
+  public TaskStatus(
       @JsonProperty("id") String id,
       @JsonProperty("status") TaskState status,
       @JsonProperty("duration") long duration,
-      @JsonProperty("errorMsg") @Nullable String errorMsg,
+      @Nullable @JsonProperty("errorMsg") String errorMsg,
       @Nullable @JsonProperty("location") TaskLocation location
   )
   {

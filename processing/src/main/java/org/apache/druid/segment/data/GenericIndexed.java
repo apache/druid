@@ -24,6 +24,7 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.utils.SerializerUtils;
 import org.apache.druid.io.Channels;
+import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -132,9 +133,9 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     }
 
     @Override
-    public int compare(ByteBuffer o1, ByteBuffer o2)
+    public int compare(@Nullable ByteBuffer o1, @Nullable ByteBuffer o2)
     {
-      return o1.compareTo(o2);
+      return ByteBufferUtils.unsignedComparator().compare(o1, o2);
     }
   };
 
@@ -217,7 +218,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
 
   public static <T> GenericIndexed<T> fromIterable(Iterable<T> objectsIterable, ObjectStrategy<T> strategy)
   {
-    return fromIterableVersionOne(objectsIterable, strategy, true, strategy);
+    return fromIterableVersionOne(objectsIterable, strategy, strategy.canCompare(), strategy);
   }
 
   static int getNumberOfFilesRequired(int bagSize, long numWritten)
@@ -347,15 +348,29 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
   @Override
   public int indexOf(@Nullable T value)
   {
-    return indexOf(this, value);
-  }
-
-  private int indexOf(Indexed<T> indexed, @Nullable T value)
-  {
     if (!allowReverseLookup) {
       throw new UnsupportedOperationException("Reverse lookup not allowed.");
     }
-    return Indexed.indexOf(indexed::get, size, strategy, value);
+
+    int minIndex = 0;
+    int maxIndex = size - 1;
+    while (minIndex <= maxIndex) {
+      int currIndex = (minIndex + maxIndex) >>> 1;
+
+      T currValue = get(currIndex);
+      int comparison = strategy.compare(currValue, value);
+      if (comparison == 0) {
+        return currIndex;
+      }
+
+      if (comparison < 0) {
+        minIndex = currIndex + 1;
+      } else {
+        maxIndex = currIndex - 1;
+      }
+    }
+
+    return -(minIndex + 1);
   }
 
   @Override
@@ -440,6 +455,9 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     return sb.toString();
   }
 
+  /**
+   * Single-threaded view.
+   */
   abstract class BufferIndexed implements Indexed<T>
   {
     int lastReadSize;
@@ -450,8 +468,23 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
       return size;
     }
 
+    @Override
+    public T get(final int index)
+    {
+      final ByteBuffer buf = getByteBuffer(index);
+      if (buf == null) {
+        return null;
+      }
+
+      // Traditionally, ObjectStrategy.fromByteBuffer() is given a buffer with limit set to capacity, and the
+      // actual limit is passed along as an extra parameter.
+      final int len = buf.remaining();
+      buf.limit(buf.capacity());
+      return strategy.fromByteBuffer(buf, len);
+    }
+
     @Nullable
-    T bufferedIndexedGet(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
+    ByteBuffer bufferedIndexedGetByteBuffer(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
     {
       int size = endOffset - startOffset;
       // When size is 0 and SQL compatibility is enabled also check for null marker before returning null.
@@ -463,13 +496,21 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
       lastReadSize = size;
 
       // ObjectStrategy.fromByteBuffer() is allowed to reset the limit of the buffer. So if the limit is changed,
-      // position() call in the next line could throw an exception, if the position is set beyond the new limit. clear()
-      // sets the limit to the maximum possible, the capacity. It is safe to reset the limit to capacity, because the
-      // value buffer(s) initial limit equals to capacity.
-      copyValueBuffer.clear();
+      // position() call could throw an exception, if the position is set beyond the new limit. Calling limit()
+      // followed by position() is safe, because limit() resets position if needed.
+      copyValueBuffer.limit(endOffset);
       copyValueBuffer.position(startOffset);
-      return strategy.fromByteBuffer(copyValueBuffer, size);
+      return copyValueBuffer;
     }
+
+    /**
+     * Like {@link #get(int)}, but returns a {@link ByteBuffer} instead of using the {@link ObjectStrategy}.
+     *
+     * The returned ByteBuffer is reused by future calls. Callers must discard it before calling another method
+     * on this BufferedIndexed object that may want to reuse the buffer.
+     */
+    @Nullable
+    protected abstract ByteBuffer getByteBuffer(int index);
 
     /**
      * This method makes no guarantees with respect to thread safety
@@ -484,7 +525,41 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     @Override
     public int indexOf(@Nullable T value)
     {
-      return GenericIndexed.this.indexOf(this, value);
+      if (!allowReverseLookup) {
+        throw new UnsupportedOperationException("Reverse lookup not allowed.");
+      }
+
+      //noinspection ObjectEquality
+      final boolean isByteBufferStrategy = strategy == BYTE_BUFFER_STRATEGY;
+
+      int minIndex = 0;
+      int maxIndex = size - 1;
+      while (minIndex <= maxIndex) {
+        int currIndex = (minIndex + maxIndex) >>> 1;
+
+        int comparison;
+
+        if (isByteBufferStrategy) {
+          // Specialization avoids ByteBuffer allocation in strategy.fromByteBuffer.
+          ByteBuffer currValue = getByteBuffer(currIndex);
+          comparison = ByteBufferUtils.compareByteBuffers(currValue, (ByteBuffer) value);
+        } else {
+          T currValue = get(currIndex);
+          comparison = strategy.compare(currValue, value);
+        }
+
+        if (comparison == 0) {
+          return currIndex;
+        }
+
+        if (comparison < 0) {
+          minIndex = currIndex + 1;
+        } else {
+          maxIndex = currIndex - 1;
+        }
+      }
+
+      return -(minIndex + 1);
     }
 
     @Override
@@ -607,8 +682,9 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     final ByteBuffer copyBuffer = firstValueBuffer.asReadOnlyBuffer();
     return new BufferIndexed()
     {
+      @Nullable
       @Override
-      public T get(final int index)
+      protected ByteBuffer getByteBuffer(final int index)
       {
         checkIndex(index);
 
@@ -623,7 +699,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
           startOffset = headerBuffer.getInt(headerPosition) + Integer.BYTES;
           endOffset = headerBuffer.getInt(headerPosition + Integer.BYTES);
         }
-        return bufferedIndexedGet(copyBuffer, startOffset, endOffset);
+        return bufferedIndexedGetByteBuffer(copyBuffer, startOffset, endOffset);
       }
 
       @Override
@@ -716,8 +792,9 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
 
     return new BufferIndexed()
     {
+      @Nullable
       @Override
-      public T get(final int index)
+      protected ByteBuffer getByteBuffer(int index)
       {
         checkIndex(index);
 
@@ -735,7 +812,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
           endOffset = headerBuffer.getInt(headerPosition + Integer.BYTES);
         }
         int fileNum = index >> logBaseTwoOfElementsPerValueFile;
-        return bufferedIndexedGet(copyValueBuffers[fileNum], startOffset, endOffset);
+        return bufferedIndexedGetByteBuffer(copyValueBuffers[fileNum], startOffset, endOffset);
       }
 
       @Override

@@ -144,6 +144,11 @@ public class OverlordResourceTestClient
     }
   }
 
+  public List<TaskResponseObject> getAllTasks()
+  {
+    return getTasks("tasks");
+  }
+
   public List<TaskResponseObject> getRunningTasks()
   {
     return getTasks("runningTasks");
@@ -197,7 +202,7 @@ public class OverlordResourceTestClient
     try {
       StatusResponseHolder response = makeRequest(
           HttpMethod.GET,
-          StringUtils.format("%stask/%s", getIndexerURL(), taskId)
+          StringUtils.format("%stask/%s", getIndexerURL(), StringUtils.urlEncode(taskId))
       );
       LOG.debug("Task %s response %s", taskId, response.getContent());
       return jsonMapper.readValue(

@@ -72,7 +72,7 @@ public abstract class NumericLastAggregator<TSelector extends BaseNullableColumn
   }
 
   /**
-   * Store the current primitive typed 'first' value
+   * Store the current primitive typed 'last' value
    */
   abstract void setCurrentValue();
 }

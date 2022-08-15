@@ -165,6 +165,19 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new SketchMergeAggregatorFactory(
+        newName,
+        getFieldName(),
+        getSize(),
+        getShouldFinalize(),
+        getIsInputThetaSketch(),
+        getErrorBoundsStdDev()
+    );
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

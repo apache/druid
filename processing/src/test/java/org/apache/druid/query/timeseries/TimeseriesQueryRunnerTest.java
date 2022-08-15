@@ -34,8 +34,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -220,7 +222,16 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .context(makeContext())
                                   .build();
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
+    StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    MetricsEmittingQueryRunner<Result<TimeseriesResultValue>> metricsEmittingQueryRunner =
+        new MetricsEmittingQueryRunner<Result<TimeseriesResultValue>>(
+            stubServiceEmitter,
+            new TimeseriesQueryQueryToolChest(),
+            runner,
+            (obj, lng) -> {},
+            (metrics) -> {}
+        ).withWaitMeasuredFromNow();
+    Iterable<Result<TimeseriesResultValue>> results = metricsEmittingQueryRunner.run(QueryPlus.wrap(query)).toList();
 
     final String[] expectedIndex = descending ?
                                    QueryRunnerTestHelper.EXPECTED_FULL_ON_INDEX_VALUES_DESC :
@@ -306,6 +317,11 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       ++count;
     }
 
+    Assert.assertEquals(1, stubServiceEmitter.getEvents().size());
+    Assert.assertEquals(
+        vectorize,
+        stubServiceEmitter.getEvents().get(0).toMap().getOrDefault("vectorized", null)
+    );
     Assert.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
   }
 
@@ -3031,6 +3047,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               "0",
                                               null,
                                               false,
+                                              false,
+                                              false,
                                               "__acc + 1",
                                               "__acc + diy_count",
                                               null,
@@ -3045,6 +3063,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               "0.0",
                                               null,
                                               null,
+                                              false,
+                                              false,
                                               "__acc + index",
                                               null,
                                               null,
@@ -3057,8 +3077,10 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               ImmutableSet.of("index"),
                                               null,
                                               "0.0",
-                                              "<DOUBLE>[]",
+                                              "ARRAY<DOUBLE>[]",
                                               null,
+                                              false,
+                                              false,
                                               "__acc + index",
                                               "array_concat(__acc, diy_decomposed_sum)",
                                               null,
@@ -3073,6 +3095,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               "[]",
                                               null,
                                               null,
+                                              true,
+                                              false,
                                               "array_set_add(acc, market)",
                                               "array_set_add_all(acc, array_agg_distinct)",
                                               null,
@@ -3094,7 +3118,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                     "diy_count", 13L,
                     "diy_sum", 6626.151569,
                     "diy_decomposed_sum", 6626.151569,
-                    "array_agg_distinct", new String[] {"upfront", "spot", "total_market"}
+                    "array_agg_distinct", new String[] {"spot", "total_market", "upfront"}
                 )
             )
         ),
@@ -3105,7 +3129,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                     "diy_count", 13L,
                     "diy_sum", 5833.209718,
                     "diy_decomposed_sum", 5833.209718,
-                    "array_agg_distinct", new String[] {"upfront", "spot", "total_market"}
+                    "array_agg_distinct", new String[] {"spot", "total_market", "upfront"}
                 )
             )
         )
@@ -3137,6 +3161,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               "[]",
                                               null,
                                               null,
+                                              true,
+                                              false,
                                               "array_set_add(acc, market)",
                                               "array_set_add_all(acc, array_agg_distinct)",
                                               null,

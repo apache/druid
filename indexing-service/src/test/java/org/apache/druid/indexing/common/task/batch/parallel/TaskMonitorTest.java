@@ -19,8 +19,9 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -57,7 +58,7 @@ public class TaskMonitorTest
   private final ExecutorService taskRunner = Execs.multiThreaded(5, "task-monitor-test-%d");
   private final ConcurrentMap<String, TaskState> tasks = new ConcurrentHashMap<>();
   private final TaskMonitor<TestTask, SimpleSubTaskReport> monitor = new TaskMonitor<>(
-      new TestIndexingServiceClient(),
+      new TestOverlordClient(),
       3,
       SPLIT_NUM
   );
@@ -247,10 +248,10 @@ public class TaskMonitorTest
     }
   }
 
-  private class TestIndexingServiceClient extends NoopIndexingServiceClient
+  private class TestOverlordClient extends NoopOverlordClient
   {
     @Override
-    public String runTask(String taskId, Object taskObject)
+    public ListenableFuture<Void> runTask(String taskId, Object taskObject)
     {
       final TestTask task = (TestTask) taskObject;
       tasks.put(task.getId(), TaskState.RUNNING);
@@ -258,13 +259,13 @@ public class TaskMonitorTest
         throw new RuntimeException(new ISE("Could not resolve type id 'test_task_id'"));
       }
       taskRunner.submit(() -> tasks.put(task.getId(), task.run(null).getStatusCode()));
-      return task.getId();
+      return Futures.immediateFuture(null);
     }
 
     @Override
-    public TaskStatusResponse getTaskStatus(String taskId)
+    public ListenableFuture<TaskStatusResponse> taskStatus(String taskId)
     {
-      return new TaskStatusResponse(
+      final TaskStatusResponse retVal = new TaskStatusResponse(
           taskId,
           new TaskStatusPlus(
               taskId,
@@ -280,6 +281,8 @@ public class TaskMonitorTest
               null
           )
       );
+
+      return Futures.immediateFuture(retVal);
     }
   }
 

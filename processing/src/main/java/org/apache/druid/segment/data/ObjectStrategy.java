@@ -52,6 +52,14 @@ public interface ObjectStrategy<T> extends Comparator<T>
   byte[] toBytes(@Nullable T val);
 
   /**
+   * Whether {@link #compare} is valid or not.
+   */
+  default boolean canCompare()
+  {
+    return true;
+  }
+
+  /**
    * Reads 4-bytes numBytes from the given buffer, and then delegates to {@link #fromByteBuffer(ByteBuffer, int)}.
    */
   default T fromByteBufferWithSize(ByteBuffer buffer)

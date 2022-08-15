@@ -48,11 +48,15 @@ public abstract class DruidCoordinatorConfig
   public abstract Duration getCoordinatorKillPeriod();
 
   @Config("druid.coordinator.kill.durationToRetain")
-  @Default("PT-1s")
+  @Default("P90D")
   public abstract Duration getCoordinatorKillDurationToRetain();
 
+  @Config("druid.coordinator.kill.ignoreDurationToRetain")
+  @Default("false")
+  public abstract boolean getCoordinatorKillIgnoreDurationToRetain();
+
   @Config("druid.coordinator.kill.maxSegments")
-  @Default("0")
+  @Default("100")
   public abstract int getCoordinatorKillMaxSegments();
 
   @Config("druid.coordinator.kill.supervisor.period")

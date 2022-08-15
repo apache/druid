@@ -40,6 +40,7 @@ import org.junit.runner.RunWith;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.StringJoiner;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -62,7 +63,7 @@ public class StringSketchTest
 
   public static class SerializationDeserializationTest
   {
-    private static final ObjectMapper OBJECT_MAPPER = new JacksonModule().smileMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new JacksonModule().smileMapper(new Properties());
 
     @Test
     public void serializesDeserializes()

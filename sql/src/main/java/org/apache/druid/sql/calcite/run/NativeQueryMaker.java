@@ -25,22 +25,25 @@ import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.filter.BoundDimFilter;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -53,6 +56,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -73,42 +77,18 @@ public class NativeQueryMaker implements QueryMaker
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
   private final List<Pair<Integer, String>> fieldMapping;
-  private final RelDataType resultType;
 
   public NativeQueryMaker(
       final QueryLifecycleFactory queryLifecycleFactory,
       final PlannerContext plannerContext,
       final ObjectMapper jsonMapper,
-      final List<Pair<Integer, String>> fieldMapping,
-      final RelDataType resultType
+      final List<Pair<Integer, String>> fieldMapping
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.plannerContext = plannerContext;
     this.jsonMapper = jsonMapper;
     this.fieldMapping = fieldMapping;
-    this.resultType = resultType;
-  }
-
-  @Override
-  public RelDataType getResultType()
-  {
-    return resultType;
-  }
-
-  @Override
-  public boolean feature(QueryFeature feature)
-  {
-    switch (feature) {
-      case CAN_RUN_TIMESERIES:
-      case CAN_RUN_TOPN:
-        return true;
-      case CAN_READ_EXTERNAL_DATA:
-      case SCAN_CAN_ORDER_BY_NON_TIME:
-        return false;
-      default:
-        throw new IAE("Unrecognized feature: %s", feature);
-    }
   }
 
   @Override
@@ -124,6 +104,36 @@ public class NativeQueryMaker implements QueryMaker
         );
       }
     }
+    int numFilters = plannerContext.getPlannerConfig().getMaxNumericInFilters();
+
+    // special corner case handling for numeric IN filters
+    // in case of query containing IN (v1, v2, v3,...) where Vi is numeric
+    // a BoundFilter is created internally for each of the values
+    // whereas when Vi s are String the Filters are converted as BoundFilter to SelectorFilter to InFilter
+    // which takes lesser processing for bitmaps
+    // So in a case where user executes a query with multiple numeric INs, flame graph shows BoundFilter.getBitmapColumnIndex
+    // and BoundFilter.match predicate eating up processing time which stalls a historical for a query with large number
+    // of numeric INs (> 10K). In such cases user should change the query to specify the IN clauses as String
+    // Instead of IN(v1,v2,v3) user should specify IN('v1','v2','v3')
+    if (numFilters != PlannerConfig.NUM_FILTER_NOT_USED) {
+      if (query.getFilter() instanceof OrDimFilter) {
+        OrDimFilter orDimFilter = (OrDimFilter) query.getFilter();
+        int numBoundFilters = 0;
+        for (DimFilter filter : orDimFilter.getFields()) {
+          numBoundFilters += filter instanceof BoundDimFilter ? 1 : 0;
+        }
+        if (numBoundFilters > numFilters) {
+          String dimension = ((BoundDimFilter) (orDimFilter.getFields().get(0))).getDimension();
+          throw new UOE(StringUtils.format(
+              "The number of values in the IN clause for [%s] in query exceeds configured maxNumericFilter limit of [%s] for INs. Cast [%s] values of IN clause to String",
+              dimension,
+              numFilters,
+              orDimFilter.getFields().size()
+          ));
+        }
+      }
+    }
+
 
     final List<String> rowOrder;
     if (query instanceof TimeseriesQuery && !druidQuery.getGrouping().getDimensions().isEmpty()) {
@@ -332,21 +342,8 @@ public class NativeQueryMaker implements QueryMaker
         // the protobuf jdbc handler prefers lists (it actually can't handle java arrays as sql arrays, only java lists)
         // the json handler could handle this just fine, but it handles lists as sql arrays as well so just convert
         // here if needed
-        if (value instanceof List) {
-          coercedValue = value;
-        } else if (value instanceof String[]) {
-          coercedValue = Arrays.asList((String[]) value);
-        } else if (value instanceof Long[]) {
-          coercedValue = Arrays.asList((Long[]) value);
-        } else if (value instanceof Double[]) {
-          coercedValue = Arrays.asList((Double[]) value);
-        } else if (value instanceof Object[]) {
-          coercedValue = Arrays.asList((Object[]) value);
-        } else if (value instanceof ComparableStringArray) {
-          coercedValue = Arrays.asList(((ComparableStringArray) value).getDelegate());
-        } else if (value instanceof ComparableList) {
-          coercedValue = ((ComparableList) value).getDelegate();
-        } else {
+        coercedValue = maybeCoerceArrayToList(value, true);
+        if (coercedValue == null) {
           throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
         }
       }
@@ -355,6 +352,34 @@ public class NativeQueryMaker implements QueryMaker
     }
 
     return coercedValue;
+  }
+
+
+  private static Object maybeCoerceArrayToList(Object value, boolean mustCoerce)
+  {
+    if (value instanceof List) {
+      return value;
+    } else if (value instanceof String[]) {
+      return Arrays.asList((String[]) value);
+    } else if (value instanceof Long[]) {
+      return Arrays.asList((Long[]) value);
+    } else if (value instanceof Double[]) {
+      return Arrays.asList((Double[]) value);
+    } else if (value instanceof Object[]) {
+      Object[] array = (Object[]) value;
+      ArrayList<Object> lst = new ArrayList<>(array.length);
+      for (Object o : array) {
+        lst.add(maybeCoerceArrayToList(o, false));
+      }
+      return lst;
+    } else if (value instanceof ComparableStringArray) {
+      return Arrays.asList(((ComparableStringArray) value).getDelegate());
+    } else if (value instanceof ComparableList) {
+      return ((ComparableList) value).getDelegate();
+    } else if (mustCoerce) {
+      return null;
+    }
+    return value;
   }
 
   private static DateTime coerceDateTime(Object value, SqlTypeName sqlType)

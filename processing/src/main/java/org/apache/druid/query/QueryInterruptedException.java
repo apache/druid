@@ -44,7 +44,9 @@ import java.util.concurrent.CancellationException;
 public class QueryInterruptedException extends QueryException
 {
   public static final String QUERY_INTERRUPTED = "Query interrupted";
-  public static final String QUERY_CANCELLED = "Query cancelled";
+  // Note: the proper spelling is with a single "l", but the version with
+  // two "l"s is documented, we can't change the text of the message.
+  public static final String QUERY_CANCELED = "Query cancelled";
   public static final String UNAUTHORIZED = "Unauthorized request";
   public static final String UNSUPPORTED_OPERATION = "Unsupported operation";
   public static final String TRUNCATED_RESPONSE_CONTEXT = "Truncated response context";
@@ -96,7 +98,7 @@ public class QueryInterruptedException extends QueryException
     } else if (e instanceof InterruptedException) {
       return QUERY_INTERRUPTED;
     } else if (e instanceof CancellationException) {
-      return QUERY_CANCELLED;
+      return QUERY_CANCELED;
     } else if (e instanceof UnsupportedOperationException) {
       return UNSUPPORTED_OPERATION;
     } else if (e instanceof TruncatedResponseContextException) {

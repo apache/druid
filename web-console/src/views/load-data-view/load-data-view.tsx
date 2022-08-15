@@ -224,9 +224,10 @@ function formatSampleEntries(sampleEntries: SampleEntry[], isDruidSource: boolea
       return sampleEntries.map(showDruidLine).join('\n');
     }
 
-    return (sampleEntries.every(l => !l.parsed)
-      ? sampleEntries.map(showBlankLine)
-      : sampleEntries.map(showRawLine)
+    return (
+      sampleEntries.every(l => !l.parsed)
+        ? sampleEntries.map(showBlankLine)
+        : sampleEntries.map(showRawLine)
     ).join('\n');
   } else {
     return 'No data returned from sampler';
@@ -1289,21 +1290,22 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 newSpec = deepSet(
                   newSpec,
                   'spec.dataSchema.dimensionsSpec.dimensions',
-                  Object.keys(inputData.columns)
-                    .filter(k => k !== TIME_COLUMN && !aggregators[k])
-                    .map(k => ({
-                      name: k,
-                      type: String(inputData.columns![k].type || 'string').toLowerCase(),
-                    })),
+                  filterMap(inputData.columns, column => {
+                    if (column === TIME_COLUMN || aggregators[column]) return;
+                    return {
+                      name: column,
+                      type: String(inputData.columnInfo?.[column]?.type || 'string').toLowerCase(),
+                    };
+                  }),
                 );
-              }
 
-              if (inputData.aggregators) {
-                newSpec = deepSet(
-                  newSpec,
-                  'spec.dataSchema.metricsSpec',
-                  Object.values(inputData.aggregators),
-                );
+                if (inputData.aggregators) {
+                  newSpec = deepSet(
+                    newSpec,
+                    'spec.dataSchema.metricsSpec',
+                    filterMap(inputData.columns, column => aggregators[column]),
+                  );
+                }
               }
 
               this.updateSpec(fillDataSourceNameIfNeeded(newSpec));
@@ -1462,7 +1464,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               )}
             </>
           )}
-          {this.renderFlattenControls()}
+          {canFlatten && this.renderFlattenControls()}
           {suggestedFlattenFields && suggestedFlattenFields.length ? (
             <FormGroup>
               <Button
@@ -1687,9 +1689,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   this.updateSpecPreview(
                     deepSetMulti(spec, {
                       'spec.dataSchema.timestampSpec': CONSTANT_TIMESTAMP_SPEC,
-                      'spec.dataSchema.transformSpec.transforms': removeTimestampTransform(
-                        transforms,
-                      ),
+                      'spec.dataSchema.transformSpec.transforms':
+                        removeTimestampTransform(transforms),
                     }),
                   );
                 }}
@@ -1705,9 +1706,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   this.updateSpecPreview(
                     deepSetMulti(spec, {
                       'spec.dataSchema.timestampSpec': timestampSpec,
-                      'spec.dataSchema.transformSpec.transforms': removeTimestampTransform(
-                        transforms,
-                      ),
+                      'spec.dataSchema.transformSpec.transforms':
+                        removeTimestampTransform(transforms),
                     }),
                   );
                 }}
@@ -1811,13 +1811,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderTransformStep() {
-    const {
-      spec,
-      columnFilter,
-      specialColumnsOnly,
-      transformQueryState,
-      selectedTransform,
-    } = this.state;
+    const { spec, columnFilter, specialColumnsOnly, transformQueryState, selectedTransform } =
+      this.state;
     const transforms: Transform[] =
       deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 

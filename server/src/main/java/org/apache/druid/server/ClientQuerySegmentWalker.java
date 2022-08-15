@@ -72,7 +72,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
- * Query handler for Broker processes (see CliBroker).
+ * Query handler for the Broker processes (see CliBroker).
  *
  * This class is responsible for:
  *

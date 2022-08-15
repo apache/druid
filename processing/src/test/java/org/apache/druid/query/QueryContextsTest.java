@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -44,7 +45,7 @@ public class QueryContextsTest
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
         false,
-        new HashMap()
+        new HashMap<>()
     );
     Assert.assertEquals(300_000, QueryContexts.getDefaultTimeout(query));
   }
@@ -56,7 +57,7 @@ public class QueryContextsTest
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
         false,
-        new HashMap()
+        new HashMap<>()
     );
     Assert.assertEquals(300_000, QueryContexts.getTimeout(query));
 
@@ -134,6 +135,20 @@ public class QueryContextsTest
   }
 
   @Test
+  public void testDefaultInSubQueryThreshold()
+  {
+    Assert.assertEquals(QueryContexts.DEFAULT_IN_SUB_QUERY_THRESHOLD,
+                        QueryContexts.getInSubQueryThreshold(ImmutableMap.of()));
+  }
+
+  @Test
+  public void testDefaultPlanTimeBoundarySql()
+  {
+    Assert.assertEquals(QueryContexts.DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING,
+                        QueryContexts.isTimeBoundaryPlanningEnabled(ImmutableMap.of()));
+  }
+
+  @Test
   public void testGetEnableJoinLeftScanDirect()
   {
     Assert.assertFalse(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of()));
@@ -168,6 +183,21 @@ public class QueryContextsTest
   }
 
   @Test
+  public void testGetTimeout_withNonNumericValue()
+  {
+    Map<String, Object> queryContext = new HashMap<>();
+    queryContext.put(QueryContexts.TIMEOUT_KEY, "2000'");
+
+    exception.expect(BadQueryContextException.class);
+    QueryContexts.getTimeout(new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        queryContext
+    ));
+  }
+
+  @Test
   public void testDefaultEnableQueryDebugging()
   {
     Query<?> query = new TestQuery(
@@ -191,5 +221,66 @@ public class QueryContextsTest
     );
     Assert.assertTrue(QueryContexts.isDebug(query));
     Assert.assertTrue(QueryContexts.isDebug(query.getContext()));
+  }
+
+  @Test
+  public void testGetAs()
+  {
+    Assert.assertNull(QueryContexts.getAsString("foo", null, null));
+    Assert.assertEquals("default", QueryContexts.getAsString("foo", null, "default"));
+    Assert.assertEquals("value", QueryContexts.getAsString("foo", "value", "default"));
+    try {
+      QueryContexts.getAsString("foo", 10, null);
+      Assert.fail();
+    }
+    catch (IAE e) {
+      // Expected
+    }
+
+    Assert.assertFalse(QueryContexts.getAsBoolean("foo", null, false));
+    Assert.assertTrue(QueryContexts.getAsBoolean("foo", null, true));
+    Assert.assertTrue(QueryContexts.getAsBoolean("foo", "true", false));
+    Assert.assertTrue(QueryContexts.getAsBoolean("foo", true, false));
+    try {
+      QueryContexts.getAsBoolean("foo", 10, false);
+      Assert.fail();
+    }
+    catch (IAE e) {
+      // Expected
+    }
+
+    Assert.assertEquals(10, QueryContexts.getAsInt("foo", null, 10));
+    Assert.assertEquals(20, QueryContexts.getAsInt("foo", "20", 10));
+    Assert.assertEquals(20, QueryContexts.getAsInt("foo", 20, 10));
+    Assert.assertEquals(20, QueryContexts.getAsInt("foo", 20L, 10));
+    Assert.assertEquals(20, QueryContexts.getAsInt("foo", 20D, 10));
+    try {
+      QueryContexts.getAsInt("foo", true, 20);
+      Assert.fail();
+    }
+    catch (IAE e) {
+      // Expected
+    }
+
+    Assert.assertEquals(10L, QueryContexts.getAsLong("foo", null, 10));
+    Assert.assertEquals(20L, QueryContexts.getAsLong("foo", "20", 10));
+    Assert.assertEquals(20L, QueryContexts.getAsLong("foo", 20, 10));
+    Assert.assertEquals(20L, QueryContexts.getAsLong("foo", 20L, 10));
+    Assert.assertEquals(20L, QueryContexts.getAsLong("foo", 20D, 10));
+    try {
+      QueryContexts.getAsLong("foo", true, 20);
+      Assert.fail();
+    }
+    catch (IAE e) {
+      // Expected
+    }
+  }
+
+  @Test
+  public void testGetAsHumanReadableBytes()
+  {
+    Assert.assertEquals(new HumanReadableBytes("500M").getBytes(), QueryContexts.getAsHumanReadableBytes("maxOnDiskStorage", 500_000_000, HumanReadableBytes.ZERO).getBytes());
+    Assert.assertEquals(new HumanReadableBytes("500M").getBytes(), QueryContexts.getAsHumanReadableBytes("maxOnDiskStorage", "500000000", HumanReadableBytes.ZERO).getBytes());
+    Assert.assertEquals(new HumanReadableBytes("500M").getBytes(), QueryContexts.getAsHumanReadableBytes("maxOnDiskStorage", "500M", HumanReadableBytes.ZERO).getBytes());
   }
 }

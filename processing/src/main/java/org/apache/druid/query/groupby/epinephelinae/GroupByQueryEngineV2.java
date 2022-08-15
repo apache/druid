@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -41,6 +42,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.column.ArrayDoubleGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.ArrayLongGroupByColumnSelectorStrategy;
@@ -90,13 +92,13 @@ import java.util.stream.Stream;
  * This code runs on data servers, like Historicals.
  *
  * Used by
- * {@link GroupByStrategyV2#process(GroupByQuery, StorageAdapter)}.
+ * {@link GroupByStrategyV2#process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)}.
  */
 public class GroupByQueryEngineV2
 {
-  private static final GroupByStrategyFactory STRATEGY_FACTORY = new GroupByStrategyFactory();
+  public static final GroupByStrategyFactory STRATEGY_FACTORY = new GroupByStrategyFactory();
 
-  private static GroupByColumnSelectorPlus[] createGroupBySelectorPlus(
+  public static GroupByColumnSelectorPlus[] createGroupBySelectorPlus(
       ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] baseSelectorPlus,
       int dimensionStart
   )
@@ -119,7 +121,9 @@ public class GroupByQueryEngineV2
       final GroupByQuery query,
       @Nullable final StorageAdapter storageAdapter,
       final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool,
-      final GroupByQueryConfig querySpecificConfig
+      final GroupByQueryConfig querySpecificConfig,
+      final DruidProcessingConfig processingConfig,
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics
   )
   {
     if (storageAdapter == null) {
@@ -161,7 +165,9 @@ public class GroupByQueryEngineV2
             fudgeTimestamp,
             filter,
             interval,
-            querySpecificConfig
+            querySpecificConfig,
+            processingConfig,
+            groupByQueryMetrics
         );
       } else {
         result = processNonVectorized(
@@ -170,8 +176,10 @@ public class GroupByQueryEngineV2
             bufferHolder.get(),
             fudgeTimestamp,
             querySpecificConfig,
+            processingConfig,
             filter,
-            interval
+            interval,
+            groupByQueryMetrics
         );
       }
 
@@ -189,8 +197,10 @@ public class GroupByQueryEngineV2
       final ByteBuffer processingBuffer,
       @Nullable final DateTime fudgeTimestamp,
       final GroupByQueryConfig querySpecificConfig,
+      final DruidProcessingConfig processingConfig,
       @Nullable final Filter filter,
-      final Interval interval
+      final Interval interval,
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics
   )
   {
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
@@ -199,7 +209,7 @@ public class GroupByQueryEngineV2
         query.getVirtualColumns(),
         query.getGranularity(),
         false,
-        null
+        groupByQueryMetrics
     );
 
     return cursors.flatMap(
@@ -232,6 +242,7 @@ public class GroupByQueryEngineV2
                   return new ArrayAggregateIterator(
                       query,
                       querySpecificConfig,
+                      processingConfig,
                       cursor,
                       processingBuffer,
                       fudgeTimestamp,
@@ -243,6 +254,7 @@ public class GroupByQueryEngineV2
                   return new HashAggregateIterator(
                       query,
                       querySpecificConfig,
+                      processingConfig,
                       cursor,
                       processingBuffer,
                       fudgeTimestamp,
@@ -295,7 +307,7 @@ public class GroupByQueryEngineV2
       }
       // We cannot support array-based aggregation on array based grouping as we we donot have all the indexes up front
       // to allocate appropriate values
-      if (dimensions.get(0).getOutputType().equals(ColumnType.STRING_ARRAY)) {
+      if (dimensions.get(0).getOutputType().isArray()) {
         return -1;
       }
 
@@ -327,10 +339,11 @@ public class GroupByQueryEngineV2
   }
 
   /**
-   * Checks whether all "dimensions" are either single-valued,
-   * or STRING_ARRAY, in case we don't want to explode the underline multi value column,
-   * or if allowed, nonexistent. Since non-existent columnselectors will show up as full of nulls they are effectively
-   * single valued, however they can also be null during broker merge, for example with an 'inline' datasource subquery.
+   * Checks whether all "dimensions" are either single-valued, or if the input column or output dimension spec has
+   * specified a type that {@link ColumnType#isArray()}. Both cases indicate we don't want to explode the under-lying
+   * multi value column. Since selectors on non-existent columns will show up as full of nulls, they are effectively
+   * single valued, however capabilites on columns can also be null, for example during broker merge with an 'inline'
+   * datasource subquery, so we only return true from this method when capabilities are fully known.
    */
   public static boolean hasNoExplodingDimensions(
       final ColumnInspector inspector,
@@ -347,10 +360,13 @@ public class GroupByQueryEngineV2
                 return false;
               }
 
-              // Now check column capabilities, which must be present and explicitly not multi-valued
+              // Now check column capabilities, which must be present and explicitly not multi-valued and not arrays
               final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
-              return dimension.getOutputType().equals(ColumnType.STRING_ARRAY)
-                     || (columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse());
+              return dimension.getOutputType().isArray()
+                     || (columnCapabilities != null
+                         && columnCapabilities.hasMultipleValues().isFalse()
+                         && !columnCapabilities.isArray()
+                     );
             });
   }
 
@@ -442,7 +458,7 @@ public class GroupByQueryEngineV2
     }
   }
 
-  private abstract static class GroupByEngineIterator<KeyType> implements Iterator<ResultRow>, Closeable
+  public abstract static class GroupByEngineIterator<KeyType> implements Iterator<ResultRow>, Closeable
   {
     protected final GroupByQuery query;
     protected final GroupByQueryConfig querySpecificConfig;
@@ -455,10 +471,13 @@ public class GroupByQueryEngineV2
     @Nullable
     protected CloseableGrouperIterator<KeyType, ResultRow> delegate = null;
     protected final boolean allSingleValueDims;
+    protected final boolean allowMultiValueGrouping;
+    protected final long maxSelectorFootprint;
 
     public GroupByEngineIterator(
         final GroupByQuery query,
         final GroupByQueryConfig querySpecificConfig,
+        final DruidProcessingConfig processingConfig,
         final Cursor cursor,
         final ByteBuffer buffer,
         @Nullable final DateTime fudgeTimestamp,
@@ -468,6 +487,7 @@ public class GroupByQueryEngineV2
     {
       this.query = query;
       this.querySpecificConfig = querySpecificConfig;
+      this.maxSelectorFootprint = querySpecificConfig.getActualMaxSelectorDictionarySize(processingConfig);
       this.cursor = cursor;
       this.buffer = buffer;
       this.keySerde = new GroupByEngineKeySerde(dims, query);
@@ -476,6 +496,10 @@ public class GroupByQueryEngineV2
       // Time is the same for every row in the cursor
       this.timestamp = fudgeTimestamp != null ? fudgeTimestamp : cursor.getTime();
       this.allSingleValueDims = allSingleValueDims;
+      this.allowMultiValueGrouping = query.getContextBoolean(
+          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+          true
+      );
     }
 
     private CloseableGrouperIterator<KeyType, ResultRow> initNewDelegate()
@@ -589,22 +613,35 @@ public class GroupByQueryEngineV2
       return indexedInts.size() == 1 ? indexedInts.get(0) : GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE;
     }
 
+    /**
+     * Throws {@link UnexpectedMultiValueDimensionException} if "allowMultiValueGrouping" is false.
+     */
+    protected void checkIfMultiValueGroupingIsAllowed(String dimName)
+    {
+      if (!allowMultiValueGrouping) {
+        throw new UnexpectedMultiValueDimensionException(dimName);
+      }
+    }
   }
 
-  private static class HashAggregateIterator extends GroupByEngineIterator<ByteBuffer>
+  public static class HashAggregateIterator extends GroupByEngineIterator<ByteBuffer>
   {
     private static final Logger LOGGER = new Logger(HashAggregateIterator.class);
 
     private final int[] stack;
     private final Object[] valuess;
-    private final ByteBuffer keyBuffer;
+    protected final ByteBuffer keyBuffer;
 
     private int stackPointer = Integer.MIN_VALUE;
-    protected boolean currentRowWasPartiallyAggregated = false;
+    private boolean currentRowWasPartiallyAggregated = false;
+
+    // Sum of internal state footprint across all "dims".
+    private long selectorInternalFootprint = 0;
 
     public HashAggregateIterator(
         GroupByQuery query,
         GroupByQueryConfig querySpecificConfig,
+        DruidProcessingConfig processingConfig,
         Cursor cursor,
         ByteBuffer buffer,
         @Nullable DateTime fudgeTimestamp,
@@ -612,7 +649,7 @@ public class GroupByQueryEngineV2
         boolean allSingleValueDims
     )
     {
-      super(query, querySpecificConfig, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
+      super(query, querySpecificConfig, processingConfig, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
 
       final int dimCount = query.getDimensions().size();
       stack = new int[dimCount];
@@ -694,12 +731,19 @@ public class GroupByQueryEngineV2
     @Override
     protected void aggregateSingleValueDims(Grouper<ByteBuffer> grouper)
     {
+      if (!currentRowWasPartiallyAggregated) {
+        for (GroupByColumnSelectorPlus dim : dims) {
+          dim.getColumnSelectorStrategy().reset();
+        }
+        selectorInternalFootprint = 0;
+      }
+
       while (!cursor.isDone()) {
         for (GroupByColumnSelectorPlus dim : dims) {
           final GroupByColumnSelectorStrategy strategy = dim.getColumnSelectorStrategy();
-          strategy.writeToKeyBuffer(
+          selectorInternalFootprint += strategy.writeToKeyBuffer(
               dim.getKeyBufferPosition(),
-              strategy.getOnlyValue(dim.getSelector()),
+              dim.getSelector(),
               keyBuffer
           );
         }
@@ -708,13 +752,27 @@ public class GroupByQueryEngineV2
         if (!grouper.aggregate(keyBuffer).isOk()) {
           return;
         }
+
         cursor.advance();
+
+        // Check selectorInternalFootprint after advancing the cursor. (We reset after the first row that causes
+        // us to go past the limit.)
+        if (selectorInternalFootprint > maxSelectorFootprint) {
+          return;
+        }
       }
     }
 
     @Override
     protected void aggregateMultiValueDims(Grouper<ByteBuffer> grouper)
     {
+      if (!currentRowWasPartiallyAggregated) {
+        for (GroupByColumnSelectorPlus dim : dims) {
+          dim.getColumnSelectorStrategy().reset();
+        }
+        selectorInternalFootprint = 0;
+      }
+
       while (!cursor.isDone()) {
         if (!currentRowWasPartiallyAggregated) {
           // Set up stack, valuess, and first grouping in keyBuffer for this row
@@ -722,7 +780,7 @@ public class GroupByQueryEngineV2
 
           for (int i = 0; i < dims.length; i++) {
             GroupByColumnSelectorStrategy strategy = dims[i].getColumnSelectorStrategy();
-            strategy.initColumnValues(
+            selectorInternalFootprint += strategy.initColumnValues(
                 dims[i].getSelector(),
                 i,
                 valuess
@@ -760,6 +818,9 @@ public class GroupByQueryEngineV2
             );
 
             if (doAggregate) {
+              // this check is done during the row aggregation as a dimension can become multi-value col if column
+              // capabilities is unknown.
+              checkIfMultiValueGroupingIsAllowed(dims[stackPointer].getName());
               stack[stackPointer]++;
               for (int i = stackPointer + 1; i < stack.length; i++) {
                 dims[i].getColumnSelectorStrategy().initGroupingKeyColumnValue(
@@ -782,6 +843,12 @@ public class GroupByQueryEngineV2
         // Advance to next row
         cursor.advance();
         currentRowWasPartiallyAggregated = false;
+
+        // Check selectorInternalFootprint after advancing the cursor. (We reset after the first row that causes
+        // us to go past the limit.)
+        if (selectorInternalFootprint > maxSelectorFootprint) {
+          return;
+        }
       }
     }
 
@@ -799,7 +866,7 @@ public class GroupByQueryEngineV2
     }
   }
 
-  private static class ArrayAggregateIterator extends GroupByEngineIterator<Integer>
+  private static class ArrayAggregateIterator extends GroupByEngineIterator<IntKey>
   {
     private final int cardinality;
 
@@ -813,6 +880,7 @@ public class GroupByQueryEngineV2
     public ArrayAggregateIterator(
         GroupByQuery query,
         GroupByQueryConfig querySpecificConfig,
+        DruidProcessingConfig processingConfig,
         Cursor cursor,
         ByteBuffer buffer,
         @Nullable DateTime fudgeTimestamp,
@@ -821,7 +889,7 @@ public class GroupByQueryEngineV2
         int cardinality
     )
     {
-      super(query, querySpecificConfig, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
+      super(query, querySpecificConfig, processingConfig, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
       this.cardinality = cardinality;
       if (dims.length == 1) {
         this.dim = dims[0];
@@ -843,19 +911,22 @@ public class GroupByQueryEngineV2
     }
 
     @Override
-    protected void aggregateSingleValueDims(Grouper<Integer> grouper)
+    protected void aggregateSingleValueDims(Grouper<IntKey> grouper)
     {
       aggregateSingleValueDims((IntGrouper) grouper);
     }
 
     @Override
-    protected void aggregateMultiValueDims(Grouper<Integer> grouper)
+    protected void aggregateMultiValueDims(Grouper<IntKey> grouper)
     {
       aggregateMultiValueDims((IntGrouper) grouper);
     }
 
     private void aggregateSingleValueDims(IntGrouper grouper)
     {
+      // No need to track strategy internal state footprint, because array-based grouping does not use strategies.
+      // It accesses dimension selectors directly and only works on truly dictionary-coded columns.
+
       while (!cursor.isDone()) {
         final int key;
         if (dim != null) {
@@ -874,6 +945,9 @@ public class GroupByQueryEngineV2
 
     private void aggregateMultiValueDims(IntGrouper grouper)
     {
+      // No need to track strategy internal state footprint, because array-based grouping does not use strategies.
+      // It accesses dimension selectors directly and only works on truly dictionary-coded columns.
+
       if (dim == null) {
         throw new ISE("dim must exist");
       }
@@ -885,12 +959,17 @@ public class GroupByQueryEngineV2
       }
 
       while (!cursor.isDone()) {
-        int multiValuesSize = multiValues.size();
+        final int multiValuesSize = multiValues.size();
         if (multiValuesSize == 0) {
           if (!grouper.aggregate(GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE).isOk()) {
             return;
           }
         } else {
+          if (multiValuesSize > 1) {
+            // this check is done during the row aggregation as a dimension can become multi-value col if column
+            // capabilities is unknown.
+            checkIfMultiValueGroupingIsAllowed(dim.getName());
+          }
           for (; nextValIndex < multiValuesSize; nextValIndex++) {
             if (!grouper.aggregate(multiValues.get(nextValIndex)).isOk()) {
               return;
@@ -908,11 +987,12 @@ public class GroupByQueryEngineV2
     }
 
     @Override
-    protected void putToRow(Integer key, ResultRow resultRow)
+    protected void putToRow(IntKey key, ResultRow resultRow)
     {
+      final int intKey = key.intValue();
       if (dim != null) {
-        if (key != GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE) {
-          resultRow.set(dim.getResultRowPosition(), ((DimensionSelector) dim.getSelector()).lookupName(key));
+        if (intKey != GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE) {
+          resultRow.set(dim.getResultRowPosition(), ((DimensionSelector) dim.getSelector()).lookupName(intKey));
         } else {
           resultRow.set(dim.getResultRowPosition(), NullHandling.defaultStringValue());
         }
@@ -957,17 +1037,26 @@ public class GroupByQueryEngineV2
     }
 
     @Override
+    public ByteBuffer createKey()
+    {
+      return ByteBuffer.allocate(keySize);
+    }
+
+    @Override
     public ByteBuffer toByteBuffer(ByteBuffer key)
     {
       return key;
     }
 
     @Override
-    public ByteBuffer fromByteBuffer(ByteBuffer buffer, int position)
+    public void readFromByteBuffer(ByteBuffer dstBuffer, ByteBuffer srcBuffer, int position)
     {
-      final ByteBuffer dup = buffer.duplicate();
-      dup.position(position).limit(position + keySize);
-      return dup.slice();
+      dstBuffer.limit(keySize);
+      dstBuffer.position(0);
+
+      for (int i = 0; i < keySize; i++) {
+        dstBuffer.put(i, srcBuffer.get(position + i));
+      }
     }
 
     @Override

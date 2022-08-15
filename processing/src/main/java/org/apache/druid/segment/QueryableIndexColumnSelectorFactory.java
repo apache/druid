@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.column.BaseColumn;
@@ -39,35 +38,29 @@ import java.util.function.Function;
  * It's counterpart for incremental index is {@link
  * org.apache.druid.segment.incremental.IncrementalIndexColumnSelectorFactory}.
  */
-public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
+public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory, RowIdSupplier
 {
-  private final QueryableIndex index;
   private final VirtualColumns virtualColumns;
   private final boolean descending;
-  private final Closer closer;
   protected final ReadableOffset offset;
 
   // Share Column objects, since they cache decompressed buffers internally, and we can avoid recomputation if the
   // same column is used by more than one part of a query.
-  private final Map<String, BaseColumn> columnCache;
+  private final ColumnCache columnCache;
 
   // Share selectors too, for the same reason that we cache columns (they may cache things internally).
   private final Map<DimensionSpec, DimensionSelector> dimensionSelectorCache;
   private final Map<String, ColumnValueSelector> valueSelectorCache;
 
   public QueryableIndexColumnSelectorFactory(
-      QueryableIndex index,
       VirtualColumns virtualColumns,
       boolean descending,
-      Closer closer,
       ReadableOffset offset,
-      Map<String, BaseColumn> columnCache
+      ColumnCache columnCache
   )
   {
-    this.index = index;
     this.virtualColumns = virtualColumns;
     this.descending = descending;
-    this.closer = closer;
     this.offset = offset;
     this.columnCache = columnCache;
     this.dimensionSelectorCache = new HashMap<>();
@@ -79,7 +72,7 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   {
     Function<DimensionSpec, DimensionSelector> mappingFunction = spec -> {
       if (virtualColumns.exists(spec.getDimension())) {
-        DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(dimensionSpec, index, offset);
+        DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(dimensionSpec, columnCache, offset);
         if (dimensionSelector == null) {
           return virtualColumns.makeDimensionSelector(dimensionSpec, this);
         } else {
@@ -107,7 +100,7 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
     final String dimension = dimensionSpec.getDimension();
     final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-    final ColumnHolder columnHolder = index.getColumnHolder(dimension);
+    final ColumnHolder columnHolder = columnCache.getColumnHolder(dimension);
     if (columnHolder == null) {
       return DimensionSelector.constant(null, extractionFn);
     }
@@ -125,10 +118,10 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
       );
     }
 
-    final DictionaryEncodedColumn column = getCachedColumn(dimension, DictionaryEncodedColumn.class);
+    final BaseColumn column = columnCache.getColumn(dimension);
 
-    if (column != null) {
-      return column.makeDimensionSelector(offset, extractionFn);
+    if (column instanceof DictionaryEncodedColumn) {
+      return ((DictionaryEncodedColumn<?>) column).makeDimensionSelector(offset, extractionFn);
     } else {
       return DimensionSelector.constant(null, extractionFn);
     }
@@ -137,31 +130,27 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
   {
-    Function<String, ColumnValueSelector<?>> mappingFunction = name -> {
-      if (virtualColumns.exists(columnName)) {
-        ColumnValueSelector<?> selector = virtualColumns.makeColumnValueSelector(columnName, index, offset);
-        if (selector == null) {
-          return virtualColumns.makeColumnValueSelector(columnName, this);
-        } else {
-          return selector;
-        }
-      }
-
-      BaseColumn column = getCachedColumn(columnName, BaseColumn.class);
-
-      if (column != null) {
-        return column.makeColumnValueSelector(offset);
-      } else {
-        return NilColumnValueSelector.instance();
-      }
-    };
-
     // We cannot use valueSelectorCache.computeIfAbsent() here since the function being
     // applied may modify the valueSelectorCache itself through virtual column references,
     // triggering a ConcurrentModificationException in JDK 9 and above.
     ColumnValueSelector<?> columnValueSelector = valueSelectorCache.get(columnName);
     if (columnValueSelector == null) {
-      columnValueSelector = mappingFunction.apply(columnName);
+      if (virtualColumns.exists(columnName)) {
+        ColumnValueSelector<?> selector = virtualColumns.makeColumnValueSelector(columnName, columnCache, offset);
+        if (selector == null) {
+          columnValueSelector = virtualColumns.makeColumnValueSelector(columnName, this);
+        } else {
+          columnValueSelector = selector;
+        }
+      } else {
+        BaseColumn column = columnCache.getColumn(columnName);
+
+        if (column != null) {
+          columnValueSelector = column.makeColumnValueSelector(offset);
+        } else {
+          columnValueSelector = NilColumnValueSelector.instance();
+        }
+      }
       valueSelectorCache.put(columnName, columnValueSelector);
     }
 
@@ -169,28 +158,16 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   }
 
   @Nullable
-  @SuppressWarnings("unchecked")
-  private <T extends BaseColumn> T getCachedColumn(final String columnName, final Class<T> clazz)
+  @Override
+  public RowIdSupplier getRowIdSupplier()
   {
-    final BaseColumn cachedColumn = columnCache.computeIfAbsent(
-        columnName,
-        name -> {
-          ColumnHolder holder = index.getColumnHolder(name);
-          if (holder != null && clazz.isAssignableFrom(holder.getColumn().getClass())) {
-            return closer.register(holder.getColumn());
-          } else {
-            // Return null from the lambda in computeIfAbsent() results in no recorded value in the columnCache and
-            // the column variable is set to null.
-            return null;
-          }
-        }
-    );
+    return this;
+  }
 
-    if (cachedColumn != null && clazz.isAssignableFrom(cachedColumn.getClass())) {
-      return (T) cachedColumn;
-    } else {
-      return null;
-    }
+  @Override
+  public long getRowId()
+  {
+    return offset.getOffset();
   }
 
   @Override
@@ -198,12 +175,9 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(
-          QueryableIndexStorageAdapter.getColumnInspectorForIndex(index),
-          columnName
-      );
+      return virtualColumns.getColumnCapabilities(columnCache, columnName);
     }
 
-    return QueryableIndexStorageAdapter.getColumnCapabilities(index, columnName);
+    return columnCache.getColumnCapabilities(columnName);
   }
 }

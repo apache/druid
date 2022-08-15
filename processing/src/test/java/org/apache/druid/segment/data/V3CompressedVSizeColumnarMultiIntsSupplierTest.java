@@ -22,21 +22,21 @@ package org.apache.druid.segment.data;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.io.Closer;
-import org.junit.After;
-import org.junit.Before;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
+import java.util.List;
 
-public class V3CompressedVSizeColumnarMultiIntsSupplierTest extends CompressedVSizeColumnarMultiIntsSupplierTest
+public class V3CompressedVSizeColumnarMultiIntsSupplierTest extends CompressedVSizeColumnarMultiIntsSupplierTestBase
 {
 
   private Closer closer;
+  private List<int[]> vals;
+  private WritableSupplier<ColumnarMultiInts> columnarMultiIntsSupplier;
 
   @Override
-  @Before
   public void setUpSimple()
   {
     vals = Arrays.asList(
@@ -46,18 +46,20 @@ public class V3CompressedVSizeColumnarMultiIntsSupplierTest extends CompressedVS
         new int[]{11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
     );
     closer = Closer.create();
-    columnarMultiIntsSupplier = V3CompressedVSizeColumnarMultiIntsSupplier.fromIterable(
-        Iterables.transform(vals, (Function<int[], ColumnarInts>) input -> VSizeColumnarInts.fromArray(input, 20)),
-        2,
-        20,
-        ByteOrder.nativeOrder(),
-        CompressionStrategy.LZ4,
+    columnarMultiIntsSupplier = wrapSupplier(
+        V3CompressedVSizeColumnarMultiIntsSupplier.fromIterable(
+            Iterables.transform(vals, (Function<int[], ColumnarInts>) input -> VSizeColumnarInts.fromArray(input, 20)),
+            2,
+            20,
+            ByteOrder.nativeOrder(),
+            CompressionStrategy.LZ4,
+            closer
+        ),
         closer
     );
   }
 
   @Override
-  @After
   public void teardown() throws IOException
   {
     columnarMultiIntsSupplier = null;
@@ -66,11 +68,26 @@ public class V3CompressedVSizeColumnarMultiIntsSupplierTest extends CompressedVS
   }
 
   @Override
-  protected WritableSupplier<ColumnarMultiInts> fromByteBuffer(ByteBuffer buffer)
+  public List<int[]> getValsUsed()
   {
-    return V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(
-        buffer,
-        ByteOrder.nativeOrder()
+    return vals;
+  }
+
+  @Override
+  public WritableSupplier<ColumnarMultiInts> getColumnarMultiIntsSupplier()
+  {
+    return columnarMultiIntsSupplier;
+  }
+
+  @Override
+  public WritableSupplier<ColumnarMultiInts> fromByteBuffer(ByteBuffer buffer)
+  {
+    return wrapSupplier(
+        V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(
+            buffer,
+            ByteOrder.nativeOrder()
+        ),
+        closer
     );
   }
 }

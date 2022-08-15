@@ -54,6 +54,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -559,7 +560,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
                   baseInputSource.withSplit(split),
                   getIngestionSchema().getIOConfig().getInputFormat(),
                   getIngestionSchema().getIOConfig().isAppendToExisting(),
-                  null
+                  getIngestionSchema().getIOConfig().isDropExisting()
               ),
               getIngestionSchema().getTuningConfig()
           ),
@@ -668,11 +669,9 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       }
 
       // build LocalParallelIndexTaskClient
-      final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
-          null,
-          getId(),
-          0,
-          null,
+      final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
+          getSupervisorTaskId(),
+          Duration.ZERO,
           0
       );
       final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) getIngestionSchema()
@@ -684,7 +683,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
           getIngestionSchema().getDataSchema(),
           getTaskLockHelper(),
-          getIngestionSchema().getIOConfig().isAppendToExisting(),
+          AbstractTask.computeBatchIngestionMode(getIngestionSchema().getIOConfig()),
           partitionsSpec,
           true
       );
@@ -709,7 +708,6 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       );
 
       taskClient.report(
-          getSupervisorTaskId(),
           new PushedSegmentsReport(getId(), Collections.emptySet(), Collections.singleton(segment), ImmutableMap.of())
       );
       return TaskStatus.fromCode(getId(), state);

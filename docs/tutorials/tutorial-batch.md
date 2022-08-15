@@ -96,7 +96,9 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
     },
     "tuningConfig" : {
       "type" : "index_parallel",
-      "maxRowsPerSegment" : 5000000,
+      "partitionsSpec": {
+        "type": "dynamic"
+      },
       "maxRowsInMemory" : 25000
     }
   }

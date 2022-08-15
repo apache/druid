@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import classNames from 'classnames';
 import { max } from 'd3-array';
 import React, { Fragment } from 'react';
 
@@ -24,6 +25,7 @@ import './braced-text.scss';
 const THOUSANDS_SEPARATOR = ','; // Maybe one day make this locale aware
 
 export interface BracedTextProps {
+  className?: string;
   text: string;
   braces: string[];
   padFractionalPart?: boolean;
@@ -74,14 +76,13 @@ function arrayJoin<T, U>(array: T[], separator: U): (T | U)[] {
 function hideThousandsSeparator(text: string) {
   const parts = text.split(THOUSANDS_SEPARATOR);
   if (parts.length < 2) return text;
-  return arrayJoin(
-    parts,
-    <span className="unselectable">{THOUSANDS_SEPARATOR}</span>,
-  ).map((x, i) => <Fragment key={i}>{x}</Fragment>);
+  return arrayJoin(parts, <span className="unselectable">{THOUSANDS_SEPARATOR}</span>).map(
+    (x, i) => <Fragment key={i}>{x}</Fragment>,
+  );
 }
 
 export const BracedText = React.memo(function BracedText(props: BracedTextProps) {
-  const { text, braces, padFractionalPart, unselectableThousandsSeparator } = props;
+  const { className, text, braces, padFractionalPart, unselectableThousandsSeparator } = props;
 
   let effectiveBraces = braces.concat(text);
 
@@ -111,7 +112,7 @@ export const BracedText = React.memo(function BracedText(props: BracedTextProps)
   }
 
   return (
-    <span className="braced-text">
+    <span className={classNames('braced-text', className)}>
       <span className="brace-text">{findMostNumbers(effectiveBraces)}</span>
       <span className="real-text">
         {unselectableThousandsSeparator ? hideThousandsSeparator(text) : text}

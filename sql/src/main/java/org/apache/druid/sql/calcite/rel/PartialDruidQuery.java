@@ -188,7 +188,8 @@ public class PartialDruidQuery
         relBuilder.push(selectProject.getInput());
         relBuilder.project(
             newProjectRexNodes,
-            newSelectProject.getRowType().getFieldNames()
+            newSelectProject.getRowType().getFieldNames(),
+            true
         );
         theProject = (Project) relBuilder.build();
       }

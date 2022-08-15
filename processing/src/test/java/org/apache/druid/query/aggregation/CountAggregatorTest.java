@@ -61,4 +61,13 @@ public class CountAggregatorTest
     Assert.assertEquals(0, comp.compare(agg.get(), agg.get()));
     Assert.assertEquals(1, comp.compare(agg.get(), first));
   }
+
+  @Test
+  public void testWithName()
+  {
+    CountAggregatorFactory factory = new CountAggregatorFactory("test");
+    Assert.assertEquals(factory, factory.withName("test"));
+
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
 }

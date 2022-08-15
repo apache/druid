@@ -53,6 +53,7 @@ import org.testng.annotations.Test;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import javax.ws.rs.core.MediaType;
+
 import java.io.IOException;
 import java.net.URL;
 
@@ -445,8 +446,11 @@ public class ITTLSTest
       catch (RuntimeException re) {
         Throwable rootCause = Throwables.getRootCause(re);
 
-        if (rootCause instanceof IOException && ("Broken pipe".equals(rootCause.getMessage())
-                                                 || "Connection reset by peer".contains(rootCause.getMessage()))) {
+        if (rootCause instanceof IOException
+            && (null != rootCause.getMessage())
+            && ("Broken pipe".equals(rootCause.getMessage())
+            || "Connection reset by peer".contains(rootCause.getMessage()))
+        ) {
           if (retries > MAX_CONNECTION_EXCEPTION_RETRIES) {
             Assert.fail(StringUtils.format(
                 "Broken pipe / connection reset retries exhausted, test failed, did not get %s.",

@@ -79,7 +79,6 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(10000, config.getRecordBufferSize());
     Assert.assertEquals(5000, config.getRecordBufferOfferTimeout());
     Assert.assertEquals(5000, config.getRecordBufferFullWait());
-    Assert.assertEquals(20000, config.getFetchSequenceNumberTimeout());
     Assert.assertNull(config.getFetchThreads());
     Assert.assertFalse(config.isSkipSequenceNumberAvailabilityCheck());
     Assert.assertFalse(config.isResetOffsetAutomatically());
@@ -100,7 +99,6 @@ public class KinesisIndexTaskTuningConfigTest
                      + "  \"recordBufferSize\": 1000,\n"
                      + "  \"recordBufferOfferTimeout\": 500,\n"
                      + "  \"recordBufferFullWait\": 500,\n"
-                     + "  \"fetchSequenceNumberTimeout\": 6000,\n"
                      + "  \"resetOffsetAutomatically\": false,\n"
                      + "  \"skipSequenceNumberAvailabilityCheck\": true,\n"
                      + "  \"fetchThreads\": 2,\n"
@@ -128,7 +126,6 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(1000, config.getRecordBufferSize());
     Assert.assertEquals(500, config.getRecordBufferOfferTimeout());
     Assert.assertEquals(500, config.getRecordBufferFullWait());
-    Assert.assertEquals(6000, config.getFetchSequenceNumberTimeout());
     Assert.assertEquals(2, (int) config.getFetchThreads());
     Assert.assertTrue(config.isSkipSequenceNumberAvailabilityCheck());
     Assert.assertFalse(config.isResetOffsetAutomatically());
@@ -156,7 +153,6 @@ public class KinesisIndexTaskTuningConfigTest
         1000,
         1000,
         500,
-        null,
         42,
         null,
         false,
@@ -216,7 +212,6 @@ public class KinesisIndexTaskTuningConfigTest
         1000,
         1000,
         500,
-        null,
         42,
         null,
         false,
@@ -268,7 +263,6 @@ public class KinesisIndexTaskTuningConfigTest
                      + "  \"recordBufferSize\": 1000,\n"
                      + "  \"recordBufferOfferTimeout\": 500,\n"
                      + "  \"recordBufferFullWait\": 500,\n"
-                     + "  \"fetchSequenceNumberTimeout\": 6000,\n"
                      + "  \"resetOffsetAutomatically\": true,\n"
                      + "  \"skipSequenceNumberAvailabilityCheck\": true,\n"
                      + "  \"fetchThreads\": 2\n"
@@ -309,8 +303,9 @@ public class KinesisIndexTaskTuningConfigTest
         1000,
         500,
         500,
-        6000,
         2,
+        null,
+        null,
         null,
         null,
         null,
@@ -335,7 +330,6 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(1000, copy.getRecordBufferSize());
     Assert.assertEquals(500, copy.getRecordBufferOfferTimeout());
     Assert.assertEquals(500, copy.getRecordBufferFullWait());
-    Assert.assertEquals(6000, copy.getFetchSequenceNumberTimeout());
     Assert.assertEquals(2, (int) copy.getFetchThreads());
     Assert.assertFalse(copy.isSkipSequenceNumberAvailabilityCheck());
     Assert.assertTrue(copy.isResetOffsetAutomatically());

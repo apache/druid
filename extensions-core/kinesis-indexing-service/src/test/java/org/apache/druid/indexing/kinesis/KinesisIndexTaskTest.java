@@ -38,9 +38,13 @@ import com.google.inject.name.Named;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.FloatDimensionSchema;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
@@ -61,6 +65,7 @@ import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -113,6 +118,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.After;
@@ -130,6 +136,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -390,6 +397,132 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         newDataSchemaMetadata()
     );
+  }
+
+  @Test(timeout = 120_000L)
+  public void testIngestNullColumnAfterDataInserted() throws Exception
+  {
+    recordSupplier.assign(EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+
+    EasyMock.expect(recordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
+
+    recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
+    EasyMock.expectLastCall().anyTimes();
+
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 5)).once();
+
+    recordSupplier.close();
+    EasyMock.expectLastCall().once();
+
+    replayAll();
+
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        ImmutableList.of(
+            new StringDimensionSchema("dim1"),
+            new StringDimensionSchema("dim1t"),
+            new StringDimensionSchema("dim2"),
+            new LongDimensionSchema("dimLong"),
+            new FloatDimensionSchema("dimFloat"),
+            new StringDimensionSchema("unknownDim")
+        )
+    );
+    final KinesisIndexTask task = createTask(
+        null,
+        NEW_DATA_SCHEMA.withDimensionsSpec(dimensionsSpec),
+        new KinesisIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "2"), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4")),
+            true,
+            null,
+            null,
+            INPUT_FORMAT,
+            "awsEndpoint",
+            null,
+            null,
+            null,
+            null,
+            false
+        )
+    );
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    verifyAll();
+
+    final Collection<DataSegment> segments = publishedSegments();
+    for (DataSegment segment : segments) {
+      for (int i = 0; i < dimensionsSpec.getDimensions().size(); i++) {
+        Assert.assertEquals(dimensionsSpec.getDimensionNames().get(i), segment.getDimensions().get(i));
+      }
+    }
+  }
+
+  @Test(timeout = 120_000L)
+  public void testIngestNullColumnAfterDataInserted_storeEmptyColumnsOff_shouldNotStoreEmptyColumns() throws Exception
+  {
+    recordSupplier.assign(EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+
+    EasyMock.expect(recordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
+
+    recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
+    EasyMock.expectLastCall().anyTimes();
+
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 5)).once();
+
+    recordSupplier.close();
+    EasyMock.expectLastCall().once();
+
+    replayAll();
+
+    final KinesisIndexTask task = createTask(
+        null,
+        NEW_DATA_SCHEMA.withDimensionsSpec(
+            new DimensionsSpec(
+                ImmutableList.of(
+                    new StringDimensionSchema("dim1"),
+                    new StringDimensionSchema("dim1t"),
+                    new StringDimensionSchema("dim2"),
+                    new LongDimensionSchema("dimLong"),
+                    new FloatDimensionSchema("dimFloat"),
+                    new StringDimensionSchema("unknownDim")
+                )
+            )
+        ),
+        new KinesisIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "2"), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4")),
+            true,
+            null,
+            null,
+            INPUT_FORMAT,
+            "awsEndpoint",
+            null,
+            null,
+            null,
+            null,
+            false
+        )
+    );
+    task.addToContext(Tasks.STORE_EMPTY_COLUMNS_KEY, false);
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    verifyAll();
+
+    final Collection<DataSegment> segments = publishedSegments();
+    for (DataSegment segment : segments) {
+      Assert.assertFalse(segment.getDimensions().contains("unknownDim"));
+    }
   }
 
   @Test(timeout = 120_000L)
@@ -1351,10 +1484,10 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         "Unable to parse value[notanumber] for field[met1]",
         "could not convert value [notanumber] to float",
         "could not convert value [notanumber] to long",
-        "Timestamp[null] is unparseable! Event: {}",
-        "Unable to parse [] as the intermediateRow resulted in empty input row",
-        "Unable to parse row [unparseable]",
-        "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}]"
+        "Timestamp[null] is unparseable! Event: {} (Record: 1)",
+        "Unable to parse [] as the intermediateRow resulted in empty input row (Record: 1)",
+        "Unable to parse row [unparseable] (Record: 1)",
+        "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}] (Record: 1)"
     );
     List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
       return ((List<String>) r.get("details")).get(0);
@@ -1457,8 +1590,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         .get(RowIngestionMeters.BUILD_SEGMENTS);
 
     List<String> expectedMessages = Arrays.asList(
-        "Unable to parse [] as the intermediateRow resulted in empty input row",
-        "Unable to parse row [unparseable]"
+        "Unable to parse [] as the intermediateRow resulted in empty input row (Record: 1)",
+        "Unable to parse row [unparseable] (Record: 1)"
     );
     List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
       return ((List<String>) r.get("details")).get(0);
@@ -2808,7 +2941,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         null,
-        null,
         logParseExceptions,
         maxParseExceptions,
         maxSavedParseExceptions,
@@ -2902,7 +3034,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         false,
         false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();
@@ -3013,7 +3146,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         MapCache.create(1024),
         new CacheConfig(),
         new CachePopulatorStats(),
-        testUtils.getTestIndexMergerV9(),
+        testUtils.getIndexMergerV9Factory(),
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
@@ -3024,7 +3157,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new NoopChatHandlerProvider(),
         testUtils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
-        new NoopIndexingServiceClient(),
+        new NoopOverlordClient(),
         null,
         null,
         null
@@ -3054,6 +3187,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
           tuningConfig,
           ioConfig,
           context,
+          false,
           awsCredentialsConfig
       );
     }

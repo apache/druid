@@ -24,7 +24,7 @@ title: "Query execution"
 
 > This document describes how Druid executes [native queries](querying.md), but since [Druid SQL](sql.md) queries
 > are translated to native queries, this document applies to the SQL runtime as well. Refer to the SQL
-> [Query translation](sql.md#query-translation) page for information about how SQL queries are translated to native
+> [Query translation](sql-translation.md) page for information about how SQL queries are translated to native
 > queries.
 
 Druid's approach to query execution varies depending on the kind of [datasource](datasource.md) you are querying.

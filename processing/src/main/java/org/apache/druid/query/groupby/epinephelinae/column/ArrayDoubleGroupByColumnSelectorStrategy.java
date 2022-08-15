@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Arrays;
 import java.util.List;
@@ -33,7 +34,7 @@ public class ArrayDoubleGroupByColumnSelectorStrategy extends ArrayNumericGroupB
 {
   public ArrayDoubleGroupByColumnSelectorStrategy()
   {
-
+    super(Double.BYTES);
   }
 
   @VisibleForTesting
@@ -42,11 +43,11 @@ public class ArrayDoubleGroupByColumnSelectorStrategy extends ArrayNumericGroupB
       Object2IntOpenHashMap<List<Double>> reverseDictionary
   )
   {
-    super(dictionary, reverseDictionary);
+    super(dictionary, reverseDictionary, Double.BYTES);
   }
 
   @Override
-  public Object getOnlyValue(ColumnValueSelector selector)
+  protected int computeDictionaryId(ColumnValueSelector selector)
   {
     Object object = selector.getObject();
     if (object == null) {
@@ -62,7 +63,7 @@ public class ArrayDoubleGroupByColumnSelectorStrategy extends ArrayNumericGroupB
                                           .map(a -> (Double) a)
                                           .collect(Collectors.toList()));
     } else {
-      throw new ISE("Found unknowm type %s in ColumnValueSelector.", object.getClass().toString());
+      throw new ISE("Found unexpected object type [%s] in %s array.", object.getClass().getName(), ValueType.DOUBLE);
     }
   }
 }

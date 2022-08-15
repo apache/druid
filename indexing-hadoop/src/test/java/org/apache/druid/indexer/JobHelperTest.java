@@ -75,9 +75,7 @@ public class JobHelperTest
               new JSONParseSpec(
                   new TimestampSpec("t", "auto", null),
                   new DimensionsSpec(
-                      DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim1t", "dim2")),
-                      null,
-                      null
+                      DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim1t", "dim2"))
                   ),
                   new JSONPathSpec(true, ImmutableList.of()),
                   ImmutableMap.of(),
@@ -131,7 +129,7 @@ public class JobHelperTest
                     new StringInputRowParser(
                         new CSVParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
                             null,
                             ImmutableList.of("timestamp", "host", "visited_num"),
                             false,

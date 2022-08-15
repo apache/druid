@@ -140,7 +140,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnFloatAndLongs() throws Exception
+  public void testQuantileOnFloatAndLongs()
   {
     testQuery(
         "SELECT\n"
@@ -213,7 +213,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnComplexColumn() throws Exception
+  public void testQuantileOnComplexColumn()
   {
     testQuery(
         "SELECT\n"
@@ -270,7 +270,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnCastedString() throws Exception
+  public void testQuantileOnCastedString()
   {
     final List<Object[]> expectedResults;
     if (NullHandling.replaceWithDefault()) {
@@ -363,7 +363,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnInnerQuery() throws Exception
+  public void testQuantileOnInnerQuery()
   {
     final List<Object[]> expectedResults;
     if (NullHandling.replaceWithDefault()) {
@@ -429,7 +429,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnInnerQuantileQuery() throws Exception
+  public void testQuantileOnInnerQuantileQuery()
   {
     ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
     builder.add(new Object[]{"", 1.0});
@@ -496,7 +496,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDoublesSketchPostAggs() throws Exception
+  public void testDoublesSketchPostAggs()
   {
     testQuery(
         "SELECT\n"
@@ -564,7 +564,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       ),
                       new ExpressionPostAggregator(
                           "p3",
-                          "(p2 + 1000)",
+                          "(\"p2\" + 1000)",
                           null,
                           TestExprMacroTable.INSTANCE
                       ),
@@ -578,7 +578,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       ),
                       new ExpressionPostAggregator(
                           "p6",
-                          "(p5 + 1000)",
+                          "(\"p5\" + 1000)",
                           null,
                           TestExprMacroTable.INSTANCE
                       ),
@@ -590,7 +590,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           ),
                           0.5f
                       ),
-                      new ExpressionPostAggregator("p9", "abs(p8)", null, TestExprMacroTable.INSTANCE),
+                      new ExpressionPostAggregator("p9", "abs(\"p8\")", null, TestExprMacroTable.INSTANCE),
                       new DoublesSketchToQuantilesPostAggregator(
                           "p11",
                           new FieldAccessPostAggregator(
@@ -633,7 +633,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       ),
                       new ExpressionPostAggregator(
                           "p20",
-                          "replace(replace(p19,'HeapCompactDoublesSketch','HeapUpdateDoublesSketch'),"
+                          "replace(replace(\"p19\",'HeapCompactDoublesSketch','HeapUpdateDoublesSketch'),"
                           + "'Combined Buffer Capacity     : 6',"
                           + "'Combined Buffer Capacity     : 8')",
                           null,
@@ -679,7 +679,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDoublesSketchPostAggsPostSort() throws Exception
+  public void testDoublesSketchPostAggsPostSort()
   {
     testQuery(
         "SELECT DS_GET_QUANTILE(y, 0.5), DS_GET_QUANTILE(y, 0.98) from ("
@@ -728,7 +728,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEmptyTimeseriesResults() throws Exception
+  public void testEmptyTimeseriesResults()
   {
     testQuery(
         "SELECT\n"
@@ -768,7 +768,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByAggregatorDefaultValues() throws Exception
+  public void testGroupByAggregatorDefaultValues()
   {
     testQuery(
         "SELECT\n"
@@ -828,14 +828,14 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFailWithSmallMaxStreamLength() throws Exception
+  public void testSuccessWithSmallMaxStreamLength()
   {
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(
         DoublesSketchApproxQuantileSqlAggregator.CTX_APPROX_QUANTILE_DS_MAX_STREAM_LENGTH,
         1
     );
-    testQueryThrows(
+    testQuery(
         "SELECT\n"
         + "APPROX_QUANTILE_DS(m1, 0.01),\n"
         + "APPROX_QUANTILE_DS(cnt, 0.5)\n"
@@ -856,11 +856,13 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   )
                   .context(context)
                   .build()
-        ),
-        expectedException -> {
-          expectedException.expect(IllegalStateException.class);
-          expectedException.expectMessage("NullPointerException was thrown while updating Doubles sketch");
-        }
+            ),
+            ImmutableList.of(
+                new Object[]{
+                    1.0,
+                    1.0
+                }
+            )
     );
   }
 

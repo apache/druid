@@ -31,10 +31,12 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -48,6 +50,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -73,17 +76,31 @@ public class SegmentManager
     private final ConcurrentHashMap<SegmentId, ReferenceCountingIndexedTable> tablesLookup = new ConcurrentHashMap<>();
     private long totalSegmentSize;
     private long numSegments;
+    private long rowCount;
+    private final SegmentRowCountDistribution segmentRowCountDistribution = new SegmentRowCountDistribution();
 
-    private void addSegment(DataSegment segment)
+    private void addSegment(DataSegment segment, long numOfRows)
     {
       totalSegmentSize += segment.getSize();
       numSegments++;
+      rowCount += (numOfRows);
+      if (segment.isTombstone()) {
+        segmentRowCountDistribution.addTombstoneToDistribution();
+      } else {
+        segmentRowCountDistribution.addRowCountToDistribution(numOfRows);
+      }
     }
 
-    private void removeSegment(DataSegment segment)
+    private void removeSegment(DataSegment segment, long numOfRows)
     {
       totalSegmentSize -= segment.getSize();
       numSegments--;
+      rowCount -= numOfRows;
+      if (segment.isTombstone()) {
+        segmentRowCountDistribution.removeTombstoneFromDistribution();
+      } else {
+        segmentRowCountDistribution.removeRowCountFromDistribution(numOfRows);
+      }
     }
 
     public VersionedIntervalTimeline<String, ReferenceCountingSegment> getTimeline()
@@ -94,6 +111,11 @@ public class SegmentManager
     public ConcurrentHashMap<SegmentId, ReferenceCountingIndexedTable> getTablesLookup()
     {
       return tablesLookup;
+    }
+
+    public long getAverageRowCount()
+    {
+      return numSegments == 0 ? 0 : rowCount / numSegments;
     }
 
     public long getTotalSegmentSize()
@@ -110,7 +132,13 @@ public class SegmentManager
     {
       return numSegments == 0;
     }
+
+    private SegmentRowCountDistribution getSegmentRowCountDistribution()
+    {
+      return segmentRowCountDistribution;
+    }
   }
+
 
   @Inject
   public SegmentManager(
@@ -135,6 +163,16 @@ public class SegmentManager
   public Map<String, Long> getDataSourceSizes()
   {
     return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getTotalSegmentSize);
+  }
+
+  public Map<String, Long> getAverageRowCountForDatasource()
+  {
+    return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getAverageRowCount);
+  }
+
+  public Map<String, SegmentRowCountDistribution> getRowCountDistribution()
+  {
+    return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getSegmentRowCountDistribution);
   }
 
   public Set<String> getDataSourceNames()
@@ -203,18 +241,29 @@ public class SegmentManager
                    .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
   }
 
+  public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
+      throws SegmentLoadingException
+  {
+    return loadSegment(segment, lazy, loadFailed, null);
+  }
+
   /**
    * Load a single segment.
    *
    * @param segment segment to load
    * @param lazy    whether to lazy load columns metadata
    * @param loadFailed callBack to execute when segment lazy load failed
+   * @param loadSegmentIntoPageCacheExec If null is specified, the default thread pool in segment loader to load
+   *                                     segments into page cache on download will be used. You can specify a dedicated
+   *                                     thread pool of larger capacity when this function is called during historical
+   *                                     process bootstrap to speed up initial loading.
    *
    * @return true if the segment was newly loaded, false if it was already loaded
    *
    * @throws SegmentLoadingException if the segment cannot be loaded
    */
-  public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
+  public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed,
+                             ExecutorService loadSegmentIntoPageCacheExec) throws SegmentLoadingException
   {
     final ReferenceCountingSegment adapter = getSegmentReference(segment, lazy, loadFailed);
 
@@ -253,7 +302,11 @@ public class SegmentManager
                 segment.getVersion(),
                 segment.getShardSpec().createChunk(adapter)
             );
-            dataSourceState.addSegment(segment);
+            StorageAdapter storageAdapter = adapter.asStorageAdapter();
+            long numOfRows = (segment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
+            dataSourceState.addSegment(segment, numOfRows);
+            // Asyncly load segment index files into page cache in a thread pool
+            segmentLoader.loadSegmentIntoPageCache(segment, loadSegmentIntoPageCacheExec);
             resultSupplier.set(true);
 
           }
@@ -307,9 +360,13 @@ public class SegmentManager
             );
             final ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
 
+
             if (oldQueryable != null) {
               try (final Closer closer = Closer.create()) {
-                dataSourceState.removeSegment(segment);
+                StorageAdapter storageAdapter = oldQueryable.asStorageAdapter();
+                long numOfRows = (segment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
+                dataSourceState.removeSegment(segment, numOfRows);
+
                 closer.register(oldQueryable);
                 log.info("Attempting to close segment %s", segment.getId());
                 final ReferenceCountingIndexedTable oldTable = dataSourceState.tablesLookup.remove(segment.getId());

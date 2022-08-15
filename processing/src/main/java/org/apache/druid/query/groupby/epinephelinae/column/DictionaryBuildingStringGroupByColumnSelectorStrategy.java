@@ -20,20 +20,21 @@
 package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.base.Preconditions;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.DictionaryBuilding;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionDictionary;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -44,13 +45,8 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
 {
   private static final int GROUP_BY_MISSING_VALUE = -1;
 
-  private int nextId = 0;
-  private final List<String> dictionary = new ArrayList<>();
-  private final Object2IntOpenHashMap<String> reverseDictionary = new Object2IntOpenHashMap<>();
-
-  {
-    reverseDictionary.defaultReturnValue(-1);
-  }
+  private final List<String> dictionary = DictionaryBuilding.createDictionary();
+  private final Object2IntMap<String> reverseDictionary = DictionaryBuilding.createReverseDictionary();
 
   public DictionaryBuildingStringGroupByColumnSelectorStrategy()
   {
@@ -77,10 +73,11 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
   }
 
   @Override
-  public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
+  public int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
     final DimensionSelector dimSelector = (DimensionSelector) selector;
     final IndexedInts row = dimSelector.getRow();
+    int stateFootprintIncrease = 0;
     ArrayBasedIndexedInts newRow = (ArrayBasedIndexedInts) valuess[columnIndex];
     if (newRow == null) {
       newRow = new ArrayBasedIndexedInts();
@@ -92,19 +89,22 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
       final String value = dimSelector.lookupName(row.get(i));
       final int dictId = reverseDictionary.getInt(value);
       if (dictId < 0) {
+        final int nextId = dictionary.size();
         dictionary.add(value);
         reverseDictionary.put(value, nextId);
         newRow.setValue(i, nextId);
-        nextId++;
+        stateFootprintIncrease +=
+            DictionaryBuilding.estimateEntryFootprint((value == null ? 0 : value.length()) * Character.BYTES);
       } else {
         newRow.setValue(i, dictId);
       }
     }
     newRow.setSize(rowSize);
+    return stateFootprintIncrease;
   }
 
   @Override
-  public Object getOnlyValue(ColumnValueSelector selector)
+  public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
     final DimensionSelector dimSelector = (DimensionSelector) selector;
     final IndexedInts row = dimSelector.getRow();
@@ -112,17 +112,21 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
     Preconditions.checkState(row.size() < 2, "Not supported for multi-value dimensions");
 
     if (row.size() == 0) {
-      return GROUP_BY_MISSING_VALUE;
+      writeToKeyBuffer(keyBufferPosition, GROUP_BY_MISSING_VALUE, keyBuffer);
+      return 0;
     }
 
     final String value = dimSelector.lookupName(row.get(0));
     final int dictId = reverseDictionary.getInt(value);
-    if (dictId < 0) {
+    if (dictId == DimensionDictionary.ABSENT_VALUE_ID) {
+      final int nextId = dictionary.size();
       dictionary.add(value);
       reverseDictionary.put(value, nextId);
-      return nextId++;
+      writeToKeyBuffer(keyBufferPosition, nextId, keyBuffer);
+      return DictionaryBuilding.estimateEntryFootprint((value == null ? 0 : value.length()) * Character.BYTES);
     } else {
-      return dictId;
+      writeToKeyBuffer(keyBufferPosition, dictId, keyBuffer);
+      return 0;
     }
   }
 
@@ -137,5 +141,12 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
       String rhsStr = dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
       return realComparator.compare(lhsStr, rhsStr);
     };
+  }
+
+  @Override
+  public void reset()
+  {
+    dictionary.clear();
+    reverseDictionary.clear();
   }
 }

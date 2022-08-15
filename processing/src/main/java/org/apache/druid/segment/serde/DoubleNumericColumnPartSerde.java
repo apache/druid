@@ -28,7 +28,6 @@ import org.apache.druid.segment.data.ColumnarDoubles;
 import org.apache.druid.segment.data.CompressedColumnarDoublesSuppliers;
 
 import javax.annotation.Nullable;
-
 import java.nio.ByteOrder;
 
 public class DoubleNumericColumnPartSerde implements ColumnPartSerde

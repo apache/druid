@@ -25,7 +25,7 @@ sidebar_label: "Simple task indexing"
 
 The simple task (type `index`) is designed to ingest small data sets into Apache Druid. The task executes within the indexing service. For general information on native batch indexing and parallel task indexing, see [Native batch ingestion](./native-batch.md).
 
-## Task syntax
+## Simple task example
 
 A sample task is shown below:
 
@@ -40,7 +40,7 @@ A sample task is shown below:
         "format" : "auto"
       },
       "dimensionsSpec" : {
-        "dimensions": ["country", "page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent",,"region","city"],
+        "dimensions": ["country", "page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","region","city"],
         "dimensionExclusions" : []
       },
       "metricsSpec" : [
@@ -94,12 +94,14 @@ A sample task is shown below:
 }
 ```
 
+## Simple task configuration
+
 |property|description|required?|
 |--------|-----------|---------|
 |type|The task type, this should always be `index`.|yes|
 |id|The task ID. If this is not explicitly specified, Druid generates the task ID using task type, data source name, interval, and date-time stamp. |no|
-|spec|The ingestion spec including the data schema, IOConfig, and TuningConfig. See below for more details. |yes|
-|context|Context containing various task configuration parameters. See below for more details.|no|
+|spec|The ingestion spec including the [data schema](#dataschema), [IO config](#ioconfig), and [tuning config](#tuningconfig).|yes|
+|context|Context to specify various task configuration parameters. See [Task context parameters](tasks.md#context-parameters) for more details.|no|
 
 ### `dataSchema`
 
@@ -120,7 +122,7 @@ that range if there's some stray data with unexpected timestamps.
 |type|The task type, this should always be "index".|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
-|dropExisting|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task drops (mark unused) all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid does not drop or mark unused any segments. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec`, Druid does not drop any segments even if `dropExisting` is `true`. WARNING: this functionality is still in beta and can result in temporary data unavailability for data within the specified `interval`.|false|no|
+|dropExisting|If this setting is `false` then ingestion proceeds as usual. Set this to `true` and `appendToExisting` to `false` to enforce true "replace" functionality as described next. If `true` and `appendToExisting` is `false` and the `granularitySpec` contains at least one`interval`, then the ingestion task will create regular segments for time chunk intervals with input data and `tombstones` for all other time chunks with no data. The task will publish the data segments and the tombstone segments together when the it publishes new segments. The net effect of the data segments and the tombstones is to completely adhere to a "replace" semantics where the  input data contained in the `granularitySpec` intervals replaces all existing data in the intervals even for time chunks that would be empty in the case that no input data was associated with them. In the extreme case when the input data set that falls in the `granularitySpec` intervals is empty all existing data in the interval will be replaced with an empty data set (i.e. with nothing -- all existing data will be covered by `tombstones`). If ingestion fails, no segments and tombstones will be published. The following two combinations are not supported and will make the ingestion fail with an error: `dropExisting` is `true` and `interval` is not specified in `granularitySpec` or  `appendToExisting` is true and `dropExisting` is `true`. WARNING: this functionality is still in beta and even though we are not aware of any bugs, use with caution.|false|no|
 
 ### `tuningConfig`
 
@@ -129,11 +131,10 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The task type, this should always be "index".|none|yes|
-|maxRowsPerSegment|Deprecated. Use `partitionsSpec` instead. Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |maxRowsInMemory|Used in determining when intermediate persists to disk should occur. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|1000000|no|
 |maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists). Note that `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until next persist will decreases, and task will fail when the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory`.|1/6 of max JVM memory|no|
 |maxTotalRows|Deprecated. Use `partitionsSpec` instead. Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
-|numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
+|numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data.|null|no|
 |partitionDimensions|Deprecated. Use `partitionsSpec` instead. The dimensions to partition on. Leave blank to select all dimensions. Only used with `forceGuaranteedRollup` = true, will be ignored otherwise.|null|no|
 |partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` if `forceGuaranteedRollup` = true|no|
 |indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](ingestion-spec.md#indexspec)|null|no|
@@ -175,7 +176,7 @@ For best-effort rollup, you should use `dynamic`.
 |-----|----|-----------|--------|
 |type|String|See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|yes|
 
-### Segment pushing modes
+## Segment pushing modes
 
 While ingesting data using the simple task indexing, Druid creates segments from the input data and pushes them. For segment pushing,
 the simple task index supports the following segment pushing modes based upon your type of [rollup](./rollup.md):

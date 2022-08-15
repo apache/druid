@@ -80,9 +80,8 @@ public class QueryableModuleTest
             new DruidProcessingConfigModule(),
             new BrokerProcessingModule(),
             new LifecycleModule(),
-            binder -> {
-              binder.bind(Properties.class).toInstance(properties);
-            },
+            binder -> binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class),
+            binder -> binder.bind(Properties.class).toInstance(properties),
             new QueryableModule()
         )
     );

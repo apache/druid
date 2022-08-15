@@ -29,16 +29,23 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.aggregation.any.NumericNilVectorAggregator;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -118,6 +125,29 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
           metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector
       );
+    }
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(
+      VectorColumnSelectorFactory columnSelectorFactory
+  )
+  {
+    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
+    VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
+    //time is always long
+    BaseLongVectorValueSelector timeSelector = (BaseLongVectorValueSelector) columnSelectorFactory.makeValueSelector(
+        timeColumn);
+    if (capabilities == null || capabilities.isNumeric()) {
+      return new FloatLastVectorAggregator(timeSelector, valueSelector);
+    } else {
+      return NumericNilVectorAggregator.floatNilVectorAggregator();
     }
   }
 
@@ -293,6 +323,12 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   {
     // timestamp, is null, value
     return Long.BYTES + Byte.BYTES + Float.BYTES;
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new FloatLastAggregatorFactory(newName, getFieldName(), getTimeColumn());
   }
 
   @Override

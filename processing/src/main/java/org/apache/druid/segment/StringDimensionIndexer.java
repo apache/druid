@@ -60,20 +60,29 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
   private final boolean hasSpatialIndexes;
+  private final boolean useMaxMemoryEstimates;
   private volatile boolean hasMultipleValues = false;
 
-  public StringDimensionIndexer(MultiValueHandling multiValueHandling, boolean hasBitmapIndexes, boolean hasSpatialIndexes)
+  public StringDimensionIndexer(
+      MultiValueHandling multiValueHandling,
+      boolean hasBitmapIndexes,
+      boolean hasSpatialIndexes,
+      boolean useMaxMemoryEstimates
+  )
   {
+    super(new StringDimensionDictionary(!useMaxMemoryEstimates));
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
     this.hasSpatialIndexes = hasSpatialIndexes;
+    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
   }
 
   @Override
-  public int[] processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
+  public EncodedKeyComponent<int[]> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
     final int[] encodedDimensionValues;
     final int oldDictSize = dimLookup.size();
+    final long oldDictSizeInBytes = useMaxMemoryEstimates ? 0 : dimLookup.sizeInBytes();
 
     if (dimValues == null) {
       final int nullId = dimLookup.getId(null);
@@ -122,18 +131,32 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       sortedLookup = null;
     }
 
-    return encodedDimensionValues;
+    long effectiveSizeBytes;
+    if (useMaxMemoryEstimates) {
+      effectiveSizeBytes = estimateEncodedKeyComponentSize(encodedDimensionValues);
+    } else {
+      // size of encoded array + dictionary size change
+      effectiveSizeBytes = 16L + (long) encodedDimensionValues.length * Integer.BYTES
+                           + (dimLookup.sizeInBytes() - oldDictSizeInBytes);
+    }
+    return new EncodedKeyComponent<>(encodedDimensionValues, effectiveSizeBytes);
   }
 
-  @Override
-  public long estimateEncodedKeyComponentSize(int[] key)
+  /**
+   * Estimates size of the given key component.
+   * <p>
+   * Deprecated method. Use {@link #processRowValsToUnsortedEncodedKeyComponent(Object, boolean)}
+   * and {@link EncodedKeyComponent#getEffectiveSizeBytes()}.
+   */
+  public long estimateEncodedKeyComponentSize(int[] keys)
   {
     // string length is being accounted for each time they are referenced, based on dimension handler interface,
     // even though they are stored just once. It may overestimate the size by a bit, but we wanted to leave
     // more buffer to be safe
-    long estimatedSize = key.length * Integer.BYTES;
-    for (int element : key) {
-      String val = dimLookup.getValue(element);
+    long estimatedSize = keys.length * Integer.BYTES;
+
+    String[] vals = dimLookup.getValues(keys);
+    for (String val : vals) {
       if (val != null) {
         // According to https://www.ibm.com/developerworks/java/library/j-codetoheap/index.html
         // String has the following memory usuage...

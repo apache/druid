@@ -19,12 +19,12 @@
 
 package org.apache.druid.cli;
 
-import io.airlift.airline.Cli;
+import com.github.rvesse.airline.builder.CliBuilder;
 
 public class CustomNodeRoleCommandCreator implements CliCommandCreator
 {
   @Override
-  public void addCommands(Cli.CliBuilder builder)
+  public void addCommands(CliBuilder builder)
   {
     builder.withGroup("server").withCommands(CliCustomNodeRole.class);
   }

@@ -23,8 +23,11 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 import javax.annotation.Nullable;
+
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -37,6 +40,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class DimensionDictionary<T extends Comparable<T>>
 {
   public static final int ABSENT_VALUE_ID = -1;
+  private final Class<T> cls;
 
   @Nullable
   private T minValue = null;
@@ -44,13 +48,15 @@ public class DimensionDictionary<T extends Comparable<T>>
   private T maxValue = null;
   private volatile int idForNull = ABSENT_VALUE_ID;
 
+  private final AtomicLong sizeInBytes = new AtomicLong(0L);
   private final Object2IntMap<T> valueToId = new Object2IntOpenHashMap<>();
 
   private final List<T> idToValue = new ArrayList<>();
   private final ReentrantReadWriteLock lock;
 
-  public DimensionDictionary()
+  public DimensionDictionary(Class<T> cls)
   {
+    this.cls = cls;
     this.lock = new ReentrantReadWriteLock();
     valueToId.defaultReturnValue(ABSENT_VALUE_ID);
   }
@@ -84,6 +90,22 @@ public class DimensionDictionary<T extends Comparable<T>>
     }
   }
 
+  public T[] getValues(int[] ids)
+  {
+    T[] values = (T[]) Array.newInstance(cls, ids.length);
+
+    lock.readLock().lock();
+    try {
+      for (int i = 0; i < ids.length; i++) {
+        values[i] = (ids[i] == idForNull) ? null : idToValue.get(ids[i]);
+      }
+      return values;
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+  }
+
   public int size()
   {
     lock.readLock().lock();
@@ -94,6 +116,20 @@ public class DimensionDictionary<T extends Comparable<T>>
     finally {
       lock.readLock().unlock();
     }
+  }
+
+  /**
+   * Gets the current size of this dictionary in bytes.
+   *
+   * @throws IllegalStateException if size computation is disabled.
+   */
+  public long sizeInBytes()
+  {
+    if (!computeOnHeapSize()) {
+      throw new IllegalStateException("On-heap size computation is disabled");
+    }
+
+    return sizeInBytes.get();
   }
 
   public int add(@Nullable T originalValue)
@@ -114,6 +150,12 @@ public class DimensionDictionary<T extends Comparable<T>>
       final int index = idToValue.size();
       valueToId.put(originalValue, index);
       idToValue.add(originalValue);
+
+      if (computeOnHeapSize()) {
+        // Add size of new dim value and 2 references (valueToId and idToValue)
+        sizeInBytes.addAndGet(estimateSizeOfValue(originalValue) + 2L * Long.BYTES);
+      }
+
       minValue = minValue == null || minValue.compareTo(originalValue) > 0 ? originalValue : minValue;
       maxValue = maxValue == null || maxValue.compareTo(originalValue) < 0 ? originalValue : maxValue;
       return index;
@@ -160,4 +202,28 @@ public class DimensionDictionary<T extends Comparable<T>>
       lock.readLock().unlock();
     }
   }
+
+  /**
+   * Estimates the size of the dimension value in bytes. This method is called
+   * only when a new dimension value is being added to the lookup.
+   *
+   * @throws UnsupportedOperationException Implementations that want to estimate
+   *                                       memory must override this method.
+   */
+  public long estimateSizeOfValue(T value)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Whether on-heap size of this dictionary should be computed.
+   *
+   * @return false, by default. Implementations that want to estimate memory
+   * must override this method.
+   */
+  public boolean computeOnHeapSize()
+  {
+    return false;
+  }
+
 }

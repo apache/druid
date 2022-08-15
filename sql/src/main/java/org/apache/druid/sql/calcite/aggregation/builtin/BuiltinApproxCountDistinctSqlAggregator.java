@@ -41,7 +41,6 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostA
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -118,9 +117,8 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
       if (arg.isSimpleExtraction()) {
         dimensionSpec = arg.getSimpleExtraction().toDimensionSpec(null, inputType);
       } else {
-        VirtualColumn virtualColumn =
-            virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, dataType);
-        dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
+        String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, dataType);
+        dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
       }
 
       aggregatorFactory = new CardinalityAggregatorFactory(

@@ -86,6 +86,12 @@ class IdentifierExpr implements Expr
     return binding;
   }
 
+  @Override
+  public boolean isIdentifier()
+  {
+    return true;
+  }
+
   @Nullable
   @Override
   public String getIdentifierIfIdentifier()

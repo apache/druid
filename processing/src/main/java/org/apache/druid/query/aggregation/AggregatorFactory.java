@@ -70,6 +70,27 @@ public abstract class AggregatorFactory implements Cacheable
   }
 
   /**
+   * Creates an {@link Aggregator} based on the provided column selector factory.
+   * The returned value is a holder object which contains both the aggregator
+   * and its initial size in bytes. The callers can then invoke
+   * {@link Aggregator#aggregateWithSize()} to perform aggregation and get back
+   * the incremental memory required in each aggregate call. Combined with the
+   * initial size, this gives the total on-heap memory required by the aggregator.
+   * <p>
+   * This method must include JVM object overheads in the estimated size and must
+   * ensure not to underestimate required memory as that might lead to OOM errors.
+   * <p>
+   * This flow does not require invoking {@link #guessAggregatorHeapFootprint(long)}
+   * which tends to over-estimate the required memory.
+   *
+   * @return AggregatorAndSize which contains the actual aggregator and its initial size.
+   */
+  public AggregatorAndSize factorizeWithSize(ColumnSelectorFactory metricFactory)
+  {
+    return new AggregatorAndSize(factorize(metricFactory), getMaxIntermediateSize());
+  }
+
+  /**
    * Returns whether or not this aggregation class supports vectorization. The default implementation returns false.
    */
   public boolean canVectorize(ColumnInspector columnInspector)
@@ -206,6 +227,9 @@ public abstract class AggregatorFactory implements Cacheable
   @Nullable
   public abstract Object finalizeComputation(@Nullable Object object);
 
+  /**
+   * @return output name of the aggregator column.
+   */
   public abstract String getName();
 
   /**
@@ -245,7 +269,6 @@ public abstract class AggregatorFactory implements Cacheable
     }
     return ColumnTypeFactory.ofValueType(finalized);
   }
-
 
   /**
    * This method is deprecated and will be removed soon. Use {@link #getIntermediateType()} instead. Do not call this
@@ -325,6 +348,23 @@ public abstract class AggregatorFactory implements Cacheable
   public AggregatorFactory optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {
     return this;
+  }
+
+  /**
+   * Used in cases where we want to change the output name of the aggregator to something else. For eg: if we have
+   * a query `select a, sum(b) as total group by a from table` the aggregator returned from the native group by query is "a0" set in
+   * {@link org.apache.druid.sql.calcite.rel.DruidQuery#computeAggregations}. We can use withName("total") to set the output name
+   * of the aggregator to "total".
+   * <p>
+   * As all implementations of this interface method may not exist, callers of this method are advised to handle such a case.
+   *
+   * @param newName newName of the output for aggregator factory
+   * @return AggregatorFactory with the output name set as the input param.
+   */
+  @SuppressWarnings("unused")
+  public AggregatorFactory withName(String newName)
+  {
+    throw new UOE("Cannot change output name for AggregatorFactory[%s].", this.getClass().getName());
   }
 
   /**

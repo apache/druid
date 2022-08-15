@@ -36,9 +36,11 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -197,7 +199,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     return Druids.newScanQueryBuilder()
                  .dataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
                  .columns(Collections.emptyList())
-                 .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                 .eternityInterval()
                  .limit(3)
                  .legacy(legacy);
   }
@@ -211,7 +213,16 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .virtualColumns(EXPR_COLUMN)
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    MetricsEmittingQueryRunner<ScanResultValue> metricsEmittingQueryRunner =
+        new MetricsEmittingQueryRunner<ScanResultValue>(
+            stubServiceEmitter,
+            TOOL_CHEST,
+            runner,
+            (obj, lng) -> {},
+            (metrics) -> {}
+        ).withWaitMeasuredFromNow();
+    Iterable<ScanResultValue> results = metricsEmittingQueryRunner.run(QueryPlus.wrap(query)).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
         toFullEvents(V_0112_0114),
@@ -219,6 +230,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         0,
         3
     );
+    Assert.assertEquals(1, stubServiceEmitter.getEvents().size());
+    Assert.assertEquals(false, stubServiceEmitter.getEvents().get(0).toMap().getOrDefault("vectorized", null));
     verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
   }
 
@@ -896,7 +909,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
         .build();
     ResponseContext responseContext = DefaultResponseContext.createEmpty();
-    responseContext.putTimeoutTime(System.currentTimeMillis());
+    final long timeoutAt = System.currentTimeMillis();
+    responseContext.putTimeoutTime(timeoutAt);
     try {
       runner.run(QueryPlus.wrap(query), responseContext).toList();
       Assert.fail("didn't timeout");
@@ -904,6 +918,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     catch (RuntimeException e) {
       Assert.assertTrue(e instanceof QueryTimeoutException);
       Assert.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
+      Assert.assertEquals(timeoutAt, responseContext.getTimeoutTime().longValue());
     }
   }
 
@@ -1153,6 +1168,14 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
           Object exValue = ex.getValue();
           if (exValue instanceof Double || exValue instanceof Float) {
             final double expectedDoubleValue = ((Number) exValue).doubleValue();
+            Assert.assertNotNull(
+                StringUtils.format(
+                    "invalid null value for %s (expected %f)",
+                    ex.getKey(),
+                    expectedDoubleValue
+                ),
+                actVal
+            );
             Assert.assertEquals(
                 "invalid value for " + ex.getKey(),
                 expectedDoubleValue,

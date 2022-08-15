@@ -20,27 +20,25 @@
 package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.annotations.Arguments;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
-import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import io.airlift.airline.Arguments;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.indexing.HttpIndexingServiceClient;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
@@ -76,12 +74,11 @@ import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.DeepStorageShuffleClient;
 import org.apache.druid.indexing.common.task.batch.parallel.HttpShuffleClient;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClientFactory;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProviderImpl;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -143,7 +140,8 @@ import java.util.Set;
 public class CliPeon extends GuiceRunnable
 {
   @SuppressWarnings("WeakerAccess")
-  @Arguments(description = "task.json status.json report.json", required = true)
+  @Arguments(description = "task.json status.json report.json")
+  @Required
   public List<String> taskAndStatusFile;
 
   // path to store the task's stdout log
@@ -299,7 +297,7 @@ public class CliPeon extends GuiceRunnable
   public void run()
   {
     try {
-      Injector injector = makeInjector();
+      Injector injector = makeInjector(ImmutableSet.of(NodeRole.PEON));
       try {
         final Lifecycle lifecycle = initLifecycle(injector);
         final Thread hook = new Thread(
@@ -417,7 +415,6 @@ public class CliPeon extends GuiceRunnable
         .in(LazySingleton.class);
 
     binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.PEON);
-    Multibinder.newSetBinder(binder, NodeRole.class, Self.class).addBinding().toInstance(NodeRole.PEON);
   }
 
   static void bindTaskConfigAndClients(Binder binder)
@@ -429,10 +426,9 @@ public class CliPeon extends GuiceRunnable
     JsonConfigProvider.bind(binder, "druid.peon.taskActionClient.retry", RetryPolicyConfig.class);
 
     configureTaskActionClient(binder);
-    binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
 
-    binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>>(){})
-          .to(ParallelIndexTaskClientFactory.class)
+    binder.bind(ParallelIndexSupervisorTaskClientProvider.class)
+          .to(ParallelIndexSupervisorTaskClientProviderImpl.class)
           .in(LazySingleton.class);
 
     binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);

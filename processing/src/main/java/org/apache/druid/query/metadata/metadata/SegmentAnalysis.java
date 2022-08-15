@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Interval;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -42,7 +43,12 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
    */
   private final String id;
   private final List<Interval> interval;
-  private final Map<String, ColumnAnalysis> columns;
+
+  /**
+   * Require LinkedHashMap to emphasize how important column order is. It's used by DruidSchema to keep
+   * SQL column order in line with ingestion column order.
+   */
+  private final LinkedHashMap<String, ColumnAnalysis> columns;
   private final long size;
   private final long numRows;
   private final Map<String, AggregatorFactory> aggregators;
@@ -54,7 +60,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   public SegmentAnalysis(
       @JsonProperty("id") String id,
       @JsonProperty("intervals") List<Interval> interval,
-      @JsonProperty("columns") Map<String, ColumnAnalysis> columns,
+      @JsonProperty("columns") LinkedHashMap<String, ColumnAnalysis> columns,
       @JsonProperty("size") long size,
       @JsonProperty("numRows") long numRows,
       @JsonProperty("aggregators") Map<String, AggregatorFactory> aggregators,
@@ -87,7 +93,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   }
 
   @JsonProperty
-  public Map<String, ColumnAnalysis> getColumns()
+  public LinkedHashMap<String, ColumnAnalysis> getColumns()
   {
     return columns;
   }

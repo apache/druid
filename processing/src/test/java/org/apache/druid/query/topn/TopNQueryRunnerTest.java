@@ -4615,6 +4615,48 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testFullOnTopNAggregateLongVirtualColumn()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .virtualColumns(new ExpressionVirtualColumn("v0", "index", ColumnType.LONG, ExprMacroTable.nil()))
+        .dimension(new DefaultDimensionSpec("quality", "quality"))
+        .metric("sumIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .aggregators(Collections.singletonList(new LongSumAggregatorFactory("sumIndex", "v0")))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                                .put("quality", "mezzanine")
+                                .put("sumIndex", 217586L)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("quality", "premium")
+                                .put("sumIndex", 210722L)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("quality", "automotive")
+                                .put("sumIndex", 12226L)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("quality", "entertainment")
+                                .put("sumIndex", 12038L)
+                                .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
   public void testTopNStringVirtualColumn()
   {
     TopNQuery query = new TopNQueryBuilder()
@@ -5988,6 +6030,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         "0",
                         null,
                         false,
+                        false,
+                        false,
                         "__acc + 1",
                         "__acc + diy_count",
                         null,
@@ -6002,6 +6046,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         "0.0",
                         null,
                         null,
+                        false,
+                        false,
                         "__acc + index",
                         null,
                         null,
@@ -6014,8 +6060,10 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         ImmutableSet.of("index"),
                         null,
                         "0.0",
-                        "<DOUBLE>[]",
+                        "ARRAY<DOUBLE>[]",
                         null,
+                        false,
+                        false,
                         "__acc + index",
                         "array_concat(__acc, diy_decomposed_sum)",
                         null,
@@ -6030,6 +6078,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         "[]",
                         null,
                         null,
+                        true,
+                        false,
                         "array_set_add(acc, quality)",
                         "array_set_add_all(acc, array_agg_distinct)",
                         "if(array_length(o1) > array_length(o2), 1, if (array_length(o1) == array_length(o2), 0, -1))",
@@ -6052,7 +6102,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         .put("diy_count", 837L)
                         .put("diy_sum", 95606.57232284546D)
                         .put("diy_decomposed_sum", 95606.57232284546D)
-                        .put("array_agg_distinct", new String[]{"mezzanine", "news", "premium", "business", "entertainment", "health", "technology", "automotive", "travel"})
+                        .put("array_agg_distinct", new String[]{"automotive", "business", "entertainment", "health", "mezzanine", "news", "premium", "technology", "travel"})
                         .build(),
                     ImmutableMap.<String, Object>builder()
                         .put(QueryRunnerTestHelper.MARKET_DIMENSION, "total_market")
@@ -6101,6 +6151,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                     "hyper_unique()",
                     null,
                     null,
+                    false,
+                    false,
                     "hyper_unique_add(quality, __acc)",
                     "hyper_unique_add(carExpr, __acc)",
                     null,

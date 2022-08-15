@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.histogram;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.Row;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryRunner;
@@ -33,12 +32,15 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -54,13 +56,31 @@ import java.util.List;
 public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlingTest
 {
   private static final Closer RESOURCE_CLOSER = Closer.create();
+  private static TestGroupByBuffers BUFFER_POOLS = null;
 
   private final QueryRunner<Row> runner;
   private final GroupByQueryRunnerFactory factory;
 
+  @BeforeClass
+  public static void setUpClass()
+  {
+    if (BUFFER_POOLS == null) {
+      BUFFER_POOLS = TestGroupByBuffers.createDefault();
+    }
+  }
+
+  @AfterClass
+  public static void tearDownClass()
+  {
+    BUFFER_POOLS.close();
+    BUFFER_POOLS = null;
+  }
+
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
+    setUpClass();
+
     final GroupByQueryConfig v1Config = new GroupByQueryConfig()
     {
       @Override
@@ -121,11 +141,7 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
     );
 
     for (GroupByQueryConfig config : configs) {
-      final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = GroupByQueryRunnerTest.makeQueryRunnerFactory(
-          config
-      );
-      final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
-      RESOURCE_CLOSER.register(factoryAndCloser.rhs);
+      final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config, BUFFER_POOLS);
       for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
         final String testName = StringUtils.format(
             "config=%s, runner=%s",
