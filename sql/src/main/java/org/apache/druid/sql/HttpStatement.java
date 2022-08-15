@@ -25,7 +25,6 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.http.SqlQuery;
 
 import javax.servlet.http.HttpServletRequest;
-
 import java.util.Set;
 import java.util.function.Function;
 

@@ -114,11 +114,12 @@ import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.SqlStatementFactoryFactory;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
-import org.apache.druid.sql.calcite.run.QueryMakerFactory;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
@@ -144,7 +145,6 @@ import org.joda.time.Duration;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -758,12 +758,12 @@ public class CalciteTests
 
   public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
 
-  public static QueryMakerFactory createMockQueryMakerFactory(
+  public static NativeSqlEngine createMockSqlEngine(
       final QuerySegmentWalker walker,
       final QueryRunnerFactoryConglomerate conglomerate
   )
   {
-    return new NativeQueryMakerFactory(createMockQueryLifecycleFactory(walker, conglomerate), getJsonMapper());
+    return new NativeSqlEngine(createMockQueryLifecycleFactory(walker, conglomerate), getJsonMapper());
   }
 
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(
@@ -790,17 +790,21 @@ public class CalciteTests
     );
   }
 
-  public static SqlStatementFactory createSqlLifecycleFactory(final PlannerFactory plannerFactory)
+  public static SqlStatementFactory createSqlStatementFactory(
+      final SqlEngine engine,
+      final PlannerFactory plannerFactory
+  )
   {
-    return createSqlLifecycleFactory(plannerFactory, new AuthConfig());
+    return createSqlStatementFactory(engine, plannerFactory, new AuthConfig());
   }
 
-  public static SqlStatementFactory createSqlLifecycleFactory(
+  public static SqlStatementFactory createSqlStatementFactory(
+      final SqlEngine engine,
       final PlannerFactory plannerFactory,
       final AuthConfig authConfig
   )
   {
-    return new SqlStatementFactory(
+    return new SqlStatementFactoryFactory(
         plannerFactory,
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
@@ -808,7 +812,7 @@ public class CalciteTests
         authConfig,
         Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())),
         new SqlLifecycleManager()
-    );
+    ).factorize(engine);
   }
 
   public static ObjectMapper getJsonMapper()

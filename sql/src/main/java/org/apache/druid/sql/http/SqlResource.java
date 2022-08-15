@@ -21,6 +21,7 @@ package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
@@ -50,6 +51,8 @@ import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.SqlRowTransformer;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.SqlStatementFactoryFactory;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -64,7 +67,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -80,7 +82,7 @@ public class SqlResource
 
   private final ObjectMapper jsonMapper;
   private final AuthorizerMapper authorizerMapper;
-  private final SqlStatementFactory sqlLifecycleFactory;
+  private final SqlStatementFactory sqlStatementFactory;
   private final SqlLifecycleManager sqlLifecycleManager;
   private final ServerConfig serverConfig;
 
@@ -88,16 +90,35 @@ public class SqlResource
   public SqlResource(
       @Json ObjectMapper jsonMapper,
       AuthorizerMapper authorizerMapper,
-      SqlStatementFactory sqlLifecycleFactory,
+      NativeSqlEngine engine,
+      SqlStatementFactoryFactory sqlStatementFactoryFactory,
       SqlLifecycleManager sqlLifecycleManager,
       ServerConfig serverConfig
   )
   {
+    this(
+        jsonMapper,
+        authorizerMapper,
+        sqlStatementFactoryFactory.factorize(engine),
+        sqlLifecycleManager,
+        serverConfig
+    );
+  }
+
+  @VisibleForTesting
+  SqlResource(
+      final ObjectMapper jsonMapper,
+      final AuthorizerMapper authorizerMapper,
+      final SqlStatementFactory sqlStatementFactory,
+      final SqlLifecycleManager sqlLifecycleManager,
+      final ServerConfig serverConfig
+  )
+  {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
-    this.sqlLifecycleFactory = Preconditions.checkNotNull(sqlLifecycleFactory, "sqlLifecycleFactory");
+    this.sqlStatementFactory = Preconditions.checkNotNull(sqlStatementFactory, "sqlStatementFactory");
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
-    this.serverConfig = serverConfig;
+    this.serverConfig = Preconditions.checkNotNull(serverConfig, "serverConfig");
   }
 
   @POST
@@ -108,7 +129,7 @@ public class SqlResource
       @Context final HttpServletRequest req
   ) throws IOException
   {
-    final HttpStatement stmt = sqlLifecycleFactory.httpStatement(sqlQuery, req);
+    final HttpStatement stmt = sqlStatementFactory.httpStatement(sqlQuery, req);
     final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
 

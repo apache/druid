@@ -78,7 +78,7 @@ public class DruidConnection
     return connectionId;
   }
 
-  public DruidJdbcStatement createStatement(SqlStatementFactory sqlLifecycleFactory)
+  public DruidJdbcStatement createStatement(SqlStatementFactory sqlStatementFactory)
   {
     final int statementId = statementCounter.incrementAndGet();
 
@@ -98,7 +98,7 @@ public class DruidConnection
           connectionId,
           statementId,
           context,
-          sqlLifecycleFactory
+          sqlStatementFactory
       );
 
       statements.put(statementId, statement);
@@ -108,7 +108,7 @@ public class DruidConnection
   }
 
   public DruidJdbcPreparedStatement createPreparedStatement(
-      SqlStatementFactory sqlLifecycleFactory,
+      SqlStatementFactory sqlStatementFactory,
       SqlQueryPlus sqlRequest,
       final long maxRowCount)
   {
@@ -126,7 +126,7 @@ public class DruidConnection
       }
 
       @SuppressWarnings("GuardedBy")
-      final PreparedStatement statement = sqlLifecycleFactory.preparedStatement(
+      final PreparedStatement statement = sqlStatementFactory.preparedStatement(
           sqlRequest.withContext(context)
       );
       final DruidJdbcPreparedStatement jdbcStmt = new DruidJdbcPreparedStatement(

@@ -19,61 +19,15 @@
 
 package org.apache.druid.sql;
 
-import com.google.common.base.Supplier;
-import com.google.inject.Inject;
-import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.DefaultQueryConfig;
-import org.apache.druid.server.QueryScheduler;
-import org.apache.druid.server.log.RequestLogger;
-import org.apache.druid.server.security.AuthConfig;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.http.SqlQuery;
 
 import javax.servlet.http.HttpServletRequest;
 
-@LazySingleton
-public class SqlStatementFactory
+public interface SqlStatementFactory
 {
-  protected final SqlToolbox lifecycleToolbox;
+  HttpStatement httpStatement(SqlQuery sqlQuery, HttpServletRequest req);
 
-  @Inject
-  public SqlStatementFactory(
-      final PlannerFactory plannerFactory,
-      final ServiceEmitter emitter,
-      final RequestLogger requestLogger,
-      final QueryScheduler queryScheduler,
-      final AuthConfig authConfig,
-      final Supplier<DefaultQueryConfig> defaultQueryConfig,
-      final SqlLifecycleManager sqlLifecycleManager
-  )
-  {
-    this.lifecycleToolbox = new SqlToolbox(
-        plannerFactory,
-        emitter,
-        requestLogger,
-        queryScheduler,
-        authConfig,
-        defaultQueryConfig.get(),
-        sqlLifecycleManager
-    );
-  }
+  DirectStatement directStatement(SqlQueryPlus sqlRequest);
 
-  public HttpStatement httpStatement(
-      final SqlQuery sqlQuery,
-      final HttpServletRequest req
-  )
-  {
-    return new HttpStatement(lifecycleToolbox, sqlQuery, req);
-  }
-
-  public DirectStatement directStatement(final SqlQueryPlus sqlRequest)
-  {
-    return new DirectStatement(lifecycleToolbox, sqlRequest);
-  }
-
-  public PreparedStatement preparedStatement(final SqlQueryPlus sqlRequest)
-  {
-    return new PreparedStatement(lifecycleToolbox, sqlRequest);
-  }
+  PreparedStatement preparedStatement(SqlQueryPlus sqlRequest);
 }

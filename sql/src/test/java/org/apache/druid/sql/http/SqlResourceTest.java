@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -73,10 +72,13 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.HttpStatement;
+import org.apache.druid.sql.PreparedStatement;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlPlanningException.PlanningError;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
@@ -85,12 +87,15 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.easymock.EasyMock;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -105,7 +110,6 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -153,7 +157,8 @@ public class SqlResourceTest extends CalciteTestBase
   private HttpServletRequest req;
   private ListeningExecutorService executorService;
   private SqlLifecycleManager lifecycleManager;
-  private SqlStatementFactory sqlLifecycleFactory;
+  private NativeSqlEngine engine;
+  private SqlStatementFactory sqlStatementFactory;
 
   private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
@@ -225,7 +230,6 @@ public class SqlResourceTest extends CalciteTestBase
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         operatorTable,
         macroTable,
         plannerConfig,
@@ -249,15 +253,18 @@ public class SqlResourceTest extends CalciteTestBase
     final ServiceEmitter emitter = new NoopServiceEmitter();
     final AuthConfig authConfig = new AuthConfig();
     final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of());
-    sqlLifecycleFactory = new SqlStatementFactory(
+    engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
+    final SqlToolbox sqlToolbox = new SqlToolbox(
+        engine,
         plannerFactory,
         emitter,
         testRequestLogger,
         scheduler,
         authConfig,
-        Suppliers.ofInstance(defaultQueryConfig),
+        defaultQueryConfig,
         lifecycleManager
-    )
+    );
+    sqlStatementFactory = new SqlStatementFactory()
     {
       @Override
       public HttpStatement httpStatement(
@@ -266,7 +273,7 @@ public class SqlResourceTest extends CalciteTestBase
       )
       {
         TestHttpStatement stmt = new TestHttpStatement(
-            lifecycleToolbox,
+            sqlToolbox,
             sqlQuery,
             req,
             validateAndAuthorizeLatchSupplier,
@@ -278,11 +285,23 @@ public class SqlResourceTest extends CalciteTestBase
         onExecute = NULL_ACTION;
         return stmt;
       }
+
+      @Override
+      public DirectStatement directStatement(SqlQueryPlus sqlRequest)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public PreparedStatement preparedStatement(SqlQueryPlus sqlRequest)
+      {
+        throw new UnsupportedOperationException();
+      }
     };
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlLifecycleFactory,
+        sqlStatementFactory,
         lifecycleManager,
         new ServerConfig()
     );
@@ -667,7 +686,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testArrayResultFormatWithHeader_nullColumnType() throws Exception
   {
     // Test a query that returns null header for some of the columns
-    final String query = "SELECT (1, 2)";
+    final String query = "SELECT (1, 2) FROM INFORMATION_SCHEMA.COLUMNS LIMIT 1";
     Assert.assertEquals(
         ImmutableList.of(
             Collections.singletonList("EXPR$0"),
@@ -783,7 +802,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testArrayLinesResultFormatWithHeader_nullColumnType() throws Exception
   {
-    final String query = "SELECT (1, 2)";
+    final String query = "SELECT (1, 2) FROM INFORMATION_SCHEMA.COLUMNS LIMIT 1";
     final Pair<QueryException, String> pair = doPostRaw(
         new SqlQuery(query, ResultFormat.ARRAYLINES, true, true, true, null, null)
     );
@@ -1040,7 +1059,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testObjectLinesResultFormatWithFullHeader_nullColumnType() throws Exception
   {
-    final String query = "SELECT (1, 2)";
+    final String query = "SELECT (1, 2) FROM INFORMATION_SCHEMA.COLUMNS LIMIT 1";
     final Pair<QueryException, String> pair =
         doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, true, true, true, null, null));
     Assert.assertNull(pair.lhs);
@@ -1116,7 +1135,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testCsvResultFormatWithHeaders_nullColumnType() throws Exception
   {
-    final String query = "SELECT (1, 2)";
+    final String query = "SELECT (1, 2) FROM INFORMATION_SCHEMA.COLUMNS LIMIT 1";
     final Pair<QueryException, String> pair = doPostRaw(
         new SqlQuery(query, ResultFormat.CSV, true, true, true, null, null)
     );
@@ -1209,8 +1228,8 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(
         exception.getMessage()
-                 .contains("Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1. " +
-                     "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.")
+                 .contains("Cannot build plan for query. " +
+                           "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.")
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
@@ -1234,8 +1253,8 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(
         exception.getMessage()
-            .contains("Cannot build plan for query: SELECT max(dim1) FROM druid.foo. " +
-                "Possible error: Max aggregation is not supported for 'STRING' type")
+                 .contains("Cannot build plan for query. " +
+                           "Possible error: Max aggregation is not supported for 'STRING' type")
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
@@ -1346,7 +1365,7 @@ public class SqlResourceTest extends CalciteTestBase
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlLifecycleFactory,
+        sqlStatementFactory,
         lifecycleManager,
         new ServerConfig() {
           @Override
@@ -1391,7 +1410,7 @@ public class SqlResourceTest extends CalciteTestBase
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlLifecycleFactory,
+        sqlStatementFactory,
         lifecycleManager,
         new ServerConfig()
         {
@@ -1492,7 +1511,12 @@ public class SqlResourceTest extends CalciteTestBase
   public void testQueryTimeoutException() throws Exception
   {
     final String sqlQueryId = "timeoutTest";
-    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1, BaseQuery.SQL_QUERY_ID, sqlQueryId);
+    Map<String, Object> queryContext = ImmutableMap.of(
+        QueryContexts.TIMEOUT_KEY,
+        1,
+        BaseQuery.SQL_QUERY_ID,
+        sqlQueryId
+    );
     final QueryException timeoutException = doPost(
         new SqlQuery(
             "SELECT CAST(__time AS DATE), dim1, dim2, dim3 FROM druid.foo GROUP by __time, dim1, dim2, dim3 ORDER BY dim2 DESC",
@@ -1626,7 +1650,12 @@ public class SqlResourceTest extends CalciteTestBase
   public void testQueryContextException() throws Exception
   {
     final String sqlQueryId = "badQueryContextTimeout";
-    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, "2000'", BaseQuery.SQL_QUERY_ID, sqlQueryId);
+    Map<String, Object> queryContext = ImmutableMap.of(
+        QueryContexts.TIMEOUT_KEY,
+        "2000'",
+        BaseQuery.SQL_QUERY_ID,
+        sqlQueryId
+    );
     final QueryException queryContextException = doPost(
         new SqlQuery(
             "SELECT 1337",
@@ -1644,6 +1673,31 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertTrue(queryContextException.getMessage().contains("For input string: \"2000'\""));
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
+  }
+
+  @Test
+  public void testQueryContextKeyNotAllowed() throws Exception
+  {
+    Map<String, Object> queryContext = ImmutableMap.of(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, "all");
+    final QueryException queryContextException = doPost(
+        new SqlQuery(
+            "SELECT 1337",
+            ResultFormat.OBJECT,
+            false,
+            false,
+            false,
+            queryContext,
+            null
+        )
+    ).lhs;
+    Assert.assertNotNull(queryContextException);
+    Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), queryContextException.getErrorCode());
+    MatcherAssert.assertThat(
+        queryContextException.getMessage(),
+        CoreMatchers.containsString(
+            "Cannot execute query with context parameter [sqlInsertSegmentGranularity]")
+    );
+    checkSqlRequestLog(false);
   }
 
   @SuppressWarnings("unchecked")

@@ -118,6 +118,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -351,6 +352,46 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"dim1_firstchar", "VARCHAR", "YES"},
             new Object[]{"dim2", "VARCHAR", "YES"},
             new Object[]{"l2", "BIGINT", useDefault ? "NO" : "YES"}
+        )
+    );
+  }
+
+  @Test
+  public void testCannotInsertWithNativeEngine()
+  {
+    final SqlPlanningException e = Assert.assertThrows(
+        SqlPlanningException.class,
+        () -> testQuery(
+            "INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL",
+            ImmutableList.of(),
+            ImmutableList.of()
+        )
+    );
+
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.equalTo("Cannot execute INSERT with SQL engine 'native'.")
+        )
+    );
+  }
+
+  @Test
+  public void testCannotReplaceWithNativeEngine()
+  {
+    final SqlPlanningException e = Assert.assertThrows(
+        SqlPlanningException.class,
+        () -> testQuery(
+            "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL",
+            ImmutableList.of(),
+            ImmutableList.of()
+        )
+    );
+
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.equalTo("Cannot execute REPLACE with SQL engine 'native'.")
         )
     );
   }
@@ -13887,15 +13928,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(new Object[]{"A", "10.1"})
-    );
-  }
-
-  @Test
-  public void testSurfaceErrorsWhenInsertingThroughIncorrectSelectStatment()
-  {
-    assertQueryIsUnplannable(
-        "INSERT INTO druid.dst SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo PARTITIONED BY ALL TIME",
-        "Possible error: SQL requires 'UNION' but only 'UNION ALL' is supported."
     );
   }
 

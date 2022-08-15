@@ -26,12 +26,14 @@ import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 
 /**
  * Provides the plan and execution resources to process SQL queries.
  */
 public class SqlToolbox
 {
+  final SqlEngine engine;
   final PlannerFactory plannerFactory;
   final ServiceEmitter emitter;
   final RequestLogger requestLogger;
@@ -41,6 +43,7 @@ public class SqlToolbox
   final SqlLifecycleManager sqlLifecycleManager;
 
   public SqlToolbox(
+      final SqlEngine engine,
       final PlannerFactory plannerFactory,
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
@@ -50,6 +53,7 @@ public class SqlToolbox
       final SqlLifecycleManager sqlLifecycleManager
   )
   {
+    this.engine = engine;
     this.plannerFactory = plannerFactory;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
@@ -57,5 +61,19 @@ public class SqlToolbox
     this.authConfig = authConfig;
     this.defaultQueryConfig = defaultQueryConfig;
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
+  }
+
+  public SqlToolbox withEngine(final SqlEngine engine)
+  {
+    return new SqlToolbox(
+        engine,
+        plannerFactory,
+        emitter,
+        requestLogger,
+        queryScheduler,
+        authConfig,
+        defaultQueryConfig,
+        sqlLifecycleManager
+    );
   }
 }

@@ -58,7 +58,6 @@ import org.joda.time.format.DateTimeFormatterBuilder;
 import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nullable;
-
 import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.sql.Date;

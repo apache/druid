@@ -45,6 +45,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -436,7 +437,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO INFORMATION_SCHEMA.COLUMNS OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot REPLACE into [INFORMATION_SCHEMA.COLUMNS] because it is not a Druid datasource."
+            "Cannot REPLACE into [INFORMATION_SCHEMA.COLUMNS] because it is not a Druid datasource (schema = druid)."
         )
         .verify();
   }
@@ -448,7 +449,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO view.aview OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot REPLACE into [view.aview] because it is not a Druid datasource."
+            "Cannot REPLACE into [view.aview] because it is not a Druid datasource (schema = druid)."
         )
         .verify();
   }
@@ -478,7 +479,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO nonexistent.dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot REPLACE into [nonexistent.dst] because it is not a Druid datasource."
+            "Cannot REPLACE into [nonexistent.dst] because it is not a Druid datasource (schema = druid)."
         )
         .verify();
   }
@@ -605,7 +606,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .columns("x", "y", "z")
         .context(
             queryJsonMapper.readValue(
-                "{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\",\"sqlQueryId\":\"dummy\",\"sqlReplaceTimeChunks\":\"all\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}",
+                "{\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\",\"sqlQueryId\":\"dummy\",\"sqlReplaceTimeChunks\":\"all\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}",
                 JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
             )
         )
@@ -619,18 +620,24 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(
         new PlannerConfig(),
+        ImmutableMap.of("sqlQueryId", "dummy"),
+        Collections.emptyList(),
         StringUtils.format(
             "EXPLAIN PLAN FOR REPLACE INTO dst OVERWRITE ALL SELECT * FROM %s PARTITIONED BY ALL TIME",
             externSql(externalDataSource)
         ),
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(),
-        ImmutableList.of(
-            new Object[]{
-                expectedExplanation,
-                "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]"
-            }
-        )
+        new DefaultResultsVerifier(
+            ImmutableList.of(
+                new Object[]{
+                    expectedExplanation,
+                    "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]"
+                }
+            ),
+            null
+        ),
+        null
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -761,7 +768,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .context(context)
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlPlanningException.class, "sqlOuterLimit cannot be provided on INSERT or REPLACE queries.")
+        .expectValidationError(SqlPlanningException.class, "sqlOuterLimit cannot be provided with REPLACE.")
         .verify();
   }
 }

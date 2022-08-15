@@ -21,7 +21,6 @@ package org.apache.druid.sql.avatica;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -38,9 +37,9 @@ import org.apache.calcite.avatica.QueryState;
 import org.apache.calcite.avatica.remote.AvaticaRuntimeException;
 import org.apache.calcite.avatica.remote.Service.ErrorResponse;
 import org.apache.calcite.avatica.remote.TypedValue;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContext;
@@ -50,13 +49,14 @@ import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.SqlStatementFactoryFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -70,6 +70,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@LazySingleton
 public class DruidMeta extends MetaImpl
 {
   /**
@@ -105,7 +106,7 @@ public class DruidMeta extends MetaImpl
       "user", "password"
   );
 
-  private final SqlStatementFactory sqlLifecycleFactory;
+  private final SqlStatementFactory sqlStatementFactory;
   private final ScheduledExecutorService exec;
   private final AvaticaServerConfig config;
   private final List<Authenticator> authenticators;
@@ -124,25 +125,41 @@ public class DruidMeta extends MetaImpl
 
   @Inject
   public DruidMeta(
-      final SqlStatementFactory sqlLifecycleFactory,
+      final NativeSqlEngine engine,
+      final SqlStatementFactoryFactory sqlStatementFactoryFactory,
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
       final Injector injector
   )
   {
+    this(
+        sqlStatementFactoryFactory.factorize(engine),
+        config,
+        errorHandler,
+        Executors.newSingleThreadScheduledExecutor(
+            new ThreadFactoryBuilder()
+                .setNameFormat("DruidMeta-ScheduledExecutor-%d")
+                .setDaemon(true)
+                .build()
+        ),
+        injector.getInstance(AuthenticatorMapper.class).getAuthenticatorChain()
+    );
+  }
+
+  public DruidMeta(
+      final SqlStatementFactory sqlStatementFactory,
+      final AvaticaServerConfig config,
+      final ErrorHandler errorHandler,
+      final ScheduledExecutorService exec,
+      final List<Authenticator> authenticators
+  )
+  {
     super(null);
-    this.sqlLifecycleFactory = Preconditions.checkNotNull(sqlLifecycleFactory, "sqlLifecycleFactory");
+    this.sqlStatementFactory = sqlStatementFactory;
     this.config = config;
     this.errorHandler = errorHandler;
-    this.exec = Executors.newSingleThreadScheduledExecutor(
-        new ThreadFactoryBuilder()
-            .setNameFormat(StringUtils.format("DruidMeta@%s-ScheduledExecutor", Integer.toHexString(hashCode())))
-            .setDaemon(true)
-            .build()
-    );
-
-    final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
-    this.authenticators = authenticatorMapper.getAuthenticatorChain();
+    this.exec = exec;
+    this.authenticators = authenticators;
   }
 
   @Override
@@ -219,7 +236,7 @@ public class DruidMeta extends MetaImpl
   public StatementHandle createStatement(final ConnectionHandle ch)
   {
     try {
-      final DruidJdbcStatement druidStatement = getDruidConnection(ch.id).createStatement(sqlLifecycleFactory);
+      final DruidJdbcStatement druidStatement = getDruidConnection(ch.id).createStatement(sqlStatementFactory);
       return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
     }
     catch (NoSuchConnectionException e) {
@@ -251,7 +268,7 @@ public class DruidMeta extends MetaImpl
           doAuthenticate(druidConnection)
       );
       DruidJdbcPreparedStatement stmt = getDruidConnection(ch.id).createPreparedStatement(
-          sqlLifecycleFactory,
+          sqlStatementFactory,
           sqlReq,
           maxRowCount);
       stmt.prepare();

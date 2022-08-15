@@ -46,6 +46,7 @@ import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -71,8 +72,8 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
-import org.apache.druid.sql.calcite.run.QueryMakerFactory;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
@@ -116,6 +117,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -219,7 +221,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             binder.bind(QueryScheduler.class)
                   .toProvider(QuerySchedulerProvider.class)
                   .in(LazySingleton.class);
-            binder.bind(QueryMakerFactory.class).to(NativeQueryMakerFactory.class);
+            binder.bind(SqlEngine.class).to(NativeSqlEngine.class);
             binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
             binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
           }
@@ -916,25 +918,27 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final List<Meta.Frame> frames = new ArrayList<>();
+    final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testMaxRowsPerFrame");
     DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
-        CalciteTests.createSqlLifecycleFactory(
-          new PlannerFactory(
-              rootSchema,
-              CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
-              operatorTable,
-              macroTable,
-              plannerConfig,
-              AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-              CalciteTests.getJsonMapper(),
-              CalciteTests.DRUID_SCHEMA_NAME,
-              new CalciteRulesManager(ImmutableSet.of())
-          )
+        CalciteTests.createSqlStatementFactory(
+            CalciteTests.createMockSqlEngine(walker, conglomerate),
+            new PlannerFactory(
+                rootSchema,
+                operatorTable,
+                macroTable,
+                plannerConfig,
+                AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+                CalciteTests.getJsonMapper(),
+                CalciteTests.DRUID_SCHEMA_NAME,
+                new CalciteRulesManager(ImmutableSet.of())
+            )
         ),
         smallFrameConfig,
         new ErrorHandler(new ServerConfig()),
-        injector
+        exec,
+        injector.getInstance(AuthenticatorMapper.class).getAuthenticatorChain()
     )
     {
       @Override
@@ -975,6 +979,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         ),
         rows
     );
+
+    exec.shutdown();
   }
 
   @Test
@@ -1006,13 +1012,14 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final List<Meta.Frame> frames = new ArrayList<>();
+    final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testMaxRowsPerFrame");
     DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
-        CalciteTests.createSqlLifecycleFactory(
+        CalciteTests.createSqlStatementFactory(
+            CalciteTests.createMockSqlEngine(walker, conglomerate),
             new PlannerFactory(
                 rootSchema,
-                CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
                 operatorTable,
                 macroTable,
                 plannerConfig,
@@ -1024,7 +1031,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         ),
         smallFrameConfig,
         new ErrorHandler(new ServerConfig()),
-        injector
+        exec,
+        injector.getInstance(AuthenticatorMapper.class).getAuthenticatorChain()
     )
     {
       @Override
@@ -1069,6 +1077,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         ),
         rows
     );
+
+    exec.shutdown();
   }
 
   @Test

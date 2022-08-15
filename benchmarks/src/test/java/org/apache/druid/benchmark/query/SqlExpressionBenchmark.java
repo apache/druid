@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.QueryableIndex;
@@ -43,6 +44,7 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -274,6 +276,7 @@ public class SqlExpressionBenchmark
   })
   private String query;
 
+  private SqlEngine engine;
   @Nullable
   private PlannerFactory plannerFactory;
   private Closer closer = Closer.create();
@@ -310,9 +313,9 @@ public class SqlExpressionBenchmark
 
     final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
     plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
@@ -349,7 +352,7 @@ public class SqlExpressionBenchmark
         QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
     );
     final String sql = QUERIES.get(Integer.parseInt(query));
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, new QueryContext(context))) {
       final PlannerResult plannerResult = planner.plan();
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);

@@ -104,6 +104,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   public Sequence<Object[]> execute()
   {
     try (DruidPlanner planner = sqlToolbox.plannerFactory.createPlanner(
+        sqlToolbox.engine,
         queryPlus.sql(),
         queryPlus.context())) {
       validate(planner);

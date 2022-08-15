@@ -20,7 +20,6 @@
 package org.apache.druid.sql;
 
 import org.apache.calcite.avatica.remote.TypedValue;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
@@ -67,19 +66,15 @@ public class PreparedStatement extends AbstractStatement
   public PrepareResult prepare()
   {
     try (DruidPlanner planner = sqlToolbox.plannerFactory.createPlanner(
+        sqlToolbox.engine,
         queryPlus.sql(),
         queryPlus.context())) {
       validate(planner);
       authorize(planner, authorizer());
 
       // Do the prepare step.
-      try {
-        this.prepareResult = planner.prepare();
-        return prepareResult;
-      }
-      catch (ValidationException e) {
-        throw new SqlPlanningException(e);
-      }
+      this.prepareResult = planner.prepare();
+      return prepareResult;
     }
     catch (RuntimeException e) {
       reporter.failed(e);

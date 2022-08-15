@@ -121,8 +121,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
           binder.bind(ExprMacroTable.class).toInstance(macroTable);
           binder.bind(AuthorizerMapper.class).toInstance(authorizerMapper);
           binder.bind(String.class).annotatedWith(DruidSchemaName.class).toInstance(DRUID_SCHEMA_NAME);
-          binder.bind(Key.get(new TypeLiteral<Set<SqlAggregator>>(){})).toInstance(aggregators);
-          binder.bind(Key.get(new TypeLiteral<Set<SqlOperatorConversion>>(){})).toInstance(operatorConversions);
+          binder.bind(Key.get(new TypeLiteral<Set<SqlAggregator>>() {})).toInstance(aggregators);
+          binder.bind(Key.get(new TypeLiteral<Set<SqlOperatorConversion>>() {})).toInstance(operatorConversions);
           binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
         },
         target,
@@ -173,6 +173,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         new DefaultObjectMapper(),
         injector.getInstance(PlannerConfig.class),
         rootSchema,
+        null,
         new QueryContext()
     );
     boolean containsCustomRule = injector.getInstance(CalciteRulesManager.class)
