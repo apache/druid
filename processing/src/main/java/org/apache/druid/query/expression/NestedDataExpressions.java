@@ -24,7 +24,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -38,6 +38,7 @@ import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.StructuredDataProcessor;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -45,8 +46,6 @@ import java.util.stream.Collectors;
 
 public class NestedDataExpressions
 {
-  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
-
   public static final ExpressionType TYPE = Preconditions.checkNotNull(
       ExpressionType.fromColumnType(NestedDataComplexTypeSerde.TYPE)
   );
@@ -108,7 +107,7 @@ public class NestedDataExpressions
   public static class JsonObjectExprMacro extends StructExprMacro
   {
     public static final String NAME = "json_object";
-    
+
     @Override
     public String name()
     {
@@ -168,6 +167,16 @@ public class NestedDataExpressions
   {
     public static final String NAME = "to_json_string";
 
+    private final ObjectMapper jsonMapper;
+
+    @Inject
+    public ToJsonStringExprMacro(
+        @Json ObjectMapper jsonMapper
+    )
+    {
+      this.jsonMapper = jsonMapper;
+    }
+
     @Override
     public String name()
     {
@@ -190,7 +199,7 @@ public class NestedDataExpressions
           ExprEval input = args.get(0).eval(bindings);
           try {
             final Object unwrapped = maybeUnwrapStructuredData(input);
-            final String stringify = unwrapped == null ? null : JSON_MAPPER.writeValueAsString(unwrapped);
+            final String stringify = unwrapped == null ? null : jsonMapper.writeValueAsString(unwrapped);
             return ExprEval.ofType(
                 ExpressionType.STRING,
                 stringify
@@ -223,6 +232,16 @@ public class NestedDataExpressions
   {
     public static final String NAME = "parse_json";
 
+    private final ObjectMapper jsonMapper;
+
+    @Inject
+    public ParseJsonExprMacro(
+        @Json ObjectMapper jsonMapper
+    )
+    {
+      this.jsonMapper = jsonMapper;
+    }
+
     @Override
     public String name()
     {
@@ -246,7 +265,7 @@ public class NestedDataExpressions
           Object parsed = maybeUnwrapStructuredData(arg);
           if (arg.type().is(ExprType.STRING) && arg.value() != null && maybeJson(arg.asString())) {
             try {
-              parsed = JSON_MAPPER.readValue(arg.asString(), Object.class);
+              parsed = jsonMapper.readValue(arg.asString(), Object.class);
             }
             catch (JsonProcessingException e) {
               throw new IAE("Bad string input [%s] to [%s]", arg.asString(), name());

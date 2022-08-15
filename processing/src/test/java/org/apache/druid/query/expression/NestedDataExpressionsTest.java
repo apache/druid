@@ -19,9 +19,11 @@
 
 package org.apache.druid.query.expression;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -38,6 +40,7 @@ import java.util.Map;
 
 public class NestedDataExpressionsTest extends InitializedNullHandlingTest
 {
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(
       ImmutableList.of(
           new NestedDataExpressions.StructExprMacro(),
@@ -50,8 +53,8 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
           new NestedDataExpressions.JsonValueExprMacro(),
           new NestedDataExpressions.JsonQueryExprMacro(),
           new NestedDataExpressions.ToJsonExprMacro(),
-          new NestedDataExpressions.ToJsonStringExprMacro(),
-          new NestedDataExpressions.ParseJsonExprMacro()
+          new NestedDataExpressions.ToJsonStringExprMacro(JSON_MAPPER),
+          new NestedDataExpressions.ParseJsonExprMacro(JSON_MAPPER)
       )
   );
   private static final Map<String, Object> NEST = ImmutableMap.of(
