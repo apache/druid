@@ -2817,7 +2817,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
       }
 
-      taskClient.stopUnfinishedPauseTasks();
+      taskClient.cancelTaskPauseRequests();
     }
   }
 

@@ -161,7 +161,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     )).andReturn(
         indexTaskClient).anyTimes();
 
-    EasyMock.expect(indexTaskClient.stopUnfinishedPauseTasks()).andReturn(true).anyTimes();
+    indexTaskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().atLeastOnce();
+
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
 

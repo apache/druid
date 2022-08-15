@@ -229,7 +229,7 @@ public class SeekableStreamIndexTaskClientTest extends EasyMockSupport
       Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(0, 1L)), responses.get(i));
     }
 
-    taskClient.stopUnfinishedPauseTasks();
+    taskClient.cancelTaskPauseRequests();
   }
 
   @Test
@@ -242,10 +242,9 @@ public class SeekableStreamIndexTaskClientTest extends EasyMockSupport
   public void testStopPauingTaskOk()
   {
     ListenableFuture future = Futures.immediateFuture(Collections.emptyMap());
-    SeekableStreamIndexTaskClient.PauseCallable pauseCallable = taskClient.new PauseCallable(TEST_ID, taskClient);
-    taskClient.stopPausingTask(future, pauseCallable);
-    Assert.assertEquals(pauseCallable.getTaskId(), TEST_ID);
-    Assert.assertEquals(taskClient.getWaitPausingTaskFinishedMap().get(TEST_ID), false);
+    SeekableStreamIndexTaskClient.TaskPauseControlInfo taskPauseControlInfo = taskClient.new TaskPauseControlInfo(future, true);
+    taskClient.stopPausingTask(TEST_ID, taskPauseControlInfo);
+    Assert.assertEquals(taskClient.getPauseFutureSize(), 0);
   }
 
   private static class MySeekableStreamIndexTaskClient extends SeekableStreamIndexTaskClient

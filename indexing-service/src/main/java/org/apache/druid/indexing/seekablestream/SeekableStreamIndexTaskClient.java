@@ -46,7 +46,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType> extends IndexTaskClient
@@ -58,9 +57,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTaskClient.class);
 
-  private ConcurrentHashMap<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>, PauseCallable> pausingTaskFutureMap = new ConcurrentHashMap<>();
-
-  private ConcurrentHashMap<String, Boolean> waitPausingTaskFinishedMap = new ConcurrentHashMap<>();
+  private ConcurrentHashMap<String, TaskPauseControlInfo> pausingTaskFutureMap = new ConcurrentHashMap<>();
 
   public SeekableStreamIndexTaskClient(
       HttpClient httpClient,
@@ -120,8 +117,6 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
   {
     log.info("Pause task[%s]", id);
 
-    waitPausingTaskFinishedMap.put(id, true);
-
     try {
       final StringFullResponseHolder response = submitRequestWithEmptyContent(
           id,
@@ -140,7 +135,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
       } else if (responseStatus.equals(HttpResponseStatus.ACCEPTED)) {
         // The task received the pause request, but its status hasn't been changed yet.
         final RetryPolicy retryPolicy = newRetryPolicy();
-        while (waitPausingTaskFinishedMap.get(id)) {
+        while (pausingTaskFutureMap.get(id).isRunning()) {
           final SeekableStreamIndexTaskRunner.Status status = getStatus(id);
           if (status == SeekableStreamIndexTaskRunner.Status.PAUSED) {
             return getCurrentOffsets(id, true);
@@ -184,14 +179,6 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     catch (IOException | InterruptedException e) {
       throw new RE(e, "Exception [%s] while pausing Task [%s]", e.getMessage(), id);
     }
-    finally {
-      waitPausingTaskFinishedMap.remove(id);
-    }
-  }
-
-  public void cancelPausingTask(final String id)
-  {
-    waitPausingTaskFinishedMap.put(id, false);
   }
 
   public SeekableStreamIndexTaskRunner.Status getStatus(final String id)
@@ -398,30 +385,26 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
 
   public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseAsync(final String id)
   {
-    PauseCallable pauseCallable = new PauseCallable(id, this);
-    ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> future = doAsync(pauseCallable);
-    pausingTaskFutureMap.put(future, pauseCallable);
+    ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> future = doAsync(() -> pause(id));
+    pausingTaskFutureMap.put(id, new TaskPauseControlInfo(future, true));
     return future;
   }
 
-  public boolean stopUnfinishedPauseTasks()
+  public void cancelTaskPauseRequests()
   {
-    for (Map.Entry<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>, PauseCallable> entry : pausingTaskFutureMap.entrySet()) {
-      ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> future = entry.getKey();
-      PauseCallable pauseCallable = entry.getValue();
+    for (Map.Entry<String, TaskPauseControlInfo> entry : pausingTaskFutureMap.entrySet()) {
+      String taskId = entry.getKey();
+      TaskPauseControlInfo taskPauseControl = entry.getValue();
 
-      if (!future.isDone()) {
-        this.stopPausingTask(future, pauseCallable);
-        log.info("Stop unfinished pause task [%s]", pauseCallable.getTaskId());
+      if (!taskPauseControl.getFuture().isDone()) {
+        this.stopPausingTask(taskId, taskPauseControl);
+        log.info("Cancel unfinished pause task [%s]", taskId);
       } else {
-        log.info("Finished pause task [%s]", pauseCallable.getTaskId());
+        log.info("Finished pause task [%s]", taskId);
       }
     }
 
     pausingTaskFutureMap.clear();
-    waitPausingTaskFinishedMap.clear();
-
-    return true;
   }
 
   @VisibleForTesting
@@ -431,20 +414,15 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
   }
 
   @VisibleForTesting
-  public Map<String, Boolean> getWaitPausingTaskFinishedMap()
+  protected void stopPausingTask(String taskId, TaskPauseControlInfo taskPauseControl)
   {
-    return waitPausingTaskFinishedMap;
-  }
-
-  protected void stopPausingTask(ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> future, PauseCallable pauseCallable)
-  {
-    pauseCallable.stop();
+    taskPauseControl.markNotRunning();
 
     try {
-      future.get();
+      taskPauseControl.getFuture().get();
     }
     catch (Exception e) {
-      log.warn(e, "Future get() exception, taskId = %s", pauseCallable.getTaskId());
+      log.warn(e, "Future get() exception, taskId = %s", taskId);
     }
   }
 
@@ -490,34 +468,34 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
 
   protected abstract Class<SequenceOffsetType> getSequenceType();
 
-  public class PauseCallable implements Callable<Map<PartitionIdType, SequenceOffsetType>>
+  @VisibleForTesting
+  public class TaskPauseControlInfo
   {
-    private String taskId;
+    private ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> future;
 
-    private SeekableStreamIndexTaskClient client;
+    private boolean running;
 
-    public PauseCallable(String taskId, SeekableStreamIndexTaskClient client)
+    public TaskPauseControlInfo(ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> future, boolean running)
     {
-      this.taskId = taskId;
-      this.client = client;
+      this.future = future;
+      this.running = running;
     }
 
-    public String getTaskId()
+    public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> getFuture()
     {
-      return this.taskId;
+      return this.future;
     }
 
-    public void stop()
+    public boolean isRunning()
     {
-      client.cancelPausingTask(taskId);
+      return this.running;
     }
 
-    @Override
-    public Map<PartitionIdType, SequenceOffsetType> call()
+    public void markNotRunning()
     {
-      return client.pause(taskId);
+      this.running = false;
     }
-  }
+  } // end class TaskPauseControlInfo
 }
 
 
