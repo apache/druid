@@ -3196,7 +3196,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().anyTimes();
+
     EasyMock.expect(taskClient.getMovingAveragesAsync("task1")).andReturn(Futures.immediateFuture(ImmutableMap.of(
         "prop1",
         "val1"

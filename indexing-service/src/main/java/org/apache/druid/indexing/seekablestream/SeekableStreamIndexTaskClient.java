@@ -57,6 +57,8 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTaskClient.class);
 
+  private final TaskPauseControlInfo DEFAULT_TASK_PAUSE_CONTROL_INFO = new TaskPauseControlInfo(null, true);
+
   private ConcurrentHashMap<String, TaskPauseControlInfo> pausingTaskFutureMap = new ConcurrentHashMap<>();
 
   public SeekableStreamIndexTaskClient(
@@ -135,7 +137,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
       } else if (responseStatus.equals(HttpResponseStatus.ACCEPTED)) {
         // The task received the pause request, but its status hasn't been changed yet.
         final RetryPolicy retryPolicy = newRetryPolicy();
-        while (pausingTaskFutureMap.get(id).isRunning()) {
+        while (pausingTaskFutureMap.getOrDefault(id, DEFAULT_TASK_PAUSE_CONTROL_INFO).isRunning()) {
           final SeekableStreamIndexTaskRunner.Status status = getStatus(id);
           if (status == SeekableStreamIndexTaskRunner.Status.PAUSED) {
             return getCurrentOffsets(id, true);

@@ -1055,7 +1055,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
-  public void testStopUnfinishedPauseTasks() throws Exception
+  public void testCancelTaskPauseRequests() throws Exception
   {
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
@@ -1080,7 +1080,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Futures.allAsList(futures).get();
     verifyAll();
 
-    client.stopUnfinishedPauseTasks();
+    client.cancelTaskPauseRequests();
     Assert.assertEquals(client.getPauseFutureSize(), 0);
   }
 

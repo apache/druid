@@ -1769,40 +1769,48 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @VisibleForTesting
   public Response pause() throws InterruptedException
   {
-    if (!(status == Status.PAUSED || status == Status.READING)) {
+    if (status == Status.NOT_STARTED || status == Status.STARTING) {
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
-                     .build();
+              .entity(StringUtils.format("Can't pause, task state is invalid (state: [%s])", status))
+              .build();
     }
 
-    pauseLock.lockInterruptibly();
-    try {
-      pauseRequested = true;
+    // if status in [PAUSED, READING], need to pause
+    // if status == PUBLISHING, return current offset, not to report exception
+    if (status == Status.PAUSED || status == Status.READING) {
+      log.info("Task state is pausable, taskId: [%s], state: [%s])", task.getId(), status);
 
-      pollRetryLock.lockInterruptibly();
+      pauseLock.lockInterruptibly();
       try {
-        isAwaitingRetry.signalAll();
+        pauseRequested = true;
+
+        pollRetryLock.lockInterruptibly();
+        try {
+          isAwaitingRetry.signalAll();
+        }
+        finally {
+          pollRetryLock.unlock();
+        }
+
+        if (isPaused()) {
+          shouldResume.signalAll(); // kick the monitor so it re-awaits with the new pauseMillis
+        }
+
+        long nanos = TimeUnit.SECONDS.toNanos(2);
+        while (!isPaused()) {
+          if (nanos <= 0L) {
+            return Response.status(Response.Status.ACCEPTED)
+                    .entity("Request accepted but task has not yet paused")
+                    .build();
+          }
+          nanos = hasPaused.awaitNanos(nanos);
+        }
       }
       finally {
-        pollRetryLock.unlock();
+        pauseLock.unlock();
       }
-
-      if (isPaused()) {
-        shouldResume.signalAll(); // kick the monitor so it re-awaits with the new pauseMillis
-      }
-
-      long nanos = TimeUnit.SECONDS.toNanos(2);
-      while (!isPaused()) {
-        if (nanos <= 0L) {
-          return Response.status(Response.Status.ACCEPTED)
-                         .entity("Request accepted but task has not yet paused")
-                         .build();
-        }
-        nanos = hasPaused.awaitNanos(nanos);
-      }
-    }
-    finally {
-      pauseLock.unlock();
+    } else {
+      log.info("Return current offsets directly, taskId: [%s], state: [%s]", task.getId(), status);
     }
 
     try {
