@@ -1917,11 +1917,11 @@ public class SqlResourceTest extends CalciteTestBase
     }
 
     @Override
-    public PlannerResult plan(DruidPlanner planner)
+    public PlannerResult createPlan(DruidPlanner planner)
     {
       if (planLatchSupplier.get() != null) {
         if (planLatchSupplier.get().rhs) {
-          PlannerResult result = super.plan(planner);
+          PlannerResult result = super.createPlan(planner);
           planLatchSupplier.get().lhs.countDown();
           return result;
         } else {
@@ -1933,10 +1933,10 @@ public class SqlResourceTest extends CalciteTestBase
           catch (InterruptedException e) {
             throw new RuntimeException(e);
           }
-          return super.plan(planner);
+          return super.createPlan(planner);
         }
       } else {
-        return super.plan(planner);
+        return super.createPlan(planner);
       }
     }
 
@@ -1944,18 +1944,13 @@ public class SqlResourceTest extends CalciteTestBase
     public Sequence<Object[]> execute()
     {
       onExecute.accept(this);
-      return super.execute();
-    }
-
-    @Override
-    public Sequence<Object[]> doExecute()
-    {
+      ResultSet resultSet = plan();
       final Function<Sequence<Object[]>, Sequence<Object[]>> sequenceMapFn =
           Optional.ofNullable(sequenceMapFnSupplier.get()).orElse(Function.identity());
 
       if (executeLatchSupplier.get() != null) {
         if (executeLatchSupplier.get().rhs) {
-          Sequence<Object[]> sequence = sequenceMapFn.apply(super.doExecute());
+          Sequence<Object[]> sequence = sequenceMapFn.apply(resultSet.run());
           executeLatchSupplier.get().lhs.countDown();
           return sequence;
         } else {
@@ -1967,10 +1962,10 @@ public class SqlResourceTest extends CalciteTestBase
           catch (InterruptedException e) {
             throw new RuntimeException(e);
           }
-          return sequenceMapFn.apply(super.doExecute());
+          return sequenceMapFn.apply(resultSet.run());
         }
       } else {
-        return sequenceMapFn.apply(super.doExecute());
+        return sequenceMapFn.apply(resultSet.run());
       }
     }
   }

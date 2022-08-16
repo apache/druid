@@ -135,8 +135,9 @@ public class SqlResource
 
     try {
       Thread.currentThread().setName(StringUtils.format("sql[%s]", sqlQueryId));
-      final Sequence<Object[]> sequence = stmt.execute();
-      final SqlRowTransformer rowTransformer = stmt.createRowTransformer();
+      HttpStatement.ResultSet resultSet = stmt.plan();
+      final Sequence<Object[]> sequence = resultSet.run();
+      final SqlRowTransformer rowTransformer = resultSet.createRowTransformer();
       final Yielder<Object[]> yielder0 = Yielders.each(sequence);
 
       try {

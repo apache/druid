@@ -442,7 +442,7 @@ public class SqlStatementTest
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
-    Map<String, Object> context = stmt.sqlRequest().context().getMergedParams();
+    Map<String, Object> context = stmt.query().context().getMergedParams();
     Assert.assertEquals(2, context.size());
     // should contain only query id, not bySegment since it is not valid for SQL
     Assert.assertTrue(context.containsKey(PlannerContext.CTX_SQL_QUERY_ID));
@@ -457,7 +457,7 @@ public class SqlStatementTest
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
-    Map<String, Object> context = stmt.sqlRequest().context().getMergedParams();
+    Map<String, Object> context = stmt.query().context().getMergedParams();
     Assert.assertEquals(2, context.size());
     // Statement should contain default query context values
     for (String defaultContextKey : defaultQueryConfig.getContext().keySet()) {

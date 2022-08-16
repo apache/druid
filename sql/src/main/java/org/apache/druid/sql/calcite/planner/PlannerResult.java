@@ -44,6 +44,11 @@ public class PlannerResult
     this.rowType = rowType;
   }
 
+  public boolean runnable()
+  {
+    return !didRun.get();
+  }
+
   /**
    * Run the query
    */

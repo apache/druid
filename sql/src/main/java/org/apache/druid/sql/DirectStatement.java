@@ -19,15 +19,18 @@
 
 package org.apache.druid.sql;
 
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -62,8 +65,81 @@ public class DirectStatement extends AbstractStatement implements Cancelable
 {
   private static final Logger log = new Logger(DirectStatement.class);
 
+  /**
+   * Represents the execution plan for a query with the ability to run
+   * that plan (once).
+   */
+  public class ResultSet implements Cancelable
+  {
+    private final PlannerResult plannerResult;
+
+    public ResultSet(PlannerResult plannerResult)
+    {
+      this.plannerResult = plannerResult;
+    }
+
+    public SqlQueryPlus query()
+    {
+      return queryPlus;
+    }
+
+    /**
+     * Convenience method for the split plan/run case to ensure that the statement
+     * can, in fact, be run.
+     */
+    public boolean runnable()
+    {
+      return plannerResult != null && plannerResult.runnable();
+    }
+
+    /**
+     * Do the actual execute step which allows subclasses to wrap the sequence,
+     * as is sometimes needed for testing.
+     */
+    public Sequence<Object[]> run()
+    {
+      // Check cancellation here and not in execute() above:
+      // required for SqlResourceTest to work.
+      checkCanceled();
+      try {
+        return plannerResult.run();
+      }
+      catch (RuntimeException e) {
+        reporter.failed(e);
+        throw e;
+      }
+    }
+
+    public SqlRowTransformer createRowTransformer()
+    {
+      return new SqlRowTransformer(plannerContext.getTimeZone(), plannerResult.rowType());
+    }
+
+    public SqlExecutionReporter reporter()
+    {
+      return reporter;
+    }
+
+    @Override
+    public Set<ResourceAction> resources()
+    {
+      return DirectStatement.this.resources();
+    }
+
+    @Override
+    public void cancel()
+    {
+      DirectStatement.this.cancel();
+    }
+
+    public void close()
+    {
+      DirectStatement.this.close();
+    }
+  }
+
   protected PrepareResult prepareResult;
-  protected PlannerResult plannerResult;
+  protected ResultSet resultSet;
   private volatile boolean canceled;
 
   public DirectStatement(
@@ -84,7 +160,21 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   }
 
   /**
-   * Direct execution of a query, including:
+   * Convenience method to perform Direct execution of a query. Does both
+   * the {@link #plan()} step and the {@link ResultSet#run()} step.
+   *
+   * @return sequence which delivers query results
+   */
+  public Sequence<Object[]> execute()
+  {
+    return plan().run();
+  }
+
+  /**
+   * Prepares and plans a query for execution, returning a result set to
+   * execute the query. In Druid, prepare and plan are different: prepare provides
+   * information about the query, but plan does the "real" preparation to create
+   * an actual executable plan.
    * <ul>
    * <li>Create the planner.</li>
    * <li>Parse the statement.</li>
@@ -93,16 +183,14 @@ public class DirectStatement extends AbstractStatement implements Cancelable
    * <li>Validate the query against the Druid catalog.</li>
    * <li>Authorize access to the resources which the query needs.</li>
    * <li>Plan the query.</li>
-   * <li>Return a {@link Sequence} which executes the query and returns results.</li>
    * </ul>
-   *
-   * This method is called from the request thread; results are read in the
-   * response thread.
-   *
-   * @return sequence which delivers query results
+   * Call {@link #run()} to run the resulting plan.
    */
-  public Sequence<Object[]> execute()
+  public ResultSet plan()
   {
+    if (resultSet != null) {
+      throw new ISE("Can plan a query only once.");
+    }
     try (DruidPlanner planner = sqlToolbox.plannerFactory.createPlanner(
         sqlToolbox.engine,
         queryPlus.sql(),
@@ -115,9 +203,9 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       // or execution prep stages take too long for some unexpected reason.
       sqlToolbox.sqlLifecycleManager.add(sqlQueryId(), this);
       checkCanceled();
-      plannerResult = plan(planner);
+      resultSet = new ResultSet(createPlan(planner));
       prepareResult = planner.prepareResult();
-      return doExecute();
+      return resultSet;
     }
     catch (RuntimeException e) {
       reporter.failed(e);
@@ -128,24 +216,6 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   public PrepareResult prepareResult()
   {
     return prepareResult;
-  }
-
-  /**
-   * Do the actual execute step which allows subclasses to wrap the sequence,
-   * as is sometimes needed for testing.
-   */
-  protected Sequence<Object[]> doExecute()
-  {
-    // Check cancellation here and not in execute() above:
-    // required for SqlResourceTest to work.
-    checkCanceled();
-    try {
-      return plannerResult.run();
-    }
-    catch (RuntimeException e) {
-      reporter.failed(e);
-      throw e;
-    }
   }
 
   /**
