@@ -120,6 +120,23 @@ public class SearchQueryQueryToolChestTest extends InitializedNullHandlingTest
         null
     );
 
+    SearchQuery query3 = new SearchQuery(
+        new TableDataSource("dummy"),
+        null,
+        Granularities.ALL,
+        1,
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
+        ImmutableList.of(Druids.DIMENSION_IDENTITY.apply("v0")),
+        VirtualColumns.create(
+            ImmutableList.of(
+                new ExpressionVirtualColumn("v0", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+            )
+        ),
+        new FragmentSearchQuerySpec(ImmutableList.of("a", "b")),
+        null,
+        null
+    );
+
     Assert.assertArrayEquals(
         toolChest.getCacheStrategy(query1).computeCacheKey(query1),
         toolChest.getCacheStrategy(query1).computeCacheKey(query1)
@@ -128,6 +145,11 @@ public class SearchQueryQueryToolChestTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(
         toolChest.getCacheStrategy(query2).computeCacheKey(query2),
         toolChest.getCacheStrategy(query2).computeCacheKey(query2)
+    );
+
+    Assert.assertArrayEquals(
+        toolChest.getCacheStrategy(query1).computeCacheKey(query1),
+        toolChest.getCacheStrategy(query3).computeCacheKey(query3)
     );
 
     Assert.assertFalse(
