@@ -22,7 +22,6 @@ package org.apache.druid.java.util.http.client;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.timeout.ReadTimeoutException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
