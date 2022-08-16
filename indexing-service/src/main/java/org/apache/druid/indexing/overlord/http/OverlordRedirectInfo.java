@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.http;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -55,13 +56,12 @@ public class OverlordRedirectInfo implements RedirectInfo
   public URL getRedirectURL(String queryString, String requestURI)
   {
     try {
-      final String leader = taskMaster.getCurrentLeader();
-      if (leader == null || leader.isEmpty()) {
+      final Optional<String> redirectLocation = taskMaster.getRedirectLocation();
+      if (!redirectLocation.isPresent()) {
         return null;
       }
 
-      String location = StringUtils.format("%s%s", leader, requestURI);
-
+      String location = StringUtils.format("%s%s", redirectLocation.get(), requestURI);
       if (queryString != null) {
         location = StringUtils.format("%s?%s", location, queryString);
       }
