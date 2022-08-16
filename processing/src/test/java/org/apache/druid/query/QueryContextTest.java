@@ -263,6 +263,35 @@ public class QueryContextTest
   }
 
   @Test
+  public void testCopy()
+  {
+    final QueryContext context = new QueryContext(
+        ImmutableMap.of(
+            "user1", "userVal1",
+            "conflict", "userVal2"
+        )
+    );
+
+    context.addDefaultParams(
+        ImmutableMap.of(
+            "default1", "defaultVal1",
+            "conflict", "defaultVal2"
+        )
+    );
+
+    context.addSystemParam("sys1", "val1");
+
+    final Map<String, Object> merged = ImmutableMap.copyOf(context.getMergedParams());
+
+    final QueryContext context2 = context.copy();
+    context2.removeUserParam("conflict");
+    context2.addSystemParam("sys2", "val2");
+    context2.addDefaultParam("default3", "defaultVal3");
+
+    Assert.assertEquals(merged, context.getMergedParams());
+  }
+
+  @Test
   public void testLegacyReturnsLegacy()
   {
     Query<?> legacy = new LegacyContextQuery(ImmutableMap.of("foo", "bar"));
