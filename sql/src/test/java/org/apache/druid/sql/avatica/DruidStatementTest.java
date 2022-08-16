@@ -20,23 +20,22 @@
 package org.apache.druid.sql.avatica;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.TypedValue;
-import org.apache.calcite.tools.RelConversionException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.SqlQueryPlus;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -93,8 +92,7 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   private SpecificSegmentsQuerySegmentWalker walker;
-  private SqlLifecycleFactory sqlLifecycleFactory;
-  private DruidConnection conn;
+  private SqlStatementFactory sqlStatementFactory;
 
   @Before
   public void setUp() throws Exception
@@ -107,7 +105,6 @@ public class DruidStatementTest extends CalciteTestBase
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         operatorTable,
         macroTable,
         plannerConfig,
@@ -116,14 +113,15 @@ public class DruidStatementTest extends CalciteTestBase
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of())
     );
-    sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory);
-    conn = new DruidConnection("dummy", 4, ImmutableMap.of(), ImmutableMap.of());
+    this.sqlStatementFactory = CalciteTests.createSqlStatementFactory(
+        CalciteTests.createMockSqlEngine(walker, conglomerate),
+        plannerFactory
+    );
   }
 
   @After
   public void tearDown() throws Exception
   {
-    conn.close();
     walker.close();
     walker = null;
   }
@@ -139,14 +137,15 @@ public class DruidStatementTest extends CalciteTestBase
   private DruidJdbcStatement jdbcStatement()
   {
     return new DruidJdbcStatement(
-        conn,
+        "",
         0,
-        sqlLifecycleFactory
+        new QueryContext(),
+        sqlStatementFactory
     );
   }
 
   @Test
-  public void testSubQueryWithOrderByDirect() throws RelConversionException
+  public void testSubQueryWithOrderByDirect()
   {
     SqlQueryPlus queryPlus = new SqlQueryPlus(
         SUB_QUERY_WITH_ORDER_BY,
@@ -167,7 +166,7 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   @Test
-  public void testFetchPastEOFDirect() throws RelConversionException
+  public void testFetchPastEOFDirect()
   {
     SqlQueryPlus queryPlus = new SqlQueryPlus(
         SUB_QUERY_WITH_ORDER_BY,
@@ -210,22 +209,6 @@ public class DruidStatementTest extends CalciteTestBase
     }
   }
 
-  @Test
-  public void testSignatureDirect() throws RelConversionException
-  {
-    SqlQueryPlus queryPlus = new SqlQueryPlus(
-        SELECT_STAR_FROM_FOO,
-        null,
-        null,
-        AllowAllAuthenticator.ALLOW_ALL_RESULT
-    );
-    try (final DruidJdbcStatement statement = jdbcStatement()) {
-      // Check signature.
-      statement.execute(queryPlus, -1);
-      verifySignature(statement.getSignature());
-    }
-  }
-
   /**
    * Ensure an error is thrown if the client attempts to fetch from a
    * statement after its result set is closed.
@@ -253,7 +236,7 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   @Test
-  public void testSubQueryWithOrderByDirectTwice() throws RelConversionException
+  public void testSubQueryWithOrderByDirectTwice()
   {
     SqlQueryPlus queryPlus = new SqlQueryPlus(
         SUB_QUERY_WITH_ORDER_BY,
@@ -298,7 +281,7 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   @Test
-  public void testSelectAllInFirstFrameDirect() throws RelConversionException
+  public void testSelectAllInFirstFrameDirect()
   {
     SqlQueryPlus queryPlus = new SqlQueryPlus(
         SELECT_FROM_FOO,
@@ -338,10 +321,9 @@ public class DruidStatementTest extends CalciteTestBase
   /**
    * Test results spread over two frames. Also checks various state-related
    * methods.
-   * @throws RelConversionException
    */
   @Test
-  public void testSelectSplitOverTwoFramesDirect() throws RelConversionException
+  public void testSelectSplitOverTwoFramesDirect()
   {
     SqlQueryPlus queryPlus = new SqlQueryPlus(
         SELECT_FROM_FOO,
@@ -376,10 +358,9 @@ public class DruidStatementTest extends CalciteTestBase
   /**
    * Verify that JDBC automatically closes the first result set when we
    * open a second for the same statement.
-   * @throws RelConversionException
    */
   @Test
-  public void testTwoFramesAutoCloseDirect() throws RelConversionException
+  public void testTwoFramesAutoCloseDirect()
   {
     SqlQueryPlus queryPlus = new SqlQueryPlus(
         SELECT_FROM_FOO,
@@ -419,10 +400,9 @@ public class DruidStatementTest extends CalciteTestBase
   /**
    * Test that closing a statement with pending results automatically
    * closes the underlying result set.
-   * @throws RelConversionException
    */
   @Test
-  public void testTwoFramesCloseWithResultSetDirect() throws RelConversionException
+  public void testTwoFramesCloseWithResultSetDirect()
   {
     SqlQueryPlus queryPlus = new SqlQueryPlus(
         SELECT_FROM_FOO,
@@ -476,6 +456,22 @@ public class DruidStatementTest extends CalciteTestBase
     );
   }
 
+  @Test
+  public void testSignatureDirect()
+  {
+    SqlQueryPlus queryPlus = new SqlQueryPlus(
+        SELECT_STAR_FROM_FOO,
+        null,
+        null,
+        AllowAllAuthenticator.ALLOW_ALL_RESULT
+    );
+    try (final DruidJdbcStatement statement = jdbcStatement()) {
+      // Check signature.
+      statement.execute(queryPlus, -1);
+      verifySignature(statement.getSignature());
+    }
+  }
+
   @SuppressWarnings("unchecked")
   private void verifySignature(Meta.Signature signature)
   {
@@ -520,10 +516,9 @@ public class DruidStatementTest extends CalciteTestBase
   private DruidJdbcPreparedStatement jdbcPreparedStatement(SqlQueryPlus queryPlus)
   {
     return new DruidJdbcPreparedStatement(
-        conn,
+        "",
         0,
-        queryPlus,
-        sqlLifecycleFactory,
+        sqlStatementFactory.preparedStatement(queryPlus),
         Long.MAX_VALUE
     );
   }

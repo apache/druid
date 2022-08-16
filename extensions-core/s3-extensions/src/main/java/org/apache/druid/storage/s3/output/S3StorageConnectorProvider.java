@@ -17,16 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.run;
+package org.apache.druid.storage.s3.output;
 
-/**
- * Gives the SQL-to-Druid query translator information about what features are supporetd by the {@link QueryMaker}
- * that will execute the query.
- */
-public interface QueryFeatureInspector
+
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorProvider;
+import org.apache.druid.storage.s3.S3StorageDruidModule;
+import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
+
+@JsonTypeName(S3StorageDruidModule.SCHEME)
+public class S3StorageConnectorProvider implements StorageConnectorProvider
 {
-  /**
-   * Returns whether a feature is present or not.
-   */
-  boolean feature(QueryFeature feature);
+  @JacksonInject
+  ServerSideEncryptingAmazonS3 s3;
+
+  @JacksonInject
+  S3OutputConfig s3OutputConfig;
+
+  @Override
+  public StorageConnector get()
+  {
+    return new S3StorageConnector(s3OutputConfig, s3);
+  }
 }

@@ -23,12 +23,12 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
@@ -42,8 +42,12 @@ import org.junit.Test;
 public class ExternalTableScanRuleTest
 {
   @Test
-  public void testMatchesWhenExternalScanUnsupported() throws ValidationException
+  public void testMatchesWhenExternalScanUnsupported()
   {
+    final NativeSqlEngine engine = CalciteTests.createMockSqlEngine(
+        EasyMock.createMock(QuerySegmentWalker.class),
+        EasyMock.createMock(QueryRunnerFactoryConglomerate.class)
+    );
     final PlannerContext plannerContext = PlannerContext.create(
         "DUMMY", // The actual query isn't important for this test
         CalciteTests.createOperatorTable(),
@@ -57,20 +61,17 @@ public class ExternalTableScanRuleTest
                 NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
             )
         ),
+        engine,
         new QueryContext()
     );
     plannerContext.setQueryMaker(
-        CalciteTests.createMockQueryMakerFactory(
-                        EasyMock.createMock(QuerySegmentWalker.class),
-                        EasyMock.createMock(QueryRunnerFactoryConglomerate.class)
-                    )
-                    .buildForSelect(EasyMock.createMock(RelRoot.class), plannerContext)
+        engine.buildQueryMakerForSelect(EasyMock.createMock(RelRoot.class), plannerContext)
     );
 
     ExternalTableScanRule rule = new ExternalTableScanRule(plannerContext);
     rule.matches(EasyMock.createMock(RelOptRuleCall.class));
     Assert.assertEquals(
-        "SQL query requires scanning external datasources that is not suported.",
+        "Cannot use 'EXTERN' with SQL engine 'native'.",
         plannerContext.getPlanningError()
     );
   }

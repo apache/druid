@@ -56,6 +56,9 @@ public class PlannerResult
     return resultsSupplier.get();
   }
 
+  /**
+   * Row type returned to the end user. Equivalent to {@link PrepareResult#getReturnedRowType()}.
+   */
   public RelDataType rowType()
   {
     return rowType;

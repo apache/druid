@@ -33,7 +33,7 @@ import java.util.Map;
 public class CalciteExplainQueryTest extends BaseCalciteQueryTest
 {
   @Test
-  public void testExplainCountStarOnView() throws Exception
+  public void testExplainCountStarOnView()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -71,7 +71,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExplainInformationSchemaColumns() throws Exception
+  public void testExplainInformationSchemaColumns()
   {
     final String explanation =
         "BindableProject(COLUMN_NAME=[$3], DATA_TYPE=[$7])\n"
@@ -93,7 +93,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExplainExactCountDistinctOfSemiJoinResult() throws Exception
+  public void testExplainExactCountDistinctOfSemiJoinResult()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -142,7 +142,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   // This testcase has been added here and not in CalciteSelectQueryTests since this checks if the overrides are working
   // properly when displaying the output of "EXPLAIN PLAN FOR ..." queries
   @Test
-  public void testExplainSelectStarWithOverrides() throws Exception
+  public void testExplainSelectStarWithOverrides()
   {
     Map<String, Object> useRegularExplainContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     useRegularExplainContext.put(PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN, false);
@@ -154,7 +154,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
     String legacyExplanation = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, dim1:STRING, dim2:STRING, dim3:STRING, cnt:LONG, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
-    String legacyExplanationWithContext = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":false},\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, dim1:STRING, dim2:STRING, dim3:STRING, cnt:LONG, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
+    String legacyExplanationWithContext = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":false,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, dim1:STRING, dim2:STRING, dim3:STRING, cnt:LONG, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
     String explanation = "[{"
                          + "\"query\":{\"queryType\":\"scan\","
                          + "\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},"
@@ -213,7 +213,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExplainMultipleTopLevelUnionAllQueries() throws Exception
+  public void testExplainMultipleTopLevelUnionAllQueries()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -260,7 +260,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExplainSelectMvfilterExpressions() throws Exception
+  public void testExplainSelectMvfilterExpressions()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -328,7 +328,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExplainSelectTimestampExpression() throws Exception
+  public void testExplainSelectTimestampExpression()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();

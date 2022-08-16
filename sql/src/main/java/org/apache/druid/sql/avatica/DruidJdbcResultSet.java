@@ -22,26 +22,27 @@ package org.apache.druid.sql.avatica;
 import com.google.common.base.Preconditions;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.calcite.avatica.Meta;
-import org.apache.calcite.tools.RelConversionException;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
-import org.apache.druid.sql.SqlLifecycle;
-import org.apache.druid.sql.SqlQueryPlus;
-import org.apache.druid.sql.calcite.planner.PrepareResult;
+import org.apache.druid.sql.DirectStatement;
 
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Druid's server-side representation of a JDBC result set. At most one
  * can be open per statement (standard or prepared). The implementation
- * is based on Druid's {@link SqlLifecycle} class. Even if result
+ * is based on Druid's own {@link DirectStatement} class. Even if result
  * set is for a {@code PreparedStatement}, the result set itself uses
- * a Druid {@code SqlLifecycle} which includes the parameter values
+ * a Druid {@code DirectStatement} which includes the parameter values
  * given for the execution. This allows Druid's planner to use the "query
  * optimized" form of parameter substitution: we replan the query for
  * each execution with the parameter values.
@@ -72,9 +73,8 @@ public class DruidJdbcResultSet implements Closeable
    * https://github.com/apache/druid/pull/4288
    * https://github.com/apache/druid/pull/4415
    */
-  private final AbstractDruidJdbcStatement jdbcStatement;
-  private final SqlQueryPlus sqlRequest;
-  private final SqlLifecycle stmt;
+  private final ExecutorService yielderOpenCloseExecutor;
+  private final DirectStatement stmt;
   private final long maxRowCount;
   private State state = State.NEW;
   private Meta.Signature signature;
@@ -83,30 +83,27 @@ public class DruidJdbcResultSet implements Closeable
 
   public DruidJdbcResultSet(
       final AbstractDruidJdbcStatement jdbcStatement,
-      final SqlQueryPlus sqlRequest,
-      final SqlLifecycle stmt,
+      DirectStatement stmt,
       final long maxRowCount
   )
   {
-    this.jdbcStatement = jdbcStatement;
     this.stmt = stmt;
-    this.sqlRequest = sqlRequest;
     this.maxRowCount = maxRowCount;
+    this.yielderOpenCloseExecutor = Execs.singleThreaded(
+        StringUtils.format(
+            "JDBCYielderOpenCloseExecutor-connection-%s-statement-%d",
+            StringUtils.encodeForFormat(jdbcStatement.getConnectionId()),
+            jdbcStatement.getStatementId()
+        )
+    );
   }
 
-  public synchronized void execute() throws RelConversionException
+  public synchronized void execute()
   {
     ensure(State.NEW);
-    stmt.validateAndAuthorize(sqlRequest.authResult());
-    PrepareResult prepareResult = stmt.prepare();
-    stmt.plan();
-    signature = AbstractDruidJdbcStatement.createSignature(
-        prepareResult,
-        sqlRequest.sql()
-    );
     try {
       state = State.RUNNING;
-      final Sequence<Object[]> baseSequence = jdbcStatement.executor().submit(stmt::execute).get();
+      final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(stmt::execute).get();
 
       // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
       final Sequence<Object[]> retSequence =
@@ -115,6 +112,13 @@ public class DruidJdbcResultSet implements Closeable
           : baseSequence;
 
       yielder = Yielders.each(retSequence);
+      signature = AbstractDruidJdbcStatement.createSignature(
+          stmt.prepareResult(),
+          stmt.sqlRequest().sql()
+      );
+    }
+    catch (ExecutionException e) {
+      throw closeAndPropagateThrowable(e.getCause());
     }
     catch (Throwable t) {
       throw closeAndPropagateThrowable(t);
@@ -180,8 +184,9 @@ public class DruidJdbcResultSet implements Closeable
   {
     DruidMeta.logFailure(t);
     // Report a failure so that the failure is logged.
+    stmt.reporter().failed(t);
     try {
-      close(t);
+      close();
     }
     catch (Throwable t1) {
       t.addSuppressed(t1);
@@ -200,11 +205,6 @@ public class DruidJdbcResultSet implements Closeable
   @Override
   public synchronized void close()
   {
-    close(null);
-  }
-
-  private void close(Throwable error)
-  {
     if (state == State.NEW) {
       state = State.CLOSED;
     }
@@ -218,7 +218,7 @@ public class DruidJdbcResultSet implements Closeable
         this.yielder = null;
 
         // Put the close last, so any exceptions it throws are after we did the other cleanup above.
-        jdbcStatement.executor().submit(
+        yielderOpenCloseExecutor.submit(
             () -> {
               theYielder.close();
               // makes this a Callable instead of Runnable so we don't need to catch exceptions inside the lambda
@@ -226,6 +226,7 @@ public class DruidJdbcResultSet implements Closeable
             }
         ).get();
 
+        yielderOpenCloseExecutor.shutdownNow();
       }
     }
     catch (RuntimeException e) {
@@ -235,7 +236,8 @@ public class DruidJdbcResultSet implements Closeable
       throw new RuntimeException(t);
     }
     finally {
-      stmt.finalizeStateAndEmitLogsAndMetrics(error, null, -1);
+      // Closing the statement cause logs and metrics to be emitted.
+      stmt.close();
     }
   }
 
