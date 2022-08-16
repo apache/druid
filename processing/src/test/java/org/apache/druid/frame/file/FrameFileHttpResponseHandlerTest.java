@@ -130,7 +130,7 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
   @Test
   public void testEmptyResponseWithLastFetchHeader()
   {
-    final HttpResponse serverResponse = makeResponse(HttpResponseStatus.OK, ByteArrays.EMPTY_ARRAY);
+    final HttpResponse serverResponse = makeResponse(HttpResponseStatus.OK);
     serverResponse.headers().set(
         FrameFileHttpResponseHandler.HEADER_LAST_FETCH_NAME,
         FrameFileHttpResponseHandler.HEADER_LAST_FETCH_VALUE
