@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -168,6 +169,12 @@ public class MaterializedViewQuery<T> implements Query<T>
   public boolean getContextBoolean(String key, boolean defaultValue) 
   {
     return query.getContextBoolean(key, defaultValue);
+  }
+
+  @Override
+  public HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
+  {
+    return query.getContextHumanReadableBytes(key, defaultValue);
   }
 
   @Override

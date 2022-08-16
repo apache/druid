@@ -37,6 +37,8 @@ import java.util.Properties;
  * <p>
  * Tests and clients must provide
  * properties via another mechanism.
+ * <p>
+ * If every test and client needs a module, it should be present here.
  */
 public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorBuilder>
 {
@@ -48,17 +50,13 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
         new ConfigModule(),
         new NullHandlingModule(),
         new ExpressionProcessingModule(),
-        binder -> {
-          binder.bind(DruidSecondaryModule.class);
-        }
+        binder -> binder.bind(DruidSecondaryModule.class)
     );
   }
 
   public StartupInjectorBuilder withProperties(Properties properties)
   {
-    add(binder -> {
-      binder.bind(Properties.class).toInstance(properties);
-    });
+    add(binder -> binder.bind(Properties.class).toInstance(properties));
     return this;
   }
 

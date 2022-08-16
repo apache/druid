@@ -203,7 +203,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPath() throws Exception
+  public void testGroupByPath()
   {
     testQuery(
         "SELECT "
@@ -240,7 +240,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByJsonValue() throws Exception
+  public void testGroupByJsonValue()
   {
     testQuery(
         "SELECT "
@@ -277,7 +277,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTopNPath() throws Exception
+  public void testTopNPath()
   {
     testQuery(
         "SELECT "
@@ -314,7 +314,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootPath() throws Exception
+  public void testGroupByRootPath()
   {
     testQuery(
         "SELECT "
@@ -351,7 +351,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByGetPaths() throws Exception
+  public void testGroupByGetPaths()
   {
     testQuery(
         "SELECT "
@@ -399,7 +399,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByJsonGetPaths() throws Exception
+  public void testGroupByJsonGetPaths()
   {
     testQuery(
         "SELECT "
@@ -447,7 +447,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByJsonValues() throws Exception
+  public void testGroupByJsonValues()
   {
     testQuery(
         "SELECT "
@@ -487,7 +487,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilter() throws Exception
+  public void testGroupByPathSelectorFilter()
   {
     testQuery(
         "SELECT "
@@ -526,7 +526,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterLong() throws Exception
+  public void testGroupByPathSelectorFilterLong()
   {
     testQuery(
         "SELECT "
@@ -566,7 +566,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterDouble() throws Exception
+  public void testGroupByPathSelectorFilterDouble()
   {
     testQuery(
         "SELECT "
@@ -606,7 +606,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterString() throws Exception
+  public void testGroupByPathSelectorFilterString()
   {
     testQuery(
         "SELECT "
@@ -646,7 +646,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterVariant() throws Exception
+  public void testGroupByPathSelectorFilterVariant()
   {
     testQuery(
         "SELECT "
@@ -681,7 +681,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterVariant2() throws Exception
+  public void testGroupByPathSelectorFilterVariant2()
   {
     testQuery(
         "SELECT "
@@ -719,7 +719,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterVariant3() throws Exception
+  public void testGroupByPathSelectorFilterVariant3()
   {
     testQuery(
         "SELECT "
@@ -757,7 +757,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterNonExistent() throws Exception
+  public void testGroupByPathSelectorFilterNonExistent()
   {
     testQuery(
         "SELECT "
@@ -792,7 +792,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterNull() throws Exception
+  public void testGroupByPathSelectorFilterNull()
   {
     testQuery(
         "SELECT "
@@ -830,7 +830,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterLong() throws Exception
+  public void testGroupByPathBoundFilterLong()
   {
     testQuery(
         "SELECT "
@@ -867,7 +867,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterLongNoUpper() throws Exception
+  public void testGroupByPathBoundFilterLongNoUpper()
   {
     testQuery(
         "SELECT "
@@ -904,7 +904,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterLongNoLower() throws Exception
+  public void testGroupByPathBoundFilterLongNoLower()
   {
     testQuery(
         "SELECT "
@@ -940,7 +940,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterLongNumeric() throws Exception
+  public void testGroupByPathBoundFilterLongNumeric()
   {
     testQuery(
         "SELECT "
@@ -978,7 +978,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterLongNoUpperNumeric() throws Exception
+  public void testGroupByPathBoundFilterLongNoUpperNumeric()
   {
     testQuery(
         "SELECT "
@@ -1016,7 +1016,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathNumericBoundFilterLongNoUpperNumeric() throws Exception
+  public void testGroupByPathNumericBoundFilterLongNoUpperNumeric()
   {
     testQuery(
         "SELECT "
@@ -1053,7 +1053,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterLongNoLowerNumeric() throws Exception
+  public void testGroupByPathBoundFilterLongNoLowerNumeric()
   {
     testQuery(
         "SELECT "
@@ -1091,7 +1091,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterDouble() throws Exception
+  public void testGroupByPathBoundFilterDouble()
   {
     testQuery(
         "SELECT "
@@ -1128,7 +1128,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterDoubleNoUpper() throws Exception
+  public void testGroupByPathBoundFilterDoubleNoUpper()
   {
     testQuery(
         "SELECT "
@@ -1165,7 +1165,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterDoubleNoLower() throws Exception
+  public void testGroupByPathBoundFilterDoubleNoLower()
   {
     testQuery(
         "SELECT "
@@ -1201,7 +1201,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundDoubleFilterNumeric() throws Exception
+  public void testGroupByPathBoundDoubleFilterNumeric()
   {
     testQuery(
         "SELECT "
@@ -1239,7 +1239,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterDoubleNoUpperNumeric() throws Exception
+  public void testGroupByPathBoundFilterDoubleNoUpperNumeric()
   {
     testQuery(
         "SELECT "
@@ -1277,7 +1277,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterDoubleNoLowerNumeric() throws Exception
+  public void testGroupByPathBoundFilterDoubleNoLowerNumeric()
   {
     testQuery(
         "SELECT "
@@ -1315,7 +1315,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterString() throws Exception
+  public void testGroupByPathBoundFilterString()
   {
     testQuery(
         "SELECT "
@@ -1352,7 +1352,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterStringNoUpper() throws Exception
+  public void testGroupByPathBoundFilterStringNoUpper()
   {
     testQuery(
         "SELECT "
@@ -1390,7 +1390,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterStringNoLower() throws Exception
+  public void testGroupByPathBoundFilterStringNoLower()
   {
     testQuery(
         "SELECT "
@@ -1428,7 +1428,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathLikeFilter() throws Exception
+  public void testGroupByPathLikeFilter()
   {
     testQuery(
         "SELECT "
@@ -1464,7 +1464,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathLikeFilterStringPrefix() throws Exception
+  public void testGroupByPathLikeFilterStringPrefix()
   {
     testQuery(
         "SELECT "
@@ -1501,7 +1501,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathLikeFilterString() throws Exception
+  public void testGroupByPathLikeFilterString()
   {
     testQuery(
         "SELECT "
@@ -1538,7 +1538,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathLikeFilterVariant() throws Exception
+  public void testGroupByPathLikeFilterVariant()
   {
     testQuery(
         "SELECT "
@@ -1575,7 +1575,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathInFilter() throws Exception
+  public void testGroupByPathInFilter()
   {
     testQuery(
         "SELECT "
@@ -1613,7 +1613,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathInFilterDouble() throws Exception
+  public void testGroupByPathInFilterDouble()
   {
     testQuery(
         "SELECT "
@@ -1651,7 +1651,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathInFilterString() throws Exception
+  public void testGroupByPathInFilterString()
   {
     testQuery(
         "SELECT "
@@ -1689,7 +1689,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathInFilterVariant() throws Exception
+  public void testGroupByPathInFilterVariant()
   {
     testQuery(
         "SELECT "
@@ -1726,7 +1726,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSumPath() throws Exception
+  public void testSumPath()
   {
     testQuery(
         "SELECT "
@@ -1753,7 +1753,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testSumPathFilteredAggDouble() throws Exception
+  public void testSumPathFilteredAggDouble()
   {
     // this one actually equals 2.1 because the filter is a long so double is cast and is 1 so both rows match
     testQuery(
@@ -1791,7 +1791,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSumPathFilteredAggString() throws Exception
+  public void testSumPathFilteredAggString()
   {
     testQuery(
         "SELECT "
@@ -1828,7 +1828,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSumPathMixed() throws Exception
+  public void testSumPathMixed()
   {
     // throws a "Cannot make vector value selector for variant typed nested field [[LONG, DOUBLE]]"
     skipVectorize();
@@ -1856,7 +1856,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSumPathMixedFilteredAggLong() throws Exception
+  public void testSumPathMixedFilteredAggLong()
   {
     // throws a "Cannot make vector value selector for variant typed nested field [[LONG, DOUBLE]]"
     skipVectorize();
@@ -1896,7 +1896,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSumPathMixedFilteredAggDouble() throws Exception
+  public void testSumPathMixedFilteredAggDouble()
   {
     // throws a "Cannot make vector value selector for variant typed nested field [[LONG, DOUBLE]]"
     skipVectorize();
@@ -1932,7 +1932,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCastAndSumPath() throws Exception
+  public void testCastAndSumPath()
   {
     testQuery(
         "SELECT "
@@ -1959,7 +1959,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testCastAndSumPathStrings() throws Exception
+  public void testCastAndSumPathStrings()
   {
     testQuery(
         "SELECT "
@@ -1985,7 +1985,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testReturningAndSumPath() throws Exception
+  public void testReturningAndSumPath()
   {
     testQuery(
         "SELECT "
@@ -2012,7 +2012,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testReturningAndSumPathStrings() throws Exception
+  public void testReturningAndSumPathStrings()
   {
     testQuery(
         "SELECT "
@@ -2038,7 +2038,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootKeys() throws Exception
+  public void testGroupByRootKeys()
   {
     cannotVectorize();
     testQuery(
@@ -2080,7 +2080,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootKeysJsonPath() throws Exception
+  public void testGroupByRootKeysJsonPath()
   {
     cannotVectorize();
     testQuery(
@@ -2122,7 +2122,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootKeys2() throws Exception
+  public void testGroupByRootKeys2()
   {
     cannotVectorize();
     testQuery(
@@ -2165,7 +2165,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByAllPaths() throws Exception
+  public void testGroupByAllPaths()
   {
     cannotVectorize();
     testQuery(
@@ -2207,7 +2207,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByNestedArrayPath() throws Exception
+  public void testGroupByNestedArrayPath()
   {
     testQuery(
         "SELECT "
@@ -2243,7 +2243,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByInvalidPath() throws Exception
+  public void testGroupByInvalidPath()
   {
     testQueryThrows(
         "SELECT "
@@ -2259,7 +2259,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonQuery() throws Exception
+  public void testJsonQuery()
   {
     testQuery(
         "SELECT JSON_QUERY(nester, '$.n'), JSON_QUERY(nester, '$')\n"
@@ -2311,7 +2311,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonQueryAndJsonObject() throws Exception
+  public void testJsonQueryAndJsonObject()
   {
     testQuery(
         "SELECT JSON_OBJECT(KEY 'n' VALUE JSON_QUERY(nester, '$.n'), KEY 'x' VALUE JSON_VALUE(nest, '$.x'))\n"
@@ -2359,7 +2359,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testToJsonAndParseJson() throws Exception
+  public void testToJsonAndParseJson()
   {
     testQuery(
         "SELECT string, TO_JSON(string), PARSE_JSON(string), PARSE_JSON('{\"foo\":1}'), PARSE_JSON(TO_JSON_STRING(nester))\n"

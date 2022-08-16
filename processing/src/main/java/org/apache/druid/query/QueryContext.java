@@ -19,6 +19,8 @@
 
 package org.apache.druid.query;
 
+import org.apache.druid.java.util.common.HumanReadableBytes;
+
 import javax.annotation.Nullable;
 
 import java.util.Collections;
@@ -174,6 +176,11 @@ public class QueryContext
   public long getAsLong(final String parameter, final long defaultValue)
   {
     return QueryContexts.getAsLong(parameter, get(parameter), defaultValue);
+  }
+
+  public HumanReadableBytes getAsHumanReadableBytes(final String parameter, final HumanReadableBytes defaultValue)
+  {
+    return QueryContexts.getAsHumanReadableBytes(parameter, get(parameter), defaultValue);
   }
 
   public Map<String, Object> getMergedParams()

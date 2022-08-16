@@ -80,7 +80,7 @@ public class QueryLogHook implements TestRule
 
         final Consumer<Object> function = query -> {
           try {
-            recordedQueries.add((Query) query);
+            recordedQueries.add((Query<?>) query);
             log.info(
                 "Issued query: %s",
                 objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query)

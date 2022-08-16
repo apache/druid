@@ -24,12 +24,17 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
+import com.google.inject.util.Providers;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.JSR311Resource;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.SqlStatementFactoryFactory;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.easymock.Capture;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
 import org.junit.Assert;
@@ -46,7 +51,7 @@ public class SqlHttpModuleTest
   @Mock
   private ObjectMapper jsonMpper;
   @Mock
-  private SqlLifecycleFactory sqlLifecycleFactory;
+  private SqlStatementFactoryFactory sqlStatementFactoryFactory;
 
   private SqlHttpModule target;
   private Injector injector;
@@ -54,14 +59,20 @@ public class SqlHttpModuleTest
   @Before
   public void setUp()
   {
+    EasyMock.expect(sqlStatementFactoryFactory.factorize(EasyMock.capture(Capture.newInstance())))
+            .andReturn(EasyMock.mock(SqlStatementFactory.class))
+            .anyTimes();
+    EasyMock.replay(sqlStatementFactoryFactory);
+
     target = new SqlHttpModule();
     injector = Guice.createInjector(
         new LifecycleModule(),
         new DruidGuiceExtensions(),
         binder -> {
           binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(jsonMpper);
-          binder.bind(SqlLifecycleFactory.class).toInstance(sqlLifecycleFactory);
+          binder.bind(SqlStatementFactoryFactory.class).toInstance(sqlStatementFactoryFactory);
           binder.bind(AuthorizerMapper.class).toInstance(new AuthorizerMapper(Collections.emptyMap()));
+          binder.bind(NativeSqlEngine.class).toProvider(Providers.of(new NativeSqlEngine(null, null)));
         },
         target
     );
@@ -80,7 +91,7 @@ public class SqlHttpModuleTest
   public void testSqlResourceIsAvailableViaJersey()
   {
     Set<Class<?>> jerseyResourceClasses =
-        injector.getInstance(Key.get(new TypeLiteral<Set<Class<?>>>(){}, JSR311Resource.class));
+        injector.getInstance(Key.get(new TypeLiteral<Set<Class<?>>>() {}, JSR311Resource.class));
     Assert.assertEquals(1, jerseyResourceClasses.size());
     Assert.assertEquals(SqlResource.class, jerseyResourceClasses.iterator().next());
   }
