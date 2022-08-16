@@ -64,10 +64,23 @@ public class QueryContext
 
   public QueryContext(@Nullable Map<String, Object> userParams)
   {
-    this.defaultParams = new TreeMap<>();
-    this.userParams = userParams == null ? new TreeMap<>() : new TreeMap<>(userParams);
-    this.systemParams = new TreeMap<>();
-    invalidateMergedParams();
+    this(
+        new TreeMap<>(),
+        userParams == null ? new TreeMap<>() : new TreeMap<>(userParams),
+        new TreeMap<>()
+    );
+  }
+
+  private QueryContext(
+      final Map<String, Object> defaultParams,
+      final Map<String, Object> userParams,
+      final Map<String, Object> systemParams
+  )
+  {
+    this.defaultParams = defaultParams;
+    this.userParams = userParams;
+    this.systemParams = systemParams;
+    this.mergedParams = null;
   }
 
   private void invalidateMergedParams()
@@ -127,6 +140,7 @@ public class QueryContext
         QueryContexts.DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT
     );
   }
+
   @SuppressWarnings("unused")
   public boolean containsKey(String key)
   {
@@ -192,6 +206,15 @@ public class QueryContext
       mergedParams = Collections.unmodifiableMap(merged);
     }
     return mergedParams;
+  }
+
+  public QueryContext copy()
+  {
+    return new QueryContext(
+        new TreeMap<>(defaultParams),
+        new TreeMap<>(userParams),
+        new TreeMap<>(systemParams)
+    );
   }
 
   @Override
