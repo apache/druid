@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.run;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -355,7 +356,8 @@ public class NativeQueryMaker implements QueryMaker
   }
 
 
-  private static Object maybeCoerceArrayToList(Object value, boolean mustCoerce)
+  @VisibleForTesting
+  static Object maybeCoerceArrayToList(Object value, boolean mustCoerce)
   {
     if (value instanceof List) {
       return value;
