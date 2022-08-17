@@ -3574,7 +3574,8 @@ public interface Function
     @Override
     public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return args.get(0).getOutputType(inspector);
+      ExpressionType arrayType = args.get(0).getOutputType(inspector);
+      return Optional.ofNullable(ExpressionType.asArrayType(arrayType)).orElse(arrayType);
     }
 
     @Override

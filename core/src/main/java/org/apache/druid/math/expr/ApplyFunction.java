@@ -407,7 +407,7 @@ public interface ApplyFunction
         return ExprEval.of(null);
       }
       if (hadEmpty) {
-        return ExprEval.ofStringArray(new String[0]);
+        return ExprEval.ofStringArray(new Object[0]);
       }
       Expr accExpr = argsExpr.get(argsExpr.size() - 1);
 

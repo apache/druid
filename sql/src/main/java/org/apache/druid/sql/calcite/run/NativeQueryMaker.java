@@ -366,10 +366,21 @@ public class NativeQueryMaker implements QueryMaker
     } else if (value instanceof Double[]) {
       return Arrays.asList((Double[]) value);
     } else if (value instanceof Object[]) {
-      Object[] array = (Object[]) value;
-      ArrayList<Object> lst = new ArrayList<>(array.length);
+      final Object[] array = (Object[]) value;
+      final ArrayList<Object> lst = new ArrayList<>(array.length);
       for (Object o : array) {
         lst.add(maybeCoerceArrayToList(o, false));
+      }
+      return lst;
+    } else if (value instanceof long[]) {
+      return Arrays.stream((long[]) value).boxed().collect(Collectors.toList());
+    } else if (value instanceof double[]) {
+      return Arrays.stream((double[]) value).boxed().collect(Collectors.toList());
+    } else if (value instanceof float[]) {
+      final float[] array = (float[]) value;
+      final ArrayList<Object> lst = new ArrayList<>(array.length);
+      for (float f : array) {
+        lst.add(f);
       }
       return lst;
     } else if (value instanceof ComparableStringArray) {
