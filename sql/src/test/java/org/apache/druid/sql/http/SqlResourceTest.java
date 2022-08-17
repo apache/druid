@@ -110,6 +110,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -1941,32 +1942,44 @@ public class SqlResourceTest extends CalciteTestBase
     }
 
     @Override
-    public Sequence<Object[]> execute()
+    public ResultSet plan()
     {
       onExecute.accept(this);
-      ResultSet resultSet = plan();
-      final Function<Sequence<Object[]>, Sequence<Object[]>> sequenceMapFn =
-          Optional.ofNullable(sequenceMapFnSupplier.get()).orElse(Function.identity());
+      return super.plan();
+    }
 
-      if (executeLatchSupplier.get() != null) {
-        if (executeLatchSupplier.get().rhs) {
-          Sequence<Object[]> sequence = sequenceMapFn.apply(resultSet.run());
-          executeLatchSupplier.get().lhs.countDown();
-          return sequence;
-        } else {
-          try {
-            if (!executeLatchSupplier.get().lhs.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
-              throw new RuntimeException("Latch timed out");
+    @Override
+    public ResultSet createResultSet(PlannerResult plannerResult)
+    {
+      return new ResultSet(plannerResult)
+      {
+        @Override
+        public Sequence<Object[]> run()
+        {
+          final Function<Sequence<Object[]>, Sequence<Object[]>> sequenceMapFn =
+              Optional.ofNullable(sequenceMapFnSupplier.get()).orElse(Function.identity());
+
+          if (executeLatchSupplier.get() != null) {
+            if (executeLatchSupplier.get().rhs) {
+              Sequence<Object[]> sequence = sequenceMapFn.apply(super.run());
+              executeLatchSupplier.get().lhs.countDown();
+              return sequence;
+            } else {
+              try {
+                if (!executeLatchSupplier.get().lhs.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
+                  throw new RuntimeException("Latch timed out");
+                }
+              }
+              catch (InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+              return sequenceMapFn.apply(super.run());
             }
+          } else {
+            return sequenceMapFn.apply(super.run());
           }
-          catch (InterruptedException e) {
-            throw new RuntimeException(e);
-          }
-          return sequenceMapFn.apply(resultSet.run());
         }
-      } else {
-        return sequenceMapFn.apply(resultSet.run());
-      }
+      };
     }
   }
 }

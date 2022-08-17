@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql;
 
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -98,10 +100,9 @@ public class DirectStatement extends AbstractStatement implements Cancelable
      */
     public Sequence<Object[]> run()
     {
-      // Check cancellation here and not in execute() above:
-      // required for SqlResourceTest to work.
-      checkCanceled();
       try {
+        // Check cancellation. Required for SqlResourceTest to work.
+        checkCanceled();
         return plannerResult.run();
       }
       catch (RuntimeException e) {
@@ -184,7 +185,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
    * <li>Authorize access to the resources which the query needs.</li>
    * <li>Plan the query.</li>
    * </ul>
-   * Call {@link #run()} to run the resulting plan.
+   * Call {@link ResultSet#run()} to run the resulting plan.
    */
   public ResultSet plan()
   {
@@ -203,7 +204,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       // or execution prep stages take too long for some unexpected reason.
       sqlToolbox.sqlLifecycleManager.add(sqlQueryId(), this);
       checkCanceled();
-      resultSet = new ResultSet(createPlan(planner));
+      resultSet = createResultSet(createPlan(planner));
       prepareResult = planner.prepareResult();
       return resultSet;
     }
@@ -211,6 +212,31 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       reporter.failed(e);
       throw e;
     }
+  }
+
+  /**
+   * Plan the query, which also produces the sequence that runs
+   * the query.
+   */
+  @VisibleForTesting
+  protected PlannerResult createPlan(DruidPlanner planner)
+  {
+    try {
+      return planner.plan();
+    }
+    catch (ValidationException e) {
+      throw new SqlPlanningException(e);
+    }
+  }
+
+  /**
+   * Wrapper around result set creation for the sole purpose of tests which
+   * inject failures.
+   */
+  @VisibleForTesting
+  protected ResultSet createResultSet(PlannerResult plannerResult)
+  {
+    return new ResultSet(plannerResult);
   }
 
   public PrepareResult prepareResult()

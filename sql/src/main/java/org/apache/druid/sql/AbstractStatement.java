@@ -30,7 +30,6 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.PlannerResult;
 
 import java.io.Closeable;
 import java.util.Set;
@@ -158,20 +157,6 @@ public abstract class AbstractStatement implements Closeable
           resourceActions,
           sqlToolbox.plannerFactory.getAuthorizerMapper()
     );
-  }
-
-  /**
-   * Plan the query, which also produces the sequence that runs
-   * the query.
-   */
-  protected PlannerResult createPlan(DruidPlanner planner)
-  {
-    try {
-      return planner.plan();
-    }
-    catch (ValidationException e) {
-      throw new SqlPlanningException(e);
-    }
   }
 
   /**
