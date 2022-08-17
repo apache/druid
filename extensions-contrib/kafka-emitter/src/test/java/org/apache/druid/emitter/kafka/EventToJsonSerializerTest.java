@@ -38,7 +38,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.DefaultRequestLogEventBuilderFactory;
-import org.joda.time.DateTime;
 
 import java.util.Collections;
 
@@ -49,10 +48,10 @@ public class EventToJsonSerializerTest extends TestCase
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     EventToJsonSerializer serializer = EventToJsonSerializer.of(mapper);
-    DateTime timestamp = DateTimes.nowUtc();
+    String timestamp = "2022-08-17T18:51:00.000Z";
     Event event = ServiceMetricEvent.builder()
                                     .setFeed("my-feed")
-                                    .build(timestamp, "m1", 1)
+                                    .build(DateTimes.of(timestamp), "m1", 1)
                                     .build("my-service", "my-host");
 
     String actual = serializer.serialize(event);
@@ -73,9 +72,9 @@ public class EventToJsonSerializerTest extends TestCase
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     EventToJsonSerializer serializer = EventToJsonSerializer.of(mapper);
-    DateTime timestamp = DateTimes.nowUtc();
+    String timestamp = "2022-08-17T18:51:00.000Z";
     Event event = new AlertEvent(
-        timestamp,
+        DateTimes.of(timestamp),
         "my-service",
         "my-host",
         AlertEvent.Severity.DEFAULT,
@@ -104,7 +103,7 @@ public class EventToJsonSerializerTest extends TestCase
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     EventToJsonSerializer serializer = EventToJsonSerializer.of(mapper);
-    DateTime timestamp = DateTimes.nowUtc();
+    String timestamp = "2022-08-17T18:51:00.000Z";
 
     Event event = DefaultRequestLogEventBuilderFactory.instance()
                                                       .createRequestLogEventBuilder(
@@ -112,7 +111,7 @@ public class EventToJsonSerializerTest extends TestCase
                                                           RequestLogLine.forSql(
                                                               "SELECT * FROM dummy",
                                                               Collections.emptyMap(),
-                                                              timestamp,
+                                                              DateTimes.of(timestamp),
                                                               "127.0.0.1",
                                                               new QueryStats(ImmutableMap.of())
                                                           )
