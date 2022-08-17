@@ -202,6 +202,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     if (state != State.START) {
       throw new ISE("Can plan a query only once.");
     }
+    long planningStartNanos = System.nanoTime();
     try (DruidPlanner planner = sqlToolbox.plannerFactory.createPlanner(
         sqlToolbox.engine,
         queryPlus.sql(),
@@ -218,6 +219,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       prepareResult = planner.prepareResult();
       // Double check needed by SqlResourceTest
       transition(State.PREPARED);
+      reporter.planningTimeNanos(System.nanoTime() - planningStartNanos);
       return resultSet;
     }
     catch (RuntimeException e) {
