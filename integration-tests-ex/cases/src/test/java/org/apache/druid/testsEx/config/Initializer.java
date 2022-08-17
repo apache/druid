@@ -70,6 +70,7 @@ import org.apache.druid.metadata.storage.mysql.MySQLConnectorSslConfig;
 import org.apache.druid.metadata.storage.mysql.MySQLMetadataStorageModule;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.IntegrationTestingConfigProvider;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testsEx.cluster.DruidClusterClient;
 import org.apache.druid.testsEx.cluster.MetastoreClient;
@@ -132,7 +133,8 @@ public class Initializer
           .toInstance(config);
       binder
           .bind(IntegrationTestingConfig.class)
-          .toInstance(config.toIntegrationTestingConfig());
+          .to(IntegrationTestingConfigEx.class)
+          .in(LazySingleton.class);
       binder
           .bind(MetastoreClient.class)
           .in(LazySingleton.class);
@@ -265,15 +267,24 @@ public class Initializer
       property("druid.client.https.keyManagerPassword", "druid123");
       property("druid.client.https.keyStorePassword", "druid123");
 
+      // More env var bindings for properties formerly passed in via
+      // a generated config file.
+      final String base = IntegrationTestingConfigProvider.PROPERTY_BASE + ".";
+      propertyEnvVarBinding(base + "cloudBucket", "DRUID_CLOUD_BUCKET");
+      propertyEnvVarBinding(base + "cloudPath", "DRUID_CLOUD_PATH");
+      propertyEnvVarBinding(base + "s3AccessKey", "AWS_ACCESS_KEY_ID");
+      propertyEnvVarBinding(base + "s3SecretKey", "AWS_SECRET_ACCESS_KEY");
+      propertyEnvVarBinding(base + "azureContainer", "AZURE_CONTAINER");
+      propertyEnvVarBinding(base + "azureAccount", "AZURE_ACCOUNT");
+      propertyEnvVarBinding(base + "azureKey", "AZURE_KEY");
+      propertyEnvVarBinding(base + "googleBucket", "GOOGLE_BUCKET");
+      propertyEnvVarBinding(base + "googlePrefix", "GOOGLE_PREFIX");
+
       // Other defaults
       // druid.global.http.numMaxThreads avoids creating 40+ Netty threads.
       // We only ever use 1.
       property("druid.global.http.numMaxThreads", 3);
       property("druid.broker.http.numMaxThreads", 3);
-
-      // druid.test.config.dockerIp is used by some older test code. Remove
-      // it when that code is updated.
-      property("druid.test.config.dockerIp", "localhost");
     }
 
     /**

@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 
+import java.util.Map;
+
 /**
  * Utility functions related to test configuration.
  */
@@ -44,5 +46,21 @@ public class TestConfigs
     catch (JsonProcessingException e) {
       return "<conversion failed>";
     }
+  }
+
+  public static void putProperty(Map<String, Object> properties, String key, Object value)
+  {
+    if (value == null) {
+      return;
+    }
+    properties.put(key, value);
+  }
+
+  public static void putProperty(Map<String, Object> properties, String base, String key, Object value)
+  {
+    if (value == null) {
+      return;
+    }
+    properties.put(base + "." + key, value);
   }
 }

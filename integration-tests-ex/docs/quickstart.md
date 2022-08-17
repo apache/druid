@@ -29,20 +29,6 @@ When first learning the framework, you can try thing out using the
 `HighAvailability` test. Of the tests converted thus far, it is the
 one that runs for the shortest time (on the order of a minute or two.)
 
-## Run all Tests
-
-Run the new ITs with:
-
-```bash
-mvn clean install -P dist,test-image,integration-tests-ex,skip-static-checks \
-    -Dmaven.javadoc.skip=true -DskipUTs=true
-```
-
-This will build Druid, create the distribution tarball, build the
-test image and run the two groups of ITs.
-
-See [this page](maven.md) for details of the Maven build process.
-
 ## Working with Individual Tests
 
 To work with tests for development and debugging, you can break the
@@ -59,11 +45,24 @@ above all-in-one step into a number of sub-steps.
 ## Build Druid
 
 The integration tests start with a Druid distribution in `distribution/target`,
-which you can build using your preferred Maven command line. For example:
+which you can build using your preferred Maven command line. Simplest:
+
+```
+cd $DRUID_DEV
+./it.sh dist
+```
+
+Or, in detail:
+
+For example:
+To make the text a bit simpler, define a variable for the standard settings:
 
 ```bash
-mvn clean install -P dist,skip-static-checks -Ddruid.console.skip=true \
-    -Dmaven.javadoc.skip=true -P skip-tests -T1.0C
+export MAVEN_IGNORE=-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true
+```
+
+```bash
+mvn clean package -P dist $MAVEN_IGNORE -T1.0C
 ```
 
 Hint: put this into a script somewhere, such as a `~/bin` directory and
@@ -90,18 +89,49 @@ You must rebuild the Docker image whenever you rebuild the Druid distribution,
 since the image includes the distribution. You also will want to rebuild the
 image if you change the `it-image` project which contains the build scripts.
 
-Assuming `DRUID_DEV` points to your Druid build directory,
+```bash
+./it.sh image
+```
+
+In detail, and assuming `DRUID_DEV` points to your Druid build directory,
 to build the image (only):
 
 ```bash
-cd $DRUID_DEV/integration-tests-ex/it-image
-mvn -P test-image install
+cd $DRUID_DEV/integration-tests-ex/image
+mvn install -P test-image $MAVEN_IGNORE
 ```
 
 The above has you `cd` into the project to avoid the need to disable all the
 unwanted bits of the Maven build.
 
 See [this page](docker.md) for more information.
+
+## Run an IT from the Command Line
+
+```bash
+./it.sh test <category>
+```
+
+Or, in detail:
+
+```bash
+mvn verify -P docker-tests,IT-<category> -pl :druid-it-cases \
+    -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -DskipUTs=true
+```
+
+Where `<category>` is one of the test categories.
+
+Or
+
+```bash
+cd $DRUID_DEV/integration-tests-ex/cases
+mvn verify -P skip-static-checks,docker-tests,IT-<category> \
+    -Dmaven.javadoc.skip=true -DskipUTs=true \
+    -pl :druid-it-cases
+```
+
+If the test fails, find the Druid logs in `target/shared/logs` within the
+test group project.
 
 ## Start a Cluster
 
@@ -113,8 +143,14 @@ So, to start a cluster, you have to pick a group to run. See
 [this list](maven.md#Modules) for the list of groups.
 
 ```bash
-cd $DRUID_DEV/integration-tests-ex/<group>
-./cluster.sh up
+./it.sh up <category>
+```
+
+Or, in detail:
+
+```bash
+cd $DRUID_DEV/integration-tests-ex/cases
+./cluster.sh <category> up
 ```
 
 You can use Docker Desktop to monitor the cluster. Give things about 30 seconds
@@ -125,19 +161,6 @@ Remember to first shut down any Druid cluster you may already be running on
 your machine.
 
 See [this page](docker.md) for more information.
-
-## Run a Test from the Command Line
-
-You can run a test group from the command line any number of times against
-a test cluster.
-
-```bash
-cd $DRUID_DEV/integration-tests-ex/<group>
-mvn verify -P integration-tests-ex
-```
-
-If the test fails, find the Druid logs in `target/shared/logs` within the
-test group project.
 
 ## Run a Test from an IDE
 
@@ -153,9 +176,16 @@ just run them directly.
 
 Once you are done with your cluster, you can stop it as follows:
 
+
+```bash
+./it.sh down <category>
+```
+
+Or, in detail:
+
 ```bash
 cd $DRUID_DEV/integration-tests-ex/<group>
-./cluster.sh down
+./cluster.sh <category> down
 ```
 
 ## Clean Up

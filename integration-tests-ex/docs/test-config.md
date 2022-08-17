@@ -33,6 +33,11 @@ To create a test, you must supply at least three key components:
 This section explains the test configuration file which defines the test
 cluster.
 
+Note that you can create multiple versions of the `docker.yaml` file. For example,
+you might want to create one that lists hosts and credentials unique to your
+debugging environment. You then use your custom version in place of the standard
+one.
+
 ## Cluster Types
 
 The integration tests can run in a variety of cluster types, depending
@@ -302,15 +307,41 @@ a "service", for example.) Technically, the properties listed here are added to
 Guice as the one and only `Properties` object.
 
 Typically most components work using the default values. Tests are free to change
-any of these values for a given test scenario. At present, the properties are
-the same for all tests within a Maven module, but we could extend the
-`ClusterConfig.Builder` class to allow test-specific settings if needed.
+any of these values for a given test scenario. The properties are
+the same for all tests within a category. However, they can be changed via environment
+variables via the environment variable "binding" mechanism described in
+[tests](tests.md).
 
 The "JSON configuration" mechanism wants all properties to be strings. YAML
 will deserialize number-like properties as numbers. To avoid confusion, all
 properties are converted to strings before being passed to Druid.
 
-When using inheritance, later properties override earlier properties.
+When using inheritance, later properties override earlier properties. Environment
+variables, if bound, override the defaults specified in this section. Command-line
+settings, if provided, have the highest priority.
+
+A number of test-specific properties are avilable:
+
+* `druid.test.config.cloudBucket`
+* `druid.test.config.cloudPath`
+
+### `settings`
+
+The settings section is much like the properties section, and, indeed, are converted
+to properties internally. Settings are a fixed set of values that map to the config
+files used in the prior tests. Keys include:
+
+| Setting | Property | Environment Variable |
+| `druid_storage_type` | - | - |
+| `druid_storage_bucket` | `druid.test.config.cloudBucket` | `DRUID_STORAGE_BUCKET` |
+| `druid_storage_baseKey` | `druid.test.config.cloudPath` | `DRUID_STORAGE_BASEKEY` |
+| `druid_s3_accessKey` | - | `AWS_ACCESS_KEY_ID` |
+| `druid_s3_secretKey` | - | AWS_SECRET_ACCESS_KEY` |
+
+The above replaces the config file mechanism from the older tests. In general, when a
+setting is fixed for a test category, list it in the `docker.yaml` configuration file.
+When it varies, pass it in as an environment variable. As a result, the prior configuration
+file is not needed. As a result, the prior `override.config.path` property is not supported.
 
 ### `metastoreInit`
 
@@ -339,7 +370,7 @@ statements.
 
 ### `metastoreInitDelaySec`
 
-``yaml
+```yaml
 metastoreInitDelaySec: <sec>
 ```
 
@@ -461,3 +492,97 @@ proxyPort: <port>
 The port number for the service as exposed on the proxy host.
 Defaults to the same as `port`. You must specify a value if
 you run multiple instances of the same service.
+
+## Conversion Guide
+
+In prior tests, a config file, and the `ConfigFileConfigProvider` class,
+provided test configuration. In this version, the file described here
+provides configuration. This section presents a mapping from the old to
+the new form.
+
+The `IntegrationTestingConfig` class, which the above class used to provide,
+is reimplemented to provide the same information
+to tests as before; only the source of the information has changed.
+
+The new framework assumes that each Druid node is configured either for
+plain text or for TLS. (If this assumption is wrong, we'll change the config
+file to match.)
+
+Many of the properties are derived from information in the configuration file.
+For example, host names (within Docker) are those given in the `druid` section,
+and ports (within the cluster and for the client) are given in `druid.<service>.intances.port`,
+from which the code computes the URL.
+
+The old system hard-codes the idea that there are two coordinators or overlords. The
+new system allows any number of instances.
+
+| Method | Old Property | New Format |
+| ------ | ------------ | ---------- |
+| Router | | |
+| `getRouterHost()` | `router_host` | `'router'` |
+| `getRouterUrl()` | `router_url` | `'router'` & `instances.port` |
+| `getRouterTLSUrl()` | `router_tls_url` | " |
+| `getPermissiveRouterUrl()` | `router_permissive_url` | " |
+| `getPermissiveRouterTLSUrl()` | `router_permissive_tls_url` | " |
+| `getNoClientAuthRouterUrl()` | `router_no_client_auth_url` | " |
+| `getNoClientAuthRouterTLSUrl()` | `router_no_client_auth_tls_url` | " |
+| `getCustomCertCheckRouterUrl()` |  | " |
+| `getCustomCertCheckRouterTLSUrl()` |  | " |
+| Broker | | |
+| `getBrokerHost()` | `broker_host` | `'broker'` |
+| `getBrokerUrl()` | `broker_url` | `'broker'` & `instances.port` |
+| `getBrokerTLSUrl()` | `broker_tls_url` | " |
+| Coordinator | | |
+| `getCoordinatorHost()` | `coordinator_host` | `'coordinator'` + `tag` |
+| `getCoordinatorTwoHost()` | `coordinator_two_host` | " |
+| `getCoordinatorUrl()` | `coordinator_url` | host & `instances.port` |
+| `getCoordinatorTLSUrl()` | `coordinator_tls_url` | " |
+| `getCoordinatorTwoUrl()` | `coordinator_two_url` | " |
+| `getCoordinatorTwoTLSUrl()` | `coordinator_two_tls_url` | " |
+| Overlord | | |
+| `getOverlordUrl()` | ? | `'overlord'` + `tag` |
+| `getOverlordTwoHost()` | `overlord_two_host` | " |
+| `getOverlordTwoUrl()` | `overlord_two_url` | host & `instances.port` |
+| `getOverlordTLSUrl()` | ? | " |
+| `getOverlordTwoTLSUrl()` | `overlord_two_tls_url` | " |
+| Overlord | | |
+| `getHistoricalHost()` | `historical_host` | `historical'` |
+| `getHistoricalUrl()` | `historical_url` | `'historical'` & `instances.port` |
+| `getHistoricalTLSUrl()` | `historical_tls_url` | " |
+| Overlord | | |
+| `getMiddleManagerHost()` | `middlemanager_host` | `'middlemanager'` |
+| Dependencies | | |
+| `getZookeeperHosts()` | `zookeeper_hosts` | `'zk'` |
+| `getKafkaHost()` | `kafka_host` | '`kafka`'  |
+| `getSchemaRegistryHost()` | `schema_registry_host` | ? |
+| `getProperty()` | From config file | From `settings` |
+| `getProperties()` | " | " |
+| `getUsername()` | `username` | Setting |
+| `getPassword()` | `password` | Setting |
+| `getCloudBucket()` | `cloud_bucket` | Setting |
+| `getCloudPath()` | `cloud_path` | Setting |
+| `getCloudRegion()` | `cloud_region` | Setting |
+| `getS3AssumeRoleWithExternalId()` | `s3_assume_role_with_external_id` | Setting  |
+| `getS3AssumeRoleExternalId()` | `s3_assume_role_external_id` | Setting |
+| `getS3AssumeRoleWithoutExternalId()` | `s3_assume_role_without_external_id` | Setting |
+| `getAzureKey()` | `azureKey` | Setting |
+| `getHadoopGcsCredentialsPath()` | `hadoopGcsCredentialsPath` | Setting |
+| `getStreamEndpoint()` | `stream_endpoint` | Setting |
+| `manageKafkaTopic()` | ? | ? |
+| `getExtraDatasourceNameSuffix()` | ? | ? |
+
+Pre-defined environment bindings:
+
+| Setting | Env. Var. |
+| `cloudBucket` | `DRUID_CLOUD_BUCKET` |
+| `cloudPath` | `DRUID_CLOUD_PATH` |
+| `s3AccessKey` | `AWS_ACCESS_KEY_ID` |
+| `s3SecretKey` | `AWS_SECRET_ACCESS_KEY` |
+| `azureContainer` | `AZURE_CONTAINER` |
+| `azureAccount` | `AZURE_ACCOUNT` |
+| `azureKey` | `AZURE_KEY` |
+| `googleBucket` | `GOOGLE_BUCKET` |
+| `googlePrefix` | `GOOGLE_PREFIX` |
+
+Others can be added in `Initializer.Builder`.
+

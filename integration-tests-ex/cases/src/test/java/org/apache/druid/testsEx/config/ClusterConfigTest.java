@@ -19,9 +19,13 @@
 
 package org.apache.druid.testsEx.config;
 
+import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testsEx.config.ClusterConfig.ClusterType;
 import org.apache.druid.testsEx.config.ResolvedService.ResolvedZk;
 import org.junit.Test;
+
+import java.util.Map;
+import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -43,7 +47,7 @@ public class ClusterConfigTest
     assertEquals(ClusterType.docker, resolved.type());
     assertEquals(ResolvedConfig.DEFAULT_READY_TIMEOUT_SEC, resolved.readyTimeoutSec());
     assertEquals(ResolvedConfig.DEFAULT_READY_POLL_MS, resolved.readyPollMs());
-    assertEquals(1, resolved.properties().size());
+    assertEquals(3, resolved.properties().size());
 
     ResolvedZk zk = resolved.zk();
     assertNotNull(zk);
@@ -74,5 +78,26 @@ public class ClusterConfigTest
     assertEquals("router", service.service());
     assertEquals("http://localhost:8888", service.clientUrl());
     assertEquals("http://localhost:8888", resolved.routerUrl());
+
+    Map<String, Object> props = resolved.toProperties();
+    // Added from ZK section
+    assertEquals("localhost:2181", props.get("druid.zk.service.zkHosts"));
+    // Generic property
+    assertEquals("howdy", props.get("my.test.property"));
+    // Mapped from settings
+    assertEquals("myBucket", props.get("druid.test.config.cloudBucket"));
+    assertEquals("myPath", props.get("druid.test.config.cloudPath"));
+    assertEquals("secret", props.get("druid.test.config.s3AccessKey"));
+    // From settings, overridden in properties
+    assertEquals("myRegion", props.get("druid.test.config.cloudRegion"));
+
+    // Test plumbing through the test config
+    Properties properties = new Properties();
+    properties.putAll(props);
+    IntegrationTestingConfig testingConfig = new IntegrationTestingConfigEx(resolved, properties);
+    assertEquals("myBucket", testingConfig.getCloudBucket());
+    assertEquals("myPath", testingConfig.getCloudPath());
+    // From settings, overridden in properties
+    assertEquals("myRegion", testingConfig.getCloudRegion());
   }
 }

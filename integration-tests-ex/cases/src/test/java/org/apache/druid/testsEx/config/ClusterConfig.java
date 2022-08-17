@@ -73,6 +73,8 @@ public class ClusterConfig
   private KafkaConfig kafka;
   @JsonProperty("druid")
   private Map<String, DruidConfig> druidServices;
+  @JsonProperty("settings")
+  private Map<String, Object> settings;
   @JsonProperty("properties")
   private Map<String, Object> properties;
   @JsonProperty("metastoreInit")
@@ -252,6 +254,13 @@ public class ClusterConfig
     return druidServices;
   }
 
+  @JsonProperty("settings")
+  @JsonInclude(Include.NON_NULL)
+  public Map<String, Object> settings()
+  {
+    return settings;
+  }
+
   @JsonProperty("properties")
   @JsonInclude(Include.NON_NULL)
   public Map<String, Object> properties()
@@ -309,6 +318,11 @@ public class ClusterConfig
       merged.druidServices = overrides.druidServices;
     } else if (overrides.druidServices != null) {
       merged.druidServices.putAll(overrides.druidServices);
+    }
+    if (merged.settings == null) {
+      merged.settings = overrides.settings;
+    } else if (overrides.settings != null) {
+      merged.settings.putAll(overrides.settings);
     }
     if (merged.properties == null) {
       merged.properties = overrides.properties;

@@ -39,8 +39,18 @@ druid:
   router:
     instances:
       - port: 8888
+
 properties:
     druid.test.config.dockerIp: localhost
+    druid.test.config.cloudRegion: myRegion
+    my.test.property: howdy
+
+settings:
+    cloudBucket: myBucket
+    cloud_path: myPath
+    cloud_region: hidden
+    druid_s3_accessKey: secret
+
 metastoreInit:
   - sql: |
       REPLACE INTO druid_segments (

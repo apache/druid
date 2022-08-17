@@ -32,21 +32,26 @@ an explanation.
 
 ### Build Druid
 
+To make the text a bit simpler, define a variable for the standard settings:
+
 ```bash
-mvn clean package -P dist,skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -T1.0C
+export MAVEN_IGNORE=-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true
+
+```bash
+mvn clean package -P dist $MAVEN_IGNORE -T1.0C
 ```
 
 ### Build the Test Image
 
 ```bash
 cd $DRUID_DEV/integration-tests-ex/image
-mvn -P test-image install
+mvn install -P test-image $MAVEN_IGNORE
 ```
 
 ### Run an IT from the Command Line
 
 ```bash
-mvn install -P IT-<category> -pl :druid-it-cases
+mvn verify -P IT-<category> -pl :druid-it-cases $MAVEN_IGNORE
 ```
 
 Where `<category>` is one of the test categories.
@@ -56,7 +61,8 @@ Or
 ```bash
 cd $DRUID_DEV/integration-tests-ex/cases
 mvn verify -P skip-static-checks,docker-tests,IT-<category> \
-    -Dmaven.javadoc.skip=true -DskipUTs=true
+    -Dmaven.javadoc.skip=true -DskipUTs=true \
+    -pl :druid-it-cases
 ```
 
 ### Run an IT from the IDE

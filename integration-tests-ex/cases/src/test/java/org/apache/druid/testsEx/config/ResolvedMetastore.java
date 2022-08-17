@@ -105,18 +105,14 @@ public class ResolvedMetastore extends ResolvedService
    */
   public Map<String, Object> toProperties()
   {
-    final String base = MetadataStorageConnectorConfig.PROPERTY_BASE + ".";
+    final String base = MetadataStorageConnectorConfig.PROPERTY_BASE;
     Map<String, Object> properties = new HashMap<>();
-    if (driver != null) {
-      properties.put("druid.metadata.mysql.driver.driverClassName", driver);
-    }
-    properties.put("druid.metadata.storage.type", "mysql");
-    properties.put(base + "connectURI", connectURI);
-    properties.put(base + "user", user);
-    properties.put(base + "password", password);
-    if (properties != null) {
-      properties.put(base + "dbcp", properties);
-    }
+    TestConfigs.putProperty(properties, "druid.metadata.mysql.driver.driverClassName", driver);
+    TestConfigs.putProperty(properties, "druid.metadata.storage.type", "mysql");
+    TestConfigs.putProperty(properties, base, "connectURI", connectURI);
+    TestConfigs.putProperty(properties, base, "user", user);
+    TestConfigs.putProperty(properties, base, "password", password);
+    TestConfigs.putProperty(properties, base, "dbcp", this.properties);
     return properties;
   }
 

@@ -59,6 +59,8 @@ run in the Docker container. If so, copy those queries into the
 these setup queries run in the test client, not in each Docker service.)
 See the former `druid.sh` script to see what SQL was used previously.
 
+###
+
 ## Test Runner
 
 ITs require a large amount of setup. All that code is encapsulated in the
@@ -155,6 +157,17 @@ Instead, we can use the `target/shared` folder: create a new `data`
 folder, copy in the required files, and mount that at `/resources`.
 Or, if we feel energetic, just change the specs to read their data
 from `/shared/data`, since `/shared` is already mounted.
+
+### Extensions
+
+You may see build or other code that passes a list of extensions to an old
+integration test. Such configuration represents a misunderstanding of how tests (as
+clients) actually work. Tests nave no visibility to a Druid installation directory.
+As a result, the "extension" concept does not apply. Instead, tests are run from
+Maven, and are subject to the usual Maven process for locating jar files. That
+means that any extensions which the test wants to use should be listed as dependencies
+in the `pom.xml` file, and will be available on the class path. There is no need for,
+or use of, the `druid_extensions_loadList` for tests (or, indeed, for any client.)
 
 ### Starter Test (Optional)
 

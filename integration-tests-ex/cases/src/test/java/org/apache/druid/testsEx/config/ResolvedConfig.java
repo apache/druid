@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.curator.CuratorConfig;
 import org.apache.druid.curator.ExhibitorConfig;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.IntegrationTestingConfigProvider;
 import org.apache.druid.testsEx.config.ClusterConfig.ClusterType;
 import org.apache.druid.testsEx.config.ResolvedService.ResolvedKafka;
 import org.apache.druid.testsEx.config.ResolvedService.ResolvedZk;
@@ -52,8 +52,9 @@ public class ResolvedConfig
   private final String proxyHost;
   private final int readyTimeoutSec;
   private final int readyPollMs;
-  private final String datasourceNameSuffix;
+  final String datasourceNameSuffix;
   private Map<String, Object> properties;
+  private Map<String, Object> settings;
 
   private final ResolvedZk zk;
   private final ResolvedKafka kafka;
@@ -77,6 +78,11 @@ public class ResolvedConfig
       this.properties = ImmutableMap.of();
     } else {
       this.properties = config.properties();
+    }
+    if (config.settings() == null) {
+      this.settings = ImmutableMap.of();
+    } else {
+      this.settings = config.settings();
     }
     if (config.datasourceSuffix() == null) {
       this.datasourceNameSuffix = "";
@@ -159,6 +165,11 @@ public class ResolvedConfig
     return kafka;
   }
 
+  public Map<String, Object> settings()
+  {
+    return settings;
+  }
+
   public Map<String, Object> properties()
   {
     return properties;
@@ -170,6 +181,14 @@ public class ResolvedConfig
       throw new ISE("Please configure Druid services");
     }
     return druidServices;
+  }
+
+  public ResolvedZk requireZk()
+  {
+    if (zk == null) {
+      throw new ISE("Please specify the ZooKeeper configuration");
+    }
+    return zk;
   }
 
   public ResolvedMetastore requireMetastore()
@@ -253,15 +272,37 @@ public class ResolvedConfig
   }
 
   /**
+   * Map from old-style config file (and settings) name to the
+   * corresponding property.
+   */
+  private static final Map<String, String> SETTINGS_MAP =
+      ImmutableMap.<String, String>builder()
+        .put("cloud_bucket", "cloudBucket")
+        .put("cloud_path", "cloudPath")
+        .put("cloud_region", "cloudRegion")
+        .put("s3_assume_role_with_external_id", "s3AssumeRoleWithExternalId")
+        .put("s3_assume_role_external_id", "s3AssumeRoleExternalId")
+        .put("s3_assume_role_without_external_id", "s3AssumeRoleWithoutExternalId")
+        .put("stream_endpoint", "streamEndpoint")
+        .put("s3_accessKey", "s3AccessKey")
+        .put("s3_secretKey", "s3SecretKey")
+        .put("azure_account", "azureAccount")
+        .put("azure_key", "azureKey")
+        .put("azure_container", "azureContainer")
+        .put("google_bucket", "googleBucket")
+        .put("google_prefix", "googlePrefix")
+        .build();
+
+  /**
    * Convert the config in this structure the the properties
    * used to configure Guice.
    */
   public Map<String, Object> toProperties()
   {
     Map<String, Object> properties = new HashMap<>();
-    if (proxyHost != null) {
-      properties.put("druid.test.config.dockerIp", proxyHost);
-    }
+    // druid.test.config.dockerIp is used by some older test code. Remove
+    // it when that code is updated.
+    TestConfigs.putProperty(properties, "druid.test.config.dockerIp", proxyHost);
 
     // Start with implicit properties from various sections.
     if (zk != null) {
@@ -271,386 +312,24 @@ public class ResolvedConfig
       properties.putAll(metastore.toProperties());
     }
 
+    // Add settings, converted to properties. Map both old and
+    // "property-style" settings to the full property path.
+    // Settings are converted to properties so they can be overridden
+    // by environment variables and -D command-line settings.
+    for (Map.Entry<String, Object> entry : settings.entrySet()) {
+      String key = entry.getKey();
+      if (key.startsWith("druid_")) {
+        key = key.substring("druid_".length());
+      }
+      String mapped = SETTINGS_MAP.get(key);
+      key = mapped == null ? key : mapped;
+      TestConfigs.putProperty(properties, IntegrationTestingConfigProvider.PROPERTY_BASE, key, entry.getValue());
+    }
+
     // Add explicit properties
     if (this.properties != null) {
-      properties.putAll(properties);
+      properties.putAll(this.properties);
     }
     return properties;
-  }
-
-  public IntegrationTestingConfig toIntegrationTestingConfig()
-  {
-    return new IntegrationTestingConfigShim();
-  }
-
-  /**
-   * Adapter to the "legacy" cluster configuration used by tests.
-   */
-  private class IntegrationTestingConfigShim implements IntegrationTestingConfig
-  {
-    @Override
-    public String getZookeeperHosts()
-    {
-      return zk.clientHosts();
-    }
-
-    @Override
-    public String getKafkaHost()
-    {
-      return requireKafka().instance().clientHost();
-    }
-
-    @Override
-    public String getKafkaInternalHost()
-    {
-      return requireKafka().instance().host();
-    }
-
-    @Override
-    public String getBrokerHost()
-    {
-      return requireBroker().instance().clientHost();
-    }
-
-    @Override
-    public String getBrokerInternalHost()
-    {
-      return requireBroker().instance().host();
-    }
-
-    @Override
-    public String getRouterHost()
-    {
-      return requireRouter().instance().clientHost();
-    }
-
-    @Override
-    public String getRouterInternalHost()
-    {
-      return requireRouter().instance().host();
-    }
-
-    @Override
-    public String getCoordinatorHost()
-    {
-      return requireCoordinator().tagOrDefault("one").clientHost();
-    }
-
-    @Override
-    public String getCoordinatorInternalHost()
-    {
-      return requireCoordinator().tagOrDefault("one").host();
-    }
-
-    @Override
-    public String getCoordinatorTwoInternalHost()
-    {
-      return requireCoordinator().requireInstance("two").host();
-    }
-
-    @Override
-    public String getCoordinatorTwoHost()
-    {
-      return requireCoordinator().tagOrDefault("one").clientHost();
-    }
-
-    @Override
-    public String getOverlordHost()
-    {
-      return requireOverlord().tagOrDefault("one").clientHost();
-    }
-
-    @Override
-    public String getOverlordTwoHost()
-    {
-      return requireOverlord().tagOrDefault("two").clientHost();
-    }
-
-    @Override
-    public String getOverlordInternalHost()
-    {
-      return requireOverlord().tagOrDefault("one").host();
-    }
-
-    @Override
-    public String getOverlordTwoInternalHost()
-    {
-      return requireOverlord().requireInstance("two").host();
-    }
-
-    @Override
-    public String getMiddleManagerHost()
-    {
-      return requireMiddleManager().instance().clientHost();
-    }
-
-    @Override
-    public String getMiddleManagerInternalHost()
-    {
-      return requireMiddleManager().instance().host();
-    }
-
-    @Override
-    public String getHistoricalHost()
-    {
-      return requireHistorical().instance().clientHost();
-    }
-
-    @Override
-    public String getHistoricalInternalHost()
-    {
-      return requireHistorical().instance().host();
-    }
-
-    @Override
-    public String getCoordinatorUrl()
-    {
-      ResolvedDruidService config = requireCoordinator();
-      return config.resolveUrl(config.tagOrDefault("one"));
-    }
-
-    @Override
-    public String getCoordinatorTLSUrl()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getCoordinatorTwoUrl()
-    {
-      ResolvedDruidService config = requireCoordinator();
-      return config.resolveUrl(config.requireInstance("two"));
-    }
-
-    @Override
-    public String getCoordinatorTwoTLSUrl()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getOverlordUrl()
-    {
-      ResolvedDruidService config = requireOverlord();
-      return config.resolveUrl(config.tagOrDefault("one"));
-    }
-
-    @Override
-    public String getOverlordTLSUrl()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getOverlordTwoUrl()
-    {
-      ResolvedDruidService config = requireOverlord();
-      return config.resolveUrl(config.requireInstance("two"));
-    }
-
-    @Override
-    public String getOverlordTwoTLSUrl()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getIndexerUrl()
-    {
-      ResolvedDruidService indexer = druidService(INDEXER);
-      if (indexer == null) {
-        indexer = requireMiddleManager();
-      }
-      return indexer.resolveUrl(indexer.instance());
-    }
-
-    @Override
-    public String getIndexerTLSUrl()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getRouterUrl()
-    {
-      return routerUrl();
-    }
-
-    @Override
-    public String getRouterTLSUrl()
-    {
-      ResolvedDruidService config = requireRouter();
-      return config.resolveUrl(config.tagOrDefault("tls"));
-    }
-
-    @Override
-    public String getPermissiveRouterUrl()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getPermissiveRouterTLSUrl()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getNoClientAuthRouterUrl()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getNoClientAuthRouterTLSUrl()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getCustomCertCheckRouterUrl()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getCustomCertCheckRouterTLSUrl()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getBrokerUrl()
-    {
-      ResolvedDruidService config = requireBroker();
-      return config.resolveUrl(config.instance());
-    }
-
-    @Override
-    public String getBrokerTLSUrl()
-    {
-      ResolvedDruidService config = requireBroker();
-      return config.resolveUrl(config.tagOrDefault("tls"));
-    }
-
-    @Override
-    public String getHistoricalUrl()
-    {
-      return requireHistorical().resolveUrl();
-    }
-
-    @Override
-    public String getHistoricalTLSUrl()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getProperty(String prop)
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getUsername()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getPassword()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public Map<String, String> getProperties()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public boolean manageKafkaTopic()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getExtraDatasourceNameSuffix()
-    {
-      return datasourceNameSuffix;
-    }
-
-    @Override
-    public String getCloudBucket()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getCloudPath()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getCloudRegion()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getS3AssumeRoleWithExternalId()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getS3AssumeRoleExternalId()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getS3AssumeRoleWithoutExternalId()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getAzureKey()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getHadoopGcsCredentialsPath()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getStreamEndpoint()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public String getSchemaRegistryHost()
-    {
-      throw new ISE("Not implemented");
-    }
-
-    @Override
-    public boolean isDocker()
-    {
-      return ResolvedConfig.this.isDocker();
-    }
-
-    @Override
-    public String getDockerHost()
-    {
-      return proxyHost();
-    }
   }
 }
