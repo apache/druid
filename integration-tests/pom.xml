@@ -306,32 +306,24 @@
         <dependency>
             <groupId>com.github.docker-java</groupId>
             <artifactId>docker-java</artifactId>
-            <version>3.2.0</version>
             <exclusions>
                 <exclusion>
                     <groupId>com.github.docker-java</groupId>
                     <artifactId>docker-java-transport-jersey</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>io.netty</groupId>
-                    <artifactId>netty-transport-native-kqueue</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
         <dependency>
             <groupId>com.github.docker-java</groupId>
             <artifactId>docker-java-transport-netty</artifactId>
-            <version>3.2.11</version>
         </dependency>
         <dependency>
             <groupId>com.github.docker-java</groupId>
             <artifactId>docker-java-api</artifactId>
-            <version>3.2.0</version>
         </dependency>
         <dependency>
             <groupId>com.github.docker-java</groupId>
             <artifactId>docker-java-core</artifactId>
-            <version>3.2.0</version>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
@@ -349,6 +341,12 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-kqueue</artifactId>
             <classifier>osx-x86_64</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport-native-kqueue</artifactId>
+            <classifier>osx-aarch_64</classifier>
             <scope>runtime</scope>
         </dependency>
         <dependency>
