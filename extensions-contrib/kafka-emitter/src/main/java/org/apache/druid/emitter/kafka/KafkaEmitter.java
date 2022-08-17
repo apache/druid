@@ -22,7 +22,6 @@ package org.apache.druid.emitter.kafka;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.emitter.kafka.MemoryBoundLinkedBlockingQueue.ObjectContainer;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -39,7 +38,6 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -60,7 +58,7 @@ public class KafkaEmitter implements Emitter
 
   private final KafkaEmitterConfig config;
   private final Producer<String, String> producer;
-  private final ObjectMapper jsonMapper;
+  private final EventToJsonSerializer jsonSerializer;
   private final MemoryBoundLinkedBlockingQueue<String> metricQueue;
   private final MemoryBoundLinkedBlockingQueue<String> alertQueue;
   private final MemoryBoundLinkedBlockingQueue<String> requestQueue;
@@ -71,7 +69,8 @@ public class KafkaEmitter implements Emitter
   public KafkaEmitter(KafkaEmitterConfig config, ObjectMapper jsonMapper)
   {
     this.config = config;
-    this.jsonMapper = jsonMapper;
+    this.jsonSerializer = EventToJsonSerializer.of(jsonMapper)
+                                               .withProperty("clusterName", config.getClusterName());
     this.producer = setKafkaProducer();
     // same with kafka producer's buffer.memory
     long queueMemoryBound = Long.parseLong(this.config.getKafkaProducerConfig()
@@ -126,8 +125,12 @@ public class KafkaEmitter implements Emitter
       scheduler.schedule(this::sendRequestToKafka, sendInterval, TimeUnit.SECONDS);
     }
     scheduler.scheduleWithFixedDelay(() -> {
-      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], invalidLost=[%d]",
-          metricLost.get(), alertLost.get(), requestLost.get(), invalidLost.get()
+      log.info(
+          "Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], invalidLost=[%d]",
+          metricLost.get(),
+          alertLost.get(),
+          requestLost.get(),
+          invalidLost.get()
       );
     }, DEFAULT_SEND_LOST_INTERVAL_MINUTES, DEFAULT_SEND_LOST_INTERVAL_MINUTES, TimeUnit.MINUTES);
     log.info("Starting Kafka Emitter.");
@@ -166,14 +169,8 @@ public class KafkaEmitter implements Emitter
   public void emit(final Event event)
   {
     if (event != null) {
-      ImmutableMap.Builder<String, Object> resultBuilder = ImmutableMap.<String, Object>builder().putAll(event.toMap());
-      if (config.getClusterName() != null) {
-        resultBuilder.put("clusterName", config.getClusterName());
-      }
-      Map<String, Object> result = resultBuilder.build();
-
       try {
-        String resultJson = jsonMapper.writeValueAsString(result);
+        String resultJson = jsonSerializer.serialize(event);
         ObjectContainer<String> objectContainer = new ObjectContainer<>(
             resultJson,
             StringUtils.toUtf8(resultJson).length
