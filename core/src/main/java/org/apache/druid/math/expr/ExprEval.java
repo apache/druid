@@ -719,9 +719,9 @@ public abstract class ExprEval<T>
             case DOUBLE:
               return ExprEval.ofDoubleArray(asArray());
             case LONG:
-              return ExprEval.ofLongArray(isNumericNull() ? null : new Object[] {value.longValue()});
+              return ExprEval.ofLongArray(value == null ? null : new Object[] {value.longValue()});
             case STRING:
-              return ExprEval.ofStringArray(isNumericNull() ? null : new Object[] {value.toString()});
+              return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
           }
       }
       throw new IAE("invalid type " + castTo);
@@ -782,11 +782,11 @@ public abstract class ExprEval<T>
         case ARRAY:
           switch (castTo.getElementType().getType()) {
             case DOUBLE:
-              return ExprEval.ofDoubleArray(isNumericNull() ? null : new Object[] {value.doubleValue()});
+              return ExprEval.ofDoubleArray(value == null ? null : new Object[] {value.doubleValue()});
             case LONG:
               return ExprEval.ofLongArray(asArray());
             case STRING:
-              return ExprEval.ofStringArray(isNumericNull() ? null : new Object[] {value.toString()});
+              return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
           }
       }
       throw new IAE("invalid type " + castTo);
