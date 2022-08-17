@@ -25,14 +25,14 @@ sidebar_label: Theta sketches
 
 A common problem in clickstream analytics is counting unique things, like visitors or sessions. Generally this involves scanning through all detail data, because unique counts **do not add up** as you aggregate the numbers.
 
-For instance, we might be interested in the number of visitors that watched episodes of a TV show. Let's say we found that at a given day, 1000 unique visitors watched the first episode, and 800 visitors watched the second episode. We may want to explore further trends, for example:
+For instance, you might be interested in the number of visitors that watched episodes of a TV show. Let's say you found that at a given day, 1000 unique visitors watched the first episode, and 800 visitors watched the second episode. You may want to explore further trends, for example:
 - How many visitors watched _both_ episodes?
 - How many visitors are there that watched _at least one_ of the episodes?
 - How many visitors watched episode 1 _but not_ episode 2?
 
-There is no way to answer these questions by just looking at the aggregated numbers. We will have to go back to the detail data and scan every single row. If the data volume is high enough, this may take long, meaning that an interactive data exploration is not possible.
+There is no way to answer these questions by just looking at the aggregated numbers. You would have to go back to the detail data and scan every single row. If the data volume is high enough, this may take long, meaning that an interactive data exploration is not possible.
 
-An additional nuisance is that unique counts don't work well with rollups. For the example above, it would be great if we could have just one row of data per 15 minute interval[^1], show, and episode. After all, we are not interested in the individual user IDs, just the unique counts.
+An additional nuisance is that unique counts don't work well with rollups. For the example above, it would be great if you could have just one row of data per 15 minute interval[^1], show, and episode. After all, you are not interested in the individual user IDs, just the unique counts.
 
 [^1]: Why 15 minutes and not just 1 hour? Intervals of 15 minutes work better with international timezones because those are not always aligned by hour. India, for instance, is 30 minutes off, and Nepal is even 45 minutes off. With 15 minute aggregates, you can get hourly sums for any of those timezones, too!
 
@@ -45,7 +45,7 @@ Theta sketches are a probabilistic data structure to enable fast approximate ana
 Theta sketches have a few useful properties:
 
 - They give you a **fast approximate estimate** for the distinct count of items that you put into them.
-- They are **mergeable**. This means we can work with rolled up data and merge the sketches over various time intervals. Thus, we can take advantage of Druid's rollup feature.
+- They are **mergeable**. This means you can work with rolled up data and merge the sketches over various time intervals. Thus, you can take advantage of Druid's rollup feature.
 - Theta sketches support **set operations**. Given two Theta sketches over subsets of data, you can compute the union, intersection, or set difference of the two subsets. This enables you to answer questions like the number of visitors that watched a specific combination of episodes from the example.
 
 There is a lot of advanced math behind Theta sketches[^2], but Druid handles the complex algorithms for you.
@@ -55,7 +55,7 @@ There is a lot of advanced math behind Theta sketches[^2], but Druid handles the
 This tutorial shows you how to create Theta sketches from your input data at ingestion time and how to run distinct count and set operation queries on the Theta sketches.
 
 ## Prerequisites
-For this tutorial, we'll assume you've already downloaded Druid as described in
+For this tutorial, you should have already downloaded Druid as described in
 the [single-machine quickstart](index.md) and have it running on your local machine.
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
 
@@ -119,7 +119,7 @@ Define the new metric as a Theta sketch with the following details:
 Click **Apply** to add the new metric to the data model.
 
 
-We have to perform one more step to complete the data model. We are not interested in individual user ID's, only the unique counts. Right now, `uid` is still in the data model. Let's get rid of that!
+There is one more step to complete the data model. You are not interested in individual user ID's, only the unique counts. Right now, `uid` is still in the data model. Let's get rid of that!
 
 Click on the `uid` column in the data model and delete it using the trashcan icon on the right:
 
@@ -240,7 +240,7 @@ That is, `APPROX_COUNT_DISTINCT_DS_THETA` applies the following:
 
 ### Filtered metrics
 
-Druid has the capability to use [filtered metrics](../querying/sql-aggregations.md). This means we can include a WHERE clause in the SELECT part of the query.
+Druid has the capability to use [filtered metrics](../querying/sql-aggregations.md). This means you can include a WHERE clause in the SELECT part of the query.
 > In the case of Theta sketches, the filter clause has to be inserted between the aggregator and the estimator.
 
 As an example, query the total unique users that watched _Bridgerton:_
@@ -256,7 +256,7 @@ FROM ts_tutorial
 
 ### Set operations
 
-We can use this capability of filtering in the aggregator, together with _set operations_, to finally answer the questions from above.
+You can use this capability of filtering in the aggregator, together with _set operations_, to finally answer the questions from above.
 
 How many users watched both episodes of _Bridgerton?_ Use `THETA_SKETCH_INTERSECT` to compute the unique count of the intersection of two (or more) segments:
 
