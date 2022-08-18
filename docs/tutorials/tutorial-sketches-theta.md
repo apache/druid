@@ -285,7 +285,9 @@ FROM ts_tutorial
 
 ![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-10.png)
 
-And finally, there is `THETA_SKETCH_NOT` which computes the set difference of two or more segments:
+And finally, there is `THETA_SKETCH_NOT` which computes the set difference of two or more segments.
+The result describes how many visitors watched episode 1 of Bridgerton but not episode 2.
+
 
 ```sql
 SELECT THETA_SKETCH_ESTIMATE(
