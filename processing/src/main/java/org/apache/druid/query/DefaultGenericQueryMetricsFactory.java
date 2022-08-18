@@ -22,8 +22,6 @@ package org.apache.druid.query;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.guice.LazySingleton;
 
-import javax.annotation.Nullable;
-
 @LazySingleton
 public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFactory
 {
@@ -48,7 +46,6 @@ public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFac
     return queryMetrics;
   }
 
-  @Nullable
   @Override
   public QueryMetrics<Query<?>> makeMetrics()
   {
