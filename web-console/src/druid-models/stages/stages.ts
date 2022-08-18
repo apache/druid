@@ -89,7 +89,7 @@ export function formatClusterBy(
   if (bucketByCount) {
     if (part === 'partition') {
       columns = columns.slice(0, bucketByCount);
-    } else if (bucketByCount) {
+    } else {
       columns = columns.slice(bucketByCount);
     }
   }
