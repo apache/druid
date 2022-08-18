@@ -31,7 +31,7 @@ export function getDemoQueries(): TabEntry[] {
       tabName: 'Demo 1',
       query: makeDemoQuery(
         `
--- Demo 1 showcases the new SQL syntax available as part of the sql-task engine.
+-- Demo 1 showcases the new SQL syntax available as part of the sql-msq-task engine.
 --
 -- The two syntax pieces highlighted in this demo are:
 --
@@ -244,14 +244,14 @@ PARTITIONED BY ALL TIME
       tabName: 'Demo 5',
       query: makeDemoQuery(
         `
--- You don't have to wrap your query in a REPLACE / INSERT clause to run it with the sql-task engine. In fact, when you
+-- You don't have to wrap your query in a REPLACE / INSERT clause to run it with the sql-msq-task engine. In fact, when you
 -- use the "Preview" button for any of the earlier demos, it works by removing the REPLACE / INSERT clause and
 -- running the query "inline" as a SELECT with a limit.
 --
 -- If you want to run a one time calculation on data, you can do it without ingesting it into Druid. Doing this
 -- takes the same order of magnitude of resources and time as it would to ingest the data into Druid though.
 --
--- This functionality should be considered as a tech preview of what the sql-task engine can do and not something for
+-- This functionality should be considered as a tech preview of what the sql-msq-task engine can do and not something for
 -- production use (outside of specific, narrow uses like the "Preview" feature in this console).
 
 WITH
@@ -288,7 +288,7 @@ LIMIT 10
       tabName: 'Demo 6',
       query: makeDemoQuery(
         `
--- At the heart of the sql-task engine is the ability to sort arbitrarily large amounts of data. Demo 6
+-- At the heart of the sql-msq-task engine is the ability to sort arbitrarily large amounts of data. Demo 6
 -- re-sorts the kttm_simple datasource on an arbitrary sort condition. This isn't possible with the "sql" or "native"
 -- engines since it requires the same order of magnitude of resources as ingesting the entire dataset over again.
 
