@@ -24,9 +24,12 @@ sidebar_label: Theta sketches
   -->
 
 Apache Druid can power real-time collection, streaming, and interactive visualization of clickstreams.
-A common problem in clickstream analytics is counting unique things, like visitors or sessions. Generally this involves scanning through all detail data, because unique counts do not add up as you aggregate the numbers.
+A common problem in clickstream analytics is counting unique things, like visitors or sessions.
+Generally this involves scanning through all detail data, because unique counts do not add up as you aggregate the numbers.
 
-For instance, you might be interested in the number of visitors that watched episodes of a TV show. Let's say you found that at a given day, 1000 unique visitors watched the first episode, and 800 visitors watched the second episode. You may want to explore further trends, for example:
+## The problem with counts and set operations on large data sets
+
+Imagine you are interested in the number of visitors that watched episodes of a TV show. Let's say you found that at a given day, 1000 unique visitors watched the first episode, and 800 visitors watched the second episode. You may want to explore further trends, for example:
 - How many visitors watched _both_ episodes?
 - How many visitors are there that watched _at least one_ of the episodes?
 - How many visitors watched episode 1 _but not_ episode 2?
@@ -38,7 +41,9 @@ An additional nuisance is that unique counts don't work well with rollups. For t
 [^1]: Why 15 minutes and not just 1 hour? Intervals of 15 minutes work better with international timezones because those are not always aligned by hour. India, for instance, is 30 minutes off, and Nepal is even 45 minutes off. With 15 minute aggregates, you can get hourly sums for any of those timezones, too!
 
 Is there a way to avoid crunching the detail data every single time, and maybe even enable rollup?
-**Enter Theta sketches for fast approximation with set operations.**
+Enter Theta sketches.
+
+## Use Theta sketches for fast approximation with set operations
 
 Use Theta sketches to obtain a fast approximate estimate for the distinct count of values used to build the sketches.
 Theta sketches are a probabilistic data structure to enable approximate analysis of big data with known error distributions.
