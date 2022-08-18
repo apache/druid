@@ -86,7 +86,7 @@ Following are main parts to a groupBy query:
 |queryType|This String should always be "groupBy"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../querying/datasource.md) for more information.|yes|
 |dimensions|A JSON list of dimensions to do the groupBy over; or see [DimensionSpec](../querying/dimensionspecs.md) for ways to extract dimensions. |yes|
-|virtualColumns|Define any [virtual columns](./virtual-columns.md) to be available to use as `dimensions` or referenced as inputs to `aggregations` or `postAggregations`.| no (default none)|
+|virtualColumns|A JSON list of [virtual columns](./virtual-columns.md). You can reference the virtual columns in `dimensions`, `aggregations`, or `postAggregations`.| no (default none)|
 |limitSpec|See [LimitSpec](../querying/limitspec.md).|no|
 |having|See [Having](../querying/having.md).|no|
 |granularity|Defines the granularity of the query. See [Granularities](../querying/granularities.md)|yes|
