@@ -92,7 +92,7 @@ export class FlexibleQueryInput extends React.PureComponent<
       SQL_EXPRESSION_PARTS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
       SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 0, meta: 'constant' })),
       SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 0, meta: 'dynamic' })),
-      SQL_DATA_TYPES.map(([name, runtime, description]) => ({
+      Object.entries(SQL_DATA_TYPES).map(([name, [runtime, description]]) => ({
         name,
         value: name,
         score: 0,
@@ -121,8 +121,7 @@ export class FlexibleQueryInput extends React.PureComponent<
   static addFunctionAutoCompleter(): void {
     if (!langTools) return;
 
-    const functionList: any[] = Object.keys(SQL_FUNCTIONS).flatMap(name => {
-      const versions = SQL_FUNCTIONS[name];
+    const functionList: any[] = Object.entries(SQL_FUNCTIONS).flatMap(([name, versions]) => {
       return versions.map(([args, description]) => ({
         name: name,
         value: versions.length > 1 ? `${name}(${args})` : name,

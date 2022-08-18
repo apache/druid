@@ -69,7 +69,7 @@ const readDoc = async () => {
   const lines = data.split('\n');
 
   const functionDocs = {};
-  const dataTypeDocs = [];
+  const dataTypeDocs = {};
   for (let line of lines) {
     const functionMatch = line.match(/^\|\s*`(\w+)\(([^|]*)\)`\s*\|([^|]+)\|(?:([^|]+)\|)?$/);
     if (functionMatch) {
@@ -83,11 +83,7 @@ const readDoc = async () => {
 
     const dataTypeMatch = line.match(/^\|([A-Z]+)\|([A-Z]+)\|([^|]*)\|([^|]*)\|$/);
     if (dataTypeMatch) {
-      dataTypeDocs.push([
-        dataTypeMatch[1],
-        dataTypeMatch[2],
-        convertMarkdownToHtml(dataTypeMatch[4]),
-      ]);
+      dataTypeDocs[dataTypeMatch[1]] = [dataTypeMatch[2], convertMarkdownToHtml(dataTypeMatch[4])];
     }
   }
 
