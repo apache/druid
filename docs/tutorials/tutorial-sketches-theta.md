@@ -23,7 +23,8 @@ sidebar_label: Theta sketches
   ~ under the License.
   -->
 
-A common problem in clickstream analytics is counting unique things, like visitors or sessions. Generally this involves scanning through all detail data, because unique counts **do not add up** as you aggregate the numbers.
+Apache Druid can power real-time collection, streaming, and interactive visualization of clickstreams.
+A common problem in clickstream analytics is counting unique things, like visitors or sessions. Generally this involves scanning through all detail data, because unique counts do not add up as you aggregate the numbers.
 
 For instance, you might be interested in the number of visitors that watched episodes of a TV show. Let's say you found that at a given day, 1000 unique visitors watched the first episode, and 800 visitors watched the second episode. You may want to explore further trends, for example:
 - How many visitors watched _both_ episodes?
@@ -32,37 +33,34 @@ For instance, you might be interested in the number of visitors that watched epi
 
 There is no way to answer these questions by just looking at the aggregated numbers. You would have to go back to the detail data and scan every single row. If the data volume is high enough, this may take long, meaning that an interactive data exploration is not possible.
 
-An additional nuisance is that unique counts don't work well with rollups. For the example above, it would be great if you could have just one row of data per 15 minute interval[^1], show, and episode. After all, you are not interested in the individual user IDs, just the unique counts.
+An additional nuisance is that unique counts don't work well with rollups. For this example, it would be great if you could have just one row of data per 15 minute interval[^1], show, and episode. After all, you are not interested in the individual user IDs, just the unique counts.
 
 [^1]: Why 15 minutes and not just 1 hour? Intervals of 15 minutes work better with international timezones because those are not always aligned by hour. India, for instance, is 30 minutes off, and Nepal is even 45 minutes off. With 15 minute aggregates, you can get hourly sums for any of those timezones, too!
 
 Is there a way to avoid crunching the detail data every single time, and maybe even enable rollup?
+**Enter Theta sketches for fast approximation with set operations.**
 
-## Fast approximation with set operations: Theta sketches
+Use Theta sketches to obtain a fast approximate estimate for the distinct count of values used to build the sketches.
+Theta sketches are a probabilistic data structure to enable approximate analysis of big data with known error distributions.
+Druid's implementation relies on the [Apache DataSketches](https://datasketches.apache.org/) library.
 
-Theta sketches are a probabilistic data structure to enable fast approximate analysis of big data. Druid's implementation relies on the [Apache DataSketches](https://datasketches.apache.org/) library.
+The following properties describe Theta sketches:
+* Similar to other sketches, Theta sketches are **mergeable**. This means you can work with rolled up data and merge the sketches over various time intervals. Thus, you can take advantage of Druid's rollup feature.
+* Specific to sketches supported in Druid, Theta sketches support **set operations**. Given two Theta sketches over subsets of data, you can compute the union, intersection, or set difference of the two subsets. This enables you to answer questions like the number of visitors that watched a specific combination of episodes from the example.
 
-Theta sketches have a few useful properties:
+In this tutorial, you will learn how to do the following:
+* Create Theta sketches from your input data at ingestion time.
+* Execute distinct count and set operation queries on the Theta sketches to explore the questions presented earlier.
 
-- They give you a **fast approximate estimate** for the distinct count of items that you put into them.
-- They are **mergeable**. This means you can work with rolled up data and merge the sketches over various time intervals. Thus, you can take advantage of Druid's rollup feature.
-- Theta sketches support **set operations**. Given two Theta sketches over subsets of data, you can compute the union, intersection, or set difference of the two subsets. This enables you to answer questions like the number of visitors that watched a specific combination of episodes from the example.
-
-There is a lot of advanced math behind Theta sketches[^2], but Druid handles the complex algorithms for you.
-
-[^2]: Specifically, the accuracy of the result is governed by the size _k_ of the Theta sketch, and by the operations you perform. See more details in the [Apache DataSketches documentation](https://datasketches.apache.org/docs/Theta/ThetaAccuracy.html). There's also a version of the sketch estimator `THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS` which takes an additional integer parameter and returns the error boundaries for the result in a JSON object.
-
-This tutorial shows you how to create Theta sketches from your input data at ingestion time and how to run distinct count and set operation queries on the Theta sketches.
 
 ## Prerequisites
+
 For this tutorial, you should have already downloaded Druid as described in
 the [single-machine quickstart](index.md) and have it running on your local machine.
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
 
-## Ingest data using Theta sketches
-
-This tutorial works with data in the snippet below, which has just the bare basics that are needed:
-- **date**: a timestamp. In this case it's just dates but as mentioned above a finer granularity makes sense in real life.
+This tutorial works with the following data:
+- **date**: a timestamp. In this case it's just dates but as mentioned earlier, a finer granularity makes sense in real life.
 - **uid**: a user ID
 - **show**: name of a TV show
 - **episode**: episode identifier
@@ -90,45 +88,44 @@ date,uid,show,episode
 2022-05-23,alice,Game of Thrones,S1E1
 ```
 
-Navigate to the **Load data** wizard in the Druid console.
-Select `Paste data` as the data source and paste the sample from above:
+## Ingest data using Theta sketches
+
+1. Navigate to the **Load data** wizard in the Druid console.
+2. Select `Paste data` as the data source and paste the given data:
 
 ![Load data view with pasted data](../assets/tutorial-theta-01.png)
 
-Leave the source type as `inline` and click **Apply** and **Next: Parse data**.
-Parse the data as CSV, with included headers:
+3. Leave the source type as `inline` and click **Apply** and **Next: Parse data**.
+4. Parse the data as CSV, with included headers:
 
 ![Parse raw data](../assets/tutorial-theta-02.png)
 
-Accept the default values in the **Parse time**, **Transform**, and **Filter** stages.
-
-In the **Configure schema** stage, enable rollup and confirm your choice in the dialog. Then set the query granularity to `day`.
+5. Accept the default values in the **Parse time**, **Transform**, and **Filter** stages.
+6. In the **Configure schema** stage, enable rollup and confirm your choice in the dialog. Then set the query granularity to `day`.
 
 ![Configure schema for rollup and query granularity](../assets/tutorial-theta-03.png)
 
-Add the Theta sketch during this stage. Select **Add metric**.
-Define the new metric as a Theta sketch with the following details:
-* **Name**: `theta_uid`
-* **Type**: `thetaSketch`
-* **Field name**: `uid`
-* **Size**: Accept the default value, `16384`.
-* **Is input theta sketch**: Accept the default value, `False`.
+7. Add the Theta sketch during this stage. Select **Add metric**.
+8. Define the new metric as a Theta sketch with the following details:
+   * **Name**: `theta_uid`
+   * **Type**: `thetaSketch`
+   * **Field name**: `uid`
+   * **Size**: Accept the default value, `16384`.
+   * **Is input theta sketch**: Accept the default value, `False`.
 
 ![Create Theta sketch metric](../assets/tutorial-theta-04.png)
 
-Click **Apply** to add the new metric to the data model.
+9. Click **Apply** to add the new metric to the data model.
 
 
-There is one more step to complete the data model. You are not interested in individual user ID's, only the unique counts. Right now, `uid` is still in the data model. Let's get rid of that!
-
-Click on the `uid` column in the data model and delete it using the trashcan icon on the right:
+10. You are not interested in individual user ID's, only the unique counts. Right now, `uid` is still in the data model. To remove it, click on the `uid` column in the data model and delete it using the trashcan icon on the right:
 
 ![Delete uid column](../assets/tutorial-theta-05.png)
 
-For the remaining stages of the **Load data** wizard, set the following options:
-* **Partition**: Set **Segment granularity** to `day`.
-* **Tune**: Leave the default options.
-* **Publish**: Set the datasource name to `ts_tutorial`.
+11. For the remaining stages of the **Load data** wizard, set the following options:
+    * **Partition**: Set **Segment granularity** to `day`.
+    * **Tune**: Leave the default options.
+    * **Publish**: Set the datasource name to `ts_tutorial`.
 
 On the **Edit spec** page, your final input spec should match the following:
 
@@ -256,7 +253,7 @@ FROM ts_tutorial
 
 ### Set operations
 
-You can use this capability of filtering in the aggregator, together with _set operations_, to finally answer the questions from above.
+You can use this capability of filtering in the aggregator, together with _set operations_, to finally answer the questions from the introduction.
 
 How many users watched both episodes of _Bridgerton?_ Use `THETA_SKETCH_INTERSECT` to compute the unique count of the intersection of two (or more) segments:
 
@@ -311,10 +308,11 @@ FROM ts_tutorial
 ## Further reading
 
 See the following topics for more information:
-* [Theta sketch](../development/extensions-core/datasketches-theta.md) for reference on ingestion and native queries on Theta sketches.
-* [Theta sketch scalar functions](../querying/sql-aggregations.md#theta-sketch-functions) and [Theta sketch aggregation functions](../querying/sql-aggregations.md#theta-sketch-functions) for Theta sketch functions in Druid SQL queries.
-* [Sketches for high cardinality columns](../ingestion/schema-design.md#sketches-for-high-cardinality-columns) for schema design involving sketches.
+* [Theta sketch](../development/extensions-core/datasketches-theta.md) for reference on ingestion and native queries on Theta sketches in Druid.
+* [Theta sketch scalar functions](../querying/sql-scalar.md#theta-sketch-functions) and [Theta sketch aggregation functions](../querying/sql-aggregations.md#theta-sketch-functions) for Theta sketch functions in Druid SQL queries.
+* [Sketches for high cardinality columns](../ingestion/schema-design.md#sketches-for-high-cardinality-columns) for Druid schema design involving sketches.
 * [DataSketches extension](../development/extensions-core/datasketches-extension.md) for more information about the DataSketches extension in Druid as well as other available sketches.
+* The accuracy of queries using Theta sketches is governed by the size _k_ of the Theta sketch and by the operations you perform. See more details in the [Apache DataSketches documentation](https://datasketches.apache.org/docs/Theta/ThetaAccuracy.html).
 
 ## Acknowledgments
 
