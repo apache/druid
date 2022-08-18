@@ -647,6 +647,46 @@ Parses `address` into an IPv4 address stored as an integer.
 
 Converts `address` into an IPv4 address in dot-decimal notation.
 
+## JSON_KEYS
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`JSON_KEYS(expr, path)`
+
+Returns an array of field names in a `COMPLEX<json>` typed `expr`, at the specified `path`.
+
+## JSON_OBJECT
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])`
+
+Constructs a new `COMPLEX<json>` object. The `KEY` expressions must evaluate to string types, but the `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` values.
+
+## JSON_PATHS
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`JSON_PATHS(expr)`
+
+Returns an array of all paths which refer to literal values in a `COMPLEX<json>` typed `expr`, in JSONPath format.
+
+## JSON_QUERY
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`JSON_QUERY(expr, path)`
+
+Extracts a `COMPLEX<json>` value from a `COMPLEX<json>` typed `expr`, at the specified `path`.
+
+## JSON_VALUE
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`JSON_VALUE(expr, path [RETURNING sqlType])`
+
+Extracts a literal value from a `COMPLEX<json>` typed `expr`, at the specified `path`. If you specify `RETURNING` and an SQL type name (such as varchar, bigint, decimal, or double) the function plans the query using the suggested type. Otherwise it attempts to infer the type based on the context. If it can't infer the type, it defaults to varchar.
+
 ## LATEST
 
 `LATEST(expr)`
@@ -898,6 +938,14 @@ Returns NULL if two values are equal, else returns the first value.
 **Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
 
 Returns `e2` if `e1` is null, else returns `e1`.
+
+## PARSE_JSON
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`PARSE_JSON(expr)`
+
+Parses a string type `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. Non-`STRING` input or invalid JSON will result in an error.
 
 ## PARSE_LONG
 
@@ -1267,6 +1315,15 @@ Adds a certain amount of time to a given timestamp.
 
 Takes the difference between two timestamps, returning the results in the given units.
 
+## TO_JSON_STRING
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`TO_JSON_STRING(expr)`
+
+Casts an `expr` of any type into a `COMPLEX<json>` object, then serializes the value into a JSON string.
+
+
 ## TRIM
 
 `TRIM([BOTH|LEADING|TRAILING] [<chars> FROM] expr)`
@@ -1290,6 +1347,16 @@ Alias for [`TRUNCATE`](#truncate).
 **Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
 Truncates a numerical expression to a specific number of decimal digits.
+
+
+## TRY_PARSE_JSON
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`TRY_PARSE_JSON(expr)`
+
+Parses a string type `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. Non-`STRING` input or invalid JSON will result in a `NULL` value.
+
 
 ## UPPER
 

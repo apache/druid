@@ -63,6 +63,7 @@ const readDoc = async () => {
     await fs.readFile('../docs/querying/sql-scalar.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-aggregations.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-multivalue-string-functions.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-json-functions.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-operators.md', 'utf-8'),
   ].join('\n');
 

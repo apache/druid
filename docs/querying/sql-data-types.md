@@ -33,7 +33,7 @@ Columns in Druid are associated with a specific data type. This topic describes 
 
 Druid natively supports five basic column types: "long" (64 bit signed int), "float" (32 bit float), "double" (64 bit
 float) "string" (UTF-8 encoded strings and string arrays), and "complex" (catch-all for more exotic data types like
-hyperUnique and approxHistogram columns).
+json, hyperUnique, and approxHistogram columns).
 
 Timestamps (including the `__time` column) are treated by Druid as longs, with the value being the number of
 milliseconds since 1970-01-01 00:00:00 UTC, not counting leap seconds. Therefore, timestamps in Druid do not carry any
@@ -112,3 +112,10 @@ When `druid.expressions.useStrictBooleans = false` (the default mode), Druid use
 When `druid.expressions.useStrictBooleans = true`, Druid uses three-valued logic for
 [expressions](../misc/math-expr.md) evaluation, such as `expression` virtual columns or `expression` filters.
 However, even in this mode, Druid uses two-valued logic for filter types other than `expression`.
+
+## Nested columns
+Druid `COMPLEX<json>` types can be interacted with using [JSON functions](sql-json-functions.md), which can perform
+nested value extraction, transforms, and create new `COMPLEX<json>` structures. `COMPLEX` types currently have
+limited functionality outside of the use of these specialized functions, and so cannot be grouped on, filtered directly
+on, or used as inputs to many types of aggregations. These values can be translated into a `STRING` as workaround
+solution until `COMPLEX` types are fully integrated into the general engine.
