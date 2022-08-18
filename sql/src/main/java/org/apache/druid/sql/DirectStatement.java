@@ -139,9 +139,19 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     }
   }
 
+  private enum State
+  {
+    START,
+    PREPARED,
+    RAN,
+    CANCELLED,
+    FAILED,
+    CLOSED
+  }
+
   protected PrepareResult prepareResult;
   protected ResultSet resultSet;
-  private volatile boolean canceled;
+  private volatile State state = State.START;
 
   public DirectStatement(
       final SqlToolbox lifecycleToolbox,
@@ -189,7 +199,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
    */
   public ResultSet plan()
   {
-    if (resultSet != null) {
+    if (state != State.START) {
       throw new ISE("Can plan a query only once.");
     }
     try (DruidPlanner planner = sqlToolbox.plannerFactory.createPlanner(
@@ -206,9 +216,11 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       checkCanceled();
       resultSet = createResultSet(createPlan(planner));
       prepareResult = planner.prepareResult();
+      state = State.PREPARED;
       return resultSet;
     }
     catch (RuntimeException e) {
+      state = State.FAILED;
       reporter.failed(e);
       throw e;
     }
@@ -252,7 +264,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
    */
   private void checkCanceled()
   {
-    if (canceled) {
+    if (state == State.CANCELLED) {
       throw new QueryInterruptedException(
           QueryInterruptedException.QUERY_CANCELED,
           StringUtils.format("Query is canceled [%s]", sqlQueryId()),
@@ -265,12 +277,33 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   @Override
   public void cancel()
   {
-    canceled = true;
+    if (state == State.CLOSED) {
+      return;
+    }
+    state = State.CANCELLED;
     final CopyOnWriteArrayList<String> nativeQueryIds = plannerContext.getNativeQueryIds();
 
     for (String nativeQueryId : nativeQueryIds) {
       log.debug("Canceling native query [%s]", nativeQueryId);
       sqlToolbox.queryScheduler.cancelQuery(nativeQueryId);
+    }
+  }
+
+  @Override
+  public void close()
+  {
+    if (state != State.START && state != State.CLOSED) {
+      super.close();
+      state = State.CLOSED;
+    }
+  }
+
+  @Override
+  public void closeWithError(Throwable e)
+  {
+    if (state != State.START && state != State.CLOSED) {
+      super.closeWithError(e);
+      state = State.CLOSED;
     }
   }
 }
