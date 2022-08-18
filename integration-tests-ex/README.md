@@ -81,6 +81,7 @@ test as a JUnit test.
 
 * [Goals](#Goals)
 * [Quickstart](docs/quickstart.md)
+* [Create a new test](docs/guide.md)
 * [Maven configuration](docs/maven.md)
 * [Travis integration](docs/travis.md)
 * [Docker image](docs/docker.md)

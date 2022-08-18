@@ -262,3 +262,41 @@ to the Docker Compose configuration for this service:
 ```text
    init: true
 ```
+
+## Extensions
+
+The following extensions are installed in the image:
+
+```text
+druid-avro-extensions
+druid-aws-rds-extensions
+druid-azure-extensions
+druid-basic-security
+druid-bloom-filter
+druid-datasketches
+druid-ec2-extensions
+druid-google-extensions
+druid-hdfs-storage
+druid-histogram
+druid-kafka-extraction-namespace
+druid-kafka-indexing-service
+druid-kerberos
+druid-kinesis-indexing-service
+druid-kubernetes-extensions
+druid-lookups-cached-global
+druid-lookups-cached-single
+druid-orc-extensions
+druid-pac4j
+druid-parquet-extensions
+druid-protobuf-extensions
+druid-ranger-security
+druid-s3-extensions
+druid-stats
+it-tools
+mysql-metadata-storage
+postgresql-metadata-storage
+simple-client-sslcontext
+```
+
+If more are needed, they should be added during the image build.
+

@@ -16,6 +16,8 @@
 # limitations under the License.
 #--------------------------------------------------------------------
 
+# Probably deprecated and to be removed.
+
 # Run from Travis which has no good way to attach logs to a
 # build. Instead, we check if any IT failed. If so, we append
 # the last 100 lines of each server log to stdout. We have to

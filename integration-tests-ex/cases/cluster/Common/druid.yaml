@@ -60,6 +60,7 @@ services:
     env_file:
       - environment-configs/common.env
       - environment-configs/overlord.env
+      - ${OVERRIDE_ENV}
 
   coordinator:
     image: ${DRUID_IT_IMAGE_NAME}
@@ -76,6 +77,7 @@ services:
     env_file:
       - environment-configs/common.env
       - environment-configs/coordinator.env
+      - ${OVERRIDE_ENV}
 
   historical:
     image: ${DRUID_IT_IMAGE_NAME}
@@ -92,6 +94,7 @@ services:
     env_file:
       - environment-configs/common.env
       - environment-configs/historical.env
+      - ${OVERRIDE_ENV}
 
   middlemanager:
     image: ${DRUID_IT_IMAGE_NAME}
@@ -120,6 +123,7 @@ services:
     env_file:
       - environment-configs/common.env
       - environment-configs/middlemanager.env
+      - ${OVERRIDE_ENV}
 
   indexer:
     image: ${DRUID_IT_IMAGE_NAME}
@@ -136,6 +140,7 @@ services:
     env_file:
       - environment-configs/common.env
       - environment-configs/indexer.env
+      - ${OVERRIDE_ENV}
 
   broker:
     image: ${DRUID_IT_IMAGE_NAME}
@@ -152,6 +157,7 @@ services:
     env_file:
       - environment-configs/common.env
       - environment-configs/broker.env
+      - ${OVERRIDE_ENV}
 
   router:
     image: ${DRUID_IT_IMAGE_NAME}
@@ -168,3 +174,4 @@ services:
     env_file:
       - environment-configs/common.env
       - environment-configs/router.env
+      - ${OVERRIDE_ENV}

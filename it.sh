@@ -21,13 +21,40 @@
 
 export DRUID_DEV=$(cd $(dirname $0) && pwd)
 
-function usage {
-	echo "Usage: $0 cmd [category]"
-	echo "  dist            - build the Druid distribution"
-	echo "  image           - build the test image"
-	echo "  up <category>   - start the cluster for category"
-	echo "  down <category> - stop the cluster for category"
-	echo "  test <category> - start the cluster, run the test for category, and stop the cluster"
+function usage
+{
+	cat <<EOF
+Usage: $0 cmd [category]
+  build
+      build Druid and the distribution
+  dist
+      build the Druid distribution (only)
+  image
+      build the test image
+  up <category>
+      start the cluster for category
+  down <category>
+      stop the cluster for category
+  test <category>
+      start the cluster, run the test for category, and stop the cluster
+  tail <category>
+      show the last 20 lines of each container log
+  travis <category>
+      run one IT in Travis (build dist, image, run test, tail logs)
+  prune
+      prune Docker volumes
+EOF
+}
+
+function tail_logs
+{
+	category=$1
+	cd integration-tests-ex/cases/target/$category/logs
+	ls *.log | while read log;
+	do
+		echo "----- $category/$log -----"
+		tail -20 $log
+	done
 }
 
 CMD=$1
@@ -35,30 +62,36 @@ shift
 MAVEN_IGNORE="-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true"
 
 case $CMD in
-	"dist")
+ 	"help" )
+ 		usage
+ 		;;
+	"build" )
 		mvn clean package -P dist $MAVEN_IGNORE -T1.0C
 		;;
-	"image")
+	"dist" )
+		mvn package -P dist $MAVEN_IGNORE -pl :distribution
+		;;
+	"image" )
 		cd $DRUID_DEV/integration-tests-ex/image
 		mvn install -P test-image $MAVEN_IGNORE
 		;;
-	"up")
+	"up" )
 		if [ -z "$1" ]; then
 			usage
 			exit 1
 		fi
 		cd $DRUID_DEV/integration-tests-ex/cases
-		./cluster.sh $1 up
+		./cluster.sh up $1
 		;;
-	"down")
+	"down" )
 		if [ -z "$1" ]; then
 			usage
 			exit 1
 		fi
 		cd $DRUID_DEV/integration-tests-ex/cases
-		./cluster.sh $1 down
+		./cluster.sh down $1
 		;;
-	"test")
+	"test" )
 		if [ -z "$1" ]; then
 			usage
 			exit 1
@@ -68,10 +101,30 @@ case $CMD in
             -Dmaven.javadoc.skip=true -DskipUTs=true \
             -pl :druid-it-cases
 		;;
- 	"help")
- 		usage
- 		;;
-	*)
+	"tail" )
+		if [ -z "$1" ]; then
+			usage
+			exit 1
+		fi
+		tail_logs $1
+		;;
+    "travis" )
+		if [ -z "$1" ]; then
+			usage
+			exit 1
+		fi
+    	$0 dist
+    	$0 image
+    	$0 test $1
+    	$0 tail $1
+    	;;
+	"prune" )
+		# Caution: this removes all volumes, which is generally what you
+		# want when testing.
+		docker system prune --volumes
+		;;
+	* )
 		usage
 		exit -1
+		;;
 esac

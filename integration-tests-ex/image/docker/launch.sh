@@ -33,14 +33,38 @@ cd /
 
 # TODO: enable only for security-related tests?
 #/tls/generate-server-certs-and-keystores.sh
-. /druid.sh
 
 # The image contains both the MySQL and MariaDB JDBC drivers.
 # The MySQL driver is selected by the Docker Compose file.
 # Set  druid.metadata.mysql.driver.driverClassName to the preferred
 # driver.
 
+# Test-specific way to define extensions. Compose defines two test-specific
+# variables. We combine these to create the final form converted to a property.
+if [ -n "$druid_extensions_loadList" ]; then
+	echo "Using the provided druid_extensions_loadList=$druid_extensions_loadList"
+else
+	mkdir -p /tmp/conf
+	EXTNS_FILE=/tmp/conf/extns
+	echo $druid_standard_loadList | tr "," "\n" > $EXTNS_FILE
+	if [ -n "$druid_test_loadList" ]; then
+		echo $druid_test_loadList | tr "," "\n" >> $EXTNS_FILE
+	fi
+	druid_extensions_loadList="["
+	delim=""
+	while read -r line; do
+	  	druid_extensions_loadList="$druid_extensions_loadList$delim\"$line\""
+	  	delim=","
+	done < $EXTNS_FILE
+	export druid_extensions_loadList="${druid_extensions_loadList}]"
+	unset druid_standard_loadList
+	unset druid_test_loadList
+	rm $EXTNS_FILE
+	echo "Effective druid_extensions_loadList=$druid_extensions_loadList"
+fi
+
 # Create druid service config files with all the config variables
+. /druid.sh
 setupConfig
 
 # Export the service config file path to use in supervisord conf file
@@ -92,7 +116,9 @@ fi
 
 LOG_FILE=$LOG_DIR/${INSTANCE_NAME}.log
 echo "" >> $LOG_FILE
-echo "--- Service runtime.properties ---" >> $LOG_FILE
+echo "--- env ---" >> $LOG_FILE
+env >> $LOG_FILE
+echo "--- runtime.properties ---" >> $LOG_FILE
 cat $DRUID_SERVICE_CONF_DIR/*.properties >> $LOG_FILE
 echo "---" >> $LOG_FILE
 echo "" >> $LOG_FILE

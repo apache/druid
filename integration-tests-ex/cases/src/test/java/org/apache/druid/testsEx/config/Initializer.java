@@ -76,6 +76,7 @@ import org.apache.druid.testsEx.cluster.DruidClusterClient;
 import org.apache.druid.testsEx.cluster.MetastoreClient;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -334,10 +335,7 @@ public class Initializer
 
     public Builder modules(Module...modules)
     {
-      for (Module module : modules) {
-        this.modules.add(module);
-      }
-      return this;
+      return modules(Arrays.asList(modules));
     }
 
     /**
@@ -399,7 +397,7 @@ public class Initializer
   private Initializer(Builder builder)
   {
     if (builder.configFile != null) {
-      this.clusterConfig = loadConfigFile(builder.configFile);
+      this.clusterConfig = loadConfigFile(builder.clusterName, builder.configFile);
     } else {
       this.clusterConfig = loadConfig(builder.clusterName, builder.configFile);
     }
@@ -454,13 +452,13 @@ public class Initializer
     }
     String loadName = StringUtils.format(CLUSTER_CONFIG_RESOURCE, category, configName);
     ClusterConfig config = ClusterConfig.loadFromResource(loadName);
-    return config.resolve();
+    return config.resolve(category);
   }
 
-  private static ResolvedConfig loadConfigFile(String path)
+  private static ResolvedConfig loadConfigFile(String category, String path)
   {
     ClusterConfig config = ClusterConfig.loadFromFile(path);
-    return config.resolve();
+    return config.resolve(category);
   }
 
   private static Injector makeInjector(
@@ -499,7 +497,7 @@ public class Initializer
   }
 
   /**
-   * Define test properties similar to how the server does. Property precendence
+   * Define test properties similar to how the server does. Property precedence
    * is:
    * <ul>
    * <li>System properties (highest)</li>
@@ -523,6 +521,8 @@ public class Initializer
       }
     }
     finalProperties.putAll(System.getProperties());
+    log.info("Properties:");
+    log.info(finalProperties.toString());
     return finalProperties;
   }
 

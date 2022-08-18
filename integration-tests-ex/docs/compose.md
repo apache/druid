@@ -37,7 +37,7 @@ See also:
 
 ## File Structure
 
-Docker Compose files live in the `druid-integration-test-cases` module (`test-cases` folder)
+Docker Compose files live in the `druid-it-cases` module (`test-cases` folder)
 in the `cluster` directory. There is a separate subdirectory for each cluster type
 (subset of test categories), plus a `Common` folder for shared files.
 
@@ -63,6 +63,44 @@ that we use to define base configurations.
 * `cluster/Common/druid.yaml` defines typical settings for each Druid service.
 
 Test-specific configurations extend and customize the above.
+
+### Druid Configuration
+
+Docker compose passes information to Docker in the form of environment variables.
+The test use a variation of the environment-variable-based configuration used in
+the [public Docker image](https://druid.apache.org/docs/latest/tutorials/docker.html).
+That is, variables of the form `druid_my_config` are converted, by the image launch
+script, into properties of the form `my.config`. These properties are then written
+to a launch-specific `runtime.properties` file.
+
+Rather than have a test version of `runtime.properties`, instead we have a set of
+files that define properties as environment variables. All are located in
+`cases/cluster/Common/environment-configs`:
+
+* `common.env` - Properties common to all services. This is the test equivalent to
+  the `common.runtime.properties` file.
+* `<service>.env` - Properties unique to one service. This is the test equivalent to
+  the `service/runtime.properties` files.
+
+### Special Environment Variables
+
+Druid properties can be a bit awkward and verbose in a test environment. A number of
+test-specific properties help:
+
+* `druid_standard_loadList` - Common extension load list for all tests, in the form
+  of a comma-delimited list of extensions (without the brackets.) Defined in
+  `common.env`.
+* `druid_test_loadList` - A list of additional extensions to load for a specific test.
+  Defined in the `docker-compose.yaml` file for that test category. Do not include
+  quotes.
+
+Example test-specific list:
+
+```text
+druid_test_loadList=druid-azure-extensions,my-extension
+```
+
+The launch script combines the two lists, and adds the required brackets and quotes.
 
 ## Test-Specific Cluster
 
@@ -134,6 +172,58 @@ in configuration within each container.
 Outside of the application network, containers are accessible only via the
 host ports defined in the Docker Compose files. Thus, ZK is known as `localhost:2181`
 to tests and other code running outside of Docker.
+
+## Test-Specific Configuration
+
+In addition to the Druid configuration discussed above, the framework provides
+three ways to pass test-specific configuration to the tests. All of these methods
+override any configuration in the `docker-compose` or cluster `env` files.
+
+The values here are passed into the Druid server as configuration values. The
+values apply to all services. (This mechanism does not allow service-specific
+values.) In all three approaches, use the `druid_` environment variable form.
+
+Precendence is in the order below with the user file lowest priority and environment
+variables highest.
+
+### User-specific `~/druid-it/<category.env` file
+
+If you are debugging a test, you may need to provide values specific to your setup.
+Examples include user names, passwords, credentials, cloud buckets, etc. Put these
+in a file in your *home* directory (not Druid development directory). Create a
+subdirectory `~/druid-it`, then create a separate file for each category that you
+want to customize. Create entries for your information:
+
+```text
+druid_cloud_bucket=MyBucket
+```
+
+### Test-specific `OVERRIDE_ENV` file
+
+Build scripts can pass values into Druid via a file. Set the `OVERRIDE_ENV` environment
+variable with the path to the file. Each line is formatted as above. The variable can
+be set on the command line:
+
+```bash
+OVERRIDE_ENV=/tmp/special.env ./cluster.sh up Category
+```
+
+It can also be set in Maven, or passed from the build environment, through Maven, to
+the script.
+
+### Environment variables
+
+Normally the environment of the script that runs Druid is separate from the environment
+passed to the container. However, the launch script will copy across any variable that
+starts with `druid_`. The variable can be set on the command line:
+
+```bash
+druid_my_config=my_value ./cluster.sh up Category
+```
+
+It can also be set in Maven, or passed from the build environment, through Maven, to
+the script. This is the preferred way to pass environment-specific information from
+Travis into the test containers.
 
 ## Define a Test Cluster
 

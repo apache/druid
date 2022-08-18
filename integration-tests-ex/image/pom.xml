@@ -200,15 +200,15 @@ Reference: https://dzone.com/articles/build-docker-image-from-maven
                                 </goals>
                                 <configuration>
                                     <environmentVariables>
-                                        <DRUID_VERSION>${project.version}</DRUID_VERSION>
                                         <MYSQL_VERSION>${mysql.version}</MYSQL_VERSION>
-                                        <MYSQL_IMAGE_VERSION>${mysql.image.version}</MYSQL_IMAGE_VERSION>
                                         <MARIADB_VERSION>${mariadb.version}</MARIADB_VERSION>
-                                        <KAFKA_VERSION>${apache.kafka.version}</KAFKA_VERSION>
+                                        <MYSQL_DRIVER_CLASSNAME>com.mysql.jdbc.Driver</MYSQL_DRIVER_CLASSNAME>
+                                        <MYSQL_IMAGE_VERSION>${mysql.image.version}</MYSQL_IMAGE_VERSION>
                                         <CONFLUENT_VERSION>${confluent-version}</CONFLUENT_VERSION>
+                                        <KAFKA_VERSION>${apache.kafka.version}</KAFKA_VERSION>
                                         <ZK_VERSION>${zookeeper.version}</ZK_VERSION>
                                         <HADOOP_VERSION>${hadoop.compile.version}</HADOOP_VERSION>
-                                        <MYSQL_DRIVER_CLASSNAME>com.mysql.jdbc.Driver</MYSQL_DRIVER_CLASSNAME>
+                                        <DRUID_VERSION>${project.version}</DRUID_VERSION>
                                         <DRUID_IT_IMAGE_NAME>${druid.it.image-name}</DRUID_IT_IMAGE_NAME>
                                         <TARGET_DIR>${project.build.directory}</TARGET_DIR>
                                         <!-- Maven has no good way to get the root directory, so

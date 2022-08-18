@@ -19,8 +19,8 @@
 
 package org.apache.druid.testsEx.config;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.RegExUtils;
-import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 
 import java.util.HashMap;

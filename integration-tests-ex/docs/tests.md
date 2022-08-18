@@ -150,6 +150,7 @@ The new names correspond to class names. The Test NG names were strings.
 
 ## Test Runner
 
+The ITs are JUnit test, but use a special test runner to handle configuration.
 Test configuration is complex. The easiest way to configure, once the configuration
 files are set, is to use the `DruidTestRunner` class:
 
@@ -174,6 +175,12 @@ a test method runs. For simple tests, this is all you need.
 
 The test runner validates that the test has a category, and handles the
 above mapping from category to cluster definition.
+
+### Parameterization
+
+The `DruidTestRunner` extends `JUnitParamsRunner` to allow parameterized tests.
+This class stays discretely out of the way if you don't care about parameters.
+To use parameters, see the `CalciteJoinQueryTest` class for an example.
 
 ## Initialization
 
@@ -215,7 +222,7 @@ code. Tests may wish to load additional modules specific to that test.
 ## Custom Configuration
 
 There are times when a test needs additional Guice modules beyond what the
-1Initializer` provides. In such cases, you can add a method to customize
+`Initializer` provides. In such cases, you can add a method to customize
 configuration.
 
 ### Guice Modules
@@ -253,6 +260,20 @@ the environment variable is set. You should also bind a default value:
   builder.propertyEnvVarBinding("druid.my.property", "ULTIMATE_ANSWER");
 ```
 
+A property can also be passed in as either a system property or an environment
+variable of the "Docker property environment variable form":
+
+```bash
+druid_property_a=foo
+./it.sh Category test
+```
+
+Or, directly on the command line:
+
+```text
+-Ddruid_property_b=bar
+```
+
 Property precedence is:
 
 * Properties set in code, as above.
@@ -281,7 +302,7 @@ field in your class. Otherwise, give the builder a hint:
   builder.eagerInstance(ThePeskyComponent.class);
 ```
 
-## Test Structure
+## Test Operation
 
 When working with tests, it is helpful to know a bit more about the "magic"
 behind `DruidTestRunner`.

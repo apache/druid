@@ -43,8 +43,8 @@ import java.util.Properties;
  * Provides the ability to create "polymorphic" bindings where the polymorphism is actually just making a decision
  * based on a value in Properties.
  * <p>
- * The workflow is that you first create a choice by calling {@link #createChoice()}. Then you create options using
- * the binder returned by the {@link #optionBinder()} method. Multiple different modules can call
+ * The workflow is that you first create a choice by calling {@code createChoice()}. Then you create options using
+ * the binder returned by the {@code optionBinder()} method. Multiple different modules can call
  * {@code optionBinder()} and all options will be reflected at injection time as long as equivalent interface
  * {@code Key} objects are passed into the various methods.
  */

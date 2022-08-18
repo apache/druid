@@ -19,9 +19,9 @@
 
 package org.apache.druid.testsEx.config;
 
+import junitparams.JUnitParamsRunner;
 import org.apache.druid.java.util.common.UOE;
 import org.junit.experimental.categories.Category;
-import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.Statement;
 
@@ -42,8 +42,10 @@ import java.lang.reflect.Modifier;
  * test members <i>before</i> starting the lifecycle, so that the injection creates
  * a reference, which creates the object, which registers it in the lifecycle. We
  * should fix this issue. Until then, the awkwardness is hidden in this test runner.
+ * <p>
+ * Extends the parameterize test runner, so your Druid ITs can also use parameters.
  */
-public class DruidTestRunner extends BlockJUnit4ClassRunner
+public class DruidTestRunner extends JUnitParamsRunner
 {
   private class CloseInitializer extends Statement
   {
@@ -87,7 +89,7 @@ public class DruidTestRunner extends BlockJUnit4ClassRunner
   private Initializer buildInitializer(Object test)
   {
     Class<?> testClass = test.getClass();
-    Category annotations[] = testClass.getAnnotationsByType(Category.class);
+    Category[] annotations = testClass.getAnnotationsByType(Category.class);
     if (annotations.length == 0) {
       throw new UOE(
           "Class % must have a @Category annotation",
@@ -100,7 +102,7 @@ public class DruidTestRunner extends BlockJUnit4ClassRunner
           testClass.getSimpleName()
       );
     }
-    Class<?> categories[] = annotations[0].value();
+    Class<?>[] categories = annotations[0].value();
     if (categories.length == 0) {
       throw new UOE(
           "Class % must have a @Category value",
@@ -148,7 +150,7 @@ public class DruidTestRunner extends BlockJUnit4ClassRunner
    */
   private Class<?> category(Class<?> testClass)
   {
-    Category annotations[] = testClass.getAnnotationsByType(Category.class);
+    Category[] annotations = testClass.getAnnotationsByType(Category.class);
     if (annotations.length == 0) {
       throw new UOE(
           "Class % must have a @Category annotation",
@@ -161,7 +163,7 @@ public class DruidTestRunner extends BlockJUnit4ClassRunner
           testClass.getSimpleName()
       );
     }
-    Class<?> categories[] = annotations[0].value();
+    Class<?>[] categories = annotations[0].value();
     if (categories.length == 0) {
       throw new UOE(
           "Class % must have a @Category value",
@@ -184,7 +186,7 @@ public class DruidTestRunner extends BlockJUnit4ClassRunner
   private String inferCluster(Class<?> category)
   {
     String categoryName = category.getSimpleName();
-    Cluster annotations[] = category.getAnnotationsByType(Cluster.class);
+    Cluster[] annotations = category.getAnnotationsByType(Cluster.class);
     if (annotations.length == 0) {
       return categoryName;
     }

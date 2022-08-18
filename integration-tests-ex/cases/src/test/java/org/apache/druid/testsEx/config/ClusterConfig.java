@@ -119,6 +119,9 @@ public class ClusterConfig
     if (from.properties != null) {
       this.properties = new HashMap<>(from.properties);
     }
+    if (from.settings != null) {
+      this.settings = new HashMap<>(from.settings);
+    }
     if (from.metastoreInit != null) {
       this.metastoreInit = new ArrayList<>(from.metastoreInit);
     }
@@ -159,9 +162,9 @@ public class ClusterConfig
     }
   }
 
-  public ResolvedConfig resolve()
+  public ResolvedConfig resolve(String clusterName)
   {
-    return new ResolvedConfig(resolveIncludes());
+    return new ResolvedConfig(clusterName, resolveIncludes());
   }
 
   public ClusterConfig resolveIncludes()

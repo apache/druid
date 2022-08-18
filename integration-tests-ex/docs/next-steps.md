@@ -19,7 +19,7 @@
 
 # Future Work
 
-The present version is very much a work in progress. Work completed to
+The present version establishes the new IT framework. Work completed to
 date includes:
 
 * Restructure the Docker images to use the Druid produced from the

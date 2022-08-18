@@ -23,6 +23,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.curator.CuratorConfig;
 import org.apache.druid.curator.ExhibitorConfig;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.testing.IntegrationTestingConfigProvider;
 import org.apache.druid.testsEx.config.ClusterConfig.ClusterType;
@@ -30,6 +31,12 @@ import org.apache.druid.testsEx.config.ResolvedService.ResolvedKafka;
 import org.apache.druid.testsEx.config.ResolvedService.ResolvedZk;
 import org.apache.druid.testsEx.config.ServiceConfig.DruidConfig;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -48,6 +55,7 @@ public class ResolvedConfig
   public static final int DEFAULT_READY_TIMEOUT_SEC = 120;
   public static final int DEFAULT_READY_POLL_MS = 2000;
 
+  private final String category;
   private final ClusterType type;
   private final String proxyHost;
   private final int readyTimeoutSec;
@@ -61,8 +69,9 @@ public class ResolvedConfig
   private final ResolvedMetastore metastore;
   private final Map<String, ResolvedDruidService> druidServices = new HashMap<>();
 
-  public ResolvedConfig(ClusterConfig config)
+  public ResolvedConfig(String category, ClusterConfig config)
   {
+    this.category = category;
     type = config.type() == null ? ClusterType.docker : config.type();
     if (!hasProxy()) {
       proxyHost = null;
@@ -293,6 +302,40 @@ public class ResolvedConfig
         .put("google_prefix", "googlePrefix")
         .build();
 
+  private static void setDruidProperyVar(Map<String, Object> properties, String key, Object value)
+  {
+    if (value == null) {
+      return;
+    }
+    if (key.startsWith("druid_")) {
+      key = key.substring("druid_".length());
+    }
+    String mapped = SETTINGS_MAP.get(key);
+    key = mapped == null ? key : mapped;
+    TestConfigs.putProperty(properties, IntegrationTestingConfigProvider.PROPERTY_BASE, key, value.toString());
+  }
+
+  private void loadPropertyFile(Map<String, Object> properties, File file)
+  {
+    try (BufferedReader in = new BufferedReader(
+        new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+      String line;
+      while ((line = in.readLine()) != null) {
+        if (Strings.isNullOrEmpty(line) || line.startsWith("#")) {
+          continue;
+        }
+        String[] parts = line.split("=");
+        if (parts.length != 2) {
+          continue;
+        }
+        setDruidProperyVar(properties, parts[0], parts[1]);
+      }
+    }
+    catch (IOException e) {
+      throw new IAE(e, "Cannot read file %s", file.getAbsolutePath());
+    }
+  }
+
   /**
    * Convert the config in this structure the the properties
    * used to configure Guice.
@@ -317,18 +360,46 @@ public class ResolvedConfig
     // Settings are converted to properties so they can be overridden
     // by environment variables and -D command-line settings.
     for (Map.Entry<String, Object> entry : settings.entrySet()) {
-      String key = entry.getKey();
-      if (key.startsWith("druid_")) {
-        key = key.substring("druid_".length());
-      }
-      String mapped = SETTINGS_MAP.get(key);
-      key = mapped == null ? key : mapped;
-      TestConfigs.putProperty(properties, IntegrationTestingConfigProvider.PROPERTY_BASE, key, entry.getValue());
+      setDruidProperyVar(properties, entry.getKey(), entry.getValue());
     }
 
     // Add explicit properties
     if (this.properties != null) {
       properties.putAll(this.properties);
+    }
+
+    // Override with a user-specific config file.
+    File userEnv = new File(
+        new File(
+            System.getProperty("user.home"),
+            "druid-it"),
+        category + ".env");
+    if (userEnv.exists()) {
+      loadPropertyFile(properties, userEnv);
+    }
+
+    // Override with a user-specific config file.
+    String overrideEnv = System.getenv("OVERRIDE_ENV");
+    if (overrideEnv != null) {
+      loadPropertyFile(properties, new File(overrideEnv));
+    }
+
+    // Override with any environment variables of the form "druid_"
+    for (Map.Entry<String, String> entry : System.getenv().entrySet()) {
+      String key = entry.getKey();
+      if (!key.startsWith("druid_")) {
+        continue;
+      }
+      setDruidProperyVar(properties, key, entry.getValue());
+    }
+
+    // Override with any system properties of the form "druid_"
+    for (Map.Entry<Object, Object> entry : System.getProperties().entrySet()) {
+      String key = (String) entry.getKey();
+      if (!key.startsWith("druid_")) {
+        continue;
+      }
+      setDruidProperyVar(properties, key, entry.getValue());
     }
     return properties;
   }

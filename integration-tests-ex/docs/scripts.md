@@ -24,8 +24,8 @@ what each one does. This guide lists each of them.
 
 ## `integration-tests-ex`
 
-* `check-results.sh` - Workaround for Travis to extract container logs for
-  failed tests.
+* `it.sh` - Utility to perform many IT-related actions such as building Druid,
+  running ITs, starting a cluster, etc. Use `it.sh help` to see the list of commands.
 
 ### `it-image`
 
@@ -55,20 +55,20 @@ what each one does. This guide lists each of them.
 * `cluster/<category>/*.yaml` - Base Docker Compose scripts that define the "standard"
   Druid cluster. Tests use these files to avoid redundant copy/past of the
   standard items.
-* `cluster.sh` - Launches or tear down a cluster for a test. Called from Maven
-  and can be used manually. See below.
+* `cluster.sh` - Launches or tears down a cluster for a test. Called from Maven
+  and `it.sh`. Can be used manually. See below.
 
 The options for `cluster.sh` are:
 
 ```bash
-cluster.sh category [-h|help|up|down|status|compose-cmd]
+cluster.sh [-h|help|up|down|status|compose-cmd] category
 ```
 
-* `category` - the test category to launch. Performs mapping from the category name
-  to cluster name when categories share definitions.
 * `up` - starts the cluster.
 * `down` - shuts down the cluster.
 * `status` - displays cluster status for debugging. Expecially useful for debugging
   issues in Travis where we cannot directly inspect the Docker cluster itself.
 * `help` - repeats the usage line.
 * Others - passes the command on to Docker Compose.
+* `category` - the test category to launch. Performs mapping from the category name
+  to cluster name when categories share definitions.

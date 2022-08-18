@@ -87,8 +87,6 @@ public class DruidInjectorBuilder
 
   /**
    * Add an arbitrary set of modules.
-   *
-   * @see #add(Object)
    */
   public DruidInjectorBuilder add(Object...input)
   {
