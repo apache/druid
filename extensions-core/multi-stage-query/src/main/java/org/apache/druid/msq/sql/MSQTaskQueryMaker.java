@@ -22,11 +22,9 @@ package org.apache.druid.msq.sql;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -176,8 +174,6 @@ public class MSQTaskQueryMaker implements QueryMaker
     // For assistance computing return types if !finalizeAggregations.
     final Map<String, ColumnType> aggregationIntermediateTypeMap =
         finalizeAggregations ? null /* Not needed */ : buildAggregationIntermediateTypeMap(druidQuery);
-
-    final DynamicPartitionsSpec partitionsSpec = new DynamicPartitionsSpec(Ints.checkedCast(rowsPerSegment), null);
 
     final List<String> sqlTypeNames = new ArrayList<>();
     final List<ColumnMapping> columnMappings = new ArrayList<>();

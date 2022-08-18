@@ -33,10 +33,10 @@ public interface InputChannels
   /**
    * Open a channel to the given output partition of the given stage.
    */
-  ReadableFrameChannel openChannel(final StagePartition stagePartition) throws IOException;
+  ReadableFrameChannel openChannel(StagePartition stagePartition) throws IOException;
 
   /**
    * Frame reader for output of the given stage.
    */
-  FrameReader frameReader(final int stageNumber);
+  FrameReader frameReader(int stageNumber);
 }

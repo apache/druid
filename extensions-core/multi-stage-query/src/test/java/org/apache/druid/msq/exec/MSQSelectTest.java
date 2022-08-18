@@ -389,7 +389,12 @@ public class MSQSelectTest extends MSQTestBase
                             new DoubleSumAggregatorFactory("a0:sum", "m2"),
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("a0:count"),
-                                not(selector("m2", null, null))
+                                not(selector("m2", null, null)),
+
+                                // Not sure why the name is only set in SQL-compatible null mode. Seems strange.
+                                // May be due to JSON serialization: name is set on the serialized aggregator even
+                                // if it was originally created with no name.
+                                NullHandling.sqlCompatible() ? "a0:count" : null
                             )
                         )
                     )

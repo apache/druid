@@ -764,9 +764,6 @@ public class ControllerImpl implements Controller
     addToKernelManipulationQueue(
         queryKernel -> {
           final StageId stageId = queryKernel.getStageId(stageNumber);
-          if (stageId == null) {
-            throw new ISE("Unable to find stage with id [%s].", stageId);
-          }
 
           // We need a specially-decorated ObjectMapper to deserialize key statistics.
           final StageDefinition stageDef = queryKernel.getStageDefinition(stageId);
