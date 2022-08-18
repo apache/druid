@@ -102,7 +102,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     {
       try {
         // Check cancellation. Required for SqlResourceTest to work.
-        checkCanceled();
+        transition(State.RAN);
         return plannerResult.run();
       }
       catch (RuntimeException e) {
@@ -213,10 +213,11 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       // Tests cancel during this call; real clients might do so if the plan
       // or execution prep stages take too long for some unexpected reason.
       sqlToolbox.sqlLifecycleManager.add(sqlQueryId(), this);
-      checkCanceled();
+      transition(State.PREPARED);
       resultSet = createResultSet(createPlan(planner));
       prepareResult = planner.prepareResult();
-      state = State.PREPARED;
+      // Double check needed by SqlResourceTest
+      transition(State.PREPARED);
       return resultSet;
     }
     catch (RuntimeException e) {
@@ -262,7 +263,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
    * a query ID, which won't happen until after the {@link #execute())}
    * call.
    */
-  private void checkCanceled()
+  private void transition(State newState)
   {
     if (state == State.CANCELLED) {
       throw new QueryInterruptedException(
@@ -272,6 +273,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
           null
       );
     }
+    state = newState;
   }
 
   @Override
