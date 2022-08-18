@@ -26,3 +26,4 @@ README
 .java-version
 integration-tests/gen-scripts/
 /bin/
+*.hprof

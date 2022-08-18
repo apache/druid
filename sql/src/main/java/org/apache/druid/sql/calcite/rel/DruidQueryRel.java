@@ -37,6 +37,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.annotation.Nullable;
+
 import java.util.Set;
 
 /**

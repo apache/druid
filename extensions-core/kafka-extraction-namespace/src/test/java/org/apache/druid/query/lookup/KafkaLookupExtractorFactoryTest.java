@@ -399,6 +399,22 @@ public class KafkaLookupExtractorFactoryTest
   }
 
   @Test
+  public void testStartFailsOnAutoCommit()
+  {
+    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
+        cacheManager,
+        TOPIC,
+        ImmutableMap.of("enable.auto.commit", "true")
+    );
+    Assert.assertThrows(
+        "Cannot set kafka property [enable.auto.commit]. Property will be forced to [false]. Found [true]",
+        IAE.class,
+        () -> factory.start()
+    );
+    Assert.assertTrue(factory.close());
+  }
+
+  @Test
   public void testFailsGetNotStarted()
   {
     Assert.assertThrows("Not started", NullPointerException.class, () -> new KafkaLookupExtractorFactory(

@@ -24,6 +24,7 @@ import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
@@ -114,7 +115,12 @@ public class Transformer
       final List<InputRow> originalRows = row.getInputRows();
       final List<InputRow> transformedRows = new ArrayList<>(originalRows.size());
       for (InputRow originalRow : originalRows) {
-        transformedRows.add(new TransformedInputRow(originalRow, transforms));
+        try {
+          transformedRows.add(new TransformedInputRow(originalRow, transforms));
+        }
+        catch (ParseException pe) {
+          return InputRowListPlusRawValues.of(row.getRawValues(), pe);
+        }
       }
       inputRowListPlusRawValues = InputRowListPlusRawValues.ofList(row.getRawValuesList(), transformedRows);
     }
@@ -170,7 +176,11 @@ public class Transformer
       final long ts;
       if (transform != null) {
         //noinspection ConstantConditions time column is never null
-        ts = Rows.objectToNumber(ColumnHolder.TIME_COLUMN_NAME, transform.eval(row), true).longValue();
+        final Number transformedVal = Rows.objectToNumber(ColumnHolder.TIME_COLUMN_NAME, transform.eval(row), true);
+        if (transformedVal == null) {
+          throw new ParseException(row.toString(), "Could not transform value for __time.");
+        }
+        ts = transformedVal.longValue();
       } else {
         ts = row.getTimestampFromEpoch();
       }

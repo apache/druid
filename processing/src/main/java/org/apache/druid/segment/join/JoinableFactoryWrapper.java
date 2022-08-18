@@ -58,6 +58,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * A wrapper class over {@link JoinableFactory} for working with {@link Joinable} related classes.
@@ -233,6 +234,7 @@ public class JoinableFactoryWrapper
       }
     }
 
+    Set<String> rightPrefixes = clauses.stream().map(JoinableClause::getPrefix).collect(Collectors.toSet());
     // Walk through the list of clauses, picking off any from the start of the list that can be converted to filters.
     boolean atStart = true;
     for (JoinableClause clause : clauses) {
@@ -246,7 +248,8 @@ public class JoinableFactoryWrapper
             convertJoinToFilter(
                 clause,
                 Sets.union(requiredColumns, columnsRequiredByJoinClauses.elementSet()),
-                maxNumFilterValues
+                maxNumFilterValues,
+                rightPrefixes
             );
 
         // add the converted filter to the filter list
@@ -287,7 +290,8 @@ public class JoinableFactoryWrapper
   static JoinClauseToFilterConversion convertJoinToFilter(
       final JoinableClause clause,
       final Set<String> requiredColumns,
-      final int maxNumFilterValues
+      final int maxNumFilterValues,
+      final Set<String> rightPrefixes
   )
   {
     if (clause.getJoinType() == JoinType.INNER
@@ -303,6 +307,12 @@ public class JoinableFactoryWrapper
 
         if (leftColumn == null) {
           return new JoinClauseToFilterConversion(null, false);
+        }
+
+        // don't add a filter on any right side table columns. only filter on left base table is supported as of now.
+        if (rightPrefixes.stream().anyMatch(leftColumn::startsWith)) {
+          joinClauseFullyConverted = false;
+          continue;
         }
 
         Joinable.ColumnValuesWithUniqueFlag columnValuesWithUniqueFlag =

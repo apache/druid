@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
@@ -94,7 +95,7 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
-  public static final boolean DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER = false;
+  public static final boolean DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER = true;
   public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE = 10000;
   public static final boolean DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT = false;
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
@@ -565,6 +566,23 @@ public class QueryContexts
       return ((Number) value).longValue();
     } else {
       throw new IAE("Expected parameter [%s] to be a long", parameter);
+    }
+  }
+
+  public static HumanReadableBytes getAsHumanReadableBytes(
+      final String parameter,
+      final Object value,
+      final HumanReadableBytes defaultValue
+  )
+  {
+    if (null == value) {
+      return defaultValue;
+    } else if (value instanceof Number) {
+      return HumanReadableBytes.valueOf(Numbers.parseLong(value));
+    } else if (value instanceof String) {
+      return new HumanReadableBytes((String) value);
+    } else {
+      throw new IAE("Expected parameter [%s] to be in human readable format", parameter);
     }
   }
 

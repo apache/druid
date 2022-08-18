@@ -144,6 +144,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   {
     final String partsString = NestedPathFinder.toNormalizedJsonPath(parts);
     return new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_USER_DEFINED).appendString("nested-field")
+                                                                                   .appendString(outputName)
                                                                                    .appendString(columnName)
                                                                                    .appendString(partsString)
                                                                                    .appendBoolean(processFromRaw)

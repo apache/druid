@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
@@ -212,6 +213,12 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     public Integer getEarliestSequenceNumber(StreamPartition<Integer> partition)
     {
       throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isOffsetAvailable(StreamPartition<Integer> partition, OrderedSequenceNumber<Integer> offset)
+    {
+      return true;
     }
 
     @Override

@@ -69,4 +69,25 @@ public class BloomFilterAggregatorFactoryTest
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
   }
+
+  @Test
+  public void testWithNameBloomFilterAggFactory()
+  {
+    BloomFilterAggregatorFactory factory = new BloomFilterAggregatorFactory(
+        "bloom",
+        DefaultDimensionSpec.of("col"),
+        1024
+    );
+    Assert.assertEquals(factory, factory.withName("bloom"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
+
+
+  @Test
+  public void testWithNameBloomFilterMergeAggFactory()
+  {
+    BloomFilterMergeAggregatorFactory factory = new BloomFilterMergeAggregatorFactory("bloomMerge", "bloom", 1024);
+    Assert.assertEquals(factory, factory.withName("bloomMerge"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
 }
