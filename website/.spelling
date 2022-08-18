@@ -481,7 +481,7 @@ useFieldDiscovery
 v1
 v2
 vCPUs
-validatcdor
+validator
 varchar
 vectorizable
 vectorize
