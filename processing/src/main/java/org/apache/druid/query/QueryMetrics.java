@@ -217,7 +217,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
   /**
    * Sets sqlQueryId as a dimension
    */
-  void sqlQueryId(String sqlQueryId);
+  void sqlQueryId(@SuppressWarnings("UnusedParameters") String sqlQueryId);
 
   /**
    * Sets {@link Query#getContext()} of the given query as dimension.
