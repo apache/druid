@@ -22,6 +22,7 @@ package org.apache.druid.query.search;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
+import org.apache.druid.java.util.common.Cacheable;
 
 import javax.annotation.Nullable;
 
@@ -36,9 +37,7 @@ import javax.annotation.Nullable;
     @JsonSubTypes.Type(name = "all", value = AllSearchQuerySpec.class)
 })
 @SubclassesMustOverrideEqualsAndHashCode
-public interface SearchQuerySpec
+public interface SearchQuerySpec extends Cacheable
 {
   boolean accept(@Nullable String dimVal);
-
-  byte[] getCacheKey();
 }
