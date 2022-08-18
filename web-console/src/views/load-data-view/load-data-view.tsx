@@ -23,17 +23,17 @@ import {
   ButtonGroup,
   Callout,
   Card,
-  Classes,
   Code,
   FormGroup,
   H5,
-  HTMLSelect,
   Icon,
   IconName,
   InputGroup,
   Intent,
   Menu,
   MenuItem,
+  Radio,
+  RadioGroup,
   Switch,
   TextArea,
 } from '@blueprintjs/core';
@@ -49,11 +49,11 @@ import {
   CenterMessage,
   ClearableInput,
   ExternalLink,
+  FormGroupWithInfo,
   JsonInput,
   Loader,
   PopoverText,
 } from '../../components';
-import { FormGroupWithInfo } from '../../components/form-group-with-info/form-group-with-info';
 import { AsyncActionDialog } from '../../dialogs';
 import {
   addTimestampTransform,
@@ -135,13 +135,12 @@ import {
   EMPTY_OBJECT,
   filterMap,
   getDruidErrorMessage,
-  localStorageGet,
+  localStorageGetJson,
   LocalStorageKeys,
-  localStorageSet,
+  localStorageSetJson,
   moveElement,
   moveToIndex,
   oneOf,
-  parseJson,
   pluralIfNeeded,
   QueryState,
 } from '../../utils';
@@ -310,11 +309,14 @@ const VIEW_TITLE: Record<Step, string> = {
   loading: 'Loading',
 };
 
+export type LoadDataViewMode = 'all' | 'streaming' | 'batch';
+
 export interface LoadDataViewProps {
+  mode: LoadDataViewMode;
   initSupervisorId?: string;
   initTaskId?: string;
   exampleManifestsUrl?: string;
-  goToIngestion: (taskGroupId: string | undefined, supervisor?: string) => void;
+  goToIngestion: (taskGroupId: string | undefined, openDialog?: string) => void;
 }
 
 interface SelectedIndex<T> {
@@ -382,10 +384,19 @@ export interface LoadDataViewState {
 }
 
 export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDataViewState> {
+  static MODE_TO_KEY: Record<LoadDataViewMode, LocalStorageKeys> = {
+    all: LocalStorageKeys.INGESTION_SPEC,
+    streaming: LocalStorageKeys.STREAMING_INGESTION_SPEC,
+    batch: LocalStorageKeys.BATCH_INGESTION_SPEC,
+  };
+
+  private readonly localStorageKey: LocalStorageKeys;
+
   constructor(props: LoadDataViewProps) {
     super(props);
 
-    let spec = parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
+    this.localStorageKey = LoadDataView.MODE_TO_KEY[props.mode];
+    let spec = localStorageGetJson(this.localStorageKey);
     if (!spec || typeof spec !== 'object') spec = {};
     this.state = {
       step: 'loading',
@@ -521,13 +532,38 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   private readonly updateSpec = (newSpec: Partial<IngestionSpec>) => {
     newSpec = normalizeSpec(newSpec);
-    newSpec = upgradeSpec(newSpec);
+    try {
+      newSpec = upgradeSpec(newSpec);
+    } catch (e) {
+      newSpec = {};
+      AppToaster.show({
+        icon: IconNames.ERROR,
+        intent: Intent.DANGER,
+        timeout: 30000,
+        message: (
+          <>
+            <p>
+              This spec can not be used in the data loader because it can not be auto-converted to
+              the latest spec format:
+            </p>
+            <p>{e.message}</p>
+            <p>You can still submit it directly form the Ingestion view.</p>
+          </>
+        ),
+        action: {
+          text: 'Go to Ingestion view',
+          onClick: () => {
+            this.props.goToIngestion(undefined);
+          },
+        },
+      });
+    }
     const deltaState: Partial<LoadDataViewState> = { spec: newSpec };
     if (!deepGet(newSpec, 'spec.ioConfig.type')) {
       deltaState.cacheRows = undefined;
     }
     this.setState(deltaState as LoadDataViewState);
-    localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSONBig.stringify(newSpec));
+    localStorageSetJson(this.localStorageKey, newSpec);
   };
 
   private readonly updateSpecPreview = (newSpecPreview: Partial<IngestionSpec>) => {
@@ -537,7 +573,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   private readonly applyPreviewSpec = () => {
     this.setState(({ spec, nextSpec }) => {
       if (nextSpec) {
-        localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSONBig.stringify(nextSpec));
+        localStorageSetJson(this.localStorageKey, nextSpec);
       }
       return { spec: nextSpec ? nextSpec : { ...spec }, nextSpec: undefined }; // If applying again, make a shallow copy to force a refresh
     });
@@ -606,7 +642,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   renderActionCard(icon: IconName, title: string, caption: string, onClick: () => void) {
     return (
       <Card className="spec-card" interactive onClick={onClick} elevation={1}>
-        <Icon className="spec-card-icon" icon={icon} iconSize={30} />
+        <Icon className="spec-card-icon" icon={icon} size={30} />
         <div className="spec-card-header">
           {title}
           <div className="spec-card-caption">{caption}</div>
@@ -616,21 +652,23 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   render(): JSX.Element {
+    const { mode } = this.props;
     const { step, continueToSpec } = this.state;
+    const type = mode === 'all' ? '' : `${mode} `;
 
     if (!continueToSpec) {
       return (
         <div className={classNames('load-data-continue-view load-data-view')}>
           {this.renderActionCard(
             IconNames.ASTERISK,
-            'Start a new spec',
-            'Begin a new ingestion flow',
+            `Start a new ${type}spec`,
+            `Begin a new ${type}ingestion flow.`,
             this.handleResetSpec,
           )}
           {this.renderActionCard(
             IconNames.REPEAT,
-            'Continue from previous spec',
-            'Go back to the most recent spec you were working on',
+            `Continue from previous ${type}spec`,
+            `Go back to the most recent ${type}ingestion flow you were working on.`,
             this.handleContinueSpec,
           )}
         </div>
@@ -683,25 +721,27 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { step } = this.state;
 
     return (
-      <div className={classNames(Classes.TABS, 'step-nav')}>
-        {SECTIONS.map(section => (
-          <div className="step-section" key={section.name}>
-            <div className="step-nav-l1">{section.name}</div>
-            <ButtonGroup className="step-nav-l2">
-              {section.steps.map(s => (
-                <Button
-                  className={s}
-                  key={s}
-                  active={s === step}
-                  onClick={() => this.updateStep(s)}
-                  icon={s === 'spec' && IconNames.MANUALLY_ENTERED_DATA}
-                  text={VIEW_TITLE[s]}
-                  disabled={!this.isStepEnabled(s)}
-                />
-              ))}
-            </ButtonGroup>
-          </div>
-        ))}
+      <div className="step-nav">
+        <div className="step-nav-inner">
+          {SECTIONS.map(section => (
+            <div className="step-section" key={section.name}>
+              <div className="step-nav-l1">{section.name}</div>
+              <ButtonGroup className="step-nav-l2">
+                {section.steps.map(s => (
+                  <Button
+                    className={s}
+                    key={s}
+                    active={s === step}
+                    onClick={() => this.updateStep(s)}
+                    icon={s === 'spec' && IconNames.MANUALLY_ENTERED_DATA}
+                    text={VIEW_TITLE[s]}
+                    disabled={!this.isStepEnabled(s)}
+                  />
+                ))}
+              </ButtonGroup>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -760,7 +800,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     return (
       <Card
-        className={classNames({ disabled: !goodToGo, active: selectedComboType === comboType })}
+        className={classNames('ingestion-card', {
+          disabled: !goodToGo,
+          active: selectedComboType === comboType,
+        })}
         interactive
         elevation={1}
         onClick={e => {
@@ -784,7 +827,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderWelcomeStep() {
-    const { exampleManifestsUrl } = this.props;
+    const { mode, exampleManifestsUrl } = this.props;
     const { spec, exampleManifests } = this.state;
     const noExamples = Boolean(!exampleManifests || !exampleManifests.length);
 
@@ -793,18 +836,26 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       <>
         <div className="main">
           <div className="ingestion-cards">
-            {this.renderIngestionCard('kafka')}
-            {this.renderIngestionCard('kinesis')}
-            {this.renderIngestionCard('azure-event-hubs')}
-            {this.renderIngestionCard('index_parallel:s3')}
-            {this.renderIngestionCard('index_parallel:azure')}
-            {this.renderIngestionCard('index_parallel:google')}
-            {this.renderIngestionCard('index_parallel:hdfs')}
-            {this.renderIngestionCard('index_parallel:druid')}
-            {this.renderIngestionCard('index_parallel:http')}
-            {this.renderIngestionCard('index_parallel:local')}
-            {this.renderIngestionCard('index_parallel:inline')}
-            {exampleManifestsUrl && this.renderIngestionCard('example', noExamples)}
+            {mode !== 'batch' && (
+              <>
+                {this.renderIngestionCard('kafka')}
+                {this.renderIngestionCard('kinesis')}
+                {this.renderIngestionCard('azure-event-hubs')}
+              </>
+            )}
+            {mode !== 'streaming' && (
+              <>
+                {this.renderIngestionCard('index_parallel:s3')}
+                {this.renderIngestionCard('index_parallel:azure')}
+                {this.renderIngestionCard('index_parallel:google')}
+                {this.renderIngestionCard('index_parallel:hdfs')}
+                {this.renderIngestionCard('index_parallel:druid')}
+                {this.renderIngestionCard('index_parallel:http')}
+                {this.renderIngestionCard('index_parallel:local')}
+                {this.renderIngestionCard('index_parallel:inline')}
+                {exampleManifestsUrl && this.renderIngestionCard('example', noExamples)}
+              </>
+            )}
             {this.renderIngestionCard('other')}
           </div>
         </div>
@@ -827,7 +878,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { selectedComboType, exampleManifests } = this.state;
 
     if (!selectedComboType) {
-      return <p>Please specify where your raw data is located</p>;
+      return <p>Please specify where your raw data is located.</p>;
     }
 
     const issue = this.selectedIngestionTypeIssue();
@@ -1244,13 +1295,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {oneOf(specType, 'kafka', 'kinesis') && (
             <FormGroup label="Where should the data be sampled from?">
-              <HTMLSelect
-                value={sampleStrategy}
-                onChange={e => this.setState({ sampleStrategy: e.target.value as any })}
+              <RadioGroup
+                selectedValue={sampleStrategy}
+                onChange={e => this.setState({ sampleStrategy: e.currentTarget.value as any })}
               >
-                <option value="start">Start of stream</option>
-                <option value="end">End of the stream</option>
-              </HTMLSelect>
+                <Radio value="start">Start of stream</Radio>
+                <Radio value="end">End of stream</Radio>
+              </RadioGroup>
             </FormGroup>
           )}
           {this.renderApplyButtonBar(

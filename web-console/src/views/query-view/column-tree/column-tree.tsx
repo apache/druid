@@ -30,10 +30,15 @@ import {
 } from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
-import { Loader } from '../../../components';
-import { Deferred } from '../../../components/deferred/deferred';
-import { ColumnMetadata, copyAndAlert, groupBy, oneOf, prettyPrintSql } from '../../../utils';
-import { dataTypeToIcon } from '../../../utils/data-type-utils';
+import { Deferred, Loader } from '../../../components';
+import {
+  ColumnMetadata,
+  copyAndAlert,
+  dataTypeToIcon,
+  groupBy,
+  oneOf,
+  prettyPrintSql,
+} from '../../../utils';
 
 import { NumberMenuItems, StringMenuItems, TimeMenuItems } from './column-tree-menu';
 

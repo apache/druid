@@ -5317,7 +5317,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Matt Zabriskie
-version: 0.21.4
+version: 0.26.1
 license_file_path: licenses/bin/axios.MIT
 
 ---
@@ -5666,7 +5666,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.14.10
+version: 0.14.23
 
 ---
 
@@ -6536,4 +6536,14 @@ license_name: ISC License
 copyright: Eemeli Aro
 version: 1.10.2
 license_file_path: licenses/bin/yaml.ISC
+
+---
+
+name: "zustand"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Paul Henschel
+version: 3.7.2
+license_file_path: licenses/bin/zustand.MIT
 # Web console modules end

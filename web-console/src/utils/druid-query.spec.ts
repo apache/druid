@@ -18,7 +18,7 @@
 
 import { sane } from 'druid-query-toolkit';
 
-import { DruidError, getDruidErrorMessage, parseHtmlError, trimSemicolon } from './druid-query';
+import { DruidError, getDruidErrorMessage, parseHtmlError } from './druid-query';
 
 describe('DruidQuery', () => {
   describe('DruidError.parsePosition', () => {
@@ -220,14 +220,6 @@ describe('DruidQuery', () => {
 
     it('parseHtmlError', () => {
       expect(getDruidErrorMessage({})).toMatchInlineSnapshot(`undefined`);
-    });
-  });
-
-  describe('.trimSemicolon', () => {
-    it('works', () => {
-      expect(trimSemicolon('SELECT * FROM tbl;')).toEqual('SELECT * FROM tbl');
-      expect(trimSemicolon('SELECT * FROM tbl;   ')).toEqual('SELECT * FROM tbl   ');
-      expect(trimSemicolon('SELECT * FROM tbl; --hello  ')).toEqual('SELECT * FROM tbl --hello  ');
     });
   });
 });

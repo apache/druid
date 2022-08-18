@@ -1,0 +1,40 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ExecutionErrorPane matches snapshot 1`] = `
+<Blueprint4.Callout
+  className="execution-error-pane"
+  icon="error"
+>
+  <p
+    className="error-message-text"
+  >
+    UnknownError: 
+    java.lang.RuntimeException: java.lang.RuntimeException: Error occured while trying to read uri: https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz_
+     
+    <a
+      onClick={[Function]}
+    >
+      (Stack trace)
+    </a>
+  </p>
+  <p>
+    Failed task ID: 
+    <Memo(ClickToCopy)
+      text="query-9f7d2aa1-72b8-49cf-9350-a1d04c539479-worker0"
+    />
+     
+    On host: 
+    <Memo(ClickToCopy)
+      text="localhost:8101"
+    />
+     
+    Debug:
+     
+    <a
+      onClick={[Function]}
+    >
+      download query detail archive
+    </a>
+  </p>
+</Blueprint4.Callout>
+`;

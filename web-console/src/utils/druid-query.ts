@@ -22,16 +22,9 @@ import { SqlRef } from 'druid-query-toolkit';
 import { Api } from '../singletons';
 
 import { assemble } from './general';
-import { QueryContext } from './query-context';
 import { RowColumn } from './query-cursor';
 
 const CANCELED_MESSAGE = 'Query canceled by user.';
-
-export interface QueryWithContext {
-  queryString: string;
-  queryContext: QueryContext;
-  wrapQueryLimit: number | undefined;
-}
 
 export interface DruidErrorResponse {
   error?: string;
@@ -322,9 +315,4 @@ export function formatSignature(queryExplanation: QueryExplanation): string {
   return queryExplanation.signature
     .map(({ name, type }) => `${SqlRef.column(name)}::${type}`)
     .join(', ');
-}
-
-export function trimSemicolon(query: string): string {
-  // Trims out a trailing semicolon while preserving space (https://bit.ly/1n1yfkJ)
-  return query.replace(/;+((?:\s*--[^\n]*)?\s*)$/, '$1');
 }
