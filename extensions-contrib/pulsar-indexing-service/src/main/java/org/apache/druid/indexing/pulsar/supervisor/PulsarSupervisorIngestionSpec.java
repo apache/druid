@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.pulsar.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIngestionSpec;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -30,9 +31,11 @@ public class PulsarSupervisorIngestionSpec extends SeekableStreamSupervisorInges
   private final PulsarSupervisorIOConfig ioConfig;
   private final PulsarSupervisorTuningConfig tuningConfig;
 
-  public PulsarSupervisorIngestionSpec(DataSchema dataSchema,
-                                       PulsarSupervisorIOConfig ioConfig,
-                                       PulsarSupervisorTuningConfig tuningConfig)
+  @JsonCreator
+  public PulsarSupervisorIngestionSpec(
+      @JsonProperty("dataSchema") DataSchema dataSchema,
+      @JsonProperty("ioConfig") PulsarSupervisorIOConfig ioConfig,
+      @JsonProperty("tuningConfig") PulsarSupervisorTuningConfig tuningConfig)
   {
     super(dataSchema, ioConfig, tuningConfig);
     this.dataSchema = dataSchema;

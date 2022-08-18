@@ -344,8 +344,10 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
       }
 
       return records;
-    } catch (InterruptedException e) {
-      throw new StreamException(e);
+    }
+    catch (InterruptedException e) {
+      log.warn(e, "Interrupted while polling");
+      return Collections.emptyList();
     }
   }
 
