@@ -161,7 +161,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testVarPop() throws Exception
+  public void testVarPop()
   {
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
@@ -208,7 +208,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testVarSamp() throws Exception
+  public void testVarSamp()
   {
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
@@ -255,7 +255,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStdDevPop() throws Exception
+  public void testStdDevPop()
   {
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
@@ -310,7 +310,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStdDevSamp() throws Exception
+  public void testStdDevSamp()
   {
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
@@ -363,7 +363,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStdDevWithVirtualColumns() throws Exception
+  public void testStdDevWithVirtualColumns()
   {
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
@@ -422,7 +422,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testVarianceOrderBy() throws Exception
+  public void testVarianceOrderBy()
   {
     List<Object[]> expectedResults = NullHandling.sqlCompatible()
                                      ? ImmutableList.of(
@@ -467,7 +467,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testVariancesOnCastedString() throws Exception
+  public void testVariancesOnCastedString()
   {
     testQuery(
         "SELECT\n"
@@ -507,7 +507,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEmptyTimeseriesResults() throws Exception
+  public void testEmptyTimeseriesResults()
   {
     testQuery(
         "SELECT\n"
@@ -557,7 +557,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByAggregatorDefaultValues() throws Exception
+  public void testGroupByAggregatorDefaultValues()
   {
     testQuery(
         "SELECT\n"

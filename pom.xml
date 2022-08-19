@@ -104,7 +104,7 @@
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
         <netty4.version>4.1.68.Final</netty4.version>
-        <postgresql.version>42.3.3</postgresql.version>
+        <postgresql.version>42.4.1</postgresql.version>
         <protobuf.version>3.11.0</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <slf4j.version>1.7.36</slf4j.version>
@@ -212,6 +212,9 @@
         <module>extensions-contrib/opentelemetry-emitter</module>
         <!-- distribution packaging -->
         <module>distribution</module>
+        <!-- Revised integration tests -->
+        <module>integration-tests-ex/it-tools</module>
+        <module>integration-tests-ex/it-image</module>
     </modules>
 
     <repositories>
@@ -943,6 +946,13 @@
               <version>${mockito.version}</version>
               <scope>import</scope>
               <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>com.github.docker-java</groupId>
+                <artifactId>docker-java-bom</artifactId>
+                <version>3.2.13</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -1873,6 +1883,7 @@
                                 <exclude>target/**</exclude>
                                 <exclude>licenses/**</exclude>
                                 <exclude>**/test/resources/**</exclude> <!-- test data for "old" ITs. -->
+                                <exclude>**/data/data/**</exclude> <!-- test data for "new" ITs. -->
                                 <exclude>**/derby.log</exclude>
                                 <exclude>**/jvm.config</exclude>
                                 <exclude>**/*.avsc</exclude>

@@ -117,7 +117,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testComputingSketchOnNumericValues() throws Exception
+  public void testComputingSketchOnNumericValues()
   {
     cannotVectorize();
 
@@ -145,7 +145,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testComputingSketchOnCastedString() throws Exception
+  public void testComputingSketchOnCastedString()
   {
     cannotVectorize();
 
@@ -185,7 +185,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDefaultCompressionForTDigestGenerateSketchAgg() throws Exception
+  public void testDefaultCompressionForTDigestGenerateSketchAgg()
   {
     cannotVectorize();
 
@@ -211,7 +211,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testComputingQuantileOnPreAggregatedSketch() throws Exception
+  public void testComputingQuantileOnPreAggregatedSketch()
   {
     cannotVectorize();
 
@@ -253,7 +253,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGeneratingSketchAndComputingQuantileOnFly() throws Exception
+  public void testGeneratingSketchAndComputingQuantileOnFly()
   {
     cannotVectorize();
 
@@ -308,7 +308,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnNumericValues() throws Exception
+  public void testQuantileOnNumericValues()
   {
     cannotVectorize();
 
@@ -345,7 +345,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCompressionParamForTDigestQuantileAgg() throws Exception
+  public void testCompressionParamForTDigestQuantileAgg()
   {
     cannotVectorize();
     testQuery(
@@ -383,7 +383,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnCastedString() throws Exception
+  public void testQuantileOnCastedString()
   {
     cannotVectorize();
 
@@ -436,7 +436,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEmptyTimeseriesResults() throws Exception
+  public void testEmptyTimeseriesResults()
   {
     cannotVectorize();
 
@@ -468,7 +468,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByAggregatorDefaultValues() throws Exception
+  public void testGroupByAggregatorDefaultValues()
   {
     cannotVectorize();
     testQuery(

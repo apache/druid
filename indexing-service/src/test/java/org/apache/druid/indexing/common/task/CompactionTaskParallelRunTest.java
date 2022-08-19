@@ -33,6 +33,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -76,6 +77,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -807,7 +809,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   private Set<DataSegment> runTask(Task task)
   {
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
-    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
+    TaskStatus status = getIndexingServiceClient().runAndWait(task);
+    Assert.assertEquals(status.toString(), TaskState.SUCCESS, status.getStatusCode());
     return getIndexingServiceClient().getPublishedSegments(task);
   }
 }

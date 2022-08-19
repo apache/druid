@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -41,8 +40,9 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.SqlLifecycle;
-import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.DirectStatement;
+import org.apache.druid.sql.SqlQueryPlus;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -91,6 +91,11 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
   );
 
   protected boolean didTest = false;
+
+  public CalciteIngestionDmlTest()
+  {
+    super(IngestionTestSqlEngine.INSTANCE);
+  }
 
   @After
   @Override
@@ -145,7 +150,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     private String expectedTargetDataSource;
     private RowSignature expectedTargetSignature;
     private List<ResourceAction> expectedResources;
-    private Query expectedQuery;
+    private Query<?> expectedQuery;
     private Matcher<Throwable> validationErrorMatcher;
 
     private IngestionDmlTester()
@@ -267,7 +272,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
         throw new ISE("Test must not have expectedQuery");
       }
 
-      final SqlLifecycleFactory sqlLifecycleFactory = getSqlLifecycleFactory(
+      final SqlStatementFactory sqlStatementFactory = getSqlStatementFactory(
           plannerConfig,
           new AuthConfig(),
           createOperatorTable(),
@@ -276,14 +281,18 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           queryJsonMapper
       );
 
-      final SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-      sqlLifecycle.initialize(sql, new QueryContext(queryContext));
+      DirectStatement stmt = sqlStatementFactory.directStatement(
+          SqlQueryPlus
+              .builder(sql)
+              .context(queryContext)
+              .auth(authenticationResult)
+              .build()
+      );
 
       final Throwable e = Assert.assertThrows(
           Throwable.class,
           () -> {
-            sqlLifecycle.validateAndAuthorize(authenticationResult);
-            sqlLifecycle.plan();
+            stmt.execute();
           }
       );
 
@@ -291,7 +300,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       Assert.assertTrue(queryLogHook.getRecordedQueries().isEmpty());
     }
 
-    private void verifySuccess() throws Exception
+    private void verifySuccess()
     {
       if (expectedTargetDataSource == null) {
         throw new ISE("Test must have expectedTargetDataSource");
@@ -301,7 +310,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
         throw new ISE("Test must have expectedResources");
       }
 
-      final List<Query> expectedQueries =
+      final List<Query<?>> expectedQueries =
           expectedQuery == null
           ? Collections.emptyList()
           : Collections.singletonList(recursivelyOverrideContext(expectedQuery, queryContext));

@@ -470,6 +470,7 @@ vectorizable
 vectorize
 vectorizeVirtualColumns
 versioning
+virtualColumns
 w.r.t.
 whitelist
 whitelisted
@@ -884,7 +885,11 @@ gcs-connector
 hadoop2
 hdfs
  - ../docs/development/extensions-core/kafka-extraction-namespace.md
+Aotearoa
+Czechia
+KTable
 LookupExtractorFactory
+Zeelund
 zookeeper.connect
  - ../docs/development/extensions-core/kafka-ingestion.md
 0.11.x.
@@ -1649,6 +1654,7 @@ enableParallelMerge
 enableJoinLeftTableScanDirect
 enableJoinFilterPushDown
 enableJoinFilterRewrite
+enableRewriteJoinToFilter
 enableJoinFilterRewriteValueColumnFilters
 floatSum
 joinFilterRewriteMaxSize
@@ -2111,3 +2117,7 @@ TIMESTAMPDIFF
 TRUNC 
 VAR_POP 
 VAR_SAMP
+KTable
+Aotearoa
+Czechia
+Zeelund

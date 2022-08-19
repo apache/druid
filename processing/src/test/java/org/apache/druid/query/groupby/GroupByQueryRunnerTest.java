@@ -34,6 +34,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -283,9 +284,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public long getMaxOnDiskStorage()
+      public HumanReadableBytes getMaxOnDiskStorage()
       {
-        return 10L * 1024 * 1024;
+        return HumanReadableBytes.valueOf(10L * 1024 * 1024);
       }
 
       @Override
@@ -315,9 +316,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public long getMaxOnDiskStorage()
+      public HumanReadableBytes getMaxOnDiskStorage()
       {
-        return 10L * 1024 * 1024;
+        return HumanReadableBytes.valueOf(10L * 1024 * 1024);
       }
 
       @Override
@@ -3018,7 +3019,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     List<ResultRow> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       expectedException.expect(ResourceLimitExceededException.class);
-      if (config.getMaxOnDiskStorage() > 0) {
+      if (config.getMaxOnDiskStorage().getBytes() > 0) {
         // The error message always mentions disk if you have spilling enabled (maxOnDiskStorage > 0)
         expectedException.expectMessage("Not enough disk space to execute this query");
       } else {

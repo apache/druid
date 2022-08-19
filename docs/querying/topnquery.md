@@ -103,6 +103,7 @@ There are 11 parts to a topN query.
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |granularity|Defines the granularity to bucket query results. See [Granularities](../querying/granularities.md)|yes|
 |filter|See [Filters](../querying/filters.md)|no|
+|virtualColumns|A JSON list of [virtual columns](./virtual-columns.md). You can reference a virtual column as the grouping `dimension` or as an input in `aggregations` or `postAggregations`.| no (default none)|
 |aggregations|See [Aggregations](../querying/aggregations.md)|for numeric metricSpec, aggregations or postAggregations should be specified. Otherwise no.|
 |postAggregations|See [Post Aggregations](../querying/post-aggregations.md)|for numeric metricSpec, aggregations or postAggregations should be specified. Otherwise no.|
 |dimension|A String or JSON object defining the dimension that you want the top taken for. For more info, see [DimensionSpecs](../querying/dimensionspecs.md)|yes|

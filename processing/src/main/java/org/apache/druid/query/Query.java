@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.filter.DimFilter;
@@ -128,6 +129,24 @@ public interface Query<T>
   <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
 
   boolean getContextBoolean(String key, boolean defaultValue);
+
+  /**
+   * Returns {@link HumanReadableBytes} for a specified context key. If the context is null or the key doesn't exist
+   * a caller specified default value is returned. A default implementation is provided since Query is an extension
+   * point. Extensions can choose to rely on this default to retain compatibility with core Druid.
+   *
+   * @param key The context key value being looked up
+   * @param defaultValue The default to return if the key value doesn't exist or the context is null.
+   * @return {@link HumanReadableBytes}
+   */
+  default HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
+  {
+    if (null != getQueryContext()) {
+      return getQueryContext().getAsHumanReadableBytes(key, defaultValue);
+    } else {
+      return defaultValue;
+    }
+  }
 
   boolean isDescending();
 

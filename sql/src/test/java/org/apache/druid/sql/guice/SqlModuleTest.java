@@ -73,7 +73,6 @@ import org.junit.runner.RunWith;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
-
 import java.util.Map;
 import java.util.Properties;
 

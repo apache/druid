@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -273,5 +274,13 @@ public class QueryContextsTest
     catch (IAE e) {
       // Expected
     }
+  }
+
+  @Test
+  public void testGetAsHumanReadableBytes()
+  {
+    Assert.assertEquals(new HumanReadableBytes("500M").getBytes(), QueryContexts.getAsHumanReadableBytes("maxOnDiskStorage", 500_000_000, HumanReadableBytes.ZERO).getBytes());
+    Assert.assertEquals(new HumanReadableBytes("500M").getBytes(), QueryContexts.getAsHumanReadableBytes("maxOnDiskStorage", "500000000", HumanReadableBytes.ZERO).getBytes());
+    Assert.assertEquals(new HumanReadableBytes("500M").getBytes(), QueryContexts.getAsHumanReadableBytes("maxOnDiskStorage", "500M", HumanReadableBytes.ZERO).getBytes());
   }
 }

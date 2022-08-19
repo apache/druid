@@ -40,9 +40,15 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
  * to back off from issuing the next request, if appropriate. However: the handler does not implement backpressure
  * through the {@link HttpResponseHandler.TrafficCop} mechanism. Therefore, it is important that each request retrieve
  * a modest amount of data.
+ *
+ * The last fetch must be empty (zero content bytes) and must have the header {@link #HEADER_LAST_FETCH_NAME} set to
+ * {@link #HEADER_LAST_FETCH_VALUE}. Under these conditions, {@link FrameFilePartialFetch#isLastFetch()} returns true.
  */
 public class FrameFileHttpResponseHandler implements HttpResponseHandler<FrameFilePartialFetch, FrameFilePartialFetch>
 {
+  public static final String HEADER_LAST_FETCH_NAME = "X-Druid-Frame-Last-Fetch";
+  public static final String HEADER_LAST_FETCH_VALUE = "yes";
+
   private final ReadableByteChunksFrameChannel channel;
 
   public FrameFileHttpResponseHandler(final ReadableByteChunksFrameChannel channel)
@@ -53,14 +59,17 @@ public class FrameFileHttpResponseHandler implements HttpResponseHandler<FrameFi
   @Override
   public ClientResponse<FrameFilePartialFetch> handleResponse(final HttpResponse response, final TrafficCop trafficCop)
   {
-    final ClientResponse<FrameFilePartialFetch> clientResponse = ClientResponse.unfinished(new FrameFilePartialFetch());
-
     if (response.getStatus().getCode() != HttpResponseStatus.OK.getCode()) {
       // Note: if the error body is chunked, we will discard all future chunks due to setting exceptionCaught here.
       // This is OK because we don't need the body; just the HTTP status code.
+      final ClientResponse<FrameFilePartialFetch> clientResponse =
+          ClientResponse.unfinished(new FrameFilePartialFetch(false));
       exceptionCaught(clientResponse, new ISE("Server for [%s] returned [%s]", channel.getId(), response.getStatus()));
       return clientResponse;
     } else {
+      final boolean lastFetchHeaderSet = HEADER_LAST_FETCH_VALUE.equals(response.headers().get(HEADER_LAST_FETCH_NAME));
+      final ClientResponse<FrameFilePartialFetch> clientResponse =
+          ClientResponse.unfinished(new FrameFilePartialFetch(lastFetchHeaderSet));
       return response(clientResponse, response.getContent());
     }
   }
