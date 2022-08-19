@@ -232,14 +232,14 @@ JSON functions provide facilities to extract, transform, and create `COMPLEX<jso
 
 | function | description |
 |---|---|
-| json_value(expr, path) | Extract a Druid literal (`STRING`, `LONG`, `DOUBLE`) value from a `COMPLEX<json>` column or input `expr` using JSONPath syntax of `path` |
-| json_query(expr, path) | Extract a `COMPLEX<json>` value from a `COMPLEX<json>` column or input `expr` using JSONPath syntax of `path` |
+| json_value(expr, path) | Extract a Druid literal (`STRING`, `LONG`, `DOUBLE`) value from `expr` using JSONPath syntax of `path` |
+| json_query(expr, path) | Extract a `COMPLEX<json>` value from `expr` using JSONPath syntax of `path` |
 | json_object(expr1, expr2[, expr3, expr4 ...]) | Construct a `COMPLEX<json>` with alternating 'key' and 'value' arguments|
-| parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>` to be used with expressions which operate on `COMPLEX<json>` inputs. Non-`STRING` input or invalid JSON will result in an error. |
-| try_parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>` to be used with expressions which operate on `COMPLEX<json>` inputs. Non-`STRING` input or invalid JSON will result in a `NULL` value. |
-| to_json_string(expr) | Convert a `COMPLEX<json>` input into a JSON `STRING` value |
-| json_keys(expr, path) | get array of field names in `expr` at the specified JSONPath `path`, or null if the data does not exist or have any fields |
-| json_paths(expr) | get array of all JSONPath paths available in `expr` |
+| parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>`. If the input is not a `STRING` or it is invalid JSON, this function will result in an error.|
+| try_parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>`. If the input is not a `STRING` or it is invalid JSON, this function will result in a `NULL` value. |
+| to_json_string(expr) | Convert `expr` into a JSON `STRING` value |
+| json_keys(expr, path) | get array of field names from `expr` at the specified JSONPath `path`, or null if the data does not exist or have any fields |
+| json_paths(expr) | get array of all JSONPath paths available from `expr` |
 
 ### JSONPath syntax
 
