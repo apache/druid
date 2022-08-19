@@ -23,7 +23,7 @@ const snarkdown = require('snarkdown');
 
 const writefile = 'lib/sql-docs.js';
 
-const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 150;
+const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 158;
 const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 14;
 
 function hasHtmlTags(str) {

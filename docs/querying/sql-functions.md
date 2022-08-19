@@ -653,7 +653,7 @@ Converts `address` into an IPv4 address in dot-decimal notation.
 
 `JSON_KEYS(expr, path)`
 
-Returns an array of field names in a `COMPLEX<json>` typed `expr`, at the specified `path`.
+Returns an array of field names from `expr` at the specified `path`.
 
 ## JSON_OBJECT
 
@@ -661,7 +661,7 @@ Returns an array of field names in a `COMPLEX<json>` typed `expr`, at the specif
 
 `JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])`
 
-Constructs a new `COMPLEX<json>` object. The `KEY` expressions must evaluate to string types, but the `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` values.
+Constructs a new `COMPLEX<json>` object. The `KEY` expressions must evaluate to string types. The `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` values. `JSON_OBJECT` can accept alternating key-value pairs separated by colons. The following syntax is equivalent: `JSON_OBJECT(expr1:expr2[, expr3:expr4, ...])`.
 
 ## JSON_PATHS
 
@@ -669,7 +669,7 @@ Constructs a new `COMPLEX<json>` object. The `KEY` expressions must evaluate to 
 
 `JSON_PATHS(expr)`
 
-Returns an array of all paths which refer to literal values in a `COMPLEX<json>` typed `expr`, in JSONPath format.
+Returns an array of all paths which refer to literal values in `expr` in JSONPath format.
 
 ## JSON_QUERY
 
@@ -677,7 +677,7 @@ Returns an array of all paths which refer to literal values in a `COMPLEX<json>`
 
 `JSON_QUERY(expr, path)`
 
-Extracts a `COMPLEX<json>` value from a `COMPLEX<json>` typed `expr`, at the specified `path`.
+Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`.
 
 ## JSON_VALUE
 
@@ -685,7 +685,7 @@ Extracts a `COMPLEX<json>` value from a `COMPLEX<json>` typed `expr`, at the spe
 
 `JSON_VALUE(expr, path [RETURNING sqlType])`
 
-Extracts a literal value from a `COMPLEX<json>` typed `expr`, at the specified `path`. If you specify `RETURNING` and an SQL type name (such as varchar, bigint, decimal, or double) the function plans the query using the suggested type. Otherwise it attempts to infer the type based on the context. If it can't infer the type, it defaults to varchar.
+Extracts a literal value from `expr` at the specified `path`. If you specify `RETURNING` and an SQL type name (such as `VARCHAR`, `BIGINT`, `DOUBLE`, etc) the function plans the query using the suggested type. Otherwise, it attempts to infer the type based on the context. If it can't infer the type, it defaults to `VARCHAR`.
 
 ## LATEST
 
@@ -945,7 +945,7 @@ Returns `e2` if `e1` is null, else returns `e1`.
 
 `PARSE_JSON(expr)`
 
-Parses a string type `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. Non-`STRING` input or invalid JSON will result in an error.
+Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in an error.
 
 ## PARSE_LONG
 
@@ -1321,7 +1321,7 @@ Takes the difference between two timestamps, returning the results in the given 
 
 `TO_JSON_STRING(expr)`
 
-Casts an `expr` of any type into a `COMPLEX<json>` object, then serializes the value into a JSON string.
+Serializes `expr` into a JSON string.
 
 
 ## TRIM
@@ -1355,7 +1355,7 @@ Truncates a numerical expression to a specific number of decimal digits.
 
 `TRY_PARSE_JSON(expr)`
 
-Parses a string type `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. Non-`STRING` input or invalid JSON will result in a `NULL` value.
+Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in a `NULL` value.
 
 
 ## UPPER

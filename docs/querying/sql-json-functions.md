@@ -30,23 +30,23 @@ sidebar_label: "JSON functions"
   patterns in this markdown file and parse it to TypeScript file for web console
 -->
 
-Druid supports nested columns, which provide optimized storage and indexes for nested data structures. These JSON
-functions provide facilities to extract, transform, and create `COMPLEX<json>` values.
+Druid supports nested columns, which provide optimized storage and indexes for nested data structures.  Use
+the following JSON functions to extract, transform, and create `COMPLEX<json>` values.
 
-| function | notes |
+| Function | Notes |
 | --- | --- |
-|`JSON_KEYS(expr, path)`| Returns an array of field names in a `COMPLEX<json>` typed `expr`, at the specified `path`.|
-|`JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])` | Constructs a new `COMPLEX<json>` object. The `KEY` expressions must evaluate to string types, but the `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` values.|
-|`JSON_PATHS(expr)`| Returns an array of all paths which refer to literal values in a `COMPLEX<json>` typed `expr`, in JSONPath format. |
-|`JSON_QUERY(expr, path)`| Extracts a `COMPLEX<json>` value from a `COMPLEX<json>` typed  `expr`, at the specified `path`. |
-|`JSON_VALUE(expr, path [RETURNING sqlType])`| Extracts a literal value from a `COMPLEX<json>` typed  `expr`, at the specified `path`. If you specify `RETURNING` and an SQL type name (such as varchar, bigint, decimal, or double) the function plans the query using the suggested type. Otherwise it attempts to infer the type based on the context. If it can't infer the type, it defaults to varchar.|
-|`PARSE_JSON(expr)`|Parses a string type `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. Non-`STRING` input or invalid JSON will result in an error.|
-|`TRY_PARSE_JSON(expr)`|Parses a string type `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. Non-`STRING` input or invalid JSON will result in a `NULL` value.|
-|`TO_JSON_STRING(expr)`|Casts an `expr` of any type into a `COMPLEX<json>` object, then serializes the value into a JSON string.|
+|`JSON_KEYS(expr, path)`| Returns an array of field names from `expr` at the specified `path`.|
+|`JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])` | Constructs a new `COMPLEX<json>` object. The `KEY` expressions must evaluate to string types. The `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` values. `JSON_OBJECT` can accept alternating key-value pairs separated by colons. The following syntax is equivalent: `JSON_OBJECT(expr1:expr2[, expr3:expr4, ...])`.|
+|`JSON_PATHS(expr)`| Returns an array of all paths which refer to literal values in `expr` in JSONPath format. |
+|`JSON_QUERY(expr, path)`| Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`. |
+|`JSON_VALUE(expr, path [RETURNING sqlType])`| Extracts a literal value from `expr` at the specified `path`. If you specify `RETURNING` and an SQL type name (such as `VARCHAR`, `BIGINT`, `DOUBLE`, etc) the function plans the query using the suggested type. Otherwise, it attempts to infer the type based on the context. If it can't infer the type, it defaults to `VARCHAR`.|
+|`PARSE_JSON(expr)`|Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in an error.|
+|`TRY_PARSE_JSON(expr)`|Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in a `NULL` value.|
+|`TO_JSON_STRING(expr)`|Serializes `expr` into a JSON string.|
 
 ### JSONPath syntax
 
-Druid supports a small, simplified subset of the [JSONPath syntax](https://github.com/json-path/JsonPath/blob/master/README.md) operators, primarily limited to extracting individual values from nested data structures.
+Druid supports a subset of the [JSONPath syntax](https://github.com/json-path/JsonPath/blob/master/README.md) operators, primarily limited to extracting individual values from nested data structures.
 
 |Operator|Description|
 | --- | --- |
@@ -61,9 +61,9 @@ Consider the following example input JSON:
 {"x":1, "y":[1, 2, 3]}
 ```
 
-- To return the JSON object:<br>
+- To return the entire JSON object:<br>
   `$`      -> `{"x":1, "y":[1, 2, 3]}`
-- To return the value of a key "x":<br>
+- To return the value of the key "x":<br>
   `$.x`    -> `1`
 - For a key that contains an array, to return the entire array:<br>
   `$['y']` -> `[1, 2, 3]`

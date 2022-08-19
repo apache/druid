@@ -80,6 +80,7 @@ The expression virtual column has the following syntax:
 
 |property|description|required?|
 |--------|-----------|---------|
+|type|Must be `"expression"` to indicate that this is an expression virtual column.|yes|
 |name|The name of the virtual column.|yes|
 |expression|An [expression](../misc/math-expr.md) that takes a row as input and outputs a value for the virtual column.|yes|
 |outputType|The expression's output will be coerced to this type. Can be LONG, FLOAT, DOUBLE, STRING, ARRAY types, or COMPLEX types.|no, default is FLOAT|
@@ -89,6 +90,10 @@ The expression virtual column has the following syntax:
 
 The nested field virtual column is an optimized virtual column that can provide direct access into various paths of
 a `COMPLEX<json>` column, including using their indexes.
+
+This virtual column is used for the SQL operators `JSON_VALUE` (if `processFromRaw` is set to false) or `JSON_QUERY`
+(if `processFromRaw` is true), and accepts 'JSONPath' or 'jq' syntax string representations of paths, or a parsed
+list of "path parts" in order to determine what should be selected from the column.
 
 Syntax (all 3 of these virtual columns produce the same output):
 ```json
@@ -136,31 +141,24 @@ Syntax (all 3 of these virtual columns produce the same output):
 
 |property|description|required?|
 |--------|-----------|---------|
-|columnName|The name of the virtual column.|yes|
+|type|Must be `"nested-field"` to indicate that this is a nested field virtual column.|yes|
+|columnName|The name of the `COMPLEX<json>` input column.|yes|
 |outputName|The name of the virtual column.|yes|
-|expectedType|The name of the virtual column.|yes|
-|pathParts|The name of the virtual column.|yes|
-|processFromRaw|If set to true, the virtual column will process the "raw" JSON data to extract values rather than using an optimized "literal" value selector. This option allows extracting non-literal values (such as nested JSON objects or arrays) as a `COMPLEX<json>` at the cost of much slower performance.|No, default false|
-|path|'JSONPath' or 'jq' syntax path. One of `path` or `pathParts` must be set|no, if `pathParts` is defined|
-|useJqSyntax||no, default is false|
+|expectedType|The native Druid output type of the column, Druid will coerce output to this type if it does not match the underlying data. This can be `STRING`, `LONG`, `FLOAT`, `DOUBLE`, or `COMPLEX<json>`. Extracting `ARRAY` types is not yet supported.|no, default `STRING`|
+|pathParts|The parsed path parts used to locate the nested values. `path` will be translated into `pathParts` internally. One of `path` or `pathParts` must be set|no, if `path` is defined|
+|processFromRaw|If set to true, the virtual column will process the "raw" JSON data to extract values rather than using an optimized "literal" value selector. This option allows extracting non-literal values (such as nested JSON objects or arrays) as a `COMPLEX<json>` at the cost of much slower performance.|no, default false|
+|path|'JSONPath' (or 'jq') syntax path. One of `path` or `pathParts` must be set. |no, if `pathParts` is defined|
+|useJqSyntax|If true, parse `path` using 'jq' syntax instead of 'JSONPath'.|no, default is false|
 
 #### Nested path part
+Specify `pathParts` as an array of objects that describe each component of the path to traverse. Each object can take the following properties:
+
 |property|description|required?|
 |--------|-----------|---------|
-|type|Must be 'field' or 'arrayElement'|yes|
+|type|Must be 'field' or 'arrayElement'. Use `field` when accessing a specific field in a nested structure. Use `arrayElement` when accessing a specific integer position of an array (zero based).|yes|
 |field|The name of the 'field' in a 'field' `type` path part|yes, if `type` is 'field'|
 |index|The array element index if `type` is `arrayElement`|yes, if `type` is 'arrayElement'|
 
-This virtual column is used for the SQL operators `JSON_VALUE` (if `processFromRaw` is set to false) or `JSON_QUERY`
-(if it is true), and accepts 'JSONPath' or 'jq' syntax string representations of paths, or a parsed
-list of "path parts" in order to determine what should be selected from the column.
-
-Type information for nested fields is absent at higher levels (it is contained within the segment, but not to segment
-metadata queries or the SQL planner), so `expectedType` provides the context for how something is being used, e.g. an
-aggregators default type or an explicit cast, or, if using the 'RETURNING' syntax which explicitly specifies type.
-This might not be the same as if it had actual type information, so the results will be "best effort" cast to the
-expected type if the column is not natively the expected type so that this column can fulfill the contract of the type
-of selector that is likely to be created to read this column.
 
 
 ### List filtered virtual column
@@ -181,6 +179,7 @@ access to the underlying column value indexes that can provide a small performan
 
 |property|description|required?|
 |--------|-----------|---------|
+|type|Must be `"mv-filtered"` to indicate that this is a list filtered virtual column.|yes|
 |name|The output name of the virtual column|yes|
 |delegate|The name of the multi-value STRING input column to filter|yes|
 |values|Set of STRING values to allow or deny|yes|
