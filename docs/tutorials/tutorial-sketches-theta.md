@@ -34,7 +34,7 @@ Imagine you are interested in the number of visitors that watched episodes of a 
 - How many visitors are there that watched _at least one_ of the episodes?
 - How many visitors watched episode 1 _but not_ episode 2?
 
-There is no way to answer these questions by just looking at the aggregated numbers. You would have to go back to the detail data and scan every single row. If the data volume is high enough, this may take long, meaning that an interactive data exploration is not possible.
+There is no way to answer these questions by just looking at the aggregated numbers. You would have to go back to the detail data and scan every single row. If the data volume is high enough, this may take a very long time, meaning that an interactive data exploration is not possible.
 
 An additional nuisance is that unique counts don't work well with rollups. For this example, it would be great if you could have just one row of data per 15 minute interval[^1], show, and episode. After all, you are not interested in the individual user IDs, just the unique counts.
 
@@ -323,5 +323,5 @@ See the following topics for more information:
 
 ## Acknowledgments
 
-This tutorial is adapted from a blog post by Hellmar Becker. Visit the [original blog post](https://blog.hellmar-becker.de/2022/06/05/druid-data-cookbook-counting-unique-visitors-for-overlapping-segments/) on Hellmar Becker's blog.
+This tutorial is adapted from a [blog post](https://blog.hellmar-becker.de/2022/06/05/druid-data-cookbook-counting-unique-visitors-for-overlapping-segments/) by community member Hellmar Becker.
 
