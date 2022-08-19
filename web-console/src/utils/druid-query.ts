@@ -211,7 +211,7 @@ export class DruidError extends Error {
       return {
         label: `Remove trailing ;`,
         fn: str => {
-          const newQuery = str.replace(/[;\s]*$/, '');
+          const newQuery = str.replace(/[;\s]+$/, '');
           if (newQuery === str) return;
           return newQuery;
         },
