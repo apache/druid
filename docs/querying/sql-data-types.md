@@ -123,6 +123,6 @@ understand them, and so have undefined behavior when:
 * grouping on complex values
 * filtered directly on complex values, e.g. `WHERE json is NULL`
 * used as inputs to aggregators without specialized handling for a specific complex type
-q
+
 In many cases, these functions are provided for translating these `COMPLEX` value types a `STRING`, which serves as
 workaround solution until `COMPLEX` types functionality can be improved.
