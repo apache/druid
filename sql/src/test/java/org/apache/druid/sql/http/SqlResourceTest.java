@@ -110,6 +110,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -133,7 +134,8 @@ public class SqlResourceTest extends CalciteTestBase
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final String DUMMY_SQL_QUERY_ID = "dummy";
-  private static final int WAIT_TIMEOUT_SECS = 3;
+  // Timeout to allow (rapid) debugging, while not blocking tests with errors.
+  private static final int WAIT_TIMEOUT_SECS = 60;
   private static final Consumer<DirectStatement> NULL_ACTION = s -> {};
 
   private static final List<String> EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS =
@@ -1917,11 +1919,11 @@ public class SqlResourceTest extends CalciteTestBase
     }
 
     @Override
-    public PlannerResult plan(DruidPlanner planner)
+    public PlannerResult createPlan(DruidPlanner planner)
     {
       if (planLatchSupplier.get() != null) {
         if (planLatchSupplier.get().rhs) {
-          PlannerResult result = super.plan(planner);
+          PlannerResult result = super.createPlan(planner);
           planLatchSupplier.get().lhs.countDown();
           return result;
         } else {
@@ -1933,45 +1935,52 @@ public class SqlResourceTest extends CalciteTestBase
           catch (InterruptedException e) {
             throw new RuntimeException(e);
           }
-          return super.plan(planner);
+          return super.createPlan(planner);
         }
       } else {
-        return super.plan(planner);
+        return super.createPlan(planner);
       }
     }
 
     @Override
-    public Sequence<Object[]> execute()
+    public ResultSet plan()
     {
       onExecute.accept(this);
-      return super.execute();
+      return super.plan();
     }
 
     @Override
-    public Sequence<Object[]> doExecute()
+    public ResultSet createResultSet(PlannerResult plannerResult)
     {
-      final Function<Sequence<Object[]>, Sequence<Object[]>> sequenceMapFn =
-          Optional.ofNullable(sequenceMapFnSupplier.get()).orElse(Function.identity());
+      return new ResultSet(plannerResult)
+      {
+        @Override
+        public Sequence<Object[]> run()
+        {
+          final Function<Sequence<Object[]>, Sequence<Object[]>> sequenceMapFn =
+              Optional.ofNullable(sequenceMapFnSupplier.get()).orElse(Function.identity());
 
-      if (executeLatchSupplier.get() != null) {
-        if (executeLatchSupplier.get().rhs) {
-          Sequence<Object[]> sequence = sequenceMapFn.apply(super.doExecute());
-          executeLatchSupplier.get().lhs.countDown();
-          return sequence;
-        } else {
-          try {
-            if (!executeLatchSupplier.get().lhs.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
-              throw new RuntimeException("Latch timed out");
+          if (executeLatchSupplier.get() != null) {
+            if (executeLatchSupplier.get().rhs) {
+              Sequence<Object[]> sequence = sequenceMapFn.apply(super.run());
+              executeLatchSupplier.get().lhs.countDown();
+              return sequence;
+            } else {
+              try {
+                if (!executeLatchSupplier.get().lhs.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
+                  throw new RuntimeException("Latch timed out");
+                }
+              }
+              catch (InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+              return sequenceMapFn.apply(super.run());
             }
+          } else {
+            return sequenceMapFn.apply(super.run());
           }
-          catch (InterruptedException e) {
-            throw new RuntimeException(e);
-          }
-          return sequenceMapFn.apply(super.doExecute());
         }
-      } else {
-        return sequenceMapFn.apply(super.doExecute());
-      }
+      };
     }
   }
 }

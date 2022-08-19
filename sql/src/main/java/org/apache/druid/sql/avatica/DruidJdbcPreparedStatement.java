@@ -65,7 +65,7 @@ public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
       PrepareResult prepareResult = sqlStatement.prepare();
       signature = createSignature(
           prepareResult,
-          sqlStatement.sqlRequest().sql()
+          sqlStatement.query().sql()
       );
       state = State.PREPARED;
     }

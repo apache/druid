@@ -487,6 +487,7 @@ vectorizable
 vectorize
 vectorizeVirtualColumns
 versioning
+virtualColumns
 w.r.t.
 whitelist
 whitelisted
