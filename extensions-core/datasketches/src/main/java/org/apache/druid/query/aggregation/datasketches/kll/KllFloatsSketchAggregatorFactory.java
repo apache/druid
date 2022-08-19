@@ -105,7 +105,7 @@ public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory
       return new KllFloatsSketchMergeAggregatorFactory(
           getName(),
           Math.max(getK(), ((KllFloatsSketchAggregatorFactory) other).getK()),
-          getMaxStreamLength()
+          Math.max(getMaxStreamLength(), ((KllFloatsSketchAggregatorFactory) other).getMaxStreamLength())
       );
     } else {
       throw new AggregatorFactoryNotMergeableException(this, other);

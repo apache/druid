@@ -105,7 +105,7 @@ public class KllDoublesSketchAggregatorFactory extends KllSketchAggregatorFactor
       return new KllDoublesSketchMergeAggregatorFactory(
           getName(),
           Math.max(getK(), ((KllDoublesSketchAggregatorFactory) other).getK()),
-          getMaxStreamLength()
+          Math.max(getMaxStreamLength(), ((KllDoublesSketchAggregatorFactory) other).getMaxStreamLength())
       );
     } else {
       throw new AggregatorFactoryNotMergeableException(this, other);
