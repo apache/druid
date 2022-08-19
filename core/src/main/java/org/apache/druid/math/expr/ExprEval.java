@@ -1000,7 +1000,7 @@ public abstract class ExprEval<T>
         } else if (value.length == 1) {
           cacheStringValue(Evals.asString(value[0]));
         } else {
-          cacheStringValue(Evals.arrayAsString(value));
+          cacheStringValue(Arrays.toString(value));
         }
       }
 

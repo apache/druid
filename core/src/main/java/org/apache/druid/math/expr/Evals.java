@@ -22,7 +22,6 @@ package org.apache.druid.math.expr;
 import org.apache.druid.common.config.NullHandling;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -84,32 +83,5 @@ public class Evals
       return null;
     }
     return o.toString();
-  }
-
-  /**
-   * Alternative implementation of {@link Arrays#toString(Object[])} except using
-   * {@link #asString(Object)} instead of {@link String#valueOf(Object)} so that null values are not transformed
-   * into "null".
-   */
-  @Nullable
-  public static String arrayAsString(@Nullable Object[] o)
-  {
-    if (o == null) {
-      return null;
-    }
-    int iMax = o.length - 1;
-    if (iMax == -1) {
-      return "[]";
-    }
-
-    StringBuilder b = new StringBuilder();
-    b.append('[');
-    for (int i = 0; ; i++) {
-      b.append(asString(o[i]));
-      if (i == iMax) {
-        return b.append(']').toString();
-      }
-      b.append(", ");
-    }
   }
 }
