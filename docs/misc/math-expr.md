@@ -238,8 +238,8 @@ JSON functions provide facilities to extract, transform, and create `COMPLEX<jso
 | parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>`. If the input is not a `STRING` or it is invalid JSON, this function will result in an error.|
 | try_parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>`. If the input is not a `STRING` or it is invalid JSON, this function will result in a `NULL` value. |
 | to_json_string(expr) | Convert `expr` into a JSON `STRING` value |
-| json_keys(expr, path) | get array of field names from `expr` at the specified JSONPath `path`, or null if the data does not exist or have any fields |
-| json_paths(expr) | get array of all JSONPath paths available from `expr` |
+| json_keys(expr, path) | Get array of field names from `expr` at the specified JSONPath `path`, or null if the data does not exist or have any fields |
+| json_paths(expr) | Get array of all JSONPath paths available from `expr` |
 
 ### JSONPath syntax
 

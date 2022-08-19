@@ -31,7 +31,7 @@ Virtual columns are queryable column "views" created from a set of columns durin
 
 A virtual column can potentially draw from multiple underlying columns, although a virtual column always presents itself as a single column.
 
-Virtual columns can be used as dimensions or as inputs to aggregators.
+Virtual columns can be referenced by their output names to be used as [dimensions](./dimensionspecs.md) or as inputs to [filters](./filters.md) and [aggregators](./aggregations.md).
 
 Each Apache Druid query can accept a list of virtual columns as a parameter. The following scan query is provided as an example:
 
@@ -95,7 +95,10 @@ This virtual column is used for the SQL operators `JSON_VALUE` (if `processFromR
 (if `processFromRaw` is true), and accepts 'JSONPath' or 'jq' syntax string representations of paths, or a parsed
 list of "path parts" in order to determine what should be selected from the column.
 
-Syntax (all 3 of these virtual columns produce the same output):
+You can define a nested field virtual column with any of the following equivalent syntaxes. The examples all produce
+the same output value, with each example showing a different way to specify how to access the nested value. The first
+is using JSONPath syntax `path`, the second with a jq `path`, and the third uses `pathParts`.
+
 ```json
     {
       "type": "nested-field",
@@ -105,6 +108,7 @@ Syntax (all 3 of these virtual columns produce the same output):
       "path": "$.phoneNumbers[1].number"
     }
 ```
+
 ```json
     {
       "type": "nested-field",

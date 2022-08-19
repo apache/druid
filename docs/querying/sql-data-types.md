@@ -114,15 +114,15 @@ When `druid.expressions.useStrictBooleans = true`, Druid uses three-valued logic
 However, even in this mode, Druid uses two-valued logic for filter types other than `expression`.
 
 ## Nested columns
-Druid supports storing nested data structures in segments using the native `COMPLEX<json>` type. This data can be
-interacted with using [JSON functions](sql-json-functions.md), which can extract nested values, parse from string,
-serialize to string, and to create new `COMPLEX<json>` structures.
+Druid supports storing nested data structures in segments using the native `COMPLEX<json>` type. You can interact
+with this data using [JSON functions](sql-json-functions.md), which can extract nested values, parse from string,
+serialize to string, and create new `COMPLEX<json>` structures.
 
 `COMPLEX` types in general currently have limited functionality outside of the use of the specialized functions which
 understand them, and so have undefined behavior when:
 * grouping on complex values
-* filtered directly on complex values, e.g. `WHERE json is NULL`
+* filtered directly on complex values, such as `WHERE json is NULL`
 * used as inputs to aggregators without specialized handling for a specific complex type
 
-In many cases, these functions are provided for translating these `COMPLEX` value types a `STRING`, which serves as
-workaround solution until `COMPLEX` types functionality can be improved.
+In many cases, functions are provided to translate `COMPLEX` value types to `STRING`, which serves as a workaround
+solution until `COMPLEX` type functionality can be improved.
