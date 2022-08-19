@@ -131,4 +131,10 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
     return Union.getMaxSerializationBytes(getLgK());
   }
 
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new HllSketchMergeAggregatorFactory(newName, getFieldName(), getLgK(), getTgtHllType(), isRound());
+  }
+
 }

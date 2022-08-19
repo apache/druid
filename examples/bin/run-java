@@ -40,6 +40,15 @@ then
     --add-opens=java.base/java.lang=ALL-UNNAMED \
     --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
     "$@"
+elif [ "$JAVA_MAJOR" != "" ] && [ "$JAVA_MAJOR" -ge "11" ]
+then
+  # Parameters below are required to use datasketches-memory as a library
+  exec "$JAVA_BIN" \
+    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
+    --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED \
+    --add-opens=java.base/java.nio=ALL-UNNAMED \
+    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED \
+    "$@"
 else
   exec "$JAVA_BIN" "$@"
 fi

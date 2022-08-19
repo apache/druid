@@ -52,6 +52,7 @@ import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -88,7 +89,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBloomFilter() throws Exception
+  public void testBloomFilter() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("def");
@@ -116,7 +117,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBloomFilterExprFilter() throws Exception
+  public void testBloomFilterExprFilter() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("a-foo");
@@ -157,7 +158,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBloomFilterVirtualColumn() throws Exception
+  public void testBloomFilterVirtualColumn() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("def-foo");
@@ -187,7 +188,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testBloomFilterVirtualColumnNumber() throws Exception
+  public void testBloomFilterVirtualColumnNumber() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addFloat(20.2f);
@@ -218,7 +219,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBloomFilters() throws Exception
+  public void testBloomFilters() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("def");
@@ -254,7 +255,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 
   @Ignore("this test is really slow and is intended to use for comparisons with testBloomFilterBigParameter")
   @Test
-  public void testBloomFilterBigNoParam() throws Exception
+  public void testBloomFilterBigNoParam() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(5_000_000);
     filter.addString("def");
@@ -282,7 +283,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 
   @Ignore("this test is for comparison with testBloomFilterBigNoParam")
   @Test
-  public void testBloomFilterBigParameter() throws Exception
+  public void testBloomFilterBigParameter() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(5_000_000);
     filter.addString("def");
@@ -310,7 +311,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBloomFilterNullParameter() throws Exception
+  public void testBloomFilterNullParameter() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addBytes(null, 0, 0);

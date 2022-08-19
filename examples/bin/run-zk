@@ -33,8 +33,8 @@ else
   CONFDIR="$1"
 fi
 
-CONFDIR="$(cd "$CONFDIR" && pwd)/zk"
-WHEREAMI="$(cd "$WHEREAMI" && pwd)"
+CONFDIR="$(cd "$CONFDIR">/dev/null && pwd)/zk"
+WHEREAMI="$(cd "$WHEREAMI">/dev/null && pwd)"
 
 LOG_DIR="${DRUID_LOG_DIR:=${WHEREAMI}/../log}"
 # Remove possible ending slash

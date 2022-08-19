@@ -23,7 +23,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -128,6 +131,17 @@ public class QueryContextTest
     Assert.assertEquals(100L, context.getAsLong("key1", 0));
     Assert.assertEquals(100L, context.getAsLong("key2", 0));
     Assert.assertEquals(0L, context.getAsLong("non-exist", 0));
+  }
+
+  @Test
+  public void testGetHumanReadableBytes()
+  {
+    final QueryContext context = new QueryContext(
+        ImmutableMap.of(
+            "maxOnDiskStorage", "500M"
+        )
+    );
+    Assert.assertEquals(500_000_000, context.getAsHumanReadableBytes("maxOnDiskStorage", HumanReadableBytes.ZERO).getBytes());
   }
 
   @Test
@@ -249,16 +263,45 @@ public class QueryContextTest
   }
 
   @Test
+  public void testCopy()
+  {
+    final QueryContext context = new QueryContext(
+        ImmutableMap.of(
+            "user1", "userVal1",
+            "conflict", "userVal2"
+        )
+    );
+
+    context.addDefaultParams(
+        ImmutableMap.of(
+            "default1", "defaultVal1",
+            "conflict", "defaultVal2"
+        )
+    );
+
+    context.addSystemParam("sys1", "val1");
+
+    final Map<String, Object> merged = ImmutableMap.copyOf(context.getMergedParams());
+
+    final QueryContext context2 = context.copy();
+    context2.removeUserParam("conflict");
+    context2.addSystemParam("sys2", "val2");
+    context2.addDefaultParam("default3", "defaultVal3");
+
+    Assert.assertEquals(merged, context.getMergedParams());
+  }
+
+  @Test
   public void testLegacyReturnsLegacy()
   {
-    Query legacy = new LegacyContextQuery(ImmutableMap.of("foo", "bar"));
+    Query<?> legacy = new LegacyContextQuery(ImmutableMap.of("foo", "bar"));
     Assert.assertNull(legacy.getQueryContext());
   }
 
   @Test
   public void testNonLegacyIsNotLegacyContext()
   {
-    Query timeseries = Druids.newTimeseriesQueryBuilder()
+    Query<?> timeseries = Druids.newTimeseriesQueryBuilder()
                              .dataSource("test")
                              .intervals("2015-01-02/2015-01-03")
                              .granularity(Granularities.DAY)
@@ -344,6 +387,22 @@ public class QueryContextTest
         return defaultValue;
       }
       return (boolean) context.get(key);
+    }
+
+    @Override
+    public HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
+    {
+      if (null == context || !context.containsKey(key)) {
+        return defaultValue;
+      }
+      Object value = context.get(key);
+      if (value instanceof Number) {
+        return HumanReadableBytes.valueOf(Numbers.parseLong(value));
+      } else if (value instanceof String) {
+        return new HumanReadableBytes((String) value);
+      } else {
+        throw new IAE("Expected parameter [%s] to be in human readable format", key);
+      }
     }
 
     @Override

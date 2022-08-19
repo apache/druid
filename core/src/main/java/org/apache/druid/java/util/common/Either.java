@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -87,7 +86,8 @@ public class Either<L, R>
     if (isValue()) {
       return value;
     } else if (error instanceof Throwable) {
-      Throwables.propagateIfPossible((Throwable) error);
+      // Always wrap Throwable, even if we could throw it directly, to provide additional context
+      // about where the exception happened (we want the current stack frame in the trace).
       throw new RuntimeException((Throwable) error);
     } else {
       throw new RuntimeException(error.toString());

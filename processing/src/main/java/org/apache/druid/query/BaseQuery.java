@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -197,6 +198,12 @@ public abstract class BaseQuery<T> implements Query<T>
   public boolean getContextBoolean(String key, boolean defaultValue)
   {
     return context.getAsBoolean(key, defaultValue);
+  }
+
+  @Override
+  public HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
+  {
+    return context.getAsHumanReadableBytes(key, defaultValue);
   }
 
   /**

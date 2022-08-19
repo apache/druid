@@ -22,6 +22,7 @@ package org.apache.druid.frame.channel;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.Frame;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 
@@ -54,16 +55,20 @@ public interface WritableFrameChannel extends Closeable
 
   /**
    * Called prior to {@link #close()} if the writer has failed. Must be followed by a call to {@link #close()}.
+   *
+   * @param cause optional cause of failure. Used by the in-memory channel {@link BlockingQueueFrameChannel.Writable}
+   *              to propagate exeptions to downstream processors. Most other channels ignore the provided cause.
    */
-  void fail() throws IOException;
+  void fail(@Nullable Throwable cause) throws IOException;
 
   /**
    * Finish writing to this channel.
    *
-   * When this method is called without {@link #fail()} having previously been called, the writer is understood to have
-   * completed successfully.
+   * When this method is called without {@link #fail(Throwable)} having previously been called, the writer is
+   * understood to have completed successfully.
    *
-   * After calling this method, no additional calls to {@link #write}, {@link #fail()}, or this method are permitted.
+   * After calling this method, no additional calls to {@link #write}, {@link #fail(Throwable)}, or this method
+   * are permitted.
    */
   @Override
   void close() throws IOException;

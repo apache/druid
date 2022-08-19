@@ -45,11 +45,10 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserImplFactory;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
-import org.apache.druid.sql.calcite.run.QueryMakerFactory;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 
-import java.util.Map;
 import java.util.Properties;
 
 public class PlannerFactory
@@ -65,7 +64,6 @@ public class PlannerFactory
       .build();
 
   private final DruidSchemaCatalog rootSchema;
-  private final QueryMakerFactory queryMakerFactory;
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
   private final PlannerConfig plannerConfig;
@@ -77,7 +75,6 @@ public class PlannerFactory
   @Inject
   public PlannerFactory(
       final DruidSchemaCatalog rootSchema,
-      final QueryMakerFactory queryMakerFactory,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
@@ -88,7 +85,6 @@ public class PlannerFactory
   )
   {
     this.rootSchema = rootSchema;
-    this.queryMakerFactory = queryMakerFactory;
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
     this.plannerConfig = plannerConfig;
@@ -101,7 +97,7 @@ public class PlannerFactory
   /**
    * Create a Druid query planner from an initial query context
    */
-  public DruidPlanner createPlanner(final String sql, final QueryContext queryContext)
+  public DruidPlanner createPlanner(final SqlEngine engine, final String sql, final QueryContext queryContext)
   {
     final PlannerContext context = PlannerContext.create(
         sql,
@@ -110,10 +106,11 @@ public class PlannerFactory
         jsonMapper,
         plannerConfig,
         rootSchema,
+        engine,
         queryContext
     );
 
-    return new DruidPlanner(buildFrameworkConfig(context), context, queryMakerFactory);
+    return new DruidPlanner(buildFrameworkConfig(context), context, engine);
   }
 
   /**
@@ -121,9 +118,9 @@ public class PlannerFactory
    * and ready to go authorization result.
    */
   @VisibleForTesting
-  public DruidPlanner createPlannerForTesting(final Map<String, Object> queryContext, String query)
+  public DruidPlanner createPlannerForTesting(final SqlEngine engine, final String sql, final QueryContext queryContext)
   {
-    final DruidPlanner thePlanner = createPlanner(query, new QueryContext(queryContext));
+    final DruidPlanner thePlanner = createPlanner(engine, sql, queryContext);
     thePlanner.getPlannerContext()
               .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
     try {

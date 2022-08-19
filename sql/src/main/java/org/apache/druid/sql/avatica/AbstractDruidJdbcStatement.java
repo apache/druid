@@ -35,7 +35,6 @@ import java.sql.Array;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Common implementation for the JDBC {@code Statement} and
@@ -55,16 +54,17 @@ public abstract class AbstractDruidJdbcStatement implements Closeable
 {
   public static final long START_OFFSET = 0;
 
-  protected final DruidConnection connection;
+  protected final String connectionId;
   protected final int statementId;
+  protected Throwable throwable;
   protected DruidJdbcResultSet resultSet;
 
   public AbstractDruidJdbcStatement(
-      final DruidConnection connection,
+      final String connectionId,
       final int statementId
   )
   {
-    this.connection = Preconditions.checkNotNull(connection, "connection");
+    this.connectionId = Preconditions.checkNotNull(connectionId, "connectionId");
     this.statementId = statementId;
   }
 
@@ -77,7 +77,7 @@ public abstract class AbstractDruidJdbcStatement implements Closeable
       params.add(createParameter(field, type));
     }
     return Meta.Signature.create(
-        createColumnMetaData(prepareResult.getRowType()),
+        createColumnMetaData(prepareResult.getReturnedRowType()),
         sql,
         params,
         Meta.CursorFactory.ARRAY,
@@ -242,16 +242,11 @@ public abstract class AbstractDruidJdbcStatement implements Closeable
 
   public String getConnectionId()
   {
-    return connection.getConnectionId();
+    return connectionId;
   }
 
   public int getStatementId()
   {
     return statementId;
-  }
-
-  public ExecutorService executor()
-  {
-    return connection.executor();
   }
 }

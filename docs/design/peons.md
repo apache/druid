@@ -27,6 +27,8 @@ title: "Peons"
 
 For Apache Druid Peon Configuration, see [Peon Query Configuration](../configuration/index.md#peon-query-configuration) and [Additional Peon Configuration](../configuration/index.md#additional-peon-configuration).
 
+For basic tuning guidance for MiddleManager tasks, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#task-configurations).
+
 ### HTTP endpoints
 
 For a list of API endpoints supported by the Peon, please see the [Peon API reference](../operations/api-reference.md#peon).

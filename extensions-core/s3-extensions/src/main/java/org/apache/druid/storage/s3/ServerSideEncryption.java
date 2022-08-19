@@ -22,7 +22,9 @@ package org.apache.druid.storage.s3;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -58,4 +60,15 @@ public interface ServerSideEncryption
   {
     return request;
   }
+
+  default InitiateMultipartUploadRequest decorate(InitiateMultipartUploadRequest request)
+  {
+    return request;
+  }
+
+  default UploadPartRequest decorate(UploadPartRequest request)
+  {
+    return request;
+  }
+
 }

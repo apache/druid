@@ -22,24 +22,27 @@ package org.apache.druid.sql;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.sql.SqlLifecycle.State;
+import org.apache.druid.server.security.ResourceAction;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
- * This class manages only _authorized_ {@link SqlLifecycle}s submitted via HTTP,
- * such as {@link org.apache.druid.sql.http.SqlResource}. The main use case of this class is
- * tracking running queries so that the cancel API can identify the lifecycles to cancel.
+ * This class manages only <i>authorized</i> {@link DirectStatement}s submitted via
+ * HTTP, such as {@link org.apache.druid.sql.http.SqlResource}. The main use case of
+ * this class is tracking running queries so that the cancel API can identify
+ * the statements to cancel.
  *
- * This class is thread-safe as there are 2 or more threads that can access lifecycles at the same time
- * for query running or query canceling.
+ * This class is thread-safe as there are 2 or more threads that can access
+ * statements at the same time for query running or query canceling.
  *
- * For managing and canceling native queries, see {@link org.apache.druid.server.QueryScheduler}.
- * As its name indicates, it also performs resource scheduling for native queries based on query lanes
+ * For managing and canceling native queries, see
+ * {@link org.apache.druid.server.QueryScheduler}. As its name indicates, it
+ * also performs resource scheduling for native queries based on query lanes
  * {@link org.apache.druid.server.QueryLaningStrategy}.
  *
  * @see org.apache.druid.server.QueryScheduler#cancelQuery(String)
@@ -47,15 +50,20 @@ import java.util.Map;
 @LazySingleton
 public class SqlLifecycleManager
 {
+  public interface Cancelable
+  {
+    Set<ResourceAction> resources();
+    void cancel();
+  }
+
   private final Object lock = new Object();
 
   @GuardedBy("lock")
-  private final Map<String, List<SqlLifecycle>> sqlLifecycles = new HashMap<>();
+  private final Map<String, List<Cancelable>> sqlLifecycles = new HashMap<>();
 
-  public void add(String sqlQueryId, SqlLifecycle lifecycle)
+  public void add(String sqlQueryId, Cancelable lifecycle)
   {
     synchronized (lock) {
-      assert lifecycle.getState() == State.AUTHORIZED;
       sqlLifecycles.computeIfAbsent(sqlQueryId, k -> new ArrayList<>())
                    .add(lifecycle);
     }
@@ -65,10 +73,10 @@ public class SqlLifecycleManager
    * Removes the given lifecycle of the given query ID.
    * This method uses {@link Object#equals} to find the lifecycle matched to the given parameter.
    */
-  public void remove(String sqlQueryId, SqlLifecycle lifecycle)
+  public void remove(String sqlQueryId, Cancelable lifecycle)
   {
     synchronized (lock) {
-      List<SqlLifecycle> lifecycles = sqlLifecycles.get(sqlQueryId);
+      List<Cancelable> lifecycles = sqlLifecycles.get(sqlQueryId);
       if (lifecycles != null) {
         lifecycles.remove(lifecycle);
         if (lifecycles.isEmpty()) {
@@ -82,10 +90,10 @@ public class SqlLifecycleManager
    * For the given sqlQueryId, this method removes all lifecycles that match to the given list of lifecycles.
    * This method uses {@link Object#equals} for matching lifecycles.
    */
-  public void removeAll(String sqlQueryId, List<SqlLifecycle> lifecyclesToRemove)
+  public void removeAll(String sqlQueryId, List<Cancelable> lifecyclesToRemove)
   {
     synchronized (lock) {
-      List<SqlLifecycle> lifecycles = sqlLifecycles.get(sqlQueryId);
+      List<Cancelable> lifecycles = sqlLifecycles.get(sqlQueryId);
       if (lifecycles != null) {
         lifecycles.removeAll(lifecyclesToRemove);
         if (lifecycles.isEmpty()) {
@@ -98,10 +106,10 @@ public class SqlLifecycleManager
   /**
    * Returns a snapshot of the lifecycles for the given sqlQueryId.
    */
-  public List<SqlLifecycle> getAll(String sqlQueryId)
+  public List<Cancelable> getAll(String sqlQueryId)
   {
     synchronized (lock) {
-      List<SqlLifecycle> lifecycles = sqlLifecycles.get(sqlQueryId);
+      List<Cancelable> lifecycles = sqlLifecycles.get(sqlQueryId);
       return lifecycles == null ? Collections.emptyList() : ImmutableList.copyOf(lifecycles);
     }
   }

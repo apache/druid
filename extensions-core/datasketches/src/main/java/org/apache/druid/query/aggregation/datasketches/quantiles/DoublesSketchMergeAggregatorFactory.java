@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -74,4 +75,9 @@ public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregator
     return new DoublesSketchMergeBufferAggregator(selector, getK(), getMaxIntermediateSizeWithNulls());
   }
 
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new DoublesSketchMergeAggregatorFactory(newName, getK(), getMaxStreamLength());
+  }
 }
