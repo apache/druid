@@ -59,6 +59,21 @@ export class WorkbenchQueryPart {
     return /EXTERN\s*\(|(?:INSERT|REPLACE)\s+INTO/im.test(queryString);
   }
 
+  static getIngestDatasourceFromQueryFragment(queryFragment: string): string | undefined {
+    // Assuming the queryFragment is no parsable find the prefix that look like:
+    // REPLACE<space>INTO<space><whatever><space>SELECT<space or EOF>
+    const matchInsertReplaceIndex = queryFragment.match(/(?:INSERT|REPLACE)\s+INTO/)?.index;
+    if (typeof matchInsertReplaceIndex !== 'number') return;
+
+    const matchEnd = queryFragment.match(/\b(?:SELECT|WITH)\b|$/);
+    const fragmentQuery = SqlQuery.maybeParse(
+      queryFragment.substring(matchInsertReplaceIndex, matchEnd?.index) + ' SELECT * FROM t',
+    );
+    if (!fragmentQuery) return;
+
+    return fragmentQuery.getIngestTable()?.getTable();
+  }
+
   public readonly id: string;
   public readonly queryName?: string;
   public readonly queryString: string;
@@ -169,21 +184,7 @@ export class WorkbenchQueryPart {
 
     if (this.isJsonLike()) return;
 
-    // When the parser fails find the prefix that look like:
-    // REPLACE<space>INTO<space><whatever><space>SELECT<space or EOF>
-    const m = /(?:INSERT|REPLACE)\s+INTO\s[\s\S]+?\s(?:SELECT|WITH)(?:[\s\n]|$)/im.exec(
-      queryString,
-    );
-    if (m) {
-      const fragmentQuery = SqlQuery.maybeParse(
-        m[0].replace(/(?:SELECT|WITH)[\s\n]+$/im, '') + ' SELECT * FROM t',
-      );
-      if (fragmentQuery) {
-        return fragmentQuery.getIngestTable()?.getTable();
-      }
-    }
-
-    return;
+    return WorkbenchQueryPart.getIngestDatasourceFromQueryFragment(queryString);
   }
 
   public getInlineMetadata(): ColumnMetadata[] {

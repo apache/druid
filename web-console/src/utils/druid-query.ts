@@ -118,6 +118,7 @@ export class DruidError extends Error {
 
   static getSuggestion(errorMessage: string): QuerySuggestion | undefined {
     // == is used instead of =
+    // ex: SELECT * FROM wikipedia WHERE channel == '#en.wikipedia'
     // ex: Encountered "= =" at line 3, column 15. Was expecting one of
     const matchEquals = /Encountered "= =" at line (\d+), column (\d+)./.exec(errorMessage);
     if (matchEquals) {
@@ -133,6 +134,8 @@ export class DruidError extends Error {
       };
     }
 
+    // Mangled quotes from copy/paste
+    // ex: SELECT * FROM wikipedia WHERE channel = ‘#en.wikipedia‛
     const matchLexical =
       /Lexical error at line (\d+), column (\d+).\s+Encountered: "\\u201\w"/.exec(errorMessage);
     if (matchLexical) {
@@ -148,7 +151,8 @@ export class DruidError extends Error {
       };
     }
 
-    // Incorrect quoting on table
+    // Incorrect quoting on table column
+    // ex: SELECT * FROM wikipedia WHERE channel = "#en.wikipedia"
     // ex: org.apache.calcite.runtime.CalciteContextException: From line 3, column 17 to line 3, column 31: Column '#ar.wikipedia' not found in any table
     const matchQuotes =
       /org.apache.calcite.runtime.CalciteContextException: From line (\d+), column (\d+) to line \d+, column \d+: Column '([^']+)' not found in any table/.exec(
@@ -171,7 +175,8 @@ export class DruidError extends Error {
     }
 
     // Single quotes on AS alias
-    const matchSingleQuotesAlias = /Encountered "\\'([\w-]+)\\'" at/i.exec(errorMessage);
+    // ex: SELECT channel AS 'c' FROM wikipedia
+    const matchSingleQuotesAlias = /Encountered "AS \\'([\w-]+)\\'" at/i.exec(errorMessage);
     if (matchSingleQuotesAlias) {
       const alias = matchSingleQuotesAlias[1];
       return {
@@ -184,22 +189,9 @@ export class DruidError extends Error {
       };
     }
 
-    // , before FROM
-    const matchCommaFrom = /Encountered "(FROM)" at/i.exec(errorMessage);
-    if (matchCommaFrom) {
-      const keyword = matchCommaFrom[1];
-      return {
-        label: `Remove , before ${keyword}`,
-        fn: str => {
-          const newQuery = str.replace(/,(\s+FROM)/gim, '$1');
-          if (newQuery === str) return;
-          return newQuery;
-        },
-      };
-    }
-
-    // , before GROUP, ORDER, or LIMIT
-    const matchComma = /Encountered ", (GROUP|ORDER|LIMIT)" at/i.exec(errorMessage);
+    // , before FROM, GROUP, ORDER, or LIMIT
+    // ex: SELECT channel, FROM wikipedia
+    const matchComma = /Encountered ", (FROM|GROUP|ORDER|LIMIT)" at/i.exec(errorMessage);
     if (matchComma) {
       const keyword = matchComma[1];
       return {
@@ -213,12 +205,13 @@ export class DruidError extends Error {
     }
 
     // ; at the end
+    // ex: SELECT 1;
     const matchSemicolon = /Encountered ";" at/i.exec(errorMessage);
     if (matchSemicolon) {
       return {
         label: `Remove trailing ;`,
         fn: str => {
-          const newQuery = str.replace(/;+(\s*)$/m, '$1');
+          const newQuery = str.replace(/[;\s]*$/, '');
           if (newQuery === str) return;
           return newQuery;
         },

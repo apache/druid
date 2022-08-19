@@ -1301,9 +1301,9 @@ function filterIsFilename(filter: string): boolean {
 }
 
 function filenameFromPath(path: string): string | undefined {
-  const m = /([^/.]+)[^/]*?\/?$/.exec(path);
-  if (!m) return;
-  return m[1];
+  const parts = path.split('/');
+  while (parts.length && !parts[parts.length - 1]) parts.pop();
+  return parts.length ? basenameFromFilename(parts[parts.length - 1]) : undefined;
 }
 
 function basenameFromFilename(filename: string): string | undefined {
