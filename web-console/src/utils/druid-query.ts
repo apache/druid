@@ -204,16 +204,19 @@ export class DruidError extends Error {
       };
     }
 
-    // ; at the end
+    // ; at the end. https://bit.ly/1n1yfkJ
     // ex: SELECT 1;
-    const matchSemicolon = /Encountered ";" at/i.exec(errorMessage);
+    // ex: Encountered ";" at line 6, column 16.
+    const matchSemicolon = /Encountered ";" at line (\d+), column (\d+)./i.exec(errorMessage);
     if (matchSemicolon) {
+      const line = Number(matchSemicolon[1]);
+      const column = Number(matchSemicolon[2]);
       return {
         label: `Remove trailing ;`,
         fn: str => {
-          const newQuery = str.replace(/[;\s]+$/, '');
-          if (newQuery === str) return;
-          return newQuery;
+          const index = DruidError.positionToIndex(str, line, column);
+          if (str[index] !== ';') return;
+          return str.slice(0, index) + str.slice(index + 1);
         },
       };
     }
