@@ -139,6 +139,8 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.QueryFramework;
+import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.storage.StorageConnector;
@@ -182,8 +184,8 @@ import java.util.stream.Collectors;
 
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
-import static org.apache.druid.sql.calcite.util.CalciteTests.ROWS1;
-import static org.apache.druid.sql.calcite.util.CalciteTests.ROWS2;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 
 /**
  * Base test runner for running MSQ unit tests. It sets up multi stage query execution environment
@@ -240,7 +242,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
       2
   ));
 
-
   @After
   public void tearDown2()
   {
@@ -250,15 +251,17 @@ public class MSQTestBase extends BaseCalciteQueryTest
   @Before
   public void setUp2()
   {
+    groupByBuffers = TestGroupByBuffers.createDefault();
+
+    QueryFramework qf = queryFramework();
     Injector secondInjector = GuiceInjectors.makeStartupInjector();
 
-    groupByBuffers = TestGroupByBuffers.createDefault();
 
     ObjectMapper secondMapper = setupObjectMapper(secondInjector);
     indexIO = new IndexIO(secondMapper, () -> 0);
 
     try {
-      segmentCacheManager = new SegmentCacheManagerFactory(secondMapper).manufacturate(temporaryFolder.newFolder("test"));
+      segmentCacheManager = new SegmentCacheManagerFactory(secondMapper).manufacturate(tmpFolder.newFolder("test"));
     }
     catch (IOException exception) {
       throw new ISE(exception, "Unable to create segmentCacheManager");
@@ -295,7 +298,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .toInstance((dataSegment, channelCounters) ->
                                   new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
             binder.bind(IndexIO.class).toInstance(indexIO);
-            binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(walker);
+            binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
 
             binder.bind(GroupByStrategySelector.class)
                   .toInstance(GroupByQueryRunnerTest.makeQueryRunnerFactory(groupByQueryConfig, groupByBuffers)
@@ -367,10 +370,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new MSQTestTaskActionClient(objectMapper),
         workerMemoryParameters
     );
-    final InProcessViewManager viewManager = new InProcessViewManager(CalciteTests.DRUID_VIEW_MACRO_FACTORY);
-    DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
-        conglomerate,
-        walker,
+    final InProcessViewManager viewManager = new InProcessViewManager(QueryFramework.DRUID_VIEW_MACRO_FACTORY);
+    DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+        CalciteTests.INJECTOR,
+        qf.conglomerate(),
+        qf.walker(),
         new PlannerConfig(),
         viewManager,
         new NoopDruidSchemaManager(),
@@ -379,7 +383,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     final SqlEngine engine = new MSQTaskSqlEngine(
         indexingServiceClient,
-        queryJsonMapper.copy().registerModules(new MSQSqlModule().getJacksonModules())
+        qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules())
     );
 
     PlannerFactory plannerFactory = new PlannerFactory(
@@ -405,7 +409,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     try {
       return ImmutableMap.<String, Object>builder()
                          .putAll(DEFAULT_MSQ_CONTEXT)
-                         .put(DruidQuery.CTX_SCAN_SIGNATURE, queryJsonMapper.writeValueAsString(signature))
+                         .put(DruidQuery.CTX_SCAN_SIGNATURE, queryFramework().queryJsonMapper().writeValueAsString(signature))
                          .build();
     }
     catch (JsonProcessingException e) {
@@ -689,8 +693,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
   }
 
-
-  public abstract class MSQTester<Builder extends MSQTester>
+  public abstract class MSQTester<Builder extends MSQTester<?>>
   {
     protected String sql = null;
     protected Map<String, Object> queryContext = DEFAULT_MSQ_CONTEXT;
@@ -705,18 +708,21 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     private boolean hasRun = false;
 
+    @SuppressWarnings("unchecked")
     public Builder setSql(String sql)
     {
       this.sql = sql;
       return (Builder) this;
     }
 
+    @SuppressWarnings("unchecked")
     public Builder setQueryContext(Map<String, Object> queryContext)
     {
       this.queryContext = queryContext;
       return (Builder) this;
     }
 
+    @SuppressWarnings("unchecked")
     public Builder setExpectedRowSignature(RowSignature expectedRowSignature)
     {
       Preconditions.checkArgument(!expectedRowSignature.equals(RowSignature.empty()), "Row signature cannot be empty");
@@ -724,6 +730,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return (Builder) this;
     }
 
+    @SuppressWarnings("unchecked")
     public Builder setExpectedSegment(Set<SegmentId> expectedSegments)
     {
       Preconditions.checkArgument(!expectedSegments.isEmpty(), "Segments cannot be empty");
@@ -731,6 +738,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return (Builder) this;
     }
 
+    @SuppressWarnings("unchecked")
     public Builder setExpectedResultRows(List<Object[]> expectedResultRows)
     {
       Preconditions.checkArgument(expectedResultRows.size() > 0, "Results rows cannot be empty");
@@ -738,26 +746,28 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return (Builder) this;
     }
 
-
+    @SuppressWarnings("unchecked")
     public Builder setExpectedMSQSpec(MSQSpec expectedMSQSpec)
     {
       this.expectedMSQSpec = expectedMSQSpec;
       return (Builder) this;
     }
 
-
+    @SuppressWarnings("unchecked")
     public Builder setExpectedValidationErrorMatcher(Matcher<Throwable> expectedValidationErrorMatcher)
     {
       this.expectedValidationErrorMatcher = expectedValidationErrorMatcher;
       return (Builder) this;
     }
 
+    @SuppressWarnings("unchecked")
     public Builder setExpectedExecutionErrorMatcher(Matcher<Throwable> expectedExecutionErrorMatcher)
     {
       this.expectedExecutionErrorMatcher = expectedExecutionErrorMatcher;
       return (Builder) this;
     }
 
+    @SuppressWarnings("unchecked")
     public Builder setExpectedMSQFault(MSQFault MSQFault)
     {
       this.expectedMSQFault = MSQFault;
@@ -806,7 +816,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
     {
       // nothing to do
     }
-
 
     public IngestTester setExpectedDataSource(String expectedDataSource)
     {

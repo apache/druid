@@ -20,26 +20,23 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
@@ -64,8 +61,6 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
-import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
-import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -78,10 +73,9 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
@@ -89,39 +83,34 @@ import org.apache.druid.sql.PreparedStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
-import org.apache.druid.sql.calcite.external.ExternalDataSource;
-import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
-import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.QueryFramework;
+import org.apache.druid.sql.calcite.util.QueryFramework.QueryComponentSupplier;
+import org.apache.druid.sql.calcite.util.QueryFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.http.SqlParameter;
-import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -137,7 +126,7 @@ import java.util.stream.Collectors;
  * A base class for SQL query testing. It sets up query execution environment, provides useful helper methods,
  * and populates data using {@link CalciteTests#createMockWalker}.
  */
-public class BaseCalciteQueryTest extends CalciteTestBase
+public class BaseCalciteQueryTest extends CalciteTestBase implements QueryComponentSupplier
 {
   public static String NULL_STRING;
   public static Float NULL_FLOAT;
@@ -186,10 +175,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final String DUMMY_SQL_ID = "dummy";
 
+  public static final String PRETEND_CURRENT_TIME = "2000-01-01T00:00:00Z";
   private static final ImmutableMap.Builder<String, Object> DEFAULT_QUERY_CONTEXT_BUILDER =
       ImmutableMap.<String, Object>builder()
                   .put(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
-                  .put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z")
+                  .put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
                   .put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
                   .put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
   public static final Map<String, Object> QUERY_CONTEXT_DEFAULT = DEFAULT_QUERY_CONTEXT_BUILDER.build();
@@ -200,7 +190,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
+      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
       TimeseriesQuery.SKIP_EMPTY_BUCKETS, false,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
@@ -208,7 +198,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final Map<String, Object> QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
+      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
       TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
@@ -216,7 +206,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_TOPN = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
+      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
       PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, "false",
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
@@ -224,7 +214,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final Map<String, Object> QUERY_CONTEXT_LOS_ANGELES = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
+      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
       PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
@@ -233,7 +223,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   // Matches QUERY_CONTEXT_DEFAULT
   public static final Map<String, Object> TIMESERIES_CONTEXT_BY_GRAN = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
+      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
       TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
@@ -257,28 +247,25 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final Map<String, Object> OUTER_LIMIT_CONTEXT = new HashMap<>(QUERY_CONTEXT_DEFAULT);
 
-  public static QueryRunnerFactoryConglomerate conglomerate;
-  public static Closer resourceCloser;
   public static int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
 
-  public final ObjectMapper queryJsonMapper;
   @Nullable
   public final SqlEngine engine0;
+  private static QueryFramework queryFramework;
   final boolean useDefault = NullHandling.replaceWithDefault();
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
+  @ClassRule
+  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public boolean cannotVectorize = false;
   public boolean skipVectorize = false;
 
-  public SpecificSegmentsQuerySegmentWalker walker = null;
-  public SqlEngine engine = null;
   public QueryLogHook queryLogHook;
+
+  public QueryComponentSupplier baseComponentSupplier;
 
   public BaseCalciteQueryTest()
   {
@@ -287,7 +274,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public BaseCalciteQueryTest(@Nullable final SqlEngine engine)
   {
-    this.queryJsonMapper = createQueryJsonMapper();
     this.engine0 = engine;
   }
 
@@ -473,112 +459,116 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @BeforeClass
   public static void setUpClass()
   {
-    resourceCloser = Closer.create();
-    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser, () -> minTopNThreshold);
+    resetFramework();
   }
 
   @AfterClass
-  public static void tearDownClass() throws IOException
+  public static void tearDownClass()
   {
-    resourceCloser.close();
+    resetFramework();
+  }
+
+  protected static void resetFramework()
+  {
+    if (queryFramework != null) {
+      queryFramework.close();
+    }
+    queryFramework = null;
   }
 
   @Rule
   public QueryLogHook getQueryLogHook()
   {
-    return queryLogHook = QueryLogHook.create(queryJsonMapper);
+    return queryLogHook = QueryLogHook.create(queryFramework().queryJsonMapper());
   }
 
-  @Before
-  public void setUp() throws Exception
+  public QueryFramework queryFramework()
   {
-    walker = createQuerySegmentWalker();
-    engine = createEngine();
-
-    // also register the static injected mapper, though across multiple test runs
-    ObjectMapper mapper = CalciteTests.getJsonMapper();
-    mapper.registerModules(getJacksonModules());
-    setMapperInjectableValues(mapper, getJacksonInjectables());
+    if (queryFramework == null) {
+      createFramework(0);
+    }
+    return queryFramework;
   }
 
-  @After
-  public void tearDown() throws Exception
+  /**
+   * Creates the query planning/execution framework. The logic is somewhat
+   * round-about: the builder creates the structure, but delegates back to
+   * this class for the parts that the Calcite tests customize. This class,
+   * in turn, delegates back to a standard class to create components. However,
+   * subclasses do override each method to customize components for specific
+   * tests.
+   */
+  private void createFramework(int mergeBufferCount)
   {
-    walker.close();
-    walker = null;
-    engine = null;
+    resetFramework();
+    try {
+      baseComponentSupplier = new StandardComponentSupplier(
+          CalciteTests.INJECTOR,
+          temporaryFolder.newFolder());
+    }
+    catch (IOException e) {
+      throw new RE(e);
+    }
+    queryFramework = new QueryFramework.Builder(this)
+        .minTopNThreshold(minTopNThreshold)
+        .mergeBufferCount(mergeBufferCount)
+        .build();
   }
 
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
+  @Override
+  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+      QueryRunnerFactoryConglomerate conglomerate
+  ) throws IOException
   {
-    return CalciteTests.createMockWalker(
-        conglomerate,
-        temporaryFolder.newFolder()
-    );
+    return baseComponentSupplier.createQuerySegmentWalker(conglomerate);
   }
 
-  public SqlEngine createEngine() throws IOException
+  @Override
+  public SqlEngine createEngine(
+      QueryLifecycleFactory qlf,
+      ObjectMapper queryJsonMapper
+  )
   {
     if (engine0 == null) {
-      return new NativeSqlEngine(
-          CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-          queryJsonMapper
-      );
+      return baseComponentSupplier.createEngine(qlf, queryJsonMapper);
     } else {
       return engine0;
     }
   }
 
-  public ObjectMapper createQueryJsonMapper()
+  @Override
+  public void configureJsonMapper(ObjectMapper mapper)
   {
-    // ugly workaround, for some reason the static mapper from Calcite.INJECTOR seems to get messed up over
-    // multiple test runs, resulting in missing subtypes that cause this JSON serde round-trip test
-    // this should be nearly identical to CalciteTests.getJsonMapper()
-    ObjectMapper mapper = new DefaultObjectMapper().registerModules(getJacksonModules());
-    setMapperInjectableValues(mapper, getJacksonInjectables());
-    return mapper;
+    baseComponentSupplier.configureJsonMapper(mapper);
   }
 
+  @Override
   public DruidOperatorTable createOperatorTable()
   {
-    return CalciteTests.createOperatorTable();
+    return baseComponentSupplier.createOperatorTable();
   }
 
+  @Override
   public ExprMacroTable createMacroTable()
   {
-    return CalciteTests.createExprMacroTable();
+    return baseComponentSupplier.createMacroTable();
   }
 
+  @Override
   public Map<String, Object> getJacksonInjectables()
   {
-    return new HashMap<>();
+    return baseComponentSupplier.getJacksonInjectables();
   }
 
-  public final void setMapperInjectableValues(ObjectMapper mapper, Map<String, Object> injectables)
-  {
-    // duplicate the injectable values from CalciteTests.INJECTOR initialization, mainly to update the injectable
-    // macro table, or whatever else you feel like injecting to a mapper
-    LookupExtractorFactoryContainerProvider lookupProvider =
-        CalciteTests.INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class);
-    mapper.setInjectableValues(new InjectableValues.Std(injectables)
-                                   .addValue(ExprMacroTable.class.getName(), createMacroTable())
-                                   .addValue(ObjectMapper.class.getName(), mapper)
-                                   .addValue(
-                                       DataSegment.PruneSpecsHolder.class,
-                                       DataSegment.PruneSpecsHolder.DEFAULT
-                                   )
-                                   .addValue(
-                                       LookupExtractorFactoryContainerProvider.class.getName(),
-                                       lookupProvider
-                                   )
-    );
-  }
-
+  @Override
   public Iterable<? extends Module> getJacksonModules()
   {
-    final List<Module> modules = new ArrayList<>(new LookupSerdeModule().getJacksonModules());
-    modules.add(new SimpleModule().registerSubtypes(ExternalDataSource.class));
-    return modules;
+    return baseComponentSupplier.getJacksonModules();
+  }
+
+  @Override
+  public void configureGuice(DruidInjectorBuilder builder)
+  {
   }
 
   public void assertQueryIsUnplannable(final String sql, String expectedError)
@@ -635,7 +625,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
-
   public void testQuery(
       final String sql,
       final List<Query<?>> expectedQueries,
@@ -675,14 +664,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void testQuery(
       final String sql,
-      final Map<String, Object> context,
+      final Map<String, Object> queryContext,
       final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults
   )
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        context,
+        queryContext,
         DEFAULT_PARAMETERS,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
@@ -733,14 +722,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void testQuery(
       final String sql,
-      final Map<String, Object> context,
+      final Map<String, Object> queryContext,
       final List<Query<?>> expectedQueries,
       final ResultsVerifier expectedResultsVerifier
   )
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        context,
+        queryContext,
         DEFAULT_PARAMETERS,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
@@ -832,10 +821,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     log.info("SQL: %s", sql);
 
+    final SqlStatementFactory sqlStatementFactory = getSqlStatementFactory(plannerConfig);
+    final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(sql)
+        .sqlParameters(parameters)
+        .auth(authenticationResult)
+        .build();
+
     final List<String> vectorizeValues = new ArrayList<>();
-
     vectorizeValues.add("false");
-
     if (!skipVectorize) {
       vectorizeValues.add("force");
     }
@@ -863,66 +856,35 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         expectedExceptionInitializer.accept(expectedException);
       }
 
-      final Pair<RowSignature, List<Object[]>> plannerResults =
-          getResults(plannerConfig, theQueryContext, parameters, sql, authenticationResult);
+      final Pair<RowSignature, List<Object[]>> plannerResults = getResults(
+          sqlStatementFactory,
+          sqlQuery.withContext(theQueryContext));
       verifyResults(sql, theQueries, plannerResults, expectedResultsVerifier);
     }
   }
 
   public Pair<RowSignature, List<Object[]>> getResults(
-      final PlannerConfig plannerConfig,
-      final Map<String, Object> queryContext,
-      final List<SqlParameter> parameters,
-      final String sql,
-      final AuthenticationResult authenticationResult
+      final SqlStatementFactory sqlStatementFactory,
+      final SqlQueryPlus query
   )
   {
-    return getResults(
-        plannerConfig,
-        queryContext,
-        parameters,
-        sql,
-        authenticationResult,
-        createOperatorTable(),
-        createMacroTable(),
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
-        queryJsonMapper
-    );
-  }
-
-  private Pair<RowSignature, List<Object[]>> getResults(
-      final PlannerConfig plannerConfig,
-      final Map<String, Object> queryContext,
-      final List<SqlParameter> parameters,
-      final String sql,
-      final AuthenticationResult authenticationResult,
-      final DruidOperatorTable operatorTable,
-      final ExprMacroTable macroTable,
-      final AuthorizerMapper authorizerMapper,
-      final ObjectMapper objectMapper
-  )
-  {
-    final SqlStatementFactory sqlStatementFactory = getSqlStatementFactory(
-        plannerConfig,
-        new AuthConfig(),
-        operatorTable,
-        macroTable,
-        authorizerMapper,
-        objectMapper
-    );
-    final DirectStatement stmt = sqlStatementFactory.directStatement(
-        SqlQueryPlus.builder(sql)
-            .context(queryContext)
-            .sqlParameters(parameters)
-            .auth(authenticationResult)
-            .build()
-    );
+    final DirectStatement stmt = sqlStatementFactory.directStatement(query);
     Sequence<Object[]> results = stmt.execute().getResults();
     RelDataType rowType = stmt.prepareResult().getReturnedRowType();
     return new Pair<>(
         RowSignatures.fromRelDataType(rowType.getFieldNames(), rowType),
         results.toList()
     );
+  }
+
+  public Set<ResourceAction> analyzeResources(
+      final SqlStatementFactory sqlStatementFactory,
+      final SqlQueryPlus query
+  )
+  {
+    PreparedStatement stmt = sqlStatementFactory.preparedStatement(query);
+    stmt.prepare();
+    return stmt.allResources();
   }
 
   public void verifyResults(
@@ -972,6 +934,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             recordedQueries.get(i)
         );
 
+        ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
         try {
           // go through some JSON serde and back, round tripping both queries and comparing them to each other, because
           // Assert.assertEquals(recordedQueries.get(i), stringAndBack) is a failure due to a sorted map being present
@@ -1041,103 +1004,37 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       AuthenticationResult authenticationResult
   )
   {
-    SqlStatementFactory lifecycleFactory = getSqlStatementFactory(
-        plannerConfig,
-        authConfig,
-        createOperatorTable(),
-        createMacroTable(),
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
-        queryJsonMapper
-    );
-
-    PreparedStatement stmt = lifecycleFactory.preparedStatement(SqlQueryPlus.builder(sql)
+    SqlQueryPlus sqlQuery = SqlQueryPlus.builder(sql)
         .context(contexts)
         .auth(authenticationResult)
-        .build()
-    );
-    stmt.prepare();
-    return stmt.allResources();
+        .build();
+    final SqlStatementFactory sqlStatementFactory =
+        getSqlStatementFactory(plannerConfig, authConfig);
+    return analyzeResources(sqlStatementFactory, sqlQuery);
   }
 
   public SqlStatementFactory getSqlStatementFactory(
-      PlannerConfig plannerConfig,
-      AuthConfig authConfig,
-      DruidOperatorTable operatorTable,
-      ExprMacroTable macroTable,
-      AuthorizerMapper authorizerMapper,
-      ObjectMapper objectMapper
+      PlannerConfig plannerConfig
   )
   {
-    final InProcessViewManager viewManager = new InProcessViewManager(CalciteTests.DRUID_VIEW_MACRO_FACTORY);
-    DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
-        conglomerate,
-        walker,
+    return getSqlStatementFactory(
         plannerConfig,
-        viewManager,
-        new NoopDruidSchemaManager(),
-        authorizerMapper
-    );
+        new AuthConfig()
+     );
+  }
 
-    final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
-        operatorTable,
-        macroTable,
-        plannerConfig,
-        authorizerMapper,
-        objectMapper,
-        CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
-    );
-    final SqlStatementFactory sqlStatementFactory = CalciteTests.createSqlStatementFactory(
-        engine,
-        plannerFactory,
-        authConfig
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "aview",
-        "SELECT SUBSTRING(dim1, 1, 1) AS dim1_firstchar FROM foo WHERE dim2 = 'a'"
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "bview",
-        "SELECT COUNT(*) FROM druid.foo\n"
-        + "WHERE __time >= CURRENT_TIMESTAMP + INTERVAL '1' DAY AND __time < TIMESTAMP '2002-01-01 00:00:00'"
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "cview",
-        "SELECT SUBSTRING(bar.dim1, 1, 1) AS dim1_firstchar, bar.dim2 as dim2, dnf.l2 as l2\n"
-        + "FROM (SELECT * from foo WHERE dim2 = 'a') as bar INNER JOIN druid.numfoo dnf ON bar.dim2 = dnf.dim2"
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "dview",
-        "SELECT SUBSTRING(dim1, 1, 1) AS numfoo FROM foo WHERE dim2 = 'a'"
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "forbiddenView",
-        "SELECT __time, SUBSTRING(dim1, 1, 1) AS dim1_firstchar, dim2 FROM foo WHERE dim2 = 'a'"
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "restrictedView",
-        "SELECT __time, dim1, dim2, m1 FROM druid.forbiddenDatasource WHERE dim2 = 'a'"
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "invalidView",
-        "SELECT __time, dim1, dim2, m1 FROM druid.invalidDatasource WHERE dim2 = 'a'"
-    );
-    return sqlStatementFactory;
+  /**
+   * Build the statement factory, which also builds all the infrastructure
+   * behind the factory by calling methods on this test class. As a result, each
+   * factory is specific to one test and one planner config. This method can be
+   * overridden to control the objects passed to the factory.
+   */
+  private SqlStatementFactory getSqlStatementFactory(
+      PlannerConfig plannerConfig,
+      AuthConfig authConfig
+  )
+  {
+    return queryFramework().statementFactory(plannerConfig, authConfig);
   }
 
   protected void cannotVectorize()
@@ -1256,14 +1153,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   /**
    * Reset the conglomerate, walker, and engine with required number of merge buffers. Default value is 2.
    */
-  protected void requireMergeBuffers(int numMergeBuffers) throws IOException
+  protected void requireMergeBuffers(int numMergeBuffers)
   {
-    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
-        resourceCloser,
-        QueryStackTests.getProcessingConfig(true, numMergeBuffers)
-    );
-    walker = createQuerySegmentWalker();
-    engine = createEngine();
+    createFramework(numMergeBuffers);
   }
 
   protected Map<String, Object> withTimestampResultContext(

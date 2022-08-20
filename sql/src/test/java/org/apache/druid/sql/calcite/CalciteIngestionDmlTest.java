@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -40,7 +41,6 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
@@ -98,11 +98,8 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
   }
 
   @After
-  @Override
-  public void tearDown() throws Exception
+  public void tearDown()
   {
-    super.tearDown();
-
     // Catch situations where tests forgot to call "verify" on their tester.
     if (!didTest) {
       throw new ISE("Test was not run; did you call verify() on a tester?");
@@ -111,6 +108,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
   protected String externSql(final ExternalDataSource externalDataSource)
   {
+    ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
     try {
       return StringUtils.format(
           "TABLE(extern(%s, %s, %s))",
@@ -126,6 +124,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
   protected Map<String, Object> queryContextWithGranularity(Granularity granularity)
   {
+    ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
     String granularityString = null;
     try {
       granularityString = queryJsonMapper.writeValueAsString(granularity);
@@ -272,27 +271,11 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
         throw new ISE("Test must not have expectedQuery");
       }
 
-      final SqlStatementFactory sqlStatementFactory = getSqlStatementFactory(
-          plannerConfig,
-          new AuthConfig(),
-          createOperatorTable(),
-          createMacroTable(),
-          CalciteTests.TEST_AUTHORIZER_MAPPER,
-          queryJsonMapper
-      );
-
-      DirectStatement stmt = sqlStatementFactory.directStatement(
-          SqlQueryPlus
-              .builder(sql)
-              .context(queryContext)
-              .auth(authenticationResult)
-              .build()
-      );
-
+      final SqlStatementFactory sqlStatementFactory = getSqlStatementFactory(plannerConfig);
       final Throwable e = Assert.assertThrows(
           Throwable.class,
           () -> {
-            stmt.execute();
+            getResults(sqlStatementFactory, sqlQuery());
           }
       );
 
@@ -320,8 +303,8 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           analyzeResources(plannerConfig, new AuthConfig(), sql, queryContext, authenticationResult)
       );
 
-      final Pair<RowSignature, List<Object[]>> results =
-          getResults(plannerConfig, queryContext, Collections.emptyList(), sql, authenticationResult);
+      final SqlStatementFactory sqlStatementFactory = getSqlStatementFactory(plannerConfig);
+      final Pair<RowSignature, List<Object[]>> results = getResults(sqlStatementFactory, sqlQuery());
 
       verifyResults(
           sql,
@@ -330,6 +313,15 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           results
       );
     }
+
+    private SqlQueryPlus sqlQuery()
+    {
+      return SqlQueryPlus.builder(sql)
+          .context(queryContext)
+          .auth(authenticationResult)
+          .build();
+    }
+
   }
 
   protected static ResourceAction viewRead(final String viewName)

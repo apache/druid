@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
@@ -600,6 +601,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
 
+    ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
     final ScanQuery expectedQuery = newScanQueryBuilder()
         .dataSource(externalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))

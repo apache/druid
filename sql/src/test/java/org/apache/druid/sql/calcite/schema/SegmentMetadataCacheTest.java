@@ -186,7 +186,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
             ImmutableSet.of(globalTableJoinable),
             ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
         ),
-        PLANNER_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new BrokerInternalQueryConfig()
     )
@@ -215,7 +215,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
             ImmutableSet.of(globalTableJoinable),
             ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
         ),
-        PLANNER_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new BrokerInternalQueryConfig()
     )
@@ -492,7 +492,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         serverView,
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-        PLANNER_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new BrokerInternalQueryConfig()
     )
@@ -534,7 +534,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         serverView,
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-        PLANNER_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new BrokerInternalQueryConfig()
     )
@@ -580,7 +580,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         serverView,
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-        PLANNER_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new BrokerInternalQueryConfig()
     )
@@ -623,7 +623,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         serverView,
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-        PLANNER_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new BrokerInternalQueryConfig()
     )
@@ -663,7 +663,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         serverView,
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-        PLANNER_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new BrokerInternalQueryConfig()
     )
@@ -720,7 +720,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         serverView,
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-        PLANNER_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new BrokerInternalQueryConfig()
     )
@@ -780,7 +780,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         serverView,
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-        PLANNER_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new BrokerInternalQueryConfig()
     )
@@ -814,7 +814,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         serverView,
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-        PLANNER_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new BrokerInternalQueryConfig()
     )
@@ -861,7 +861,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         serverView,
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-        PLANNER_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new BrokerInternalQueryConfig()
     )
@@ -1083,7 +1083,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
             ImmutableSet.of(globalTableJoinable),
             ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
         ),
-        PLANNER_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         brokerInternalQueryConfig
     );

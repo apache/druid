@@ -97,7 +97,10 @@ public class PlannerFactory
   /**
    * Create a Druid query planner from an initial query context
    */
-  public DruidPlanner createPlanner(final SqlEngine engine, final String sql, final QueryContext queryContext)
+  public DruidPlanner createPlanner(
+      final SqlEngine engine,
+      final String sql,
+      final QueryContext queryContext)
   {
     final PlannerContext context = PlannerContext.create(
         sql,

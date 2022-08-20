@@ -82,7 +82,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.server.QueryLifecycle;
-import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -4557,8 +4556,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .setVirtualColumns(expressionVirtualColumn("v0", "'def'", ColumnType.STRING))
         .build();
 
-    QueryLifecycleFactory qlf = CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate);
-    QueryLifecycle ql = qlf.factorize();
+    QueryLifecycle ql = queryFramework().queryLifecycle();
     Sequence seq = ql.runSimple(query, CalciteTests.SUPER_USER_AUTH_RESULT, Access.OK).getResults();
     List<Object> results = seq.toList();
     Assert.assertEquals(
