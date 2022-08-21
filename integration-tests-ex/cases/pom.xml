@@ -45,6 +45,12 @@
             <artifactId>druid-integration-tests</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+        <!-- WARNING ALERT - Remove this -->
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-multi-stage-query</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
         <!-- See https://maven.apache.org/plugins/maven-jar-plugin/examples/create-test-jar.html -->
         <dependency>
             <groupId>org.apache.druid</groupId>
