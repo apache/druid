@@ -323,9 +323,8 @@ public class OverlordResourceTestClient
           {
             TaskState status = getTaskStatus(taskID).getStatusCode();
             if (status == TaskState.FAILED) {
-              String msg = getTaskErrorMessage(taskID);
               LOG.error("Task failed: %s", taskID);
-              LOG.error("Message: %s", msg);
+              LOG.error("Message: %s", getTaskErrorMessage(taskID));
               throw new ISE("Indexer task FAILED");
             }
             return status == TaskState.SUCCESS;

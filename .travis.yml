@@ -46,7 +46,7 @@ addons:
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
 # output.  To compensate, use travis_wait to extend the timeout.
-install: ./check_test_suite.py && travis_terminate 0  || echo 'Running Maven install...' && MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-tools,!:druid-it-image' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+install: ./check_test_suite.py && travis_terminate 0  || echo 'Running Maven install...' && MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-tools,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
 # There are 3 stages of tests
 # 1. Tests - phase 1
@@ -676,24 +676,22 @@ jobs:
       jdk: openjdk8
       env: TESTNG_GROUPS='-Dgroups=query' USE_INDEXER='middleManager' MYSQL_DRIVER_CLASSNAME='org.mariadb.jdbc.Driver' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
+    # Revised ITs.
     - &integration_tests_ex
+      name: "(Compile=openjdk8, Run=openjdk8) leadership and high availability integration tests (new)"
       stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
-
-    # Revised ITs.
-    - <<: *integration_tests_ex
-      name: "(Compile=openjdk8, Run=openjdk8) leadership and high availability integration tests (new)"
       # Uses the install defined above. Then, builds the test tools and docker image,
       # and runs one IT. If tests fail, echos log lines of any of
       # the Druid services that did not exit normally.
-      script: it.sh travis HighAvailability
+      script: ./it.sh travis HighAvailability
        
     - <<: *integration_tests_ex
       name: "(Compile=openjdk8, Run=openjdk8) batch index integration test with Indexer (new)"
       env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
-      script: it.sh travis BatchIndex
+      script: ./it.sh travis BatchIndex
 
     # END - Integration tests for Compile with Java 8 and Run with Java 8
 
