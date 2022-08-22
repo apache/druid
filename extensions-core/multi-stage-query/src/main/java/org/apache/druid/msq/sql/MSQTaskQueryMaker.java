@@ -177,18 +177,12 @@ public class MSQTaskQueryMaker implements QueryMaker
     final List<String> sqlTypeNames = new ArrayList<>();
     final List<ColumnMapping> columnMappings = new ArrayList<>();
 
-    String timeColumnName = null; // For later.
-
     for (final Pair<Integer, String> entry : fieldMapping) {
       // Note: SQL generally allows output columns to be duplicates, but MultiStageQueryMakerFactory.validateNoDuplicateAliases
       // will prevent duplicate output columns from appearing here. So no need to worry about it.
 
       final String queryColumn = druidQuery.getOutputRowSignature().getColumnName(entry.getKey());
       final String outputColumns = entry.getValue();
-
-      if (outputColumns.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-        timeColumnName = queryColumn;
-      }
 
       final SqlTypeName sqlTypeName;
 
