@@ -36,6 +36,7 @@ export function getDemoQueries(): TabEntry[] {
 -- The two syntax pieces highlighted in this demo are:
 --
 -- 1. The REPLACE clause wraps a query and specifies that the result of the underlying query should be written to a datasource.
+--    You can also use INSERT instead of REPLACE to append data instead of replacing it.
 --
 -- 2. The TABLE(EXTERN(...)) function defines a external table that can be used anywhere a table can be used.
 --
