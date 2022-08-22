@@ -31,7 +31,6 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.utils.CloseableExecutorService;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.curator.x.discovery.DownInstancePolicy;
 import org.apache.curator.x.discovery.InstanceFilter;
@@ -69,6 +68,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -416,14 +416,10 @@ public class DiscoveryModule implements Module
       return this;
     }
 
-    @Override
-    public ServiceCacheBuilder<T> executorService(CloseableExecutorService closeableExecutorService)
-    {
-      return this;
-    }
-
     private static class NoopServiceCache<T> implements ServiceCache<T>
     {
+      private static final CountDownLatch COUNT_DOWN_LATCH = new CountDownLatch(0);
+
       @Override
       public List<ServiceInstance<T>> getInstances()
       {
@@ -434,6 +430,12 @@ public class DiscoveryModule implements Module
       public void start()
       {
         // nothing
+      }
+
+      @Override
+      public CountDownLatch startImmediate() throws Exception
+      {
+        return COUNT_DOWN_LATCH;
       }
 
       @Override
@@ -502,12 +504,6 @@ public class DiscoveryModule implements Module
 
     @Override
     public ServiceProviderBuilder<T> executorService(ExecutorService executorService)
-    {
-      return this;
-    }
-
-    @Override
-    public ServiceProviderBuilder<T> executorService(CloseableExecutorService closeableExecutorService)
     {
       return this;
     }
