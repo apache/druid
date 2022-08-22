@@ -181,6 +181,7 @@ public class BasicRoleBasedAuthorizerTest
         Action.WRITE
     );
     Assert.assertFalse(access.isAllowed());
+    Assert.assertEquals("Action [WRITE] not allowed for Resource [DATASOURCE:wrongResource]", access.getMessage());
   }
 
   @Test

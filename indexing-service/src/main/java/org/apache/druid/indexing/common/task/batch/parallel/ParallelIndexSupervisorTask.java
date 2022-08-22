@@ -716,9 +716,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
       if (cardinalityRunner.getReports().isEmpty()) {
         String msg = "No valid rows for hash partitioning."
-                     + " All rows may have invalid timestamps or have been filtered out.";
+                     + " All rows may have invalid timestamps or have been filtered out."
+                     + "Please make sure to use the correct format in timestampSpec.";
         LOG.warn(msg);
-        return TaskStatus.success(getId(), msg);
+        return TaskStatus.failure(getId(), msg);
       }
 
       if (partitionsSpec.getNumShards() == null) {
@@ -740,6 +741,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             mergeCardinalityReports(cardinalityRunner.getReports().values()),
             k -> partitionsSpec.getNumShards()
         );
+      }
+
+      if (intervalToNumShards.isEmpty()) {
+        String msg = "No valid rows for hash partitioning."
+            + " All rows may have invalid timestamps or have been filtered out."
+            + "Please make sure to use the correct format in timestampSpec.";
+        LOG.warn(msg);
+        return TaskStatus.failure(getId(), msg);
       }
 
       ingestionSchemaToUse = rewriteIngestionSpecWithIntervalsIfMissing(
@@ -834,9 +843,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       );
       if (intervalToPartitions.isEmpty()) {
         String msg = "No valid rows for range partitioning."
-                     + " All rows may have invalid timestamps or multiple dimension values.";
+                     + " All rows may have invalid timestamps or multiple dimension values or do not pass the filter."
+                     + " Please make sure to use the correct format in timestampSpec.";
         LOG.warn(msg);
-        return TaskStatus.success(getId(), msg);
+        return TaskStatus.failure(getId(), msg);
       }
     }
     catch (Exception e) {

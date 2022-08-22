@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.BasicAuthDBConfig;
 import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
@@ -44,6 +46,8 @@ import java.util.regex.Pattern;
 @JsonTypeName("basic")
 public class BasicRoleBasedAuthorizer implements Authorizer
 {
+  private static final Logger LOG = new Logger(BasicRoleBasedAuthorizer.class);
+
   private final String name;
   private final BasicAuthDBConfig dbConfig;
   private final RoleProvider roleProvider;
@@ -90,7 +94,11 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     Map<String, BasicAuthorizerRole> roleMap = roleProvider.getRoleMap(name);
 
     if (roleNames.isEmpty()) {
-      return new Access(false);
+      LOG.info("No roles found for authorizer [%s] and user [%s]", name, authenticationResult.getIdentity());
+      return new Access(false, StringUtils.format("You don't have '%s' permission for Resource [%s:%s]",
+          action.name(),
+          resource.getType(),
+          resource.getName()));
     }
     if (roleMap == null) {
       throw new IAE("Could not load roleMap for authorizer [%s]", name);
@@ -106,8 +114,16 @@ public class BasicRoleBasedAuthorizer implements Authorizer
         }
       }
     }
-
-    return new Access(false);
+    LOG.info("User [%s] is not allowed to [%s] the resource [%s:%s]",
+        authenticationResult.getIdentity(),
+        action.name(),
+        resource.getType(), resource.getName());
+    // We don't include the identity information in the error message so that there is no accidental leak of
+    // any sensitive information
+    return new Access(false, StringUtils.format("You don't have '%s' permission for Resource [%s:%s]",
+        action.name(),
+        resource.getType(),
+        resource.getName()));
   }
 
   private boolean permissionCheck(Resource resource, Action action, BasicAuthorizerPermission permission)
