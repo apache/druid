@@ -187,7 +187,7 @@ export async function getTaskExecution(
       console.error(
         `Got unusable response from the reports endpoint (/druid/indexer/v1/task/${encodedId}/reports) going to retry`,
       );
-      console.log(taskReportResp.data);
+      console.log('Report response:', taskReportResp.data);
     }
   }
 
