@@ -97,7 +97,7 @@ public class SQLMetadataConnectorTest
             for (String column : Arrays.asList("type", "group_id")) {
               Assert.assertTrue(
                   StringUtils.format("Tasks table column %s was not created!", column),
-                  connector.tableContainsColumn(handle, taskTable, column)
+                  connector.tableHasColumn(taskTable, column)
               );
             }
 

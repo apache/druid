@@ -229,9 +229,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             public Void withHandle(Handle handle)
             {
               if (tableExists(handle, tableName)) {
-                log.info("Altering table[%s]", tableName);
                 final Batch batch = handle.createBatch();
                 for (String s : sql) {
+                  log.info("Altering table[%s], with command: %s", tableName, s);
                   batch.add(s);
                 }
                 batch.execute();
@@ -369,27 +369,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
   
-  public boolean tableContainsColumn(Handle handle, String table, String column)
-  {
-    try {
-      DatabaseMetaData databaseMetaData = handle.getConnection().getMetaData();
-      ResultSet columns = databaseMetaData.getColumns(
-          null,
-          null,
-          table,
-          column
-      );
-      return columns.next();
-    }
-    catch (SQLException e) {
-      return false;
-    }
-  }
-  
   public void prepareTaskEntryTable(final String tableName)
   {
     createEntryTable(tableName);
-    alterEntryTable(tableName);
+    alterEntryTableAddTypeAndGroupId(tableName);
   }
 
   public void createEntryTable(final String tableName)
@@ -405,6 +388,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  payload %2$s NOT NULL,\n"
                 + "  status_payload %2$s NOT NULL,\n"
                 + "  active BOOLEAN NOT NULL DEFAULT FALSE,\n"
+                + "  type VARCHAR(255), \n"
+                + "  group_id VARCHAR(255) \n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
                 tableName, getPayloadType(), getCollation()
@@ -414,32 +399,23 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  private void alterEntryTable(final String tableName)
+  private void alterEntryTableAddTypeAndGroupId(final String tableName)
   {
-    try {
-      retryWithHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle)
-            {
-              final Batch batch = handle.createBatch();
-              if (!tableContainsColumn(handle, tableName, "type")) {
-                log.info("Adding column: type to table[%s]", tableName);
-                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
-              }
-              if (!tableContainsColumn(handle, tableName, "group_id")) {
-                log.info("Adding column: group_id to table[%s]", tableName);
-                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
-              }
-              batch.execute();
-              return null;
-            }
-          }
-      );
+    ArrayList<String> statements = new ArrayList<>();
+    if (!tableHasColumn(tableName, "type")) {
+      log.info("Adding 'type' column to %s", tableName);
+      statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
+    } else {
+      log.info("%s already has 'type' column", tableName);
     }
-    catch (Exception e) {
-      log.warn(e, "Exception altering table");
+    if (!tableHasColumn(tableName, "group_id")) {
+      log.info("Adding 'group_id' column to %s", tableName);
+      statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
+    } else {
+      log.info("%s already has 'group_id' column", tableName);
+    }
+    if (!statements.isEmpty()) {
+      alterTable(tableName, statements);
     }
   }
 
@@ -511,7 +487,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     String tableName = tablesConfigSupplier.get().getSegmentsTable();
     if (!tableHasColumn(tableName, "used_flag_last_updated")) {
-      log.info("Adding used_flag_last_updated column to %s", tableName);
+      log.info("Adding 'used_flag_last_updated' column to %s", tableName);
       alterTable(
           tableName,
           ImmutableList.of(

@@ -1015,17 +1015,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       for (List<DataSegment> partition : partitionedSegments) {
         for (DataSegment segment : partition) {
+          String now = DateTimes.nowUtc().toString();
           preparedBatch.add()
               .bind("id", segment.getId().toString())
               .bind("dataSource", segment.getDataSource())
-              .bind("created_date", DateTimes.nowUtc().toString())
+              .bind("created_date", now)
               .bind("start", segment.getInterval().getStart().toString())
               .bind("end", segment.getInterval().getEnd().toString())
               .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
               .bind("version", segment.getVersion())
               .bind("used", usedSegments.contains(segment))
               .bind("payload", jsonMapper.writeValueAsBytes(segment))
-              .bind("used_flag_last_updated", DateTimes.nowUtc().toString());
+              .bind("used_flag_last_updated", now);
         }
         final int[] affectedRows = preparedBatch.execute();
         final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);

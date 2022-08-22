@@ -41,7 +41,7 @@ import java.util.List;
 
 @Command(
     name = "metadata-update",
-    description = "Controlled update of metadta storage"
+    description = "Controlled update of metadata storage"
 )
 
 public class UpdateTables extends GuiceRunnable

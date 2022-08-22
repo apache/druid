@@ -89,24 +89,6 @@ public class DerbyConnector extends SQLMetadataConnector
   }
 
   @Override
-  public boolean tableContainsColumn(Handle handle, String table, String column)
-  {
-    try {
-      DatabaseMetaData databaseMetaData = handle.getConnection().getMetaData();
-      ResultSet columns = databaseMetaData.getColumns(
-          null,
-          null,
-          table.toUpperCase(Locale.ENGLISH),
-          column.toUpperCase(Locale.ENGLISH)
-      );
-      return columns.next();
-    }
-    catch (SQLException e) {
-      return false;
-    }
-  }
-
-  @Override
   public String getSerialType()
   {
     return SERIAL_TYPE;
