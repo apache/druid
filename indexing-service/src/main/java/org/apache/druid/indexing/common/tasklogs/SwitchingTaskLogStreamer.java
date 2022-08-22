@@ -59,11 +59,8 @@ public class SwitchingTaskLogStreamer implements TaskLogStreamer
     }
     catch (IOException e) {
       // defer first IO exception due to race in the way tasks update their exit status in the overlord
-      // 1) task chat handler is unregistered and stops responding to http requests
-      // 2) task jvm exits and returns status to middle manager
-      // 3) middle manager sends status to OL
-      // It may happen that the task have sent their logs to deep storage but are still running with http chat handlers unregistered
-      // in such a case, catch and ignore the 1st IOException and try deepStorage for the logs. If still not found, return the caught exception
+      // It may happen that the task sent the log to deep storage but is still running with http chat handlers unregistered
+      // In such a case, catch and ignore the 1st IOException and try deepStorage for the log. If the log is still not found, return the caught exception
       deferIOException = e;
     }
 
@@ -101,11 +98,8 @@ public class SwitchingTaskLogStreamer implements TaskLogStreamer
     }
     catch (IOException e) {
       // defer first IO exception due to race in the way tasks update their exit status in the overlord
-      // 1) task chat handler is unregistered and stops responding to http requests
-      // 2) task jvm exits and returns status to middle manager
-      // 3) middle manager sends status to OL
-      // It may happen that the task have sent their logs to deep storage but are still running with http chat handlers unregistered
-      // in such a case, catch and ignore the 1st IOException and try deepStorage for the logs. If still not found, return the caught exception
+      // It may happen that the task sent the report to deep storage but the task is still running with http chat handlers unregistered
+      // In such a case, catch and ignore the 1st IOException and try deepStorage for the report. If the report is still not found, return the caught exception
       deferIOException = e;
     }
 
