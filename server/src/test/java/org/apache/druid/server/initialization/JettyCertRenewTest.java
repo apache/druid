@@ -20,11 +20,13 @@
 package org.apache.druid.server.initialization;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -32,9 +34,11 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.HttpClientConfig;
 import org.apache.druid.java.util.http.client.HttpClientInit;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -42,31 +46,55 @@ import org.apache.druid.server.initialization.jetty.ServletFilterHolder;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.server.Server;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
-import org.junit.Before;
+import org.junit.Assert;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
+import javax.ws.rs.core.MediaType;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
+import java.text.SimpleDateFormat;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.zip.GZIPOutputStream;
 
-public class JettyCertRenewTest extends JettyTest
+public class JettyCertRenewTest extends BaseJettyTest
 {
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
 
-  private HttpClientConfig sslConfig;
-
   private Injector injector;
 
   private LatchedRequestStateHolder latchedRequestState;
+
+  private Path tmpKeyStore;
+
+  private Path tmpTrustStore;
+
+  private PasswordProvider pp;
 
   @Override
   public void setProperties()
@@ -76,29 +104,6 @@ public class JettyCertRenewTest extends JettyTest
     System.setProperty("druid.server.http.showDetailedJettyErrors", "true");
   }
 
-  @Override
-  @Before
-  public void setup() throws Exception
-  {
-    setProperties();
-    Injector injector = setupInjector();
-    final DruidNode node = injector.getInstance(Key.get(DruidNode.class, Self.class));
-    port = node.getPlaintextPort();
-    tlsPort = node.getTlsPort();
-
-    lifecycle = injector.getInstance(Lifecycle.class);
-    lifecycle.start();
-    BaseJettyTest.ClientHolder holder = injector.getInstance(BaseJettyTest.ClientHolder.class);
-    server = injector.getInstance(Server.class);
-    client = holder.getClient();
-
-    File keyStore = new File(JettyCertRenewTest.class.getClassLoader().getResource("server-new.jks").getFile());
-    Files.copy(keyStore.toPath(), new File(folder.newFolder(), "server.jks").toPath());
-    File trustStore = new File(JettyCertRenewTest.class.getClassLoader().getResource("truststore-new.jks").getFile());
-    Files.copy(trustStore.toPath(), new File(folder.newFolder(), "truststore.jks").toPath());
-
-    Thread.sleep(2000);
-  }
 
   @Override
   protected Injector setupInjector()
@@ -106,10 +111,10 @@ public class JettyCertRenewTest extends JettyTest
     TLSServerConfig tlsConfig;
     try {
       File keyStore = new File(JettyCertRenewTest.class.getClassLoader().getResource("server.jks").getFile());
-      Path tmpKeyStore = Files.copy(keyStore.toPath(), new File(folder.newFolder(), "server.jks").toPath());
+      tmpKeyStore = Files.copy(keyStore.toPath(), new File(folder.newFolder(), "server.jks").toPath());
       File trustStore = new File(JettyCertRenewTest.class.getClassLoader().getResource("truststore.jks").getFile());
-      Path tmpTrustStore = Files.copy(trustStore.toPath(), new File(folder.newFolder(), "truststore.jks").toPath());
-      PasswordProvider pp = () -> "druid123";
+      tmpTrustStore = Files.copy(trustStore.toPath(), new File(folder.newFolder(), "truststore.jks").toPath());
+      pp = () -> "druid123";
       tlsConfig = new TLSServerConfig()
       {
         @Override
@@ -190,15 +195,6 @@ public class JettyCertRenewTest extends JettyTest
           return 1;
         }
       };
-
-      sslConfig =
-          HttpClientConfig.builder()
-                          .withSslContext(
-                              HttpClientInit.sslContextWithTrustedKeyStore(tmpTrustStore.toString(), pp.getPassword())
-                          )
-                          .withWorkerCount(1)
-                          .withReadTimeout(Duration.ZERO)
-                          .build();
     }
     catch (IOException e) {
       throw new RuntimeException(e);
@@ -278,5 +274,128 @@ public class JettyCertRenewTest extends JettyTest
     );
 
     return injector;
+  }
+
+
+  @Test
+  public void testCertificateEndDateInvalid() throws Exception
+  {
+    SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.ENGLISH);
+
+    Certificate[] certificatesBefore = getCertificates();
+    for (Certificate certificate : certificatesBefore) {
+      X509Certificate real = (X509Certificate) certificate;
+      Assert.assertEquals(dateFormat.parse("Fri Mar 29 11:00:40 UTC 2030").toInstant(), real.getNotAfter().toInstant());
+    }
+
+    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, getResponseWithProperTrustStore());
+
+    // Replace the server and trustore keystores, wait for 3s and perform all the tests.
+    File keyStore = new File(JettyCertRenewTest.class.getClassLoader().getResource("server-new.jks").getFile());
+    Files.copy(keyStore.toPath(), tmpKeyStore, StandardCopyOption.REPLACE_EXISTING);
+    File trustStore = new File(JettyCertRenewTest.class.getClassLoader().getResource("truststore-new.jks").getFile());
+    Files.copy(trustStore.toPath(), tmpTrustStore, StandardCopyOption.REPLACE_EXISTING);
+
+    Thread.sleep(3000);
+
+    Certificate[] certificatesAfter = getCertificates();
+    for (Certificate certificate : certificatesAfter) {
+      X509Certificate real = (X509Certificate) certificate;
+      Assert.assertEquals(dateFormat.parse("Thu Aug 19 13:38:51 UTC 2032").toInstant(), real.getNotAfter().toInstant());
+    }
+
+    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, getResponseWithProperTrustStore());
+  }
+
+  private static class AcceptAllForTestX509TrustManager implements X509TrustManager
+  {
+    private X509Certificate[] accepted;
+
+    @Override
+    public void checkClientTrusted(X509Certificate[] xcs, String string)
+    {
+    }
+
+    @Override
+    public void checkServerTrusted(X509Certificate[] xcs, String string)
+    {
+      accepted = xcs;
+    }
+
+    @Override
+    public X509Certificate[] getAcceptedIssuers()
+    {
+      return accepted;
+    }
+  }
+
+  private static class AcceptAllForTestHostnameVerifier implements HostnameVerifier
+  {
+    @Override
+    public boolean verify(String string, SSLSession ssls)
+    {
+      return true;
+    }
+  }
+
+  private Certificate[] getCertificates() throws Exception
+  {
+    URL url = new URL("https://localhost:" + tlsPort + "/default/");
+
+    SSLContext sslCtx = SSLContext.getInstance("TLS");
+    sslCtx.init(null, new TrustManager[]{new AcceptAllForTestX509TrustManager()}, null);
+
+    HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+
+    connection.setHostnameVerifier(new AcceptAllForTestHostnameVerifier());
+    connection.setSSLSocketFactory(sslCtx.getSocketFactory());
+
+    connection.getResponseCode();
+
+    Certificate[] certificates = connection.getServerCertificates();
+
+    connection.disconnect();
+
+    return certificates;
+  }
+
+  private HttpClientConfig getSslConfig()
+  {
+    return HttpClientConfig.builder()
+                           .withSslContext(
+                               HttpClientInit.sslContextWithTrustedKeyStore(tmpTrustStore.toString(), pp.getPassword())
+                           )
+                           .withWorkerCount(1)
+                           .withReadTimeout(Duration.ZERO)
+                           .build();
+  }
+
+  private String getResponseWithProperTrustStore() throws Exception
+  {
+    String text = "hello";
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    try (GZIPOutputStream gzipOutputStream = new GZIPOutputStream(out)) {
+      gzipOutputStream.write(text.getBytes(Charset.defaultCharset()));
+    }
+    Request request = new Request(HttpMethod.GET, new URL("https://localhost:" + tlsPort + "/default/"));
+    request.setHeader("Content-Encoding", "gzip");
+    request.setContent(MediaType.TEXT_PLAIN, out.toByteArray());
+
+    HttpClient client;
+    try {
+      client = HttpClientInit.createClient(
+          getSslConfig(),
+          lifecycle
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
+    ListenableFuture<InputStream> go = client.go(
+        request,
+        new InputStreamResponseHandler()
+    );
+    return IOUtils.toString(go.get(), StandardCharsets.UTF_8);
   }
 }

@@ -181,7 +181,8 @@ public class TLSServerConfig
     return reloadSslContextSeconds;
   }
 
-  public boolean isReloadSslContext() {
+  public boolean isReloadSslContext()
+  {
     return reloadSslContext;
   }
 
