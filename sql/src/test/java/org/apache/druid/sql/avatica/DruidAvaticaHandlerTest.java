@@ -1097,6 +1097,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       Assert.assertEquals(true, stats.get("success"));
       Assert.assertEquals("regularUser", stats.get("identity"));
       Assert.assertTrue(stats.containsKey("sqlQuery/time"));
+      Assert.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
       Assert.assertTrue(stats.containsKey("sqlQuery/bytes"));
     }
 
@@ -1151,6 +1152,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       Assert.assertEquals(true, stats.get("success"));
       Assert.assertEquals("regularUser", stats.get("identity"));
       Assert.assertTrue(stats.containsKey("sqlQuery/time"));
+      Assert.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
       Assert.assertTrue(stats.containsKey("sqlQuery/bytes"));
     }
 
