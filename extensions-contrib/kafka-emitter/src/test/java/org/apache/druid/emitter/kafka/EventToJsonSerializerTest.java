@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.TableDataSource;
@@ -47,14 +48,13 @@ public class EventToJsonSerializerTest extends TestCase
   public void testSerializeServiceMetricEvent() throws JsonProcessingException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    EventToJsonSerializer serializer = EventToJsonSerializer.of(mapper);
     String timestamp = "2022-08-17T18:51:00.000Z";
     Event event = ServiceMetricEvent.builder()
                                     .setFeed("my-feed")
                                     .build(DateTimes.of(timestamp), "m1", 1)
                                     .build("my-service", "my-host");
 
-    String actual = serializer.serialize(event);
+    String actual = mapper.writeValueAsString(event.toMap());
     String expected = "{"
                       + "\"feed\":\"my-feed\","
                       + "\"timestamp\":\""
@@ -71,7 +71,6 @@ public class EventToJsonSerializerTest extends TestCase
   public void testSerializeAlertEvent() throws JsonProcessingException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    EventToJsonSerializer serializer = EventToJsonSerializer.of(mapper);
     String timestamp = "2022-08-17T18:51:00.000Z";
     Event event = new AlertEvent(
         DateTimes.of(timestamp),
@@ -82,7 +81,7 @@ public class EventToJsonSerializerTest extends TestCase
         Collections.emptyMap()
     );
 
-    String actual = serializer.serialize(event);
+    String actual = mapper.writeValueAsString(event.toMap());
     String expected = "{"
                       + "\"feed\":\"alerts\","
                       + "\"timestamp\":\""
@@ -102,7 +101,6 @@ public class EventToJsonSerializerTest extends TestCase
   public void testSerializeSqlLogRequest() throws JsonProcessingException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    EventToJsonSerializer serializer = EventToJsonSerializer.of(mapper);
     String timestamp = "2022-08-17T18:51:00.000Z";
 
     Event event = DefaultRequestLogEventBuilderFactory.instance()
@@ -118,7 +116,7 @@ public class EventToJsonSerializerTest extends TestCase
                                                       )
                                                       .build("my-service", "my-host");
 
-    String actual = serializer.serialize(event);
+    String actual = mapper.writeValueAsString(event.toMap());
     String expected = "{"
                       + "\"feed\":\"requests\","
                       + "\"timestamp\":\""
@@ -138,7 +136,6 @@ public class EventToJsonSerializerTest extends TestCase
   public void testSerializeNativeLogRequest() throws JsonProcessingException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    EventToJsonSerializer serializer = EventToJsonSerializer.of(mapper);
 
     RequestLogLine nativeLine = RequestLogLine.forNative(
         new TimeseriesQuery(
@@ -173,7 +170,7 @@ public class EventToJsonSerializerTest extends TestCase
                                                       .createRequestLogEventBuilder("my-feed", nativeLine)
                                                       .build("my-service", "my-host");
 
-    String actual = serializer.serialize(event);
+    String actual = mapper.writeValueAsString(event.toMap());
     String queryString = "{"
                          + "\"queryType\":\"timeseries\","
                          + "\"dataSource\":{\"type\":\"table\",\"name\":\"dummy\"},"
@@ -201,10 +198,7 @@ public class EventToJsonSerializerTest extends TestCase
   public void testSerializeNativeLogRequestWithAdditionalParameters() throws JsonProcessingException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    EventToJsonSerializer serializer = EventToJsonSerializer.of(mapper)
-                                                            .withProperty("number", 1)
-                                                            .withProperty("text", "some text")
-                                                            .withProperty("null", null);
+
 
     RequestLogLine nativeLine = RequestLogLine.forNative(
         new TimeseriesQuery(
@@ -239,7 +233,14 @@ public class EventToJsonSerializerTest extends TestCase
                                                       .createRequestLogEventBuilder("my-feed", nativeLine)
                                                       .build("my-service", "my-host");
 
-    String actual = serializer.serialize(event);
+    EventMap map = EventMap.builder()
+                           .putNonNull("number", 1)
+                           .putNonNull("text", "some text")
+                           .putNonNull("null", null)
+                           .putAll(event.toMap())
+                           .build();
+
+    String actual = mapper.writeValueAsString(map);
     String queryString = "{"
                          + "\"queryType\":\"timeseries\","
                          + "\"dataSource\":{\"type\":\"table\",\"name\":\"dummy\"},"

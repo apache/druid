@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.server.log.RequestLogEvent;
@@ -58,7 +59,7 @@ public class KafkaEmitter implements Emitter
 
   private final KafkaEmitterConfig config;
   private final Producer<String, String> producer;
-  private final EventToJsonSerializer jsonSerializer;
+  private final ObjectMapper jsonMapper;
   private final MemoryBoundLinkedBlockingQueue<String> metricQueue;
   private final MemoryBoundLinkedBlockingQueue<String> alertQueue;
   private final MemoryBoundLinkedBlockingQueue<String> requestQueue;
@@ -69,8 +70,7 @@ public class KafkaEmitter implements Emitter
   public KafkaEmitter(KafkaEmitterConfig config, ObjectMapper jsonMapper)
   {
     this.config = config;
-    this.jsonSerializer = EventToJsonSerializer.of(jsonMapper)
-                                               .withProperty("clusterName", config.getClusterName());
+    this.jsonMapper = jsonMapper;
     this.producer = setKafkaProducer();
     // same with kafka producer's buffer.memory
     long queueMemoryBound = Long.parseLong(this.config.getKafkaProducerConfig()
@@ -170,7 +170,13 @@ public class KafkaEmitter implements Emitter
   {
     if (event != null) {
       try {
-        String resultJson = jsonSerializer.serialize(event);
+        EventMap map = event.toMap();
+        if (config.getClusterName() != null) {
+          map.put("clusterName", config.getClusterName());
+        }
+
+        String resultJson = jsonMapper.writeValueAsString(map);
+
         ObjectContainer<String> objectContainer = new ObjectContainer<>(
             resultJson,
             StringUtils.toUtf8(resultJson).length
