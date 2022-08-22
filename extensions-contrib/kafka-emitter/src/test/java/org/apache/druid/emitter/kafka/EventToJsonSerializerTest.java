@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import junit.framework.TestCase;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -39,12 +38,16 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.DefaultRequestLogEventBuilderFactory;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.Collections;
 
-public class EventToJsonSerializerTest extends TestCase
+
+public class EventToJsonSerializerTest
 {
 
+  @Test
   public void testSerializeServiceMetricEvent() throws JsonProcessingException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
@@ -65,9 +68,10 @@ public class EventToJsonSerializerTest extends TestCase
                       + "\"service\":\"my-service\","
                       + "\"host\":\"my-host\""
                       + "}";
-    assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
   }
 
+  @Test
   public void testSerializeAlertEvent() throws JsonProcessingException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
@@ -95,9 +99,10 @@ public class EventToJsonSerializerTest extends TestCase
                       + "\"description\":\"my-description\","
                       + "\"data\":{}"
                       + "}";
-    assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
   }
 
+  @Test
   public void testSerializeSqlLogRequest() throws JsonProcessingException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
@@ -130,9 +135,10 @@ public class EventToJsonSerializerTest extends TestCase
                       + "\"remoteAddr\":\"127.0.0.1\""
                       + "}";
 
-    assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
   }
 
+  @Test
   public void testSerializeNativeLogRequest() throws JsonProcessingException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
@@ -192,9 +198,10 @@ public class EventToJsonSerializerTest extends TestCase
                       + "\"remoteAddr\":\"127.0.0.1\","
                       + "\"queryStats\":{\"query/time\":13,\"query/bytes\":10,\"success\":true,\"identity\":\"allowAll\"}}";
 
-    assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
   }
 
+  @Test
   public void testSerializeNativeLogRequestWithAdditionalParameters() throws JsonProcessingException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
@@ -264,6 +271,6 @@ public class EventToJsonSerializerTest extends TestCase
                       + "\"text\":\"some text\","
                       + "\"queryStats\":{\"query/time\":13,\"query/bytes\":10,\"success\":true,\"identity\":\"allowAll\"}}";
 
-    assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
   }
 }
