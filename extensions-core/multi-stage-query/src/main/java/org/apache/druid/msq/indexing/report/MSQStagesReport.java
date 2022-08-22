@@ -85,7 +85,7 @@ public class MSQStagesReport
     return new MSQStagesReport(stages);
   }
 
-  @JsonValue
+  @JsonProperty("stages")
   public List<Stage> getStages()
   {
     return stages;

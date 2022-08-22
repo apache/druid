@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-public class MsqTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResults>
+public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResults>
 {
   final ObjectMapper jsonMapper;
   final IntegrationTestingConfig config;
@@ -104,7 +104,8 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResu
     } while (time++ < maxTimeoutSeconds);
   }
 
-  public Map<String, MSQTaskReport> fetchStatusReports(String taskId) {
+  public Map<String, MSQTaskReport> fetchStatusReports(String taskId)
+  {
     return overlordClient.getTaskReportForMsqTask(taskId);
   }
 }
