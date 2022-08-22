@@ -50,6 +50,8 @@ values for the configs below, among others provided by Java implementation.
 |`druid.server.https.keyStoreType`|The type of the key store.|none|yes|
 |`druid.server.https.certAlias`|Alias of TLS/SSL certificate for the connector.|none|yes|
 |`druid.server.https.keyStorePassword`|The [Password Provider](../operations/password-provider.md) or String password for the Key Store.|none|yes|
+|`druid.server.https.reloadSslContext`| Should druid server detect Key Store file change and reload.|false|no|
+|`druid.server.https.reloadSslContextSeconds`| how frequently should druid server scan for Key Store file change.|60|yes|
 
 The following table contains configuration options related to client certificate authentication.
 
