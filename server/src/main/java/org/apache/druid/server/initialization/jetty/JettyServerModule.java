@@ -348,7 +348,7 @@ public class JettyServerModule extends JerseyServletModule
       }
       connector.setPort(node.getTlsPort());
       serverConnectors.add(connector);
-      if(tlsServerConfig.isReloadSslContext()){
+      if (tlsServerConfig.isReloadSslContext()) {
         KeyStoreScanner keyStoreScanner = new KeyStoreScanner(sslContextFactory);
         keyStoreScanner.setScanInterval(tlsServerConfig.getReloadSslContextSeconds());
         server.addBean(keyStoreScanner);
