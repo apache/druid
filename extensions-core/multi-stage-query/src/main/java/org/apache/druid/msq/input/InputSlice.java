@@ -36,5 +36,5 @@ public interface InputSlice
    *
    * May be zero for some kinds of slices, even if they contain data, if the input is not file-based.
    */
-  int numFiles();
+  int fileCount();
 }

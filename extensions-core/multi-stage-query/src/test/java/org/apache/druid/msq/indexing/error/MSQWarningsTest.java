@@ -28,7 +28,6 @@ import org.apache.druid.msq.indexing.ColumnMapping;
 import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
-import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
@@ -169,12 +168,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
                          MSQSpec.builder()
-                                .query(
-                                    defaultQuery.withOverriddenContext(userContext)
-                                                .withOverriddenContext(
-                                                    ImmutableMap.of(QueryKitUtils.CTX_TIME_COLUMN_NAME, "d0")
-                                                )
-                                )
+                                .query(defaultQuery.withOverriddenContext(userContext))
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
                                 .build())
@@ -262,12 +256,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
                          MSQSpec.builder()
-                                .query(
-                                    defaultQuery.withOverriddenContext(userContext)
-                                                .withOverriddenContext(
-                                                    ImmutableMap.of(QueryKitUtils.CTX_TIME_COLUMN_NAME, "d0")
-                                                )
-                                )
+                                .query(defaultQuery.withOverriddenContext(userContext))
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
                                 .build())
@@ -299,12 +288,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
                          MSQSpec.builder()
-                                .query(
-                                    defaultQuery.withOverriddenContext(userContext)
-                                                .withOverriddenContext(
-                                                    ImmutableMap.of(QueryKitUtils.CTX_TIME_COLUMN_NAME, "d0")
-                                                )
-                                )
+                                .query(defaultQuery.withOverriddenContext(userContext))
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
                                 .build())
@@ -411,12 +395,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
                          MSQSpec.builder()
-                                .query(
-                                    defaultQuery.withOverriddenContext(userContext)
-                                                .withOverriddenContext(
-                                                    ImmutableMap.of(QueryKitUtils.CTX_TIME_COLUMN_NAME, "d0")
-                                                )
-                                )
+                                .query(defaultQuery.withOverriddenContext(userContext))
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
                                 .build())

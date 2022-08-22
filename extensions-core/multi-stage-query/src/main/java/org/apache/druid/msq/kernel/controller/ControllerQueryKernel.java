@@ -22,6 +22,7 @@ package org.apache.druid.msq.kernel.controller;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.ints.Int2IntAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
@@ -43,7 +44,6 @@ import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -66,34 +66,57 @@ public class ControllerQueryKernel
 {
   private final QueryDefinition queryDef;
 
-  // Stage ID -> tracker for that stage. An extension of the state of this kernel.
+  /**
+   * Stage ID -> tracker for that stage. An extension of the state of this kernel.
+   */
   private final Map<StageId, ControllerStageTracker> stageTracker = new HashMap<>();
 
-  private Map<StageId, Set<StageId>> inflowMap = null; // Will be initialized to an unmodifiable map
-  private Map<StageId, Set<StageId>> outflowMap = null; // Will be initialized to an unmodifiable map
+  /**
+   * Stage ID -> stages that flow *into* that stage. Computed by {@link #computeStageInflowMap}.
+   */
+  private final ImmutableMap<StageId, Set<StageId>> inflowMap;
 
-  // Maintains a running map of (stageId -> pending inflow stages) which need to be completed to provision the stage
-  // corresponding to the stageId. After initializing,if the value of the entry becomes an empty set, it is removed from
-  // the map, and the removed entry is added to readyToRunStages
-  private Map<StageId, Set<StageId>> pendingInflowMap = null;
+  /**
+   * Stage ID -> stages that *depend on* that stage. Computed by {@link #computeStageOutflowMap}.
+   */
+  private final ImmutableMap<StageId, Set<StageId>> outflowMap;
 
-  // Maintains a running count of (stageId -> outflow stages pending on its results). After initializing, if
-  // the value of the entry becomes an empty set, it is removed from the map and the removed entry is added to
-  // effectivelyFinishedStages
-  private Map<StageId, Set<StageId>> pendingOutflowMap = null;
+  /**
+   * Maintains a running map of (stageId -> pending inflow stages) which need to be completed to provision the stage
+   * corresponding to the stageId. After initializing, if the value of the entry becomes an empty set, it is removed
+   * from the map, and the removed entry is added to {@link #readyToRunStages}.
+   */
+  private final Map<StageId, Set<StageId>> pendingInflowMap;
 
-  // Tracks those stages which can be initialized safely.
+  /**
+   * Maintains a running count of (stageId -> outflow stages pending on its results). After initializing, if
+   * the value of the entry becomes an empty set, it is removed from the map and the removed entry is added to
+   * {@link #effectivelyFinishedStages}.
+   */
+  private final Map<StageId, Set<StageId>> pendingOutflowMap;
+
+  /**
+   * Tracks those stages which can be initialized safely.
+   */
   private final Set<StageId> readyToRunStages = new HashSet<>();
 
-  // Tracks the stageIds which can be finished. Once returned by getEffectivelyFinishedStageKernels(), it gets cleared
-  // and not tracked anymore in this Set
-  private final Set<StageId> effectivelyFinishedStages = new HashSet<>(); // Modifiable map
+  /**
+   * Tracks the stageIds which can be finished. Once returned by {@link #getEffectivelyFinishedStageIds()}, it gets
+   * cleared and not tracked anymore in this Set.
+   */
+  private final Set<StageId> effectivelyFinishedStages = new HashSet<>();
 
   public ControllerQueryKernel(final QueryDefinition queryDef)
   {
     this.queryDef = queryDef;
-    initializeStageDAGMaps();
-    initializeLeafStages();
+    this.inflowMap = ImmutableMap.copyOf(computeStageInflowMap(queryDef));
+    this.outflowMap = ImmutableMap.copyOf(computeStageOutflowMap(queryDef));
+
+    // pendingInflowMap and pendingOutflowMap are wholly separate from inflowMap, so we can edit the Sets.
+    this.pendingInflowMap = computeStageInflowMap(queryDef);
+    this.pendingOutflowMap = computeStageOutflowMap(queryDef);
+
+    initializeReadyToRunStages();
   }
 
   /**
@@ -250,61 +273,13 @@ public class ControllerQueryKernel
   }
 
   /**
-   * Populates the inflowMap, outflowMap and pending inflow/outflow maps corresponding to the query definition
+   * Called by the constructor. Initializes {@link #readyToRunStages} and removes any ready-to-run stages from
+   * the {@link #pendingInflowMap}.
    */
-  private void initializeStageDAGMaps()
+  private void initializeReadyToRunStages()
   {
-    initializeStageOutflowMap(this.queryDef);
-    initializeStageInflowMap(this.queryDef);
-  }
+    final Iterator<Map.Entry<StageId, Set<StageId>>> pendingInflowIterator = pendingInflowMap.entrySet().iterator();
 
-  /**
-   * Initializes this.outflowMap with a mapping of stage -> stages that depend on that stage.
-   */
-  private void initializeStageOutflowMap(final QueryDefinition queryDefinition)
-  {
-    Preconditions.checkArgument(this.outflowMap == null, "outflow map must only be built once");
-    final Map<StageId, Set<StageId>> retVal = new HashMap<>();
-    this.pendingOutflowMap = new HashMap<>();
-    for (final StageDefinition stageDef : queryDefinition.getStageDefinitions()) {
-      final StageId stageId = stageDef.getId();
-      retVal.computeIfAbsent(stageId, ignored -> new HashSet<>());
-      this.pendingOutflowMap.computeIfAbsent(stageId, ignored -> new HashSet<>());
-      for (final int inputStageNumber : queryDefinition.getStageDefinition(stageId).getInputStageNumbers()) {
-        final StageId inputStageId = new StageId(queryDef.getQueryId(), inputStageNumber);
-        retVal.computeIfAbsent(inputStageId, ignored -> new HashSet<>()).add(stageId);
-        this.pendingOutflowMap.computeIfAbsent(inputStageId, ignored -> new HashSet<>()).add(stageId);
-      }
-    }
-    this.outflowMap = Collections.unmodifiableMap(retVal);
-  }
-
-  /**
-   * Initializes this.inflowMap with a mapping of stage -> stages that flow *into* that stage.
-   */
-  private void initializeStageInflowMap(final QueryDefinition queryDefinition)
-  {
-    final Map<StageId, Set<StageId>> retVal = new HashMap<>();
-    this.pendingInflowMap = new HashMap<>();
-    for (final StageDefinition stageDef : queryDefinition.getStageDefinitions()) {
-      final StageId stageId = stageDef.getId();
-      retVal.computeIfAbsent(stageId, ignored -> new HashSet<>());
-      this.pendingInflowMap.computeIfAbsent(stageId, ignored -> new HashSet<>());
-      for (final int inputStageNumber : queryDefinition.getStageDefinition(stageId).getInputStageNumbers()) {
-        final StageId inputStageId = new StageId(queryDef.getQueryId(), inputStageNumber);
-        retVal.computeIfAbsent(stageId, ignored -> new HashSet<>()).add(inputStageId);
-        this.pendingInflowMap.computeIfAbsent(stageId, ignored -> new HashSet<>()).add(inputStageId);
-      }
-    }
-    this.inflowMap = Collections.unmodifiableMap(retVal);
-  }
-
-  /**
-   * Adds stageIds for those stages which donot require any input from any other stages
-   */
-  private void initializeLeafStages()
-  {
-    Iterator<Map.Entry<StageId, Set<StageId>>> pendingInflowIterator = pendingInflowMap.entrySet().iterator();
     while (pendingInflowIterator.hasNext()) {
       Map.Entry<StageId, Set<StageId>> stageToInflowStages = pendingInflowIterator.next();
       if (stageToInflowStages.getValue().size() == 0) {
@@ -330,14 +305,6 @@ public class ControllerQueryKernel
   public ControllerStagePhase getStagePhase(final StageId stageId)
   {
     return getStageKernelOrThrow(stageId).getPhase();
-  }
-
-  /**
-   * Delegates call to {@link ControllerStageTracker#canReadResults()}
-   */
-  public boolean canStageReadResults(final StageId stageId)
-  {
-    return getStageKernelOrThrow(stageId).canReadResults();
   }
 
   /**
@@ -493,7 +460,6 @@ public class ControllerQueryKernel
    */
   public void transitionStageKernel(StageId stageId, ControllerStagePhase newPhase)
   {
-
     Preconditions.checkArgument(
         stageTracker.containsKey(stageId),
         "Attempting to modify an unknown stageKernel"
@@ -536,5 +502,45 @@ public class ControllerQueryKernel
   ControllerStageTracker getControllerStageKernel(int stageNumber)
   {
     return stageTracker.get(new StageId(queryDef.getQueryId(), stageNumber));
+  }
+
+  /**
+   * Returns a mapping of stage -> stages that flow *into* that stage.
+   */
+  private static Map<StageId, Set<StageId>> computeStageInflowMap(final QueryDefinition queryDefinition)
+  {
+    final Map<StageId, Set<StageId>> retVal = new HashMap<>();
+
+    for (final StageDefinition stageDef : queryDefinition.getStageDefinitions()) {
+      final StageId stageId = stageDef.getId();
+      retVal.computeIfAbsent(stageId, ignored -> new HashSet<>());
+
+      for (final int inputStageNumber : queryDefinition.getStageDefinition(stageId).getInputStageNumbers()) {
+        final StageId inputStageId = new StageId(queryDefinition.getQueryId(), inputStageNumber);
+        retVal.computeIfAbsent(stageId, ignored -> new HashSet<>()).add(inputStageId);
+      }
+    }
+
+    return retVal;
+  }
+
+  /**
+   * Returns a mapping of stage -> stages that depend on that stage.
+   */
+  private static Map<StageId, Set<StageId>> computeStageOutflowMap(final QueryDefinition queryDefinition)
+  {
+    final Map<StageId, Set<StageId>> retVal = new HashMap<>();
+
+    for (final StageDefinition stageDef : queryDefinition.getStageDefinitions()) {
+      final StageId stageId = stageDef.getId();
+      retVal.computeIfAbsent(stageId, ignored -> new HashSet<>());
+
+      for (final int inputStageNumber : queryDefinition.getStageDefinition(stageId).getInputStageNumbers()) {
+        final StageId inputStageId = new StageId(queryDefinition.getQueryId(), inputStageNumber);
+        retVal.computeIfAbsent(inputStageId, ignored -> new HashSet<>()).add(stageId);
+      }
+    }
+
+    return retVal;
   }
 }

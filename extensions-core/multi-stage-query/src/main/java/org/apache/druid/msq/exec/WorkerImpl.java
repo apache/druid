@@ -147,22 +147,36 @@ public class WorkerImpl implements Worker
 
   private final MSQWorkerTask task;
   private final WorkerContext context;
+  private final DruidNode selfDruidNode;
+  private final Bouncer processorBouncer;
 
   private final BlockingQueue<Consumer<KernelHolder>> kernelManipulationQueue = new LinkedBlockingDeque<>();
   private final ConcurrentHashMap<StageId, ConcurrentHashMap<Integer, ReadableFrameChannel>> stageOutputs = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, CounterTracker> stageCounters = new ConcurrentHashMap<>();
   private final boolean durableStageStorageEnabled;
 
-  private volatile DruidNode selfDruidNode;
+  /**
+   * Set once in {@link #runTask} and never reassigned.
+   */
   private volatile ControllerClient controllerClient;
+
+  /**
+   * Set once in {@link #runTask} and never reassigned. Used by processing threads so we can contact other workers
+   * during a shuffle.
+   */
   private volatile WorkerClient workerClient;
-  private volatile Bouncer processorBouncer;
+
+  /**
+   * Set to false by {@link #controllerFailed()} as a way of enticing the {@link #runTask} method to exit promptly.
+   */
   private volatile boolean controllerAlive = true;
 
   public WorkerImpl(MSQWorkerTask task, WorkerContext context)
   {
     this.task = task;
     this.context = context;
+    this.selfDruidNode = context.selfNode();
+    this.processorBouncer = context.processorBouncer();
     this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(task.getContext());
   }
 
@@ -217,13 +231,11 @@ public class WorkerImpl implements Worker
    */
   public Optional<MSQErrorReport> runTask(final Closer closer) throws Exception
   {
-    this.selfDruidNode = context.selfNode();
     this.controllerClient = context.makeControllerClient(task.getControllerTaskId());
     closer.register(controllerClient::close);
     context.registerWorker(this, closer); // Uses controllerClient, so must be called after that is initialized
     this.workerClient = new ExceptionWrappingWorkerClient(context.makeWorkerClient());
     closer.register(workerClient::close);
-    this.processorBouncer = context.processorBouncer();
 
     final KernelHolder kernelHolder = new KernelHolder();
     final String cancellationId = id();
@@ -570,6 +582,13 @@ public class WorkerImpl implements Worker
     }
   }
 
+  /**
+   * Decorates the server-wide {@link QueryProcessingPool} such that any Callables and Runnables, not just
+   * {@link PrioritizedCallable} and {@link PrioritizedRunnable}, may be added to it.
+   *
+   * In production, the underlying {@link QueryProcessingPool} pool is set up by
+   * {@link org.apache.druid.guice.DruidProcessingModule}.
+   */
   private ListeningExecutorService makeProcessingPool()
   {
     final QueryProcessingPool queryProcessingPool = context.injector().getInstance(QueryProcessingPool.class);
@@ -753,7 +772,7 @@ public class WorkerImpl implements Worker
       final CountingOutputChannelFactory shuffleOutputChannelFactory =
           new CountingOutputChannelFactory(
               makeStageOutputChannelFactory(frameContext, stageDef.getStageNumber()),
-              counters.channel(CounterNames.sortChannel())
+              counters.channel(CounterNames.shuffleChannel())
           );
 
       if (stageDef.doesSortDuringShuffle()) {

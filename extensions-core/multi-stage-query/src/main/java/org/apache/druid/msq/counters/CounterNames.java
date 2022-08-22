@@ -33,7 +33,7 @@ public class CounterNames
 {
   private static final String INPUT = "input";
   private static final String OUTPUT = "output";
-  private static final String SORT = "sort";
+  private static final String SHUFFLE = "shuffle";
   private static final String SORT_PROGRESS = "sortProgress";
   private static final String WARNINGS = "warnings";
   private static final Comparator<String> COMPARATOR = new NameComparator();
@@ -60,11 +60,11 @@ public class CounterNames
   }
 
   /**
-   * Standard name for a sort channel counter created by {@link CounterTracker#channel}.
+   * Standard name for a shuffle channel counter created by {@link CounterTracker#channel}.
    */
-  public static String sortChannel()
+  public static String shuffleChannel()
   {
-    return SORT;
+    return SHUFFLE;
   }
 
   /**
@@ -100,7 +100,7 @@ public class CounterNames
     private static final Map<String, Integer> ORDER =
         ImmutableMap.<String, Integer>builder()
                     .put(OUTPUT, 0)
-                    .put(SORT, 1)
+                    .put(SHUFFLE, 1)
                     .put(SORT_PROGRESS, 2)
                     .put(WARNINGS, 3)
                     .build();

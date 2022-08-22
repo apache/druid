@@ -42,6 +42,7 @@ import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.SqlRowTransformer;
@@ -145,8 +146,9 @@ public class SqlTaskResource
     final HttpStatement stmt = sqlStatementFactory.httpStatement(sqlQuery, req);
     final String sqlQueryId = stmt.sqlQueryId();
     try {
-      final Sequence<Object[]> sequence = stmt.execute();
-      final SqlRowTransformer rowTransformer = stmt.createRowTransformer();
+      final DirectStatement.ResultSet plan = stmt.plan();
+      final Sequence<Object[]> sequence = plan.run();
+      final SqlRowTransformer rowTransformer = plan.createRowTransformer();
       final boolean isTaskStruct = MSQTaskSqlEngine.TASK_STRUCT_FIELD_NAMES.equals(rowTransformer.getFieldList());
 
       if (isTaskStruct) {

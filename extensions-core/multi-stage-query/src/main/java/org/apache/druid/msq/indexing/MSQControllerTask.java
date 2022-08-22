@@ -199,7 +199,7 @@ public class MSQControllerTask extends AbstractTask
       controller.stopGracefully();
     }
     if (remoteFetchExecutorService != null) {
-      // This is to make sure we donot leak connections.
+      // This is to make sure we don't leak connections.
       remoteFetchExecutorService.shutdownNow();
     }
   }

@@ -24,7 +24,7 @@ import org.apache.druid.msq.input.InputSlice;
 public class ControllerTestInputSlice implements InputSlice
 {
   @Override
-  public int numFiles()
+  public int fileCount()
   {
     return 0;
   }

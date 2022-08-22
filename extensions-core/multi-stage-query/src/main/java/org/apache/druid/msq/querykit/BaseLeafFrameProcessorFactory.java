@@ -97,8 +97,8 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
     if (hasParquet(inputSlices)) {
       // This is a workaround for memory use in ParquetFileReader, which loads up an entire row group into memory as
       // part of its normal operation. Row groups can be quite large (like, 1GB large) so this is a major source of
-      // unaccounted-for memory use during ingestion and query of external data.
-      // We are trying to prevent memory overload by running only a single processor at once
+      // unaccounted-for memory use during ingestion and query of external data. We are trying to prevent memory
+      // overload by running only a single processor at once.
       outstandingProcessors = 1;
     } else {
       outstandingProcessors = Math.min(totalProcessors, maxOutstandingProcessors);

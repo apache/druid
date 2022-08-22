@@ -68,7 +68,7 @@ public class SegmentsInputSlice implements InputSlice
   }
 
   @Override
-  public int numFiles()
+  public int fileCount()
   {
     return descriptors.size();
   }

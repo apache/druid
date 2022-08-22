@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
@@ -35,9 +36,11 @@ import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Production implementation of {@link DataSegmentProvider} using Coordinator APIs.
@@ -70,16 +73,22 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
       // rather than the main thread.
       return new LazyResourceHolder<>(
           () -> {
+            final DataSegment dataSegment;
             try {
-              final DataSegment dataSegment = FutureUtils.getUnchecked(
+              dataSegment = FutureUtils.get(
                   coordinatorClient.fetchUsedSegment(
                       segmentId.getDataSource(),
                       segmentId.toString()
                   ),
                   true
               );
+            }
+            catch (InterruptedException | ExecutionException e) {
+              throw new RE(e, "Failed to fetch segment details from Coordinator for [%s]", segmentId);
+            }
 
-              final Closer closer = Closer.create();
+            final Closer closer = Closer.create();
+            try {
               final File segmentDir = segmentCacheManager.getSegmentFiles(dataSegment);
               closer.register(() -> FileUtils.deleteDirectory(segmentDir));
 
@@ -91,7 +100,10 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
               return Pair.of(new QueryableIndexSegment(index, dataSegment.getId()), closer);
             }
             catch (IOException | SegmentLoadingException e) {
-              throw new RuntimeException(e);
+              throw CloseableUtils.closeInCatch(
+                  new RE(e, "Failed to download segment [%s]", segmentId),
+                  closer
+              );
             }
           }
       );

@@ -55,7 +55,7 @@ public class MSQTasks
   private static final String TASK_ID_PREFIX = "query-";
 
   /**
-   * Returns a controller task ID given a
+   * Returns a controller task ID given a SQL query id.
    */
   public static String controllerTaskId(@Nullable final String queryId)
   {
@@ -63,7 +63,7 @@ public class MSQTasks
   }
 
   /**
-   * Returns a controller task ID given a
+   * Returns a worker task ID given a SQL query id.
    */
   public static String workerTaskId(final String controllerTaskId, final int workerNumber)
   {

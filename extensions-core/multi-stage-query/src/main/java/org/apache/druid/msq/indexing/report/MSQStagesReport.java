@@ -35,13 +35,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class MSQStagesReport
 {
   private final List<Stage> stages;
 
   @JsonCreator
-  public MSQStagesReport(@JsonProperty("stages") final List<Stage> stages)
+  public MSQStagesReport(final List<Stage> stages)
   {
     this.stages = Preconditions.checkNotNull(stages, "stages");
   }
@@ -88,6 +89,33 @@ public class MSQStagesReport
   public List<Stage> getStages()
   {
     return stages;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    MSQStagesReport that = (MSQStagesReport) o;
+    return Objects.equals(stages, that.stages);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(stages);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "MSQStagesReport{" +
+           "stages=" + stages +
+           '}';
   }
 
   public static class Stage
@@ -176,6 +204,45 @@ public class MSQStagesReport
     public long getDuration()
     {
       return duration;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      Stage stage = (Stage) o;
+      return stageNumber == stage.stageNumber
+             && workerCount == stage.workerCount
+             && partitionCount == stage.partitionCount
+             && duration == stage.duration
+             && Objects.equals(stageDef, stage.stageDef)
+             && phase == stage.phase
+             && Objects.equals(startTime, stage.startTime);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(stageNumber, stageDef, phase, workerCount, partitionCount, startTime, duration);
+    }
+
+    @Override
+    public String toString()
+    {
+      return "Stage{" +
+             "stageNumber=" + stageNumber +
+             ", stageDef=" + stageDef +
+             ", phase=" + phase +
+             ", workerCount=" + workerCount +
+             ", partitionCount=" + partitionCount +
+             ", startTime=" + startTime +
+             ", duration=" + duration +
+             '}';
     }
   }
 }

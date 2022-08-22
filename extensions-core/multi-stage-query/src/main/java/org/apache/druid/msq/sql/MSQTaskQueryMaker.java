@@ -42,7 +42,6 @@ import org.apache.druid.msq.indexing.MSQDestination;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.TaskReportMSQDestination;
-import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -243,11 +242,6 @@ public class MSQTaskQueryMaker implements QueryMaker
     }
 
     final Map<String, Object> nativeQueryContextOverrides = new HashMap<>();
-
-    // Add time column to native query context, if it exists.
-    if (timeColumnName != null) {
-      nativeQueryContextOverrides.put(QueryKitUtils.CTX_TIME_COLUMN_NAME, timeColumnName);
-    }
 
     // Add appropriate finalization to native query context.
     nativeQueryContextOverrides.put(QueryContexts.FINALIZE_KEY, finalizeAggregations);

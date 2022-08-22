@@ -58,10 +58,22 @@ import java.util.stream.Collectors;
  */
 public class QueryKitUtils
 {
+  /**
+   * Field in frames that stores the partition "boosting" value. Typically used as the last element of a partitioning
+   * key when generating segments. This is an incrementing number that helps split up otherwise too-large partitions.
+   */
   public static final String PARTITION_BOOST_COLUMN = "__boost";
 
+  /**
+   * Field in frames that stores the segment-granular timestamp.
+   */
   public static final String SEGMENT_GRANULARITY_COLUMN = "__bucket";
 
+  /**
+   * Enables QueryKit-generated processors to understand which output column will be mapped to
+   * {@link org.apache.druid.segment.column.ColumnHolder#TIME_COLUMN_NAME}. Necessary because {@link QueryKit}
+   * does not get direct access to {@link org.apache.druid.msq.indexing.ColumnMappings}.
+   */
   public static final String CTX_TIME_COLUMN_NAME = "__timeColumn";
 
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();

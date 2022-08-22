@@ -145,7 +145,6 @@ import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
 import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
-import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.IntervalUtils;
@@ -215,6 +214,14 @@ public class ControllerImpl implements Controller
   private final MSQControllerTask task;
   private final ControllerContext context;
 
+  /**
+   * Queue of "commands" to run on the {@link ControllerQueryKernel}. Various threads insert into the queue
+   * using {@link #addToKernelManipulationQueue}. The main thread running {@link RunQueryUntilDone#run()} reads
+   * from the queue and executes the commands.
+   *
+   * This ensures that all manipulations on {@link ControllerQueryKernel}, and all core logic, are run in
+   * a single-threaded manner.
+   */
   private final BlockingQueue<Consumer<ControllerQueryKernel>> kernelManipulationQueue =
       new ArrayBlockingQueue<>(Limits.MAX_KERNEL_MANIPULATION_QUEUE_SIZE);
 
@@ -224,25 +231,32 @@ public class ControllerImpl implements Controller
   // For system warning reporting
   private final ConcurrentLinkedQueue<MSQErrorReport> workerWarnings = new ConcurrentLinkedQueue<>();
 
-  // For live reports.
+  // Query definition.
+  // For live reports. Written by the main controller thread, read by HTTP threads.
   private final AtomicReference<QueryDefinition> queryDefRef = new AtomicReference<>();
 
-  // For live reports. Last reported CounterSnapshots per stage per worker
+  // Last reported CounterSnapshots per stage per worker
+  // For live reports. Written by the main controller thread, read by HTTP threads.
   private final CounterSnapshotsTree taskCountersForLiveReports = new CounterSnapshotsTree();
 
-  // For live reports. stage number -> stage phase
+  // Stage number -> stage phase
+  // For live reports. Written by the main controller thread, read by HTTP threads.
   private final ConcurrentHashMap<Integer, ControllerStagePhase> stagePhasesForLiveReports = new ConcurrentHashMap<>();
 
-  // For live reports. stage number -> runtime interval. Endpoint is eternity's end if the stage is still running.
+  // Stage number -> runtime interval. Endpoint is eternity's end if the stage is still running.
+  // For live reports. Written by the main controller thread, read by HTTP threads.
   private final ConcurrentHashMap<Integer, Interval> stageRuntimesForLiveReports = new ConcurrentHashMap<>();
 
-  // For live reports. stage number -> worker count. Only set for stages that have started.
+  // Stage number -> worker count. Only set for stages that have started.
+  // For live reports. Written by the main controller thread, read by HTTP threads.
   private final ConcurrentHashMap<Integer, Integer> stageWorkerCountsForLiveReports = new ConcurrentHashMap<>();
 
-  // For live reports. stage number -> partition count. Only set for stages that have started.
+  // Stage number -> partition count. Only set for stages that have started.
+  // For live reports. Written by the main controller thread, read by HTTP threads.
   private final ConcurrentHashMap<Integer, Integer> stagePartitionCountsForLiveReports = new ConcurrentHashMap<>();
 
-  // For live reports. The time at which the query started
+  // Time at which the query started.
+  // For live reports. Written by the main controller thread, read by HTTP threads.
   private volatile DateTime queryStartTime = null;
 
   private volatile DruidNode selfDruidNode;
@@ -326,12 +340,15 @@ public class ControllerImpl implements Controller
     final MSQErrorReport errorForReport;
 
     try {
+      // Planning-related: convert the native query from MSQSpec into a multi-stage QueryDefinition.
       this.queryStartTime = DateTimes.nowUtc();
       queryDef = initializeQueryDefAndState(closer);
 
       final InputSpecSlicerFactory inputSpecSlicerFactory = makeInputSpecSlicerFactory(makeDataSegmentTimelineView());
+
+      // Execution-related: run the multi-stage QueryDefinition.
       final Pair<ControllerQueryKernel, ListenableFuture<?>> queryRunResult =
-          runQueryUntilDone(queryDef, inputSpecSlicerFactory, closer);
+          new RunQueryUntilDone(queryDef, inputSpecSlicerFactory, closer).run();
 
       queryKernel = Preconditions.checkNotNull(queryRunResult.lhs);
       workerTaskRunnerFuture = Preconditions.checkNotNull(queryRunResult.rhs);
@@ -478,7 +495,7 @@ public class ControllerImpl implements Controller
 
   /**
    * Adds some logic to {@link #kernelManipulationQueue}, where it will, in due time, be executed by the main
-   * controller loop in {@link #runQueryUntilDone}.
+   * controller loop in {@link RunQueryUntilDone#run()}.
    *
    * If the consumer throws an exception, the query fails.
    */
@@ -537,222 +554,6 @@ public class ControllerImpl implements Controller
     );
 
     return queryDef;
-  }
-
-  private Pair<ControllerQueryKernel, ListenableFuture<?>> runQueryUntilDone(
-      final QueryDefinition queryDef,
-      final InputSpecSlicerFactory inputSpecSlicerFactory,
-      final Closer closer
-  ) throws Exception
-  {
-    // Start tasks.
-    log.debug("Query [%s] starting tasks.", queryDef.getQueryId());
-
-    final ListenableFuture<?> workerTaskLauncherFuture = workerTaskLauncher.start();
-    closer.register(() -> workerTaskLauncher.stop(true));
-
-    workerTaskLauncherFuture.addListener(
-        () ->
-            addToKernelManipulationQueue(queryKernel -> {
-              // Throw an exception in the main loop, if anything went wrong.
-              FutureUtils.getUncheckedImmediately(workerTaskLauncherFuture);
-            }),
-        Execs.directExecutor()
-    );
-
-    // Segments to generate; used for making stage-two workers.
-    List<SegmentIdWithShardSpec> segmentsToGenerate = null;
-
-    // Track which stages have got their partition boundaries sent out yet.
-    final Set<StageId> stageResultPartitionBoundariesSent = new HashSet<>();
-
-    // Start query tracking loop.
-    log.debug("Query [%s] starting tracker.", queryDef.getQueryId());
-    final ControllerQueryKernel queryKernel = new ControllerQueryKernel(queryDef);
-
-    while (!queryKernel.isDone()) {
-      // Start stages that need to be started.
-      logKernelStatus(queryDef.getQueryId(), queryKernel);
-      final List<StageId> newStageIds = queryKernel.createAndGetNewStageIds(
-          inputSpecSlicerFactory,
-          task.getQuerySpec().getAssignmentStrategy()
-      );
-
-      for (final StageId stageId : newStageIds) {
-        queryKernel.startStage(stageId);
-
-        // Allocate segments, if this is the final stage of an ingestion.
-        if (MSQControllerTask.isIngestion(task.getQuerySpec())
-            && stageId.getStageNumber() == queryDef.getFinalStageDefinition().getStageNumber()) {
-          // We need to find the shuffle details (like partition ranges) to generate segments. Generally this is
-          // going to correspond to the stage immediately prior to the final segment-generator stage.
-          int shuffleStageNumber = Iterables.getOnlyElement(queryDef.getFinalStageDefinition().getInputStageNumbers());
-
-          // The following logic assumes that output of all the stages without a shuffle retain the partition boundaries
-          // of the input to that stage. This may not always be the case. For example GROUP BY queries without an ORDER BY
-          // clause. This works for QueryKit generated queries uptil now, but it should be reworked as it might not
-          // always be the case
-          while (!queryDef.getStageDefinition(shuffleStageNumber).doesShuffle()) {
-            shuffleStageNumber =
-                Iterables.getOnlyElement(queryDef.getStageDefinition(shuffleStageNumber).getInputStageNumbers());
-          }
-
-          final StageId shuffleStageId = new StageId(queryDef.getQueryId(), shuffleStageNumber);
-          final boolean isTimeBucketed = isTimeBucketedIngestion(task.getQuerySpec());
-          final ClusterByPartitions partitionBoundaries =
-              queryKernel.getResultPartitionBoundariesForStage(shuffleStageId);
-
-          // We require some data to be inserted in case it is partitioned by anything other than all and we are
-          // inserting everything into a single bucket. This can be handled more gracefully instead of throwing an exception
-          // Note: This can also be the case when we have limit queries but validation in Broker SQL layer prevents such
-          // queries
-          if (isTimeBucketed && partitionBoundaries.equals(ClusterByPartitions.oneUniversalPartition())) {
-            throw new MSQException(new InsertCannotBeEmptyFault(task.getDataSource()));
-          } else {
-            log.info("Query [%s] generating %d segments.", queryDef.getQueryId(), partitionBoundaries.size());
-          }
-
-          final boolean mayHaveMultiValuedClusterByFields =
-              !queryKernel.getStageDefinition(shuffleStageId).mustGatherResultKeyStatistics()
-              || queryKernel.hasStageCollectorEncounteredAnyMultiValueField(shuffleStageId);
-
-          segmentsToGenerate = generateSegmentIdsWithShardSpecs(
-              (DataSourceMSQDestination) task.getQuerySpec().getDestination(),
-              queryKernel.getStageDefinition(shuffleStageId).getSignature(),
-              queryKernel.getStageDefinition(shuffleStageId).getShuffleSpec().get().getClusterBy(),
-              partitionBoundaries,
-              mayHaveMultiValuedClusterByFields
-          );
-        }
-
-        final int workerCount = queryKernel.getWorkerInputsForStage(stageId).workerCount();
-        log.info(
-            "Query [%s] starting %d workers for stage %d.",
-            stageId.getQueryId(),
-            workerCount,
-            stageId.getStageNumber()
-        );
-
-        workerTaskLauncher.launchTasksIfNeeded(workerCount);
-        stageRuntimesForLiveReports.put(stageId.getStageNumber(), new Interval(DateTimes.nowUtc(), DateTimes.MAX));
-        startWorkForStage(queryDef, queryKernel, stageId.getStageNumber(), segmentsToGenerate);
-      }
-
-      // Send partition boundaries to tasks, if the time is right.
-      logKernelStatus(queryDef.getQueryId(), queryKernel);
-      for (final StageId stageId : queryKernel.getActiveStages()) {
-
-        if (queryKernel.getStageDefinition(stageId).mustGatherResultKeyStatistics()
-            && queryKernel.doesStageHaveResultPartitions(stageId)
-            && stageResultPartitionBoundariesSent.add(stageId)) {
-          if (log.isDebugEnabled()) {
-            final ClusterByPartitions partitions = queryKernel.getResultPartitionBoundariesForStage(stageId);
-            log.debug(
-                "Query [%s] sending out partition boundaries for stage %d: %s",
-                stageId.getQueryId(),
-                stageId.getStageNumber(),
-                IntStream.range(0, partitions.size())
-                         .mapToObj(i -> StringUtils.format("%s:%s", i, partitions.get(i)))
-                         .collect(Collectors.joining(", "))
-            );
-          } else {
-            log.info(
-                "Query [%s] sending out partition boundaries for stage %d.",
-                stageId.getQueryId(),
-                stageId.getStageNumber()
-            );
-          }
-
-          postResultPartitionBoundariesForStage(
-              queryDef,
-              stageId.getStageNumber(),
-              queryKernel.getResultPartitionBoundariesForStage(stageId),
-              queryKernel.getWorkerInputsForStage(stageId).workers()
-          );
-        }
-      }
-
-      logKernelStatus(queryDef.getQueryId(), queryKernel);
-
-      // Live reports: update stage phases, worker counts, partition counts.
-      for (StageId stageId : queryKernel.getActiveStages()) {
-        final int stageNumber = stageId.getStageNumber();
-        stagePhasesForLiveReports.put(stageNumber, queryKernel.getStagePhase(stageId));
-
-        if (queryKernel.doesStageHaveResultPartitions(stageId)) {
-          stagePartitionCountsForLiveReports.computeIfAbsent(
-              stageNumber,
-              k -> Iterators.size(queryKernel.getResultPartitionsForStage(stageId).iterator())
-          );
-        }
-
-        stageWorkerCountsForLiveReports.putIfAbsent(
-            stageNumber,
-            queryKernel.getWorkerInputsForStage(stageId).workerCount()
-        );
-      }
-
-      // Live reports: update stage end times for any stages that just ended.
-      for (StageId stageId : queryKernel.getActiveStages()) {
-        if (ControllerStagePhase.isSuccessfulTerminalPhase(queryKernel.getStagePhase(stageId))) {
-          stageRuntimesForLiveReports.compute(
-              queryKernel.getStageDefinition(stageId).getStageNumber(),
-              (k, currentValue) -> {
-                if (currentValue.getEnd().equals(DateTimes.MAX)) {
-                  return new Interval(currentValue.getStart(), DateTimes.nowUtc());
-                } else {
-                  return currentValue;
-                }
-              }
-          );
-        }
-      }
-
-      // Notify the workers to clean up the stages which can be marked as finished.
-      cleanUpEffectivelyFinishedStages(queryDef, queryKernel);
-
-      if (!queryKernel.isDone()) {
-        // Run the next command, waiting for it if necessary.
-        Consumer<ControllerQueryKernel> command = kernelManipulationQueue.take();
-        command.accept(queryKernel);
-
-        // Run all pending commands after that one. Helps avoid deep queues.
-        // After draining the command queue, move on to the next iteration of the controller loop.
-        while ((command = kernelManipulationQueue.poll()) != null) {
-          command.accept(queryKernel);
-        }
-      }
-    }
-
-    if (!queryKernel.isSuccess()) {
-      // Look for a known failure reason and throw a meaningful exception.
-      for (final StageId stageId : queryKernel.getActiveStages()) {
-        if (queryKernel.getStagePhase(stageId) == ControllerStagePhase.FAILED) {
-          final MSQFault fault = queryKernel.getFailureReasonForStage(stageId);
-
-          // Fall through (without throwing an exception) in case of UnknownFault; we may be able to generate
-          // a better exception later in query teardown.
-          if (!UnknownFault.CODE.equals(fault.getErrorCode())) {
-            throw new MSQException(fault);
-          }
-        }
-      }
-    }
-
-    cleanUpEffectivelyFinishedStages(queryDef, queryKernel);
-    return Pair.of(queryKernel, workerTaskLauncherFuture);
-  }
-
-  private void cleanUpEffectivelyFinishedStages(QueryDefinition queryDef, ControllerQueryKernel queryKernel)
-  {
-    for (final StageId stageId : queryKernel.getEffectivelyFinishedStageIds()) {
-      log.info("Query [%s] issuing cleanup order for stage %d.", queryDef.getQueryId(), stageId.getStageNumber());
-      contactWorkersForStage(
-          (netClient, taskId, workerNumber) -> netClient.postCleanupStage(taskId, stageId),
-          queryKernel.getWorkerInputsForStage(stageId).workers()
-      );
-      queryKernel.finishStage(stageId, true);
-    }
   }
 
   /**
@@ -837,6 +638,7 @@ public class ControllerImpl implements Controller
         faultsExceededChecker.addFaultsAndCheckIfExceeded(taskCountersForLiveReports);
 
     if (warningsExceeded.isPresent()) {
+      // Present means the warning limit was exceeded, and warnings have therefore turned into an error.
       String errorCode = warningsExceeded.get().lhs;
       Long limit = warningsExceeded.get().rhs;
       workerError(MSQErrorReport.fromFault(
@@ -1249,6 +1051,8 @@ public class ControllerImpl implements Controller
       if (intervalsToDrop.isEmpty()) {
         segmentsToDrop = null;
       } else {
+        // Determine which segments to drop as part of the replace operation. This is safe because, in the case where we
+        // are doing a replace, the isReady method (which runs prior to the task starting) acquires an exclusive lock.
         segmentsToDrop =
             ImmutableSet.copyOf(
                 context.taskActionClient().submit(
@@ -1483,6 +1287,13 @@ public class ControllerImpl implements Controller
     }
   }
 
+  /**
+   * Clean up durable storage, if used for stage output.
+   *
+   * Note that this is only called by the controller task itself. It isn't called automatically by anything in
+   * particular if the controller fails early without being able to run its cleanup routines. This can cause files
+   * to be left in durable storage beyond their useful life.
+   */
   private void cleanUpDurableStorageIfNeeded()
   {
     if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().getContext())) {
@@ -1521,13 +1332,25 @@ public class ControllerImpl implements Controller
       throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
     }
 
+    final Query<?> queryToPlan;
+
+    if (querySpec.getColumnMappings().hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME)) {
+      queryToPlan = querySpec.getQuery().withOverriddenContext(
+          ImmutableMap.of(
+              QueryKitUtils.CTX_TIME_COLUMN_NAME,
+              querySpec.getColumnMappings().getQueryColumnForOutputColumn(ColumnHolder.TIME_COLUMN_NAME)
+          )
+      );
+    } else {
+      queryToPlan = querySpec.getQuery();
+    }
+
     final QueryDefinition queryDef;
 
     try {
-      //noinspection unchecked
       queryDef = toolKit.makeQueryDefinition(
           queryId,
-          querySpec.getQuery(),
+          queryToPlan,
           toolKit,
           shuffleSpecFactory,
           tuningConfig.getMaxNumWorkers(),
@@ -1535,7 +1358,7 @@ public class ControllerImpl implements Controller
       );
     }
     catch (MSQException e) {
-      // If the toolkit throws a MSQFault, donot wrap it in a more generic QueryNotSupportedFault
+      // If the toolkit throws a MSQFault, don't wrap it in a more generic QueryNotSupportedFault
       throw e;
     }
     catch (Exception e) {
@@ -1604,7 +1427,7 @@ public class ControllerImpl implements Controller
   )
   {
     final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
-    final boolean isRollupQ = isRollupQuery(querySpec.getQuery());
+    final boolean isRollupQuery = isRollupQuery(querySpec.getQuery());
 
     final Pair<List<DimensionSchema>, List<AggregatorFactory>> dimensionsAndAggregators =
         makeDimensionsAndAggregatorsForIngestion(
@@ -1612,7 +1435,7 @@ public class ControllerImpl implements Controller
             queryClusterBy,
             destination.getSegmentSortOrder(),
             columnMappings,
-            isRollupQ,
+            isRollupQuery,
             querySpec.getQuery()
         );
 
@@ -1621,19 +1444,21 @@ public class ControllerImpl implements Controller
         new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
         new DimensionsSpec(dimensionsAndAggregators.lhs),
         dimensionsAndAggregators.rhs.toArray(new AggregatorFactory[0]),
-        makeGranularitySpecForIngestion(isRollupQ, querySpec.getQuery()),
+        makeGranularitySpecForIngestion(querySpec.getQuery(), querySpec.getColumnMappings(), isRollupQuery),
         new TransformSpec(null, Collections.emptyList())
     );
   }
 
-  private static GranularitySpec makeGranularitySpecForIngestion(boolean isRollupQ, Query<?> query)
+  private static GranularitySpec makeGranularitySpecForIngestion(
+      final Query<?> query,
+      final ColumnMappings columnMappings,
+      final boolean isRollupQuery
+  )
   {
-    if (!isRollupQ) {
-      return new ArbitraryGranularitySpec(Granularities.NONE, false, Intervals.ONLY_ETERNITY);
-    } else {
+    if (isRollupQuery) {
       final String queryGranularity = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, "");
 
-      if (checkIfTimeColumnsAreEqual((GroupByQuery) query) && !queryGranularity.isEmpty()) {
+      if (timeIsGroupByDimension((GroupByQuery) query, columnMappings) && !queryGranularity.isEmpty()) {
         return new ArbitraryGranularitySpec(
             Granularity.fromString(queryGranularity),
             true,
@@ -1641,38 +1466,49 @@ public class ControllerImpl implements Controller
         );
       }
       return new ArbitraryGranularitySpec(Granularities.NONE, true, Intervals.ONLY_ETERNITY);
+    } else {
+      return new ArbitraryGranularitySpec(Granularities.NONE, false, Intervals.ONLY_ETERNITY);
     }
   }
 
-
   /**
-   * Checks if the time columns present in the groupByQuery context are same. One is set by
-   * {@link DruidQuery#toGroupByQuery()} and the other is set by
-   * {@link MSQTaskQueryMaker#runQuery(DruidQuery)}
+   * Checks that a {@link GroupByQuery} is grouping on the primary time column.
    *
-   * @return true if both groupByQuery context values are present and equal else returns false.
+   * The logic here is roundabout. First, we check which column in the {@link GroupByQuery} corresponds to the
+   * output column {@link ColumnHolder#TIME_COLUMN_NAME}, using our {@link ColumnMappings}. Then, we check for the
+   * presence of an optimization done in {@link DruidQuery#toGroupByQuery()}, where the context parameter
+   * {@link GroupByQuery#CTX_TIMESTAMP_RESULT_FIELD} and various related parameters are set when one of the dimensions
+   * is detected to be a time-floor. Finally, we check that the name of that dimension, and the name of our time field
+   * from {@link ColumnMappings}, are the same.
    */
-  private static boolean checkIfTimeColumnsAreEqual(GroupByQuery groupByQuery)
+  private static boolean timeIsGroupByDimension(GroupByQuery groupByQuery, ColumnMappings columnMappings)
   {
-    final String msqTimeColumn = groupByQuery.getContextValue(QueryKitUtils.CTX_TIME_COLUMN_NAME, "");
-    if (msqTimeColumn.isEmpty()) {
+    if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME)) {
+      final String queryTimeColumn = columnMappings.getQueryColumnForOutputColumn(ColumnHolder.TIME_COLUMN_NAME);
+      return queryTimeColumn.equals(groupByQuery.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD));
+    } else {
       return false;
     }
-    return msqTimeColumn.equals(groupByQuery.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD));
   }
 
   /**
-   * Checks if segments generated by the insert query can be rolled up futher.
+   * Whether a native query represents an ingestion with rollup.
    *
-   * @param query
+   * Checks for three things:
    *
-   * @return
+   * - The query must be a {@link GroupByQuery}, because rollup requires columns to be split into dimensions and
+   * aggregations.
+   * - The query must not finalize aggregations, because rollup requires inserting the intermediate type of
+   * complex aggregations, not the finalized type. (So further rollup is possible.)
+   * - The query must explicitly disable {@link GroupByQueryConfig#CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING}, because
+   * groupBy on multi-value dimensions implicitly unnests, which is not desired behavior for rollup at ingestion time
+   * (rollup expects multi-value dimensions to be treated as arrays).
    */
   private static boolean isRollupQuery(Query<?> query)
   {
-    return MultiStageQueryContext.isFinalizeAggregations(query.getQueryContext()) == false
-           && query.getContextBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true) == false
-           && query instanceof GroupByQuery;
+    return query instanceof GroupByQuery
+           && !MultiStageQueryContext.isFinalizeAggregations(query.getQueryContext())
+           && !query.getContextBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
   }
 
   private static boolean isInlineResults(final MSQSpec querySpec)
@@ -1733,6 +1569,10 @@ public class ControllerImpl implements Controller
     return shardColumns;
   }
 
+  /**
+   * Checks if the {@link ClusterBy} has a {@link QueryKitUtils#PARTITION_BOOST_COLUMN}. See javadocs for that
+   * constant for more details about what it does.
+   */
   private static boolean isClusterByBoosted(final ClusterBy clusterBy)
   {
     return !clusterBy.getColumns().isEmpty()
@@ -1787,6 +1627,8 @@ public class ControllerImpl implements Controller
 
     // Then the query-level CLUSTERED BY.
     // Note: this doesn't work when CLUSTERED BY specifies an expression that is not being selected.
+    // Such fields in CLUSTERED BY still control partitioning as expected, but do not affect sort order of rows
+    // within an individual segment.
     for (final SortColumn clusterByColumn : queryClusterBy.getColumns()) {
       if (clusterByColumn.descending()) {
         throw new MSQException(new InsertCannotOrderByDescendingFault(clusterByColumn.columnName()));
@@ -1801,6 +1643,7 @@ public class ControllerImpl implements Controller
     Map<String, AggregatorFactory> outputColumnAggregatorFactories = new HashMap<>();
 
     if (isRollupQuery) {
+      // Populate aggregators from the native query when doing an ingest in rollup mode.
       for (AggregatorFactory aggregatorFactory : ((GroupByQuery) query).getAggregatorSpecs()) {
         String outputColumn = Iterables.getOnlyElement(columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName()));
         if (outputColumnAggregatorFactories.containsKey(outputColumn)) {
@@ -2027,6 +1870,296 @@ public class ControllerImpl implements Controller
                      )
                      .collect(Collectors.joining("; "))
       );
+    }
+  }
+
+  /**
+   * Main controller logic for running a multi-stage query.
+   */
+  private class RunQueryUntilDone
+  {
+    private final QueryDefinition queryDef;
+    private final InputSpecSlicerFactory inputSpecSlicerFactory;
+    private final Closer closer;
+    private final ControllerQueryKernel queryKernel;
+
+    /**
+     * Set of stages that have got their partition boundaries sent out.
+     */
+    private final Set<StageId> stageResultPartitionBoundariesSent = new HashSet<>();
+
+    /**
+     * Return value of {@link MSQWorkerTaskLauncher#start()}. Set by {@link #startTaskLauncher()}.
+     */
+    private ListenableFuture<?> workerTaskLauncherFuture;
+
+    /**
+     * Segments to generate. Populated prior to launching the final stage of a query with destination
+     * {@link DataSourceMSQDestination} (which originate from SQL INSERT or REPLACE). The final stage of such a query
+     * uses {@link SegmentGeneratorFrameProcessorFactory}, which requires a list of segment IDs to generate.
+     */
+    private List<SegmentIdWithShardSpec> segmentsToGenerate;
+
+    public RunQueryUntilDone(
+        final QueryDefinition queryDef,
+        final InputSpecSlicerFactory inputSpecSlicerFactory,
+        final Closer closer
+    )
+    {
+      this.queryDef = queryDef;
+      this.inputSpecSlicerFactory = inputSpecSlicerFactory;
+      this.closer = closer;
+      this.queryKernel = new ControllerQueryKernel(queryDef);
+    }
+
+    /**
+     * Primary 'run' method.
+     */
+    private Pair<ControllerQueryKernel, ListenableFuture<?>> run() throws IOException, InterruptedException
+    {
+      startTaskLauncher();
+
+      while (!queryKernel.isDone()) {
+        startStages();
+        sendPartitionBoundaries();
+        updateLiveReportMaps();
+        cleanUpEffectivelyFinishedStages();
+        runKernelCommands();
+      }
+
+      if (!queryKernel.isSuccess()) {
+        throwKernelExceptionIfNotUnknown();
+      }
+
+      cleanUpEffectivelyFinishedStages();
+      return Pair.of(queryKernel, workerTaskLauncherFuture);
+    }
+
+    /**
+     * Run at least one command from {@link #kernelManipulationQueue}, waiting for it if necessary.
+     */
+    private void runKernelCommands() throws InterruptedException
+    {
+      if (!queryKernel.isDone()) {
+        // Run the next command, waiting for it if necessary.
+        Consumer<ControllerQueryKernel> command = kernelManipulationQueue.take();
+        command.accept(queryKernel);
+
+        // Run all pending commands after that one. Helps avoid deep queues.
+        // After draining the command queue, move on to the next iteration of the controller loop.
+        while ((command = kernelManipulationQueue.poll()) != null) {
+          command.accept(queryKernel);
+        }
+      }
+    }
+
+    /**
+     * Start up the {@link MSQWorkerTaskLauncher}, such that later on it can be used to launch new tasks
+     * via {@link MSQWorkerTaskLauncher#launchTasksIfNeeded}.
+     */
+    private void startTaskLauncher()
+    {
+      // Start tasks.
+      log.debug("Query [%s] starting task launcher.", queryDef.getQueryId());
+
+      workerTaskLauncherFuture = workerTaskLauncher.start();
+      closer.register(() -> workerTaskLauncher.stop(true));
+
+      workerTaskLauncherFuture.addListener(
+          () ->
+              addToKernelManipulationQueue(queryKernel -> {
+                // Throw an exception in the main loop, if anything went wrong.
+                FutureUtils.getUncheckedImmediately(workerTaskLauncherFuture);
+              }),
+          Execs.directExecutor()
+      );
+    }
+
+    /**
+     * Start up any stages that are ready to start.
+     */
+    private void startStages() throws IOException, InterruptedException
+    {
+      logKernelStatus(queryDef.getQueryId(), queryKernel);
+      final List<StageId> newStageIds = queryKernel.createAndGetNewStageIds(
+          inputSpecSlicerFactory,
+          task.getQuerySpec().getAssignmentStrategy()
+      );
+
+      for (final StageId stageId : newStageIds) {
+        queryKernel.startStage(stageId);
+
+        // Allocate segments, if this is the final stage of an ingestion.
+        if (MSQControllerTask.isIngestion(task.getQuerySpec())
+            && stageId.getStageNumber() == queryDef.getFinalStageDefinition().getStageNumber()) {
+          // We need to find the shuffle details (like partition ranges) to generate segments. Generally this is
+          // going to correspond to the stage immediately prior to the final segment-generator stage.
+          int shuffleStageNumber = Iterables.getOnlyElement(queryDef.getFinalStageDefinition().getInputStageNumbers());
+
+          // The following logic assumes that output of all the stages without a shuffle retain the partition boundaries
+          // of the input to that stage. This may not always be the case. For example: GROUP BY queries without an
+          // ORDER BY clause. This works for QueryKit generated queries up until now, but it should be reworked as it
+          // might not always be the case.
+          while (!queryDef.getStageDefinition(shuffleStageNumber).doesShuffle()) {
+            shuffleStageNumber =
+                Iterables.getOnlyElement(queryDef.getStageDefinition(shuffleStageNumber).getInputStageNumbers());
+          }
+
+          final StageId shuffleStageId = new StageId(queryDef.getQueryId(), shuffleStageNumber);
+          final boolean isTimeBucketed = isTimeBucketedIngestion(task.getQuerySpec());
+          final ClusterByPartitions partitionBoundaries =
+              queryKernel.getResultPartitionBoundariesForStage(shuffleStageId);
+
+          // We require some data to be inserted in case it is partitioned by anything other than all and we are
+          // inserting everything into a single bucket. This can be handled more gracefully instead of throwing an exception
+          // Note: This can also be the case when we have limit queries but validation in Broker SQL layer prevents such
+          // queries
+          if (isTimeBucketed && partitionBoundaries.equals(ClusterByPartitions.oneUniversalPartition())) {
+            throw new MSQException(new InsertCannotBeEmptyFault(task.getDataSource()));
+          } else {
+            log.info("Query [%s] generating %d segments.", queryDef.getQueryId(), partitionBoundaries.size());
+          }
+
+          final boolean mayHaveMultiValuedClusterByFields =
+              !queryKernel.getStageDefinition(shuffleStageId).mustGatherResultKeyStatistics()
+              || queryKernel.hasStageCollectorEncounteredAnyMultiValueField(shuffleStageId);
+
+          segmentsToGenerate = generateSegmentIdsWithShardSpecs(
+              (DataSourceMSQDestination) task.getQuerySpec().getDestination(),
+              queryKernel.getStageDefinition(shuffleStageId).getSignature(),
+              queryKernel.getStageDefinition(shuffleStageId).getShuffleSpec().get().getClusterBy(),
+              partitionBoundaries,
+              mayHaveMultiValuedClusterByFields
+          );
+        }
+
+        final int workerCount = queryKernel.getWorkerInputsForStage(stageId).workerCount();
+        log.info(
+            "Query [%s] starting %d workers for stage %d.",
+            stageId.getQueryId(),
+            workerCount,
+            stageId.getStageNumber()
+        );
+
+        workerTaskLauncher.launchTasksIfNeeded(workerCount);
+        stageRuntimesForLiveReports.put(stageId.getStageNumber(), new Interval(DateTimes.nowUtc(), DateTimes.MAX));
+        startWorkForStage(queryDef, queryKernel, stageId.getStageNumber(), segmentsToGenerate);
+      }
+    }
+
+    /**
+     * Send partition boundaries to any stages that are ready to receive partition boundaries.
+     */
+    private void sendPartitionBoundaries()
+    {
+      logKernelStatus(queryDef.getQueryId(), queryKernel);
+      for (final StageId stageId : queryKernel.getActiveStages()) {
+
+        if (queryKernel.getStageDefinition(stageId).mustGatherResultKeyStatistics()
+            && queryKernel.doesStageHaveResultPartitions(stageId)
+            && stageResultPartitionBoundariesSent.add(stageId)) {
+          if (log.isDebugEnabled()) {
+            final ClusterByPartitions partitions = queryKernel.getResultPartitionBoundariesForStage(stageId);
+            log.debug(
+                "Query [%s] sending out partition boundaries for stage %d: %s",
+                stageId.getQueryId(),
+                stageId.getStageNumber(),
+                IntStream.range(0, partitions.size())
+                         .mapToObj(i -> StringUtils.format("%s:%s", i, partitions.get(i)))
+                         .collect(Collectors.joining(", "))
+            );
+          } else {
+            log.info(
+                "Query [%s] sending out partition boundaries for stage %d.",
+                stageId.getQueryId(),
+                stageId.getStageNumber()
+            );
+          }
+
+          postResultPartitionBoundariesForStage(
+              queryDef,
+              stageId.getStageNumber(),
+              queryKernel.getResultPartitionBoundariesForStage(stageId),
+              queryKernel.getWorkerInputsForStage(stageId).workers()
+          );
+        }
+      }
+    }
+
+    /**
+     * Update the various maps used for live reports.
+     */
+    private void updateLiveReportMaps()
+    {
+      logKernelStatus(queryDef.getQueryId(), queryKernel);
+
+      // Live reports: update stage phases, worker counts, partition counts.
+      for (StageId stageId : queryKernel.getActiveStages()) {
+        final int stageNumber = stageId.getStageNumber();
+        stagePhasesForLiveReports.put(stageNumber, queryKernel.getStagePhase(stageId));
+
+        if (queryKernel.doesStageHaveResultPartitions(stageId)) {
+          stagePartitionCountsForLiveReports.computeIfAbsent(
+              stageNumber,
+              k -> Iterators.size(queryKernel.getResultPartitionsForStage(stageId).iterator())
+          );
+        }
+
+        stageWorkerCountsForLiveReports.putIfAbsent(
+            stageNumber,
+            queryKernel.getWorkerInputsForStage(stageId).workerCount()
+        );
+      }
+
+      // Live reports: update stage end times for any stages that just ended.
+      for (StageId stageId : queryKernel.getActiveStages()) {
+        if (ControllerStagePhase.isSuccessfulTerminalPhase(queryKernel.getStagePhase(stageId))) {
+          stageRuntimesForLiveReports.compute(
+              queryKernel.getStageDefinition(stageId).getStageNumber(),
+              (k, currentValue) -> {
+                if (currentValue.getEnd().equals(DateTimes.MAX)) {
+                  return new Interval(currentValue.getStart(), DateTimes.nowUtc());
+                } else {
+                  return currentValue;
+                }
+              }
+          );
+        }
+      }
+    }
+
+    /**
+     * Issue cleanup commands to any stages that are effectivley finished, allowing them to delete their outputs.
+     */
+    private void cleanUpEffectivelyFinishedStages()
+    {
+      for (final StageId stageId : queryKernel.getEffectivelyFinishedStageIds()) {
+        log.info("Query [%s] issuing cleanup order for stage %d.", queryDef.getQueryId(), stageId.getStageNumber());
+        contactWorkersForStage(
+            (netClient, taskId, workerNumber) -> netClient.postCleanupStage(taskId, stageId),
+            queryKernel.getWorkerInputsForStage(stageId).workers()
+        );
+        queryKernel.finishStage(stageId, true);
+      }
+    }
+
+    /**
+     * Throw {@link MSQException} if the kernel method {@link ControllerQueryKernel#getFailureReasonForStage}
+     * has any failure reason other than {@link UnknownFault}.
+     */
+    private void throwKernelExceptionIfNotUnknown()
+    {
+      for (final StageId stageId : queryKernel.getActiveStages()) {
+        if (queryKernel.getStagePhase(stageId) == ControllerStagePhase.FAILED) {
+          final MSQFault fault = queryKernel.getFailureReasonForStage(stageId);
+
+          // Fall through (without throwing an exception) in case of UnknownFault; we may be able to generate
+          // a better exception later in query teardown.
+          if (!UnknownFault.CODE.equals(fault.getErrorCode())) {
+            throw new MSQException(fault);
+          }
+        }
+      }
     }
   }
 

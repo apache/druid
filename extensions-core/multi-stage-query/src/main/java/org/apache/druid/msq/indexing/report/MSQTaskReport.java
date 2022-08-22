@@ -57,7 +57,7 @@ public class MSQTaskReport implements TaskReport
 
   @Override
   @JsonProperty
-  public Object getPayload()
+  public MSQTaskReportPayload getPayload()
   {
     return payload;
   }

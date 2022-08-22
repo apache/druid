@@ -35,7 +35,7 @@ public class NilInputSlice implements InputSlice
   }
 
   @Override
-  public int numFiles()
+  public int fileCount()
   {
     return 0;
   }

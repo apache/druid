@@ -55,7 +55,7 @@ public class FaultsExceededChecker
   /**
    * @param snapshotsTree WorkerCounters have the count of the warnings generated per worker
    *
-   * @return An optional which is empty if the faults count in the present in the task counters donot exceed their
+   * @return An optional which is empty if the faults count in the present in the task counters don't exceed their
    * prescribed limit, else it contains the errorCode and the maximum allowed faults for that errorCode
    */
   public Optional<Pair<String, Long>> addFaultsAndCheckIfExceeded(CounterSnapshotsTree snapshotsTree)

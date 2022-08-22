@@ -28,7 +28,9 @@ import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.Queue;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Objects;
 
 public class MSQStatusReport
 {
@@ -37,7 +39,7 @@ public class MSQStatusReport
   @Nullable
   private final MSQErrorReport errorReport;
 
-  private final Queue<MSQErrorReport> warningReports;
+  private final Collection<MSQErrorReport> warningReports;
 
   @Nullable
   private final DateTime startTime;
@@ -48,18 +50,17 @@ public class MSQStatusReport
   @JsonCreator
   public MSQStatusReport(
       @JsonProperty("status") TaskState status,
-      @JsonProperty("error") @Nullable MSQErrorReport errorReport,
-      @JsonProperty("warnings") Queue<MSQErrorReport> warningReports,
+      @JsonProperty("errorReport") @Nullable MSQErrorReport errorReport,
+      @JsonProperty("warnings") Collection<MSQErrorReport> warningReports,
       @JsonProperty("startTime") @Nullable DateTime startTime,
       @JsonProperty("durationMs") long durationMs
   )
   {
     this.status = Preconditions.checkNotNull(status, "status");
     this.errorReport = errorReport;
-    this.warningReports = warningReports;
-    this.startTime = Preconditions.checkNotNull(startTime, "startTime");
+    this.warningReports = warningReports != null ? warningReports : Collections.emptyList();
+    this.startTime = startTime;
     this.durationMs = durationMs;
-
   }
 
   @JsonProperty
@@ -69,15 +70,16 @@ public class MSQStatusReport
   }
 
   @Nullable
-  @JsonProperty
+  @JsonProperty("errorReport")
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public MSQErrorReport getErrorReport()
   {
     return errorReport;
   }
 
-  @JsonProperty
-  public Queue<MSQErrorReport> getWarningReports()
+  @JsonProperty("warnings")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  public Collection<MSQErrorReport> getWarningReports()
   {
     return warningReports;
   }
@@ -94,5 +96,40 @@ public class MSQStatusReport
   public long getDurationMs()
   {
     return durationMs;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    MSQStatusReport that = (MSQStatusReport) o;
+    return durationMs == that.durationMs
+           && status == that.status
+           && Objects.equals(errorReport, that.errorReport)
+           && Objects.equals(warningReports, that.warningReports)
+           && Objects.equals(startTime, that.startTime);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(status, errorReport, warningReports, startTime, durationMs);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "MSQStatusReport{" +
+           "status=" + status +
+           ", errorReport=" + errorReport +
+           ", warningReports=" + warningReports +
+           ", startTime=" + startTime +
+           ", durationMs=" + durationMs +
+           '}';
   }
 }

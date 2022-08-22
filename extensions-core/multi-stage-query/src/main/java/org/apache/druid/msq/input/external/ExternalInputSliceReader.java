@@ -98,7 +98,7 @@ public class ExternalInputSliceReader implements InputSliceReader
                 externalInputSlice.getInputFormat(),
                 externalInputSlice.getSignature(),
                 temporaryDirectory,
-                counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.numFiles()),
+                counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount()),
                 counters.warnings(),
                 warningPublisher
             ),

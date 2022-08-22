@@ -73,7 +73,7 @@ public class ExternalInputSlice implements InputSlice
   }
 
   @Override
-  public int numFiles()
+  public int fileCount()
   {
     return inputSources.size();
   }

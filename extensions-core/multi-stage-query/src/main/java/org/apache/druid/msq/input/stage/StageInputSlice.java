@@ -61,7 +61,7 @@ public class StageInputSlice implements InputSlice
   }
 
   @Override
-  public int numFiles()
+  public int fileCount()
   {
     return 0;
   }

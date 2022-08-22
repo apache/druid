@@ -23,7 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
@@ -48,12 +50,16 @@ public class MSQResultsReport
   }
 
   /**
-   * Method that prevents Jackson deserialization, because serialization is one-way for this class.
+   * Method that enables Jackson deserialization.
    */
   @JsonCreator
-  static MSQResultsReport dontCreate()
+  static MSQResultsReport fromJson(
+      @JsonProperty("signature") final RowSignature signature,
+      @JsonProperty("sqlTypeNames") @Nullable final List<String> sqlTypeNames,
+      @JsonProperty("results") final List<Object[]> results
+  )
   {
-    throw new UnsupportedOperationException();
+    return new MSQResultsReport(signature, sqlTypeNames, Yielders.each(Sequences.simple(results)));
   }
 
   @JsonProperty("signature")
@@ -62,6 +68,7 @@ public class MSQResultsReport
     return signature;
   }
 
+  @Nullable
   @JsonProperty("sqlTypeNames")
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<String> getSqlTypeNames()

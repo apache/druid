@@ -31,7 +31,6 @@ import org.apache.druid.msq.indexing.ColumnMapping;
 import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
-import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryDataSource;
@@ -644,12 +643,7 @@ public class MSQSelectTest extends MSQTestBase
                     )
                     .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)))
                     .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                    .setContext(
-                        ImmutableMap.<String, Object>builder()
-                                    .putAll(DEFAULT_MSQ_CONTEXT)
-                                    .put(QueryKitUtils.CTX_TIME_COLUMN_NAME, "d0")
-                                    .build()
-                    )
+                    .setContext(DEFAULT_MSQ_CONTEXT)
                     .build();
 
     testSelectQuery()
@@ -992,12 +986,7 @@ public class MSQSelectTest extends MSQTestBase
                             )
                         )
                     )
-                    .setContext(
-                        ImmutableMap.<String, Object>builder()
-                                    .putAll(DEFAULT_MSQ_CONTEXT)
-                                    .put(QueryKitUtils.CTX_TIME_COLUMN_NAME, "d0")
-                                    .build()
-                    )
+                    .setContext(DEFAULT_MSQ_CONTEXT)
                     .build();
 
     testSelectQuery()

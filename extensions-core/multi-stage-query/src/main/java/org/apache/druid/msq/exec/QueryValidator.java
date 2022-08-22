@@ -62,7 +62,7 @@ public class QueryValidator
    */
   public static void validateWorkOrder(final WorkOrder order)
   {
-    final int numInputFiles = Ints.checkedCast(order.getInputs().stream().mapToLong(InputSlice::numFiles).sum());
+    final int numInputFiles = Ints.checkedCast(order.getInputs().stream().mapToLong(InputSlice::fileCount).sum());
 
     if (numInputFiles > Limits.MAX_INPUT_FILES_PER_WORKER) {
       throw new MSQException(

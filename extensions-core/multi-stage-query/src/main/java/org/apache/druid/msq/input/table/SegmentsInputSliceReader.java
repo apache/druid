@@ -70,7 +70,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
             dataSegmentIterator(
                 segmentsInputSlice.getDataSource(),
                 segmentsInputSlice.getDescriptors(),
-                counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.numFiles())
+                counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount())
             ),
             ReadableInput::segment
         )

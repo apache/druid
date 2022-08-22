@@ -202,12 +202,6 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       return mapStageIdsToStageNumbers(controllerQueryKernel.getEffectivelyFinishedStageIds());
     }
 
-    public List<StageId> getActiveStages()
-    {
-      Preconditions.checkArgument(initialized);
-      return controllerQueryKernel.getActiveStages();
-    }
-
     public boolean isDone()
     {
       Preconditions.checkArgument(initialized);

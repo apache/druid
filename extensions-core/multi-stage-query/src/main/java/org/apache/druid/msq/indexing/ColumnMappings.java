@@ -71,6 +71,11 @@ public class ColumnMappings
     return mappings.stream().map(ColumnMapping::getOutputColumn).collect(Collectors.toList());
   }
 
+  public boolean hasOutputColumn(final String columnName)
+  {
+    return outputToQueryColumnMap.containsKey(columnName);
+  }
+
   public String getQueryColumnForOutputColumn(final String outputColumn)
   {
     final String queryColumn = outputToQueryColumnMap.get(outputColumn);

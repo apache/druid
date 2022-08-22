@@ -75,7 +75,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
    */
   // No ordering, but there is a limit or an offset. These work by funneling everything through a single partition.
   // So there is no point in forcing any particular partitioning. Since everything is funnelled into a single
-  // partition without a ClusterBy, we donot need to necessarily create it via the resultShuffleSpecFactory provided
+  // partition without a ClusterBy, we don't need to necessarily create it via the resultShuffleSpecFactory provided
   @Override
   public QueryDefinition makeQueryDefinition(
       final String queryId,

@@ -97,7 +97,7 @@ class ControllerStageTracker
   }
 
   /**
-   * Given a stage definition and number of workers to available per stage, this method creates a stage kernel.
+   * Given a stage definition and number of workers to available per stage, this method creates a stage tracker.
    * This method determines the actual number of workers to use (which in turn depends on the input slices and
    * the assignment strategy)
    */
@@ -113,7 +113,7 @@ class ControllerStageTracker
   }
 
   /**
-   * @return StageDefinition associated with the stage represented by this kernel
+   * StageDefinition associated with the stage represented by this tracker
    */
   StageDefinition getStageDefinition()
   {
@@ -121,7 +121,7 @@ class ControllerStageTracker
   }
 
   /**
-   * @return The phase this stageKernel is in
+   * The phase this stage tracker is in.
    */
   ControllerStagePhase getPhase()
   {
@@ -129,16 +129,7 @@ class ControllerStageTracker
   }
 
   /**
-   * @return true if the results of this stage are ready for consumption i.e. the corresponding phase is RESULTS_READY
-   */
-  boolean canReadResults()
-  {
-    // This is correct when we are working on the file granularity level, but not when working with streamable inputs
-    return phase == ControllerStagePhase.RESULTS_READY;
-  }
-
-  /**
-   * @return if partitions for the results of this stage have been set
+   * Whether partitions for the results of this stage have been set.
    */
   boolean hasResultPartitions()
   {
@@ -146,7 +137,7 @@ class ControllerStageTracker
   }
 
   /**
-   * @return partitions for the results of the stage associated with this kernel
+   * Partitions for the results of the stage associated with this tracker.
    */
   ReadablePartitions getResultPartitions()
   {
@@ -341,10 +332,10 @@ class ControllerStageTracker
   }
 
   /**
-   * Failing to comply with the following preconditions of the method will result in an exception being generated:
-   * 1. If the method has been successfully called once before that resulted in the result partitions being computed
-   * earlier
-   * 2. If the method has been called without gathering all the worker statistics
+   * Sets {@link #resultPartitions} (always) and {@link #resultPartitionBoundaries}.
+   *
+   * If {@link StageDefinition#mustGatherResultKeyStatistics()} is true, this method cannot be called until after
+   * statistics have been provided to {@link #addResultKeyStatisticsForWorker} for all workers.
    */
   private void generateResultPartitionsAndBoundaries()
   {
