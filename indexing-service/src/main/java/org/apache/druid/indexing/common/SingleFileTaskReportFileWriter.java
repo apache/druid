@@ -19,11 +19,14 @@
 
 package org.apache.druid.indexing.common;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.util.Map;
 
 public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
@@ -46,17 +49,37 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
       if (reportsFileParent != null) {
         FileUtils.mkdirp(reportsFileParent);
       }
-      objectMapper.writeValue(reportsFile, reports);
+
+      try (final FileOutputStream outputStream = new FileOutputStream(reportsFile)) {
+        writeReportToStream(objectMapper, outputStream, reports);
+      }
     }
     catch (Exception e) {
       log.error(e, "Encountered exception in write().");
     }
   }
 
-
   @Override
   public void setObjectMapper(ObjectMapper objectMapper)
   {
     this.objectMapper = objectMapper;
+  }
+
+  public static void writeReportToStream(
+      final ObjectMapper objectMapper,
+      final OutputStream outputStream,
+      final Map<String, TaskReport> reports
+  ) throws Exception
+  {
+    try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(outputStream)) {
+      jg.writeStartObject();
+
+      for (final Map.Entry<String, TaskReport> entry : reports.entrySet()) {
+        jg.writeFieldName(entry.getKey());
+        objectMapper.writeValue(jg, entry.getValue());
+      }
+
+      jg.writeEndObject();
+    }
   }
 }
