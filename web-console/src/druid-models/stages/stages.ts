@@ -100,12 +100,12 @@ export function formatClusterBy(
 export interface StageWorkerCounter {
   [k: `input${number}`]: ChannelCounter | undefined;
   output?: ChannelCounter;
-  sort?: ChannelCounter;
+  shuffle?: ChannelCounter;
   sortProgress?: SortProgressCounter;
   warnings?: WarningCounter;
 }
 
-export type ChannelCounterName = `input${number}` | 'output' | 'sort';
+export type ChannelCounterName = `input${number}` | 'output' | 'shuffle';
 
 export type CounterName = keyof StageWorkerCounter;
 
@@ -152,18 +152,11 @@ export interface WarningCounter {
   // More types of warnings might be added later
 }
 
-export interface SimpleNarrowCounter {
-  index: number;
-  rows: number;
-  bytes: number;
-  frames: number;
-}
-
 export interface SimpleWideCounter {
   index: number;
   [k: `input${number}`]: Record<ChannelFields, number> | undefined;
   output?: Record<ChannelFields, number>;
-  sort?: Record<ChannelFields, number>;
+  shuffle?: Record<ChannelFields, number>;
 }
 
 function zeroChannelFields(): Record<ChannelFields, number> {
@@ -218,8 +211,8 @@ export class Stages {
       case 'output':
         return 'Processor output';
 
-      case 'sort':
-        return 'Sort output';
+      case 'shuffle':
+        return 'Shuffle output';
 
       default:
         if (counterName.startsWith('input')) {
@@ -246,7 +239,7 @@ export class Stages {
   }
 
   stageOutputCounterName(stage: StageDefinition): ChannelCounterName {
-    return this.stageHasSort(stage) ? 'sort' : 'output';
+    return this.stageHasSort(stage) ? 'shuffle' : 'output';
   }
 
   overallProgress(): number {
@@ -412,7 +405,7 @@ export class Stages {
 
     const channelCounters = definition.input.map((_, i) => `input${i}` as ChannelCounterName);
     if (this.stageHasOutput(stage)) channelCounters.push('output');
-    if (this.stageHasSort(stage)) channelCounters.push('sort');
+    if (this.stageHasSort(stage)) channelCounters.push('shuffle');
     return channelCounters;
   }
 

@@ -127,7 +127,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
   const rowsValues = stages.stages.flatMap(stage => [
     ...stages.getInputCountersForStage(stage, 'rows').map(formatRows),
     formatRows(stages.getTotalCounterForStage(stage, 'output', 'rows')),
-    formatRows(stages.getTotalCounterForStage(stage, 'sort', 'rows')),
+    formatRows(stages.getTotalCounterForStage(stage, 'shuffle', 'rows')),
   ]);
 
   const bytesAndFilesValues = stages.stages.flatMap(stage => {
@@ -135,7 +135,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     return [
       ...stages.getInputCountersForStage(stage, 'bytes').map(formatSize),
       formatSize(stages.getTotalCounterForStage(stage, 'output', 'bytes')),
-      formatSize(stages.getTotalCounterForStage(stage, 'sort', 'bytes')),
+      formatSize(stages.getTotalCounterForStage(stage, 'shuffle', 'bytes')),
       inputFileCount ? formatFileOfTotalForBrace(inputFileCount, inputFileCount) : '',
     ];
   });
@@ -403,25 +403,25 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     );
   }
 
-  function dataProcessedSort(stage: StageDefinition) {
-    const hasCounter = stages.hasCounterForStage(stage, 'sort');
+  function dataProcessedShuffle(stage: StageDefinition) {
+    const hasCounter = stages.hasCounterForStage(stage, 'shuffle');
     const hasProgress = stages.hasSortProgressForStage(stage);
     if (!hasCounter && !hasProgress) return;
 
-    const sortRows = stages.getTotalCounterForStage(stage, 'sort', 'rows');
+    const shuffleRows = stages.getTotalCounterForStage(stage, 'shuffle', 'rows');
     const sortProgress = stages.getSortProgressForStage(stage);
     return (
       <div
         className="data-transfer"
-        title={`${stages.getStageCounterTitle(stage, 'sort')} frames: ${formatFrames(
-          stages.getTotalCounterForStage(stage, 'sort', 'frames'),
+        title={`${stages.getStageCounterTitle(stage, 'shuffle')} frames: ${formatFrames(
+          stages.getTotalCounterForStage(stage, 'shuffle', 'frames'),
         )}`}
       >
-        {sortRows ? (
+        {shuffleRows ? (
           <>
-            <BracedText text={formatRows(sortRows)} braces={rowsValues} /> &nbsp;{' '}
+            <BracedText text={formatRows(shuffleRows)} braces={rowsValues} /> &nbsp;{' '}
             <BracedText
-              text={formatSize(stages.getTotalCounterForStage(stage, 'sort', 'bytes'))}
+              text={formatSize(stages.getTotalCounterForStage(stage, 'shuffle', 'bytes'))}
               braces={bytesAndFilesValues}
             />
             {0 < sortProgress && sortProgress < 1 && (
@@ -527,8 +527,8 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                     <div>{stages.getStageCounterTitle(stage, 'output')}</div>
                   </>
                 )}
-                {stages.hasCounterForStage(stage, 'sort') && (
-                  <div>{stages.getStageCounterTitle(stage, 'sort')}</div>
+                {stages.hasCounterForStage(stage, 'shuffle') && (
+                  <div>{stages.getStageCounterTitle(stage, 'shuffle')}</div>
                 )}
               </>
             );
@@ -554,7 +554,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                   <div className="counter-spacer extend-left" />
                 )}
                 {dataProcessedOutput(stage)}
-                {dataProcessedSort(stage)}
+                {dataProcessedShuffle(stage)}
               </>
             );
           },

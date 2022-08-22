@@ -35,10 +35,10 @@ PARTITIONED BY ALL TIME
 
 export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
   {
-    task: 'query-12e9498f-3515-4543-ba97-0c4724274068',
+    task: 'query-32ced762-7679-4a25-9220-3915c5976961',
     payload: {
       type: 'query_controller',
-      id: 'query-12e9498f-3515-4543-ba97-0c4724274068',
+      id: 'query-32ced762-7679-4a25-9220-3915c5976961',
       spec: {
         query: {
           queryType: 'scan',
@@ -77,13 +77,12 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
           columns: ['agent_type', 'v0'],
           legacy: false,
           context: {
-            __timeColumn: 'v0',
             finalize: false,
             finalizeAggregations: false,
             groupByEnableMultiValueUnnesting: false,
             scanSignature: '[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]',
             sqlInsertSegmentGranularity: '{"type":"all"}',
-            sqlQueryId: '12e9498f-3515-4543-ba97-0c4724274068',
+            sqlQueryId: '32ced762-7679-4a25-9220-3915c5976961',
             sqlReplaceTimeChunks: 'all',
           },
           granularity: { type: 'all' },
@@ -108,15 +107,15 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
         groupByEnableMultiValueUnnesting: false,
         maxParseExceptions: 0,
         sqlInsertSegmentGranularity: '{"type":"all"}',
-        sqlQueryId: '12e9498f-3515-4543-ba97-0c4724274068',
+        sqlQueryId: '32ced762-7679-4a25-9220-3915c5976961',
         sqlReplaceTimeChunks: 'all',
       },
       sqlTypeNames: ['TIMESTAMP', 'VARCHAR'],
       context: { forceTimeChunkLock: true, useLineageBasedSegmentAllocation: true },
-      groupId: 'query-12e9498f-3515-4543-ba97-0c4724274068',
+      groupId: 'query-32ced762-7679-4a25-9220-3915c5976961',
       dataSource: 'kttm_simple',
       resource: {
-        availabilityGroup: 'query-12e9498f-3515-4543-ba97-0c4724274068',
+        availabilityGroup: 'query-32ced762-7679-4a25-9220-3915c5976961',
         requiredCapacity: 1,
       },
     },
@@ -124,19 +123,14 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
 
   {
     multiStageQuery: {
-      taskId: 'query-12e9498f-3515-4543-ba97-0c4724274068',
+      taskId: 'query-32ced762-7679-4a25-9220-3915c5976961',
       payload: {
-        status: {
-          status: 'SUCCESS',
-          startTime: '2022-08-18T05:29:44.881Z',
-          durationMs: 25476,
-          warningReports: [],
-        },
+        status: { status: 'SUCCESS', startTime: '2022-08-22T20:12:51.391Z', durationMs: 25097 },
         stages: [
           {
             stageNumber: 0,
             definition: {
-              id: '20816c97-405e-48fb-9380-c94545f31c20_0',
+              id: '0b353011-6ea1-480a-8ca8-386771621672_0',
               input: [
                 {
                   type: 'external',
@@ -188,7 +182,7 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
                     scanSignature:
                       '[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]',
                     sqlInsertSegmentGranularity: '{"type":"all"}',
-                    sqlQueryId: '12e9498f-3515-4543-ba97-0c4724274068',
+                    sqlQueryId: '32ced762-7679-4a25-9220-3915c5976961',
                     sqlReplaceTimeChunks: 'all',
                   },
                   granularity: { type: 'all' },
@@ -210,14 +204,14 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
             phase: 'FINISHED',
             workerCount: 1,
             partitionCount: 1,
-            startTime: '2022-08-18T05:29:47.278Z',
-            duration: 20613,
+            startTime: '2022-08-22T20:12:53.790Z',
+            duration: 20229,
             sort: true,
           },
           {
             stageNumber: 1,
             definition: {
-              id: '20816c97-405e-48fb-9380-c94545f31c20_1',
+              id: '0b353011-6ea1-480a-8ca8-386771621672_1',
               input: [{ type: 'stage', stage: 0 }],
               processor: {
                 type: 'segmentGenerator',
@@ -261,8 +255,8 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
             phase: 'FINISHED',
             workerCount: 1,
             partitionCount: 1,
-            startTime: '2022-08-18T05:30:07.857Z',
-            duration: 2500,
+            startTime: '2022-08-22T20:13:13.991Z',
+            duration: 2497,
           },
         ],
         counters: {
@@ -270,7 +264,7 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
             '0': {
               input0: { type: 'channel', rows: [465346], files: [1], totalFiles: [1] },
               output: { type: 'channel', rows: [465346], bytes: [25430674], frames: [4] },
-              sort: { type: 'channel', rows: [465346], bytes: [23570446], frames: [38] },
+              shuffle: { type: 'channel', rows: [465346], bytes: [23570446], frames: [38] },
               sortProgress: {
                 type: 'sortProgress',
                 totalMergingLevels: 3,

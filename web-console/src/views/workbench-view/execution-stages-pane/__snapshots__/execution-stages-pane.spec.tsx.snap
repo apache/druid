@@ -158,7 +158,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
     Array [
       Object {
         "definition": Object {
-          "id": "20816c97-405e-48fb-9380-c94545f31c20_0",
+          "id": "0b353011-6ea1-480a-8ca8-386771621672_0",
           "input": Array [
             Object {
               "inputFormat": Object {
@@ -202,7 +202,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
                 "groupByEnableMultiValueUnnesting": false,
                 "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                 "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                "sqlQueryId": "12e9498f-3515-4543-ba97-0c4724274068",
+                "sqlQueryId": "32ced762-7679-4a25-9220-3915c5976961",
                 "sqlReplaceTimeChunks": "all",
               },
               "dataSource": Object {
@@ -259,17 +259,17 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
             },
           ],
         },
-        "duration": 20613,
+        "duration": 20229,
         "partitionCount": 1,
         "phase": "FINISHED",
         "sort": true,
         "stageNumber": 0,
-        "startTime": "2022-08-18T05:29:47.278Z",
+        "startTime": "2022-08-22T20:12:53.790Z",
         "workerCount": 1,
       },
       Object {
         "definition": Object {
-          "id": "20816c97-405e-48fb-9380-c94545f31c20_1",
+          "id": "0b353011-6ea1-480a-8ca8-386771621672_1",
           "input": Array [
             Object {
               "stage": 0,
@@ -334,11 +334,11 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
           },
           "signature": Array [],
         },
-        "duration": 2500,
+        "duration": 2497,
         "partitionCount": 1,
         "phase": "FINISHED",
         "stageNumber": 1,
-        "startTime": "2022-08-18T05:30:07.857Z",
+        "startTime": "2022-08-22T20:13:13.991Z",
         "workerCount": 1,
       },
     ]

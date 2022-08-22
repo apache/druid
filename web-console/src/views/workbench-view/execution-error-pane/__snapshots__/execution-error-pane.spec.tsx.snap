@@ -20,7 +20,7 @@ exports[`ExecutionErrorPane matches snapshot 1`] = `
   <p>
     Failed task ID: 
     <Memo(ClickToCopy)
-      text="query-9f7d2aa1-72b8-49cf-9350-a1d04c539479-worker0"
+      text="query-0cf1a40a-aaef-4d17-bda4-5afa7edf07e7-worker0"
     />
      
     On host: 

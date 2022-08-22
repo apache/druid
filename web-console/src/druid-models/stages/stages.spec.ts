@@ -733,7 +733,7 @@ describe('Stages', () => {
               '0': {
                 input0: { type: 'channel', rows: [197], files: [1], totalFiles: [1] },
                 output: { type: 'channel', rows: [197], bytes: [15468], frames: [1] },
-                sort: { type: 'channel', rows: [98, 99], bytes: [7260, 7454], frames: [1, 1] },
+                shuffle: { type: 'channel', rows: [98, 99], bytes: [7260, 7454], frames: [1, 1] },
                 sortProgress: {
                   type: 'sortProgress',
                   totalMergingLevels: 3,
@@ -766,7 +766,7 @@ describe('Stages', () => {
                 },
                 input1: { type: 'channel', rows: [98, 99], bytes: [7260, 7454], frames: [1, 1] },
                 output: { type: 'channel', rows: [39667], bytes: [11081283], frames: [2] },
-                sort: {
+                shuffle: {
                   type: 'channel',
                   rows: [19834, 19833],
                   bytes: [5458795, 5464500],
@@ -797,7 +797,7 @@ describe('Stages', () => {
               '0': {
                 input0: { type: 'channel', rows: [19834], bytes: [5458795], frames: [11] },
                 output: { type: 'channel', rows: [19834], bytes: [5795633], frames: [1] },
-                sort: {
+                shuffle: {
                   type: 'channel',
                   rows: [
                     888, 993, 1418, 894, 590, 633, 309, 241, 236, 309, 253, 260, 440, 876, 1394,
@@ -821,7 +821,7 @@ describe('Stages', () => {
               '1': {
                 input0: { type: 'channel', rows: [0, 19833], bytes: [0, 5464500], frames: [0, 11] },
                 output: { type: 'channel', rows: [0, 19833], bytes: [0, 5801321], frames: [0, 1] },
-                sort: {
+                shuffle: {
                   type: 'channel',
                   rows: [
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 909, 4525, 4324, 4149, 2561,
