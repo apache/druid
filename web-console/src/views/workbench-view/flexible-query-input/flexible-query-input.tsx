@@ -18,7 +18,8 @@
 
 import { ResizeEntry } from '@blueprintjs/core';
 import { ResizeSensor2 } from '@blueprintjs/popover2';
-import ace, { Ace } from 'ace-builds';
+import type { Ace } from 'ace-builds';
+import ace from 'ace-builds';
 import classNames from 'classnames';
 import escape from 'lodash.escape';
 import React from 'react';
@@ -35,7 +36,6 @@ import { AceEditorStateCache } from '../../../singletons/ace-editor-state-cache'
 import { ColumnMetadata, RowColumn, uniq } from '../../../utils';
 
 import './flexible-query-input.scss';
-import Completion = Ace.Completion;
 
 const langTools = ace.require('ace/ext/language_tools');
 
@@ -43,7 +43,7 @@ const V_PADDING = 10;
 const SCROLLBAR = 20;
 
 const COMPLETER = {
-  insertMatch: (editor: any, data: Completion) => {
+  insertMatch: (editor: any, data: Ace.Completion) => {
     editor.completer.insertMatch({ value: data.name });
   },
 };

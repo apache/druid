@@ -18,7 +18,8 @@
 
 import { ResizeEntry } from '@blueprintjs/core';
 import { ResizeSensor2 } from '@blueprintjs/popover2';
-import ace, { Ace } from 'ace-builds';
+import type { Ace } from 'ace-builds';
+import ace from 'ace-builds';
 import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
@@ -33,12 +34,11 @@ import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../../../lib/sql-docs';
 import { ColumnMetadata, RowColumn, uniq } from '../../../utils';
 
 import './query-input.scss';
-import Completion = Ace.Completion;
 
 const langTools = ace.require('ace/ext/language_tools');
 
 const COMPLETER = {
-  insertMatch: (editor: any, data: Completion) => {
+  insertMatch: (editor: any, data: Ace.Completion) => {
     editor.completer.insertMatch({ value: data.name });
   },
 };
