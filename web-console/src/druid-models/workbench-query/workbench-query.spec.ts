@@ -128,6 +128,40 @@ describe('WorkbenchQuery', () => {
     expect(String(WorkbenchQuery.fromString(tabString))).toEqual(tabString);
   });
 
+  describe('#makePreview', () => {
+    it('works', () => {
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sane`
+        REPLACE INTO "kttm_simple" OVERWRITE ALL
+        SELECT
+          TIME_PARSE("timestamp") AS __time,
+          session
+        FROM TABLE(
+          EXTERN(
+            '{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"]}',
+            '{"type":"json"}',
+            '[{"name":"timestamp","type":"string"}]'
+          )
+        )
+        PARTITIONED BY HOUR
+        CLUSTERED BY browser, session
+      `);
+
+      expect(workbenchQuery.makePreview().getQueryString()).toEqual(sane`
+        SELECT
+          TIME_PARSE("timestamp") AS __time,
+          session
+        FROM TABLE(
+          EXTERN(
+            '{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"]}',
+            '{"type":"json"}',
+            '[{"name":"timestamp","type":"string"}]'
+          )
+        )
+        ORDER BY FLOOR(__time TO HOUR), browser, session
+      `);
+    });
+  });
+
   describe('#getApiQuery', () => {
     const makeQueryId = () => 'deadbeef-9fb0-499c-8475-ea461e96a4fd';
 

@@ -16,7 +16,18 @@
  * limitations under the License.
  */
 
-import { SqlExpression, SqlQuery, SqlTableRef } from 'druid-query-toolkit';
+import {
+  SqlClusteredByClause,
+  SqlExpression,
+  SqlFunction,
+  SqlLiteral,
+  SqlOrderByClause,
+  SqlPartitionedByClause,
+  SqlQuery,
+  SqlRef,
+  SqlTableRef,
+} from 'druid-query-toolkit';
+import { SqlOrderByExpression } from 'druid-query-toolkit/build/sql/sql-clause/sql-order-by-expression/sql-order-by-expression';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
@@ -178,6 +189,33 @@ export class WorkbenchQuery {
         ),
       )
       .join('\n');
+  }
+
+  static makeOrderByClause(
+    partitionedByClause: SqlPartitionedByClause | undefined,
+    clusteredByClause: SqlClusteredByClause | undefined,
+  ): SqlOrderByClause | undefined {
+    if (!partitionedByClause) return;
+
+    const orderByExpressions: SqlOrderByExpression[] = [];
+    let partitionedByExpression = partitionedByClause.expression;
+    if (partitionedByExpression) {
+      if (partitionedByExpression instanceof SqlLiteral) {
+        partitionedByExpression = SqlFunction.floor(
+          SqlRef.column('__time'),
+          partitionedByExpression,
+        );
+      }
+      orderByExpressions.push(SqlOrderByExpression.create(partitionedByExpression));
+    }
+
+    if (clusteredByClause) {
+      orderByExpressions.push(
+        ...clusteredByClause.expressions.values.map(ex => SqlOrderByExpression.create(ex)),
+      );
+    }
+
+    return orderByExpressions.length ? SqlOrderByClause.create(orderByExpressions) : undefined;
   }
 
   public readonly queryParts: WorkbenchQueryPart[];
@@ -438,6 +476,12 @@ export class WorkbenchQuery {
           .changeReplaceClause(undefined)
           .changePartitionedByClause(undefined)
           .changeClusteredByClause(undefined)
+          .changeOrderByClause(
+            WorkbenchQuery.makeOrderByClause(
+              parsedQuery.partitionedByClause,
+              parsedQuery.clusteredByClause,
+            ),
+          )
           .toString()
       : WorkbenchQuery.commentOutIngestParts(this.getQueryString());
 
