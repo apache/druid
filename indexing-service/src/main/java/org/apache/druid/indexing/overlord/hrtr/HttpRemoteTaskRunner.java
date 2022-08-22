@@ -32,7 +32,6 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -962,7 +961,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(String taskId, long offset) throws IOException
+  public Optional<InputStream> streamTaskLog(String taskId, long offset) throws IOException
   {
     @SuppressWarnings("GuardedBy") // Read on tasks is safe
     HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem = tasks.get(taskId);
@@ -984,28 +983,15 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       );
 
       try {
-        final InputStream inputStream = httpClient.go(
+        return Optional.of(httpClient.go(
             new Request(HttpMethod.GET, url),
             new InputStreamResponseHandler()
-        ).get();
-        return Optional.of(new ByteSource()
-        {
-          @Override
-          public InputStream openStream()
-          {
-            return inputStream;
-          }
-        });
+        ).get());
       }
       catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
       catch (ExecutionException e) {
-        // If task is finished or in process of shutting down we should reroute the request to deep storage
-        Optional<TaskStatus> statusOptional = taskStorage.getStatus(taskId);
-        if (statusOptional.isPresent() && statusOptional.get().isComplete()) {
-          return Optional.absent();
-        }
         // Unwrap if possible
         Throwables.propagateIfPossible(e.getCause(), IOException.class);
         throw new RuntimeException(e);
@@ -1014,7 +1000,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Optional<ByteSource> streamTaskReports(String taskId)
+  public Optional<InputStream> streamTaskReports(String taskId) throws IOException
   {
     @SuppressWarnings("GuardedBy") // Read on tasks is safe
     HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem = tasks.get(taskId);
@@ -1040,29 +1026,21 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           "/druid/worker/v1/chat/%s/liveReports",
           taskId
       );
-      return Optional.of(
-          new ByteSource()
-          {
-            @Override
-            public InputStream openStream() throws IOException
-            {
-              try {
-                return httpClient.go(
-                    new Request(HttpMethod.GET, url),
-                    new InputStreamResponseHandler()
-                ).get();
-              }
-              catch (InterruptedException e) {
-                throw new RuntimeException(e);
-              }
-              catch (ExecutionException e) {
-                // Unwrap if possible
-                Throwables.propagateIfPossible(e.getCause(), IOException.class);
-                throw new RuntimeException(e);
-              }
-            }
-          }
-      );
+
+      try {
+        return Optional.of(httpClient.go(
+            new Request(HttpMethod.GET, url),
+            new InputStreamResponseHandler()
+        ).get());
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      catch (ExecutionException e) {
+        // Unwrap if possible
+        Throwables.propagateIfPossible(e.getCause(), IOException.class);
+        throw new RuntimeException(e);
+      }
     }
   }
 
