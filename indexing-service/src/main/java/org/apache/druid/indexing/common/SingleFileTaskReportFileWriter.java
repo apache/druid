@@ -21,7 +21,9 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
@@ -71,12 +73,14 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
       final Map<String, TaskReport> reports
   ) throws Exception
   {
+    final SerializerProvider serializers = objectMapper.getSerializerProviderInstance();
+
     try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(outputStream)) {
       jg.writeStartObject();
 
       for (final Map.Entry<String, TaskReport> entry : reports.entrySet()) {
         jg.writeFieldName(entry.getKey());
-        objectMapper.writeValue(jg, entry.getValue());
+        JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, entry.getValue());
       }
 
       jg.writeEndObject();

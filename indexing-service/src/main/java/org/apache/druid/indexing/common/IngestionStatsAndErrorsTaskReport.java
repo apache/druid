@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 
 import java.util.Objects;
 
