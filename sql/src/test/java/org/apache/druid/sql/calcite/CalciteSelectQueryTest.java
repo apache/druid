@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
@@ -545,7 +546,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     final String resources = "[]";
 
     testQuery(
+        PlannerConfig.builder().useNativeQueryExplain(false).build(),
         query,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{
@@ -1286,7 +1289,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
 
     testQuery(
+        PlannerConfig.builder().useNativeQueryExplain(false).build(),
         query,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{
