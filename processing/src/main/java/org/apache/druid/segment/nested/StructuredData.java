@@ -52,12 +52,21 @@ public class StructuredData implements Comparable<StructuredData>
   }
 
   @Nullable
-  public static StructuredData possiblyWrap(@Nullable Object value)
+  public static StructuredData wrap(@Nullable Object value)
   {
     if (value == null || value instanceof StructuredData) {
       return (StructuredData) value;
     }
     return new StructuredData(value);
+  }
+
+  @Nullable
+  public static Object unwrap(@Nullable Object value)
+  {
+    if (value instanceof StructuredData) {
+      return ((StructuredData) value).getValue();
+    }
+    return value;
   }
 
   @JsonCreator
