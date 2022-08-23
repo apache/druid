@@ -201,8 +201,9 @@ like `MILLIS_TO_TIMESTAMP`, `TIME_FLOOR`, and others. If you're using native Dru
 
 ### Nested dimensions
 
-At the time of this writing, Druid does not support nested dimensions. Nested dimensions need to be flattened. For example,
-if you have data of the following form:
+You can ingest and store nested JSON in a Druid column as a `COMPLEX<json>` data type. See [Nested columns](../querying/nested-columns.md) for more information.
+
+If you want to ingest nested data in a format other than JSON&mdash;for example Avro, ORC, and Parquet&mdash;you  must use the `flattenSpec` object to flatten it. For example, if you have data of the following form:
 
 ```
 {"foo":{"bar": 3}}
@@ -214,8 +215,7 @@ then before indexing it, you should transform it to:
 {"foo_bar": 3}
 ```
 
-Druid is capable of flattening JSON, Avro, or Parquet input data.
-Please read about [`flattenSpec`](./ingestion-spec.md#flattenspec) for more details.
+See the [`flattenSpec`](./ingestion-spec.md#flattenspec) documentation for more details.
 
 <a name="counting"></a>
 
