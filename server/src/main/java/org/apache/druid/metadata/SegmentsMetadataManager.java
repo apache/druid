@@ -157,4 +157,12 @@ public interface SegmentsMetadataManager
 
   @VisibleForTesting
   void poll();
+
+  /**
+   * Populates used_flag_last_updated column in the segments table iteratively until there are no segments with a NULL
+   * value for that column.
+   */
+  void populateUsedFlagLastUpdatedAsync();
+
+  void stopAsyncUsedFlagLastUpdatedUpdate();
 }

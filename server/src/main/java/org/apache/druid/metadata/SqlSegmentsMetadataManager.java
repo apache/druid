@@ -55,11 +55,13 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.BaseResultSetMapper;
+import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
+import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
 import javax.annotation.Nullable;
@@ -76,6 +78,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -229,6 +233,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @GuardedBy("startStopPollLock")
   private @Nullable ScheduledExecutorService exec = null;
 
+  private Future<?> usedFlagLastUpdatedPopulationFuture;
+
   @Inject
   public SqlSegmentsMetadataManager(
       ObjectMapper jsonMapper,
@@ -311,6 +317,109 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     finally {
       lock.unlock();
     }
+  }
+
+  @Override
+  public void stopAsyncUsedFlagLastUpdatedUpdate()
+  {
+    if (!usedFlagLastUpdatedPopulationFuture.isDone() && !usedFlagLastUpdatedPopulationFuture.isCancelled()) {
+      usedFlagLastUpdatedPopulationFuture.cancel(true);
+    }
+  }
+
+  @Override
+  public void populateUsedFlagLastUpdatedAsync()
+  {
+    ExecutorService executorService = Executors.newSingleThreadExecutor();
+    usedFlagLastUpdatedPopulationFuture = executorService.submit(
+        () -> populateUsedFlagLastUpdated()
+    );
+  }
+
+  /**
+   * Populate used_flag_last_updated for unused segments whose current value for said column is NULL
+   *
+   * The updates are made incrementally.
+   */
+  private void populateUsedFlagLastUpdated()
+  {
+    String segmentsTable = getSegmentsTable();
+    log.info(
+        "Populating used_flag_last_updated with non-NULL values for unused segments in [%s]",
+        segmentsTable
+    );
+
+    int limit = 100;
+    int totalUpdatedEntries = 0;
+
+    while (true) {
+      List<String> segmentsToUpdate = new ArrayList<>(100);
+      try {
+        connector.retryWithHandle(
+            new HandleCallback<Void>()
+            {
+              @Override
+              public Void withHandle(Handle handle)
+              {
+                segmentsToUpdate.addAll(handle.createQuery(
+                    StringUtils.format(
+                        "SELECT id FROM %1$s WHERE used_flag_last_updated IS NULL and used = false %2$s",
+                        segmentsTable,
+                        connector.limitClause(limit)
+                    )
+                ).mapTo(String.class).list());
+                return null;
+              }
+            }
+        );
+
+        if (segmentsToUpdate.isEmpty()) {
+          // We have no segments to process
+          break;
+        }
+
+        connector.retryWithHandle(
+            new HandleCallback<Void>()
+            {
+              @Override
+              public Void withHandle(Handle handle)
+              {
+                Batch updateBatch = handle.createBatch();
+                String sql = "UPDATE %1$s SET used_flag_last_updated = '%2$s' WHERE id = '%3$s'";
+                String now = DateTimes.nowUtc().toString();
+                for (String id : segmentsToUpdate) {
+                  updateBatch.add(StringUtils.format(sql, segmentsTable, now, id));
+                }
+                updateBatch.execute();
+                return null;
+              }
+            }
+        );
+      }
+      catch (Exception e) {
+        log.warn(e, "Population of used_flag_last_updated in [%s] has failed. There may be unused segments with"
+                    + " NULL values for used_flag_last_updated that won't be killed!", segmentsTable);
+        return;
+      }
+
+      totalUpdatedEntries += segmentsToUpdate.size();
+      log.info("Updated a batch of %d rows in [%s] with a valid used_flag_last_updated date",
+               segmentsToUpdate.size(),
+               segmentsTable
+      );
+      try {
+        Thread.sleep(10000);
+      }
+      catch (InterruptedException e) {
+        log.info("Interrupted, exiting!");
+        Thread.currentThread().interrupt();
+      }
+    }
+    log.info(
+        "Finished updating [%s] with a valid used_flag_last_updated date. %d rows updated",
+        segmentsTable,
+        totalUpdatedEntries
+    );
   }
 
   private Runnable createPollTaskForStartOrder(long startOrder, PeriodicDatabasePoll periodicDatabasePoll)

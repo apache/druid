@@ -660,6 +660,7 @@ public class DruidCoordinator
       );
 
       segmentsMetadataManager.startPollingDatabasePeriodically();
+      segmentsMetadataManager.populateUsedFlagLastUpdatedAsync();
       metadataRuleManager.start();
       lookupCoordinatorManager.start();
       serviceAnnouncer.announce(self);
@@ -749,6 +750,7 @@ public class DruidCoordinator
       lookupCoordinatorManager.stop();
       metadataRuleManager.stop();
       segmentsMetadataManager.stopPollingDatabasePeriodically();
+      segmentsMetadataManager.stopAsyncUsedFlagLastUpdatedUpdate();
 
       if (balancerExec != null) {
         balancerExec.shutdownNow();
