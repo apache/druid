@@ -20,7 +20,6 @@
 package org.apache.druid.curator;
 
 import com.google.inject.Injector;
-
 import org.apache.curator.CuratorZookeeperClient;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
