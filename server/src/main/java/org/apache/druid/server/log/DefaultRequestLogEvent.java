@@ -70,9 +70,8 @@ public final class DefaultRequestLogEvent implements RequestLogEvent
              .put("sqlQueryContext", getSqlQueryContext());
     }
 
-    builder
-        .put("remoteAddr", getRemoteAddr())
-        .put("queryStats", getQueryStats());
+    builder.put("remoteAddr", getRemoteAddr())
+           .put("queryStats", getQueryStats());
 
     return builder.build();
   }

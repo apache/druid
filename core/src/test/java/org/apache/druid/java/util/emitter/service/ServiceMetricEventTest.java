@@ -290,4 +290,5 @@ public class ServiceMetricEventTest
   {
     ServiceMetricEvent.builder().build("foo", 0 / 0f);
   }
+
 }

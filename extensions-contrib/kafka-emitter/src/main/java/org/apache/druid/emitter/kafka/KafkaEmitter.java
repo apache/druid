@@ -172,7 +172,9 @@ public class KafkaEmitter implements Emitter
       try {
         EventMap map = event.toMap();
         if (config.getClusterName() != null) {
-          map.put("clusterName", config.getClusterName());
+          map = map.asBuilder()
+                   .put("clusterName", config.getClusterName())
+                   .build();
         }
 
         String resultJson = jsonMapper.writeValueAsString(map);

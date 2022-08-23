@@ -25,10 +25,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * EventMap can be safely serialzed to JSON using Jackson serializer as it respects the polymorphic annotations
- * on entires (unlike standard Map). The example of polymorphic class is a query interface, where different native
- * query types are resolved by additional field called "queryType". This implementation esures that the annotation on
- * the values are respected during serialization.
+ * EventMap is a hash map implementation. It can be safely serialzed to JSON using Jackson serializer as it
+ * respects the polymorphic annotations on entires (unlike standard Map). The example of polymorphic class is a query
+ * interface, where different native query types are resolved by additional field called "queryType".
+ * This implementation ensures that the annotation on the values are respected during serialization.
  */
 @JsonSerialize(using = EventMapSerializer.class)
 public class EventMap extends HashMap<String, Object>
@@ -39,6 +39,14 @@ public class EventMap extends HashMap<String, Object>
   public static Builder builder()
   {
     return new Builder();
+  }
+
+  /**
+   * Convert this EventMap to a builder. Performs copy of the whole EventMap.
+   */
+  public Builder asBuilder()
+  {
+    return new Builder().putAll(this);
   }
 
   public static class Builder
@@ -89,7 +97,9 @@ public class EventMap extends HashMap<String, Object>
       return this;
     }
 
-    /** Builds and returns the EventMap */
+    /**
+     * Builds and returns the EventMap
+     */
     public EventMap build()
     {
       return map;
