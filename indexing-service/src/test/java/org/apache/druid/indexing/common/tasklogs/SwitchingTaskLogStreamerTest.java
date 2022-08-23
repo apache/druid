@@ -223,14 +223,14 @@ public class SwitchingTaskLogStreamerTest
     }
 
     @Override
-    public Optional<InputStream> streamTaskLog(String taskid, long offset) throws IOException
+    public Optional<InputStream> streamTaskLog(String taskid, long offset)
     {
       return Optional.of(new ByteArrayInputStream(getLogString(id, taskid, offset).getBytes(StandardCharsets.UTF_8)));
     }
 
 
     @Override
-    public Optional<InputStream> streamTaskReports(String taskid) throws IOException
+    public Optional<InputStream> streamTaskReports(String taskid)
     {
       return Optional.of(new ByteArrayInputStream(getReportString(id, taskid).getBytes(StandardCharsets.UTF_8)));
     }
