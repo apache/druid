@@ -30,7 +30,7 @@ import org.junit.Test;
 
 import java.util.Collections;
 
-public class AlertMetricServiceTest
+public class AlertEventSerdeTest
 {
   @Test
   public void testSerializeAlertEventMap() throws JsonProcessingException

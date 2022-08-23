@@ -28,7 +28,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ServiceMetricSerdeTest
+public class ServiceMetricEventSerdeTest
 {
 
   @Test
