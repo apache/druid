@@ -447,11 +447,11 @@ public class SqlSegmentsMetadataManagerTest
         sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 5, DateTimes.nowUtc().minus(Duration.parse("PT86400S")))
     );
 
-    // One of the 3 segments in newDs has a null used_flag_last_updated which should mean getUnusedSegmentIntervals returns it because null used_flag_last_updated means bufferPeriod does not come into play
+    // One of the 3 segments in newDs has a null used_flag_last_updated which should mean getUnusedSegmentIntervals never returns it
     // One of the 3 segments in newDs has a used_flag_last_updated older than 1 day which means it should also be returned
     // The last of the 3 segemns in newDs has a used_flag_last_updated date less than one day and should not be returned
     Assert.assertEquals(
-        ImmutableList.of(newSegment2.getInterval(), newSegment3.getInterval()),
+        ImmutableList.of(newSegment2.getInterval()),
         sqlSegmentsMetadataManager.getUnusedSegmentIntervals(newDs, DateTimes.of("3000"), 5, DateTimes.nowUtc().minus(Duration.parse("PT86400S")))
     );
   }
