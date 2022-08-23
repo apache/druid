@@ -28,7 +28,7 @@ sidebar_label: Nested columns
 
 > Nested columns is an experimental feature available starting in Apache Druid 24.0. As an experimental feature, functionality documented on this page is subject to change or removal in future releases. Review the release notes and this page to stay up to date with changes.
 
-You can ingest and store JSON in an Apache Druid column as a `COMPLEX<json>` data type. Druid indexes and optimizes the nested data. This means you can use JSON functions to extract ‘literal’ values at ingestion time using the `transformSpec` or  in the SELECT clause when using multi-stage query architecture. 
+You can ingest and store nested JSON in an Apache Druid column as a `COMPLEX<json>` data type. Druid indexes and optimizes the nested data. This means you can use JSON functions to extract ‘literal’ values at ingestion time using the `transformSpec` or  in the SELECT clause when using multi-stage query architecture. 
 
 Druid SQL JSON functions let you extract, transform, and create `COMPLEX<json>` values. Additionally, you can use certain `JSONPath` operators to extract values from nested data structures.
 
