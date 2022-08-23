@@ -43,7 +43,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.BaseQuery;
@@ -62,7 +62,6 @@ import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.Access;
@@ -110,6 +109,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -133,7 +133,8 @@ public class SqlResourceTest extends CalciteTestBase
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final String DUMMY_SQL_QUERY_ID = "dummy";
-  private static final int WAIT_TIMEOUT_SECS = 3;
+  // Timeout to allow (rapid) debugging, while not blocking tests with errors.
+  private static final int WAIT_TIMEOUT_SECS = 60;
   private static final Consumer<DirectStatement> NULL_ACTION = s -> {};
 
   private static final List<String> EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS =
@@ -159,6 +160,7 @@ public class SqlResourceTest extends CalciteTestBase
   private SqlLifecycleManager lifecycleManager;
   private NativeSqlEngine engine;
   private SqlStatementFactory sqlStatementFactory;
+  private StubServiceEmitter stubServiceEmitter;
 
   private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
@@ -250,14 +252,14 @@ public class SqlResourceTest extends CalciteTestBase
         }
       }
     };
-    final ServiceEmitter emitter = new NoopServiceEmitter();
+    stubServiceEmitter = new StubServiceEmitter("test", "test");
     final AuthConfig authConfig = new AuthConfig();
     final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of());
     engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
     final SqlToolbox sqlToolbox = new SqlToolbox(
         engine,
         plannerFactory,
-        emitter,
+        stubServiceEmitter,
         testRequestLogger,
         scheduler,
         authConfig,
@@ -356,6 +358,33 @@ public class SqlResourceTest extends CalciteTestBase
     checkSqlRequestLog(true);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
+
+  @Test
+  public void testSqlLifecycleMetrics() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+        createSimpleQueryWithId("id", "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
+    ).rhs;
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("cnt", 6, "TheFoo", "foo")
+        ),
+        rows
+    );
+    checkSqlRequestLog(true);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+    Set<String> metricNames = ImmutableSet.of("sqlQuery/time", "sqlQuery/bytes", "sqlQuery/planningTimeMs");
+    Assert.assertEquals(3, stubServiceEmitter.getEvents().size());
+    for (String metricName : metricNames) {
+      Assert.assertTrue(
+          stubServiceEmitter.getEvents()
+                            .stream()
+                            .anyMatch(event -> event.toMap().containsValue(metricName))
+      );
+    }
+  }
+
 
   @Test
   public void testCountStarExtendedCharacters() throws Exception
@@ -1710,6 +1739,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(success, stats.get("success"));
     Assert.assertEquals(CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity(), stats.get("identity"));
     Assert.assertTrue(stats.containsKey("sqlQuery/time"));
+    Assert.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
     Assert.assertTrue(queryContext.containsKey(PlannerContext.CTX_SQL_QUERY_ID));
     if (success) {
       Assert.assertTrue(stats.containsKey("sqlQuery/bytes"));
@@ -1917,11 +1947,11 @@ public class SqlResourceTest extends CalciteTestBase
     }
 
     @Override
-    public PlannerResult plan(DruidPlanner planner)
+    public PlannerResult createPlan(DruidPlanner planner)
     {
       if (planLatchSupplier.get() != null) {
         if (planLatchSupplier.get().rhs) {
-          PlannerResult result = super.plan(planner);
+          PlannerResult result = super.createPlan(planner);
           planLatchSupplier.get().lhs.countDown();
           return result;
         } else {
@@ -1933,45 +1963,52 @@ public class SqlResourceTest extends CalciteTestBase
           catch (InterruptedException e) {
             throw new RuntimeException(e);
           }
-          return super.plan(planner);
+          return super.createPlan(planner);
         }
       } else {
-        return super.plan(planner);
+        return super.createPlan(planner);
       }
     }
 
     @Override
-    public Sequence<Object[]> execute()
+    public ResultSet plan()
     {
       onExecute.accept(this);
-      return super.execute();
+      return super.plan();
     }
 
     @Override
-    public Sequence<Object[]> doExecute()
+    public ResultSet createResultSet(PlannerResult plannerResult)
     {
-      final Function<Sequence<Object[]>, Sequence<Object[]>> sequenceMapFn =
-          Optional.ofNullable(sequenceMapFnSupplier.get()).orElse(Function.identity());
+      return new ResultSet(plannerResult)
+      {
+        @Override
+        public Sequence<Object[]> run()
+        {
+          final Function<Sequence<Object[]>, Sequence<Object[]>> sequenceMapFn =
+              Optional.ofNullable(sequenceMapFnSupplier.get()).orElse(Function.identity());
 
-      if (executeLatchSupplier.get() != null) {
-        if (executeLatchSupplier.get().rhs) {
-          Sequence<Object[]> sequence = sequenceMapFn.apply(super.doExecute());
-          executeLatchSupplier.get().lhs.countDown();
-          return sequence;
-        } else {
-          try {
-            if (!executeLatchSupplier.get().lhs.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
-              throw new RuntimeException("Latch timed out");
+          if (executeLatchSupplier.get() != null) {
+            if (executeLatchSupplier.get().rhs) {
+              Sequence<Object[]> sequence = sequenceMapFn.apply(super.run());
+              executeLatchSupplier.get().lhs.countDown();
+              return sequence;
+            } else {
+              try {
+                if (!executeLatchSupplier.get().lhs.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
+                  throw new RuntimeException("Latch timed out");
+                }
+              }
+              catch (InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+              return sequenceMapFn.apply(super.run());
             }
+          } else {
+            return sequenceMapFn.apply(super.run());
           }
-          catch (InterruptedException e) {
-            throw new RuntimeException(e);
-          }
-          return sequenceMapFn.apply(super.doExecute());
         }
-      } else {
-        return sequenceMapFn.apply(super.doExecute());
-      }
+      };
     }
   }
 }

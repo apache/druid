@@ -615,7 +615,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public Object getObject()
     {
-      StructuredData data = StructuredData.possiblyWrap(baseSelector.getObject());
+      StructuredData data = StructuredData.wrap(baseSelector.getObject());
       return NestedPathFinder.findLiteral(data == null ? null : data.getValue(), parts);
     }
 
@@ -689,8 +689,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public Object getObject()
     {
-      StructuredData data = StructuredData.possiblyWrap(baseSelector.getObject());
-      return StructuredData.possiblyWrap(NestedPathFinder.find(data == null ? null : data.getValue(), parts));
+      StructuredData data = StructuredData.wrap(baseSelector.getObject());
+      return StructuredData.wrap(NestedPathFinder.find(data == null ? null : data.getValue(), parts));
     }
 
     @Override
@@ -744,8 +744,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
 
     private Object compute(Object input)
     {
-      StructuredData data = StructuredData.possiblyWrap(input);
-      return StructuredData.possiblyWrap(NestedPathFinder.find(data == null ? null : data.getValue(), parts));
+      StructuredData data = StructuredData.wrap(input);
+      return StructuredData.wrap(NestedPathFinder.find(data == null ? null : data.getValue(), parts));
     }
   }
 }

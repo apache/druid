@@ -30,7 +30,6 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.PlannerResult;
 
 import java.io.Closeable;
 import java.util.Set;
@@ -161,20 +160,6 @@ public abstract class AbstractStatement implements Closeable
   }
 
   /**
-   * Plan the query, which also produces the sequence that runs
-   * the query.
-   */
-  protected PlannerResult plan(DruidPlanner planner)
-  {
-    try {
-      return planner.plan();
-    }
-    catch (ValidationException e) {
-      throw new SqlPlanningException(e);
-    }
-  }
-
-  /**
    * Return the datasource and table resources for this
    * statement.
    */
@@ -188,7 +173,7 @@ public abstract class AbstractStatement implements Closeable
     return fullResourceActions;
   }
 
-  public SqlQueryPlus sqlRequest()
+  public SqlQueryPlus query()
   {
     return queryPlus;
   }
@@ -219,5 +204,18 @@ public abstract class AbstractStatement implements Closeable
    */
   public void closeQuietly()
   {
+  }
+
+  /**
+   * Convenience method to close the statement and report an error
+   * associated with the statement. Same as calling:{@code
+   * stmt.reporter().failed(e);
+   * stmt.close();
+   * }
+   */
+  public void closeWithError(Throwable e)
+  {
+    reporter.failed(e);
+    close();
   }
 }
