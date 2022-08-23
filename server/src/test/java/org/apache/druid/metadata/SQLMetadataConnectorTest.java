@@ -149,28 +149,6 @@ public class SQLMetadataConnectorTest
         "USED_FLAG_LAST_UPDATED"
     );
   }
-  private int getCountOfRowsWithLastUsedNull()
-  {
-    return connector.retryWithHandle(
-        new HandleCallback<Integer>()
-        {
-          @Override
-          public Integer withHandle(Handle handle)
-          {
-            List<Map<String, Object>> lst = handle.select(
-                StringUtils.format(
-                    "SELECT * FROM %1$s WHERE USED_FLAG_LAST_UPDATED IS NULL",
-                    derbyConnectorRule.metadataTablesConfigSupplier()
-                                      .get()
-                                      .getSegmentsTable()
-                                      .toUpperCase(Locale.ENGLISH)
-                )
-            );
-            return lst.size();
-          }
-        }
-    );
-  }
 
   @Test
   public void testInsertOrUpdate()

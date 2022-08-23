@@ -46,8 +46,13 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -930,5 +935,45 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertEquals(2, dataSegmentSet.size());
     Assert.assertTrue(dataSegmentSet.contains(segment1));
     Assert.assertTrue(dataSegmentSet.contains(newSegment2));
+  }
+
+  @Test
+  public void testPopulateUsedFlagLastUpdated() throws IOException
+  {
+    derbyConnectorRule.allowUsedFlagLastUpdatedToBeNullable();
+    final DataSegment newSegment = createSegment(
+        "dummyDS",
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+    publish(newSegment, false, null);
+    Assert.assertTrue(getCountOfRowsWithLastUsedNull() > 0);
+    sqlSegmentsMetadataManager.populateUsedFlagLastUpdated();
+    Assert.assertTrue(getCountOfRowsWithLastUsedNull() == 0);
+  }
+
+  private int getCountOfRowsWithLastUsedNull()
+  {
+    return derbyConnectorRule.getConnector().retryWithHandle(
+        new HandleCallback<Integer>()
+        {
+          @Override
+          public Integer withHandle(Handle handle)
+          {
+            List<Map<String, Object>> lst = handle.select(
+                StringUtils.format(
+                    "SELECT * FROM %1$s WHERE USED_FLAG_LAST_UPDATED IS NULL",
+                    derbyConnectorRule.metadataTablesConfigSupplier()
+                                      .get()
+                                      .getSegmentsTable()
+                                      .toUpperCase(Locale.ENGLISH)
+                )
+            );
+            return lst.size();
+          }
+        }
+    );
   }
 }

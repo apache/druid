@@ -341,7 +341,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    *
    * The updates are made incrementally.
    */
-  private void populateUsedFlagLastUpdated()
+  @VisibleForTesting
+  void populateUsedFlagLastUpdated()
   {
     String segmentsTable = getSegmentsTable();
     log.info(
@@ -363,11 +364,11 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
               {
                 segmentsToUpdate.addAll(handle.createQuery(
                     StringUtils.format(
-                        "SELECT id FROM %1$s WHERE used_flag_last_updated IS NULL and used = false %2$s",
+                        "SELECT id FROM %1$s WHERE used_flag_last_updated IS NULL and used = :used %2$s",
                         segmentsTable,
                         connector.limitClause(limit)
                     )
-                ).mapTo(String.class).list());
+                ).bind("used", false).mapTo(String.class).list());
                 return null;
               }
             }
