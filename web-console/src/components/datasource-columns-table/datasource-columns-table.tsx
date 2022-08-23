@@ -21,12 +21,8 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { useQueryManager } from '../../hooks';
-import {
-  ColumnMetadata,
-  queryDruidSql,
-  SMALL_TABLE_PAGE_SIZE,
-  SMALL_TABLE_PAGE_SIZE_OPTIONS,
-} from '../../utils';
+import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
+import { ColumnMetadata, queryDruidSql } from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './datasource-columns-table.scss';
@@ -67,10 +63,14 @@ export const DatasourceColumnsTable = React.memo(function DatasourceColumnsTable
           {
             Header: 'Column name',
             accessor: 'COLUMN_NAME',
+            width: 300,
+            className: 'padded',
           },
           {
             Header: 'Data type',
             accessor: 'DATA_TYPE',
+            width: 200,
+            className: 'padded',
           },
         ]}
         noDataText={columnsState.getErrorMessage() || 'No column data found'}

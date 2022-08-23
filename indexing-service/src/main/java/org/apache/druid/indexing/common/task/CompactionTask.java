@@ -76,6 +76,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -196,7 +197,15 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JacksonInject RetryPolicyFactory retryPolicyFactory
   )
   {
-    super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context, -1);
+    super(
+        getOrMakeId(id, TYPE, dataSource),
+        null,
+        taskResource,
+        dataSource,
+        context,
+        -1,
+        computeCompactionIngestionMode(ioConfig)
+    );
     Checks.checkOneNotNullOrEmpty(
         ImmutableList.of(
             new Property<>("ioConfig", ioConfig),
@@ -422,9 +431,25 @@ public class CompactionTask extends AbstractBatchIndexTask
     return tuningConfig != null && tuningConfig.isForceGuaranteedRollup();
   }
 
+  @VisibleForTesting
+  void emitCompactIngestionModeMetrics(
+      ServiceEmitter emitter,
+      boolean isDropExisting
+  )
+  {
+
+    if (emitter == null) {
+      return;
+    }
+    emitMetric(emitter, "ingest/count", 1);
+  }
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
+
+    // emit metric for compact ingestion mode:
+    emitCompactIngestionModeMetrics(toolbox.getEmitter(), ioConfig.isDropExisting());
+
     final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSchema(
         toolbox,
         getTaskLockHelper().getLockGranularityToUse(),

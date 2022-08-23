@@ -33,15 +33,10 @@ else
   CONFDIR="$1"
 fi
 
-CONFDIR="$(cd "$CONFDIR" && pwd)/zk"
-WHEREAMI="$(cd "$WHEREAMI" && pwd)"
-JAVA_BIN="$(source "$WHEREAMI"/java-util && get_java_bin_dir)"
-if [ -z "$JAVA_BIN" ]; then
-  >&2 echo "Could not find java - please run $WHEREAMI/verify-java to confirm it is installed."
-  exit 1
-fi
+CONFDIR="$(cd "$CONFDIR">/dev/null && pwd)/zk"
+WHEREAMI="$(cd "$WHEREAMI">/dev/null && pwd)"
 
-LOG_DIR="${DRUID_LOG_DIR:=${WHEREAMI}/log}"
+LOG_DIR="${DRUID_LOG_DIR:=${WHEREAMI}/../log}"
 # Remove possible ending slash
 if [[ $LOG_DIR == */ ]];
 then
@@ -52,7 +47,7 @@ if [ ! -d "$LOG_DIR" ]; then mkdir -p $LOG_DIR; fi
 echo "Running [ZooKeeper], logging to [$LOG_DIR/zookeeper.log] if no changes made to log4j2.xml"
 
 cd "$WHEREAMI/.."
-exec "$JAVA_BIN"/java "-Ddruid.log.path=$LOG_DIR" `cat "$CONFDIR"/jvm.config | xargs` \
+exec "$WHEREAMI"/run-java "-Ddruid.log.path=$LOG_DIR" `cat "$CONFDIR"/jvm.config | xargs` \
   -cp "$WHEREAMI/../lib/*:$CONFDIR" \
   -Dzookeeper.jmx.log4j.disable=true \
   org.apache.zookeeper.server.quorum.QuorumPeerMain \

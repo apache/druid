@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.aggregation;
 
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -34,6 +34,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 
 /**
  * The SerializablePairLongStringSerde serializes a Long-String pair (SerializablePairLongString).
@@ -46,6 +47,12 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
 {
 
   private static final String TYPE_NAME = "serializablePairLongString";
+  // Null SerializablePairLongString values are put first
+  private static final Comparator<SerializablePairLongString> COMPARATOR = Comparator.nullsFirst(
+      // assumes that the LHS of the pair will never be null
+      Comparator.<SerializablePairLongString>comparingLong(SerializablePair::getLhs)
+                .thenComparing(SerializablePair::getRhs, Comparator.nullsFirst(Comparator.naturalOrder()))
+  );
 
   @Override
   public String getTypeName()
@@ -87,7 +94,7 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
       @Override
       public int compare(@Nullable SerializablePairLongString o1, @Nullable SerializablePairLongString o2)
       {
-        return StringFirstAggregatorFactory.VALUE_COMPARATOR.compare(o1, o2);
+        return COMPARATOR.compare(o1, o2);
       }
 
       @Override

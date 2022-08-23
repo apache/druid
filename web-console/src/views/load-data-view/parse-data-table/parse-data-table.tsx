@@ -25,11 +25,11 @@ import { TableCell } from '../../../components';
 import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
 import { FlattenField } from '../../../druid-models';
 import {
-  caseInsensitiveContains,
-  filterMap,
+  DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
-} from '../../../utils';
+} from '../../../react-table';
+import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './parse-data-table.scss';
@@ -58,7 +58,7 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
   const key = useInput ? 'input' : 'parsed';
   return (
     <ReactTable
-      className="parse-data-table -striped -highlight"
+      className={classNames('parse-data-table', DEFAULT_TABLE_CLASS_NAME)}
       data={sampleData.rows}
       sortable={false}
       defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
@@ -86,6 +86,7 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
           ),
           id: String(i),
           accessor: (row: SampleEntry) => (row[key] ? row[key]![columnName] : null),
+          width: 140,
           Cell: function ParseDataTableCell(row) {
             if (row.original.unparseable) {
               return <TableCellUnparseable />;

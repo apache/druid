@@ -45,25 +45,6 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   private final IncrementalIndex index;
   private final Map<String, DimensionAccessor> accessors;
 
-  private static class DimensionAccessor
-  {
-    private final IncrementalIndex.DimensionDesc dimensionDesc;
-    @Nullable
-    private final MutableBitmap[] invertedIndexes;
-    private final DimensionIndexer indexer;
-
-    public DimensionAccessor(IncrementalIndex.DimensionDesc dimensionDesc)
-    {
-      this.dimensionDesc = dimensionDesc;
-      this.indexer = dimensionDesc.getIndexer();
-      if (dimensionDesc.getCapabilities().hasBitmapIndexes()) {
-        this.invertedIndexes = new MutableBitmap[indexer.getCardinality() + 1];
-      } else {
-        this.invertedIndexes = null;
-      }
-    }
-  }
-
   public IncrementalIndexAdapter(Interval dataInterval, IncrementalIndex index, BitmapFactory bitmapFactory)
   {
     this.dataInterval = dataInterval;
@@ -116,6 +97,11 @@ public class IncrementalIndexAdapter implements IndexableAdapter
       }
       ++rowNum;
     }
+  }
+
+  public IncrementalIndex getIncrementalIndex()
+  {
+    return index;
   }
 
   @Override
@@ -190,6 +176,24 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     return new MutableBitmapValues(bitmapIndex);
   }
 
+  @Override
+  public String getMetricType(String metric)
+  {
+    return index.getMetricType(metric);
+  }
+
+  @Override
+  public ColumnCapabilities getCapabilities(String column)
+  {
+    return index.getColumnCapabilities(column);
+  }
+
+  @Override
+  public Metadata getMetadata()
+  {
+    return index.getMetadata();
+  }
+
   static class MutableBitmapValues implements BitmapValues
   {
     private final MutableBitmap bitmapIndex;
@@ -212,21 +216,22 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     }
   }
 
-  @Override
-  public String getMetricType(String metric)
+  private static class DimensionAccessor
   {
-    return index.getMetricType(metric);
-  }
+    private final IncrementalIndex.DimensionDesc dimensionDesc;
+    @Nullable
+    private final MutableBitmap[] invertedIndexes;
+    private final DimensionIndexer indexer;
 
-  @Override
-  public ColumnCapabilities getCapabilities(String column)
-  {
-    return index.getColumnCapabilities(column);
-  }
-
-  @Override
-  public Metadata getMetadata()
-  {
-    return index.getMetadata();
+    public DimensionAccessor(IncrementalIndex.DimensionDesc dimensionDesc)
+    {
+      this.dimensionDesc = dimensionDesc;
+      this.indexer = dimensionDesc.getIndexer();
+      if (dimensionDesc.getCapabilities().hasBitmapIndexes()) {
+        this.invertedIndexes = new MutableBitmap[indexer.getCardinality() + 1];
+      } else {
+        this.invertedIndexes = null;
+      }
+    }
   }
 }

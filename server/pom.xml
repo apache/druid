@@ -50,6 +50,13 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <!-- This is needed to bundle the web console -->
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-console</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
@@ -296,10 +303,6 @@
         <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.aether</groupId>
-            <artifactId>aether-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

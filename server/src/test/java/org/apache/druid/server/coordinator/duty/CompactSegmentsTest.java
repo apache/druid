@@ -736,6 +736,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -801,6 +802,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -860,6 +862,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -914,6 +917,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -986,6 +990,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -1048,6 +1053,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -1104,6 +1110,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1206,6 +1213,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1337,6 +1345,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -1394,6 +1403,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1460,6 +1470,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1612,6 +1623,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -1709,6 +1721,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
@@ -1774,6 +1787,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -1831,6 +1845,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -2149,6 +2164,7 @@ public class CompactSegmentsTest
                   null,
                   null,
                   maxNumConcurrentSubTasks,
+                  null,
                   null,
                   null,
                   null,

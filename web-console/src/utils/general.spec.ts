@@ -29,7 +29,6 @@ import {
   moveToIndex,
   objectHash,
   parseCsvLine,
-  sqlQueryCustomTableFilter,
   swapElements,
 } from './general';
 
@@ -53,30 +52,6 @@ describe('general', () => {
           'baba'.split(''),
         ).join(''),
       ).toEqual('gefhdcba');
-    });
-  });
-
-  describe('sqlQueryCustomTableFilter', () => {
-    it('works with contains', () => {
-      expect(
-        String(
-          sqlQueryCustomTableFilter({
-            id: 'datasource',
-            value: `Hello`,
-          }),
-        ),
-      ).toEqual(`LOWER("datasource") LIKE '%hello%'`);
-    });
-
-    it('works with exact', () => {
-      expect(
-        String(
-          sqlQueryCustomTableFilter({
-            id: 'datasource',
-            value: `"Hello"`,
-          }),
-        ),
-      ).toEqual(`"datasource" = 'Hello'`);
     });
   });
 

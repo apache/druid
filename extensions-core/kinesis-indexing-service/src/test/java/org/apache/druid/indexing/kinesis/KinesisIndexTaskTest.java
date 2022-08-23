@@ -38,7 +38,7 @@ import com.google.inject.name.Named;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -2941,7 +2941,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         null,
-        null,
         logParseExceptions,
         maxParseExceptions,
         maxSavedParseExceptions,
@@ -3158,7 +3157,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new NoopChatHandlerProvider(),
         testUtils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
-        new NoopIndexingServiceClient(),
+        new NoopOverlordClient(),
         null,
         null,
         null

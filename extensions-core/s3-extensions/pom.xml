@@ -116,6 +116,11 @@
       <artifactId>aws-java-sdk-sts</artifactId>
       <version>${aws.sdk.version}</version>
     </dependency>
+    <dependency>
+      <groupId>it.unimi.dsi</groupId>
+      <artifactId>fastutil-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
     <!-- Tests -->
     <dependency>
       <groupId>org.apache.druid</groupId>

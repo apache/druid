@@ -460,6 +460,12 @@ public class OperatorConversions
       return this;
     }
 
+    public OperatorBuilder operandTypeInference(SqlOperandTypeInference operandTypeInference)
+    {
+      this.operandTypeInference = operandTypeInference;
+      return this;
+    }
+
     /**
      * Creates a {@link SqlFunction} from this builder.
      */

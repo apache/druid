@@ -276,38 +276,36 @@ public class LookupJoinableTest extends NullHandlingTest
   @Test
   public void getNonNullColumnValuesIfAllUniqueForValueColumnShouldReturnEmpty()
   {
-    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
         Integer.MAX_VALUE
     );
 
-    Assert.assertEquals(Optional.empty(), values);
+    Assert.assertEquals(ImmutableSet.of(), values.getColumnValues());
   }
 
   @Test
   public void getNonNullColumnValuesIfAllUniqueForKeyColumnShouldReturnValues()
   {
-    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(
         LookupColumnSelectorFactory.KEY_COLUMN,
         Integer.MAX_VALUE
     );
 
     Assert.assertEquals(
-        Optional.of(
-            NullHandling.replaceWithDefault() ? ImmutableSet.of("foo", "bar") : ImmutableSet.of("foo", "bar", "")
-        ),
-        values
+        NullHandling.replaceWithDefault() ? ImmutableSet.of("foo", "bar") : ImmutableSet.of("foo", "bar", ""),
+        values.getColumnValues()
     );
   }
 
   @Test
   public void getNonNullColumnValuesIfAllUniqueForKeyColumnWithLowMaxValuesShouldReturnEmpty()
   {
-    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(
         LookupColumnSelectorFactory.KEY_COLUMN,
         1
     );
 
-    Assert.assertEquals(Optional.empty(), values);
+    Assert.assertEquals(ImmutableSet.of(), values.getColumnValues());
   }
 }

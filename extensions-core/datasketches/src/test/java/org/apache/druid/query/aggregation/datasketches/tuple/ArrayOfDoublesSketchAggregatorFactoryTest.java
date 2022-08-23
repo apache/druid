@@ -110,4 +110,12 @@ public class ArrayOfDoublesSketchAggregatorFactoryTest
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
   }
+
+  @Test
+  public void testWithName()
+  {
+    AggregatorFactory factory = new ArrayOfDoublesSketchAggregatorFactory("name", "", null, null, null);
+    Assert.assertEquals(factory, factory.withName("name"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
 }

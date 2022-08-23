@@ -185,18 +185,17 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
   }
 
   private trigger() {
-    const currentlyLoading = Boolean(this.currentRunCancelFn);
-
-    this.setState(
-      new QueryState<R, E>({
-        loading: true,
-        lastData: this.state.getSomeData(),
-      }),
-    );
-
-    if (currentlyLoading) {
+    if (this.currentRunCancelFn) {
+      // Currently loading
       this.runWhenLoading();
     } else {
+      this.setState(
+        new QueryState<R, E>({
+          loading: true,
+          lastData: this.state.getSomeData(),
+        }),
+      );
+
       this.runWhenIdle();
     }
   }

@@ -311,7 +311,7 @@ public abstract class AbstractAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Allowed:false, Message:\"}"
+        "{\"Access-Check-Result\":\"Unauthorized\"}"
     );
 
     LOG.info("Checking sys.servers query as datasourceOnlyUser...");
@@ -319,7 +319,7 @@ public abstract class AbstractAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Allowed:false, Message:\"}"
+        "{\"Access-Check-Result\":\"Unauthorized\"}"
     );
 
     LOG.info("Checking sys.server_segments query as datasourceOnlyUser...");
@@ -327,7 +327,7 @@ public abstract class AbstractAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Allowed:false, Message:\"}"
+        "{\"Access-Check-Result\":\"Unauthorized\"}"
     );
 
     LOG.info("Checking sys.tasks query as datasourceOnlyUser...");
@@ -335,7 +335,7 @@ public abstract class AbstractAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_TASKS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Allowed:false, Message:\"}"
+        "{\"Access-Check-Result\":\"Unauthorized\"}"
     );
   }
 
@@ -366,7 +366,7 @@ public abstract class AbstractAuthConfigurationTest
         datasourceAndSysUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Insufficient permission to view servers : Allowed:false, Message:\"}"
+        "{\"Access-Check-Result\":\"Insufficient permission to view servers: Unauthorized\"}"
     );
 
     LOG.info("Checking sys.server_segments query as datasourceAndSysUser...");
@@ -374,7 +374,7 @@ public abstract class AbstractAuthConfigurationTest
         datasourceAndSysUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Insufficient permission to view servers : Allowed:false, Message:\"}"
+        "{\"Access-Check-Result\":\"Insufficient permission to view servers: Unauthorized\"}"
     );
 
     LOG.info("Checking sys.tasks query as datasourceAndSysUser...");
@@ -652,15 +652,13 @@ public abstract class AbstractAuthConfigurationTest
   protected void testAvaticaQuery(Properties connectionProperties, String url)
   {
     LOG.info("URL: " + url);
-    try {
-      Connection connection = DriverManager.getConnection(url, connectionProperties);
-      Statement statement = connection.createStatement();
+    try (
+        Connection connection = DriverManager.getConnection(url, connectionProperties);
+        Statement statement = connection.createStatement()) {
       statement.setMaxRows(450);
       String query = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS";
       ResultSet resultSet = statement.executeQuery(query);
       Assert.assertTrue(resultSet.next());
-      statement.close();
-      connection.close();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -681,9 +679,9 @@ public abstract class AbstractAuthConfigurationTest
       throws Exception
   {
     LOG.info("URL: " + url);
-    try {
-      Connection connection = DriverManager.getConnection(url, connectionProperties);
-      Statement statement = connection.createStatement();
+    try (
+        Connection connection = DriverManager.getConnection(url, connectionProperties);
+        Statement statement = connection.createStatement()) {
       statement.setMaxRows(450);
       String query = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS";
       statement.executeQuery(query);

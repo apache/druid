@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.rel;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -48,6 +49,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -72,6 +74,7 @@ import org.apache.druid.query.topn.TopNMetricSpec;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -86,8 +89,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.OffsetLimit;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rule.GroupByRules;
-import org.apache.druid.sql.calcite.run.QueryFeature;
-import org.apache.druid.sql.calcite.run.QueryFeatureInspector;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nonnull;
@@ -111,6 +113,11 @@ import java.util.stream.Collectors;
  */
 public class DruidQuery
 {
+  /**
+   * Native query context key that is set when {@link EngineFeature#SCAN_NEEDS_SIGNATURE}.
+   */
+  public static final String CTX_SCAN_SIGNATURE = "scanSignature";
+
   private final DataSource dataSource;
   private final PlannerContext plannerContext;
 
@@ -130,6 +137,7 @@ public class DruidQuery
   private final RowSignature outputRowSignature;
   private final RelDataType outputRowType;
   private final VirtualColumnRegistry virtualColumnRegistry;
+  private final RowSignature sourceRowSignature;
 
   private DruidQuery(
       final DataSource dataSource,
@@ -149,10 +157,12 @@ public class DruidQuery
     this.selectProjection = selectProjection;
     this.grouping = grouping;
     this.sorting = sorting;
+    this.sourceRowSignature = sourceRowSignature;
+
     this.outputRowSignature = computeOutputRowSignature(sourceRowSignature, selectProjection, grouping, sorting);
     this.outputRowType = Preconditions.checkNotNull(outputRowType, "outputRowType");
     this.virtualColumnRegistry = Preconditions.checkNotNull(virtualColumnRegistry, "virtualColumnRegistry");
-    this.query = computeQuery(plannerContext.getQueryMaker());
+    this.query = computeQuery();
   }
 
   public static DruidQuery fromPartialQuery(
@@ -167,7 +177,11 @@ public class DruidQuery
   {
     final RelDataType outputRowType = partialQuery.leafRel().getRowType();
     if (virtualColumnRegistry == null) {
-      virtualColumnRegistry = VirtualColumnRegistry.create(sourceRowSignature, plannerContext.getExprMacroTable());
+      virtualColumnRegistry = VirtualColumnRegistry.create(
+          sourceRowSignature,
+          plannerContext.getExprMacroTable(),
+          plannerContext.getPlannerConfig().isForceExpressionVirtualColumns()
+      );
     }
 
     // Now the fun begins.
@@ -634,23 +648,24 @@ public class DruidQuery
     // implementation can be used instead of being composed as part of some expression tree in an expresson virtual
     // column
     Set<String> specialized = new HashSet<>();
+    final boolean forceExpressionVirtualColumns =
+        plannerContext.getPlannerConfig().isForceExpressionVirtualColumns();
     virtualColumnRegistry.visitAllSubExpressions((expression) -> {
-      switch (expression.getType()) {
-        case SPECIALIZED:
-          // add the expression to the top level of the registry as a standalone virtual column
-          final String name = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-              expression,
-              expression.getDruidType()
-          );
-          specialized.add(name);
-          // replace with an identifier expression of the new virtual column name
-          return DruidExpression.ofColumn(expression.getDruidType(), name);
-        default:
-          // do nothing
-          return expression;
+      if (!forceExpressionVirtualColumns
+          && expression.getType() == DruidExpression.NodeType.SPECIALIZED) {
+        // add the expression to the top level of the registry as a standalone virtual column
+        final String name = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+            expression,
+            expression.getDruidType()
+        );
+        specialized.add(name);
+        // replace with an identifier expression of the new virtual column name
+        return DruidExpression.ofColumn(expression.getDruidType(), name);
+      } else {
+        // do nothing
+        return expression;
       }
     });
-
 
     // we always want to add any virtual columns used by the query level DimFilter
     if (filter != null) {
@@ -791,13 +806,13 @@ public class DruidQuery
    *
    * @return Druid query
    */
-  private Query computeQuery(final QueryFeatureInspector queryFeatureInspector)
+  private Query computeQuery()
   {
     if (dataSource instanceof QueryDataSource) {
       // If there is a subquery, then we prefer the outer query to be a groupBy if possible, since this potentially
       // enables more efficient execution. (The groupBy query toolchest can handle some subqueries by itself, without
       // requiring the Broker to inline results.)
-      final GroupByQuery outerQuery = toGroupByQuery(queryFeatureInspector);
+      final GroupByQuery outerQuery = toGroupByQuery();
 
       if (outerQuery != null) {
         return outerQuery;
@@ -809,22 +824,22 @@ public class DruidQuery
       return timeBoundaryQuery;
     }
 
-    final TimeseriesQuery tsQuery = toTimeseriesQuery(queryFeatureInspector);
+    final TimeseriesQuery tsQuery = toTimeseriesQuery();
     if (tsQuery != null) {
       return tsQuery;
     }
 
-    final TopNQuery topNQuery = toTopNQuery(queryFeatureInspector);
+    final TopNQuery topNQuery = toTopNQuery();
     if (topNQuery != null) {
       return topNQuery;
     }
 
-    final GroupByQuery groupByQuery = toGroupByQuery(queryFeatureInspector);
+    final GroupByQuery groupByQuery = toGroupByQuery();
     if (groupByQuery != null) {
       return groupByQuery;
     }
 
-    final ScanQuery scanQuery = toScanQuery(queryFeatureInspector);
+    final ScanQuery scanQuery = toScanQuery();
     if (scanQuery != null) {
       return scanQuery;
     }
@@ -840,7 +855,8 @@ public class DruidQuery
   @Nullable
   private TimeBoundaryQuery toTimeBoundaryQuery()
   {
-    if (grouping == null
+    if (!plannerContext.engineHasFeature(EngineFeature.TIME_BOUNDARY_QUERY)
+        || grouping == null
         || grouping.getSubtotals().hasEffect(grouping.getDimensionSpecs())
         || grouping.getHavingFilter() != null
         || selectProjection != null) {
@@ -901,9 +917,9 @@ public class DruidQuery
    * @return query
    */
   @Nullable
-  private TimeseriesQuery toTimeseriesQuery(final QueryFeatureInspector queryFeatureInspector)
+  private TimeseriesQuery toTimeseriesQuery()
   {
-    if (!queryFeatureInspector.feature(QueryFeature.CAN_RUN_TIMESERIES)
+    if (!plannerContext.engineHasFeature(EngineFeature.TIMESERIES_QUERY)
         || grouping == null
         || grouping.getSubtotals().hasEffect(grouping.getDimensionSpecs())
         || grouping.getHavingFilter() != null) {
@@ -1013,10 +1029,10 @@ public class DruidQuery
    * @return query or null
    */
   @Nullable
-  private TopNQuery toTopNQuery(final QueryFeatureInspector queryFeatureInspector)
+  private TopNQuery toTopNQuery()
   {
     // Must be allowed by the QueryMaker.
-    if (!queryFeatureInspector.feature(QueryFeature.CAN_RUN_TOPN)) {
+    if (!plannerContext.engineHasFeature(EngineFeature.TOPN_QUERY)) {
       return null;
     }
 
@@ -1108,7 +1124,7 @@ public class DruidQuery
    * @return query or null
    */
   @Nullable
-  private GroupByQuery toGroupByQuery(final QueryFeatureInspector queryFeatureInspector)
+  private GroupByQuery toGroupByQuery()
   {
     if (grouping == null) {
       return null;
@@ -1221,7 +1237,7 @@ public class DruidQuery
    * @return query or null
    */
   @Nullable
-  private ScanQuery toScanQuery(final QueryFeatureInspector queryFeatureInspector)
+  private ScanQuery toScanQuery()
   {
     if (grouping != null) {
       // Scan cannot GROUP BY.
@@ -1272,7 +1288,7 @@ public class DruidQuery
       orderByColumns = Collections.emptyList();
     }
 
-    if (!queryFeatureInspector.feature(QueryFeature.SCAN_CAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
+    if (!plannerContext.engineHasFeature(EngineFeature.SCAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
       if (orderByColumns.size() > 1 || !ColumnHolder.TIME_COLUMN_NAME.equals(orderByColumns.get(0).getColumnName())) {
         // Cannot handle this ordering.
         // Scan cannot ORDER BY non-time columns.
@@ -1297,10 +1313,13 @@ public class DruidQuery
     final SortedSet<String> scanColumns = new TreeSet<>(outputRowSignature.getColumnNames());
     orderByColumns.forEach(column -> scanColumns.add(column.getColumnName()));
 
+    final VirtualColumns virtualColumns = getVirtualColumns(true);
+    final ImmutableList<String> scanColumnsList = ImmutableList.copyOf(scanColumns);
+
     return new ScanQuery(
         newDataSource,
         filtration.getQuerySegmentSpec(),
-        getVirtualColumns(true),
+        virtualColumns,
         ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
         0,
         scanOffset,
@@ -1308,9 +1327,57 @@ public class DruidQuery
         null,
         orderByColumns,
         filtration.getDimFilter(),
-        ImmutableList.copyOf(scanColumns),
+        scanColumnsList,
         false,
-        ImmutableSortedMap.copyOf(plannerContext.getQueryContext().getMergedParams())
+        withScanSignatureIfNeeded(
+            virtualColumns,
+            scanColumnsList,
+            plannerContext.getQueryContext()
+        ).getMergedParams()
     );
+  }
+
+  /**
+   * Returns a copy of "queryContext" with {@link #CTX_SCAN_SIGNATURE} added if the execution context has the
+   * {@link EngineFeature#SCAN_NEEDS_SIGNATURE} feature.
+   */
+  private QueryContext withScanSignatureIfNeeded(
+      final VirtualColumns virtualColumns,
+      final List<String> scanColumns,
+      final QueryContext queryContext
+  )
+  {
+    if (plannerContext.engineHasFeature(EngineFeature.SCAN_NEEDS_SIGNATURE)) {
+      // Compute the signature of the columns that we are selecting.
+      final RowSignature.Builder scanSignatureBuilder = RowSignature.builder();
+
+      for (final String columnName : scanColumns) {
+        final ColumnCapabilities capabilities =
+            virtualColumns.getColumnCapabilitiesWithFallback(sourceRowSignature, columnName);
+
+        if (capabilities == null) {
+          // No type for this column. This is a planner bug.
+          throw new ISE("No type for column [%s]", columnName);
+        }
+
+        scanSignatureBuilder.add(columnName, capabilities.toColumnType());
+      }
+
+      final RowSignature signature = scanSignatureBuilder.build();
+
+      try {
+        final QueryContext newContext = queryContext.copy();
+        newContext.addSystemParam(
+            CTX_SCAN_SIGNATURE,
+            plannerContext.getJsonMapper().writeValueAsString(signature)
+        );
+        return newContext;
+      }
+      catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
+    } else {
+      return queryContext;
+    }
   }
 }

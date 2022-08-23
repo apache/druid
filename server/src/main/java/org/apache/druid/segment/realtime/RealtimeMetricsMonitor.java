@@ -46,6 +46,8 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
   private final List<FireDepartment> fireDepartments;
   private final Map<String, String[]> dimensions;
 
+  private volatile boolean lastRoundMetricsToBePushed = false;
+
   @Inject
   public RealtimeMetricsMonitor(List<FireDepartment> fireDepartments)
   {
@@ -57,6 +59,27 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
     this.fireDepartments = fireDepartments;
     this.previousValues = new HashMap<>();
     this.dimensions = ImmutableMap.copyOf(dimensions);
+  }
+
+  @Override
+  public void start()
+  {
+    super.start();
+    lastRoundMetricsToBePushed = true;
+  }
+
+  @Override
+  public boolean monitor(ServiceEmitter emitter)
+  {
+    if (isStarted()) {
+      return doMonitor(emitter);
+    } else if (lastRoundMetricsToBePushed) {
+      // Run one more time even if the monitor was removed, in case there's some extra data to flush
+      lastRoundMetricsToBePushed = false;
+      return doMonitor(emitter);
+    }
+
+    return false;
   }
 
   @Override
