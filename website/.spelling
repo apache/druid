@@ -2006,3 +2006,10 @@ protobuf
 Golang
 multiValueHandling
 _n_
+KLL
+KllFloatsSketch
+KllDoublesSketch
+PMF
+CDF
+maxStreamLength
+toString
