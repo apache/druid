@@ -62,9 +62,9 @@ public class TestExprMacroTable extends ExprMacroTable
             new NestedDataExpressions.JsonPathsExprMacro(),
             new NestedDataExpressions.JsonValueExprMacro(),
             new NestedDataExpressions.JsonQueryExprMacro(),
-            new NestedDataExpressions.ToJsonExprMacro(),
             new NestedDataExpressions.ToJsonStringExprMacro(jsonMapper),
-            new NestedDataExpressions.ParseJsonExprMacro(jsonMapper)
+            new NestedDataExpressions.ParseJsonExprMacro(jsonMapper),
+            new NestedDataExpressions.TryParseJsonExprMacro(jsonMapper)
         )
     );
   }
