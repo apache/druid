@@ -37,7 +37,7 @@
 #
 # - DRUID_CONFIG_COMMON -- full path to a file for druid 'common' properties
 # - DRUID_CONFIG_${service} -- full path to a file for druid 'service' properties
-# - DRUID_SINGLE_NODE_CONF -- config to use at runtime. Choose from: {cluster, large, medium, micro-quickstart, nano-quickstart, small, xlarge}
+# - DRUID_SINGLE_NODE_CONF -- config to use at runtime. Choose from: {large, medium, micro-quickstart, nano-quickstart, small, xlarge}
 
 set -e
 SERVICE="$1"
