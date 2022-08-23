@@ -89,7 +89,7 @@ public class ObjectFlatteners
           @Override
           public boolean isEmpty()
           {
-            throw new UnsupportedOperationException();
+            return keySet().isEmpty();
           }
 
           @Override
