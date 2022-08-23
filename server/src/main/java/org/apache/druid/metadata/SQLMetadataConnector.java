@@ -503,26 +503,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
   }
 
-  /**
-   * Populates the used_flag_last_updated column for all unused segments in the Druid segment table.
-   *
-   * The current UTC timestamp string is used for the content of each column.
-   * This is public due to allow the UpdateTables cli tool to use in a optional post-upgrade action.
-   */
-  @Override
-  public void updateSegmentTablePopulateUsedFlagLastUpdated()
-  {
-    String tableName = tablesConfigSupplier.get().getSegmentsTable();
-    if (tableHasColumn(tableName, "used_flag_last_updated")) {
-      getDBI().withHandle(
-          (Handle handle) -> handle
-              .createStatement(StringUtils.format("UPDATE %s SET used_flag_last_updated = :used_flag_last_updated WHERE used = false", tableName))
-              .bind("used_flag_last_updated", DateTimes.nowUtc().toString())
-              .execute()
-      );
-    }
-  }
-
   @Override
   public Void insertOrUpdate(
       final String tableName,
