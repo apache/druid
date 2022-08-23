@@ -19,27 +19,21 @@
 
 package org.apache.druid.testsEx.msq;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.druid.indexer.TaskState;
-import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.msq.indexing.report.MSQStagesReport;
-import org.apache.druid.msq.indexing.report.MSQStatusReport;
-import org.apache.druid.msq.indexing.report.MSQTaskReport;
-import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.MsqTestClient;
+import org.apache.druid.testing.guice.models.MSQTaskReportDeserializable;
+import org.apache.druid.testing.utils.MsqQueryWithResults;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testsEx.categories.BatchIndex;
 import org.apache.druid.testsEx.config.DruidTestRunner;
-import org.joda.time.DateTime;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import java.util.ArrayDeque;
 import java.util.Map;
 
 @RunWith(DruidTestRunner.class)
@@ -84,33 +78,19 @@ public class ITMultiStageQuery
         + "PARTITIONED BY ALL TIME";
     String taskId = msqHelper.submitMsqTask(query);
     msqHelper.pollTaskIdForCompletion(taskId, 0);
-    Map<String, MSQTaskReport> reports = msqHelper.fetchStatusReports(taskId);
+    Map<String, MSQTaskReportDeserializable> reports = msqHelper.fetchStatusReports(taskId);
+
+    String resultsQuery = "SELECT * FROM dst";
+    String resultsTaskId = msqHelper.submitMsqTask(resultsQuery);
+    msqHelper.pollTaskIdForCompletion(resultsTaskId, 0);
+    msqHelper.compareResults(resultsTaskId, new MsqQueryWithResults(
+        query,
+        ImmutableList.of(
+            ImmutableMap.of("x", "a", "y", "b", "z", 1),
+            ImmutableMap.of("x", "c", "y", "d", "z", 2)
+        )
+    ));
     int x = 5;
     x += 1;
   }
-
-  @Test
-  public void scratchPad() throws JsonProcessingException
-  {
-    MSQTaskReport msqTaskReport = new MSQTaskReport(
-        "test-id",
-        new MSQTaskReportPayload(
-            new MSQStatusReport(
-                TaskState.RUNNING,
-                null,
-                new ArrayDeque<>(),
-                DateTime.now(),
-                1
-            ),
-            new MSQStagesReport(ImmutableList.of()),
-            null,
-            null
-        )
-    );
-    String serialized = jsonMapper.writeValueAsString(msqTaskReport);
-    MSQTaskReport deserializEd = jsonMapper.readValue(serialized, MSQTaskReport.class);
-    int x = 6;
-    x += 1;
-  }
 }
-

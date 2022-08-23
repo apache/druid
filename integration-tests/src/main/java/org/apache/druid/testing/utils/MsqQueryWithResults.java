@@ -21,18 +21,17 @@ package org.apache.druid.testing.utils;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.sql.http.SqlQuery;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class MsqQueryWithResults extends AbstractQueryWithResults<SqlQuery>
+public class MsqQueryWithResults extends AbstractQueryWithResults<String>
 {
 
   @JsonCreator
   public MsqQueryWithResults(
-      @JsonProperty("query") SqlQuery query,
+      @JsonProperty("query") String query,
       @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults
   )
   {
