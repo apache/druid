@@ -28,7 +28,7 @@ class Footer extends React.Component {
               <a href="/technology">Technology</a>&ensp;·&ensp;
               <a href="/use-cases">Use Cases</a>&ensp;·&ensp;
               <a href="/druid-powered">Powered by Druid</a>&ensp;·&ensp;
-              <a href="/docs/latest">Docs</a>&ensp;·&ensp;
+              <a href="/docs/">Docs</a>&ensp;·&ensp;
               <a href="/community/">Community</a>&ensp;·&ensp;
               <a href="/downloads.html">Download</a>&ensp;·&ensp;
               <a href="/faq">FAQ</a>
