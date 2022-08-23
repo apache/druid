@@ -36,8 +36,8 @@ public class NestedDataDimensionHandler implements DimensionHandler<StructuredDa
 {
   private static Comparator<ColumnValueSelector> COMPARATOR = (s1, s2) ->
       StructuredData.COMPARATOR.compare(
-          StructuredData.possiblyWrap(s1.getObject()),
-          StructuredData.possiblyWrap(s2.getObject())
+          StructuredData.wrap(s1.getObject()),
+          StructuredData.wrap(s2.getObject())
       );
 
   private final String name;

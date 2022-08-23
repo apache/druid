@@ -307,9 +307,9 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new NestedDataOperatorConversions.JsonValueOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonValueAnyOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonObjectOperatorConversion())
-                   .add(new NestedDataOperatorConversions.ToJsonOperatorConversion())
                    .add(new NestedDataOperatorConversions.ToJsonStringOperatorConversion())
                    .add(new NestedDataOperatorConversions.ParseJsonOperatorConversion())
+                   .add(new NestedDataOperatorConversions.TryParseJsonOperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> STANDARD_OPERATOR_CONVERSIONS =
