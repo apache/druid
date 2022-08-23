@@ -32,6 +32,7 @@ import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 
+import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -75,7 +76,26 @@ public class StatusResource
   {
     Map<String, String> allProperties = Maps.fromProperties(properties);
     Set<String> hidderProperties = druidServerConfig.getHiddenProperties();
-    return Maps.filterEntries(allProperties, (entry) -> !hidderProperties.contains(entry.getKey()));
+    Set<String> hidderPropertiesContain = druidServerConfig.getHiddenPropertiesContain();
+    Map<String, String> unhiddenProperties = Maps.filterEntries(allProperties, (entry) -> !hidderProperties.contains(entry.getKey()));
+    return filterHiddenPropertiesContain(hidderPropertiesContain, unhiddenProperties);
+  }
+
+  @Nonnull
+  private Map<String, String> filterHiddenPropertiesContain(
+      Set<String> hidderPropertiesContain,
+      Map<String, String> unhiddenProperties
+  )
+  {
+    return Maps.filterEntries(
+        unhiddenProperties,
+        (entry) -> hidderPropertiesContain
+            .stream()
+            .anyMatch(
+                hiddenPropertyElement ->
+                    !entry.getKey().contains(hiddenPropertyElement)
+            )
+    );
   }
 
   @GET

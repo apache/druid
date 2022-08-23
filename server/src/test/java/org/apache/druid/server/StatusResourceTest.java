@@ -62,7 +62,7 @@ public class StatusResourceTest
   }
 
   @Test
-  public void testPropertiesWithRestrictedConfigs()
+  public void testHiddenProperties()
   {
     Injector injector = Guice.createInjector(Collections.singletonList(new PropertiesModule(Collections.singletonList(
         "status.resource.test.runtime.properties"))));
@@ -70,5 +70,16 @@ public class StatusResourceTest
     Set<String> hiddenProperties = new HashSet<>();
     Splitter.on(",").split(returnedProperties.get("druid.server.hiddenProperties")).forEach(hiddenProperties::add);
     hiddenProperties.forEach((property) -> Assert.assertNull(returnedProperties.get(property)));
+  }
+
+  @Test
+  public void testHiddenPropertiesContain()
+  {
+    Injector injector = Guice.createInjector(Collections.singletonList(new PropertiesModule(Collections.singletonList(
+            "status.resource.test.runtime.hpc.properties"))));
+    Map<String, String> returnedProperties = injector.getInstance(StatusResource.class).getProperties();
+    Set<String> hiddenPropertiesContain = new HashSet<>();
+    Splitter.on(",").split(returnedProperties.get("druid.server.hiddenPropertiesContain")).forEach(hiddenPropertiesContain::add);
+    hiddenPropertiesContain.forEach((property) -> Assert.assertFalse(returnedProperties.keySet().stream().anyMatch((returnedProperty) -> returnedProperty.contains(property))));
   }
 }
