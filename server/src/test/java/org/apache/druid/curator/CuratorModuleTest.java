@@ -54,7 +54,7 @@ public final class CuratorModuleTest
   public final LoggerCaptureRule logger = new LoggerCaptureRule(CuratorModule.class);
 
   @Test
-  public void createsCuratorFrameworkAsConfigured() throws Exception
+  public void createsCuratorFrameworkAsConfigured()
   {
     CuratorConfig config = CuratorConfig.create("myhost1:2888,myhost2:2888");
     CuratorFramework curatorFramework = CuratorModule.createCurator(config);
