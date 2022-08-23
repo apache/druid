@@ -20,6 +20,7 @@
 package org.apache.druid.msq.shuffle;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameFileChannel;
@@ -118,17 +119,22 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
     }
   }
 
+  public static String getControllerDirectory(final String controllerTaskId)
+  {
+    return StringUtils.format("controller_%s", IdUtils.validateId("controller task ID", controllerTaskId));
+  }
+
   public static String getPartitionFileName(
-      String controllerTaskId,
-      String workerTaskId,
-      int stageNumber,
-      int partitionNumber
+      final String controllerTaskId,
+      final String workerTaskId,
+      final int stageNumber,
+      final int partitionNumber
   )
   {
     return StringUtils.format(
-        "controller_%s/worker_%s/stage_%d/part_%d",
-        controllerTaskId,
-        workerTaskId,
+        "%s/worker_%s/stage_%d/part_%d",
+        getControllerDirectory(controllerTaskId),
+        IdUtils.validateId("worker task ID", workerTaskId),
         stageNumber,
         partitionNumber
     );

@@ -144,6 +144,7 @@ import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
 import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
+import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
@@ -669,9 +670,6 @@ public class ControllerImpl implements Controller
     addToKernelManipulationQueue(
         queryKernel -> {
           final StageId stageId = new StageId(queryId, stageNumber);
-          if (stageId == null) {
-            throw new ISE("Unable to find stage with id [%s]", stageId);
-          }
           final Object convertedResultObject;
           try {
             convertedResultObject = context.jsonMapper().convertValue(
@@ -1297,7 +1295,7 @@ public class ControllerImpl implements Controller
   private void cleanUpDurableStorageIfNeeded()
   {
     if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().getContext())) {
-      final String controllerDirName = StringUtils.format("controller_%s", task.getId());
+      final String controllerDirName = DurableStorageOutputChannelFactory.getControllerDirectory(task.getId());
       try {
         // Delete all temporary files as a failsafe
         MSQTasks.makeStorageConnector(context.injector()).deleteRecursively(controllerDirName);

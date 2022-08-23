@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.EnumUtils;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.StorageLocationConfig;
@@ -191,7 +192,7 @@ public class TaskConfig
 
   public File getTaskDir(String taskId)
   {
-    return new File(baseTaskDir, taskId);
+    return new File(baseTaskDir, IdUtils.validateId("task ID", taskId));
   }
 
   public File getTaskWorkDir(String taskId)
