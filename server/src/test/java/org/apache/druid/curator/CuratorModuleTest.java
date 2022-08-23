@@ -20,6 +20,8 @@
 package org.apache.druid.curator;
 
 import com.google.inject.Injector;
+
+import org.apache.curator.CuratorZookeeperClient;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
@@ -30,6 +32,8 @@ import org.apache.druid.testing.junit.LoggerCaptureRule;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -49,6 +53,22 @@ public final class CuratorModuleTest
 
   @Rule
   public final LoggerCaptureRule logger = new LoggerCaptureRule(CuratorModule.class);
+
+  @Test
+  public void createsCuratorFrameworkAsConfigured() throws Exception
+  {
+    CuratorConfig config = CuratorConfig.create("myhost1:2888,myhost2:2888");
+    CuratorFramework curatorFramework = CuratorModule.createCurator(config);
+    CuratorZookeeperClient client = curatorFramework.getZookeeperClient();
+
+    Assert.assertEquals(config.getZkHosts(), client.getCurrentConnectionString());
+    Assert.assertEquals(config.getZkConnectionTimeoutMs(), client.getConnectionTimeoutMs());
+
+    MatcherAssert.assertThat(client.getRetryPolicy(), Matchers.instanceOf(BoundedExponentialBackoffRetry.class));
+    BoundedExponentialBackoffRetry retryPolicy = (BoundedExponentialBackoffRetry) client.getRetryPolicy();
+    Assert.assertEquals(CuratorModule.BASE_SLEEP_TIME_MS, retryPolicy.getBaseSleepTimeMs());
+    Assert.assertEquals(CuratorModule.MAX_SLEEP_TIME_MS, retryPolicy.getMaxSleepTimeMs());
+  }
 
   @Test
   public void exitsJvmWhenMaxRetriesExceeded() throws Exception

@@ -418,8 +418,6 @@ public class DiscoveryModule implements Module
 
     private static class NoopServiceCache<T> implements ServiceCache<T>
     {
-      private static final CountDownLatch COUNT_DOWN_LATCH = new CountDownLatch(0);
-
       @Override
       public List<ServiceInstance<T>> getInstances()
       {
@@ -433,9 +431,9 @@ public class DiscoveryModule implements Module
       }
 
       @Override
-      public CountDownLatch startImmediate() throws Exception
+      public CountDownLatch startImmediate()
       {
-        return COUNT_DOWN_LATCH;
+        return null;
       }
 
       @Override

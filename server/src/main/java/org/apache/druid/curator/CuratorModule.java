@@ -45,8 +45,8 @@ public class CuratorModule implements Module
 {
   private static final Logger log = new Logger(CuratorModule.class);
 
-  private static final int BASE_SLEEP_TIME_MS = 1000;
-  private static final int MAX_SLEEP_TIME_MS = 45000;
+  static final int BASE_SLEEP_TIME_MS = 1000;
+  static final int MAX_SLEEP_TIME_MS = 45000;
   private static final int MAX_RETRIES = 29;
 
   @Override
