@@ -54,6 +54,7 @@ public class SqlExecutionReporter
   private final long startNs;
   private Throwable e;
   private long bytesWritten;
+  private long planningTimeNanos;
 
   public SqlExecutionReporter(
       final AbstractStatement stmt,
@@ -74,6 +75,11 @@ public class SqlExecutionReporter
   public void succeeded(final long bytesWritten)
   {
     this.bytesWritten = bytesWritten;
+  }
+
+  public void planningTimeNanos(final long planningTimeNanos)
+  {
+    this.planningTimeNanos = planningTimeNanos;
   }
 
   public void emit()
@@ -105,9 +111,16 @@ public class SqlExecutionReporter
       if (bytesWritten >= 0) {
         emitter.emit(metricBuilder.build("sqlQuery/bytes", bytesWritten));
       }
+      if (planningTimeNanos >= 0) {
+        emitter.emit(metricBuilder.build(
+            "sqlQuery/planningTimeMs",
+            TimeUnit.NANOSECONDS.toMillis(planningTimeNanos)
+        ));
+      }
 
       final Map<String, Object> statsMap = new LinkedHashMap<>();
       statsMap.put("sqlQuery/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
+      statsMap.put("sqlQuery/planningTimeMs", TimeUnit.NANOSECONDS.toMillis(planningTimeNanos));
       statsMap.put("sqlQuery/bytes", bytesWritten);
       statsMap.put("success", success);
       QueryContext queryContext;

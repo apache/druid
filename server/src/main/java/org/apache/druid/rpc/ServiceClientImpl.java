@@ -200,7 +200,12 @@ public class ServiceClientImpl implements ServiceClient
                         final String newUri = result.error().getResponse().headers().get("Location");
 
                         if (redirectCount >= MAX_REDIRECTS) {
-                          retVal.setException(new RpcException("Service [%s] issued too many redirects", serviceName));
+                          retVal.setException(new RpcException(
+                              "Service [%s] redirected too many times [%d] to invalid url %s",
+                              serviceName,
+                              redirectCount,
+                              newUri
+                          ));
                         } else {
                           // Update preferredLocationNoPath if we got a redirect.
                           final ServiceLocation redirectLocationNoPath = serviceLocationNoPathFromUri(newUri);
@@ -212,7 +217,12 @@ public class ServiceClientImpl implements ServiceClient
                             );
                           } else {
                             retVal.setException(
-                                new RpcException("Service [%s] redirected to invalid URL [%s]", serviceName, newUri)
+                                new RpcException(
+                                    "Service [%s] redirected [%d] times to invalid URL [%s]",
+                                    serviceName,
+                                    redirectCount,
+                                    newUri
+                                )
                             );
                           }
                         }

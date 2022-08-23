@@ -130,7 +130,14 @@ public class DefaultRequestLogEventTest
     final String host = "127.0.0.1";
     final String sql = "select * from 1337";
     final QueryStats queryStats = new QueryStats(
-        ImmutableMap.of("sqlQuery/time", 13L, "sqlQuery/bytes", 10L, "success", true, "identity", "allowAll"));
+        ImmutableMap.of(
+            "sqlQuery/time", 13L,
+            "sqlQuery/planningTimeMs", 1L,
+            "sqlQuery/bytes", 10L,
+            "success", true,
+            "identity", "allowAll"
+        )
+    );
 
     RequestLogLine nativeLine = RequestLogLine.forSql(
         sql,

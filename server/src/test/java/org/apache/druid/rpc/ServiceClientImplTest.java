@@ -285,7 +285,7 @@ public class ServiceClientImplTest
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(RpcException.class));
     MatcherAssert.assertThat(
         e.getCause(),
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("too many redirects"))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("redirected too many times"))
     );
   }
 
@@ -309,7 +309,8 @@ public class ServiceClientImplTest
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(RpcException.class));
     MatcherAssert.assertThat(
         e.getCause(),
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("redirected to invalid URL [invalid-url]"))
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString("redirected [0] times to invalid URL [invalid-url]"))
     );
   }
 
@@ -333,7 +334,7 @@ public class ServiceClientImplTest
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(RpcException.class));
     MatcherAssert.assertThat(
         e.getCause(),
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("redirected to invalid URL [null]"))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("redirected [0] times to invalid URL [null]"))
     );
   }
 
@@ -357,7 +358,7 @@ public class ServiceClientImplTest
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(RpcException.class));
     MatcherAssert.assertThat(
         e.getCause(),
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("too many redirects"))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("redirected too many times"))
     );
   }
 

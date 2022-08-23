@@ -88,6 +88,9 @@ import java.util.stream.Collectors;
 
 public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 {
+  // Timeout to allow (rapid) debugging, while not blocking tests with errors.
+  private static final int WAIT_TIMEOUT_SECS = 60;
+
   private SpecificSegmentsQuerySegmentWalker walker;
   private TestServerInventoryView serverView;
   private List<ImmutableDruidServer> druidServers;
@@ -931,11 +934,11 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     segmentDataSourceNames.add("foo");
     joinableDataSourceNames.add("foo");
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
-    Assert.assertTrue(markDataSourceLatch.await(2, TimeUnit.SECONDS));
+    Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for build twice
-    Assert.assertTrue(buildTableLatch.await(2, TimeUnit.SECONDS));
+    Assert.assertTrue(buildTableLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
-    Assert.assertTrue(getDatasourcesLatch.await(2, TimeUnit.SECONDS));
+    Assert.assertTrue(getDatasourcesLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
     fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
@@ -952,11 +955,11 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     segmentDataSourceNames.remove("foo");
     serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
 
-    Assert.assertTrue(markDataSourceLatch.await(2, TimeUnit.SECONDS));
+    Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for build
-    Assert.assertTrue(buildTableLatch.await(2, TimeUnit.SECONDS));
+    Assert.assertTrue(buildTableLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
-    Assert.assertTrue(getDatasourcesLatch.await(2, TimeUnit.SECONDS));
+    Assert.assertTrue(getDatasourcesLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
     fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
@@ -996,10 +999,10 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     segmentDataSourceNames.add("foo");
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
 
-    Assert.assertTrue(markDataSourceLatch.await(2, TimeUnit.SECONDS));
-    Assert.assertTrue(buildTableLatch.await(2, TimeUnit.SECONDS));
+    Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(buildTableLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
-    Assert.assertTrue(getDatasourcesLatch.await(2, TimeUnit.SECONDS));
+    Assert.assertTrue(getDatasourcesLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
     fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
@@ -1017,11 +1020,11 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     segmentDataSourceNames.remove("foo");
     serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
 
-    Assert.assertTrue(markDataSourceLatch.await(2, TimeUnit.SECONDS));
+    Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for build
-    Assert.assertTrue(buildTableLatch.await(2, TimeUnit.SECONDS));
+    Assert.assertTrue(buildTableLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
-    Assert.assertTrue(getDatasourcesLatch.await(2, TimeUnit.SECONDS));
+    Assert.assertTrue(getDatasourcesLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
     fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);

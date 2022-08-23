@@ -2362,7 +2362,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public void testToJsonAndParseJson()
   {
     testQuery(
-        "SELECT string, TO_JSON(string), PARSE_JSON(string), PARSE_JSON('{\"foo\":1}'), PARSE_JSON(TO_JSON_STRING(nester))\n"
+        "SELECT string, TRY_PARSE_JSON(TO_JSON_STRING(string)), PARSE_JSON('{\"foo\":1}'), PARSE_JSON(TO_JSON_STRING(nester))\n"
         + "FROM druid.nested",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -2371,30 +2371,24 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .virtualColumns(
                       new ExpressionVirtualColumn(
                           "v0",
-                          "to_json(\"string\")",
+                          "try_parse_json(to_json_string(\"string\"))",
                           NestedDataComplexTypeSerde.TYPE,
                           macroTable
                       ),
                       new ExpressionVirtualColumn(
                           "v1",
-                          "parse_json(\"string\")",
-                          NestedDataComplexTypeSerde.TYPE,
-                          macroTable
-                      ),
-                      new ExpressionVirtualColumn(
-                          "v2",
                           "parse_json('{\\u0022foo\\u0022:1}')",
                           NestedDataComplexTypeSerde.TYPE,
                           macroTable
                       ),
                       new ExpressionVirtualColumn(
-                          "v3",
+                          "v2",
                           "parse_json(to_json_string(\"nester\"))",
                           NestedDataComplexTypeSerde.TYPE,
                           macroTable
                       )
                   )
-                  .columns("string", "v0", "v1", "v2", "v3")
+                  .columns("string", "v0", "v1", "v2")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)
                   .build()
@@ -2403,23 +2397,21 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{
                 "aaa",
                 "\"aaa\"",
-                "\"aaa\"",
                 "{\"foo\":1}",
                 "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}"
             },
-            new Object[]{"bbb", "\"bbb\"", "\"bbb\"", "{\"foo\":1}", "\"hello\""},
-            new Object[]{"ccc", "\"ccc\"", "\"ccc\"", "{\"foo\":1}", null},
-            new Object[]{"ddd", "\"ddd\"", "\"ddd\"", "{\"foo\":1}", null},
-            new Object[]{"eee", "\"eee\"", "\"eee\"", "{\"foo\":1}", null},
-            new Object[]{"aaa", "\"aaa\"", "\"aaa\"", "{\"foo\":1}", "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"},
-            new Object[]{"ddd", "\"ddd\"", "\"ddd\"", "{\"foo\":1}", "2"}
+            new Object[]{"bbb", "\"bbb\"", "{\"foo\":1}", "\"hello\""},
+            new Object[]{"ccc", "\"ccc\"", "{\"foo\":1}", null},
+            new Object[]{"ddd", "\"ddd\"", "{\"foo\":1}", null},
+            new Object[]{"eee", "\"eee\"", "{\"foo\":1}", null},
+            new Object[]{"aaa", "\"aaa\"", "{\"foo\":1}", "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"},
+            new Object[]{"ddd", "\"ddd\"", "{\"foo\":1}", "2"}
         ),
         RowSignature.builder()
                     .add("string", ColumnType.STRING)
                     .add("EXPR$1", NestedDataComplexTypeSerde.TYPE)
                     .add("EXPR$2", NestedDataComplexTypeSerde.TYPE)
                     .add("EXPR$3", NestedDataComplexTypeSerde.TYPE)
-                    .add("EXPR$4", NestedDataComplexTypeSerde.TYPE)
                     .build()
     );
   }
