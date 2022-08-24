@@ -45,6 +45,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * A generic, flat storage mechanism.  Use static methods fromArray() or fromIterable() to construct.  If input
@@ -373,10 +374,45 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     return -(minIndex + 1);
   }
 
+  public int compare(@Nullable T b1, @Nullable T b2)
+  {
+    return strategy.compare(b1, b2);
+  }
+
   @Override
   public Iterator<T> iterator()
   {
     return IndexedIterable.create(this).iterator();
+  }
+
+  public Iterator<ValueWithIndex> iteratorWithIndexId()
+  {
+    return new Iterator<ValueWithIndex>()
+    {
+      private int currIndex = 0;
+
+      @Override
+      public boolean hasNext()
+      {
+        return currIndex < size();
+      }
+
+      @Override
+      public ValueWithIndex next()
+      {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        int idx = currIndex++;
+        return new ValueWithIndex(get(idx), idx);
+      }
+
+      @Override
+      public void remove()
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
   }
 
   @Override
@@ -825,5 +861,29 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
         inspector.visit("strategy", strategy);
       }
     };
+  }
+
+  public class ValueWithIndex
+  {
+    @Nullable
+    private final T value;
+    private final int idx;
+
+    public ValueWithIndex(@Nullable T value, int idx)
+    {
+      this.value = value;
+      this.idx = idx;
+    }
+
+    @Nullable
+    public T getValue()
+    {
+      return value;
+    }
+
+    public int getIdx()
+    {
+      return idx;
+    }
   }
 }
