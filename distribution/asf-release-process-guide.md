@@ -39,7 +39,37 @@ $ git checkout origin/master
 $ git checkout -b 0.17.0
 ```
 
-Then push the branch to `origin`. 
+#### Preparing the release branch
+Ensure that the web console and docker-compose file are in the correct state in the release branch.
+
+[package.json](../web-console/package.json) and [package-lock.json](../web-console/package-lock.json) should match the release version. If they do not, run:
+
+```bash
+npm version 0.17.0
+```
+
+[unified-console.html](../web-console/unified-console.html), Javascript script tag must match the package.json version:
+
+```html
+<script src="public/web-console-0.17.0.js"></script>
+```
+
+[`links.ts`](../web-console/src/links.ts) needs to be adjusted from `'latest'` to the release version:
+```
+const DRUID_DOCS_VERSION = '0.17.0';
+```
+
+The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should match the release version:
+
+```yaml
+...
+  coordinator:
+    image: apache/druid:0.17.0
+    container_name: coordinator
+...
+```
+
+Once everything is ready, then push the branch to `origin`. 
 
 #### Preparing the master branch for the next version after branching
 If doing a quarterly release, it will also be necessary to prepare master for the release _after_ the release you are working on, by setting the version to the next release snapshot:
@@ -53,11 +83,16 @@ You should also prepare the web-console for the next release, by bumping the [pa
 ```bash
 npm version 0.18.0
 ```
-and update the script tag top level html file, [unified-console.html](../web-console/unified-console.html):
+
+which will update `package.json` and `package-lock.json`.
+
+You will also need to manually update the top level html file, [unified-console.html](../web-console/unified-console.html), to ensure that the Javascript script tag is set to match the package.json version:
 
 ```html
 <script src="public/web-console-0.18.0.js"></script>
 ```
+
+[`DRUID_DOCS_VERSION` in `links.ts`](../web-console/src/links.ts) should already be set to `'latest'` in the master branch, and so should not have to be adjusted.
 
 The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should be updated to reflect the version for the next release:
 
@@ -68,8 +103,6 @@ The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/di
     container_name: coordinator
 ...
 ```
-
-`DRUID_DOCS_VERSION` has to be changed to `0.17.0` in [`links.ts`](https://github.com/apache/druid/blob/master/web-console/src/links.ts).
 
 Once this is completed, open a PR to the master branch. Also, be sure to confirm that these versions are all correct in the release branch, otherwise fix them and open a backport PR to the release branch.
 
@@ -219,23 +252,6 @@ It is also the release managers responsibility for correctly assigning all PRs m
 Next create an issue in the Druid github to contain the release notes and allow the community to provide feedback prior to the release. Make sure to attach it to the release milestone in github. It is highly recommended to review [previous release notes for reference](https://github.com/apache/druid/releases) of how to best structure them. Be sure to call out any exciting new features, important bug fixes, and any compatibility concerns for users or operators to consider when upgrading to this release.
 
 The [make-linkable-release-notes](bin/make-linkable-release-notes.py) script can assist in converting plain markdown into a version with headers that have embedded self links, to allow directly linking to specific release note entries.
-
-## Web console package version
-Make sure the web console Javascript package version matches the upcoming release version prior to making tags and artifacts. You can find the release version in [package.json](../web-console/package.json). This should be set correctly, but if it isn't, it can be set with: 
-
-```bash
-npm version 0.17.0
-```
-
-which will update `package.json` and `package-lock.json`.
-
-You will also need to manually update the top level html file, [unified-console.html](../web-console/unified-console.html), to ensure that the Javascript script tag is set to match the package.json version.
-
-```html
-<script src="public/web-console-0.17.0.js"></script>
-```
-
-Finally, [`DRUID_DOCS_VERSION` in `links.ts`](../web-console/src/links.ts) needs to be adjusted from `'latest'` to whatever the release version is, e.g. `0.17.0` so that the web console documentation links point to the correct location.
 
 
 ## Building a release candidate
