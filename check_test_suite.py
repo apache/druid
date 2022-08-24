@@ -29,7 +29,7 @@ always_run_jobs = ['license checks', '(openjdk8) packaging check', '(openjdk11) 
 ignore_prefixes = ['.github', '.idea', '.asf.yaml', '.backportrc.json', '.codecov.yml', '.dockerignore', '.gitignore',
                    '.lgtm.yml', 'CONTRIBUTING.md', 'setup-hooks.sh', 'upload.sh', 'dev', 'distribution/docker',
                    'distribution/asf-release-process-guide.md', '.travis.yml',
-                   'owasp-dependency-check-suppressions.xml']
+                   'owasp-dependency-check-suppressions.xml', 'licenses']
 
 script_prefixes = ['check_test_suite.py', 'check_test_suite_test.py']
 script_job = ['script checks']
