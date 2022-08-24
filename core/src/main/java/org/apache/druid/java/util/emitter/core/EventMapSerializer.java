@@ -19,24 +19,22 @@
 
 package org.apache.druid.java.util.emitter.core;
 
-class IntEvent implements Event
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+
+import java.io.IOException;
+import java.util.Map;
+
+public class EventMapSerializer extends JsonSerializer<EventMap>
 {
-  int index;
-
-  IntEvent()
-  {
-  }
-
   @Override
-  public EventMap toMap()
+  public void serialize(EventMap map, JsonGenerator gen, SerializerProvider serializers) throws IOException
   {
-    return null;
+    gen.writeStartObject();
+    for (Map.Entry<String, Object> entry : map.entrySet()) {
+      gen.writeObjectField(entry.getKey(), entry.getValue());
+    }
+    gen.writeEndObject();
   }
-
-  @Override
-  public String getFeed()
-  {
-    return null;
-  }
-
 }
