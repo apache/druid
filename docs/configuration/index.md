@@ -278,7 +278,7 @@ For native JSON request, the `sql_query` field is empty. Example
 
 For SQL query request, the `native_query` field is empty. Example
 ```
-2019-01-14T10:00:00.000Z        127.0.0.1       {"sqlQuery/time":100,"sqlQuery/bytes":600,"success":true,"identity":"user1"}  {"query":"SELECT page, COUNT(*) AS Edits FROM wikiticker WHERE TIME_IN_INTERVAL(\"__time\", '2015-09-12/2015-09-13') GROUP BY page ORDER BY Edits DESC LIMIT 10","context":{"sqlQueryId":"c9d035a0-5ffd-4a79-a865-3ffdadbb5fdd","nativeQueryIds":"[490978e4-f5c7-4cf6-b174-346e63cf8863]"}}
+2019-01-14T10:00:00.000Z        127.0.0.1       {"sqlQuery/time":100, "sqlQuery/planningTimeMs":10, "sqlQuery/bytes":600, "success":true, "identity":"user1"}  {"query":"SELECT page, COUNT(*) AS Edits FROM wikiticker WHERE TIME_IN_INTERVAL(\"__time\", '2015-09-12/2015-09-13') GROUP BY page ORDER BY Edits DESC LIMIT 10","context":{"sqlQueryId":"c9d035a0-5ffd-4a79-a865-3ffdadbb5fdd","nativeQueryIds":"[490978e4-f5c7-4cf6-b174-346e63cf8863]"}}
 ```
 
 #### Emitter request logging
@@ -733,6 +733,12 @@ In current Druid, multiple data segments may be announced under the same Znode.
 |`druid.announcer.maxBytesPerNode`|Max byte size for Znode.|524288|
 |`druid.announcer.skipDimensionsAndMetrics`|Skip Dimensions and Metrics list from segment announcements. NOTE: Enabling this will also remove the dimensions and metrics list from Coordinator and Broker endpoints.|false|
 |`druid.announcer.skipLoadSpec`|Skip segment LoadSpec from segment announcements. NOTE: Enabling this will also remove the loadspec from Coordinator and Broker endpoints.|false|
+
+If you want to turn off the batch data segment announcer, you can add a property to skip announcing segments. **You do not want to enable this config if you have any services using `batch` for `druid.serverview.type`**
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.announcer.skipSegmentAnnouncementOnZk`|Skip announcing segments to zookeeper. Note that the batch server view will not work if this is set to true.|false|
 
 ### JavaScript
 
@@ -2079,6 +2085,7 @@ Supported runtime properties:
 |`druid.query.groupBy.maxSelectorDictionarySize`|Maximum amount of heap space (approximately) to use for per-segment string dictionaries. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|100000000|
 |`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for per-query string dictionaries. When the dictionary exceeds this size, a spill to disk will be triggered. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|100000000|
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
+|`druid.query.groupBy.defaultOnDiskStorage`|Default amount of disk space to use, per-query, for spilling the result sets to disk when either the merging buffer or the dictionary fills up. Set to zero to disable disk spilling for queries which don't override `maxOnDiskStorage` in their context.|`druid.query.groupBy.maxOnDiskStorage`|
 
 Supported query contexts:
 
@@ -2086,7 +2093,7 @@ Supported query contexts:
 |---|-----------|
 |`maxSelectorDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxMergingDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
-|`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
+|`maxOnDiskStorage`|Can be used to set `maxOnDiskStorage` to a value between 0 and `druid.query.groupBy.maxOnDiskStorage` for this query. If this query context override exceeds `druid.query.groupBy.maxOnDiskStorage`, the query will use `druid.query.groupBy.maxOnDiskStorage`. Omitting this from the query context will cause the query to use `druid.query.groupBy.defaultOnDiskStorage` for `maxOnDiskStorage`|
 
 
 ### Advanced configurations

@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -162,12 +163,12 @@ public class BlockingQueueFrameChannel
     }
 
     @Override
-    public void fail()
+    public void fail(@Nullable Throwable cause)
     {
       synchronized (lock) {
         queue.clear();
 
-        if (!queue.offer(Optional.of(Either.error(new ISE("Aborted"))))) {
+        if (!queue.offer(Optional.of(Either.error(cause != null ? cause : new ISE("Failed"))))) {
           // If this happens, it's a bug, potentially due to incorrectly using this class with multiple writers.
           throw new ISE("Could not write error to channel");
         }

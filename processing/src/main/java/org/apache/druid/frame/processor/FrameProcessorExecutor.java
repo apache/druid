@@ -50,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
@@ -317,7 +318,7 @@ public class FrameProcessorExecutor
       {
         for (final WritableFrameChannel outputChannel : outputChannels) {
           try {
-            outputChannel.fail();
+            outputChannel.fail(e);
           }
           catch (Throwable e1) {
             e.addSuppressed(e1);
@@ -535,7 +536,7 @@ public class FrameProcessorExecutor
       // Fail all output channels prior to calling cleanup.
       for (final WritableFrameChannel outputChannel : processor.outputChannels()) {
         try {
-          outputChannel.fail();
+          outputChannel.fail(new CancellationException("Canceled"));
         }
         catch (Throwable e) {
           log.debug(e, "Exception encountered while marking output channel failed for processor [%s]", processor);

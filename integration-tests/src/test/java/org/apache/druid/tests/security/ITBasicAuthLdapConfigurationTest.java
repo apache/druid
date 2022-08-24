@@ -53,8 +53,8 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   private static final String LDAP_AUTHENTICATOR = "ldap";
   private static final String LDAP_AUTHORIZER = "ldapauth";
 
-  private static final String EXPECTED_AVATICA_AUTH_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: QueryInterruptedException: User LDAP authentication failed. -> BasicSecurityAuthenticationException: User LDAP authentication failed.";
-  private static final String EXPECTED_AVATICA_AUTHZ_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: ForbiddenException: Allowed:false, Message:";
+  private static final String EXPECTED_AVATICA_AUTH_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: User LDAP authentication failed.";
+  private static final String EXPECTED_AVATICA_AUTHZ_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: Unauthorized";
 
   @Inject
   IntegrationTestingConfig config;
