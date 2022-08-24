@@ -72,16 +72,16 @@ public class QueriesTest
         )
     );
 
-    boolean exceptionOccured = false;
+    boolean exceptionOccurred = false;
 
     try {
       Queries.prepareAggregations(ImmutableList.of(), aggFactories, postAggs);
     }
     catch (IllegalArgumentException e) {
-      exceptionOccured = true;
+      exceptionOccurred = true;
     }
 
-    Assert.assertFalse(exceptionOccured);
+    Assert.assertFalse(exceptionOccurred);
   }
 
   @Test
@@ -104,16 +104,16 @@ public class QueriesTest
         )
     );
 
-    boolean exceptionOccured = false;
+    boolean exceptionOccurred = false;
 
     try {
       Queries.prepareAggregations(ImmutableList.of(), aggFactories, postAggs);
     }
     catch (IllegalArgumentException e) {
-      exceptionOccured = true;
+      exceptionOccurred = true;
     }
 
-    Assert.assertTrue(exceptionOccured);
+    Assert.assertTrue(exceptionOccurred);
   }
 
   @Test
@@ -158,16 +158,16 @@ public class QueriesTest
         )
     );
 
-    boolean exceptionOccured = false;
+    boolean exceptionOccurred = false;
 
     try {
       Queries.prepareAggregations(ImmutableList.of(), aggFactories, postAggs);
     }
     catch (IllegalArgumentException e) {
-      exceptionOccured = true;
+      exceptionOccurred = true;
     }
 
-    Assert.assertFalse(exceptionOccured);
+    Assert.assertFalse(exceptionOccurred);
   }
 
   @Test
@@ -212,16 +212,16 @@ public class QueriesTest
         )
     );
 
-    boolean exceptionOccured = false;
+    boolean exceptionOccurred = false;
 
     try {
       Queries.prepareAggregations(ImmutableList.of(), aggFactories, postAggs);
     }
     catch (IllegalArgumentException e) {
-      exceptionOccured = true;
+      exceptionOccurred = true;
     }
 
-    Assert.assertTrue(exceptionOccured);
+    Assert.assertTrue(exceptionOccurred);
   }
 
   @Test
