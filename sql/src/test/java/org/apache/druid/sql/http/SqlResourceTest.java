@@ -43,7 +43,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.BaseQuery;
@@ -62,7 +62,6 @@ import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.Access;
@@ -161,6 +160,7 @@ public class SqlResourceTest extends CalciteTestBase
   private SqlLifecycleManager lifecycleManager;
   private NativeSqlEngine engine;
   private SqlStatementFactory sqlStatementFactory;
+  private StubServiceEmitter stubServiceEmitter;
 
   private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
@@ -252,14 +252,14 @@ public class SqlResourceTest extends CalciteTestBase
         }
       }
     };
-    final ServiceEmitter emitter = new NoopServiceEmitter();
+    stubServiceEmitter = new StubServiceEmitter("test", "test");
     final AuthConfig authConfig = new AuthConfig();
     final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of());
     engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
     final SqlToolbox sqlToolbox = new SqlToolbox(
         engine,
         plannerFactory,
-        emitter,
+        stubServiceEmitter,
         testRequestLogger,
         scheduler,
         authConfig,
@@ -358,6 +358,33 @@ public class SqlResourceTest extends CalciteTestBase
     checkSqlRequestLog(true);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
+
+  @Test
+  public void testSqlLifecycleMetrics() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+        createSimpleQueryWithId("id", "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
+    ).rhs;
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("cnt", 6, "TheFoo", "foo")
+        ),
+        rows
+    );
+    checkSqlRequestLog(true);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+    Set<String> metricNames = ImmutableSet.of("sqlQuery/time", "sqlQuery/bytes", "sqlQuery/planningTimeMs");
+    Assert.assertEquals(3, stubServiceEmitter.getEvents().size());
+    for (String metricName : metricNames) {
+      Assert.assertTrue(
+          stubServiceEmitter.getEvents()
+                            .stream()
+                            .anyMatch(event -> event.toMap().containsValue(metricName))
+      );
+    }
+  }
+
 
   @Test
   public void testCountStarExtendedCharacters() throws Exception
@@ -1712,6 +1739,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(success, stats.get("success"));
     Assert.assertEquals(CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity(), stats.get("identity"));
     Assert.assertTrue(stats.containsKey("sqlQuery/time"));
+    Assert.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
     Assert.assertTrue(queryContext.containsKey(PlannerContext.CTX_SQL_QUERY_ID));
     if (success) {
       Assert.assertTrue(stats.containsKey("sqlQuery/bytes"));

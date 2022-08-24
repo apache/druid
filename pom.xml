@@ -169,6 +169,7 @@
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
         <module>extensions-core/kinesis-indexing-service</module>
+        <module>extensions-core/multi-stage-query</module>
         <module>extensions-core/mysql-metadata-storage</module>
         <module>extensions-core/orc-extensions</module>
         <module>extensions-core/parquet-extensions</module>
@@ -213,8 +214,9 @@
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- Revised integration tests -->
-        <module>integration-tests-ex/it-tools</module>
-        <module>integration-tests-ex/it-image</module>
+        <module>integration-tests-ex/tools</module>
+        <module>integration-tests-ex/image</module>
+        <module>integration-tests-ex/cases</module>
     </modules>
 
     <repositories>
@@ -1207,7 +1209,8 @@
                         <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
-                        <!-- The ITs has test code sprinkled through the module tree. Remove the following
+                        <!-- The "new" ITs put the test classes into the above testing package. However,
+                             the "old" version has them sprinked through the module tree. Remove the following
                              once the old version is retired. -->
                         <exclude>org/apache/druid/server/coordination/ServerManagerForQueryErrorTest.class</exclude>
                         <exclude>org/apache/druid/guice/SleepModule.class</exclude>
@@ -1525,7 +1528,7 @@
               <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.0.0-M6</version>
+                    <version>3.0.0-M7</version>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set default options -->
@@ -1880,10 +1883,11 @@
                                 <exclude>conf/**</exclude>
                                 <exclude>docker/*.conf</exclude>
                                 <exclude>docker/service-supervisords/*.conf</exclude>
-                                <exclude>target/**</exclude>
+                                <exclude>**/target/**</exclude>
                                 <exclude>licenses/**</exclude>
-                                <exclude>**/test/resources/**</exclude> <!-- test data for "old" ITs. -->
-                                <exclude>**/data/data/**</exclude> <!-- test data for "new" ITs. -->
+                                <exclude>**/test/resources/**/*</exclude> <!-- test data for "old" ITs. -->
+                                <exclude>**/docker/client_tls/*</exclude> <!-- generated files for "old" ITs. -->
+                                <exclude>resources/data/**/*</exclude> <!-- test data for "new" ITs. -->
                                 <exclude>**/derby.log</exclude>
                                 <exclude>**/jvm.config</exclude>
                                 <exclude>**/*.avsc</exclude>
@@ -1903,14 +1907,17 @@
                                 <exclude>.github/pull_request_template.md</exclude>
                                 <exclude>.github/dependabot.yml</exclude>
                                 <exclude>git.version</exclude>
-                                <exclude>node_modules/**</exclude>
+                                <exclude>website/node_modules/**</exclude>
                                 <exclude>src/**/*.snap</exclude>
                                 <exclude>examples/conf/**</exclude>
                                 <exclude>.asf.yaml</exclude>
                                 <exclude>**/dependency-reduced-pom.xml</exclude>
                                 <exclude>.editorconfig</exclude>
                                 <exclude>**/hadoop.indexer.libs.version</exclude>
-                                <exclude>**/codegen/**</exclude>
+                                <exclude>**/codegen/**/*</exclude>
+                                <exclude>**/.settings/**/*</exclude> <!-- Eclipse -->
+                                <exclude>**/.classpath</exclude> <!-- Eclipse -->
+                                <exclude>**/.project</exclude> <!-- Eclipse -->
                             </excludes>
                         </configuration>
                     </plugin>
