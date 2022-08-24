@@ -39,7 +39,7 @@ public class ExtensionInjectorBuilder extends DruidInjectorBuilder
     this.serviceBuilder = serviceBuilder;
     ExtensionsLoader extnLoader = ExtensionsLoader.instance(baseInjector);
     for (DruidModule module : extnLoader.getFromExtensions(DruidModule.class)) {
-      addDruidModule(module);
+      addModule(module);
     }
   }
 

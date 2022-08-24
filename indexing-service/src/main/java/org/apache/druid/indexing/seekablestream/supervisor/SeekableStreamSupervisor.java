@@ -2967,7 +2967,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
                 killTask(
                     taskId,
-                    "An exception occured while waiting for task [%s] to pause: [%s]",
+                    "An exception occurred while waiting for task [%s] to pause: [%s]",
                     taskId,
                     pauseException
                 );
