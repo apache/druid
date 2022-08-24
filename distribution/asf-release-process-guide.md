@@ -235,6 +235,8 @@ You will also need to manually update the top level html file, [unified-console.
 <script src="public/web-console-0.17.0.js"></script>
 ```
 
+Finally, [`DRUID_DOCS_VERSION` in `links.ts`](../web-console/src/links.ts) needs to be adjusted from `'latest'` to whatever the release version is, e.g. `0.17.0` so that the web console documentation links point to the correct location.
+
 
 ## Building a release candidate
 
