@@ -87,13 +87,27 @@ public class DruidInjectorBuilder
 
   /**
    * Add an arbitrary set of modules.
-   *
-   * @see #add(Object)
    */
   public DruidInjectorBuilder add(Object...input)
   {
     for (Object o : input) {
-      add(o);
+      addInput(o);
+    }
+    return this;
+  }
+
+  public DruidInjectorBuilder addModules(Module...inputs)
+  {
+    for (Object o : inputs) {
+      addInput(o);
+    }
+    return this;
+  }
+
+  public DruidInjectorBuilder addAll(List<? extends Object> inputs)
+  {
+    for (Object o : inputs) {
+      addInput(o);
     }
     return this;
   }
@@ -106,11 +120,9 @@ public class DruidInjectorBuilder
    * modules have visibility <i>only</i> to objects defined in the base
    * injector, but not to objects defined in the injector being built.
    */
-  public DruidInjectorBuilder add(Object input)
+  public DruidInjectorBuilder addInput(Object input)
   {
-    if (input instanceof DruidModule) {
-      return addDruidModule((DruidModule) input);
-    } else if (input instanceof Module) {
+    if (input instanceof Module) {
       return addModule((Module) input);
     } else if (input instanceof Class) {
       return addClass((Class<?>) input);
@@ -119,23 +131,15 @@ public class DruidInjectorBuilder
     }
   }
 
-  public DruidInjectorBuilder addDruidModule(DruidModule module)
-  {
-    if (!acceptModule(module.getClass())) {
-      return this;
-    }
-    baseInjector.injectMembers(module);
-    registerJacksonModules(module);
-    modules.add(module);
-    return this;
-  }
-
   public DruidInjectorBuilder addModule(Module module)
   {
     if (!acceptModule(module.getClass())) {
       return this;
     }
     baseInjector.injectMembers(module);
+    if (module instanceof DruidModule) {
+      registerJacksonModules((DruidModule) module);
+    }
     modules.add(module);
     return this;
   }

@@ -176,7 +176,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
                     LockSupport.parkNanos(LookupReferencesManager.this, TimeUnit.MINUTES.toNanos(1));
                   }
                   catch (Throwable t) {
-                    LOG.makeAlert(t, "Error occured while lookup notice handling.").emit();
+                    LOG.makeAlert(t, "Error occurred while lookup notice handling.").emit();
                   }
                 }
               }
@@ -219,8 +219,8 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
         notice.handle(lookupMap);
       }
       catch (Exception ex) {
-        LOG.error(ex, "Exception occured while handling lookup notice [%s].", notice);
-        LOG.makeAlert("Exception occured while handling lookup notice, with message [%s].", ex.getMessage()).emit();
+        LOG.error(ex, "Exception occurred while handling lookup notice [%s].", notice);
+        LOG.makeAlert("Exception occurred while handling lookup notice, with message [%s].", ex.getMessage()).emit();
       }
     }
 
