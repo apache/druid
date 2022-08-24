@@ -252,31 +252,7 @@ Once ingested, Druid stores the JSON-typed columns as native JSON objects and pr
 
 See the [Nested columns functions reference](./sql-json-functions.md) for information on the functions in the examples below.
 
-### JSONPath syntax
-
-Druid supports a small, simplified subset of the [JSONPath syntax](https://github.com/json-path/JsonPath/blob/master/README.md) operators, primarily limited to extracting individual values from nested data structures.
-
-|Operator|Description|
-| --- | --- |
-|`$`| Root element. All JSONPath expressions start with this operator. |
-|`.<name>`| Child element in dot notation. |
-|`['<name>']`| Child element in bracket notation. |
-|`[<number>]`| Array index. |
-
-Consider the following example input JSON:
-
-```json
-{"x":1, "y":[1, 2, 3]}
-```
-
-- To return the JSON object:<br>
-`$`      -> `{"x":1, "y":[1, 2, 3]}`
-- To return the value of a key "x":<br>
-`$.x`    -> `1`
-- For a key that contains an array, to return the entire array:<br>
-`$['y']` -> `[1, 2, 3]`
-- For a key that contains an array, to return an item in the array:<br>
-`$.y[1]` -> `2`
+Druid supports a small, simplified subset of the [JSONPath syntax](https://github.com/json-path/JsonPath/blob/master/README.md) operators, primarily limited to extracting individual values from nested data structures. See the [SQL JSON functions](./sql-json-functions.md#jsonpath-syntax) page for details.
 
 ### Displaying data types
 
