@@ -28,7 +28,7 @@ import org.apache.druid.testing.clients.MsqTestClient;
 import org.apache.druid.testing.guice.models.MSQTaskReportDeserializable;
 import org.apache.druid.testing.utils.MsqQueryWithResults;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
-import org.apache.druid.testsEx.categories.BatchIndex;
+import org.apache.druid.testsEx.categories.MultiStageQuery;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -37,7 +37,7 @@ import org.junit.runner.RunWith;
 import java.util.Map;
 
 @RunWith(DruidTestRunner.class)
-@Category(BatchIndex.class)
+@Category(MultiStageQuery.class)
 public class ITMultiStageQuery
 {
   @Inject
