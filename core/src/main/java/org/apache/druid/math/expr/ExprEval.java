@@ -161,22 +161,28 @@ public abstract class ExprEval<T>
       }
 
       if (coercedType == Long.class || coercedType == Integer.class) {
-        return new NonnullPair<>(
-            ExpressionType.LONG_ARRAY,
-            val.stream().map(x -> x != null ? ExprEval.ofType(ExpressionType.LONG, x).value() : null).toArray()
-        );
+        Object[] array = new Object[val.size()];
+        int i = 0;
+        for (Object o : val) {
+          array[i++] = o == null ? null : ExprEval.ofType(ExpressionType.LONG, o).value();
+        }
+        return new NonnullPair<>(ExpressionType.LONG_ARRAY, array);
       }
       if (coercedType == Float.class || coercedType == Double.class) {
-        return new NonnullPair<>(
-            ExpressionType.DOUBLE_ARRAY,
-            val.stream().map(x -> x != null ? ExprEval.ofType(ExpressionType.DOUBLE, x).value() : null).toArray()
-        );
+        Object[] array = new Object[val.size()];
+        int i = 0;
+        for (Object o : val) {
+          array[i++] = o == null ? null : ExprEval.ofType(ExpressionType.DOUBLE, o).value();
+        }
+        return new NonnullPair<>(ExpressionType.DOUBLE_ARRAY, array);
       }
       // default to string
-      return new NonnullPair<>(
-          ExpressionType.STRING_ARRAY,
-          val.stream().map(x -> x != null ? ExprEval.ofType(ExpressionType.STRING, x).value() : null).toArray()
-      );
+      Object[] array = new Object[val.size()];
+      int i = 0;
+      for (Object o : val) {
+        array[i++] = o == null ? null : ExprEval.ofType(ExpressionType.STRING, o).value();
+      }
+      return new NonnullPair<>(ExpressionType.STRING_ARRAY, array);
     }
     if (homogenizeMultiValueStrings) {
       return new NonnullPair<>(ExpressionType.STRING_ARRAY, new Object[]{null});
@@ -388,30 +394,60 @@ public abstract class ExprEval<T>
       return new StringExprEval(String.valueOf(val));
     }
     if (val instanceof Long[]) {
-      return new ArrayExprEval(ExpressionType.LONG_ARRAY, Arrays.stream((Long[]) val).toArray());
+      final Long[] inputArray = (Long[]) val;
+      final Object[] array = new Object[inputArray.length];
+      for (int i = 0; i < inputArray.length; i++) {
+        array[i] = inputArray[i];
+      }
+      return new ArrayExprEval(ExpressionType.LONG_ARRAY, array);
     }
     if (val instanceof long[]) {
-      return new ArrayExprEval(ExpressionType.LONG_ARRAY, Arrays.stream((long[]) val).boxed().toArray());
+      final long[] longArray = (long[]) val;
+      final Object[] array = new Object[longArray.length];
+      for (int i = 0; i < longArray.length; i++) {
+        array[i] = longArray[i];
+      }
+      return new ArrayExprEval(ExpressionType.LONG_ARRAY, array);
     }
     if (val instanceof Double[]) {
-      return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, Arrays.stream((Double[]) val).toArray());
+      final Double[] inputArray = (Double[]) val;
+      final Object[] array = new Object[inputArray.length];
+      for (int i = 0; i < inputArray.length; i++) {
+        array[i] = inputArray[i];
+      }
+      return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, array);
     }
     if (val instanceof double[]) {
-      return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, Arrays.stream((double[]) val).boxed().toArray());
+      final double[] inputArray = (double[]) val;
+      final Object[] array = new Object[inputArray.length];
+      for (int i = 0; i < inputArray.length; i++) {
+        array[i] = inputArray[i];
+      }
+      return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, array);
     }
     if (val instanceof Float[]) {
-      return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, Arrays.stream((Float[]) val).map(Float::doubleValue).toArray());
+      final Float[] inputArray = (Float[]) val;
+      final Object[] array = new Object[inputArray.length];
+      for (int i = 0; i < inputArray.length; i++) {
+        array[i] = inputArray[i] != null ? inputArray[i].doubleValue() : null;
+      }
+      return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, array);
     }
     if (val instanceof float[]) {
-      float[] floats = (float[]) val;
-      Object[] boxed = new Object[floats.length];
-      for (int i = 0; i < floats.length; i++) {
-        boxed[i] = floats[i];
+      final float[] inputArray = (float[]) val;
+      final Object[] array = new Object[inputArray.length];
+      for (int i = 0; i < inputArray.length; i++) {
+        array[i] = inputArray[i];
       }
-      return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, boxed);
+      return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, array);
     }
     if (val instanceof String[]) {
-      return new ArrayExprEval(ExpressionType.STRING_ARRAY, Arrays.stream((String[]) val).toArray());
+      final String[] inputArray = (String[]) val;
+      final Object[] array = new Object[inputArray.length];
+      for (int i = 0; i < inputArray.length; i++) {
+        array[i] = inputArray[i];
+      }
+      return new ArrayExprEval(ExpressionType.STRING_ARRAY, array);
     }
 
     if (val instanceof List || val instanceof Object[]) {
@@ -443,7 +479,12 @@ public abstract class ExprEval<T>
       case STRING:
         // not all who claim to be "STRING" are always a String, prepare ourselves...
         if (value instanceof String[]) {
-          return new ArrayExprEval(ExpressionType.STRING_ARRAY, Arrays.stream((String[]) value).toArray());
+          final String[] inputArray = (String[]) value;
+          final Object[] array = new Object[inputArray.length];
+          for (int i = 0; i < inputArray.length; i++) {
+            array[i] = inputArray[i];
+          }
+          return new ArrayExprEval(ExpressionType.STRING_ARRAY, array);
         }
         if (value instanceof Object[]) {
           return bestEffortOf(value);

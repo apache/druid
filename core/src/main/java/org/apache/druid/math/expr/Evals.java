@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import org.apache.druid.common.config.NullHandling;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -30,12 +31,7 @@ public class Evals
 {
   public static boolean isAllConstants(Expr... exprs)
   {
-    for (Expr expr : exprs) {
-      if (!(expr instanceof ConstantExpr)) {
-        return false;
-      }
-    }
-    return true;
+    return isAllConstants(Arrays.asList(exprs));
   }
 
   public static boolean isAllConstants(List<Expr> exprs)

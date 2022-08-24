@@ -65,17 +65,17 @@ public enum ValueType implements TypeDescriptor
    * stored in segments, and contextually at various layers of query processing, but this information is not available
    * at this level.
    *
-   * Strings are typically represented as {@link String}, but multi-value strings might also appear as a
-   * {@link java.util.List<String>}.
+   * Strings are typically represented as {@link String}. Multi-value strings appear as {@link java.util.List<String>}
+   * when necessary to represent multiple values, and can vary between string and list from one row to the next.
    */
   STRING,
   /**
    * Placeholder for arbitrary 'complex' types, which have a corresponding serializer/deserializer implementation. Note
    * that knowing a type is complex alone isn't enough information to work with it directly, and additional information
-   * in the form of a type name which must be registered in the complex type registry. This type is not currently
-   * supported as a grouping key for aggregations, and might only be supported by the specific aggregators crafted to
-   * handle this complex type. Filtering on this type with standard filters will most likely have limited support, and
-   * may match as a "null" value.
+   * in the form of a type name which must be registered in the complex type registry. Complex types are not currently
+   * supported as a grouping key for aggregations. Complex types can be used as inputs to aggregators, in cases where
+   * the specific aggregator supports the specific complex type. Filtering on these types with standard filters is not
+   * well supported, and will be treated as null values.
    *
    * These types are represented by the individual Java type associated with the complex type name as defined in the
    * type registry.
@@ -84,16 +84,17 @@ public enum ValueType implements TypeDescriptor
 
   /**
    * Placeholder for arbitrary arrays of other {@link ValueType}. This type has limited support as a grouping
-   * key for aggregations, cannot be used as an input for numerical primitive aggregations such as sums, and may have
-   * limited support as an input among complex type sketch aggregators.
+   * key for aggregations, ARRAY of STRING, LONG, DOUBLE, and FLOAT are supported, but ARRAY types in general are not.
+   * ARRAY types cannot be used as an input for numerical primitive aggregations such as sums, and have limited support
+   * as an input among complex type sketch aggregators.
    *
    * There are currently no native ARRAY typed columns, but they may be produced by expression virtual columns,
    * aggregators, and post-aggregators.
    *
-   * Arrays are typically represented as Object[], but may also be Java primitive arrays such as long[], double[], or
-   * float[]. There are additionally some exceptions in the grouping engine and SQL result layer, which translate
-   * arrays to lists. Long term, this will settle on Object[] and primitive arrays, with list representation being
-   * dropped internally and only used at the surface layer (such as JDBC) where necessary.
+   * Arrays are represented as Object[], long[], double[], or float[]. The preferred type is Object[], since the
+   * expression system is the main consumer of arrays, and the expression system uses Object[] internally. Some code
+   * represents arrays in other ways; in particular the groupBy engine and SQL result layer. Over time we expect these
+   * usages to migrate to Object[], long[], double[], and float[].
    */
   ARRAY;
 

@@ -37,7 +37,8 @@ public class ColumnType extends BaseTypeSignature<ValueType>
   /**
    * Druid string type. Values will be represented as {@link String} or {@link java.util.List<String>} in the case
    * of multi-value string columns. {@link ColumnType} has insufficient information to distinguish between single
-   * and multi-value strings, this requires a type 'ColumnCapabilities' which is available at a higher layer.
+   * and multi-value strings, this requires a specific {@link TypeSignature} implementation which is supplied by
+   * segments, 'ColumnCapabilities', which is available at a higher layer and provides the method 'hasMultipleValues'.
    *
    * @see ValueType#STRING
    */
@@ -66,19 +67,19 @@ public class ColumnType extends BaseTypeSignature<ValueType>
   // currently, arrays only come from expressions or aggregators
   // and there are no native float expressions (or aggs which produce float arrays)
   /**
-   * An array of Strings. Values will reprsented as Object[]
+   * An array of Strings. Values will be represented as Object[]
    * @see ValueType#ARRAY
    * @see ValueType#STRING
    */
   public static final ColumnType STRING_ARRAY = new ColumnType(ValueType.ARRAY, null, STRING);
   /**
-   * An array of Longs. Values may be represented as Object[] or long[]
+   * An array of Longs. Values will be represented as Object[] or long[]
    * @see ValueType#ARRAY
    * @see ValueType#LONG
    */
   public static final ColumnType LONG_ARRAY = new ColumnType(ValueType.ARRAY, null, LONG);
   /**
-   * An array of Doubles. Values may be represented as Object[] or double[].
+   * An array of Doubles. Values will be represented as Object[] or double[].
    * @see ValueType#ARRAY
    * @see ValueType#DOUBLE
    */
