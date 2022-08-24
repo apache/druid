@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -620,14 +619,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(
-        new PlannerConfig().withOverrides(
-            new QueryContext(
-                ImmutableMap.of(
-                    PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
-                    "false"
-                )
-            )
-        ),
+        PlannerConfig.builder().useNativeQueryExplain(false).build(),
         ImmutableMap.of("sqlQueryId", "dummy"),
         Collections.emptyList(),
         StringUtils.format(
