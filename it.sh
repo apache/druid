@@ -18,6 +18,7 @@
 
 # Utility script for running the new integration tests, since the Maven
 # commands are unwieldy.
+set -e
 
 export DRUID_DEV=$(cd $(dirname $0) && pwd)
 
@@ -120,9 +121,7 @@ case $CMD in
 		fi
     	$0 image
     	$0 test $1
-    	local exit_code=$? # Saving the exit code of the previous line
     	$0 tail $1
-    	(exit $exit_code) # This fails travis step if the test fails.
     	;;
 	"prune" )
 		# Caution: this removes all volumes, which is generally what you
