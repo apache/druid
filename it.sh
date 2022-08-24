@@ -118,11 +118,11 @@ case $CMD in
 			usage
 			exit 1
 		fi
-    	$0 dist
-    	$0 tools
     	$0 image
     	$0 test $1
+    	local exit_code=$? # Saving the exit code of the previous line
     	$0 tail $1
+    	(exit $exit_code) # This fails travis step if the test fails.
     	;;
 	"prune" )
 		# Caution: this removes all volumes, which is generally what you

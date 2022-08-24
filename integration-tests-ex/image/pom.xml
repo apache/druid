@@ -92,7 +92,7 @@ Reference: https://dzone.com/articles/build-docker-image-from-maven
                 </dependency>
                 <dependency>
                     <groupId>org.apache.druid</groupId>
-                    <artifactId>it-tools</artifactId>
+                    <artifactId>druid-it-tools</artifactId>
                     <version>${project.parent.version}</version>
                 </dependency>
                 <dependency>
@@ -156,7 +156,7 @@ Reference: https://dzone.com/articles/build-docker-image-from-maven
                                         </artifactItem>
                                         <artifactItem>
                                             <groupId>org.apache.druid</groupId>
-                                            <artifactId>it-tools</artifactId>
+                                            <artifactId>druid-it-tools</artifactId>
                                             <version>${project.version}</version>
                                             <type>jar</type>
                                             <overWrite>true</overWrite>
