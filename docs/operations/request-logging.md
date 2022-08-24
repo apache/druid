@@ -122,6 +122,7 @@ The following shows an example log emitter output:
         "queryStats":
         {
             "sqlQuery/time": 43,
+            "sqlQuery/planningTimeMs": 5,
             "sqlQuery/bytes": 9351,
             "success": true,
             "context":

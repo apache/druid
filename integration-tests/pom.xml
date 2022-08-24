@@ -333,6 +333,7 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-kqueue</artifactId>
             <classifier>osx-x86_64</classifier>
+            <!--<classifier>osx-aarch_64</classifier> - Use for M1 Macs -->
             <scope>runtime</scope>
         </dependency>
         <dependency>

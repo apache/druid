@@ -41,7 +41,7 @@ public class IdUtils
 
   private static final Joiner UNDERSCORE_JOINER = Joiner.on("_");
 
-  public static void validateId(String thingToValidate, String stringToValidate)
+  public static String validateId(String thingToValidate, String stringToValidate)
   {
     Preconditions.checkArgument(
         !Strings.isNullOrEmpty(stringToValidate),
@@ -71,6 +71,8 @@ public class IdUtils
         throw new IAE("%s cannot contain character #%d (at position %d).", thingToValidate, (int) c, i);
       }
     }
+
+    return stringToValidate;
   }
 
   public static String getRandomId()

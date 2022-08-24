@@ -23,12 +23,13 @@ package org.apache.druid.java.util.emitter.service;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.EventMap;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
+ *
  */
 public class UnitEvent implements Event
 {
@@ -50,12 +51,14 @@ public class UnitEvent implements Event
 
   @Override
   @JsonValue
-  public Map<String, Object> toMap()
+  public EventMap toMap()
   {
-    Map<String, Object> result = new HashMap<>(dimensions);
-    result.put("feed", feed);
-    result.put("metrics", ImmutableMap.of("value", value));
-    return ImmutableMap.copyOf(result);
+    return EventMap
+        .builder()
+        .putAll(dimensions)
+        .put("feed", feed)
+        .put("metrics", ImmutableMap.of("value", value))
+        .build();
   }
 
   @Override
