@@ -71,6 +71,13 @@
             <Class name="org.apache.druid.frame.file.FrameFileWriter" />
         </And>
     </Match>
+    <Match>
+        <!-- Spotbugs doesn't like awaiting a latch without checking return value -->
+        <And>
+            <Bug pattern="RV_RETURN_VALUE_IGNORED" />
+            <Class name="org.apache.druid.msq.indexing.MSQWorkerTaskLauncher" />
+        </And>
+    </Match>
 
     <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION"/>
     <Bug pattern="BC_UNCONFIRMED_CAST"/>

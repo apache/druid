@@ -51,7 +51,7 @@ public class DruidTestModule implements Module
     binder.bind(IntegrationTestingConfig.class)
           .toProvider(IntegrationTestingConfigProvider.class)
           .in(ManageLifecycle.class);
-    JsonConfigProvider.bind(binder, "druid.test.config", IntegrationTestingConfigProvider.class);
+    JsonConfigProvider.bind(binder, IntegrationTestingConfigProvider.PROPERTY_BASE, IntegrationTestingConfigProvider.class);
 
     binder.bind(CuratorConfig.class).to(IntegrationTestingCuratorConfig.class);
 

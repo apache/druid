@@ -19,13 +19,11 @@
 
 package org.apache.druid.java.util.emitter.core;
 
-import java.util.Map;
-
 /**
  */
 public interface Event
 {
-  Map<String, Object> toMap();
+  EventMap toMap();
 
   String getFeed();
 }
