@@ -18,7 +18,7 @@
 
 import * as playwright from 'playwright-chromium';
 
-import { clickButton, clickText, setInput } from '../../util/playwright';
+import { clickButton, clickText } from '../../util/playwright';
 import { extractTable } from '../../util/table';
 
 /**
@@ -37,8 +37,9 @@ export class QueryOverview {
     await this.page.goto(this.baseUrl);
     await this.page.reload({ waitUntil: 'networkidle' });
 
-    const input = await this.page.$('div.query-input textarea');
-    await setInput(input!, query);
+    const input = await this.page.waitForSelector('div.query-input textarea');
+    await input.fill(query);
+
     await clickButton(this.page, 'Run');
     await this.page.waitForSelector('div.query-info');
 
@@ -49,10 +50,8 @@ export class QueryOverview {
     await this.page.goto(this.baseUrl);
     await this.page.reload({ waitUntil: 'networkidle' });
 
-    await this.page.waitForSelector('div.query-input textarea');
-    const input = await this.page.$('div.query-input textarea');
-
-    await setInput(input!, query);
+    const input = await this.page.waitForSelector('div.query-input textarea');
+    await input.fill(query);
 
     await Promise.all([
       this.page.waitForRequest(

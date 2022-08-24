@@ -48,9 +48,7 @@ ace.define(
       ).join('|');
 
       // Stuff like: 'int|numeric|decimal|date|varchar|char|bigint|float|double|bit|binary|text|set|timestamp'
-      var dataTypes = druidFunctions.SQL_DATA_TYPES.map(function (f) {
-        return f[0];
-      }).join('|');
+      var dataTypes = Object.keys(druidFunctions.SQL_DATA_TYPES).join('|');
 
       var keywordMapper = this.createKeywordMapper(
         {

@@ -35,8 +35,11 @@ export type QueryType = 'none' | 'nativeOnly' | 'nativeAndSql';
 
 export interface CapabilitiesOptions {
   queryType: QueryType;
+  multiStageQuery: boolean;
   coordinator: boolean;
   overlord: boolean;
+
+  warnings?: string[];
 }
 
 export class Capabilities {
@@ -49,6 +52,7 @@ export class Capabilities {
   static NO_PROXY: Capabilities;
 
   private readonly queryType: QueryType;
+  private readonly multiStageQuery: boolean;
   private readonly coordinator: boolean;
   private readonly overlord: boolean;
 
@@ -123,6 +127,15 @@ export class Capabilities {
     return true;
   }
 
+  static async detectMultiStageQuery(): Promise<boolean> {
+    try {
+      const resp = await Api.instance.get(`/druid/v2/sql/task/enabled?capabilities`);
+      return Boolean(resp.data.enabled);
+    } catch {
+      return false;
+    }
+  }
+
   static async detectCapabilities(): Promise<Capabilities | undefined> {
     const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
     if (capabilitiesOverride) return new Capabilities(capabilitiesOverride);
@@ -141,8 +154,11 @@ export class Capabilities {
       coordinator = overlord = await Capabilities.detectManagementProxy();
     }
 
+    const multiStageQuery = await Capabilities.detectMultiStageQuery();
+
     return new Capabilities({
       queryType,
+      multiStageQuery,
       coordinator,
       overlord,
     });
@@ -150,6 +166,7 @@ export class Capabilities {
 
   constructor(options: CapabilitiesOptions) {
     this.queryType = options.queryType;
+    this.multiStageQuery = options.multiStageQuery;
     this.coordinator = options.coordinator;
     this.overlord = options.overlord;
   }
@@ -204,6 +221,10 @@ export class Capabilities {
     return this.queryType === 'nativeAndSql';
   }
 
+  public hasMultiStageQuery(): boolean {
+    return this.multiStageQuery;
+  }
+
   public hasCoordinatorAccess(): boolean {
     return this.coordinator;
   }
@@ -222,31 +243,37 @@ export class Capabilities {
 }
 Capabilities.FULL = new Capabilities({
   queryType: 'nativeAndSql',
+  multiStageQuery: true,
   coordinator: true,
   overlord: true,
 });
 Capabilities.NO_SQL = new Capabilities({
   queryType: 'nativeOnly',
+  multiStageQuery: false,
   coordinator: true,
   overlord: true,
 });
 Capabilities.COORDINATOR_OVERLORD = new Capabilities({
   queryType: 'none',
+  multiStageQuery: false,
   coordinator: true,
   overlord: true,
 });
 Capabilities.COORDINATOR = new Capabilities({
   queryType: 'none',
+  multiStageQuery: false,
   coordinator: true,
   overlord: false,
 });
 Capabilities.OVERLORD = new Capabilities({
   queryType: 'none',
+  multiStageQuery: false,
   coordinator: false,
   overlord: true,
 });
 Capabilities.NO_PROXY = new Capabilities({
   queryType: 'nativeAndSql',
+  multiStageQuery: true,
   coordinator: false,
   overlord: false,
 });
