@@ -29,6 +29,8 @@ Usage: $0 cmd [category]
       build Druid and the distribution
   dist
       build the Druid distribution (only)
+  tools
+      build druid-it-tools
   image
       build the test image
   up <category>
@@ -70,6 +72,9 @@ case $CMD in
 		;;
 	"dist" )
 		mvn package -P dist $MAVEN_IGNORE -pl :distribution
+		;;
+	"tools" )
+		mvn install -pl :druid-it-tools
 		;;
 	"image" )
 		cd $DRUID_DEV/integration-tests-ex/image
@@ -114,6 +119,7 @@ case $CMD in
 			exit 1
 		fi
     	$0 dist
+    	$0 tools
     	$0 image
     	$0 test $1
     	$0 tail $1
