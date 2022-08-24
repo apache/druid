@@ -48,6 +48,7 @@ import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -234,7 +235,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
     }
   }
 
-  private static Deserializer getKafkaDeserializer(Properties properties, String kafkaConfigKey)
+  private static Deserializer getKafkaDeserializer(Properties properties, String kafkaConfigKey, boolean isKey)
   {
     Deserializer deserializerObject;
     try {
@@ -257,6 +258,13 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
     catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
       throw new StreamException(e);
     }
+
+    Map<String, Object> configs = new HashMap<>();
+    for (String key : properties.stringPropertyNames()) {
+      configs.put(key, properties.get(key));
+    }
+
+    deserializerObject.configure(configs, isKey);
     return deserializerObject;
   }
 
@@ -272,8 +280,8 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(KafkaRecordSupplier.class.getClassLoader());
-      Deserializer keyDeserializerObject = getKafkaDeserializer(props, "key.deserializer");
-      Deserializer valueDeserializerObject = getKafkaDeserializer(props, "value.deserializer");
+      Deserializer keyDeserializerObject = getKafkaDeserializer(props, "key.deserializer", true);
+      Deserializer valueDeserializerObject = getKafkaDeserializer(props, "value.deserializer", true);
 
       return new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject);
     }
