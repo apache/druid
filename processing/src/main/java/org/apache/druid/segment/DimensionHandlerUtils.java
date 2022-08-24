@@ -328,7 +328,12 @@ public final class DimensionHandlerUtils
       }
       return ret;
     } else {
-      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not convert value [%s] to long. Invalid type: [%s]",
+          valObj,
+          valObj.getClass()
+      );
     }
   }
 
@@ -356,7 +361,12 @@ public final class DimensionHandlerUtils
       }
       return ret;
     } else {
-      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not convert value [%s] to float. Invalid type: [%s]",
+          valObj,
+          valObj.getClass()
+      );
     }
   }
 
@@ -538,7 +548,12 @@ public final class DimensionHandlerUtils
       }
       return ret;
     } else {
-      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not convert value [%s] to double. Invalid type: [%s]",
+          valObj,
+          valObj.getClass()
+      );
     }
   }
 

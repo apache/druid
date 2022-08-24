@@ -256,7 +256,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=19.0, long=[10, 5], double=21.0}], exceptions: [Numeric columns do not support multivalue rows.]",
+        "Found unparseable columns in row: [{string=A, float=19.0, long=[10, 5], double=21.0}], exceptions: [Could not convert value [[10, 5]] to long. Invalid type: [class java.util.Arrays$ArrayList]]",
         result.getParseException().getMessage()
     );
 
@@ -278,7 +278,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=[10.0, 5.0], long=20, double=21.0}], exceptions: [Numeric columns do not support multivalue rows.]",
+        "Found unparseable columns in row: [{string=A, float=[10.0, 5.0], long=20, double=21.0}], exceptions: [Could not convert value [[10.0, 5.0]] to float. Invalid type: [class java.util.Arrays$ArrayList]]",
         result.getParseException().getMessage()
     );
 
@@ -300,7 +300,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=[10.0, 5.0]}], exceptions: [Numeric columns do not support multivalue rows.]",
+        "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=[10.0, 5.0]}], exceptions: [Could not convert value [[10.0, 5.0]] to double. Invalid type: [class java.util.Arrays$ArrayList]]",
         result.getParseException().getMessage()
     );
   }

@@ -23,7 +23,6 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -35,7 +34,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Objects;
 
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
@@ -47,10 +45,6 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public EncodedKeyComponent<Long> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
-    if (dimValues instanceof List) {
-      throw new ParseException(null, "Numeric columns do not support multivalue rows.");
-    }
-
     Long l = DimensionHandlerUtils.convertObjectToLong(dimValues, reportParseExceptions);
     if (l == null) {
       hasNulls = NullHandling.sqlCompatible();
