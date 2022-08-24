@@ -475,44 +475,6 @@ public class NestedDataOperatorConversions
     }
   }
 
-  public static class ToJsonOperatorConversion implements SqlOperatorConversion
-  {
-    private static final String FUNCTION_NAME = "to_json";
-    private static final SqlFunction SQL_FUNCTION = OperatorConversions
-        .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
-        .operandTypes(SqlTypeFamily.ANY)
-        .returnTypeInference(NESTED_RETURN_TYPE_INFERENCE)
-        .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
-        .build();
-
-
-    @Override
-    public SqlOperator calciteOperator()
-    {
-      return SQL_FUNCTION;
-    }
-
-    @Nullable
-    @Override
-    public DruidExpression toDruidExpression(
-        PlannerContext plannerContext,
-        RowSignature rowSignature,
-        RexNode rexNode
-    )
-    {
-      return OperatorConversions.convertCall(
-          plannerContext,
-          rowSignature,
-          rexNode,
-          druidExpressions -> DruidExpression.ofExpression(
-              NestedDataComplexTypeSerde.TYPE,
-              DruidExpression.functionCall("to_json"),
-              druidExpressions
-          )
-      );
-    }
-  }
-
   public static class ToJsonStringOperatorConversion implements SqlOperatorConversion
   {
     private static final String FUNCTION_NAME = "to_json_string";
@@ -556,7 +518,7 @@ public class NestedDataOperatorConversions
     private static final String FUNCTION_NAME = "parse_json";
     private static final SqlFunction SQL_FUNCTION = OperatorConversions
         .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
-        .operandTypes(SqlTypeFamily.ANY)
+        .operandTypes(SqlTypeFamily.STRING)
         .returnTypeInference(NESTED_RETURN_TYPE_INFERENCE)
         .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
         .build();
@@ -583,6 +545,44 @@ public class NestedDataOperatorConversions
           druidExpressions -> DruidExpression.ofExpression(
               NestedDataComplexTypeSerde.TYPE,
               DruidExpression.functionCall("parse_json"),
+              druidExpressions
+          )
+      );
+    }
+  }
+
+  public static class TryParseJsonOperatorConversion implements SqlOperatorConversion
+  {
+    private static final String FUNCTION_NAME = "try_parse_json";
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
+        .operandTypes(SqlTypeFamily.STRING)
+        .returnTypeInference(NESTED_RETURN_TYPE_INFERENCE)
+        .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
+        .build();
+
+
+    @Override
+    public SqlOperator calciteOperator()
+    {
+      return SQL_FUNCTION;
+    }
+
+    @Nullable
+    @Override
+    public DruidExpression toDruidExpression(
+        PlannerContext plannerContext,
+        RowSignature rowSignature,
+        RexNode rexNode
+    )
+    {
+      return OperatorConversions.convertCall(
+          plannerContext,
+          rowSignature,
+          rexNode,
+          druidExpressions -> DruidExpression.ofExpression(
+              NestedDataComplexTypeSerde.TYPE,
+              DruidExpression.functionCall("try_parse_json"),
               druidExpressions
           )
       );
