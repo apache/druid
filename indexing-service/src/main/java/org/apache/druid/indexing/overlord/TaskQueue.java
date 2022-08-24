@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.annotations.SuppressFBWarnings;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
@@ -462,6 +463,9 @@ public class TaskQueue
    */
   public boolean add(final Task task) throws EntryExistsException
   {
+    // Before adding the task, validate the ID, so it can be safely used in file paths, znodes, etc.
+    IdUtils.validateId("Task ID", task.getId());
+
     if (taskStorage.getTask(task.getId()).isPresent()) {
       throw new EntryExistsException(StringUtils.format("Task %s already exists", task.getId()));
     }
