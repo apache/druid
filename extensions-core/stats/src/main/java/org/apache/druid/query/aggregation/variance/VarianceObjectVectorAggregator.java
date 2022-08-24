@@ -46,29 +46,31 @@ public class VarianceObjectVectorAggregator implements VectorAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
   {
-    VarianceAggregatorCollector[] vector = (VarianceAggregatorCollector[]) selector.getObjectVector();
     VarianceAggregatorCollector previous = VarianceBufferAggregator.getVarianceCollector(buf, position);
+    VarianceAggregatorCollector current;
     for (int i = startRow; i < endRow; i++) {
-      previous.fold(vector[i]);
+      current = (VarianceAggregatorCollector) selector.getObjectVector()[i];
+      previous.fold(current);
     }
     VarianceBufferAggregator.writeNVariance(buf, position, previous.count, previous.sum, previous.nvariance);
   }
 
   @Override
   public void aggregate(
-      ByteBuffer buf,
-      int numRows,
-      int[] positions,
-      @Nullable int[] rows,
-      int positionOffset
+          ByteBuffer buf,
+          int numRows,
+          int[] positions,
+          @Nullable int[] rows,
+          int positionOffset
   )
   {
-    VarianceAggregatorCollector[] vector = (VarianceAggregatorCollector[]) selector.getObjectVector();
+    VarianceAggregatorCollector current;
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows != null ? rows[i] : i;
+      current = (VarianceAggregatorCollector) selector.getObjectVector()[row];
       VarianceAggregatorCollector previous = VarianceBufferAggregator.getVarianceCollector(buf, position);
-      previous.fold(vector[row]);
+      previous.fold(current);
       VarianceBufferAggregator.writeNVariance(buf, position, previous.count, previous.sum, previous.nvariance);
     }
   }
