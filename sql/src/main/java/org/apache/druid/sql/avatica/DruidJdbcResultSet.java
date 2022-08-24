@@ -114,7 +114,7 @@ public class DruidJdbcResultSet implements Closeable
       yielder = Yielders.each(retSequence);
       signature = AbstractDruidJdbcStatement.createSignature(
           stmt.prepareResult(),
-          stmt.sqlRequest().sql()
+          stmt.query().sql()
       );
     }
     catch (ExecutionException e) {

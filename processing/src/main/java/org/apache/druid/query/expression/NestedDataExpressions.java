@@ -80,7 +80,7 @@ public class NestedDataExpressions
             ExprEval value = args.get(i + 1).eval(bindings);
 
             Preconditions.checkArgument(field.type().is(ExprType.STRING), "field name must be a STRING");
-            theMap.put(field.asString(), maybeUnwrapStructuredData(value.value()));
+            theMap.put(field.asString(), unwrap(value));
           }
 
           return ExprEval.ofComplex(TYPE, theMap);
@@ -112,54 +112,6 @@ public class NestedDataExpressions
     public String name()
     {
       return NAME;
-    }
-  }
-
-  public static class ToJsonExprMacro implements ExprMacroTable.ExprMacro
-  {
-    public static final String NAME = "to_json";
-
-    @Override
-    public String name()
-    {
-      return NAME;
-    }
-
-    @Override
-    public Expr apply(List<Expr> args)
-    {
-      class ToJsonExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
-      {
-        public ToJsonExpr(List<Expr> args)
-        {
-          super(name(), args);
-        }
-
-        @Override
-        public ExprEval eval(ObjectBinding bindings)
-        {
-          ExprEval input = args.get(0).eval(bindings);
-          return ExprEval.ofComplex(
-              TYPE,
-              maybeUnwrapStructuredData(input)
-          );
-        }
-
-        @Override
-        public Expr visit(Shuttle shuttle)
-        {
-          List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-          return shuttle.visit(new ToJsonExpr(newArgs));
-        }
-
-        @Nullable
-        @Override
-        public ExpressionType getOutputType(InputBindingInspector inspector)
-        {
-          return TYPE;
-        }
-      }
-      return new ToJsonExpr(args);
     }
   }
 
@@ -198,7 +150,7 @@ public class NestedDataExpressions
         {
           ExprEval input = args.get(0).eval(bindings);
           try {
-            final Object unwrapped = maybeUnwrapStructuredData(input);
+            final Object unwrapped = unwrap(input);
             final String stringify = unwrapped == null ? null : jsonMapper.writeValueAsString(unwrapped);
             return ExprEval.ofType(
                 ExpressionType.STRING,
@@ -262,18 +214,98 @@ public class NestedDataExpressions
         public ExprEval eval(ObjectBinding bindings)
         {
           ExprEval arg = args.get(0).eval(bindings);
-          Object parsed = maybeUnwrapStructuredData(arg);
-          if (arg.type().is(ExprType.STRING) && arg.value() != null && maybeJson(arg.asString())) {
+          if (arg.value() == null) {
+            return ExprEval.ofComplex(TYPE, null);
+          }
+          if (arg.type().is(ExprType.STRING)) {
             try {
-              parsed = jsonMapper.readValue(arg.asString(), Object.class);
+              return ExprEval.ofComplex(
+                  TYPE,
+                  jsonMapper.readValue(arg.asString(), Object.class)
+              );
             }
             catch (JsonProcessingException e) {
               throw new IAE("Bad string input [%s] to [%s]", arg.asString(), name());
             }
           }
+          throw new IAE(
+              "Invalid input [%s] of type [%s] to [%s], expected [%s]",
+              arg.asString(),
+              arg.type(),
+              name(),
+              ExpressionType.STRING
+          );
+        }
+
+        @Override
+        public Expr visit(Shuttle shuttle)
+        {
+          List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+          return shuttle.visit(new ParseJsonExpr(newArgs));
+        }
+
+        @Nullable
+        @Override
+        public ExpressionType getOutputType(InputBindingInspector inspector)
+        {
+          return TYPE;
+        }
+      }
+      return new ParseJsonExpr(args);
+    }
+  }
+
+  public static class TryParseJsonExprMacro implements ExprMacroTable.ExprMacro
+  {
+    public static final String NAME = "try_parse_json";
+
+    private final ObjectMapper jsonMapper;
+
+    @Inject
+    public TryParseJsonExprMacro(
+        @Json ObjectMapper jsonMapper
+    )
+    {
+      this.jsonMapper = jsonMapper;
+    }
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+
+    @Override
+    public Expr apply(List<Expr> args)
+    {
+      class ParseJsonExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+      {
+        public ParseJsonExpr(List<Expr> args)
+        {
+          super(name(), args);
+        }
+
+        @Override
+        public ExprEval eval(ObjectBinding bindings)
+        {
+          ExprEval arg = args.get(0).eval(bindings);
+          if (arg.type().is(ExprType.STRING) && arg.value() != null) {
+            try {
+              return ExprEval.ofComplex(
+                  TYPE,
+                  jsonMapper.readValue(arg.asString(), Object.class)
+              );
+            }
+            catch (JsonProcessingException e) {
+              return ExprEval.ofComplex(
+                  TYPE,
+                  null
+              );
+            }
+          }
           return ExprEval.ofComplex(
               TYPE,
-              parsed
+              null
           );
         }
 
@@ -323,7 +355,7 @@ public class NestedDataExpressions
         {
           ExprEval input = args.get(0).eval(bindings);
           return ExprEval.bestEffortOf(
-              NestedPathFinder.findLiteral(maybeUnwrapStructuredData(input), parts)
+              NestedPathFinder.findLiteral(unwrap(input), parts)
           );
         }
 
@@ -373,7 +405,7 @@ public class NestedDataExpressions
           ExprEval input = args.get(0).eval(bindings);
           return ExprEval.ofComplex(
               TYPE,
-              NestedPathFinder.find(maybeUnwrapStructuredData(input), parts)
+              NestedPathFinder.find(unwrap(input), parts)
           );
         }
 
@@ -422,7 +454,7 @@ public class NestedDataExpressions
         {
           ExprEval input = args.get(0).eval(bindings);
           return ExprEval.bestEffortOf(
-              NestedPathFinder.findLiteral(maybeUnwrapStructuredData(input), parts)
+              NestedPathFinder.findLiteral(unwrap(input), parts)
           );
         }
 
@@ -479,7 +511,7 @@ public class NestedDataExpressions
         public ExprEval eval(ObjectBinding bindings)
         {
           ExprEval input = args.get(0).eval(bindings);
-          StructuredDataProcessor.ProcessResults info = processor.processFields(maybeUnwrapStructuredData(input));
+          StructuredDataProcessor.ProcessResults info = processor.processFields(unwrap(input));
           return ExprEval.ofType(
               ExpressionType.STRING_ARRAY,
               ImmutableList.copyOf(info.getLiteralFields())
@@ -539,7 +571,7 @@ public class NestedDataExpressions
         {
           ExprEval input = args.get(0).eval(bindings);
           // maybe in the future ProcessResults should deal in PathFinder.PathPart instead of strings for fields
-          StructuredDataProcessor.ProcessResults info = processor.processFields(maybeUnwrapStructuredData(input));
+          StructuredDataProcessor.ProcessResults info = processor.processFields(unwrap(input));
           List<String> transformed = info.getLiteralFields()
                                         .stream()
                                         .map(p -> NestedPathFinder.toNormalizedJsonPath(NestedPathFinder.parseJqPath(p)))
@@ -595,7 +627,7 @@ public class NestedDataExpressions
           ExprEval input = args.get(0).eval(bindings);
           return ExprEval.ofType(
               ExpressionType.STRING_ARRAY,
-              NestedPathFinder.findKeys(maybeUnwrapStructuredData(input), parts)
+              NestedPathFinder.findKeys(unwrap(input), parts)
           );
         }
 
@@ -630,21 +662,17 @@ public class NestedDataExpressions
   }
 
   @Nullable
-  static Object maybeUnwrapStructuredData(ExprEval input)
+  static Object unwrap(ExprEval input)
   {
-    return maybeUnwrapStructuredData(input.value());
+    return unwrap(input.value());
   }
 
-  static Object maybeUnwrapStructuredData(Object input)
+  static Object unwrap(Object input)
   {
-    if (input instanceof StructuredData) {
-      StructuredData data = (StructuredData) input;
-      return data.getValue();
-    }
     if (input instanceof Object[]) {
-      return Arrays.stream((Object[]) input).map(x -> maybeUnwrapStructuredData(x)).toArray();
+      return Arrays.stream((Object[]) input).map(NestedDataExpressions::unwrap).toArray();
     }
-    return input;
+    return StructuredData.unwrap(input);
   }
 
 
@@ -683,16 +711,5 @@ public class NestedDataExpressions
         (String) args.get(1).getLiteralValue()
     );
     return parts;
-  }
-
-  static boolean maybeJson(@Nullable String val)
-  {
-    if (val == null) {
-      return false;
-    }
-    if (val.isEmpty()) {
-      return false;
-    }
-    return val.startsWith("[") || val.startsWith("{") || val.startsWith("\"") || Character.isDigit(val.charAt(0));
   }
 }
