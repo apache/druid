@@ -55,13 +55,6 @@ public class MSQTaskReport implements TaskReport
     return REPORT_KEY;
   }
 
-  @JsonProperty("type")
-  private String getType()
-  {
-    return REPORT_KEY;
-  }
-
-
   @Override
   @JsonProperty
   public MSQTaskReportPayload getPayload()

@@ -45,7 +45,7 @@
             <artifactId>druid-integration-tests</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
-        <!-- WARNING ALERT - Remove this -->
+        <!-- Get this change reviewed -->
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-multi-stage-query</artifactId>

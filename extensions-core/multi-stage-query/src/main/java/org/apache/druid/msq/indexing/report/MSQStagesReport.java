@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing.report;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
@@ -84,7 +85,7 @@ public class MSQStagesReport
     return new MSQStagesReport(stages);
   }
 
-  @JsonProperty("stages")
+  @JsonValue
   public List<Stage> getStages()
   {
     return stages;
