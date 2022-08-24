@@ -21,9 +21,6 @@ sidebar_label: Nested columns
   ~ KIND, either express or implied.  See the License for the
   ~ specific language governing permissions and limitations
   ~ under the License.
-    ~
-  ~ Nested columns is an experimental feature that is subject to 
-  ~ change or removal at any time.
   -->
 
 > Nested columns is an experimental feature available starting in Apache Druid 24.0. As an experimental feature, functionality documented on this page is subject to change or removal in future releases. Review the release notes and this page to stay up to date with changes.
@@ -66,7 +63,7 @@ When pretty-printed a sample row in `nested_example_data` looks like this:
 
 ## Native batch ingestion
 
-For native batch ingestion, you can use the [JSON nested columns functions](../misc/math-expr.md#nested-columns-functions) to extract nested data as an alternative to using the [flattenSpec](../ingestion/data-formats.md#flattenspec) input format.
+For native batch ingestion, you can use the [JSON nested columns functions](./sql-json-functions.md) to extract nested data as an alternative to using the [flattenSpec](../ingestion/data-formats.md#flattenspec) input format.
 
 To configure a dimension as a nested data type, include a `dimensions` object in the `dimensionsSpec` property of your ingestion spec.
 
@@ -127,7 +124,7 @@ For example, the following ingestion spec instructs Druid to ingest `shipTo` and
 
 ### Transform data during batch ingestion
 
-You can use the [JSON nested columns functions](../misc/math-expr.md#nested-columns-functions) to transform JSON data and reference the transformed data in your ingestion spec. 
+You can use the [JSON nested columns functions](./sql-json-functions.md) to transform JSON data and reference the transformed data in your ingestion spec. 
 
 To do this, include a `transforms` object in the `transformSpec` property of your ingestion spec.
 
@@ -224,7 +221,7 @@ PARTITIONED BY ALL
 
 ### Transform data during SQL-based ingestion
 
-You can use the [JSON nested columns functions](../misc/math-expr.md#nested-columns-functions) to transform JSON data in your ingestion query.
+You can use the [JSON nested columns functions](./sql-json-functions.md) to transform JSON data in your ingestion query.
 
 For example, the following ingestion query is the SQL-based version of the [batch example above](#transform-data-during-batch-ingestion)&mdash;it extracts `firstName`, `lastName` and `address` from `shipTo` and creates a composite JSON object containing `product`, `details` and `department`.
 
@@ -253,7 +250,7 @@ PARTITIONED BY ALL
 
 Once ingested, Druid stores the JSON-typed columns as native JSON objects and presents them as `COMPLEX<json>`.
 
-See the [Nested columns functions reference](../misc/math-expr.md#nested-columns-functions) for information on the functions in the examples below.
+See the [Nested columns functions reference](./sql-json-functions.md) for information on the functions in the examples below.
 
 ### JSONPath syntax
 
@@ -540,7 +537,7 @@ Before you start using the nested columns feature, consider the following known 
 
 For more information, see the following pages:
 
-- [Nested columns functions reference](../misc/math-expr.md#nested-columns-functions) for details of the functions used in the examples on this page.
+- [Nested columns functions reference](./sql-json-functions.md) for details of the functions used in the examples on this page.
 - [Ingestion spec reference](../ingestion/ingestion-spec.md) for information on native ingestion and [`transformSpec`](../ingestion/ingestion-spec.md#transformspec).
 - [Multi-stage query architecture overview](../multi-stage-query/index.md) for information on how to set up and use this feature.
 - [Data formats](../ingestion/data-formats.md) for information on [`flattenSpec`](../ingestion/data-formats.md#flattenspec).
