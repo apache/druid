@@ -959,7 +959,7 @@ public class MSQSelectTest extends MSQTestBase
                                             .add("cnt1", ColumnType.LONG)
                                             .build();
 
-    ArrayList<Object[]> expected = ngew ArrayList<>();
+    ArrayList<Object[]> expected = new ArrayList<>();
     expected.add(new Object[]{Collections.singletonList(null), !useDefault ? 2L : 3L});
     if (!useDefault) {
       expected.add(new Object[]{Collections.singletonList(""), 1L});
