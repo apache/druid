@@ -388,7 +388,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  status_payload %2$s NOT NULL,\n"
                 + "  active BOOLEAN NOT NULL DEFAULT FALSE,\n"
                 + "  type VARCHAR(255), \n"
-                + "  group_id VARCHAR(255) \n"
+                + "  group_id VARCHAR(255), \n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
                 tableName, getPayloadType(), getCollation()
