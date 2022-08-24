@@ -35,10 +35,20 @@ export const EXAMPLE_INPUT_SOURCES: ExampleInputSource[] = [
   },
   {
     name: 'KoalasToTheMax one day',
-    description: 'One day of events from KoalasToTheMax.com (JSON)',
+    description: 'One day of flat events from KoalasToTheMax.com (JSON)',
     inputSource: {
       type: 'http',
       uris: ['https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz'],
+    },
+  },
+  {
+    name: 'KoalasToTheMax one day (nested)',
+    description: 'One day of nested events from KoalasToTheMax.com (JSON)',
+    inputSource: {
+      type: 'http',
+      uris: [
+        'https://static.imply.io/example-data/kttm-nested-v2/kttm-nested-v2-2019-08-25.json.gz',
+      ],
     },
   },
   {
