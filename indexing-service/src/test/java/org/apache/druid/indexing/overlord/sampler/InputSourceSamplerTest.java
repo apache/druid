@@ -49,6 +49,7 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
@@ -1392,7 +1393,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         inputSource,
         inputFormat,
         dataSchema,
-        new SamplerConfig(null, null, 256L, null)
+        new SamplerConfig(null, null, HumanReadableBytes.valueOf(256), null)
     );
 
     Assert.assertEquals(4, response.getNumRowsRead());
@@ -1426,7 +1427,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         inputSource,
         inputFormat,
         dataSchema,
-        new SamplerConfig(null, null, null, 300L)
+        new SamplerConfig(null, null, null, HumanReadableBytes.valueOf(300))
     );
 
     Assert.assertEquals(4, response.getNumRowsRead());

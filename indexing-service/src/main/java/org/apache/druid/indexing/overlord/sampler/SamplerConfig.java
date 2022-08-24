@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
@@ -47,14 +48,14 @@ public class SamplerConfig
   public SamplerConfig(
       @JsonProperty("numRows") @Nullable Integer numRows,
       @JsonProperty("timeoutMs") @Nullable Integer timeoutMs,
-      @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-      @JsonProperty("maxClientResponseBytes") @Nullable Long maxClientResponseBytes
+      @JsonProperty("maxBytesInMemory") @Nullable HumanReadableBytes maxBytesInMemory,
+      @JsonProperty("maxClientResponseBytes") @Nullable HumanReadableBytes maxClientResponseBytes
   )
   {
     this.numRows = numRows != null ? numRows : DEFAULT_NUM_ROWS;
     this.timeoutMs = timeoutMs != null ? timeoutMs : DEFAULT_TIMEOUT_MS;
-    this.maxBytesInMemory = maxBytesInMemory != null ? maxBytesInMemory : Long.MAX_VALUE;
-    this.maxClientResponseBytes = maxClientResponseBytes != null ? maxClientResponseBytes : 0;
+    this.maxBytesInMemory = maxBytesInMemory != null ? maxBytesInMemory.getBytes() : Long.MAX_VALUE;
+    this.maxClientResponseBytes = maxClientResponseBytes != null ? maxClientResponseBytes.getBytes() : 0;
 
     Preconditions.checkArgument(this.numRows <= MAX_NUM_ROWS, "numRows must be <= %s", MAX_NUM_ROWS);
   }

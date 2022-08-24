@@ -253,7 +253,6 @@ public class SegmentListerResource
 
     final AsyncContext asyncContext = req.startAsync();
 
-
     asyncContext.addListener(
         new AsyncListener()
         {
