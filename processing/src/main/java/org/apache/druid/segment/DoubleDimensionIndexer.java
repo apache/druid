@@ -23,6 +23,7 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -47,7 +48,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   public EncodedKeyComponent<Double> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
     if (dimValues instanceof List) {
-      throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
+      throw new ParseException(null, "Numeric columns do not support multivalue rows.");
     }
 
     Double d = DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions);
