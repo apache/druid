@@ -93,7 +93,7 @@ public class StatusResource
             .stream()
             .anyMatch(
                 hiddenPropertyElement ->
-                    !entry.getKey().contains(hiddenPropertyElement)
+                    !StringUtils.toLowerCase(entry.getKey()).contains(StringUtils.toLowerCase(hiddenPropertyElement))
             )
     );
   }
