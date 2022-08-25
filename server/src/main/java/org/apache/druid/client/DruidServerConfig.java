@@ -49,8 +49,6 @@ public class DruidServerConfig
   @NotNull
   private Set<String> hiddenProperties = Sets.newHashSet("druid.s3.accessKey", "druid.s3.secretKey", "druid.metadata.storage.connector.password");
 
-  @JsonProperty
-  private Set<String> hiddenPropertiesContain = Sets.newHashSet("password", "key", "token", "pwd");
   private SegmentLoaderConfig segmentLoaderConfig;
 
   // Guice inject added here to properly bind this dependency into its dependents such as StatusResource
@@ -86,9 +84,5 @@ public class DruidServerConfig
     return hiddenProperties;
   }
 
-  public Set<String> getHiddenPropertiesContain()
-  {
-    return hiddenPropertiesContain;
-  }
 
 }

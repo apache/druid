@@ -26,6 +26,7 @@ import com.google.inject.Injector;
 import org.apache.druid.guice.PropertiesModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServerInjectorBuilderTest;
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,6 +36,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class StatusResourceTest
 {
@@ -64,22 +66,34 @@ public class StatusResourceTest
   @Test
   public void testHiddenProperties()
   {
-    Injector injector = Guice.createInjector(Collections.singletonList(new PropertiesModule(Collections.singletonList(
-        "status.resource.test.runtime.properties"))));
-    Map<String, String> returnedProperties = injector.getInstance(StatusResource.class).getProperties();
-    Set<String> hiddenProperties = new HashSet<>();
-    Splitter.on(",").split(returnedProperties.get("druid.server.hiddenProperties")).forEach(hiddenProperties::add);
-    hiddenProperties.forEach((property) -> Assert.assertNull(returnedProperties.get(property)));
+    testHiddenPropertiesWithPropertyFileName("status.resource.test.runtime.properties");
   }
 
   @Test
   public void testHiddenPropertiesContain()
   {
-    Injector injector = Guice.createInjector(Collections.singletonList(new PropertiesModule(Collections.singletonList(
-            "status.resource.test.runtime.hpc.properties"))));
-    Map<String, String> returnedProperties = injector.getInstance(StatusResource.class).getProperties();
-    Set<String> hiddenPropertiesContain = new HashSet<>();
-    Splitter.on(",").split(returnedProperties.get("druid.server.hiddenPropertiesContain")).forEach(hiddenPropertiesContain::add);
-    hiddenPropertiesContain.forEach((property) -> Assert.assertFalse(returnedProperties.keySet().stream().anyMatch((returnedProperty) -> returnedProperty.contains(property))));
+    testHiddenPropertiesWithPropertyFileName("status.resource.test.runtime.hpc.properties");
   }
+
+  private void testHiddenPropertiesWithPropertyFileName(String fileName)
+  {
+    Injector injector = Guice.createInjector(Collections.singletonList(new PropertiesModule(Collections.singletonList(
+        fileName))));
+    Map<String, String> returnedProperties = injector.getInstance(StatusResource.class).getProperties();
+    Set<String> lowerCasePropertyNames = returnedProperties.keySet()
+                                                           .stream()
+                                                           .map(StringUtils::toLowerCase)
+                                                           .collect(Collectors.toSet());
+    Set<String> hiddenProperties = new HashSet<>();
+    Splitter.on(",").split(returnedProperties.get("druid.server.hiddenProperties")).forEach(hiddenProperties::add);
+    hiddenProperties.forEach(
+        (property) -> {
+          lowerCasePropertyNames.forEach(
+              lowerCasePropertyName -> Assert.assertFalse(lowerCasePropertyName.contains(StringUtils.toLowerCase(
+                  property)))
+          );
+        }
+    );
+  }
+
 }

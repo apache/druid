@@ -49,6 +49,7 @@ import java.util.Properties;
 import java.util.Set;
 
 /**
+ *
  */
 @Path("/status")
 public class StatusResource
@@ -61,7 +62,8 @@ public class StatusResource
   public StatusResource(
       final Properties properties,
       final DruidServerConfig druidServerConfig,
-      final ExtensionsLoader extnLoader)
+      final ExtensionsLoader extnLoader
+  )
   {
     this.properties = properties;
     this.druidServerConfig = druidServerConfig;
@@ -76,20 +78,18 @@ public class StatusResource
   {
     Map<String, String> allProperties = Maps.fromProperties(properties);
     Set<String> hidderProperties = druidServerConfig.getHiddenProperties();
-    Set<String> hidderPropertiesContain = druidServerConfig.getHiddenPropertiesContain();
-    Map<String, String> unhiddenProperties = Maps.filterEntries(allProperties, (entry) -> !hidderProperties.contains(entry.getKey()));
-    return filterHiddenPropertiesContain(hidderPropertiesContain, unhiddenProperties);
+    return filterHiddenProperties(hidderProperties, allProperties);
   }
 
   @Nonnull
-  private Map<String, String> filterHiddenPropertiesContain(
-      Set<String> hidderPropertiesContain,
-      Map<String, String> unhiddenProperties
+  private Map<String, String> filterHiddenProperties(
+      Set<String> hidderProperties,
+      Map<String, String> allProperties
   )
   {
     return Maps.filterEntries(
-        unhiddenProperties,
-        (entry) -> hidderPropertiesContain
+        allProperties,
+        (entry) -> hidderProperties
             .stream()
             .anyMatch(
                 hiddenPropertyElement ->
