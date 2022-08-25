@@ -25,11 +25,11 @@ sidebar_label: Nested columns
 
 > Nested columns is an experimental feature available starting in Apache Druid 24.0. As an experimental feature, functionality documented on this page is subject to change or removal in future releases. Review the release notes and this page to stay up to date with changes.
 
-Apache Druid supports directly storing nested data structures in `COMPLEX<json>` columns. In addition to storing a copy of the structured data in JSON format, `COMPLEX<json>` columns also store specialized internal columns and indexes for nested 'literal' values (`STRING`, `LONG`, and `DOUBLE` types). An optimized [virtual-column](./virtual-columns.md#nested-field-virtual-column) allows for fast reading and filtering of these values at speeds which are consistent with standard Druid `LONG`, `DOUBLE`, and `STRING` columns.
+Apache Druid supports directly storing nested data structures in `COMPLEX<json>` columns. `COMPLEX<json>` columns store a copy of the structured data in JSON format, and specialized internal columns and indexes for nested 'literal' values&mdash;STRING, LONG, and DOUBLE types. An optimized [virtual column](./virtual-columns.md#nested-field-virtual-column) allows Druid to read and filter these values at speeds consistent with standard Druid LONG, DOUBLE, and STRING columns.
 
-The [Druid SQL JSON functions](./sql-json-functions.md) let you extract, transform, and create `COMPLEX<json>` values in SQL queries, taking advantage of the specialized virtual columns whenever possible. The [JSON nested columns functions](../misc/math-expr.md#nested-columns-functions), can be used in ['native' queries](./querying.md) using [expression virtual columns](./virtual-columns.md#expression-virtual-column), and in native ingestion with a [`transformSpec`](../ingestion/ingestion-spec.md#transformspec).
+Druid [SQL JSON functions](./sql-json-functions.md) allow you to extract, transform, and create `COMPLEX<json>` values in SQL queries, using the specialized virtual columns where appropriate. You can use the [JSON nested columns functions](../misc/math-expr.md#nested-columns-functions) in [native queries](./querying.md) using [expression virtual columns](./virtual-columns.md#expression-virtual-column), and in native ingestion with a [`transformSpec`](../ingestion/ingestion-spec.md#transformspec).
 
-When used in MSQ INSERT and REPLACE statements, or native ingestion `transformSpec`, the JSON functions can serve as an alternative to using a [`flattenSpec`](../ingestion/data-formats.md#flattenspec).
+You can use the JSON functions in INSERT and REPLACE statements in query-based ingestion, or in a `transformSpec` in native ingestion. This is an alternative to using a [`flattenSpec`](../ingestion/data-formats.md#flattenspec) object to 'flatten' nested data for ingestion.
 
 ### Example nested data
 
