@@ -471,7 +471,7 @@ SELECT
 Example query results:
 
 ```json
-[["EXPR$0","EXPR$2","EXPR$3"],["COMPLEX","STRING","STRING"],["OTHER","VARCHAR","VARCHAR"],["{\"x\":\"y\"}","\"{\\\"x\\\":\\\"y\\\"}\"","{\"x\":\"y\"}"]]
+[["EXPR$0","EXPR$2","EXPR$3"],["COMPLEX<json>","STRING","STRING"],["OTHER","VARCHAR","VARCHAR"],["{\"x\":\"y\"}","\"{\\\"x\\\":\\\"y\\\"}\"","{\"x\":\"y\"}"]]
 ```
 
 ### Using helper operators
