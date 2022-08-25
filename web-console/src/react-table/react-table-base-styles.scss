@@ -92,10 +92,6 @@ $border-color: rgba(0, 0, 0, 0.15);
       &.-cursor-pointer {
         cursor: pointer;
       }
-
-      &:last-child {
-        border-right: 0;
-      }
     }
 
     .rt-resizable-header {
@@ -150,9 +146,6 @@ $border-color: rgba(0, 0, 0, 0.15);
     }
     .rt-td {
       border-right: 1px solid $border-color;
-      &:last-child {
-        border-right: 0;
-      }
     }
     .rt-expandable {
       cursor: pointer;

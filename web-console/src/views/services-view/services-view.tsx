@@ -34,6 +34,7 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
+import { QueryWithContext } from '../../druid-models';
 import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api } from '../../singletons';
 import {
@@ -101,8 +102,7 @@ function formatQueues(
 }
 
 export interface ServicesViewProps {
-  goToQuery: (initSql: string) => void;
-  goToTask: (taskId: string) => void;
+  goToQuery(queryWithContext: QueryWithContext): void;
   capabilities: Capabilities;
 }
 
@@ -683,7 +683,7 @@ ORDER BY
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
-            onClick={() => goToQuery(ServicesView.SERVICE_SQL)}
+            onClick={() => goToQuery({ queryString: ServicesView.SERVICE_SQL })}
           />
         )}
       </MoreButton>

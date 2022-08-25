@@ -31,17 +31,17 @@ import { Popover2 } from '@blueprintjs/popover2';
 import React, { useCallback, useMemo } from 'react';
 
 import { MenuCheckbox } from '../../../components';
-import { getLink } from '../../../links';
-import { pluralIfNeeded } from '../../../utils';
 import {
+  changeUseApproximateCountDistinct,
+  changeUseApproximateTopN,
+  changeUseCache,
   getUseApproximateCountDistinct,
   getUseApproximateTopN,
   getUseCache,
   QueryContext,
-  setUseApproximateCountDistinct,
-  setUseApproximateTopN,
-  setUseCache,
-} from '../../../utils/query-context';
+} from '../../../druid-models';
+import { getLink } from '../../../links';
+import { pluralIfNeeded } from '../../../utils';
 
 import './run-button.scss';
 
@@ -102,7 +102,7 @@ const RunButtonExtraMenu = (props: RunButtonProps) => {
             text="Use approximate COUNT(DISTINCT)"
             onChange={() => {
               onQueryContextChange(
-                setUseApproximateCountDistinct(queryContext, !useApproximateCountDistinct),
+                changeUseApproximateCountDistinct(queryContext, !useApproximateCountDistinct),
               );
             }}
           />
@@ -110,7 +110,7 @@ const RunButtonExtraMenu = (props: RunButtonProps) => {
             checked={useApproximateTopN}
             text="Use approximate TopN"
             onChange={() => {
-              onQueryContextChange(setUseApproximateTopN(queryContext, !useApproximateTopN));
+              onQueryContextChange(changeUseApproximateTopN(queryContext, !useApproximateTopN));
             }}
           />
         </>
@@ -119,7 +119,7 @@ const RunButtonExtraMenu = (props: RunButtonProps) => {
         checked={useCache}
         text="Use cache"
         onChange={() => {
-          onQueryContextChange(setUseCache(queryContext, !useCache));
+          onQueryContextChange(changeUseCache(queryContext, !useCache));
         }}
       />
     </Menu>

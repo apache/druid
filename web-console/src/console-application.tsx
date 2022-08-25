@@ -20,9 +20,11 @@ import { HotkeysProvider, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React from 'react';
+import { RouteComponentProps } from 'react-router';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { HeaderActiveTab, HeaderBar, Loader } from './components';
+import { DruidEngine, QueryWithContext } from './druid-models';
 import { AppToaster } from './singletons';
 import { Capabilities, QueryManager } from './utils';
 import {
@@ -34,6 +36,8 @@ import {
   QueryView,
   SegmentsView,
   ServicesView,
+  SqlDataLoaderView,
+  WorkbenchView,
 } from './views';
 
 import './console-application.scss';
@@ -75,7 +79,7 @@ export class ConsoleApplication extends React.PureComponent<
   private openDialog?: string;
   private datasource?: string;
   private onlyUnavailable?: boolean;
-  private initQuery?: string;
+  private queryWithContext?: QueryWithContext;
 
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
@@ -119,14 +123,19 @@ export class ConsoleApplication extends React.PureComponent<
       this.openDialog = undefined;
       this.datasource = undefined;
       this.onlyUnavailable = undefined;
-      this.initQuery = undefined;
+      this.queryWithContext = undefined;
     }, 50);
   }
 
-  private readonly goToLoadData = (supervisorId?: string, taskId?: string) => {
-    if (taskId) this.taskId = taskId;
+  private readonly goToStreamingDataLoader = (supervisorId?: string) => {
     if (supervisorId) this.supervisorId = supervisorId;
-    window.location.hash = 'load-data';
+    window.location.hash = 'streaming-data-loader';
+    this.resetInitialsWithDelay();
+  };
+
+  private readonly goToClassicBatchDataLoader = (taskId?: string) => {
+    if (taskId) this.taskId = taskId;
+    window.location.hash = 'classic-batch-data-loader';
     this.resetInitialsWithDelay();
   };
 
@@ -140,6 +149,12 @@ export class ConsoleApplication extends React.PureComponent<
     this.datasource = datasource;
     this.onlyUnavailable = onlyUnavailable;
     window.location.hash = 'segments';
+    this.resetInitialsWithDelay();
+  };
+
+  private readonly goToIngestionWithTaskId = (taskId?: string) => {
+    this.taskId = taskId;
+    window.location.hash = 'ingestion';
     this.resetInitialsWithDelay();
   };
 
@@ -157,9 +172,9 @@ export class ConsoleApplication extends React.PureComponent<
     this.resetInitialsWithDelay();
   };
 
-  private readonly goToQuery = (initQuery: string) => {
-    this.initQuery = initQuery;
-    window.location.hash = 'query';
+  private readonly goToQuery = (queryWithContext: QueryWithContext) => {
+    this.queryWithContext = queryWithContext;
+    window.location.hash = 'workbench';
     this.resetInitialsWithDelay();
   };
 
@@ -187,13 +202,41 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(null, <HomeView capabilities={capabilities} />);
   };
 
-  private readonly wrappedLoadDataView = () => {
+  private readonly wrappedDataLoaderView = () => {
     const { exampleManifestsUrl } = this.props;
 
     return this.wrapInViewContainer(
-      'load-data',
+      'data-loader',
       <LoadDataView
+        mode="all"
+        initTaskId={this.taskId}
         initSupervisorId={this.supervisorId}
+        exampleManifestsUrl={exampleManifestsUrl}
+        goToIngestion={this.goToIngestionWithTaskGroupId}
+      />,
+      'narrow-pad',
+    );
+  };
+
+  private readonly wrappedStreamingDataLoaderView = () => {
+    return this.wrapInViewContainer(
+      'streaming-data-loader',
+      <LoadDataView
+        mode="streaming"
+        initSupervisorId={this.supervisorId}
+        goToIngestion={this.goToIngestionWithTaskGroupId}
+      />,
+      'narrow-pad',
+    );
+  };
+
+  private readonly wrappedClassicBatchDataLoaderView = () => {
+    const { exampleManifestsUrl } = this.props;
+
+    return this.wrapInViewContainer(
+      'classic-batch-data-loader',
+      <LoadDataView
+        mode="batch"
         initTaskId={this.taskId}
         exampleManifestsUrl={exampleManifestsUrl}
         goToIngestion={this.goToIngestionWithTaskGroupId}
@@ -208,11 +251,48 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'query',
       <QueryView
-        initQuery={this.initQuery}
+        initQuery={this.queryWithContext?.queryString}
         defaultQueryContext={defaultQueryContext}
         mandatoryQueryContext={mandatoryQueryContext}
       />,
       'thin',
+    );
+  };
+
+  private readonly wrappedWorkbenchView = (p: RouteComponentProps<any>) => {
+    const { defaultQueryContext, mandatoryQueryContext } = this.props;
+    const { capabilities } = this.state;
+
+    const queryEngines: DruidEngine[] = ['native'];
+    if (capabilities.hasSql()) {
+      queryEngines.push('sql-native');
+    }
+    if (capabilities.hasMultiStageQuery()) {
+      queryEngines.push('sql-msq-task');
+    }
+
+    return this.wrapInViewContainer(
+      'workbench',
+      <WorkbenchView
+        tabId={p.match.params.tabId}
+        onTabChange={newTabId => {
+          location.hash = `#workbench/${newTabId}`;
+        }}
+        initQueryWithContext={this.queryWithContext}
+        defaultQueryContext={defaultQueryContext}
+        mandatoryQueryContext={mandatoryQueryContext}
+        queryEngines={queryEngines}
+        allowExplain
+        goToIngestion={this.goToIngestionWithTaskId}
+      />,
+      'thin',
+    );
+  };
+
+  private readonly wrappedSqlDataLoaderView = () => {
+    return this.wrapInViewContainer(
+      'sql-data-loader',
+      <SqlDataLoaderView goToQuery={this.goToQuery} goToIngestion={this.goToIngestionWithTaskId} />,
     );
   };
 
@@ -248,12 +328,14 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'ingestion',
       <IngestionView
+        taskId={this.taskId}
         taskGroupId={this.taskGroupId}
         datasourceId={this.datasource}
         openDialog={this.openDialog}
         goToDatasource={this.goToDatasources}
         goToQuery={this.goToQuery}
-        goToLoadData={this.goToLoadData}
+        goToStreamingDataLoader={this.goToStreamingDataLoader}
+        goToClassicBatchDataLoader={this.goToClassicBatchDataLoader}
         capabilities={capabilities}
       />,
     );
@@ -263,11 +345,7 @@ export class ConsoleApplication extends React.PureComponent<
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'services',
-      <ServicesView
-        goToQuery={this.goToQuery}
-        goToTask={this.goToIngestionWithTaskGroupId}
-        capabilities={capabilities}
-      />,
+      <ServicesView goToQuery={this.goToQuery} capabilities={capabilities} />,
     );
   };
 
@@ -291,7 +369,15 @@ export class ConsoleApplication extends React.PureComponent<
         <HashRouter hashType="noslash">
           <div className="console-application">
             <Switch>
-              <Route path="/load-data" component={this.wrappedLoadDataView} />
+              <Route path="/data-loader" component={this.wrappedDataLoaderView} />
+              <Route
+                path="/streaming-data-loader"
+                component={this.wrappedStreamingDataLoaderView}
+              />
+              <Route
+                path="/classic-batch-data-loader"
+                component={this.wrappedClassicBatchDataLoaderView}
+              />
 
               <Route path="/ingestion" component={this.wrappedIngestionView} />
               <Route path="/datasources" component={this.wrappedDatasourcesView} />
@@ -299,6 +385,11 @@ export class ConsoleApplication extends React.PureComponent<
               <Route path="/services" component={this.wrappedServicesView} />
 
               <Route path="/query" component={this.wrappedQueryView} />
+              <Route
+                path={['/workbench/:tabId', '/workbench']}
+                component={this.wrappedWorkbenchView}
+              />
+              <Route path="/sql-data-loader" component={this.wrappedSqlDataLoaderView} />
 
               <Route path="/lookups" component={this.wrappedLookupsView} />
               <Route component={this.wrappedHomeView} />

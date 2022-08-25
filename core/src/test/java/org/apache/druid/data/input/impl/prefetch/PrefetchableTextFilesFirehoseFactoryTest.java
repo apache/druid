@@ -41,6 +41,7 @@ import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -249,6 +250,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   }
 
   @Test
+  @Ignore("See issue #12638")
   public void testWithLargeCacheAndSmallFetch() throws IOException
   {
     final TestPrefetchableTextFilesFirehoseFactory factory =
@@ -336,6 +338,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   }
 
   @Test
+  @Ignore("See issue #12638")
   public void testReconnectWithCacheAndPrefetch() throws IOException
   {
     final TestPrefetchableTextFilesFirehoseFactory factory =
