@@ -228,7 +228,7 @@ For example, the following ingestion query is the SQL-based version of the [batc
 ```sql
 REPLACE INTO msq_nested_data_transform_example OVERWRITE ALL
 SELECT
-  "time",
+  TIME_PARSE("time") as __time,
   JSON_VALUE(shipTo, '$.firstName') as firstName,
   JSON_VALUE(shipTo, '$.lastName') as lastName,
   JSON_QUERY(shipTo, '$.address') as address,
