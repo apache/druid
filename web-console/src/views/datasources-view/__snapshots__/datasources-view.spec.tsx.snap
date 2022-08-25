@@ -18,12 +18,13 @@ exports[`DatasourcesView matches snapshot 1`] = `
           disabled={false}
           icon="compressed"
           intent="danger"
+          label="(debug)"
           multiline={false}
           onClick={[Function]}
           popoverProps={Object {}}
           selected={false}
           shouldDismissPopover={true}
-          text="Force compaction run (debug)"
+          text="Force compaction run"
         />
       }
     >
@@ -207,7 +208,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
           "className": "padded",
           "filterable": false,
           "show": true,
-          "width": 220,
+          "width": 230,
         },
         Object {
           "Cell": [Function],
@@ -247,7 +248,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
           "className": "padded",
           "filterable": false,
           "show": true,
-          "width": 100,
+          "width": 110,
         },
         Object {
           "Cell": [Function],

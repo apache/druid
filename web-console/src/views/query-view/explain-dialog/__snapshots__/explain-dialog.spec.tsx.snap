@@ -113,10 +113,43 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
           >
             <Blueprint4.FormGroup
               className="query-group"
-              label="Query"
             >
-              <Blueprint4.TextArea
+              <ReactAce
+                className="query-string"
+                cursorStart={1}
+                editorProps={Object {}}
+                enableBasicAutocompletion={false}
+                enableLiveAutocompletion={false}
+                enableSnippets={false}
+                focus={false}
+                fontSize={13}
+                height="100%"
+                highlightActiveLine={true}
+                maxLines={null}
+                minLines={null}
+                mode="hjson"
+                name="ace-editor"
+                navigateToFileEnd={true}
+                onChange={null}
+                onLoad={null}
+                onPaste={null}
+                onScroll={null}
+                placeholder={null}
                 readOnly={true}
+                scrollMargin={
+                  Array [
+                    0,
+                    0,
+                    0,
+                    0,
+                  ]
+                }
+                setOptions={Object {}}
+                showGutter={true}
+                showPrintMargin={false}
+                style={Object {}}
+                tabSize={4}
+                theme="solarized_dark"
                 value="{
   \\"queryType\\": \\"scan\\",
   \\"dataSource\\": {
@@ -144,6 +177,8 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
     \\"type\\": \\"all\\"
   }
 }"
+                width="100%"
+                wrapEnabled={false}
               />
             </Blueprint4.FormGroup>
             <Blueprint4.FormGroup
@@ -177,10 +212,43 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
           >
             <Blueprint4.FormGroup
               className="query-group"
-              label="Query"
             >
-              <Blueprint4.TextArea
+              <ReactAce
+                className="query-string"
+                cursorStart={1}
+                editorProps={Object {}}
+                enableBasicAutocompletion={false}
+                enableLiveAutocompletion={false}
+                enableSnippets={false}
+                focus={false}
+                fontSize={13}
+                height="100%"
+                highlightActiveLine={true}
+                maxLines={null}
+                minLines={null}
+                mode="hjson"
+                name="ace-editor"
+                navigateToFileEnd={true}
+                onChange={null}
+                onLoad={null}
+                onPaste={null}
+                onScroll={null}
+                placeholder={null}
                 readOnly={true}
+                scrollMargin={
+                  Array [
+                    0,
+                    0,
+                    0,
+                    0,
+                  ]
+                }
+                setOptions={Object {}}
+                showGutter={true}
+                showPrintMargin={false}
+                style={Object {}}
+                tabSize={4}
+                theme="solarized_dark"
                 value="{
   \\"queryType\\": \\"scan\\",
   \\"dataSource\\": {
@@ -213,6 +281,8 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
     \\"type\\": \\"all\\"
   }
 }"
+                width="100%"
+                wrapEnabled={false}
               />
             </Blueprint4.FormGroup>
             <Blueprint4.FormGroup
@@ -270,10 +340,43 @@ exports[`ExplainDialog matches snapshot on some data (one query) 1`] = `
     >
       <Blueprint4.FormGroup
         className="query-group"
-        label="Query"
       >
-        <Blueprint4.TextArea
+        <ReactAce
+          className="query-string"
+          cursorStart={1}
+          editorProps={Object {}}
+          enableBasicAutocompletion={false}
+          enableLiveAutocompletion={false}
+          enableSnippets={false}
+          focus={false}
+          fontSize={13}
+          height="100%"
+          highlightActiveLine={true}
+          maxLines={null}
+          minLines={null}
+          mode="hjson"
+          name="ace-editor"
+          navigateToFileEnd={true}
+          onChange={null}
+          onLoad={null}
+          onPaste={null}
+          onScroll={null}
+          placeholder={null}
           readOnly={true}
+          scrollMargin={
+            Array [
+              0,
+              0,
+              0,
+              0,
+            ]
+          }
+          setOptions={Object {}}
+          showGutter={true}
+          showPrintMargin={false}
+          style={Object {}}
+          tabSize={4}
+          theme="solarized_dark"
           value="{
   \\"queryType\\": \\"topN\\",
   \\"dataSource\\": {
@@ -364,6 +467,8 @@ exports[`ExplainDialog matches snapshot on some data (one query) 1`] = `
   \\"context\\": {},
   \\"descending\\": false
 }"
+          width="100%"
+          wrapEnabled={false}
         />
       </Blueprint4.FormGroup>
       <Blueprint4.FormGroup

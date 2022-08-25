@@ -25,6 +25,8 @@
   }
 
   .#{$bp-ns}-dialog-body {
+    position: relative;
+
     .#{$bp-ns}-tabs {
       width: 100%;
       height: 100%;

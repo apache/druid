@@ -35,9 +35,10 @@ describe('ExplainDialog', () => {
   function makeExplainDialog() {
     return (
       <ExplainDialog
-        setQueryString={() => {}}
-        queryWithContext={{ queryString: 'test', queryContext: {}, wrapQueryLimit: undefined }}
+        onOpenQuery={() => {}}
+        queryWithContext={{ engine: 'sql-native', queryString: 'test', queryContext: {} }}
         onClose={() => {}}
+        openQueryLabel="Open query"
       />
     );
   }

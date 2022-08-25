@@ -19,11 +19,9 @@
 import { Callout, Code, FormGroup } from '@blueprintjs/core';
 import React from 'react';
 
-import { ExternalLink } from '../../components';
+import { ExternalLink, LearnMore } from '../../components';
 import { DimensionMode, getIngestionDocLink, IngestionSpec } from '../../druid-models';
 import { getLink } from '../../links';
-
-import { LearnMore } from './learn-more/learn-more';
 
 export interface ConnectMessageProps {
   inlineMode: boolean;

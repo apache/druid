@@ -21,7 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
-import { formatInteger, nonEmptyArray } from '../../utils';
+import { formatInteger, nonEmptyArray, tickIcon } from '../../utils';
 
 import { PageJumpDialog } from './page-jump-dialog/page-jump-dialog';
 
@@ -86,7 +86,7 @@ export const ReactTablePagination = React.memo(function ReactTablePagination(
         {pageSizeOptions.map((option, i) => (
           <MenuItem
             key={i}
-            icon={option === pageSize ? IconNames.TICK : IconNames.BLANK}
+            icon={tickIcon(option === pageSize)}
             text={String(option)}
             onClick={() => {
               if (option === pageSize) return;
@@ -99,9 +99,10 @@ export const ReactTablePagination = React.memo(function ReactTablePagination(
   }
 
   const start = page * pageSize + 1;
-  const end =
-    page * pageSize +
-    (nonEmptyArray(sortedData) ? Math.min(sortedData.length, pageSize) : pageSize);
+  let end = page * pageSize + pageSize;
+  if (nonEmptyArray(sortedData)) {
+    end = Math.min(end, sortedData.length);
+  }
 
   let pageInfo = 'Showing';
   if (end) {
