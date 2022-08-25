@@ -564,7 +564,7 @@ public class NestedDataOperatorConversions
                            )
                            .functionCategory(SqlFunctionCategory.SYSTEM)
                            .build();
-    
+
     @Override
     public SqlOperator calciteOperator()
     {
