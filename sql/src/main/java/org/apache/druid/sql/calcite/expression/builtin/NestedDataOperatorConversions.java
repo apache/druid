@@ -365,15 +365,10 @@ public class NestedDataOperatorConversions
           );
         } else {
           // fallback to json_value_any, e.g. the 'standard' convertlet.
-          rewrite = SqlStdOperatorTable.JSON_VALUE_ANY.createCall(
+          rewrite = JsonValueAnyOperatorConversion.FUNCTION.createCall(
               SqlParserPos.ZERO,
               call.operand(0),
-              call.operand(1),
-              call.operand(2),
-              call.operand(3),
-              call.operand(4),
-              call.operand(5),
-              null
+              call.operand(1)
           );
         }
 
