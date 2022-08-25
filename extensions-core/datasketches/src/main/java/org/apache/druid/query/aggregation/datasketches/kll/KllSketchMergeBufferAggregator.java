@@ -49,7 +49,7 @@ abstract class KllSketchMergeBufferAggregator<SketchType extends KllSketch> impl
   @Override
   public Object get(final ByteBuffer buffer, final int position)
   {
-    return helper.getSketchAtPosition(buffer, position);
+    return helper.get(buffer, position);
   }
 
   @Override

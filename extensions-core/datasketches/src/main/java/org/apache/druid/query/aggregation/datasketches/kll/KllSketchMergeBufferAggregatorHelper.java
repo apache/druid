@@ -55,11 +55,6 @@ abstract class KllSketchMergeBufferAggregatorHelper<SketchType extends KllSketch
     putUnion(buffer, position, union);
   }
 
-  public Object get(final ByteBuffer buffer, final int position)
-  {
-    return unions.get(buffer).get(position);
-  }
-
   public void clear()
   {
     unions.clear();
@@ -87,7 +82,7 @@ abstract class KllSketchMergeBufferAggregatorHelper<SketchType extends KllSketch
   }
 
   /**
-   * Retrieves the sketch at a particular position.
+   * Retrieves the sketch at a particular position. The returned sketch references the provided buffer.
    */
   public SketchType getSketchAtPosition(final ByteBuffer buf, final int position)
   {
@@ -109,4 +104,10 @@ abstract class KllSketchMergeBufferAggregatorHelper<SketchType extends KllSketch
   abstract SketchType newDirectInstance(int k, WritableMemory mem, MemoryRequestServer reqServer);
 
   abstract SketchType writableWrap(WritableMemory mem, MemoryRequestServer reqServer);
+
+  /**
+   * Returns a copy of the union at the provided buffer position. The returned union does not reference the
+   * provided buffer.
+   */
+  abstract SketchType get(final ByteBuffer buffer, final int position);
 }

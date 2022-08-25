@@ -79,7 +79,7 @@ abstract class KllSketchBuildBufferAggregatorHelper<SketchType extends KllSketch
   }
 
   /**
-   * Retrieves the sketch at a particular position.
+   * Retrieves the sketch at a particular position. The returned sketch references the provided buffer.
    */
   public SketchType getSketchAtPosition(final ByteBuffer buf, final int position)
   {
@@ -102,5 +102,8 @@ abstract class KllSketchBuildBufferAggregatorHelper<SketchType extends KllSketch
   
   abstract SketchType writableWrap(WritableMemory mem, MemoryRequestServer reqServer);
 
+  /**
+   * Returns a copy of the sketch at the provided buffer. The returned sketch does not reference the provided buffer.
+   */
   abstract SketchType get(ByteBuffer buf, int position);
 }

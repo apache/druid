@@ -20,8 +20,11 @@
 package org.apache.druid.query.aggregation.datasketches.kll;
 
 import org.apache.datasketches.kll.KllDoublesSketch;
+import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.MemoryRequestServer;
 import org.apache.datasketches.memory.WritableMemory;
+
+import java.nio.ByteBuffer;
 
 public class KllDoublesSketchMergeBufferAggregatorHelper extends KllSketchMergeBufferAggregatorHelper<KllDoublesSketch>
 {
@@ -45,4 +48,10 @@ public class KllDoublesSketchMergeBufferAggregatorHelper extends KllSketchMergeB
     return KllDoublesSketch.writableWrap(mem, reqServer);
   }
 
+  @Override
+  KllDoublesSketch get(ByteBuffer buffer, int position)
+  {
+    final KllDoublesSketch union = getSketchAtPosition(buffer, position);
+    return KllDoublesSketch.wrap(Memory.wrap(union.toByteArray()));
+  }
 }
