@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .table-cell-unparseable {
+  padding: $table-cell-v-padding $table-cell-h-padding;
   color: #9e2b0e;
 }

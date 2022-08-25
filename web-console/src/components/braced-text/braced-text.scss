@@ -26,6 +26,7 @@
     top: -50000px; // Send it into the stratosphere (get it out of the parent container to prevent the browser from adding '...')
     opacity: 0;
     pointer-events: none;
+    user-select: none;
   }
 
   .real-text {

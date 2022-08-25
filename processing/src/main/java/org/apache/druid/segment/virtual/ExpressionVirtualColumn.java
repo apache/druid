@@ -42,6 +42,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -140,6 +141,13 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
   {
+    final ColumnCapabilities capabilities = capabilities(factory, name);
+    // we make a special column value selector for values that are expected to be STRING to conform to behavior of
+    // other single and multi-value STRING selectors, whose getObject is expected to produce a single STRING value
+    // or List of STRING values.
+    if (capabilities.is(ValueType.STRING)) {
+      return ExpressionSelectors.makeStringColumnValueSelector(factory, parsedExpression.get());
+    }
     return ExpressionSelectors.makeColumnValueSelector(factory, parsedExpression.get());
   }
 

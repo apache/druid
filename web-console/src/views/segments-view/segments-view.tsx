@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Icon, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import { SqlComparison, SqlExpression, SqlLiteral, SqlRef } from 'druid-query-toolkit';
@@ -41,6 +41,7 @@ import {
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
+import { QueryWithContext } from '../../druid-models';
 import {
   booleanCustomTableFilter,
   BooleanFilterInput,
@@ -128,7 +129,7 @@ function formatRangeDimensionValue(dimension: any, value: any): string {
 }
 
 export interface SegmentsViewProps {
-  goToQuery: (initSql: string) => void;
+  goToQuery(queryWithContext: QueryWithContext): void;
   datasource: string | undefined;
   onlyUnavailable: boolean | undefined;
   capabilities: Capabilities;
@@ -655,18 +656,17 @@ END AS "time_span"`,
                 });
               };
 
-              const fullShardIcon = (
-                <Icon className="full-shard-spec-icon" icon={IconNames.EYE_OPEN} />
-              );
-
               switch (v?.type) {
                 case 'range': {
                   const dimensions = v.dimensions || [];
                   const formatEdge = (values: string[]) =>
-                    values.map((x, i) => formatRangeDimensionValue(dimensions[i], x)).join('; ');
+                    values
+                      .map((x, i) => formatRangeDimensionValue(dimensions[i] || `d${i}`, x))
+                      .join('; ');
 
                   return (
                     <TableClickableCell
+                      className="range-detail"
                       onClick={onShowFullShardSpec}
                       hoverIcon={IconNames.EYE_OPEN}
                     >
@@ -681,14 +681,17 @@ END AS "time_span"`,
 
                 case 'single': {
                   return (
-                    <div className="spec-detail range-detail" onClick={onShowFullShardSpec}>
+                    <TableClickableCell
+                      className="range-detail"
+                      onClick={onShowFullShardSpec}
+                      hoverIcon={IconNames.EYE_OPEN}
+                    >
                       <span className="range-label">Start:</span>
                       {v.start != null ? formatRangeDimensionValue(v.dimension, v.start) : '-∞'}
                       <br />
                       <span className="range-label">End:</span>
                       {v.end != null ? formatRangeDimensionValue(v.dimension, v.end) : '∞'}
-                      {fullShardIcon}
-                    </div>
+                    </TableClickableCell>
                   );
                 }
 
@@ -696,14 +699,16 @@ END AS "time_span"`,
                   const { partitionDimensions } = v;
                   if (!Array.isArray(partitionDimensions)) return value;
                   return (
-                    <div className="spec-detail" onClick={onShowFullShardSpec}>
+                    <TableClickableCell
+                      onClick={onShowFullShardSpec}
+                      hoverIcon={IconNames.EYE_OPEN}
+                    >
                       {`hash(${
                         partitionDimensions.length
                           ? partitionDimensions.join(', ')
                           : '<all dimensions>'
                       })`}
-                      {fullShardIcon}
-                    </div>
+                    </TableClickableCell>
                   );
                 }
 
@@ -711,17 +716,22 @@ END AS "time_span"`,
                 case 'none':
                 case 'tombstone':
                   return (
-                    <div className="spec-detail" onClick={onShowFullShardSpec}>
-                      No detail{fullShardIcon}
-                    </div>
+                    <TableClickableCell
+                      onClick={onShowFullShardSpec}
+                      hoverIcon={IconNames.EYE_OPEN}
+                    >
+                      No detail
+                    </TableClickableCell>
                   );
 
                 default:
                   return (
-                    <div className="spec-detail" onClick={onShowFullShardSpec}>
+                    <TableClickableCell
+                      onClick={onShowFullShardSpec}
+                      hoverIcon={IconNames.EYE_OPEN}
+                    >
                       {String(value)}
-                      {fullShardIcon}
-                    </div>
+                    </TableClickableCell>
                   );
               }
             },
@@ -906,7 +916,7 @@ END AS "time_span"`,
             disabled={!lastSegmentsQuery}
             onClick={() => {
               if (!lastSegmentsQuery) return;
-              goToQuery(lastSegmentsQuery);
+              goToQuery({ queryString: lastSegmentsQuery });
             }}
           />
         )}

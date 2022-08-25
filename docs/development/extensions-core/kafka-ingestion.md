@@ -134,8 +134,6 @@ If you want to ingest data from other fields in addition to the Kafka message co
 - the Kafka event timestamp
 - the Kafka event value that stores the payload.
 
-> The Kafka inputFormat is currently designated as experimental.
-
 For example, consider the following structure for a message that represents a fictitious wiki edit in a development environment:
 - **Event headers**: {"environment": "development"}
 - **Event key**: {"key: "wiki-edit"}

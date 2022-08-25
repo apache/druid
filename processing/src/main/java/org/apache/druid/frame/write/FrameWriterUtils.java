@@ -147,9 +147,9 @@ public class FrameWriterUtils
       for (int i = 0; i < ((List<?>) row).size(); i++) {
         retVal.add(getUtf8ByteBufferFromString(((List<String>) row).get(i)));
       }
-    } else if (row instanceof String[]) {
-      for (String value : (String[]) row) {
-        retVal.add(getUtf8ByteBufferFromString(value));
+    } else if (row instanceof Object[]) {
+      for (Object value : (Object[]) row) {
+        retVal.add(getUtf8ByteBufferFromString((String) value));
       }
     } else if (row instanceof ComparableStringArray) {
       for (String value : ((ComparableStringArray) row).getDelegate()) {
