@@ -119,10 +119,10 @@ Druid supports storing nested data structures in segments using the native `COMP
 
 You can interact with nested data using [JSON functions](./sql-json-functions.md), which can extract nested values, parse from string, serialize to string, and create new `COMPLEX<json>` structures.
 
-`COMPLEX` types in general currently have limited functionality outside of the use of the specialized functions which understand them, and so have undefined behavior when:
+`COMPLEX` types have limited functionality outside the specialized functions that use them, so their behavior is undefined when:
 
 * Grouping on complex values.
-* Filtered directly on complex values, such as `WHERE json is NULL`.
+* Filtering directly on complex values, such as `WHERE json is NULL`.
 * Used as inputs to aggregators without specialized handling for a specific complex type.
 
 In many cases, functions are provided to translate `COMPLEX` value types to `STRING`, which serves as a workaround solution until `COMPLEX` type functionality can be improved.
