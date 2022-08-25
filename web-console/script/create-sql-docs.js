@@ -23,7 +23,7 @@ const snarkdown = require('snarkdown');
 
 const writefile = 'lib/sql-docs.js';
 
-const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 150;
+const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 158;
 const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 14;
 
 function hasHtmlTags(str) {
@@ -63,13 +63,14 @@ const readDoc = async () => {
     await fs.readFile('../docs/querying/sql-scalar.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-aggregations.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-multivalue-string-functions.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-json-functions.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-operators.md', 'utf-8'),
   ].join('\n');
 
   const lines = data.split('\n');
 
   const functionDocs = {};
-  const dataTypeDocs = [];
+  const dataTypeDocs = {};
   for (let line of lines) {
     const functionMatch = line.match(/^\|\s*`(\w+)\(([^|]*)\)`\s*\|([^|]+)\|(?:([^|]+)\|)?$/);
     if (functionMatch) {
@@ -83,11 +84,7 @@ const readDoc = async () => {
 
     const dataTypeMatch = line.match(/^\|([A-Z]+)\|([A-Z]+)\|([^|]*)\|([^|]*)\|$/);
     if (dataTypeMatch) {
-      dataTypeDocs.push([
-        dataTypeMatch[1],
-        dataTypeMatch[2],
-        convertMarkdownToHtml(dataTypeMatch[4]),
-      ]);
+      dataTypeDocs[dataTypeMatch[1]] = [dataTypeMatch[2], convertMarkdownToHtml(dataTypeMatch[4])];
     }
   }
 

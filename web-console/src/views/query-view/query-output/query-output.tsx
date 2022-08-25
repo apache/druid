@@ -29,8 +29,8 @@ import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-d
 import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
 import {
   changePage,
+  columnToWidth,
   copyAndAlert,
-  dataTypeToColumnWidth,
   formatNumber,
   getNumericColumnBraces,
   Pagination,
@@ -217,7 +217,12 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         icon={icon}
         text={`${having ? 'Having' : 'Filter on'}: ${prettyPrintSql(clause)}`}
         onClick={() => {
-          onQueryAction(having ? q => q.addHaving(clause) : q => q.addWhere(clause));
+          const column = clause.getUsedColumns()[0];
+          onQueryAction(
+            having
+              ? q => q.removeFromHaving(column).addHaving(clause)
+              : q => q.removeColumnFromWhere(column).addWhere(clause),
+          );
         }}
       />
     );
@@ -367,7 +372,6 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         }
         columns={queryResult.header.map((column, i) => {
           const h = column.name;
-          const effectiveType = column.isTimeColumn() ? column.sqlType : column.nativeType;
 
           return {
             Header:
@@ -378,15 +382,13 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                       <Popover2 content={<Deferred content={() => getHeaderMenu(h, i)} />}>
                         <div className="clickable-cell">
                           {h}
-                          {hasFilterOnHeader(h, i) && (
-                            <Icon icon={IconNames.FILTER} iconSize={14} />
-                          )}
+                          {hasFilterOnHeader(h, i) && <Icon icon={IconNames.FILTER} size={14} />}
                         </div>
                       </Popover2>
                     );
                   },
             headerClassName: getHeaderClassName(h, i),
-            width: dataTypeToColumnWidth(effectiveType),
+            width: columnToWidth(column),
             accessor: String(i),
             Cell(row) {
               const value = row.value;

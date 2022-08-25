@@ -17,8 +17,8 @@
  */
 
 import { Intent } from '@blueprintjs/core';
+import { IconName, IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
-import FileSaver from 'file-saver';
 import hasOwnProp from 'has-own-prop';
 import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
@@ -44,6 +44,10 @@ export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
   });
+}
+
+export function clamp(n: number, min: number, max: number): number {
+  return Math.min(Math.max(n, min), max);
 }
 
 export function addOrUpdate<T>(xs: readonly T[], x: T, keyFn: (x: T) => string | number): T[] {
@@ -246,14 +250,6 @@ export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string)
 
 // ----------------------------
 
-export function parseJson(json: string): any {
-  try {
-    return JSONBig.parse(json);
-  } catch (e) {
-    return undefined;
-  }
-}
-
 export function validJson(json: string): boolean {
   try {
     JSONBig.parse(json);
@@ -279,6 +275,15 @@ export function alphanumericCompare(a: string, b: string): number {
   return String(a).localeCompare(b, undefined, { numeric: true });
 }
 
+export function zeroDivide(a: number, b: number): number {
+  if (b === 0) return 0;
+  return a / b;
+}
+
+export function capitalizeFirst(str: string): string {
+  return str.slice(0, 1).toUpperCase() + str.slice(1).toLowerCase();
+}
+
 export function arrangeWithPrefixSuffix(
   things: readonly string[],
   prefix: readonly string[],
@@ -291,25 +296,6 @@ export function arrangeWithPrefixSuffix(
 }
 
 // ----------------------------
-
-export function downloadFile(text: string, type: string, filename: string): void {
-  let blobType;
-  switch (type) {
-    case 'json':
-      blobType = 'application/json';
-      break;
-    case 'tsv':
-      blobType = 'text/tab-separated-values';
-      break;
-    default:
-      // csv
-      blobType = `text/${type}`;
-  }
-  const blob = new Blob([text], {
-    type: blobType,
-  });
-  FileSaver.saveAs(blob, filename);
-}
 
 export function copyAndAlert(copyString: string, alertMessage: string): void {
   copy(copyString, { format: 'text/plain' });
@@ -396,7 +382,7 @@ export function isInBackground(): boolean {
   return document.visibilityState === 'hidden';
 }
 
-export function twoLines(line1: string, line2: string) {
+export function twoLines(line1: string | JSX.Element, line2: string | JSX.Element) {
   return (
     <>
       {line1}
@@ -444,4 +430,16 @@ export function objectHash(obj: any): string {
 
 export function hasPopoverOpen(): boolean {
   return Boolean(document.querySelector('.bp4-portal .bp4-overlay .bp4-popover2'));
+}
+
+export function checkedCircleIcon(checked: boolean): IconName {
+  return checked ? IconNames.TICK_CIRCLE : IconNames.CIRCLE;
+}
+
+export function tickIcon(checked: boolean): IconName {
+  return checked ? IconNames.TICK : IconNames.BLANK;
+}
+
+export function generate8HexId(): string {
+  return (Math.random() * 1e10).toString(16).replace('.', '').substr(0, 8);
 }

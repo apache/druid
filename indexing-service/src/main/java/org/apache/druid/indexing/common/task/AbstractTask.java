@@ -104,7 +104,7 @@ public abstract class AbstractTask implements Task
       @Nonnull IngestionMode ingestionMode
   )
   {
-    this.id = Preconditions.checkNotNull(id, "id");
+    this.id = IdUtils.validateId("task ID", id);
     this.groupId = groupId == null ? id : groupId;
     this.taskResource = taskResource == null ? new TaskResource(id, 1) : taskResource;
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");

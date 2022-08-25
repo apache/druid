@@ -144,22 +144,32 @@ public class DruidRexExecutor implements RexExecutor
           assert exprResult.isArray();
           if (SqlTypeName.NUMERIC_TYPES.contains(constExp.getType().getComponentType().getSqlTypeName())) {
             if (exprResult.type().getElementType().is(ExprType.LONG)) {
-              List<BigDecimal> resultAsBigDecimalList = Arrays.stream(exprResult.asLongArray())
-                                                              .map(BigDecimal::valueOf)
+              List<BigDecimal> resultAsBigDecimalList = Arrays.stream(exprResult.asArray())
+                                                              .map(val -> {
+                                                                final Number longVal = (Number) val;
+                                                                if (longVal == null) {
+                                                                  return null;
+                                                                }
+                                                                return BigDecimal.valueOf(longVal.longValue());
+                                                              })
                                                               .collect(Collectors.toList());
               literal = rexBuilder.makeLiteral(resultAsBigDecimalList, constExp.getType(), true);
             } else {
-              List<BigDecimal> resultAsBigDecimalList = Arrays.stream(exprResult.asDoubleArray()).map(
-                  doubleVal -> {
-                    if (Double.isNaN(doubleVal) || Double.isInfinite(doubleVal)) {
+              List<BigDecimal> resultAsBigDecimalList = Arrays.stream(exprResult.asArray()).map(
+                  val -> {
+                    final Number doubleVal = (Number) val;
+                    if (doubleVal == null) {
+                      return null;
+                    }
+                    if (Double.isNaN(doubleVal.doubleValue()) || Double.isInfinite(doubleVal.doubleValue())) {
                       String expression = druidExpression.getExpression();
                       throw new UnsupportedSQLQueryException(
                           "'%s' contains an element that evaluates to '%s' which is not supported in SQL. You can either cast the element in the array to bigint or char or change the expression itself",
                           expression,
-                          Double.toString(doubleVal)
+                          Double.toString(doubleVal.doubleValue())
                       );
                     }
-                    return BigDecimal.valueOf(doubleVal);
+                    return BigDecimal.valueOf(doubleVal.doubleValue());
                   }
               ).collect(Collectors.toList());
               literal = rexBuilder.makeLiteral(resultAsBigDecimalList, constExp.getType(), true);

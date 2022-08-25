@@ -44,6 +44,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.DirectStatement.ResultSet;
 import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlExecutionReporter;
 import org.apache.druid.sql.SqlLifecycleManager;
@@ -67,6 +68,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -135,8 +137,9 @@ public class SqlResource
 
     try {
       Thread.currentThread().setName(StringUtils.format("sql[%s]", sqlQueryId));
-      final Sequence<Object[]> sequence = stmt.execute();
-      final SqlRowTransformer rowTransformer = stmt.createRowTransformer();
+      ResultSet resultSet = stmt.plan();
+      final Sequence<Object[]> sequence = resultSet.run();
+      final SqlRowTransformer rowTransformer = resultSet.createRowTransformer();
       final Yielder<Object[]> yielder0 = Yielders.each(sequence);
 
       try {
