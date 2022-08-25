@@ -52,11 +52,6 @@ abstract class KllSketchBuildBufferAggregatorHelper<SketchType extends KllSketch
     putSketch(buffer, position, sketch);
   }
 
-  public SketchType get(final ByteBuffer buffer, final int position)
-  {
-    return sketches.get(buffer).get(position);
-  }
-
   // A small number of sketches may run out of the given memory, request more memory on heap and move there.
   // In that case we need to reuse the object from the cache as opposed to wrapping the new buffer.
   public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
@@ -106,4 +101,6 @@ abstract class KllSketchBuildBufferAggregatorHelper<SketchType extends KllSketch
   abstract SketchType newDirectInstance(int k, WritableMemory mem, MemoryRequestServer reqServer);
   
   abstract SketchType writableWrap(WritableMemory mem, MemoryRequestServer reqServer);
+
+  abstract SketchType get(ByteBuffer buf, int position);
 }

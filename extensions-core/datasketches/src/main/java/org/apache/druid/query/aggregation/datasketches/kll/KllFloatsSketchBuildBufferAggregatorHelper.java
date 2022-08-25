@@ -20,8 +20,11 @@
 package org.apache.druid.query.aggregation.datasketches.kll;
 
 import org.apache.datasketches.kll.KllFloatsSketch;
+import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.MemoryRequestServer;
 import org.apache.datasketches.memory.WritableMemory;
+
+import java.nio.ByteBuffer;
 
 public class KllFloatsSketchBuildBufferAggregatorHelper
     extends KllSketchBuildBufferAggregatorHelper<KllFloatsSketch>
@@ -41,6 +44,12 @@ public class KllFloatsSketchBuildBufferAggregatorHelper
   KllFloatsSketch writableWrap(final WritableMemory mem, final MemoryRequestServer reqServer)
   {
     return KllFloatsSketch.writableWrap(mem, reqServer);
+  }
+
+  @Override
+  public KllFloatsSketch get(final ByteBuffer buffer, final int position)
+  {
+    return KllFloatsSketch.wrap(Memory.wrap(getSketchAtPosition(buffer, position).toByteArray()));
   }
 
 }
