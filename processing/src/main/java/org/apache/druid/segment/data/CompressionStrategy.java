@@ -21,6 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.github.luben.zstd.Zstd;
 import com.ning.compress.BufferRecycler;
 import com.ning.compress.lzf.LZFDecoder;
 import com.ning.compress.lzf.LZFEncoder;
@@ -75,6 +76,21 @@ public enum CompressionStrategy
       return LZ4Compressor.DEFAULT_COMPRESSOR;
     }
   },
+
+  ZSTD((byte) 0x2) {
+    @Override
+    public Decompressor getDecompressor()
+    {
+      return ZstdDecompressor.DEFAULT_COMPRESSOR;
+    }
+
+    @Override
+    public Compressor getCompressor()
+    {
+      return ZstdCompressor.DEFAULT_COMPRESSOR;
+    }
+  },
+
   UNCOMPRESSED((byte) 0xFF) {
     @Override
     public Decompressor getDecompressor()
@@ -171,10 +187,10 @@ public enum CompressionStrategy
     /**
      * Allocates a buffer that should be passed to {@link #compress} method as input buffer. Different Compressors
      * require (or work more efficiently with) different kinds of buffers.
-     *
+     * <p>
      * If the allocated buffer is a direct buffer, it should be registered to be freed with the given Closer.
      */
-    ByteBuffer allocateInBuffer(int inputSize, Closer closer)
+    public ByteBuffer allocateInBuffer(int inputSize, Closer closer)
     {
       return ByteBuffer.allocate(inputSize);
     }
@@ -182,12 +198,12 @@ public enum CompressionStrategy
     /**
      * Allocates a buffer that should be passed to {@link #compress} method as output buffer. Different Compressors
      * require (or work more efficiently with) different kinds of buffers.
-     *
+     * <p>
      * Allocates a buffer that is always enough to compress a byte sequence of the given size.
-     *
+     * <p>
      * If the allocated buffer is a direct buffer, it should be registered to be freed with the given Closer.
      */
-    abstract ByteBuffer allocateOutBuffer(int inputSize, Closer closer);
+    public abstract ByteBuffer allocateOutBuffer(int inputSize, Closer closer);
 
     /**
      * Returns a ByteBuffer with compressed contents of in between it's position and limit. It may be the provided out
@@ -205,7 +221,7 @@ public enum CompressionStrategy
     private static final UncompressedCompressor DEFAULT_COMPRESSOR = new UncompressedCompressor();
 
     @Override
-    ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
+    public ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
     {
       return ByteBuffer.allocate(inputSize);
     }
@@ -317,7 +333,7 @@ public enum CompressionStrategy
     }
 
     @Override
-    ByteBuffer allocateInBuffer(int inputSize, Closer closer)
+    public ByteBuffer allocateInBuffer(int inputSize, Closer closer)
     {
       ByteBuffer inBuffer = ByteBuffer.allocateDirect(inputSize);
       closer.register(() -> ByteBufferUtils.free(inBuffer));
@@ -325,7 +341,7 @@ public enum CompressionStrategy
     }
 
     @Override
-    ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
+    public ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
     {
       ByteBuffer outBuffer = ByteBuffer.allocateDirect(LZ4_HIGH.maxCompressedLength(inputSize));
       closer.register(() -> ByteBufferUtils.free(outBuffer));
@@ -341,6 +357,81 @@ public enum CompressionStrategy
       in.position(position);
       out.flip();
       return out;
+    }
+  }
+
+  public static class ZstdCompressor extends Compressor
+  {
+    private static final ZstdCompressor DEFAULT_COMPRESSOR = new ZstdCompressor();
+
+    @Override
+    public ByteBuffer allocateInBuffer(int inputSize, Closer closer)
+    {
+      ByteBuffer inBuffer = ByteBuffer.allocateDirect(inputSize);
+      closer.register(() -> ByteBufferUtils.free(inBuffer));
+      return inBuffer;
+    }
+
+    @Override
+    public ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
+    {
+      ByteBuffer outBuffer = ByteBuffer.allocateDirect((int) Zstd.compressBound(inputSize));
+      closer.register(() -> ByteBufferUtils.free(outBuffer));
+      return outBuffer;
+    }
+
+    @Override
+    public ByteBuffer compress(ByteBuffer in, ByteBuffer out)
+    {
+      int position = in.position();
+      out.clear();
+      long sizeNeeded = Zstd.compressBound(in.remaining());
+      if (out.remaining() < sizeNeeded) {
+        throw new RuntimeException("Output buffer too small, please allocate more space. " + sizeNeeded + " required.");
+      }
+      Zstd.compress(out, in, Zstd.maxCompressionLevel());
+      in.position(position);
+      out.flip();
+      return out;
+    }
+  }
+
+  public static class ZstdDecompressor implements Decompressor
+  {
+    private static final ZstdDecompressor DEFAULT_COMPRESSOR = new ZstdDecompressor();
+
+    @Override
+    public void decompress(ByteBuffer in, int numBytes, ByteBuffer out)
+    {
+      out.clear();
+      if (!in.isDirect() || !out.isDirect()) {
+        // fall back to heap byte arrays if both buffers are not direct
+        final byte[] inputBytes = new byte[numBytes];
+        in.get(inputBytes);
+        try (final ResourceHolder<byte[]> outputBytesHolder = CompressedPools.getOutputBytes()) {
+          final byte[] outputBytes = outputBytesHolder.get();
+          int decompressedBytes = (int) Zstd.decompressByteArray(
+              outputBytes,
+              0,
+              outputBytes.length,
+              inputBytes,
+              0,
+              numBytes
+          );
+          out.put(outputBytes, 0, decompressedBytes);
+          out.flip();
+        }
+      } else {
+        int decompressedBytes = (int) Zstd.decompressDirectByteBuffer(
+            out,
+            out.position(),
+            out.remaining(),
+            in,
+            in.position(),
+            numBytes
+        );
+        out.limit(out.position() + decompressedBytes);
+      }
     }
   }
 

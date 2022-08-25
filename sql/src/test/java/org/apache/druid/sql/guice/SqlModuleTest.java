@@ -73,8 +73,6 @@ import org.junit.runner.RunWith;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -148,7 +146,7 @@ public class SqlModuleTest
     Assert.assertNotNull(viewManager);
     Assert.assertTrue(viewManager instanceof NoopViewManager);
   }
-  
+
   @Test
   public void testNonDefaultViewManagerBind()
   {
@@ -208,12 +206,6 @@ public class SqlModuleTest
   private static class TestViewManagerModule implements DruidModule
   {
     @Override
-    public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
-    {
-      return Collections.emptyList();
-    }
-
-    @Override
     public void configure(Binder binder)
     {
       PolyBind.optionBinder(binder, Key.get(ViewManager.class))
@@ -225,7 +217,6 @@ public class SqlModuleTest
 
   private static class BindTestViewManager implements ViewManager
   {
-
     @Override
     public void createView(
         PlannerFactory plannerFactory,
@@ -233,7 +224,6 @@ public class SqlModuleTest
         String viewSql
     )
     {
-
     }
 
     @Override
@@ -243,13 +233,11 @@ public class SqlModuleTest
         String viewSql
     )
     {
-
     }
 
     @Override
     public void dropView(String viewName)
     {
-
     }
 
     @Override

@@ -123,7 +123,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnFloatAndLongs() throws Exception
+  public void testQuantileOnFloatAndLongs()
   {
     testQuery(
         "SELECT\n"
@@ -195,7 +195,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnComplexColumn() throws Exception
+  public void testQuantileOnComplexColumn()
   {
     testQuery(
         "SELECT\n"
@@ -243,7 +243,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnInnerQuery() throws Exception
+  public void testQuantileOnInnerQuery()
   {
     final List<Object[]> expectedResults;
     if (NullHandling.replaceWithDefault()) {
@@ -309,7 +309,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnCastedString() throws Exception
+  public void testQuantileOnCastedString()
   {
     cannotVectorize();
 
@@ -372,7 +372,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEmptyTimeseriesResults() throws Exception
+  public void testEmptyTimeseriesResults()
   {
     testQuery(
         "SELECT\n"
@@ -404,7 +404,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByAggregatorDefaultValues() throws Exception
+  public void testGroupByAggregatorDefaultValues()
   {
     testQuery(
         "SELECT\n"

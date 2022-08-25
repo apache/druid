@@ -362,7 +362,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     private TestTask(String id, Interval interval, Map<String, Object> context)
     {
-      super(id, "datasource", context);
+      super(id, "datasource", context, IngestionMode.NONE);
       this.interval = interval;
     }
 

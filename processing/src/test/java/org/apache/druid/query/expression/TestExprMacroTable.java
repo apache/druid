@@ -19,7 +19,9 @@
 
 package org.apache.druid.query.expression;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.math.expr.ExprMacroTable;
 
 public class TestExprMacroTable extends ExprMacroTable
@@ -27,6 +29,11 @@ public class TestExprMacroTable extends ExprMacroTable
   public static final ExprMacroTable INSTANCE = new TestExprMacroTable();
 
   private TestExprMacroTable()
+  {
+    this(new DefaultObjectMapper());
+  }
+
+  private TestExprMacroTable(ObjectMapper jsonMapper)
   {
     super(
         ImmutableList.of(
@@ -47,7 +54,17 @@ public class TestExprMacroTable extends ExprMacroTable
             new HyperUniqueExpressions.HllCreateExprMacro(),
             new HyperUniqueExpressions.HllAddExprMacro(),
             new HyperUniqueExpressions.HllEstimateExprMacro(),
-            new HyperUniqueExpressions.HllRoundEstimateExprMacro()
+            new HyperUniqueExpressions.HllRoundEstimateExprMacro(),
+            new NestedDataExpressions.JsonObjectExprMacro(),
+            new NestedDataExpressions.ListKeysExprMacro(),
+            new NestedDataExpressions.ListPathsExprMacro(),
+            new NestedDataExpressions.JsonKeysExprMacro(),
+            new NestedDataExpressions.JsonPathsExprMacro(),
+            new NestedDataExpressions.JsonValueExprMacro(),
+            new NestedDataExpressions.JsonQueryExprMacro(),
+            new NestedDataExpressions.ToJsonStringExprMacro(jsonMapper),
+            new NestedDataExpressions.ParseJsonExprMacro(jsonMapper),
+            new NestedDataExpressions.TryParseJsonExprMacro(jsonMapper)
         )
     );
   }

@@ -19,12 +19,15 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -35,10 +38,10 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 
 /**
  *
@@ -101,6 +104,7 @@ public abstract class BaseQuery<T> implements Query<T>
 
   @JsonProperty
   @Override
+  @JsonInclude(Include.NON_DEFAULT)
   public boolean isDescending()
   {
     return descending;
@@ -165,6 +169,7 @@ public abstract class BaseQuery<T> implements Query<T>
 
   @Override
   @JsonProperty
+  @JsonInclude(Include.NON_DEFAULT)
   public Map<String, Object> getContext()
   {
     return context.getMergedParams();
@@ -195,6 +200,12 @@ public abstract class BaseQuery<T> implements Query<T>
     return context.getAsBoolean(key, defaultValue);
   }
 
+  @Override
+  public HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
+  {
+    return context.getAsHumanReadableBytes(key, defaultValue);
+  }
+
   /**
    * @deprecated use {@link #computeOverriddenContext(Map, Map) computeOverriddenContext(getContext(), overrides))}
    * instead. This method may be removed in the next minor or major version of Druid.
@@ -210,13 +221,7 @@ public abstract class BaseQuery<T> implements Query<T>
       final Map<String, Object> overrides
   )
   {
-    Map<String, Object> overridden = new TreeMap<>();
-    if (context != null) {
-      overridden.putAll(context);
-    }
-    overridden.putAll(overrides);
-
-    return overridden;
+    return QueryContexts.override(context, overrides);
   }
 
   /**

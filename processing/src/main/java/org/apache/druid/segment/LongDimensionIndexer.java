@@ -39,7 +39,7 @@ import java.util.Objects;
 
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
-  public static final Comparator LONG_COMPARATOR = Comparators.<Long>naturalNullsFirst();
+  public static final Comparator<Long> LONG_COMPARATOR = Comparators.naturalNullsFirst();
 
   private volatile boolean hasNulls = false;
 

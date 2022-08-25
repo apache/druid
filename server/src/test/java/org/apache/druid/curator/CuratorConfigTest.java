@@ -23,6 +23,8 @@ import org.apache.druid.guice.JsonConfigTesterBase;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 public class CuratorConfigTest extends JsonConfigTesterBase<CuratorConfig>
 {
   @Test
@@ -41,5 +43,22 @@ public class CuratorConfigTest extends JsonConfigTesterBase<CuratorConfig>
     Assert.assertEquals("test-zk-user", config.getZkUser());
     Assert.assertEquals("test-zk-pwd", config.getZkPwd());
     Assert.assertEquals("auth", config.getAuthScheme());
+  }
+
+  @Test
+  public void testCreate()
+  {
+    CuratorConfig config = CuratorConfig.create("foo:2181,bar:2181");
+    Assert.assertEquals("foo:2181,bar:2181", config.getZkHosts());
+    Assert.assertEquals(false, config.getEnableAcl());
+    Assert.assertNull(config.getZkUser());
+    Assert.assertEquals("digest", config.getAuthScheme());
+  }
+
+  @Test
+  public void testExhibitorCreate()
+  {
+    ExhibitorConfig config = ExhibitorConfig.create(Arrays.asList("foo:2181", "bar:2181"));
+    Assert.assertEquals(2, config.getHosts().size());
   }
 }

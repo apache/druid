@@ -41,7 +41,7 @@ public class QueryLogHook implements TestRule
   private static final Logger log = new Logger(QueryLogHook.class);
 
   private final ObjectMapper objectMapper;
-  private final List<Query> recordedQueries = Lists.newCopyOnWriteArrayList();
+  private final List<Query<?>> recordedQueries = Lists.newCopyOnWriteArrayList();
 
   public QueryLogHook(final ObjectMapper objectMapper)
   {
@@ -63,7 +63,7 @@ public class QueryLogHook implements TestRule
     recordedQueries.clear();
   }
 
-  public List<Query> getRecordedQueries()
+  public List<Query<?>> getRecordedQueries()
   {
     return ImmutableList.copyOf(recordedQueries);
   }
@@ -80,7 +80,7 @@ public class QueryLogHook implements TestRule
 
         final Consumer<Object> function = query -> {
           try {
-            recordedQueries.add((Query) query);
+            recordedQueries.add((Query<?>) query);
             log.info(
                 "Issued query: %s",
                 objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query)

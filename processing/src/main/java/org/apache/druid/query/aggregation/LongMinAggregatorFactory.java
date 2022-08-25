@@ -118,6 +118,12 @@ public class LongMinAggregatorFactory extends SimpleLongAggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new LongMinAggregatorFactory(newName, getFieldName(), getExpression(), macroTable);
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     return cacheKey.get();

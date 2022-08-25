@@ -91,4 +91,16 @@ public class MySQLConnectorTest
         connector.connectorIsTransientException(new SQLTransientConnectionException("transient"))
     );
   }
+
+  @Test
+  public void testLimitClause()
+  {
+    MySQLConnector connector = new MySQLConnector(
+        CONNECTOR_CONFIG_SUPPLIER,
+        TABLES_CONFIG_SUPPLIER,
+        new MySQLConnectorSslConfig(),
+        MYSQL_DRIVER_CONFIG
+    );
+    Assert.assertEquals("LIMIT 100", connector.limitClause(100));
+  }
 }

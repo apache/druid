@@ -123,7 +123,7 @@ public class ResourcePool<K, V> implements Closeable
       public void returnResource()
       {
         if (returned.getAndSet(true)) {
-          log.warn(StringUtils.format("Resource at key[%s] was returned multiple times?", key));
+          log.warn("Resource at key[%s] was returned multiple times?", key);
         } else {
           holder.giveBack(value);
         }

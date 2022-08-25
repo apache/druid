@@ -111,7 +111,9 @@ We will ingest the sample data using the following spec, which demonstrates the 
     },
     "tuningConfig" : {
       "type" : "index_parallel",
-      "maxRowsPerSegment" : 5000000,
+      "partitionsSpec": {
+        "type": "dynamic"
+      },
       "maxRowsInMemory" : 25000
     }
   }

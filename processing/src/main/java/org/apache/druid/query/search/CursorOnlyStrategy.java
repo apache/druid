@@ -30,7 +30,6 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -90,7 +89,7 @@ public class CursorOnlyStrategy extends SearchStrategy
       final Sequence<Cursor> cursors = adapter.makeCursors(
           filter,
           interval,
-          VirtualColumns.EMPTY,
+          query.getVirtualColumns(),
           query.getGranularity(),
           query.isDescending(),
           null

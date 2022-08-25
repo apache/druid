@@ -31,14 +31,20 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -139,6 +145,28 @@ public class StringLastAggregatorFactory extends AggregatorFactory
           StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
       );
     }
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+
+    ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+    VectorObjectSelector vSelector = selectorFactory.makeObjectSelector(fieldName);
+    BaseLongVectorValueSelector timeSelector = (BaseLongVectorValueSelector) selectorFactory.makeValueSelector(
+        timeColumn);
+    if (capabilities != null) {
+      return new StringLastVectorAggregator(timeSelector, vSelector, maxStringBytes);
+    } else {
+      return new StringLastVectorAggregator(null, vSelector, maxStringBytes);
+    }
+
   }
 
   @Override
@@ -245,6 +273,12 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return Long.BYTES + Integer.BYTES + maxStringBytes;
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new StringLastAggregatorFactory(newName, getFieldName(), getTimeColumn(), getMaxStringBytes());
   }
 
   @Override

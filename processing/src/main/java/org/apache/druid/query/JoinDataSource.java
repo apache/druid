@@ -21,6 +21,8 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -33,6 +35,7 @@ import org.apache.druid.segment.join.JoinPrefixUtils;
 import org.apache.druid.segment.join.JoinType;
 
 import javax.annotation.Nullable;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -176,6 +179,7 @@ public class JoinDataSource implements DataSource
 
   @JsonProperty
   @Nullable
+  @JsonInclude(Include.NON_NULL)
   public DimFilter getLeftFilter()
   {
     return leftFilter;

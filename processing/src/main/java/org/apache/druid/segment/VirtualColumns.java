@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -33,9 +34,9 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
@@ -170,13 +171,17 @@ public class VirtualColumns implements Cacheable
     return withDotSupport.get(baseColumnName);
   }
 
+  /**
+   * Get the {@link ColumnIndexSupplier} of the specified virtual column, with the assistance of a
+   * {@link ColumnSelector} to allow reading things from segments. If the column does not have indexes this method
+   * may return null, or may also return a non-null supplier whose methods may return null values - having a supplier
+   * is no guarantee that the column has indexes.
+   */
   @Nullable
-  public BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
+  public ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
   {
     final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
-    return virtualColumn.capabilities(columnSelector, columnName).hasBitmapIndexes()
-           ? virtualColumn.getBitmapIndex(columnName, columnSelector)
-           : null;
+    return virtualColumn.getIndexSupplier(columnName, columnSelector);
   }
 
   /**
@@ -460,12 +465,11 @@ public class VirtualColumns implements Cacheable
                                 : Sets.newHashSet(columnNames);
 
     for (String columnName : virtualColumn.requiredColumns()) {
-      if (!nextSet.add(columnName)) {
-        throw new IAE("Self-referential column[%s]", columnName);
-      }
-
       final VirtualColumn dependency = getVirtualColumn(columnName);
       if (dependency != null) {
+        if (!nextSet.add(columnName)) {
+          throw new IAE("Self-referential column[%s]", columnName);
+        }
         detectCycles(dependency, nextSet);
       }
     }
@@ -496,5 +500,22 @@ public class VirtualColumns implements Cacheable
   public String toString()
   {
     return virtualColumns.toString();
+  }
+
+  /**
+   * {@link JsonInclude} filter for {@code getVirtualColumns()}.
+   *
+   * This API works by "creative" use of equals. It requires warnings to be suppressed
+   * and also requires spotbugs exclusions (see spotbugs-exclude.xml).
+   */
+  @SuppressWarnings({"EqualsAndHashcode", "EqualsHashCode"})
+  public static class JsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
+  {
+    @Override
+    public boolean equals(Object obj)
+    {
+      return obj instanceof VirtualColumns &&
+             ((VirtualColumns) obj).virtualColumns.isEmpty();
+    }
   }
 }

@@ -55,6 +55,7 @@ DRUIDVERSION
 DataSketches
 DateTime
 DateType
+dimensionsSpec
 DimensionSpec
 DimensionSpecs
 Dockerfile
@@ -112,6 +113,7 @@ InputFormat
 InputSource
 InputSources
 Integer.MAX_VALUE
+ioConfig
 JBOD
 JDBC
 JDK
@@ -123,6 +125,7 @@ JRE
 JS
 JSON
 JsonPath
+JSONPath
 JSSE
 JVM
 JVMs
@@ -207,6 +210,7 @@ aggregator
 aggregators
 ambari
 analytics
+arrayElement
 assumeRoleArn
 assumeRoleExternalId
 async
@@ -223,6 +227,7 @@ backfills
 backpressure
 base64
 big-endian
+bigint
 blobstore
 boolean
 breakpoint
@@ -230,6 +235,7 @@ broadcasted
 checksums
 classpath
 clickstream
+clientConfig
 codebase
 codec
 colocated
@@ -258,13 +264,16 @@ dequeued
 deserialization
 deserialize
 deserialized
+deserializes
 downtimes
 druid
 druid–kubernetes-extensions
 e.g.
 encodings
 endian
+endpointConfig
 enum
+expectedType
 expr
 failover
 featureSpec
@@ -283,6 +292,7 @@ gzipped
 hadoop
 hasher
 hashtable
+high-QPS
 historicals
 hostname
 hostnames
@@ -296,9 +306,15 @@ injective
 inlined
 inSubQueryThreshold
 interruptible
+isAllowList
 jackson-jq
 javadoc
 joinable
+json_keys
+json_object
+json_paths
+json_query
+json_value
 kerberos
 keystore
 keytool
@@ -338,10 +354,12 @@ noop
 numerics
 numShards
 parameterized
+parse_json
 parseable
 partitioner
 partitionFunction
 partitionsSpec
+pathParts
 performant
 plaintext
 pluggable
@@ -372,9 +390,12 @@ prepopulated
 preprocessing
 priori
 procs
+processFromRaw
 programmatically
 proto
 proxied
+proxyConfig
+QPS
 quantile
 quantiles
 queryable
@@ -401,10 +422,13 @@ searchable
 secondaryPartitionPruning
 seekable-stream
 servlet
+setProcessingThreadNames
 simple-client-sslcontext
 sharded
 sharding
 skipHeaderRows
+Smoosh
+smoosh
 smooshed
 splittable
 ssl
@@ -422,12 +446,15 @@ subtask
 subtasks
 supervisorTaskId
 symlink
+syntaxes
 tiering
 timeseries
 timestamp
 timestamps
+to_json_string
 tradeoffs
 transformSpec
+try_parse_json
 tsv
 ulimit
 unannounce
@@ -446,6 +473,7 @@ unparsed
 unsetting
 untrusted
 useFilterCNF
+useJqSyntax
 useSSL
 uptime
 uris
@@ -455,10 +483,12 @@ v1
 v2
 vCPUs
 validator
+varchar
 vectorizable
 vectorize
 vectorizeVirtualColumns
 versioning
+virtualColumns
 w.r.t.
 whitelist
 whitelisted
@@ -490,11 +520,13 @@ ISOYEAR
 IS_NULLABLE
 JDBC_TYPE
 MIDDLE_MANAGER
+MILLIS_TO_TIMESTAMP
 NULLable
 NUMERIC_PRECISION
 NUMERIC_PRECISION_RADIX
 NUMERIC_SCALE
 ORDINAL_POSITION
+POSIX
 PT1M
 PT5M
 SCHEMA_NAME
@@ -522,12 +554,14 @@ druid.server.tier
 druid.sql.planner.maxSemiJoinRowsInMemory
 druid.sql.planner.sqlTimeZone
 druid.sql.planner.useApproximateCountDistinct
-druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useApproximateTopN
+druid.sql.planner.useGroupingSetForExactDistinct
+druid.sql.planner.useNativeQueryExplain
 error_msg
 exprs
 group_id
 interval_expr
+is_active
 is_available
 is_leader
 is_overshadowed
@@ -558,11 +592,15 @@ useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
 wikipedia
+enableTimeBoundaryPlanning
+TimeBoundary
+druid.query.default.context.enableTimeBoundaryPlanning
 IEC
  - ../docs/comparisons/druid-vs-elasticsearch.md
 100x
  - ../docs/configuration/logging.md
 _common
+appenders
  - ../docs/dependencies/deep-storage.md
 druid-hdfs-storage
 druid-s3-extensions
@@ -671,7 +709,6 @@ baseDataSource
 baseDataSource-hashCode
 classpathPrefix
 derivativeDataSource
-dimensionsSpec
 druid.extensions.hadoopDependenciesDir
 hadoopDependencyCoordinates
 maxTaskCount
@@ -867,7 +904,11 @@ gcs-connector
 hadoop2
 hdfs
  - ../docs/development/extensions-core/kafka-extraction-namespace.md
+Aotearoa
+Czechia
+KTable
 LookupExtractorFactory
+Zeelund
 zookeeper.connect
  - ../docs/development/extensions-core/kafka-ingestion.md
 0.11.x.
@@ -1132,7 +1173,6 @@ datetime
 f.example.com
 filePattern
 forceExtendableShardSpecs
-granularitySpec
 ignoreInvalidRows
 ignoreWhenNoSegments
 indexSpecForIntermediatePersists
@@ -1311,6 +1351,8 @@ expm1
 expr
 expr1
 expr2
+expr3
+expr4
 fromIndex
 getExponent
 hypot
@@ -1414,13 +1456,16 @@ time-iso8601
 hadoopStorageDirectory
  - ../docs/operations/insert-segment-to-db.md
 0.14.x
+ - ../docs/operations/java.md
+G1
+Temurin
  - ../docs/operations/metrics.md
 0.14.x
 1s
 Bufferpool
 EventReceiverFirehose
 EventReceiverFirehoseMonitor
-Filesystesm
+Filesystem
 JVMMonitor
 QueryCountStatsMonitor
 RealtimeMetricsMonitor
@@ -1429,6 +1474,7 @@ SysMonitor
 TaskCountStatsMonitor
 TaskSlotCountStatsMonitor
 WorkerTaskCountStatsMonitor
+workerVersion
 bufferCapacity
 bufferpoolName
 cms
@@ -1460,6 +1506,7 @@ poolName
 remoteAddress
 segmentAvailabilityConfirmed
 serviceName
+taskIngestionMode
 taskStatus
 taskType
 threadPoolNumBusyThreads.
@@ -1572,6 +1619,7 @@ pre-existing
 pushdown
 row1
 subtotalsSpec
+tradeoff
 unnested
 unnesting
  - ../docs/querying/having.md
@@ -1627,6 +1675,7 @@ enableParallelMerge
 enableJoinLeftTableScanDirect
 enableJoinFilterPushDown
 enableJoinFilterRewrite
+enableRewriteJoinToFilter
 enableJoinFilterRewriteValueColumnFilters
 floatSum
 joinFilterRewriteMaxSize
@@ -1842,7 +1891,6 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
-dimensionsSpec
 doubleMax
 doubleMin
 doubleSum
@@ -1861,6 +1909,7 @@ druid_taskLock
 druid_taskLog
 druid_tasks
 DruidQueryRel
+durationToRetain
 ec2
 equalDistribution
 extractionFn
@@ -2013,3 +2062,90 @@ PMF
 CDF
 maxStreamLength
 toString
+100TB
+ - ../docs/querying/sql-functions.md
+ANY_VALUE 
+APPROX_COUNT_DISTINCT_DS_HLL 
+APPROX_COUNT_DISTINCT_DS_THETA 
+APPROX_QUANTILE_DS 
+APPROX_QUANTILE_FIXED_BUCKETS 
+ARRAY_CONCAT_AGG 
+BIT_AND 
+BIT_OR 
+BIT_XOR 
+BITWISE_AND 
+BITWISE_COMPLEMENT 
+BITWISE_CONVERT_DOUBLE_TO_LONG_BITS 
+BITWISE_CONVERT_LONG_BITS_TO_DOUBLE 
+BITWISE_OR 
+BITWISE_SHIFT_LEFT 
+BITWISE_SHIFT_RIGHT 
+BITWISE_XOR 
+BLOOM_FILTER 
+BTRIM 
+CHAR_LENGTH 
+CHARACTER_LENGTH 
+CURRENT_DATE 
+CURRENT_TIMESTAMP 
+DATE_TRUNC 
+DS_CDF 
+DS_GET_QUANTILE 
+DS_GET_QUANTILES 
+DS_HISTOGRAM 
+DS_HLL 
+DS_QUANTILE_SUMMARY 
+DS_QUANTILES_SKETCH 
+DS_RANK 
+DS_THETA 
+EARLIEST_BY 
+_e_
+HLL_SKETCH_ESTIMATE 
+HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS 
+HLL_SKETCH_TO_STRING 
+HLL_SKETCH_UNION 
+LATEST_BY 
+base-10
+MV_APPEND 
+MV_CONCAT 
+MV_CONTAINS 
+MV_FILTER_NONE 
+MV_FILTER_ONLY 
+MV_LENGTH 
+MV_OFFSET 
+MV_OFFSET_OF 
+MV_ORDINAL 
+MV_ORDINAL_OF 
+MV_OVERLAP 
+MV_PREPEND 
+MV_SLICE 
+MV_TO_STRING 
+NULLIF 
+_n_th
+STDDEV_POP 
+STDDEV_SAMP 
+STRING_FORMAT 
+STRING_TO_MV 
+SUBSTR 
+TDIGEST_GENERATE_SKETCH 
+TDIGEST_QUANTILE 
+TEXTCAT 
+THETA_SKETCH_ESTIMATE 
+THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS 
+THETA_SKETCH_INTERSECT 
+THETA_SKETCH_NOT 
+THETA_SKETCH_UNION 
+TIME_CEIL 
+TIME_EXTRACT 
+TIME_FLOOR 
+TIME_FORMAT 
+TIME_IN_INTERVAL 
+TIMESTAMP_TO_MILLIS 
+TIMESTAMPADD 
+TIMESTAMPDIFF 
+TRUNC 
+VAR_POP 
+VAR_SAMP
+KTable
+Aotearoa
+Czechia
+Zeelund

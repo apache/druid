@@ -94,11 +94,15 @@ public class NullHandlingTest
   @Test
   public void test_ignoreNullsStrings()
   {
-    NullHandling.initializeForTestsWithValues(false, true);
-    Assert.assertFalse(NullHandling.ignoreNullsForStringCardinality());
+    try {
+      NullHandling.initializeForTestsWithValues(false, true);
+      Assert.assertFalse(NullHandling.ignoreNullsForStringCardinality());
 
-    NullHandling.initializeForTestsWithValues(true, false);
-    Assert.assertFalse(NullHandling.ignoreNullsForStringCardinality());
-
+      NullHandling.initializeForTestsWithValues(true, false);
+      Assert.assertFalse(NullHandling.ignoreNullsForStringCardinality());
+    }
+    finally {
+      NullHandling.initializeForTests();
+    }
   }
 }

@@ -118,6 +118,12 @@ public class LongMaxAggregatorFactory extends SimpleLongAggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new LongMaxAggregatorFactory(newName, getFieldName(), getExpression(), macroTable);
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     return cacheKey.get();
