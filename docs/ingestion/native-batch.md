@@ -393,9 +393,7 @@ them to create the final segments. Finally, they push the final segments to the 
 
 #### Multi-dimension range partitioning
 
-> Multiple dimension (multi-dimension) range partitioning is an experimental feature.
-> Multi-dimension range partitioning is not supported in the sequential mode of the
-> `index_parallel` task type.
+> Multi-dimension range partitioning is not supported in the sequential mode of the `index_parallel` task type.
 
 Range partitioning has [several benefits](#benefits-of-range-partitioning) related to storage footprint and query
 performance. Multi-dimension range partitioning improves over single-dimension range partitioning by allowing
