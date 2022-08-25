@@ -1614,7 +1614,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           />
           <AnchorButton
             icon={IconNames.INFO_SIGN}
-            href={`${getLink('DOCS')}/ingestion/flatten-json.html`}
+            href={`${getLink('DOCS')}/ingestion/data-formats.html#flattenspec`}
             target="_blank"
             minimal
           />
