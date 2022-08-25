@@ -19,6 +19,8 @@
 @import '../../../variables';
 
 .execution-error-pane {
+  overflow: hidden;
+
   .#{$bp-ns}-dark & {
     background: $dark-gray3;
   }
