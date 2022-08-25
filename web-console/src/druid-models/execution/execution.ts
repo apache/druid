@@ -211,14 +211,14 @@ export class Execution {
   static fromTaskPayloadAndReport(
     taskPayload: { payload: any; task: string },
     taskReport: {
-      multiStageQuery: { payload: any; taskId: string };
+      multiStageQuery: { type: string; payload: any; taskId: string };
       error?: any;
     },
   ): Execution {
     // Must have status set for a valid report
     const id = deepGet(taskReport, 'multiStageQuery.taskId');
     const status = deepGet(taskReport, 'multiStageQuery.payload.status.status');
-    const warnings = deepGet(taskReport, 'multiStageQuery.payload.status.warningReports');
+    const warnings = deepGet(taskReport, 'multiStageQuery.payload.status.warnings');
 
     if (typeof id !== 'string' || !Execution.validTaskStatus(status)) {
       throw new Error('Invalid payload');
