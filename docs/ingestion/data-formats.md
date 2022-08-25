@@ -155,8 +155,6 @@ Be sure to change the `delimiter` to the appropriate delimiter for your data. Li
 
 Configure the Kafka `inputFormat` to load complete kafka records including header, key, and value. 
 
-> That Kafka inputFormat is currently designated as experimental.
-
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | Set value to `kafka`. | yes |

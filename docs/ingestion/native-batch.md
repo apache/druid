@@ -387,7 +387,6 @@ them to create the final segments. Finally, they push the final segments to the 
 > the task may fail if the input changes in between the two passes.
 
 #### Multi-dimension range partitioning
-> Multiple dimension (multi-dimension) range partitioning is an experimental feature. Multi-dimension range partitioning is currently not supported in the sequential mode of the Parallel task.
 
 When you use multi-dimension partitioning for your data, Druid is able to distribute segment sizes more evenly than with single dimension partitioning.
 
