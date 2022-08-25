@@ -497,7 +497,7 @@ FROM nested_data_example
 Example query results:
 
 ```json
-[["EXPR$0","EXPR$1","EXPR$2","EXPR$3"],["COMPLEX","COMPLEX","STRING","STRING"],["OTHER","OTHER","VARCHAR","VARCHAR"],["{\"x\":\"y\"}","\"{\\\"x\\\":\\\"y\\\"}\"","\"{\\\"x\\\":\\\"y\\\"}\"","{\"x\":\"y\"}"]]
+[["EXPR$0","EXPR$1","EXPR$2","EXPR$3"],["COMPLEX<json>","COMPLEX<json>","STRING","STRING"],["OTHER","OTHER","VARCHAR","VARCHAR"],["{\"x\":\"y\"}","\"{\\\"x\\\":\\\"y\\\"}\"","\"{\\\"x\\\":\\\"y\\\"}\"","{\"x\":\"y\"}"]]
 ```
 
 ## Known issues
