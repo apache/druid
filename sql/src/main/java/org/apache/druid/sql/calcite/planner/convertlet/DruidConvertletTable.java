@@ -28,6 +28,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql2rel.SqlRexConvertlet;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
+import org.apache.druid.sql.calcite.expression.builtin.NestedDataOperatorConversions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ public class DruidConvertletTable implements SqlRexConvertletTable
       ImmutableList.<DruidConvertletFactory>builder()
                    .add(CurrentTimestampAndFriendsConvertletFactory.INSTANCE)
                    .add(TimeInIntervalConvertletFactory.INSTANCE)
+                   .add(new NestedDataOperatorConversions.DruidJsonValueConvertletFactory())
                    .build();
 
   // Operators we don't have standard conversions for, but which can be converted into ones that do by

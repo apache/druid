@@ -2253,7 +2253,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         (expected) -> {
           expected.expect(UnsupportedSQLQueryException.class);
           expected.expectMessage(
-              "Cannot use [JSON_VALUE_ANY]: [Bad format, '.array.[1]' is not a valid JSONPath path: must start with '$']");
+              "Cannot use [JSON_VALUE_VARCHAR]: [Bad format, '.array.[1]' is not a valid JSONPath path: must start with '$']");
         }
     );
   }
@@ -2354,6 +2354,54 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         RowSignature.builder()
                     .add("EXPR$0", NestedDataComplexTypeSerde.TYPE)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testCompositionTyping()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE((JSON_OBJECT(KEY 'x' VALUE JSON_VALUE(nest, '$.x' RETURNING BIGINT))), '$.x' RETURNING BIGINT)\n"
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "json_value(json_object('x',\"v1\"),'$.x', 'LONG')",
+                          ColumnType.LONG,
+                          macroTable
+                      ),
+                      new NestedFieldVirtualColumn(
+                          "nest",
+                          "v1",
+                          ColumnType.LONG,
+                          null,
+                          false,
+                          "$.x",
+                          false
+                      )
+                  )
+                  .columns("v0")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{100L},
+            new Object[]{NullHandling.defaultLongValue()},
+            new Object[]{200L},
+            new Object[]{NullHandling.defaultLongValue()},
+            new Object[]{NullHandling.defaultLongValue()},
+            new Object[]{100L},
+            new Object[]{NullHandling.defaultLongValue()}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
                     .build()
     );
   }

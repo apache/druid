@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
@@ -270,6 +271,11 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     Assert.assertEquals("hello", eval.value());
     Assert.assertEquals(ExpressionType.STRING, eval.type());
 
+    expr = Parser.parse("json_value(nester, '$.y.a', 'LONG')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals(NullHandling.defaultLongValue(), eval.value());
+    Assert.assertEquals(ExpressionType.LONG, eval.type());
+
     expr = Parser.parse("json_value(nester, '$.y.a.b.c[12]')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertNull(eval.value());
@@ -278,6 +284,26 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     eval = expr.eval(inputBindings);
     Assert.assertEquals(1234L, eval.value());
     Assert.assertEquals(ExpressionType.LONG, eval.type());
+
+    expr = Parser.parse("json_value(long, '$', 'STRING')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("1234", eval.value());
+    Assert.assertEquals(ExpressionType.STRING, eval.type());
+
+    expr = Parser.parse("json_value(nest, '$.x')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals(100L, eval.value());
+    Assert.assertEquals(ExpressionType.LONG, eval.type());
+
+    expr = Parser.parse("json_value(nest, '$.x', 'DOUBLE')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals(100.0, eval.value());
+    Assert.assertEquals(ExpressionType.DOUBLE, eval.type());
+
+    expr = Parser.parse("json_value(nest, '$.x', 'STRING')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("100", eval.value());
+    Assert.assertEquals(ExpressionType.STRING, eval.type());
   }
 
   @Test

@@ -20,18 +20,25 @@
 package org.apache.druid.sql.calcite.expression.builtin;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeTransforms;
+import org.apache.calcite.sql2rel.SqlRexConvertlet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
@@ -50,9 +57,11 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
+import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletFactory;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 
 public class NestedDataOperatorConversions
@@ -316,12 +325,214 @@ public class NestedDataOperatorConversions
     }
   }
 
-  public static class JsonValueOperatorConversion implements SqlOperatorConversion
+
+  /**
+   * The {@link org.apache.calcite.sql2rel.StandardConvertletTable} converts json_value(.. RETURNING type) into
+   * cast(json_value_any(..), type).
+   *
+   * This is not that useful for us, so we have our own convertlet, to translate into specialized operators such
+   * as 'JSON_VALUE_BIGINT', 'JSON_VALUE_DOUBLE', and so on, before falling back to JSON_VALUE_ANY.
+   *
+   * This convertlet still always wraps the function in a cast, to smooth out type mismatches such as
+   * VARCHAR(2000) vs VARCHAR or whatever else various type checkers like to complain about not exactly matching.
+   */
+  public static class DruidJsonValueConvertletFactory implements DruidConvertletFactory
+  {
+    @Override
+    public SqlRexConvertlet createConvertlet(PlannerContext plannerContext)
+    {
+      return (cx, call) -> {
+        SqlDataTypeSpec dataType = call.operand(6);
+        RelDataType sqlType = dataType.deriveType(cx.getValidator());
+        SqlNode rewrite;
+        if (SqlTypeName.INT_TYPES.contains(sqlType.getSqlTypeName())) {
+          rewrite = JsonValueBigintOperatorConversion.FUNCTION.createCall(
+              SqlParserPos.ZERO,
+              call.operand(0),
+              call.operand(1)
+          );
+        } else if (SqlTypeName.APPROX_TYPES.contains(sqlType.getSqlTypeName())) {
+          rewrite = JsonValueDoubleOperatorConversion.FUNCTION.createCall(
+              SqlParserPos.ZERO,
+              call.operand(0),
+              call.operand(1)
+          );
+        } else if (SqlTypeName.STRING_TYPES.contains(sqlType.getSqlTypeName())) {
+          rewrite = JsonValueStringOperatorConversion.FUNCTION.createCall(
+              SqlParserPos.ZERO,
+              call.operand(0),
+              call.operand(1)
+          );
+        } else {
+          // fallback to json_value_any, e.g. the 'standard' convertlet.
+          rewrite = SqlStdOperatorTable.JSON_VALUE_ANY.createCall(
+              SqlParserPos.ZERO,
+              call.operand(0),
+              call.operand(1),
+              call.operand(2),
+              call.operand(3),
+              call.operand(4),
+              call.operand(5),
+              null
+          );
+        }
+
+        // always cast anyway, to prevent haters from complaining that VARCHAR doesn't match VARCHAR(2000)
+        SqlNode caster = SqlStdOperatorTable.CAST.createCall(
+            SqlParserPos.ZERO,
+            rewrite,
+            call.operand(6)
+        );
+        return cx.convertExpression(caster);
+      };
+    }
+
+    @Override
+    public List<SqlOperator> operators()
+    {
+      return Collections.singletonList(SqlStdOperatorTable.JSON_VALUE);
+    }
+  }
+
+  public abstract static class JsonValueReturningTypeOperatorConversion implements SqlOperatorConversion
+  {
+    private final SqlFunction function;
+    private final ColumnType druidType;
+
+    public JsonValueReturningTypeOperatorConversion(SqlFunction function, ColumnType druidType)
+    {
+      this.druidType = druidType;
+      this.function = function;
+    }
+
+    @Override
+    public SqlOperator calciteOperator()
+    {
+      return function;
+    }
+
+    @Nullable
+    @Override
+    public DruidExpression toDruidExpression(
+        PlannerContext plannerContext,
+        RowSignature rowSignature,
+        RexNode rexNode
+    )
+    {
+      final RexCall call = (RexCall) rexNode;
+      final List<DruidExpression> druidExpressions = Expressions.toDruidExpressions(
+          plannerContext,
+          rowSignature,
+          call.getOperands()
+      );
+
+      if (druidExpressions == null || druidExpressions.size() != 2) {
+        return null;
+      }
+
+      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      if (!pathExpr.isLiteral()) {
+        return null;
+      }
+      // pre-normalize path so that the same expressions with different jq syntax are collapsed
+      final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
+      final List<NestedPathPart> parts;
+      try {
+        parts = NestedPathFinder.parseJsonPath(path);
+      }
+      catch (IllegalArgumentException iae) {
+        throw new UnsupportedSQLQueryException(
+            "Cannot use [%s]: [%s]",
+            call.getOperator().getName(),
+            iae.getMessage()
+        );
+      }
+      final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
+      final DruidExpression.ExpressionGenerator builder = (args) ->
+          "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "', '" + druidType.asTypeString() + "')";
+
+      if (druidExpressions.get(0).isSimpleExtraction()) {
+
+        return DruidExpression.ofVirtualColumn(
+            druidType,
+            builder,
+            ImmutableList.of(
+                DruidExpression.ofColumn(NestedDataComplexTypeSerde.TYPE, druidExpressions.get(0).getDirectColumn())
+            ),
+            (name, outputType, expression, macroTable) -> new NestedFieldVirtualColumn(
+                druidExpressions.get(0).getDirectColumn(),
+                name,
+                outputType,
+                parts,
+                false,
+                null,
+                null
+            )
+        );
+      }
+      return DruidExpression.ofExpression(druidType, builder, druidExpressions);
+    }
+
+    static SqlFunction buildFunction(String functionName, SqlTypeName typeName)
+    {
+      return OperatorConversions.operatorBuilder(functionName)
+                                .operandTypeChecker(
+                                    OperandTypes.sequence(
+                                        "(expr,path)",
+                                        OperandTypes.family(SqlTypeFamily.ANY),
+                                        OperandTypes.family(SqlTypeFamily.STRING)
+                                    )
+                                )
+                                .returnTypeInference(
+                                    ReturnTypes.cascade(
+                                        opBinding -> opBinding.getTypeFactory().createSqlType(typeName),
+                                        SqlTypeTransforms.FORCE_NULLABLE
+                                    )
+                                )
+                                .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
+                                .build();
+    }
+  }
+
+  public static class JsonValueBigintOperatorConversion extends JsonValueReturningTypeOperatorConversion
+  {
+    public static SqlFunction FUNCTION = buildFunction("JSON_VALUE_BIGINT", SqlTypeName.BIGINT);
+
+    public JsonValueBigintOperatorConversion()
+    {
+      super(FUNCTION, ColumnType.LONG);
+    }
+  }
+
+  public static class JsonValueDoubleOperatorConversion extends JsonValueReturningTypeOperatorConversion
+  {
+    public static SqlFunction FUNCTION = buildFunction("JSON_VALUE_DOUBLE", SqlTypeName.DOUBLE);
+
+    public JsonValueDoubleOperatorConversion()
+    {
+      super(FUNCTION, ColumnType.DOUBLE);
+    }
+  }
+
+  public static class JsonValueStringOperatorConversion extends JsonValueReturningTypeOperatorConversion
+  {
+    public static SqlFunction FUNCTION = buildFunction("JSON_VALUE_VARCHAR", SqlTypeName.VARCHAR);
+
+    public JsonValueStringOperatorConversion()
+    {
+      super(FUNCTION, ColumnType.STRING);
+    }
+  }
+
+  /**
+   * Calcites {@link org.apache.calcite.sql2rel.StandardConvertletTable} translates JSON_VALUE
+   */
+  public static class JsonValueAnyOperatorConversion implements SqlOperatorConversion
   {
     @Override
     public SqlOperator calciteOperator()
     {
-      return SqlStdOperatorTable.JSON_VALUE;
+      return SqlStdOperatorTable.JSON_VALUE_ANY;
     }
 
     @Nullable
@@ -334,8 +545,9 @@ public class NestedDataOperatorConversions
     {
       final RexCall call = (RexCall) rexNode;
 
-      // calcite puts a bunch of junk in here so the call looks something like
-      // JSON_VALUE(`nested`.`nest`, '$.x', SQLJSONVALUEEMPTYORERRORBEHAVIOR[NULL], NULL, SQLJSONVALUEEMPTYORERRORBEHAVIOR[NULL], NULL, VARCHAR(2000))
+      // calcite parser puts a bunch of junk in here that we don't care about right now, so the call looks something
+      // like this:
+      // JSON_VALUE_ANY(`nested`.`nest`, '$.x', SQLJSONVALUEEMPTYORERRORBEHAVIOR[NULL], NULL, SQLJSONVALUEEMPTYORERRORBEHAVIOR[NULL], NULL)
       // by the time it gets here
       final List<DruidExpression> druidExpressions = Expressions.toDruidExpressions(
           plannerContext,
@@ -343,13 +555,6 @@ public class NestedDataOperatorConversions
           call.getOperands().subList(0, 2)
       );
 
-      ColumnType inferredOutputType = ColumnType.STRING;
-      if (call.getOperands().size() == 7) {
-        ColumnType maybe = Calcites.getColumnTypeForRelDataType(call.getOperands().get(6).getType());
-        if (maybe != null && !ColumnType.UNKNOWN_COMPLEX.equals(maybe)) {
-          inferredOutputType = maybe;
-        }
-      }
 
       if (druidExpressions == null || druidExpressions.size() != 2) {
         return null;
@@ -379,7 +584,7 @@ public class NestedDataOperatorConversions
       if (druidExpressions.get(0).isSimpleExtraction()) {
 
         return DruidExpression.ofVirtualColumn(
-            inferredOutputType,
+            null,
             builder,
             ImmutableList.of(
                 DruidExpression.ofColumn(NestedDataComplexTypeSerde.TYPE, druidExpressions.get(0).getDirectColumn())
@@ -395,24 +600,7 @@ public class NestedDataOperatorConversions
             )
         );
       }
-      return DruidExpression.ofExpression(ColumnType.STRING, builder, druidExpressions);
-    }
-  }
-
-  // calcite converts JSON_VALUE to JSON_VALUE_ANY so we have to wire that up too...
-  public static class JsonValueAnyOperatorConversion extends AliasedOperatorConversion
-  {
-    private static final String FUNCTION_NAME = StringUtils.toUpperCase("json_value_any");
-
-    public JsonValueAnyOperatorConversion()
-    {
-      super(new JsonValueOperatorConversion(), FUNCTION_NAME);
-    }
-
-    @Override
-    public SqlOperator calciteOperator()
-    {
-      return SqlStdOperatorTable.JSON_VALUE_ANY;
+      return DruidExpression.ofExpression(null, builder, druidExpressions);
     }
   }
 
