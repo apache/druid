@@ -194,9 +194,7 @@ For example, the following ingestion spec extracts `firstName`, `lastName` and `
 
 To ingest nested data using multi-stage query architecture, specify `COMPLEX<json>` as the column `type` when you define the row signature&mdash;`shipTo` and `details` in the following example ingestion spec: 
 
-> Note to self: add screenshot
-
-<!---![Multi-stage query architecture](../assets/nested-columns-multi-stage-query-engine.png)-->
+![SQL-based ingestion](../assets/nested-msq-ingestion.png)
 
 ```sql
 REPLACE INTO msq_nested_data_example OVERWRITE ALL
@@ -224,6 +222,8 @@ PARTITIONED BY ALL
 You can use the [JSON nested columns functions](./sql-json-functions.md) to transform JSON data in your ingestion query.
 
 For example, the following ingestion query is the SQL-based version of the [batch example above](#transform-data-during-batch-ingestion)&mdash;it extracts `firstName`, `lastName` and `address` from `shipTo` and creates a composite JSON object containing `product`, `details` and `department`.
+
+![SQL-based ingestion](../assets/nested-msq-ingestion-transform.png)
 
 ```sql
 REPLACE INTO msq_nested_data_transform_example OVERWRITE ALL
@@ -260,9 +260,7 @@ The following example illustrates how you can display the data types for your co
 
 #### Example query: Display data types
 
-> Note to self: add screenshot
-
-<!---![Display data types](../assets/nested-columns-json-information-schema.png)-->
+![Display data types](../assets/nested-display-data-types.png)
 
 ```sql
 SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE
@@ -284,9 +282,7 @@ You can retrieve JSON data directly from a table. Druid returns the results as a
 
 The following example query extracts all data from `nested_data_example`:
 
-> Note to self: add screenshot
-
-<!---![Nested columns select star](../assets/nested-columns-json-select-star.png)-->
+![Retrieve JSON data](../assets/nested-retrieve-json.png)
 
 ```sql
 SELECT * FROM nested_data_example
@@ -312,9 +308,7 @@ Some operations using `JSON_VALUE` run faster than those using native Druid colu
 
 The following example query illustrates how to use `JSON_VALUE` to extract specified elements from a `COMPLEX<json>` object. Note that the returned values default to type VARCHAR.
 
-> Note to self: add screenshot
-
-<!---![Extract nested data elements](../assets/nested-columns-json-value-1.png)-->
+![Extract nested data elements](../assets/nested-extract-elements.png)
 
 ```sql
 SELECT
@@ -342,7 +336,7 @@ The following example query illustrates how to use `JSON_VALUE` and the `RETURNI
 
 > Note to self: add screenshot
 
-<!---![Extract nested data elements as a suggested type](../assets/nested-columns-json-value-returning.png)-->
+![Extract nested data elements as a suggested type](../assets/nested-extract-as-type.png)
 
 ```sql
 SELECT
@@ -369,9 +363,7 @@ You can use `JSON_VALUE` expressions in any context where you can use traditiona
 
 The following example query illustrates how to use SUM, WHERE, GROUP BY and ORDER BY operators with `JSON_VALUE`.
 
-> Note to self: add screenshot
-
-<!---![Group, aggregate, filter](../assets/nested-columns-json-value-2.png)-->
+![Group, aggregate, filter](../assets/nested-group-aggregate.png)
 
 ```sql
 SELECT
@@ -407,9 +399,7 @@ You can use the `JSON_QUERY` function to extract a partial structure from any JS
 
 The following example query illustrates the differences in output between `JSON_VALUE` and `JSON_QUERY`.
 
-> Note to self: add screenshot
-
-<!---![Return results in a JSON object](../assets/nested-columns-json-query.png)-->
+![Return results in a JSON object](../assets/nested-return-json.png)
 
 ```sql
 SELECT
@@ -430,9 +420,7 @@ Example query results:
 
  The following query illustrates how to use `JSON_OBJECT` to combine nested data elements into a new object.
 
- > Note to self: add screenshot
-
-<!---![Combine JSON inputs](../assets/nested-columns-json-object.png)-->
+![Combine JSON inputs](../assets/nested-combined-json.png)
 
 ```sql
 SELECT
@@ -457,9 +445,7 @@ Druid provides the following additional transform functions:
 
  The following query illustrates how to use the transform functions to parse and deserialize data.
 
-> Note to self: add screenshot
-
-<!---![Parse and deserialize data](../assets/nested-columns-parse-json.png)-->
+![Parse and deserialize data](../assets/nested-parse-deserialize.png)
 
 ```sql
 SELECT
@@ -482,9 +468,7 @@ The `JSON_KEYS` and `JSON_PATHS` functions are helper operators that you can use
 
  The following query illustrates how to use the helper operators to examine a nested data object.
 
-> Note to self: add screenshot
-
-<!---![Examine JSON object schema](../assets/nested-columns-json-keys.png)-->
+![Examine JSON object schema](../assets/nested-examine-schema.png)
 
 ```sql
 SELECT
