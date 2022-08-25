@@ -496,7 +496,7 @@ public class NestedDataOperatorConversions
 
   public static class JsonValueBigintOperatorConversion extends JsonValueReturningTypeOperatorConversion
   {
-    public static SqlFunction FUNCTION = buildFunction("JSON_VALUE_BIGINT", SqlTypeName.BIGINT);
+    private static final SqlFunction FUNCTION = buildFunction("JSON_VALUE_BIGINT", SqlTypeName.BIGINT);
 
     public JsonValueBigintOperatorConversion()
     {
@@ -506,7 +506,7 @@ public class NestedDataOperatorConversions
 
   public static class JsonValueDoubleOperatorConversion extends JsonValueReturningTypeOperatorConversion
   {
-    public static SqlFunction FUNCTION = buildFunction("JSON_VALUE_DOUBLE", SqlTypeName.DOUBLE);
+    private static final SqlFunction FUNCTION = buildFunction("JSON_VALUE_DOUBLE", SqlTypeName.DOUBLE);
 
     public JsonValueDoubleOperatorConversion()
     {
@@ -516,7 +516,7 @@ public class NestedDataOperatorConversions
 
   public static class JsonValueStringOperatorConversion extends JsonValueReturningTypeOperatorConversion
   {
-    public static SqlFunction FUNCTION = buildFunction("JSON_VALUE_VARCHAR", SqlTypeName.VARCHAR);
+    private static final SqlFunction FUNCTION = buildFunction("JSON_VALUE_VARCHAR", SqlTypeName.VARCHAR);
 
     public JsonValueStringOperatorConversion()
     {
@@ -529,10 +529,50 @@ public class NestedDataOperatorConversions
    */
   public static class JsonValueAnyOperatorConversion implements SqlOperatorConversion
   {
+    private static final SqlFunction FUNCTION =
+        OperatorConversions.operatorBuilder("JSON_VALUE_ANY")
+                           .operandTypeChecker(
+                               OperandTypes.or(
+                                   OperandTypes.sequence(
+                                       "(expr,path)",
+                                       OperandTypes.family(SqlTypeFamily.ANY),
+                                       OperandTypes.family(SqlTypeFamily.STRING)
+                                   ),
+                                   OperandTypes.family(
+                                       SqlTypeFamily.ANY,
+                                       SqlTypeFamily.CHARACTER,
+                                       SqlTypeFamily.ANY,
+                                       SqlTypeFamily.ANY,
+                                       SqlTypeFamily.ANY,
+                                       SqlTypeFamily.ANY,
+                                       SqlTypeFamily.ANY
+                                   )
+                               )
+                           )
+                           .operandTypeInference((callBinding, returnType, operandTypes) -> {
+                             RelDataTypeFactory typeFactory = callBinding.getTypeFactory();
+                             if (operandTypes.length > 5) {
+                               operandTypes[3] = typeFactory.createSqlType(SqlTypeName.ANY);
+                               operandTypes[5] = typeFactory.createSqlType(SqlTypeName.ANY);
+                             }
+                           })
+                           .returnTypeInference(
+                               ReturnTypes.cascade(
+                                   opBinding -> opBinding.getTypeFactory().createTypeWithNullability(
+                                       // STRING is the closest thing we have to an ANY type
+                                       // however, this should really be using SqlTypeName.ANY.. someday
+                                       opBinding.getTypeFactory().createSqlType(SqlTypeName.VARCHAR),
+                                       true
+                                   ),
+                                   SqlTypeTransforms.FORCE_NULLABLE
+                               )
+                           )
+                           .functionCategory(SqlFunctionCategory.SYSTEM)
+                           .build();
     @Override
     public SqlOperator calciteOperator()
     {
-      return SqlStdOperatorTable.JSON_VALUE_ANY;
+      return FUNCTION;
     }
 
     @Nullable
@@ -545,14 +585,15 @@ public class NestedDataOperatorConversions
     {
       final RexCall call = (RexCall) rexNode;
 
-      // calcite parser puts a bunch of junk in here that we don't care about right now, so the call looks something
-      // like this:
+      // calcite parser can allow for a bunch of junk in here that we don't care about right now, so the call looks
+      // something like this:
       // JSON_VALUE_ANY(`nested`.`nest`, '$.x', SQLJSONVALUEEMPTYORERRORBEHAVIOR[NULL], NULL, SQLJSONVALUEEMPTYORERRORBEHAVIOR[NULL], NULL)
       // by the time it gets here
+
       final List<DruidExpression> druidExpressions = Expressions.toDruidExpressions(
           plannerContext,
           rowSignature,
-          call.getOperands().subList(0, 2)
+          call.getOperands().size() > 2 ? call.getOperands().subList(0, 2) : call.getOperands()
       );
 
 
@@ -581,10 +622,13 @@ public class NestedDataOperatorConversions
       final DruidExpression.ExpressionGenerator builder = (args) ->
           "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "')";
 
-      if (druidExpressions.get(0).isSimpleExtraction()) {
+      // STRING is the closest thing we have to ANY, though maybe someday this
+      // can be replaced with a VARIANT type
+      final ColumnType columnType = ColumnType.STRING;
 
+      if (druidExpressions.get(0).isSimpleExtraction()) {
         return DruidExpression.ofVirtualColumn(
-            null,
+            columnType,
             builder,
             ImmutableList.of(
                 DruidExpression.ofColumn(NestedDataComplexTypeSerde.TYPE, druidExpressions.get(0).getDirectColumn())
@@ -600,7 +644,7 @@ public class NestedDataOperatorConversions
             )
         );
       }
-      return DruidExpression.ofExpression(null, builder, druidExpressions);
+      return DruidExpression.ofExpression(columnType, builder, druidExpressions);
     }
   }
 
