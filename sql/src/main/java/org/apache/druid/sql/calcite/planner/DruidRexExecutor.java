@@ -162,7 +162,7 @@ public class DruidRexExecutor implements RexExecutor
               for (Object val : array) {
                 final Number doubleVal = (Number) val;
                 if (doubleVal == null) {
-                   resultAsBigDecimalList.add(null);
+                  resultAsBigDecimalList.add(null);
                 } else if (Double.isNaN(doubleVal.doubleValue()) || Double.isInfinite(doubleVal.doubleValue())) {
                   String expression = druidExpression.getExpression();
                   throw new UnsupportedSQLQueryException(
