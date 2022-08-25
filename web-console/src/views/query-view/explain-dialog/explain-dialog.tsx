@@ -25,51 +25,56 @@ import {
   Intent,
   Tab,
   Tabs,
-  TextArea,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
+import AceEditor from 'react-ace';
 
 import { Loader } from '../../../components';
+import { DruidEngine, isEmptyContext, QueryContext, QueryWithContext } from '../../../druid-models';
 import { useQueryManager } from '../../../hooks';
+import { Api } from '../../../singletons';
 import {
+  deepGet,
   formatSignature,
   getDruidErrorMessage,
+  nonEmptyArray,
   queryDruidSql,
   QueryExplanation,
-  QueryWithContext,
-  trimSemicolon,
 } from '../../../utils';
-import { isEmptyContext } from '../../../utils/query-context';
 
 import './explain-dialog.scss';
 
 function isExplainQuery(query: string): boolean {
-  return /EXPLAIN\sPLAN\sFOR/i.test(query);
+  return /^\s*EXPLAIN\sPLAN\sFOR/im.test(query);
 }
 
 function wrapInExplainIfNeeded(query: string): string {
-  query = trimSemicolon(query);
   if (isExplainQuery(query)) return query;
   return `EXPLAIN PLAN FOR ${query}`;
 }
 
+export interface QueryContextEngine extends QueryWithContext {
+  engine: DruidEngine;
+}
+
 export interface ExplainDialogProps {
-  queryWithContext: QueryWithContext;
+  queryWithContext: QueryContextEngine;
   mandatoryQueryContext?: Record<string, any>;
   onClose: () => void;
-  setQueryString: (queryString: string) => void;
+  openQueryLabel: string | undefined;
+  onOpenQuery: (queryString: string) => void;
 }
 
 export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDialogProps) {
-  const { queryWithContext, onClose, setQueryString, mandatoryQueryContext } = props;
+  const { queryWithContext, onClose, openQueryLabel, onOpenQuery, mandatoryQueryContext } = props;
 
-  const [explainState] = useQueryManager<QueryWithContext, QueryExplanation[] | string>({
-    processQuery: async (queryWithContext: QueryWithContext) => {
-      const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
+  const [explainState] = useQueryManager<QueryContextEngine, QueryExplanation[] | string>({
+    processQuery: async queryWithContext => {
+      const { engine, queryString, queryContext, wrapQueryLimit } = queryWithContext;
 
-      let context: Record<string, any> | undefined;
+      let context: QueryContext | undefined;
       if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
         context = {
           ...queryContext,
@@ -81,19 +86,24 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
         }
       }
 
-      let result: any[] | undefined;
+      const payload: any = {
+        query: wrapInExplainIfNeeded(queryString),
+        context,
+      };
+
+      let result: any[];
       try {
-        result = await queryDruidSql({
-          query: wrapInExplainIfNeeded(queryString),
-          context,
-        });
+        result =
+          engine === 'sql-msq-task'
+            ? (await Api.instance.post(`/druid/v2/sql/task`, payload)).data
+            : await queryDruidSql(payload);
       } catch (e) {
         throw new Error(getDruidErrorMessage(e));
       }
 
-      const plan = result[0]['PLAN'];
+      const plan = deepGet(result, '0.PLAN');
       if (typeof plan !== 'string') {
-        throw new Error(`unexpected result from server`);
+        throw new Error(`unexpected result from ${engine} API`);
       }
 
       try {
@@ -113,23 +123,37 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
     const queryString = JSONBig.stringify(queryExplanation.query, undefined, 2);
     return (
       <div className="query-explanation">
-        <FormGroup className="query-group" label="Query">
-          <TextArea readOnly value={queryString} />
+        <FormGroup className="query-group">
+          <AceEditor
+            mode="hjson"
+            theme="solarized_dark"
+            className="query-string"
+            name="ace-editor"
+            fontSize={13}
+            width="100%"
+            height="100%"
+            showGutter
+            showPrintMargin={false}
+            value={queryString}
+            readOnly
+          />
         </FormGroup>
         <FormGroup className="signature-group" label="Signature">
           <InputGroup defaultValue={formatSignature(queryExplanation)} readOnly />
         </FormGroup>
-        <Button
-          className="open-query"
-          text="Open query"
-          rightIcon={IconNames.ARROW_TOP_RIGHT}
-          intent={Intent.PRIMARY}
-          minimal
-          onClick={() => {
-            setQueryString(queryString);
-            onClose();
-          }}
-        />
+        {openQueryLabel && (
+          <Button
+            className="open-query"
+            text={openQueryLabel}
+            rightIcon={IconNames.ARROW_TOP_RIGHT}
+            intent={Intent.PRIMARY}
+            minimal
+            onClick={() => {
+              onOpenQuery(queryString);
+              onClose();
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -140,7 +164,7 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
     content = <div>{explainError.message}</div>;
   } else if (!explainResult) {
     content = <div />;
-  } else if (Array.isArray(explainResult) && explainResult.length) {
+  } else if (nonEmptyArray(explainResult)) {
     if (explainResult.length === 1) {
       content = renderQueryExplanation(explainResult[0]);
     } else {
@@ -159,7 +183,7 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
       );
     }
   } else {
-    content = <div className="generic-result">{explainResult}</div>;
+    content = <div className="generic-result">{String(explainResult)}</div>;
   }
 
   return (

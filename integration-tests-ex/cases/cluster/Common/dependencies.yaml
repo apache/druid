@@ -1,0 +1,166 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Service definitions for Druid's dependencies: ZooKeeper, MySQL, and Kafka.
+# All tests need ZK and MySQL, ingestion tasks may need Kafka.
+#
+# These services use "official" images from the project or other sources.
+# Some amount of fiddling is needed to map them into configuration which
+# Druid requires.
+
+services:
+
+  # Uses the official Zookeeper image
+  # See https://hub.docker.com/_/zookeeper
+  zookeeper:
+    image: zookeeper:${ZK_VERSION}
+    container_name: zookeeper
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.4
+    ports:
+        - 2181:2181
+    volumes:
+      - ${SHARED_DIR}/logs:/logs
+    environment:
+       ZOO_LOG4J_PROP: INFO,ROLLINGFILE
+
+  # Uses the Bitnami Kafka image
+  # See https://hub.docker.com/r/bitnami/kafka/
+  kafka:
+    image: bitnami/kafka:${KAFKA_VERSION}
+    container_name: kafka
+    ports:
+      - 9092:9092
+      - 9093:9093
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.2
+    volumes:
+      - ${SHARED_DIR}/kafka:/bitnami/kafka
+    environment:
+      # This is the default: making it explicit
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Plaintext is disabled by default
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      # Adapted from base-setup.sh and Bitnami docs
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_CFG_LISTENERS: "INTERNAL://:9092,EXTERNAL://:9093"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "INTERNAL://kafka:9092,EXTERNAL://localhost:9093"
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
+    depends_on:
+      - zookeeper
+
+  # Uses the official MySQL image
+  # See https://hub.docker.com/_/mysql
+  # The image will intialize the user and DB upon first start.
+  metadata:
+    #    platform: linux/x86_64  - Add when running on M1 Macs
+    image: mysql:$MYSQL_IMAGE_VERSION
+    container_name: metadata
+    command:
+      - --character-set-server=utf8mb4
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.3
+    ports:
+      - 3306:3306
+    volumes:
+      - ${SHARED_DIR}/db:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: driud
+      MYSQL_DATABASE: druid
+      MYSQL_USER: druid
+      MYSQL_PASSWORD: diurd
+
+## TODO: Not yet retested
+### Optional supporting infra
+
+  openldap:
+    image: osixia/openldap:1.4.0
+    container_name: openldap
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.102
+    ports:
+      - 8389:389
+      - 8636:636
+    privileged: true
+    volumes:
+      - ./ldap-configs:/container/service/slapd/assets/config/bootstrap/ldif/custom
+    command: --copy-service
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:5.5.1
+    container_name: schema-registry
+    ports:
+      - 8085:8085
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.103
+    volumes:
+      - ./schema-registry/jaas_config.file:/usr/lib/druid/conf/jaas_config.file
+      - ./schema-registry/password-file:/usr/lib/druid/conf/password-file
+    privileged: true
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:8085"
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
+      SCHEMA_REGISTRY_AUTHENTICATION_METHOD: BASIC
+      SCHEMA_REGISTRY_AUTHENTICATION_REALM: druid
+      SCHEMA_REGISTRY_AUTHENTICATION_ROLES: users
+      SCHEMA_REGISTRY_OPTS: -Djava.security.auth.login.config=/usr/lib/druid/conf/jaas_config.file -Xmx32m
+
+  druid-it-hadoop:
+    ## Giving fake version
+    image: druid-it/hadoop:9.9.9
+    container_name: druid-it-hadoop
+    ports:
+      - 2049:2049
+      - 2122:2122
+      - 8020:8020
+      - 8021:8021
+      - 8030:8030
+      - 8031:8031
+      - 8032:8032
+      - 8033:8033
+      - 8040:8040
+      - 8042:8042
+      - 8088:8088
+      - 8443:8443
+      - 9000:9000
+      - 10020:10020
+      - 19888:19888
+      - 34455:34455
+      - 50010:50010
+      - 50020:50020
+      - 50030:50030
+      - 50060:50060
+      - 50070:50070
+      - 50075:50075
+      - 50090:50090
+      - 51111:51111
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.101
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./../src/test/resources:/resources
+    hostname: "druid-it-hadoop"
+    command: "bash -c 'echo Start druid-it-hadoop container... && \
+                /etc/bootstrap.sh && \
+                tail -f /dev/null'"
+

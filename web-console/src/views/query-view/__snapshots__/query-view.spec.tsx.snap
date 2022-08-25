@@ -24,7 +24,7 @@ exports[`QueryView matches snapshot 1`] = `
           "tableRefName": undefined,
           "type": "ref",
         },
-        "not": false,
+        "negated": false,
         "op": ">=",
         "rhs": SqlMulti {
           "args": SeparatedArray {
@@ -132,9 +132,10 @@ exports[`QueryView matches snapshot 1`] = `
             onChange={[Function]}
           />
         </Blueprint4.Tooltip2>
-        <Memo(LiveQueryModeSelector)
+        <Memo(LiveQueryModeButton)
           autoLiveQueryModeShouldRun={true}
           liveQueryMode="auto"
+          minimal={true}
           onLiveQueryModeChange={[Function]}
         />
         <Memo(QueryTimer) />
@@ -176,7 +177,7 @@ exports[`QueryView matches snapshot with query 1`] = `
           "tableRefName": undefined,
           "type": "ref",
         },
-        "not": false,
+        "negated": false,
         "op": ">=",
         "rhs": SqlMulti {
           "args": SeparatedArray {
@@ -284,9 +285,10 @@ exports[`QueryView matches snapshot with query 1`] = `
             onChange={[Function]}
           />
         </Blueprint4.Tooltip2>
-        <Memo(LiveQueryModeSelector)
+        <Memo(LiveQueryModeButton)
           autoLiveQueryModeShouldRun={true}
           liveQueryMode="auto"
+          minimal={true}
           onLiveQueryModeChange={[Function]}
         />
         <Memo(QueryTimer) />

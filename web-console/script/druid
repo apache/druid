@@ -61,7 +61,7 @@ function _build_distribution() {
     && tar xzf "apache-druid-$(_get_druid_version)-bin.tar.gz" \
     && cd apache-druid-$(_get_druid_version) \
     && bin/run-java -classpath "lib/*" org.apache.druid.cli.Main tools pull-deps -c org.apache.druid.extensions:druid-testing-tools \
-    && echo -e "\n\ndruid.extensions.loadList=[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-datasketches\", \"druid-testing-tools\"]" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
+    && echo -e "\n\ndruid.extensions.loadList=[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-datasketches\", \"druid-multi-stage-query\", \"druid-testing-tools\"]" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
     && echo -e "\n\ndruid.server.http.allowedHttpMethods=[\"HEAD\"]" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
   )
 }

@@ -360,6 +360,7 @@
      <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop\-.*@.*$</packageUrl>
      <cve>CVE-2018-11765</cve>
      <cve>CVE-2020-9492</cve>
+     <cve>CVE-2022-25168</cve>
      <cve>CVE-2022-26612</cve>
      <cve>CVE-2018-8009</cve>
   </suppress>

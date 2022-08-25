@@ -16,12 +16,15 @@
  * limitations under the License.
  */
 
+import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
 import { ShowJson } from '../../components';
 import { Api } from '../../singletons';
 import { BasicAction } from '../../utils/basic-action';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
+
+import { SegmentsPreviewPane } from './segments-preview-pane/segments-preview-pane';
 
 interface SegmentTableActionDialogProps {
   segmentId: string;
@@ -38,10 +41,16 @@ export const SegmentTableActionDialog = React.memo(function SegmentTableActionDi
 
   const taskTableSideButtonMetadata: SideButtonMetaData[] = [
     {
-      icon: 'manually-entered-data',
+      icon: IconNames.MANUALLY_ENTERED_DATA,
       text: 'Metadata',
       active: activeTab === 'metadata',
       onClick: () => setActiveTab('metadata'),
+    },
+    {
+      icon: IconNames.TH,
+      text: 'Records',
+      active: activeTab === 'records',
+      onClick: () => setActiveTab('records'),
     },
   ];
 
@@ -60,6 +69,7 @@ export const SegmentTableActionDialog = React.memo(function SegmentTableActionDi
           downloadFilename={`Segment-metadata-${segmentId}.json`}
         />
       )}
+      {activeTab === 'records' && <SegmentsPreviewPane segmentId={segmentId} />}
     </TableActionDialog>
   );
 });
