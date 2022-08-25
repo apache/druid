@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-export * from './datasource-view/datasource-view';
+export * from './datasources-view/datasources-view';
 export * from './home-view/home-view';
 export * from './ingestion-view/ingestion-view';
 export * from './load-data-view/load-data-view';
@@ -24,3 +24,5 @@ export * from './lookups-view/lookups-view';
 export * from './query-view/query-view';
 export * from './segments-view/segments-view';
 export * from './services-view/services-view';
+export * from './sql-data-loader-view/sql-data-loader-view';
+export * from './workbench-view/workbench-view';

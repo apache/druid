@@ -41,7 +41,7 @@
     background: $gray5;
     color: $gray1;
 
-    .bp3-dark & {
+    .#{$bp-ns}-dark & {
       background: $dark-gray4;
       color: $gray5;
     }
@@ -79,7 +79,7 @@
   border-radius: 2px;
   box-shadow: 0 5px 15px rgba(15, 19, 32, 0.45);
 
-  .bp3-dark & {
+  .#{$bp-ns}-dark & {
     background: $dark-gray4;
   }
 

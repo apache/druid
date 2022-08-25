@@ -28,6 +28,7 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.junit.Assert;
@@ -60,7 +61,7 @@ public class CsvInputSourceSamplerTest
     );
     final InputSource inputSource = new InlineInputSource(String.join("\n", strCsvRows));
     final InputFormat inputFormat = new CsvInputFormat(null, null, null, true, 0);
-    final InputSourceSampler inputSourceSampler = new InputSourceSampler();
+    final InputSourceSampler inputSourceSampler = new InputSourceSampler(new DefaultObjectMapper());
 
     final SamplerResponse response = inputSourceSampler.sample(
         inputSource,

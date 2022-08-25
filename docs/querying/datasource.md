@@ -54,7 +54,7 @@ The table datasource is the most common type. This is the kind of datasource you
 [data ingestion](../ingestion/index.md). They are split up into segments, distributed around the cluster,
 and queried in parallel.
 
-In [Druid SQL](sql-syntax.md#from), table datasources reside in the `druid` schema. This is the default schema, so table
+In [Druid SQL](sql.md#from), table datasources reside in the `druid` schema. This is the default schema, so table
 datasources can be referenced as either `druid.dataSourceName` or simply `dataSourceName`.
 
 In native queries, table datasources can be referenced using their names as strings (as in the example above), or by
@@ -91,7 +91,7 @@ SELECT k, v FROM lookup.countries
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Lookup datasources correspond to Druid's key-value [lookup](lookups.md) objects. In [Druid SQL](sql-syntax.md#from),
+Lookup datasources correspond to Druid's key-value [lookup](lookups.md) objects. In [Druid SQL](sql.md#from),
 they reside in the `lookup` schema. They are preloaded in memory on all servers, so they can be accessed rapidly.
 They can be joined onto regular tables using the [join operator](#join).
 
@@ -139,10 +139,10 @@ FROM (
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 Unions allow you to treat two or more tables as a single datasource. In SQL, this is done with the UNION ALL operator
-applied directly to tables, called a ["table-level union"](sql-syntax.md#table-level). In native queries, this is done with a
+applied directly to tables, called a ["table-level union"](sql.md#table-level). In native queries, this is done with a
 "union" datasource.
 
-With SQL [table-level unions](sql-syntax.md#table-level) the same columns must be selected from each table in the same order,
+With SQL [table-level unions](sql.md#table-level) the same columns must be selected from each table in the same order,
 and those columns must either have the same types, or types that can be implicitly cast to each other (such as different
 numeric types). For this reason, it is more robust to write your queries to select specific columns.
 

@@ -41,6 +41,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   private final Duration shutdownTimeout;
   private final Duration repartitionTransitionDuration;
   private final Duration offsetFetchPeriod;
+  private final boolean useListShards;
   private final boolean skipIgnorableShards;
 
   public static KinesisSupervisorTuningConfig defaultConfig()
@@ -108,7 +109,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("recordBufferSize") Integer recordBufferSize,
       @JsonProperty("recordBufferOfferTimeout") Integer recordBufferOfferTimeout,
       @JsonProperty("recordBufferFullWait") Integer recordBufferFullWait,
-      @JsonProperty("fetchSequenceNumberTimeout") Integer fetchSequenceNumberTimeout,
       @JsonProperty("fetchThreads") Integer fetchThreads,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
@@ -117,6 +117,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration,
       @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod,
+      @JsonProperty("useListShards") Boolean useListShards,
       @JsonProperty("skipIgnorableShards") Boolean skipIgnorableShards
   )
   {
@@ -139,7 +140,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         recordBufferSize,
         recordBufferOfferTimeout,
         recordBufferFullWait,
-        fetchSequenceNumberTimeout,
         fetchThreads,
         segmentWriteOutMediumFactory,
         logParseExceptions,
@@ -165,6 +165,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         offsetFetchPeriod,
         DEFAULT_OFFSET_FETCH_PERIOD
     );
+    this.useListShards = (useListShards != null ? useListShards : false);
     this.skipIgnorableShards = (skipIgnorableShards != null ? skipIgnorableShards : false);
   }
 
@@ -217,6 +218,12 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   }
 
   @JsonProperty
+  public boolean isUseListShards()
+  {
+    return useListShards;
+  }
+
+  @JsonProperty
   public boolean isSkipIgnorableShards()
   {
     return skipIgnorableShards;
@@ -247,7 +254,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", recordBufferSize=" + getRecordBufferSize() +
            ", recordBufferOfferTimeout=" + getRecordBufferOfferTimeout() +
            ", recordBufferFullWait=" + getRecordBufferFullWait() +
-           ", fetchSequenceNumberTimeout=" + getFetchSequenceNumberTimeout() +
            ", fetchThreads=" + getFetchThreads() +
            ", segmentWriteOutMediumFactory=" + getSegmentWriteOutMediumFactory() +
            ", logParseExceptions=" + isLogParseExceptions() +
@@ -256,6 +262,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", maxRecordsPerPoll=" + getMaxRecordsPerPoll() +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", repartitionTransitionDuration=" + getRepartitionTransitionDuration() +
+           ", useListShards=" + isUseListShards() +
            ", skipIgnorableShards=" + isSkipIgnorableShards() +
            '}';
   }
@@ -282,7 +289,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getRecordBufferSize(),
         getRecordBufferOfferTimeout(),
         getRecordBufferFullWait(),
-        getFetchSequenceNumberTimeout(),
         getFetchThreads(),
         getSegmentWriteOutMediumFactory(),
         isLogParseExceptions(),

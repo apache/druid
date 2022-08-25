@@ -26,11 +26,13 @@ The Apache Druid Router process can be used to route queries to different Broker
 
 For query routing purposes, you should only ever need the Router process if you have a Druid cluster well into the terabyte range.
 
-In addition to query routing, the Router also runs the [Druid Console](../operations/druid-console.md), a management UI for datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
+In addition to query routing, the Router also runs the [Druid console](../operations/druid-console.md), a management UI for datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
 
 ### Configuration
 
 For Apache Druid Router Process Configuration, see [Router Configuration](../configuration/index.md#router).
+
+For basic tuning guidance for the Router process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#router).
 
 ### HTTP endpoints
 

@@ -192,6 +192,7 @@ public interface IndexMerger
    * Equivalent to {@link #persist(IncrementalIndex, Interval, File, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory)}
    * without a progress indicator and with interval set to {@link IncrementalIndex#getInterval()}.
    */
+  @VisibleForTesting
   default File persist(
       IncrementalIndex index,
       File outDir,
@@ -312,6 +313,7 @@ public interface IndexMerger
       boolean rollup,
       AggregatorFactory[] metricAggs,
       File outDir,
+      DimensionsSpec dimensionsSpec,
       IndexSpec indexSpec,
       int maxColumnsToMerge
   ) throws IOException;

@@ -34,11 +34,11 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.ArraySqlType;
 import org.apache.calcite.sql.type.BasicSqlType;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
@@ -71,8 +71,10 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       .operandTypes(SqlTypeFamily.ANY)
       .requiredOperands(0)
       .returnTypeInference(
-          ReturnTypes.explicit(
-              new RowSignatures.ComplexSqlType(SqlTypeName.OTHER, ColumnType.ofComplex("hyperUnique"), true)
+          opBinding -> RowSignatures.makeComplexType(
+              opBinding.getTypeFactory(),
+              ColumnType.ofComplex("hyperUnique"),
+              true
           )
       )
       .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
@@ -94,7 +96,8 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
               NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
           )
       ),
-      ImmutableMap.of()
+      null /* Don't need an engine */,
+      new QueryContext()
   );
 
   private final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());

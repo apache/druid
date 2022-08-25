@@ -25,7 +25,7 @@ sidebar_label: "Simple task indexing"
 
 The simple task (type `index`) is designed to ingest small data sets into Apache Druid. The task executes within the indexing service. For general information on native batch indexing and parallel task indexing, see [Native batch ingestion](./native-batch.md).
 
-## Task syntax
+## Simple task example
 
 A sample task is shown below:
 
@@ -94,12 +94,14 @@ A sample task is shown below:
 }
 ```
 
+## Simple task configuration
+
 |property|description|required?|
 |--------|-----------|---------|
 |type|The task type, this should always be `index`.|yes|
 |id|The task ID. If this is not explicitly specified, Druid generates the task ID using task type, data source name, interval, and date-time stamp. |no|
-|spec|The ingestion spec including the data schema, IOConfig, and TuningConfig. See below for more details. |yes|
-|context|Context containing various task configuration parameters. See below for more details.|no|
+|spec|The ingestion spec including the [data schema](#dataschema), [IO config](#ioconfig), and [tuning config](#tuningconfig).|yes|
+|context|Context to specify various task configuration parameters. See [Task context parameters](tasks.md#context-parameters) for more details.|no|
 
 ### `dataSchema`
 
@@ -129,11 +131,10 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The task type, this should always be "index".|none|yes|
-|maxRowsPerSegment|Deprecated. Use `partitionsSpec` instead. Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |maxRowsInMemory|Used in determining when intermediate persists to disk should occur. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|1000000|no|
 |maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists). Note that `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until next persist will decreases, and task will fail when the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory`.|1/6 of max JVM memory|no|
 |maxTotalRows|Deprecated. Use `partitionsSpec` instead. Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
-|numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
+|numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data.|null|no|
 |partitionDimensions|Deprecated. Use `partitionsSpec` instead. The dimensions to partition on. Leave blank to select all dimensions. Only used with `forceGuaranteedRollup` = true, will be ignored otherwise.|null|no|
 |partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` if `forceGuaranteedRollup` = true|no|
 |indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](ingestion-spec.md#indexspec)|null|no|
@@ -175,7 +176,7 @@ For best-effort rollup, you should use `dynamic`.
 |-----|----|-----------|--------|
 |type|String|See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|yes|
 
-### Segment pushing modes
+## Segment pushing modes
 
 While ingesting data using the simple task indexing, Druid creates segments from the input data and pushes them. For segment pushing,
 the simple task index supports the following segment pushing modes based upon your type of [rollup](./rollup.md):

@@ -33,8 +33,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.ClientTaskQuery;
-import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
@@ -53,10 +52,12 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -94,6 +95,7 @@ public class ClientCompactionTaskQuerySerdeTest
         ),
         new ClientCompactionTaskQueryTuningConfig(
             null,
+            null,
             40000,
             2000L,
             null,
@@ -120,7 +122,8 @@ public class ClientCompactionTaskQuerySerdeTest
             new Duration(3000L),
             7,
             1000,
-            100
+            100,
+            2
         ),
         new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
@@ -249,7 +252,7 @@ public class ClientCompactionTaskQuerySerdeTest
             new ParallelIndexTuningConfig(
                 null,
                 null,
-                null,
+                new OnheapIncrementalIndex.Spec(true),
                 40000,
                 2000L,
                 null,
@@ -285,7 +288,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 null,
                 null,
                 null,
-                null,
+                2,
                 null,
                 null
             )
@@ -313,6 +316,7 @@ public class ClientCompactionTaskQuerySerdeTest
         ),
         new ClientCompactionTaskQueryTuningConfig(
             100,
+            new OnheapIncrementalIndex.Spec(true),
             40000,
             2000L,
             30000L,
@@ -339,7 +343,8 @@ public class ClientCompactionTaskQuerySerdeTest
             new Duration(3000L),
             7,
             1000,
-            100
+            100,
+            2
         ),
         new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
@@ -377,7 +382,7 @@ public class ClientCompactionTaskQuerySerdeTest
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
                   binder.bind(SegmentCacheManagerFactory.class).toInstance(new SegmentCacheManagerFactory(objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(APPENDERATORS_MANAGER);
-                  binder.bind(IndexingServiceClient.class).toInstance(new NoopIndexingServiceClient());
+                  binder.bind(OverlordClient.class).toInstance(new NoopOverlordClient());
                 }
             )
         )

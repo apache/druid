@@ -20,11 +20,11 @@
 #
 
 # NOTE: this is a 'run' script for the stock tarball
-# It takes 1 required argument (the name of the service,
+# It takes one required argument (the name of the service,
 # e.g. 'broker', 'historical' etc). Any additional arguments
 # are passed to that service.
 #
-# It accepts 'JAVA_OPTS' as an environment variable
+# This script accepts JAVA_OPTS as an environment variable
 #
 # Additional env vars:
 # - DRUID_LOG4J -- set the entire log4j.xml verbatim

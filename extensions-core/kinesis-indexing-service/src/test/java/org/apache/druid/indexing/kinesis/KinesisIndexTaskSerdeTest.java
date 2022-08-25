@@ -72,7 +72,6 @@ public class KinesisIndexTaskSerdeTest
       null,
       null,
       null,
-      null,
       null
   );
   private static final KinesisIndexTaskIOConfig IO_CONFIG = new KinesisIndexTaskIOConfig(
@@ -117,6 +116,7 @@ public class KinesisIndexTaskSerdeTest
         TUNING_CONFIG,
         IO_CONFIG,
         null,
+        false,
         null
     );
     ObjectMapper objectMapper = createObjectMapper();

@@ -26,16 +26,16 @@ import ReactTable from 'react-table';
 
 import { BracedText, Deferred, TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
+import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
 import {
   changePage,
+  columnToWidth,
   copyAndAlert,
   formatNumber,
   getNumericColumnBraces,
   Pagination,
   prettyPrintSql,
   QueryAction,
-  SMALL_TABLE_PAGE_SIZE,
-  SMALL_TABLE_PAGE_SIZE_OPTIONS,
   stringifyValue,
 } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
@@ -217,7 +217,12 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         icon={icon}
         text={`${having ? 'Having' : 'Filter on'}: ${prettyPrintSql(clause)}`}
         onClick={() => {
-          onQueryAction(having ? q => q.addHaving(clause) : q => q.addWhere(clause));
+          const column = clause.getUsedColumns()[0];
+          onQueryAction(
+            having
+              ? q => q.removeFromHaving(column).addHaving(clause)
+              : q => q.removeColumnFromWhere(column).addWhere(clause),
+          );
         }}
       />
     );
@@ -270,12 +275,12 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
             <>
               {isComparable(value) && (
                 <>
-                  {filterOnMenuItem(IconNames.FILTER_KEEP, ex.greaterThanOrEqual(val), having)}
-                  {filterOnMenuItem(IconNames.FILTER_KEEP, ex.lessThanOrEqual(val), having)}
+                  {filterOnMenuItem(IconNames.FILTER, ex.greaterThanOrEqual(val), having)}
+                  {filterOnMenuItem(IconNames.FILTER, ex.lessThanOrEqual(val), having)}
                 </>
               )}
-              {filterOnMenuItem(IconNames.FILTER_KEEP, ex.equal(val), having)}
-              {filterOnMenuItem(IconNames.FILTER_REMOVE, ex.unequal(val), having)}
+              {filterOnMenuItem(IconNames.FILTER, ex.equal(val), having)}
+              {filterOnMenuItem(IconNames.FILTER, ex.unequal(val), having)}
             </>
           )}
           {showFullValueMenuItem}
@@ -351,14 +356,15 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
   return (
     <div className={classNames('query-output', { 'more-results': hasMoreResults })}>
       <ReactTable
+        className="-striped -highlight"
         data={queryResult.rows as any[][]}
+        ofText={hasMoreResults ? '' : 'of'}
         noDataText={queryResult.rows.length ? '' : 'Query returned no data'}
         page={pagination.page}
         pageSize={pagination.pageSize}
         onPageChange={page => changePagination(changePage(pagination, page))}
         onPageSizeChange={(pageSize, page) => changePagination({ page, pageSize })}
         sortable={false}
-        ofText={hasMoreResults ? '' : 'of'}
         defaultPageSize={SMALL_TABLE_PAGE_SIZE}
         pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
         showPagination={
@@ -366,44 +372,40 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         }
         columns={queryResult.header.map((column, i) => {
           const h = column.name;
+
           return {
             Header:
               i === renamingColumn && parsedQuery
                 ? () => <ColumnRenameInput initialName={h} onDone={renameColumnTo} />
                 : () => {
                     return (
-                      <Popover2
-                        className="clickable-cell"
-                        content={<Deferred content={() => getHeaderMenu(h, i)} />}
-                      >
-                        <div>
+                      <Popover2 content={<Deferred content={() => getHeaderMenu(h, i)} />}>
+                        <div className="clickable-cell">
                           {h}
-                          {hasFilterOnHeader(h, i) && (
-                            <Icon icon={IconNames.FILTER} iconSize={14} />
-                          )}
+                          {hasFilterOnHeader(h, i) && <Icon icon={IconNames.FILTER} size={14} />}
                         </div>
                       </Popover2>
                     );
                   },
             headerClassName: getHeaderClassName(h, i),
+            width: columnToWidth(column),
             accessor: String(i),
             Cell(row) {
               const value = row.value;
               return (
-                <div>
-                  <Popover2 content={<Deferred content={() => getCellMenu(h, i, value)} />}>
-                    {numericColumnBraces[i] ? (
-                      <BracedText
-                        text={formatNumber(value)}
-                        braces={numericColumnBraces[i]}
-                        padFractionalPart
-                        unselectableThousandsSeparator
-                      />
-                    ) : (
-                      <TableCell value={value} unlimited />
-                    )}
-                  </Popover2>
-                </div>
+                <Popover2 content={<Deferred content={() => getCellMenu(h, i, value)} />}>
+                  {numericColumnBraces[i] ? (
+                    <BracedText
+                      className="table-padding"
+                      text={formatNumber(value)}
+                      braces={numericColumnBraces[i]}
+                      padFractionalPart
+                      unselectableThousandsSeparator
+                    />
+                  ) : (
+                    <TableCell value={value} unlimited />
+                  )}
+                </Popover2>
               );
             },
             className:

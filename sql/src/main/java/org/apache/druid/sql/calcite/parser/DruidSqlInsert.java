@@ -43,6 +43,8 @@ public class DruidSqlInsert extends SqlInsert
   public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
 
   private final Granularity partitionedBy;
+
+  // Used in the unparse function to generate the original query since we convert the string to an enum
   private final String partitionedByStringForUnparse;
 
   @Nullable
@@ -69,7 +71,7 @@ public class DruidSqlInsert extends SqlInsert
         insertNode.getTargetColumnList()
     );
     if (partitionedBy == null) {
-      throw new ParseException("INSERT statements must specify PARTITIONED BY clause explictly");
+      throw new ParseException("INSERT statements must specify PARTITIONED BY clause explicitly");
     }
     this.partitionedBy = partitionedBy;
 

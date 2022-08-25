@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
@@ -57,7 +56,7 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -216,9 +215,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return testUtils.getTestIndexIO();
   }
 
-  public IndexMergerV9 getIndexMerger()
+  public IndexMergerV9Factory getIndexMergerV9Factory()
   {
-    return testUtils.getTestIndexMergerV9();
+    return testUtils.getIndexMergerV9Factory();
   }
 
   public class TestLocalTaskActionClientFactory implements TaskActionClientFactory
@@ -314,46 +313,40 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             StringUtils.format("ingestionTestBase-%s.json", System.currentTimeMillis())
         );
 
-        final TaskToolbox box = new TaskToolbox(
-            new TaskConfig(null, null, null, null, null, false, null, null, null, false, false,
-                           TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()),
-            new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
-            taskActionClient,
-            null,
-            new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()),
-            new NoopDataSegmentKiller(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            NoopJoinableFactory.INSTANCE,
-            null,
-            null,
-            objectMapper,
-            temporaryFolder.newFolder(),
-            getIndexIO(),
-            null,
-            null,
-            null,
-            getIndexMerger(),
-            null,
-            null,
-            null,
-            null,
-            new SingleFileTaskReportFileWriter(taskReportsFile),
-            null,
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            new NoopChatHandlerProvider(),
-            testUtils.getRowIngestionMetersFactory(),
-            new TestAppenderatorsManager(),
-            new NoopIndexingServiceClient(),
-            null,
-            null,
-            null
-        );
+        final TaskToolbox box = new TaskToolbox.Builder()
+            .config(
+                new TaskConfig(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    false,
+                    null,
+                    null,
+                    null,
+                    false,
+                    false,
+                    TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+                    null
+                )
+            )
+            .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
+            .taskActionClient(taskActionClient)
+            .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()))
+            .dataSegmentKiller(new NoopDataSegmentKiller())
+            .joinableFactory(NoopJoinableFactory.INSTANCE)
+            .jsonMapper(objectMapper)
+            .taskWorkDir(temporaryFolder.newFolder())
+            .indexIO(getIndexIO())
+            .indexMergerV9(testUtils.getIndexMergerV9Factory()
+                                    .create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
+            .taskReportFileWriter(new SingleFileTaskReportFileWriter(taskReportsFile))
+            .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
+            .chatHandlerProvider(new NoopChatHandlerProvider())
+            .rowIngestionMetersFactory(testUtils.getRowIngestionMetersFactory())
+            .appenderatorsManager(new TestAppenderatorsManager())
+            .build();
 
         if (task.isReady(box.getTaskActionClient())) {
           return Futures.immediateFuture(task.run(box));

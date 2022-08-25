@@ -69,6 +69,21 @@ Before running or debugging the apps, you should do a `mvn clean install -Pdist 
 
 You may also add `-Ddruid.console.skip=true` to the command if you're focusing on backend servers instead of frontend project. This option saves great building time.
 
+## Debug a running Druid cluster using Intellij
+Intellij IDEA debugger can attach to a local or remote Java process (Druid process). 
+Follow these steps to debug a Druid process using the IntelliJ IDEA debugger.
+1. Enable debugging in the Druid process
+    1. For Druid services (such as Overlord, Coordinator, etc), include the following as JVM config `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=<PORT>` where `<PORT>` is any available port. Note that different port values should be chosen for each Druid service.
+    2. For the peons (workers on Middlemanager), include the following `agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0` in runtime properties `druid.indexer.runner.javaOpts` of the Middle Manager. Note that `address=0` will tell the debugger to assign ephemeral port.
+2. Find the port assigned to the Druid process.
+    1. For Druid services, the port value is what you chose in the JVM argument of step 1i above. The port value can also be found in the first line of each Druid service log.
+    2. For the peons (workers on Middlemanager), you can find the assigned ephemeral port by checking the first line of the task log.
+3. Attach Intellij IDEA debugger to the running process
+    1. Create a Remote configuration in the Run/Debug Configurations dialog of Intellij (see: https://www.jetbrains.com/help/idea/tutorial-remote-debug.html#debugger_rc)
+    2. Set the port value using the value from step 2 for the Druid service and/or peon (worker on Middlemanager) that you want to debug
+    3. Start (debug) the above remote configuration
+    4. Repeat step 3i to 3iii for each Druid service and/or peon (worker on Middlemanager) that you want to debug
+
 ## XML App Def
 You can configure application definitions in XML for import into IntelliJ. Below are a few examples. These should be placed in an XML file in `.idea/runConfigurations` in the Druid source code.
 

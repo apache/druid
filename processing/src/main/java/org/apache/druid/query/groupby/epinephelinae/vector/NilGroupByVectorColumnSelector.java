@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
-import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 
 /**
  * Treats all rows as null.
@@ -49,7 +49,7 @@ public class NilGroupByVectorColumnSelector implements GroupByVectorColumnSelect
   }
 
   @Override
-  public void writeKeyToResultRow(Memory keyMemory, int keyOffset, ResultRow resultRow, int resultRowPosition)
+  public void writeKeyToResultRow(MemoryPointer keyMemory, int keyOffset, ResultRow resultRow, int resultRowPosition)
   {
     resultRow.set(resultRowPosition, null);
   }

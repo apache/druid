@@ -21,6 +21,7 @@ package org.apache.druid.emitter.prometheus;
 
 
 import com.google.common.collect.ImmutableMap;
+import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
@@ -32,6 +33,8 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -46,6 +49,9 @@ public class PrometheusEmitter implements Emitter
   private final PrometheusEmitterConfig.Strategy strategy;
   private static final Pattern PATTERN = Pattern.compile("[^a-zA-Z0-9_][^a-zA-Z0-9_]*");
 
+  private static final String TAG_HOSTNAME = "host_name";
+  private static final String TAG_SERVICE = "druid_service";
+
   private HTTPServer server;
   private PushGateway pushGateway;
   private String identifier;
@@ -59,7 +65,7 @@ public class PrometheusEmitter implements Emitter
   {
     this.config = config;
     this.strategy = config.getStrategy();
-    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath());
+    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath(), config.isAddHostAsLabel(), config.isAddServiceAsLabel());
   }
 
 
@@ -78,9 +84,24 @@ public class PrometheusEmitter implements Emitter
         log.error("HTTPServer is already started");
       }
     } else if (strategy.equals(PrometheusEmitterConfig.Strategy.pushgateway)) {
-      pushGateway = new PushGateway(config.getPushGatewayAddress());
+      String address = config.getPushGatewayAddress();
+      if (address.startsWith("https") || address.startsWith("http")) {
+        URL myURL = createURLSneakily(address);
+        pushGateway = new PushGateway(myURL);
+      } else {
+        pushGateway = new PushGateway(address);
+      }
     }
+  }
 
+  private static URL createURLSneakily(final String urlString)
+  {
+    try {
+      return new URL(urlString);
+    }
+    catch (MalformedURLException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
@@ -95,6 +116,7 @@ public class PrometheusEmitter implements Emitter
   {
     String name = metricEvent.getMetric();
     String service = metricEvent.getService();
+    String host = metricEvent.getHost();
     Map<String, Object> userDims = metricEvent.getUserDims();
     identifier = (userDims.get("task") == null ? metricEvent.getHost() : (String) userDims.get("task"));
     Number value = metricEvent.getValue();
@@ -107,7 +129,18 @@ public class PrometheusEmitter implements Emitter
         String labelName = labelNames[i];
         //labelName is controlled by the user. Instead of potential NPE on invalid labelName we use "unknown" as the dimension value
         Object userDim = userDims.get(labelName);
-        labelValues[i] = userDim != null ? PATTERN.matcher(userDim.toString()).replaceAll("_") : "unknown";
+
+        if (userDim != null) {
+          labelValues[i] = PATTERN.matcher(userDim.toString()).replaceAll("_");
+        } else {
+          if (config.isAddHostAsLabel() && TAG_HOSTNAME.equals(labelName)) {
+            labelValues[i] = host;
+          } else if (config.isAddServiceAsLabel() && TAG_SERVICE.equals(labelName)) {
+            labelValues[i] = service;
+          } else {
+            labelValues[i] = "unknown";
+          }
+        }
       }
 
       if (metric.getCollector() instanceof Counter) {
@@ -127,15 +160,17 @@ public class PrometheusEmitter implements Emitter
   private void pushMetric()
   {
     Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
-    try {
-      for (DimensionsAndCollector collector : map.values()) {
-        if (config.getNamespace() != null) {
-          pushGateway.push(collector.getCollector(), config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
+    CollectorRegistry metrics = new CollectorRegistry();
+    if (config.getNamespace() != null) {
+      try {
+        for (DimensionsAndCollector collector : map.values()) {
+          metrics.register(collector.getCollector());
         }
+        pushGateway.push(metrics, config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
       }
-    }
-    catch (IOException e) {
-      log.error(e, "Unable to push prometheus metrics to pushGateway");
+      catch (IOException e) {
+        log.error(e, "Unable to push prometheus metrics to pushGateway");
+      }
     }
   }
 

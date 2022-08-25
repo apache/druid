@@ -56,6 +56,7 @@ export class BarGroup extends React.Component<BarGroupProps> {
         datasource: entry.datasource,
         xValue: entry.x,
         yValue: entry.y,
+        dailySize: entry.dailySize,
       };
       return (
         <BarUnit

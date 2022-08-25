@@ -272,7 +272,7 @@ public class DruidClusterAdminClient
           }
           catch (Throwable e) {
             //
-            // supress stack trace logging for some specific exceptions
+            // suppress stack trace logging for some specific exceptions
             // to reduce excessive stack trace messages when waiting druid nodes to start up
             //
             if (e.getCause() instanceof ChannelException) {

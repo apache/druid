@@ -57,7 +57,9 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
+import org.apache.druid.server.coordinator.duty.EmitClusterStatsAndMetrics;
 import org.apache.druid.server.coordinator.duty.KillSupervisorsCustomDuty;
+import org.apache.druid.server.coordinator.duty.LogUsedSegments;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
@@ -143,26 +145,13 @@ public class DruidCoordinatorTest extends CuratorTestBase
     curator.blockUntilConnected();
     curator.create().creatingParentsIfNeeded().forPath(LOADPATH);
     objectMapper = new DefaultObjectMapper();
-    druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        new Duration(COORDINATOR_START_DELAY),
-        new Duration(COORDINATOR_PERIOD),
-        null,
-        null,
-        null,
-        new Duration(COORDINATOR_PERIOD),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        10,
-        new Duration("PT0s")
-    );
+    druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withCoordinatorStartDelay(new Duration(COORDINATOR_START_DELAY))
+        .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
+        .withCoordinatorKillPeriod(new Duration(COORDINATOR_PERIOD))
+        .withLoadQueuePeonRepeatDelay(new Duration("PT0s"))
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     pathChildrenCache = new PathChildrenCache(
         curator,
         LOADPATH,
@@ -922,27 +911,15 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testInitializeCompactSegmentsDutyWhenCustomDutyGroupContainsCompactSegments()
   {
-    DruidCoordinatorConfig differentConfigUsedInCustomGroup = new TestDruidCoordinatorConfig(
-        new Duration(COORDINATOR_START_DELAY),
-        new Duration(COORDINATOR_PERIOD),
-        null,
-        null,
-        null,
-        new Duration(COORDINATOR_PERIOD),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        10,
-        new Duration("PT0s"),
-        false
-    );
+    DruidCoordinatorConfig differentConfigUsedInCustomGroup = new TestDruidCoordinatorConfig.Builder()
+        .withCoordinatorStartDelay(new Duration(COORDINATOR_START_DELAY))
+        .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
+        .withCoordinatorKillPeriod(new Duration(COORDINATOR_PERIOD))
+        .withCoordinatorKillMaxSegments(10)
+        .withLoadQueuePeonRepeatDelay(new Duration("PT0s"))
+        .withCompactionSkippedLockedIntervals(false)
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup("group1", Duration.standardSeconds(1), ImmutableList.of(new CompactSegments(differentConfigUsedInCustomGroup, null, null)));
     CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(compactSegmentCustomGroup));
     coordinator = new DruidCoordinator(
@@ -1131,6 +1108,34 @@ public class DruidCoordinatorTest extends CuratorTestBase
     latch1.await();
     // Wait until group 2 duty ran for latch2 to countdown
     latch2.await();
+  }
+
+  @Test
+  public void testEmitClusterStatsAndMetricsAddedWhenNotInDutyList()
+  {
+    DruidCoordinator.DutiesRunnable dutyRunnable = coordinator.new DutiesRunnable(ImmutableList.of(new LogUsedSegments()), 0, "TEST");
+    List<? extends CoordinatorDuty> duties = dutyRunnable.getDuties();
+    int emitDutyFound = 0;
+    for (CoordinatorDuty duty : duties) {
+      if (duty instanceof EmitClusterStatsAndMetrics) {
+        emitDutyFound++;
+      }
+    }
+    Assert.assertEquals(1, emitDutyFound);
+  }
+
+  @Test
+  public void testEmitClusterStatsAndMetricsNotAddedAgainWhenInDutyList()
+  {
+    DruidCoordinator.DutiesRunnable dutyRunnable = coordinator.new DutiesRunnable(ImmutableList.of(new LogUsedSegments(), new EmitClusterStatsAndMetrics(coordinator, "TEST", false)), 0, "TEST");
+    List<? extends CoordinatorDuty> duties = dutyRunnable.getDuties();
+    int emitDutyFound = 0;
+    for (CoordinatorDuty duty : duties) {
+      if (duty instanceof EmitClusterStatsAndMetrics) {
+        emitDutyFound++;
+      }
+    }
+    Assert.assertEquals(1, emitDutyFound);
   }
 
   private CountDownLatch createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(int latchCount,

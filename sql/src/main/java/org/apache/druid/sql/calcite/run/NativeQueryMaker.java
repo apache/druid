@@ -21,18 +21,17 @@ package org.apache.druid.sql.calcite.run;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -79,42 +78,18 @@ public class NativeQueryMaker implements QueryMaker
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
   private final List<Pair<Integer, String>> fieldMapping;
-  private final RelDataType resultType;
 
   public NativeQueryMaker(
       final QueryLifecycleFactory queryLifecycleFactory,
       final PlannerContext plannerContext,
       final ObjectMapper jsonMapper,
-      final List<Pair<Integer, String>> fieldMapping,
-      final RelDataType resultType
+      final List<Pair<Integer, String>> fieldMapping
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.plannerContext = plannerContext;
     this.jsonMapper = jsonMapper;
     this.fieldMapping = fieldMapping;
-    this.resultType = resultType;
-  }
-
-  @Override
-  public RelDataType getResultType()
-  {
-    return resultType;
-  }
-
-  @Override
-  public boolean feature(QueryFeature feature)
-  {
-    switch (feature) {
-      case CAN_RUN_TIMESERIES:
-      case CAN_RUN_TOPN:
-        return true;
-      case CAN_READ_EXTERNAL_DATA:
-      case SCAN_CAN_ORDER_BY_NON_TIME:
-        return false;
-      default:
-        throw new IAE("Unrecognized feature: %s", feature);
-    }
   }
 
   @Override
@@ -137,7 +112,7 @@ public class NativeQueryMaker implements QueryMaker
     // a BoundFilter is created internally for each of the values
     // whereas when Vi s are String the Filters are converted as BoundFilter to SelectorFilter to InFilter
     // which takes lesser processing for bitmaps
-    // So in a case where user executes a query with multiple numeric INs, flame graph shows BoundFilter.getBitmapResult
+    // So in a case where user executes a query with multiple numeric INs, flame graph shows BoundFilter.getBitmapColumnIndex
     // and BoundFilter.match predicate eating up processing time which stalls a historical for a query with large number
     // of numeric INs (> 10K). In such cases user should change the query to specify the IN clauses as String
     // Instead of IN(v1,v2,v3) user should specify IN('v1','v2','v3')
@@ -381,7 +356,8 @@ public class NativeQueryMaker implements QueryMaker
   }
 
 
-  private static Object maybeCoerceArrayToList(Object value, boolean mustCoerce)
+  @VisibleForTesting
+  static Object maybeCoerceArrayToList(Object value, boolean mustCoerce)
   {
     if (value instanceof List) {
       return value;
@@ -392,10 +368,21 @@ public class NativeQueryMaker implements QueryMaker
     } else if (value instanceof Double[]) {
       return Arrays.asList((Double[]) value);
     } else if (value instanceof Object[]) {
-      Object[] array = (Object[]) value;
-      ArrayList<Object> lst = new ArrayList<>(array.length);
+      final Object[] array = (Object[]) value;
+      final ArrayList<Object> lst = new ArrayList<>(array.length);
       for (Object o : array) {
         lst.add(maybeCoerceArrayToList(o, false));
+      }
+      return lst;
+    } else if (value instanceof long[]) {
+      return Arrays.stream((long[]) value).boxed().collect(Collectors.toList());
+    } else if (value instanceof double[]) {
+      return Arrays.stream((double[]) value).boxed().collect(Collectors.toList());
+    } else if (value instanceof float[]) {
+      final float[] array = (float[]) value;
+      final ArrayList<Object> lst = new ArrayList<>(array.length);
+      for (float f : array) {
+        lst.add(f);
       }
       return lst;
     } else if (value instanceof ComparableStringArray) {

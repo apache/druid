@@ -22,17 +22,13 @@ package org.apache.druid.java.util.metrics;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.gridkit.lab.jvm.perfdata.JStatData;
-import org.gridkit.lab.jvm.perfdata.JStatData.LongCounter;
-import org.gridkit.lab.jvm.perfdata.JStatData.StringCounter;
-import org.gridkit.lab.jvm.perfdata.JStatData.TickCounter;
 
 import javax.annotation.Nullable;
 import java.lang.management.BufferPoolMXBean;
+import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryType;
@@ -43,14 +39,12 @@ import java.util.Map;
 
 public class JvmMonitor extends FeedDefiningMonitor
 {
-  private static final Logger log = new Logger(JvmMonitor.class);
 
   private final Map<String, String[]> dimensions;
-  private final long pid;
 
   @VisibleForTesting
   @Nullable
-  final GcCounters gcCounters;
+  final GcCollectors gcCollectors;
 
   @Nullable
   private final AllocationMetricCollector collector;
@@ -67,17 +61,11 @@ public class JvmMonitor extends FeedDefiningMonitor
 
   public JvmMonitor(Map<String, String[]> dimensions, String feed)
   {
-    this(dimensions, feed, JvmPidDiscoverer.instance());
-  }
-
-  public JvmMonitor(Map<String, String[]> dimensions, String feed, PidDiscoverer pidDiscoverer)
-  {
     super(feed);
     Preconditions.checkNotNull(dimensions);
     this.dimensions = ImmutableMap.copyOf(dimensions);
-    this.pid = Preconditions.checkNotNull(pidDiscoverer).getPid();
     this.collector = AllocationMetricCollectors.getAllocationMetricCollector();
-    this.gcCounters = tryCreateGcCounters();
+    this.gcCollectors = new GcCollectors();
   }
 
   @Override
@@ -155,164 +143,152 @@ public class JvmMonitor extends FeedDefiningMonitor
 
   private void emitGcMetrics(ServiceEmitter emitter)
   {
-    if (gcCounters != null) {
-      gcCounters.emit(emitter, dimensions);
-    }
+    gcCollectors.emit(emitter, dimensions);
   }
 
-  @Nullable
-  private GcCounters tryCreateGcCounters()
+  private class GcCollectors
   {
-    try {
-      return new GcCounters();
-    }
-    catch (RuntimeException e) {
-      // in JDK11 jdk.internal.perf.Perf is not accessible, unless
-      // --add-exports java.base/jdk.internal.perf=ALL-UNNAMED is set
-      log.warn("Cannot initialize GC counters. If running JDK11 and above,"
-               + " add --add-exports java.base/jdk.internal.perf=ALL-UNNAMED"
-               + " to the JVM arguments to enable GC counters.");
-    }
-    return null;
-  }
+    private final List<GcGenerationCollector> generationCollectors = new ArrayList<>();
+    private final List<GcSpaceCollector> spaceCollectors = new ArrayList<>();
 
-  /**
-   * The following GC-related code is partially based on
-   * https://github.com/aragozin/jvm-tools/blob/e0e37692648951440aa1a4ea5046261cb360df70/
-   * sjk-core/src/main/java/org/gridkit/jvmtool/PerfCounterGcCpuUsageMonitor.java
-   */
-  private class GcCounters
-  {
-    private final List<GcGeneration> generations = new ArrayList<>();
-
-    GcCounters()
+    GcCollectors()
     {
-      // connect to itself
-      final JStatData jStatData = JStatData.connect(pid);
-      final Map<String, JStatData.Counter<?>> jStatCounters = jStatData.getAllCounters();
-
-      generations.add(new GcGeneration(jStatCounters, 0, "young"));
-      generations.add(new GcGeneration(jStatCounters, 1, "old"));
-      // Removed in Java 8 but still actual for previous Java versions
-      if (jStatCounters.containsKey("sun.gc.generation.2.name")) {
-        generations.add(new GcGeneration(jStatCounters, 2, "perm"));
+      List<GarbageCollectorMXBean> collectorMxBeans = ManagementFactory.getGarbageCollectorMXBeans();
+      for (GarbageCollectorMXBean collectorMxBean : collectorMxBeans) {
+        generationCollectors.add(new GcGenerationCollector(collectorMxBean));
       }
+
+      List<MemoryPoolMXBean> memoryPoolMxBeans = ManagementFactory.getMemoryPoolMXBeans();
+      for (MemoryPoolMXBean memoryPoolMxBean : memoryPoolMxBeans) {
+        MemoryUsage collectionUsage = memoryPoolMxBean.getCollectionUsage();
+        if (collectionUsage != null) {
+          spaceCollectors.add(new GcSpaceCollector(collectionUsage, memoryPoolMxBean.getName()));
+        }
+      }
+
     }
 
     void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
-      for (GcGeneration generation : generations) {
-        generation.emit(emitter, dimensions);
-      }
-    }
-  }
-
-  private class GcGeneration
-  {
-    private final String name;
-    private final GcGenerationCollector collector;
-    private final List<GcGenerationSpace> spaces = new ArrayList<>();
-
-    GcGeneration(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, String name)
-    {
-      this.name = StringUtils.toLowerCase(name);
-
-      long spacesCount = ((JStatData.LongCounter) jStatCounters.get(
-          StringUtils.format("sun.gc.generation.%d.spaces", genIndex)
-      )).getLong();
-      for (long spaceIndex = 0; spaceIndex < spacesCount; spaceIndex++) {
-        spaces.add(new GcGenerationSpace(jStatCounters, genIndex, spaceIndex));
+      for (GcGenerationCollector generationCollector : generationCollectors) {
+        generationCollector.emit(emitter, dimensions);
       }
 
-      if (jStatCounters.containsKey(StringUtils.format("sun.gc.collector.%d.name", genIndex))) {
-        collector = new GcGenerationCollector(jStatCounters, genIndex);
-      } else {
-        collector = null;
-      }
-    }
-
-    void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
-    {
-      ImmutableMap.Builder<String, String[]> dimensionsCopyBuilder = ImmutableMap
-          .<String, String[]>builder()
-          .putAll(dimensions)
-          .put("gcGen", new String[]{name});
-
-      if (collector != null) {
-        dimensionsCopyBuilder.put("gcName", new String[]{collector.name});
-      }
-
-      Map<String, String[]> dimensionsCopy = dimensionsCopyBuilder.build();
-
-      if (collector != null) {
-        collector.emit(emitter, dimensionsCopy);
-      }
-
-      for (GcGenerationSpace space : spaces) {
-        space.emit(emitter, dimensionsCopy);
+      for (GcSpaceCollector spaceCollector : spaceCollectors) {
+        spaceCollector.emit(emitter, dimensions);
       }
     }
   }
 
   private class GcGenerationCollector
   {
-    private final String name;
-    private final LongCounter invocationsCounter;
-    private final TickCounter cpuCounter;
+    private final String generation;
+    private final String collectorName;
+    private final GarbageCollectorMXBean gcBean;
+
     private long lastInvocations = 0;
     private long lastCpuNanos = 0;
 
-    GcGenerationCollector(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex)
+    private static final String GC_YOUNG_GENERATION_NAME = "young";
+    private static final String GC_OLD_GENERATION_NAME = "old";
+    private static final String GC_ZGC_GENERATION_NAME = "zgc";
+
+    private static final String CMS_COLLECTOR_NAME = "cms";
+    private static final String G1_COLLECTOR_NAME = "g1";
+    private static final String PARALLEL_COLLECTOR_NAME = "parallel";
+    private static final String SERIAL_COLLECTOR_NAME = "serial";
+    private static final String ZGC_COLLECTOR_NAME = "zgc";
+    private static final String SHENANDOAN_COLLECTOR_NAME = "shenandoah";
+
+    GcGenerationCollector(GarbageCollectorMXBean gcBean)
     {
-      String collectorKeyPrefix = StringUtils.format("sun.gc.collector.%d", genIndex);
+      Pair<String, String> gcNamePair = getReadableName(gcBean.getName());
+      this.generation = gcNamePair.lhs;
+      this.collectorName = gcNamePair.rhs;
+      this.gcBean = gcBean;
+    }
 
-      String nameKey = StringUtils.format("%s.name", collectorKeyPrefix);
-      StringCounter nameCounter = (StringCounter) jStatCounters.get(nameKey);
-      name = getReadableName(nameCounter.getString());
+    private Pair<String, String> getReadableName(String name)
+    {
+      switch (name) {
+        //CMS
+        case "ParNew":
+          return new Pair<>(GC_YOUNG_GENERATION_NAME, CMS_COLLECTOR_NAME);
+        case "ConcurrentMarkSweep":
+          return new Pair<>(GC_OLD_GENERATION_NAME, CMS_COLLECTOR_NAME);
 
-      invocationsCounter = (LongCounter) jStatCounters.get(StringUtils.format("%s.invocations", collectorKeyPrefix));
-      cpuCounter = (TickCounter) jStatCounters.get(StringUtils.format("%s.time", collectorKeyPrefix));
+        // G1
+        case "G1 Young Generation":
+          return new Pair<>(GC_YOUNG_GENERATION_NAME, G1_COLLECTOR_NAME);
+        case "G1 Old Generation":
+          return new Pair<>(GC_OLD_GENERATION_NAME, G1_COLLECTOR_NAME);
+
+        // Parallel
+        case "PS Scavenge":
+          return new Pair<>(GC_YOUNG_GENERATION_NAME, PARALLEL_COLLECTOR_NAME);
+        case "PS MarkSweep":
+          return new Pair<>(GC_OLD_GENERATION_NAME, PARALLEL_COLLECTOR_NAME);
+
+        // Serial
+        case "Copy":
+          return new Pair<>(GC_YOUNG_GENERATION_NAME, SERIAL_COLLECTOR_NAME);
+        case "MarkSweepCompact":
+          return new Pair<>(GC_OLD_GENERATION_NAME, SERIAL_COLLECTOR_NAME);
+
+        //zgc
+        case "ZGC":
+          return new Pair<>(GC_ZGC_GENERATION_NAME, ZGC_COLLECTOR_NAME);
+
+        //Shenandoah
+        case "Shenandoah Cycles":
+          return new Pair<>(GC_YOUNG_GENERATION_NAME, SHENANDOAN_COLLECTOR_NAME);
+        case "Shenandoah Pauses":
+          return new Pair<>(GC_OLD_GENERATION_NAME, SHENANDOAN_COLLECTOR_NAME);
+
+        default:
+          return new Pair<>(name, name);
+      }
     }
 
     void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
-      final ServiceMetricEvent.Builder builder = builder();
-      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+      ImmutableMap.Builder<String, String[]> dimensionsCopyBuilder = ImmutableMap
+              .<String, String[]>builder()
+              .putAll(dimensions)
+              .put("gcGen", new String[]{generation});
 
-      long newInvocations = invocationsCounter.getLong();
+      dimensionsCopyBuilder.put("gcName", new String[]{collectorName});
+
+      Map<String, String[]> dimensionsCopy = dimensionsCopyBuilder.build();
+
+      final ServiceMetricEvent.Builder builder = builder();
+      MonitorUtils.addDimensionsToBuilder(builder, dimensionsCopy);
+
+      long newInvocations = gcBean.getCollectionCount();
       emitter.emit(builder.build("jvm/gc/count", newInvocations - lastInvocations));
       lastInvocations = newInvocations;
 
-      long newCpuNanos = cpuCounter.getNanos();
+      long newCpuNanos = gcBean.getCollectionTime();
       emitter.emit(builder.build("jvm/gc/cpu", newCpuNanos - lastCpuNanos));
       lastCpuNanos = newCpuNanos;
+
+    }
+  }
+
+  private class GcSpaceCollector
+  {
+
+    private final List<GcGenerationSpace> spaces = new ArrayList<>();
+
+    public GcSpaceCollector(MemoryUsage collectionUsage, String name)
+    {
+      spaces.add(new GcGenerationSpace(collectionUsage, name));
     }
 
-    private String getReadableName(String name)
+    void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
-      switch (name) {
-        // Young gen
-        case "Copy":
-          return "serial";
-        case "PSScavenge":
-          return "parallel";
-        case "PCopy":
-          return "cms";
-        case "G1 incremental collections":
-          return "g1";
-
-        // Old gen
-        case "MCS":
-          return "serial";
-        case "PSParallelCompact":
-          return "parallel";
-        case "CMS":
-          return "cms";
-        case "G1 stop-the-world full collections":
-          return "g1";
-
-        default:
-          return name;
+      for (GcGenerationSpace space : spaces) {
+        space.emit(emitter, dimensions);
       }
     }
   }
@@ -320,24 +296,12 @@ public class JvmMonitor extends FeedDefiningMonitor
   private class GcGenerationSpace
   {
     private final String name;
+    private final MemoryUsage memoryUsage;
 
-    private final LongCounter maxCounter;
-    private final LongCounter capacityCounter;
-    private final LongCounter usedCounter;
-    private final LongCounter initCounter;
-
-    GcGenerationSpace(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, long spaceIndex)
+    public GcGenerationSpace(MemoryUsage memoryUsage, String name)
     {
-      String spaceKeyPrefix = StringUtils.format("sun.gc.generation.%d.space.%d", genIndex, spaceIndex);
-
-      String nameKey = StringUtils.format("%s.name", spaceKeyPrefix);
-      StringCounter nameCounter = (StringCounter) jStatCounters.get(nameKey);
-      name = StringUtils.toLowerCase(nameCounter.toString());
-
-      maxCounter = (LongCounter) jStatCounters.get(StringUtils.format("%s.maxCapacity", spaceKeyPrefix));
-      capacityCounter = (LongCounter) jStatCounters.get(StringUtils.format("%s.capacity", spaceKeyPrefix));
-      usedCounter = (LongCounter) jStatCounters.get(StringUtils.format("%s.used", spaceKeyPrefix));
-      initCounter = (LongCounter) jStatCounters.get(StringUtils.format("%s.initCapacity", spaceKeyPrefix));
+      this.memoryUsage = memoryUsage;
+      this.name = name;
     }
 
     void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
@@ -347,10 +311,10 @@ public class JvmMonitor extends FeedDefiningMonitor
 
       builder.setDimension("gcGenSpaceName", name);
 
-      emitter.emit(builder.build("jvm/gc/mem/max", maxCounter.getLong()));
-      emitter.emit(builder.build("jvm/gc/mem/capacity", capacityCounter.getLong()));
-      emitter.emit(builder.build("jvm/gc/mem/used", usedCounter.getLong()));
-      emitter.emit(builder.build("jvm/gc/mem/init", initCounter.getLong()));
+      emitter.emit(builder.build("jvm/gc/mem/max", memoryUsage.getMax()));
+      emitter.emit(builder.build("jvm/gc/mem/capacity", memoryUsage.getCommitted()));
+      emitter.emit(builder.build("jvm/gc/mem/used", memoryUsage.getUsed()));
+      emitter.emit(builder.build("jvm/gc/mem/init", memoryUsage.getInit()));
     }
   }
 }

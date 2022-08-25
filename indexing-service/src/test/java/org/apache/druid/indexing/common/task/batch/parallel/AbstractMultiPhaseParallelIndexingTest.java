@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -41,8 +42,6 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
@@ -177,7 +176,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   {
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     TaskStatus taskStatus = getIndexingServiceClient().runAndWait(task);
-    Assert.assertEquals(expectedTaskStatus, taskStatus.getStatusCode());
+    Assert.assertEquals("Actual task status: " + taskStatus, expectedTaskStatus, taskStatus.getStatusCode());
   }
 
   Set<DataSegment> runTask(Task task, TaskState expectedTaskStatus)
@@ -189,7 +188,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   Map<String, Object> runTaskAndGetReports(Task task, TaskState expectedTaskStatus)
   {
     runTaskAndVerifyStatus(task, expectedTaskStatus);
-    return getIndexingServiceClient().getTaskReport(task.getId());
+    return FutureUtils.getUnchecked(getIndexingServiceClient().taskReportAsMap(task.getId()), true);
   }
 
   protected ParallelIndexSupervisorTask createTask(
@@ -234,7 +233,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
               DATASOURCE,
               timestampSpec,
               dimensionsSpec,
-              new AggregatorFactory[]{new LongSumAggregatorFactory("val", "val")},
+              DEFAULT_METRICS_SPEC,
               granularitySpec,
               null
           ),
@@ -256,9 +255,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
                   new StringInputRowParser(parseSpec, null),
                   Map.class
               ),
-              new AggregatorFactory[]{
-                  new LongSumAggregatorFactory("val", "val")
-              },
+              DEFAULT_METRICS_SPEC,
               granularitySpec,
               null,
               getObjectMapper()

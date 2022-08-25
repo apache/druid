@@ -45,6 +45,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -77,17 +78,26 @@ public class SegmentManagerTest
     {
 
     }
+
+    @Override
+    public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+    {
+
+    }
   };
 
   private static class SegmentForTesting implements Segment
   {
     private final String version;
     private final Interval interval;
+    private final StorageAdapter storageAdapter;
 
     SegmentForTesting(String version, Interval interval)
     {
       this.version = version;
       this.interval = interval;
+      storageAdapter = Mockito.mock(StorageAdapter.class);
+      Mockito.when(storageAdapter.getNumRows()).thenReturn(1);
     }
 
     public String getVersion()
@@ -121,7 +131,7 @@ public class SegmentManagerTest
     @Override
     public StorageAdapter asStorageAdapter()
     {
-      throw new UnsupportedOperationException();
+      return storageAdapter;
     }
 
     @Override

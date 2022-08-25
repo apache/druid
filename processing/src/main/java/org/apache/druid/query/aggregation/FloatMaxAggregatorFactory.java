@@ -118,6 +118,12 @@ public class FloatMaxAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new FloatMaxAggregatorFactory(newName, getFieldName(), getExpression(), macroTable);
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     return cacheKey.get();

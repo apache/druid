@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-@import '~@blueprintjs/core/src/common/colors';
 @import '../../variables';
 
 $control-bar-width: 300px;
@@ -49,14 +48,17 @@ $actual-icon-height: 400px;
 
     .spec-card {
       display: inline-block;
-      width: 480px;
-      height: 100px;
+      vertical-align: top;
+      position: relative;
+      width: 440px;
+      height: 120px;
       margin: 10px;
       text-align: left;
 
       .spec-card-icon {
-        vertical-align: top;
-        margin-top: 6px;
+        position: absolute;
+        top: 26px;
+        left: 20px;
 
         svg {
           width: 20px;
@@ -68,9 +70,7 @@ $actual-icon-height: 400px;
         font-size: 16px;
         font-weight: 600;
         line-height: 32px;
-        display: inline-block;
-        vertical-align: top;
-        padding-left: 16px;
+        padding-left: 36px;
 
         .spec-card-caption {
           font-size: 13px;
@@ -92,23 +92,13 @@ $actual-icon-height: 400px;
         @include sunk-panel;
         display: grid;
         gap: $thin-padding;
-        grid-template-columns: 1fr 1fr 1fr 1fr;
+        grid-template-columns: repeat(auto-fill, minmax(225px, 1fr));
+        grid-template-rows: repeat(auto-fill, 150px);
         padding: 10px;
-
-        @media (max-width: 1200px) {
-          grid-template-columns: 1fr 1fr 1fr;
-        }
-
-        @media (max-width: 900px) {
-          grid-template-columns: 1fr 1fr;
-        }
-
-        @media (max-width: 600px) {
-          grid-template-columns: 1fr;
-        }
+        height: 100%;
       }
 
-      .bp3-card {
+      .ingestion-card {
         position: relative;
         display: inline-block;
         vertical-align: top;
@@ -129,7 +119,7 @@ $actual-icon-height: 400px;
           border: 2px solid $blue3;
           border-radius: $pt-border-radius;
 
-          .bp3-dark & {
+          .#{$bp-ns}-dark & {
             border: 2px solid $blue4;
           }
         }
@@ -167,24 +157,32 @@ $actual-icon-height: 400px;
 
   .step-nav {
     grid-area: navi;
-    white-space: nowrap;
-    overflow: auto;
-    padding: 5px 5px 0 5px;
+    overflow: hidden;
+    position: relative;
 
-    .step-section {
-      display: inline-block;
-      vertical-align: top;
-      margin-right: $thin-padding;
-    }
+    .step-nav-inner {
+      position: absolute;
+      width: 100%;
+      height: 80px;
+      overflow: auto;
+      white-space: nowrap;
+      padding: 5px 5px 0 5px;
 
-    .step-nav-l1 {
-      height: 24px;
-      font-weight: 600;
-      color: #eeeeee;
-    }
+      .step-section {
+        display: inline-block;
+        vertical-align: top;
+        margin-right: $thin-padding;
+      }
 
-    .step-nav-l2 {
-      height: 30px;
+      .step-nav-l1 {
+        height: 24px;
+        font-weight: 600;
+        color: #eeeeee;
+      }
+
+      .step-nav-l2 {
+        height: 30px;
+      }
     }
   }
 
@@ -306,7 +304,7 @@ $actual-icon-height: 400px;
   .control-buttons {
     text-align: right;
 
-    .bp3-button {
+    .#{$bp-ns}-button {
       margin-left: 15px;
     }
   }

@@ -60,6 +60,7 @@ import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataActi
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
+import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.input.InputRowSchemas;
@@ -393,7 +394,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         null
     );
     this.fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-    toolbox.addMonitor(TaskRealtimeMetricsMonitorBuilder.build(task, fireDepartmentForMetrics, rowIngestionMeters));
+    TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(task, fireDepartmentForMetrics, rowIngestionMeters);
+    toolbox.addMonitor(metricsMonitor);
 
     final String lookupTier = task.getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER);
     final LookupNodeService lookupNodeService = lookupTier == null ?
@@ -900,7 +902,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           driver.close();
         }
         toolbox.getChatHandlerProvider().unregister(task.getId());
-
+        toolbox.removeMonitor(metricsMonitor);
         if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
           toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
           toolbox.getDataSegmentServerAnnouncer().unannounce();
@@ -1024,6 +1026,17 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     return null;
                   }
                 }
+            );
+            // emit segment count metric:
+            int segmentCount = 0;
+            if (publishedSegmentsAndCommitMetadata != null
+                && publishedSegmentsAndCommitMetadata.getSegments() != null) {
+              segmentCount = publishedSegmentsAndCommitMetadata.getSegments().size();
+            }
+            task.emitMetric(
+                toolbox.getEmitter(),
+                "ingest/segment/count",
+                segmentCount
             );
           }
 
@@ -1240,10 +1253,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       final SequenceOffsetType endSequenceNumber
   )
   {
-    final int compareToEnd = createSequenceNumber(recordSequenceNumber)
-        .compareTo(createSequenceNumber(endSequenceNumber));
-
-    return isEndOffsetExclusive() ? compareToEnd < 0 : compareToEnd <= 0;
+    return createSequenceNumber(recordSequenceNumber).isMoreToReadBeforeReadingRecord(
+        createSequenceNumber(endSequenceNumber),
+        isEndOffsetExclusive()
+    );
   }
 
   /**

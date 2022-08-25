@@ -66,7 +66,19 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
     final IterType iterator = maker.make();
 
     try {
-      return makeYielder(initValue, accumulator, iterator);
+      OutType retVal = initValue;
+      while (!accumulator.yielded() && iterator.hasNext()) {
+        retVal = accumulator.accumulate(retVal, iterator.next());
+      }
+
+      if (!accumulator.yielded()) {
+        return Yielders.done(
+            retVal,
+            (Closeable) () -> maker.cleanup(iterator)
+        );
+      }
+
+      return makeYielder(retVal, accumulator, iterator);
     }
     catch (Throwable t) {
       try {
@@ -80,47 +92,34 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
   }
 
   private <OutType> Yielder<OutType> makeYielder(
-      final OutType initValue,
+      final OutType retValue,
       final YieldingAccumulator<OutType, T> accumulator,
       final IterType iter
   )
   {
-    OutType retVal = initValue;
-    while (!accumulator.yielded() && iter.hasNext()) {
-      retVal = accumulator.accumulate(retVal, iter.next());
-    }
-
-    if (!accumulator.yielded()) {
-      return Yielders.done(
-          retVal,
-          (Closeable) () -> maker.cleanup(iter)
-      );
-    }
-
-    final OutType finalRetVal = retVal;
     return new Yielder<OutType>()
     {
+      OutType retVal = retValue;
+
       @Override
       public OutType get()
       {
-        return finalRetVal;
+        return retVal;
       }
 
       @Override
       public Yielder<OutType> next(OutType initValue)
       {
         accumulator.reset();
-        try {
-          return makeYielder(initValue, accumulator, iter);
+        retVal = initValue;
+        while (!accumulator.yielded() && iter.hasNext()) {
+          retVal = accumulator.accumulate(retVal, iter.next());
         }
-        catch (Throwable t) {
-          try {
-            maker.cleanup(iter);
-          }
-          catch (Exception e) {
-            t.addSuppressed(e);
-          }
-          throw t;
+
+        if (accumulator.yielded()) {
+          return this;
+        } else {
+          return Yielders.done(retVal, this);
         }
       }
 

@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -35,30 +36,28 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -225,14 +224,14 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
 
   static class ParallelIndexSupervisorTaskTest extends ParallelIndexSupervisorTask
   {
-    // These variables control how many runners get created until it fails:
-    private final int succeedsBeforeFailing;
-    private int numRuns;
+    // These variables control how many phases pass until the task fails:
+    private final int failInPhase;
+    private int currentPhase;
 
     // These maps are a hacky way to provide some sort of mock object in the runner to make the run continue
     // until it fails (whatever they contain is nonsense other that it allows the code to make progress):
-    private final Map<String, DimensionDistributionReport> firstMap;
-    private final Map<String, DimensionDistributionReport> secondMap;
+    private static final Map<Interval, PartitionBoundaries> INTERVAL_TO_PARTITIONS
+        = ImmutableMap.of(Intervals.of("2011-04-01/2011-04-02"), new PartitionBoundaries());
 
     public ParallelIndexSupervisorTaskTest(
         String id,
@@ -242,19 +241,10 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
         @Nullable String baseSubtaskSpecName,
         Map<String, Object> context,
         int succedsBeforeFailing
-
     )
     {
       super(id, groupId, taskResource, ingestionSchema, baseSubtaskSpecName, context);
-      this.succeedsBeforeFailing = succedsBeforeFailing;
-
-      this.firstMap = new HashMap<>();
-      Map<Interval, StringDistribution> intervalToDistribution = new HashMap<>();
-      intervalToDistribution.put(Intervals.of("2011-04-01/2011-04-02"), new StringSketch());
-      this.firstMap.put("A", new DimensionDistributionReport("id", intervalToDistribution));
-
-      this.secondMap = Collections.emptyMap();
-
+      this.failInPhase = succedsBeforeFailing;
     }
 
     @Override
@@ -263,141 +253,44 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
         Function<TaskToolbox, ParallelIndexTaskRunner<T, R>> runnerCreator
     )
     {
-
       // Below are the conditions to determine phase:
-      ParallelIndexTaskRunner<T, R> retVal;
-      if (succeedsBeforeFailing == 0) {
-        retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(false, firstMap, "PHASE-1");
-      } else if (succeedsBeforeFailing == 1
-                 && numRuns == 1) {
-        retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(false, secondMap, "PHASE-2");
-      } else if (succeedsBeforeFailing == 2
-                 && numRuns == 2) {
-        retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(false, secondMap, "PHASE-3");
+      final PartialDimensionDistributionParallelIndexTaskRunner retVal;
+      if (failInPhase == 0) {
+        retVal = createMockDistributionRunner(false, "PHASE-1");
+      } else if (failInPhase == 1 && currentPhase == 1) {
+        retVal = createMockDistributionRunner(false, "PHASE-2");
+      } else if (failInPhase == 2 && currentPhase == 2) {
+        retVal = createMockDistributionRunner(false, "PHASE-3");
       } else {
-        numRuns++;
-        Map<String, DimensionDistributionReport> map;
-        if (numRuns < 2) {
-          map = firstMap;
-        } else {
-          map = secondMap;
-        }
-        retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(true, map, "SUCCESFUL-PHASE");
+        currentPhase++;
+        retVal = createMockDistributionRunner(true, "SUCCESFUL-PHASE");
       }
-      return retVal;
-    }
-  }
 
-  static class TestRunner
-      implements ParallelIndexTaskRunner<PartialDimensionDistributionTask, DimensionDistributionReport>
-  {
-
-    private final boolean succeeds;
-    private final String phase;
-
-    private final Map<String, DimensionDistributionReport> distributionMap;
-
-    TestRunner(boolean succeeds, Map<String, DimensionDistributionReport> distributionMap, String phase)
-    {
-      this.succeeds = succeeds;
-      this.distributionMap = distributionMap;
-      this.phase = phase;
+      return (ParallelIndexTaskRunner<T, R>) retVal;
     }
 
-    @Override
-    public String getName()
+    private PartialDimensionDistributionParallelIndexTaskRunner createMockDistributionRunner(
+        boolean succeeds,
+        String phase
+    )
     {
-      if (succeeds) {
-        return StringUtils.format(phase);
-      } else {
-        return StringUtils.format(phase);
+      try {
+        final PartialDimensionDistributionParallelIndexTaskRunner runner = Mockito.mock(
+            PartialDimensionDistributionParallelIndexTaskRunner.class
+        );
+        Mockito.when(runner.getName()).thenReturn(phase);
+        Mockito.when(runner.run()).thenReturn(succeeds ? TaskState.SUCCESS : TaskState.FAILED);
+        Mockito.when(runner.getStopReason()).thenReturn(null);
+        Mockito.when(runner.getProgress()).thenReturn(null);
+        Mockito.when(runner.getIntervalToPartitionBoundaries(ArgumentMatchers.any()))
+               .thenReturn(INTERVAL_TO_PARTITIONS);
+
+        return runner;
+      }
+      catch (Exception e) {
+        throw new ISE(e, "Error while mocking distribution phase runner");
       }
     }
-
-    @Override
-    public TaskState run() 
-    {
-      if (succeeds) {
-        return TaskState.SUCCESS;
-      }
-      return TaskState.FAILED;
-    }
-
-    @Override
-    public void stopGracefully(String stopReason)
-    {
-
-    }
-
-    @Override
-    public String getStopReason()
-    {
-      return null;
-    }
-
-    @Override
-    public void collectReport(DimensionDistributionReport report)
-    {
-
-    }
-
-    @Override
-    public Map<String, DimensionDistributionReport> getReports()
-    {
-      return distributionMap;
-    }
-
-    @Override
-    public ParallelIndexingPhaseProgress getProgress()
-    {
-      return null;
-    }
-
-    @Override
-    public Set<String> getRunningTaskIds()
-    {
-      return null;
-    }
-
-    @Override
-    public List<SubTaskSpec<PartialDimensionDistributionTask>> getSubTaskSpecs()
-    {
-      return null;
-    }
-
-    @Override
-    public List<SubTaskSpec<PartialDimensionDistributionTask>> getRunningSubTaskSpecs()
-    {
-      return null;
-    }
-
-    @Override
-    public List<SubTaskSpec<PartialDimensionDistributionTask>> getCompleteSubTaskSpecs()
-    {
-      return null;
-    }
-
-    @Nullable
-    @Override
-    public SubTaskSpec<PartialDimensionDistributionTask> getSubTaskSpec(String subTaskSpecId)
-    {
-      return null;
-    }
-
-    @Nullable
-    @Override
-    public SubTaskSpecStatus getSubTaskState(String subTaskSpecId)
-    {
-      return null;
-    }
-
-    @Nullable
-    @Override
-    public TaskHistory<PartialDimensionDistributionTask> getCompleteSubTaskSpecAttemptHistory(String subTaskSpecId)
-    {
-      return null;
-    }
-
   }
 
   protected ParallelIndexSupervisorTask newTask(

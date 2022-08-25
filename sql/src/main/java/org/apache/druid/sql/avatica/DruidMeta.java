@@ -21,7 +21,6 @@ package org.apache.druid.sql.avatica;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -29,33 +28,41 @@ import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import org.apache.calcite.avatica.AvaticaSeverity;
 import org.apache.calcite.avatica.MetaImpl;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchConnectionException;
 import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.calcite.avatica.QueryState;
+import org.apache.calcite.avatica.remote.AvaticaRuntimeException;
+import org.apache.calcite.avatica.remote.Service.ErrorResponse;
 import org.apache.calcite.avatica.remote.TypedValue;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.SqlQueryPlus;
+import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.SqlStatementFactoryFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
@@ -63,6 +70,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@LazySingleton
 public class DruidMeta extends MetaImpl
 {
   /**
@@ -94,15 +102,18 @@ public class DruidMeta extends MetaImpl
   }
 
   private static final Logger LOG = new Logger(DruidMeta.class);
+  private static final Set<String> SENSITIVE_CONTEXT_FIELDS = ImmutableSet.of(
+      "user", "password"
+  );
 
-  private final SqlLifecycleFactory sqlLifecycleFactory;
+  private final SqlStatementFactory sqlStatementFactory;
   private final ScheduledExecutorService exec;
   private final AvaticaServerConfig config;
   private final List<Authenticator> authenticators;
   private final ErrorHandler errorHandler;
 
   /**
-   * Used to track logical connections.
+   * Tracks logical connections.
    */
   private final ConcurrentMap<String, DruidConnection> connections = new ConcurrentHashMap<>();
 
@@ -114,25 +125,41 @@ public class DruidMeta extends MetaImpl
 
   @Inject
   public DruidMeta(
-      final SqlLifecycleFactory sqlLifecycleFactory,
+      final NativeSqlEngine engine,
+      final SqlStatementFactoryFactory sqlStatementFactoryFactory,
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
       final Injector injector
   )
   {
+    this(
+        sqlStatementFactoryFactory.factorize(engine),
+        config,
+        errorHandler,
+        Executors.newSingleThreadScheduledExecutor(
+            new ThreadFactoryBuilder()
+                .setNameFormat("DruidMeta-ScheduledExecutor-%d")
+                .setDaemon(true)
+                .build()
+        ),
+        injector.getInstance(AuthenticatorMapper.class).getAuthenticatorChain()
+    );
+  }
+
+  public DruidMeta(
+      final SqlStatementFactory sqlStatementFactory,
+      final AvaticaServerConfig config,
+      final ErrorHandler errorHandler,
+      final ScheduledExecutorService exec,
+      final List<Authenticator> authenticators
+  )
+  {
     super(null);
-    this.sqlLifecycleFactory = Preconditions.checkNotNull(sqlLifecycleFactory, "sqlLifecycleFactory");
+    this.sqlStatementFactory = sqlStatementFactory;
     this.config = config;
     this.errorHandler = errorHandler;
-    this.exec = Executors.newSingleThreadScheduledExecutor(
-        new ThreadFactoryBuilder()
-            .setNameFormat(StringUtils.format("DruidMeta@%s-ScheduledExecutor", Integer.toHexString(hashCode())))
-            .setDaemon(true)
-            .build()
-    );
-
-    final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
-    this.authenticators = authenticatorMapper.getAuthenticatorChain();
+    this.exec = exec;
+    this.authenticators = authenticators;
   }
 
   @Override
@@ -140,23 +167,29 @@ public class DruidMeta extends MetaImpl
   {
     try {
       // Build connection context.
-      final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
+      final Map<String, Object> secret = new HashMap<>();
+      final Map<String, Object> contextMap = new HashMap<>();
       if (info != null) {
         for (Map.Entry<String, String> entry : info.entrySet()) {
-          context.put(entry);
+          if (SENSITIVE_CONTEXT_FIELDS.contains(entry.getKey())) {
+            secret.put(entry.getKey(), entry.getValue());
+          } else {
+            contextMap.put(entry.getKey(), entry.getValue());
+          }
         }
       }
-      // we don't want to stringify arrays for JDBC ever because avatica needs to handle this
-      context.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
-      openDruidConnection(ch.id, context.build());
+      // we don't want to stringify arrays for JDBC ever because Avatica needs to handle this
+      final QueryContext context = new QueryContext(contextMap);
+      context.addSystemParam(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
+      openDruidConnection(ch.id, secret, context);
     }
     catch (NoSuchConnectionException e) {
       throw e;
     }
     catch (Throwable t) {
-      // we want to avoid sanitizing avatica specific exceptions as the avatica code can rely on them to handle issues
+      // we want to avoid sanitizing Avatica specific exceptions as the Avatica code can rely on them to handle issues
       // differently
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -174,7 +207,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -190,25 +223,35 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
+  /**
+   * Creates a new implementation of the one-pass JDBC {@code Statement}
+   * class. Corresponds to the JDBC {@code Connection.createStatement()}
+   * method.
+   */
   @Override
   public StatementHandle createStatement(final ConnectionHandle ch)
   {
     try {
-      final DruidStatement druidStatement = getDruidConnection(ch.id).createStatement(sqlLifecycleFactory);
+      final DruidJdbcStatement druidStatement = getDruidConnection(ch.id).createStatement(sqlStatementFactory);
       return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
     }
     catch (NoSuchConnectionException e) {
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
+  /**
+   * Creates a new implementation of the JDBC {@code PreparedStatement}
+   * class which allows preparing once, executing many times. Corresponds to
+   * the JDBC {@code Connection.prepareStatement()} call.
+   */
   @Override
   public StatementHandle prepare(
       final ConnectionHandle ch,
@@ -217,33 +260,39 @@ public class DruidMeta extends MetaImpl
   )
   {
     try {
-      final StatementHandle statement = createStatement(ch);
-      final DruidStatement druidStatement;
-      try {
-        druidStatement = getDruidStatement(statement);
-      }
-      catch (NoSuchStatementException e) {
-        throw logFailure(new ISE(e, e.getMessage()));
-      }
-      final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
-      AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
-      if (authenticationResult == null) {
-        throw logFailure(
-            new ForbiddenException("Authentication failed."),
-            "Authentication failed for statement[%s]",
-            druidStatement.getStatementId()
-        );
-      }
-      statement.signature = druidStatement.prepare(sql, maxRowCount, authenticationResult).getSignature();
-      LOG.debug("Successfully prepared statement[%s] for execution", druidStatement.getStatementId());
-      return statement;
+      final DruidConnection druidConnection = getDruidConnection(ch.id);
+      SqlQueryPlus sqlReq = new SqlQueryPlus(
+          sql,
+          null, // Context provided by connection
+          null, // No parameters in this path
+          doAuthenticate(druidConnection)
+      );
+      DruidJdbcPreparedStatement stmt = getDruidConnection(ch.id).createPreparedStatement(
+          sqlStatementFactory,
+          sqlReq,
+          maxRowCount);
+      stmt.prepare();
+      LOG.debug("Successfully prepared statement [%s] for execution", stmt.getStatementId());
+      return new StatementHandle(ch.id, stmt.getStatementId(), stmt.getSignature());
     }
     catch (NoSuchConnectionException e) {
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
+  }
+
+  private AuthenticationResult doAuthenticate(final DruidConnection druidConnection)
+  {
+    AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
+    if (authenticationResult == null) {
+      throw logFailure(
+          new ForbiddenException("Authentication failed."),
+          "Authentication failed for prepare"
+      );
+    }
+    return authenticationResult;
   }
 
   @Deprecated
@@ -259,6 +308,9 @@ public class DruidMeta extends MetaImpl
     throw errorHandler.sanitize(new UOE("Deprecated"));
   }
 
+  /**
+   * Prepares and executes a JDBC {@code Statement}
+   */
   @Override
   public ExecuteResult prepareAndExecute(
       final StatementHandle statement,
@@ -268,45 +320,70 @@ public class DruidMeta extends MetaImpl
       final PrepareCallback callback
   ) throws NoSuchStatementException
   {
+
     try {
       // Ignore "callback", this class is designed for use with LocalService which doesn't use it.
-      final DruidStatement druidStatement = getDruidStatement(statement);
+      final DruidJdbcStatement druidStatement = getDruidStatement(statement, DruidJdbcStatement.class);
       final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
-      AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
-      if (authenticationResult == null) {
-        throw logFailure(
-            new ForbiddenException("Authentication failed."),
-            "Authentication failed for statement[%s]",
-            druidStatement.getStatementId()
-        );
-      }
-      druidStatement.prepare(sql, maxRowCount, authenticationResult);
-      final Frame firstFrame = druidStatement.execute(Collections.emptyList())
-                                             .nextFrame(
-                                                 DruidStatement.START_OFFSET,
-                                                 getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
-                                             );
-      final Signature signature = druidStatement.getSignature();
-      LOG.debug("Successfully prepared statement[%s] and started execution", druidStatement.getStatementId());
-      return new ExecuteResult(
-          ImmutableList.of(
-              MetaResultSet.create(
-                  statement.connectionId,
-                  statement.id,
-                  false,
-                  signature,
-                  firstFrame
-              )
-          )
-      );
+      AuthenticationResult authenticationResult = doAuthenticate(druidConnection);
+      SqlQueryPlus sqlRequest = SqlQueryPlus.builder(sql)
+          .auth(authenticationResult)
+          .build();
+      druidStatement.execute(sqlRequest, maxRowCount);
+      ExecuteResult result = doFetch(druidStatement, maxRowsInFirstFrame);
+      LOG.debug("Successfully prepared statement [%s] and started execution", druidStatement.getStatementId());
+      return result;
     }
-    // cannot affect these exceptions as avatica handles them
+    // Cannot affect these exceptions as Avatica handles them.
     catch (NoSuchConnectionException | NoSuchStatementException e) {
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
+  }
+
+  /**
+   * Convert a Druid exception to an Avatica exception. Avatica can pass
+   * along things like an error code and SQL state. There are defined
+   * values for security failures, so map to those.
+   */
+  private RuntimeException mapException(Throwable t)
+  {
+    // BasicSecurityAuthenticationException is not visible here.
+    String className = t.getClass().getSimpleName();
+    if (t instanceof ForbiddenException ||
+        "BasicSecurityAuthenticationException".equals(className)) {
+      throw new AvaticaRuntimeException(
+          t.getMessage(),
+          ErrorResponse.UNAUTHORIZED_ERROR_CODE,
+          ErrorResponse.UNAUTHORIZED_SQL_STATE,
+          AvaticaSeverity.ERROR);
+    }
+
+    // Let Avatica do its default mapping.
+    throw errorHandler.sanitize(t);
+  }
+
+  private ExecuteResult doFetch(AbstractDruidJdbcStatement druidStatement, int maxRows)
+  {
+    final Signature signature = druidStatement.getSignature();
+    final Frame firstFrame = druidStatement.nextFrame(
+                                       AbstractDruidJdbcStatement.START_OFFSET,
+                                       getEffectiveMaxRowsPerFrame(maxRows)
+                                   );
+
+    return new ExecuteResult(
+        ImmutableList.of(
+            MetaResultSet.create(
+                druidStatement.connectionId,
+                druidStatement.statementId,
+                false,
+                signature,
+                firstFrame
+            )
+        )
+    );
   }
 
   @Override
@@ -339,13 +416,13 @@ public class DruidMeta extends MetaImpl
     try {
       final int maxRows = getEffectiveMaxRowsPerFrame(fetchMaxRowCount);
       LOG.debug("Fetching next frame from offset[%s] with [%s] rows for statement[%s]", offset, maxRows, statement.id);
-      return getDruidStatement(statement).nextFrame(offset, maxRows);
+      return getDruidStatement(statement, AbstractDruidJdbcStatement.class).nextFrame(offset, maxRows);
     }
     catch (NoSuchConnectionException e) {
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -369,32 +446,20 @@ public class DruidMeta extends MetaImpl
   ) throws NoSuchStatementException
   {
     try {
-      final DruidStatement druidStatement = getDruidStatement(statement);
-      final Frame firstFrame = druidStatement.execute(parameterValues)
-                                             .nextFrame(
-                                                 DruidStatement.START_OFFSET,
-                                                 getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
-                                             );
-
-      final Signature signature = druidStatement.getSignature();
-      LOG.debug("Successfully started execution of statement[%s]", druidStatement.getStatementId());
-      return new ExecuteResult(
-          ImmutableList.of(
-              MetaResultSet.create(
-                  statement.connectionId,
-                  statement.id,
-                  false,
-                  signature,
-                  firstFrame
-              )
-          )
-      );
+      final DruidJdbcPreparedStatement druidStatement =
+          getDruidStatement(statement, DruidJdbcPreparedStatement.class);
+      druidStatement.execute(parameterValues);
+      ExecuteResult result = doFetch(druidStatement, maxRowsInFirstFrame);
+      LOG.debug(
+          "Successfully started execution of statement[%s]",
+          druidStatement.getStatementId());
+      return result;
     }
     catch (NoSuchStatementException | NoSuchConnectionException e) {
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -418,17 +483,14 @@ public class DruidMeta extends MetaImpl
       // connections.get, not getDruidConnection, since we want to silently ignore nonexistent statements
       final DruidConnection druidConnection = connections.get(h.connectionId);
       if (druidConnection != null) {
-        final DruidStatement druidStatement = druidConnection.getStatement(h.id);
-        if (druidStatement != null) {
-          druidStatement.close();
-        }
+        druidConnection.closeStatement(h.id);
       }
     }
     catch (NoSuchConnectionException e) {
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -440,7 +502,7 @@ public class DruidMeta extends MetaImpl
   ) throws NoSuchStatementException
   {
     try {
-      final DruidStatement druidStatement = getDruidStatement(sh);
+      final AbstractDruidJdbcStatement druidStatement = getDruidStatement(sh, AbstractDruidJdbcStatement.class);
       final boolean isDone = druidStatement.isDone();
       final long currentOffset = druidStatement.getCurrentOffset();
       if (currentOffset != offset) {
@@ -456,7 +518,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -495,7 +557,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -532,7 +594,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -591,7 +653,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -661,7 +723,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -682,7 +744,7 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
-      throw errorHandler.sanitize(t);
+      throw mapException(t);
     }
   }
 
@@ -697,7 +759,7 @@ public class DruidMeta extends MetaImpl
   @Nullable
   private AuthenticationResult authenticateConnection(final DruidConnection connection)
   {
-    Map<String, Object> context = connection.context();
+    Map<String, Object> context = connection.userSecret();
     for (Authenticator authenticator : authenticators) {
       LOG.debug("Attempting authentication with authenticator[%s]", authenticator.getClass());
       AuthenticationResult authenticationResult = authenticator.authenticateJDBCContext(context);
@@ -714,7 +776,11 @@ public class DruidMeta extends MetaImpl
     return null;
   }
 
-  private DruidConnection openDruidConnection(final String connectionId, final Map<String, Object> context)
+  private DruidConnection openDruidConnection(
+      final String connectionId,
+      final Map<String, Object> userSecret,
+      final QueryContext context
+  )
   {
     if (connectionCount.incrementAndGet() > config.getMaxConnections()) {
       // O(connections) but we don't expect this to happen often (it's a last-ditch effort to clear out
@@ -744,7 +810,7 @@ public class DruidMeta extends MetaImpl
 
     final DruidConnection putResult = connections.putIfAbsent(
         connectionId,
-        new DruidConnection(connectionId, config.getMaxStatementsPerConnection(), context)
+        new DruidConnection(connectionId, config.getMaxStatementsPerConnection(), userSecret, context)
     );
 
     if (putResult != null) {
@@ -788,14 +854,22 @@ public class DruidMeta extends MetaImpl
   }
 
   @Nonnull
-  private DruidStatement getDruidStatement(final StatementHandle statement) throws NoSuchStatementException
+  private <T extends AbstractDruidJdbcStatement> T getDruidStatement(
+      final StatementHandle statement,
+      final Class<T> stmtClass
+  ) throws NoSuchStatementException
   {
     final DruidConnection connection = getDruidConnection(statement.connectionId);
-    final DruidStatement druidStatement = connection.getStatement(statement.id);
+    final AbstractDruidJdbcStatement druidStatement = connection.getStatement(statement.id);
     if (druidStatement == null) {
       throw logFailure(new NoSuchStatementException(statement));
     }
-    return druidStatement;
+    try {
+      return stmtClass.cast(druidStatement);
+    }
+    catch (ClassCastException e) {
+      throw logFailure(new NoSuchStatementException(statement));
+    }
   }
 
   private MetaResultSet sqlResultSet(final ConnectionHandle ch, final String sql)

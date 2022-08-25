@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
+import java.util.concurrent.ExecutorService;
 
 /**
  * A class to fetch segment files to local disk and manage the local cache.
@@ -84,4 +85,15 @@ public interface SegmentCacheManager
    * explicitly reserved via {@link #reserve(DataSegment)}
    */
   void cleanup(DataSegment segment);
+
+  /**
+   * Asyncly load segment into page cache.
+   * Equivalent to `cat segment_files > /dev/null` to force loading the segment index files into page cache so that
+   * later when the segment is queried, they are already in page cache and only a minor page fault needs to be triggered
+   * instead of a major page fault to make the query latency more consistent.
+   *
+   * @param segment The segment to load its index files into page cache
+   * @param exec The thread pool to use
+   */
+  void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec);
 }

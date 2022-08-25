@@ -26,7 +26,7 @@ import { ColumnTree } from './column-tree';
 
 describe('ColumnTree', () => {
   it('matches snapshot', () => {
-    const columnTree = shallow(
+    const comp = shallow(
       <ColumnTree
         getParsedQuery={() => {
           return SqlQuery.parse(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`);
@@ -66,6 +66,6 @@ describe('ColumnTree', () => {
       />,
     );
 
-    expect(columnTree).toMatchSnapshot();
+    expect(comp).toMatchSnapshot();
   });
 });

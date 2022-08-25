@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.23.0-SNAPSHOT</version>
+        <version>0.24.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -50,6 +50,7 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <!-- This is needed to bundle the web console -->
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-console</artifactId>
             <version>${project.parent.version}</version>
@@ -302,10 +303,6 @@
         <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.aether</groupId>
-            <artifactId>aether-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

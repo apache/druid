@@ -230,6 +230,10 @@ public class ExpressionPlan
     if (outputType != null) {
       final ColumnType inferredValueType = ExpressionType.toColumnType(outputType);
 
+      if (inferredValueType.is(ValueType.COMPLEX)) {
+        return ColumnCapabilitiesImpl.createDefault().setHasNulls(true).setType(inferredValueType);
+      }
+
       if (inferredValueType.isNumeric()) {
         // if float was explicitly specified preserve it, because it will currently never be the computed output type
         // since there is no float expression type

@@ -1,0 +1,24 @@
+{
+  "transforms": [
+    {
+      "type": "expression",
+      "name": "nest_json",
+      "expression": "parse_json(nest)"
+    },
+    {
+      "type": "expression",
+      "name": "nester_json",
+      "expression": "parse_json(nester)"
+    },
+    {
+      "type": "expression",
+      "name": "variant_json",
+      "expression": "parse_json(variant)"
+    },
+    {
+      "type": "expression",
+      "name": "list_json",
+      "expression": "parse_json(list)"
+    }
+  ]
+}

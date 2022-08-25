@@ -28,6 +28,7 @@ import org.apache.druid.testing.utils.StreamAdminClient;
 import org.apache.druid.testing.utils.StreamEventWriter;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.function.Function;
 
 public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamIndexingTest
@@ -59,6 +60,7 @@ public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamI
       String fullDatasourceName,
       String parserType,
       String parserOrInputFormat,
+      List<String> dimensions,
       IntegrationTestingConfig config
   )
   {
@@ -121,6 +123,11 @@ public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamI
                 spec,
                 "%%SCHEMA_REGISTRY_HOST%%",
                 StringUtils.format("http://%s", config.getSchemaRegistryInternalHost())
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%DIMENSIONS%%",
+            jsonMapper.writeValueAsString(dimensions)
         );
         return StringUtils.replace(
             spec,

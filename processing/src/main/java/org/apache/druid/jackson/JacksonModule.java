@@ -32,6 +32,10 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.guice.annotations.Smile;
 
+import javax.annotation.Nullable;
+
+import java.util.Properties;
+
 /**
  */
 public class JacksonModule implements Module
@@ -43,28 +47,37 @@ public class JacksonModule implements Module
   }
 
   @Provides @LazySingleton @Json
-  public ObjectMapper jsonMapper()
+  public ObjectMapper jsonMapper(Properties props)
   {
-    return new DefaultObjectMapper();
+    return new DefaultObjectMapper(getServiceName(props));
   }
 
   /**
    * Provides ObjectMapper that suppress serializing properties with null values
    */
   @Provides @LazySingleton @JsonNonNull
-  public ObjectMapper jsonMapperOnlyNonNullValue()
+  public ObjectMapper jsonMapperOnlyNonNullValue(Properties props)
   {
-    return new DefaultObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    return new DefaultObjectMapper(getServiceName(props)).setSerializationInclusion(JsonInclude.Include.NON_NULL);
   }
 
   @Provides @LazySingleton @Smile
-  public ObjectMapper smileMapper()
+  public ObjectMapper smileMapper(Properties props)
   {
     final SmileFactory smileFactory = new SmileFactory();
     smileFactory.configure(SmileGenerator.Feature.ENCODE_BINARY_AS_7BIT, false);
     smileFactory.delegateToTextual(true);
-    final ObjectMapper retVal = new DefaultObjectMapper(smileFactory);
+    final ObjectMapper retVal = new DefaultObjectMapper(smileFactory, getServiceName(props));
     retVal.getFactory().setCodec(retVal);
     return retVal;
+  }
+
+  @Nullable
+  private String getServiceName(Properties properties)
+  {
+    if (null == properties) {
+      return null;
+    }
+    return properties.getProperty("druid.service");
   }
 }

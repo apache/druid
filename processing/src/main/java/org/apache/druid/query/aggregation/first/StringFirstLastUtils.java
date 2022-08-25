@@ -27,6 +27,8 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -57,6 +59,47 @@ public class StringFirstLastUtils
     final Class<?> clazz = valueSelector.classOfObject();
     return clazz.isAssignableFrom(SerializablePairLongString.class)
            || SerializablePairLongString.class.isAssignableFrom(clazz);
+  }
+
+  /**
+   * Returns whether an object *might* contain SerializablePairLongString objects.
+   */
+  public static boolean objectNeedsFoldCheck(Object obj)
+  {
+    if (obj == null) {
+      return false;
+    }
+    final Class<?> clazz = obj.getClass();
+    return clazz.isAssignableFrom(SerializablePairLongString.class)
+           || SerializablePairLongString.class.isAssignableFrom(clazz);
+  }
+
+  /**
+   * Return the object at a particular index from the vector selectors.
+   * index of bounds issues is the responsibility of the caller
+   */
+  public static SerializablePairLongString readPairFromVectorSelectorsAtIndex(
+      BaseLongVectorValueSelector timeSelector,
+      VectorObjectSelector valueSelector,
+      int index
+  )
+  {
+    final long time;
+    final String string;
+    final Object object = valueSelector.getObjectVector()[index];
+    if (object instanceof SerializablePairLongString) {
+      final SerializablePairLongString pair = (SerializablePairLongString) object;
+      time = pair.lhs;
+      string = pair.rhs;
+    } else if (object != null) {
+      time = timeSelector.getLongVector()[index];
+      string = DimensionHandlerUtils.convertObjectToString(object);
+    } else {
+      // Don't aggregate nulls.
+      return null;
+    }
+
+    return new SerializablePairLongString(time, string);
   }
 
   @Nullable
