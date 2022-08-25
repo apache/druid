@@ -19,11 +19,9 @@
 
 package org.apache.druid.testsEx.cluster;
 
-import org.apache.curator.ensemble.EnsembleProvider;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.curator.CuratorConfig;
 import org.apache.druid.curator.CuratorModule;
-import org.apache.druid.curator.ExhibitorConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.testsEx.config.ResolvedConfig;
 import org.apache.druid.testsEx.config.ResolvedService.ResolvedZk;
@@ -56,9 +54,7 @@ public class ZooKeeperClient
   private void prepare()
   {
     CuratorConfig curatorConfig = clusterConfig.toCuratorConfig();
-    ExhibitorConfig exhibitorConfig = clusterConfig.toExhibitorConfig();
-    EnsembleProvider ensembleProvider = CuratorModule.createEnsembleProvider(curatorConfig, exhibitorConfig);
-    curatorFramework = CuratorModule.createCurator(curatorConfig, ensembleProvider);
+    curatorFramework = CuratorModule.createCurator(curatorConfig);
   }
 
   private void awaitReady()

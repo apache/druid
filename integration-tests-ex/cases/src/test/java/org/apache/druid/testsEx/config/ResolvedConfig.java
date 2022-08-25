@@ -22,7 +22,6 @@ package org.apache.druid.testsEx.config;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.curator.CuratorConfig;
-import org.apache.druid.curator.ExhibitorConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.testing.IntegrationTestingConfigProvider;
@@ -272,12 +271,6 @@ public class ResolvedConfig
     }
     // TODO: Add a builder for other properties
     return CuratorConfig.create(zk.clientHosts());
-  }
-
-  public ExhibitorConfig toExhibitorConfig()
-  {
-    // Does not yet support exhibitors
-    return ExhibitorConfig.create(Collections.emptyList());
   }
 
   /**
