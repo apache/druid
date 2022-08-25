@@ -17,26 +17,24 @@ exports[`ExecutionErrorPane matches snapshot 1`] = `
       (Stack trace)
     </a>
   </p>
-  <p>
+  <div>
     Failed task ID: 
     <Memo(ClickToCopy)
       text="query-0cf1a40a-aaef-4d17-bda4-5afa7edf07e7-worker0"
     />
-     /
-     
-    On host: 
+     (on host: 
     <Memo(ClickToCopy)
       text="localhost:8101"
     />
-     /
-     
-    Debug:
-     
+    )
+  </div>
+  <div>
+    Debug: 
     <a
       onClick={[Function]}
     >
-      download query detail archive
+      get query detail archive
     </a>
-  </p>
+  </div>
 </Blueprint4.Callout>
 `;
