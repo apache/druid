@@ -201,7 +201,7 @@ To ingest nested data using multi-stage query architecture, specify `COMPLEX<jso
 ```sql
 REPLACE INTO msq_nested_data_example OVERWRITE ALL
 SELECT
-  "time",
+  TIME_PARSE("time") as __time,
   product,
   department,
   shipTo,
