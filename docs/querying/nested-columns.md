@@ -25,11 +25,11 @@ sidebar_label: Nested columns
 
 > Nested columns is an experimental feature available starting in Apache Druid 24.0. As an experimental feature, functionality documented on this page is subject to change or removal in future releases. Review the release notes and this page to stay up to date with changes.
 
-You can ingest and store nested JSON in an Apache Druid column as a `COMPLEX<json>` data type. Druid indexes and optimizes the nested data. This means you can use JSON functions to extract ‘literal’ values at ingestion time using the `transformSpec` or  in the SELECT clause when using multi-stage query architecture. 
+Apache Druid supports directly storing nested data structures in `COMPLEX<json>` columns. In addition to storing a copy of the structured data in JSON format, `COMPLEX<json>` columns also store specialized internal columns and indexes for nested 'literal' values (`STRING`, `LONG`, and `DOUBLE` types). An optimized [virtual-column](./virtual-columns.md#nested-field-virtual-column) allows for fast reading and filtering of these values at speeds which are consistent with standard Druid `LONG`, `DOUBLE`, and `STRING` columns.
 
-Druid SQL JSON functions let you extract, transform, and create `COMPLEX<json>` values. Additionally, you can use certain `JSONPath` operators to extract values from nested data structures.
+The [Druid SQL JSON functions](./sql-json-functions.md) let you extract, transform, and create `COMPLEX<json>` values in SQL queries, taking advantage of the specialized virtual columns whenever possible. The [JSON nested columns functions](../misc/math-expr.md#nested-columns-functions), can be used in ['native' queries](./querying.md) using [expression virtual columns](./virtual-columns.md#expression-virtual-column), and in native ingestion with a [`transformSpec`](../ingestion/ingestion-spec.md#transformspec).
 
-Druid currently supports ingesting JSON-format nested columns with this feature. If you want to ingest nested data in another format, consider using the [flattenSpec object](../ingestion/data-formats.md#flattenspec).
+When used in MSQ INSERT and REPLACE statements, or native ingestion `transformSpec`, the JSON functions can serve as an alternative to using a [`flattenSpec`](../ingestion/data-formats.md#flattenspec).
 
 ### Example nested data
 
