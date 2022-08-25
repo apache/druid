@@ -5401,7 +5401,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         // JOIN condition with a function of both sides.
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
         + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n",
-        "Possible error: SQL requires a join with 'GREATER_THAN' condition that is not supported."
+        "Possible error: SQL requires a join with 'GREATER_THAN' condition that is not supported.",
+
+        // Window functions
+        "SELECT min(foo.dim1) OVER (partition by foo.dim2) from druid.foo",
+        "Possible error: SQL query requires windows functios that are not supported."
     );
 
     for (final Map.Entry<String, String> queryErrorPair : queries.entrySet()) {

@@ -27,6 +27,7 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexOver;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
@@ -238,6 +239,11 @@ public class Expressions
       final PostAggregatorVisitor postAggregatorVisitor
   )
   {
+    RexCall rexCall = (RexCall) rexNode;
+    if (rexCall instanceof RexOver) {
+      plannerContext.setPlanningError("SQL query requires windows functios that are not supported.");
+      return null;
+    }
     final SqlOperator operator = ((RexCall) rexNode).getOperator();
 
     final SqlOperatorConversion conversion = plannerContext.getOperatorTable()
