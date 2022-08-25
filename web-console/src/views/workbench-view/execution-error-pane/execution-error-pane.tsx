@@ -61,14 +61,12 @@ export const ExecutionErrorPane = React.memo(function ExecutionErrorPane(
       <p>
         {taskId && (
           <>
-            Failed task ID: <ClickToCopy text={taskId} />
-            &nbsp;
+            Failed task ID: <ClickToCopy text={taskId} /> /{' '}
           </>
         )}
         {host && (
           <>
-            On host: <ClickToCopy text={host} />
-            &nbsp;
+            On host: <ClickToCopy text={host} /> /{' '}
           </>
         )}
         Debug:{' '}

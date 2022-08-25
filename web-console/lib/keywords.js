@@ -60,6 +60,7 @@ exports.SQL_KEYWORDS = [
   'INSERT INTO',
   'REPLACE INTO',
   'OVERWRITE',
+  'RETURNING',
 ];
 
 exports.SQL_EXPRESSION_PARTS = [
