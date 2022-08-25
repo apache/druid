@@ -81,6 +81,11 @@ public class StatusResource
     return filterHiddenProperties(hidderProperties, allProperties);
   }
 
+  /**
+   * filter out entries from allProperties with key containing elements in hidderProperties (case insensitive)
+   *
+   * @return map of properties that are not filtered out.
+   */
   @Nonnull
   private Map<String, String> filterHiddenProperties(
       Set<String> hidderProperties,
