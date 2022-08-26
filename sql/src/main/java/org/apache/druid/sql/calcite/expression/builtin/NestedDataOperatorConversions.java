@@ -28,12 +28,10 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.type.SqlTypeTransforms;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
@@ -167,7 +165,7 @@ public class NestedDataOperatorConversions
         .operatorBuilder("JSON_PATHS")
         .operandTypeChecker(OperandTypes.ANY)
         .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
-        .returnTypeNullableArray(SqlTypeName.VARCHAR)
+        .returnTypeArrayWithNullableElements(SqlTypeName.VARCHAR)
         .build();
 
     @Override
@@ -209,16 +207,7 @@ public class NestedDataOperatorConversions
             )
         )
         .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
-        .returnTypeInference(
-            ReturnTypes.cascade(
-                opBinding -> Calcites.createSqlArrayTypeWithNullability(
-                    opBinding.getTypeFactory(),
-                    SqlTypeName.VARCHAR,
-                    true
-                ),
-                SqlTypeTransforms.FORCE_NULLABLE
-            )
-        )
+        .returnTypeNullableArrayWithNullableElements(SqlTypeName.VARCHAR)
         .build();
 
     @Override

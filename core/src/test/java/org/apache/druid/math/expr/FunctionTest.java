@@ -347,12 +347,13 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testStringToArray()
   {
     assertArrayExpr("string_to_array('1,2,3', ',')", new String[]{"1", "2", "3"});
+    assertArrayExpr("string_to_array(null, ',')", null);
     assertArrayExpr("string_to_array('1', ',')", new String[]{"1"});
     assertArrayExpr("string_to_array(array_to_string(a, ','), ',')", new String[]{"foo", "bar", "baz", "foobar"});
   }
 
   @Test
-  public void testArrayCast()
+  public void testArrayCastLegacy()
   {
     assertArrayExpr("cast([1, 2, 3], 'STRING_ARRAY')", new String[]{"1", "2", "3"});
     assertArrayExpr("cast([1, 2, 3], 'DOUBLE_ARRAY')", new Double[]{1.0, 2.0, 3.0});
@@ -362,6 +363,19 @@ public class FunctionTest extends InitializedNullHandlingTest
         new Long[]{1L, 2L, 3L, 4L, 5L}
     );
     assertArrayExpr("cast(['1.0', '2.0', '3.0'], 'LONG_ARRAY')", new Long[]{1L, 2L, 3L});
+  }
+
+  @Test
+  public void testArrayCast()
+  {
+    assertArrayExpr("cast([1, 2, 3], 'ARRAY<STRING>')", new String[]{"1", "2", "3"});
+    assertArrayExpr("cast([1, 2, 3], 'ARRAY<DOUBLE>')", new Double[]{1.0, 2.0, 3.0});
+    assertArrayExpr("cast(c, 'ARRAY<LONG>')", new Long[]{3L, 4L, 5L});
+    assertArrayExpr(
+        "cast(string_to_array(array_to_string(b, ','), ','), 'ARRAY<LONG>')",
+        new Long[]{1L, 2L, 3L, 4L, 5L}
+    );
+    assertArrayExpr("cast(['1.0', '2.0', '3.0'], 'ARRAY<LONG>')", new Long[]{1L, 2L, 3L});
   }
 
   @Test

@@ -130,7 +130,7 @@ public class DruidRexExecutor implements RexExecutor
               double exprResultDouble = exprResult.asDouble();
               if (Double.isNaN(exprResultDouble) || Double.isInfinite(exprResultDouble)) {
                 String expression = druidExpression.getExpression();
-                throw new UnsupportedSQLQueryException("'%s' evaluates to '%s' that is not supported in SQL. You can either cast the expression as bigint ('cast(%s as bigint)') or char ('cast(%s as char)') or change the expression itself",
+                throw new UnsupportedSQLQueryException("'%s' evaluates to '%s' that is not supported in SQL. You can either cast the expression as BIGINT ('CAST(%s as BIGINT)') or VARCHAR ('CAST(%s as VARCHAR)') or change the expression itself",
                     expression,
                     Double.toString(exprResultDouble),
                     expression,
@@ -166,7 +166,7 @@ public class DruidRexExecutor implements RexExecutor
                 } else if (Double.isNaN(doubleVal.doubleValue()) || Double.isInfinite(doubleVal.doubleValue())) {
                   String expression = druidExpression.getExpression();
                   throw new UnsupportedSQLQueryException(
-                      "'%s' contains an element that evaluates to '%s' which is not supported in SQL. You can either cast the element in the array to bigint or char or change the expression itself",
+                      "'%s' contains an element that evaluates to '%s' which is not supported in SQL. You can either cast the element in the ARRAY to BIGINT or VARCHAR or change the expression itself",
                       expression,
                       Double.toString(doubleVal.doubleValue())
                   );
