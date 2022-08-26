@@ -22,9 +22,6 @@ title: "Lookups"
   ~ under the License.
   -->
 
-
-> Lookups are an [experimental](../development/experimental.md) feature.
-
 Lookups are a concept in Apache Druid where dimension values are (optionally) replaced with new values, allowing join-like
 functionality. Applying lookups in Druid is similar to joining a dimension table in a data warehouse. See
 [dimension specs](../querying/dimensionspecs.md) for more information. For the purpose of these documents, a "key"
