@@ -123,6 +123,7 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
 
   {
     multiStageQuery: {
+      type: 'multiStageQuery',
       taskId: 'query-32ced762-7679-4a25-9220-3915c5976961',
       payload: {
         status: { status: 'SUCCESS', startTime: '2022-08-22T20:12:51.391Z', durationMs: 25097 },
