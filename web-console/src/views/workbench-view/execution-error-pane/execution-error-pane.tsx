@@ -58,28 +58,27 @@ export const ExecutionErrorPane = React.memo(function ExecutionErrorPane(
           </>
         )}
       </p>
-      <p>
-        {taskId && (
-          <>
-            Failed task ID: <ClickToCopy text={taskId} />
-            &nbsp;
-          </>
-        )}
-        {host && (
-          <>
-            On host: <ClickToCopy text={host} />
-            &nbsp;
-          </>
-        )}
-        Debug:{' '}
+      {taskId && (
+        <div>
+          Failed task ID: <ClickToCopy text={taskId} />
+          {host && (
+            <>
+              {' (on host: '}
+              <ClickToCopy text={host} />)
+            </>
+          )}
+        </div>
+      )}
+      <div>
+        {'Debug: '}
         <a
           onClick={() => {
             void downloadQueryDetailArchive(execution.id);
           }}
         >
-          download query detail archive
+          get query detail archive
         </a>
-      </p>
+      </div>
 
       {stackToShow && (
         <ShowValueDialog
