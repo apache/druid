@@ -29,17 +29,17 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.sql.SqlTaskStatus;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.MsqOverlordResourceTestClient;
 import org.apache.druid.testing.clients.MsqTestClient;
-import org.apache.druid.testing.guice.models.MSQResultsReportDeserializable;
-import org.apache.druid.testing.guice.models.MSQTaskReportDeserializable;
-import org.apache.druid.testing.guice.models.MSQTaskReportPayloadDeserializable;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.util.ArrayList;
@@ -135,38 +135,40 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     return overlordClient.getTaskStatus(taskId).getStatusCode();
   }
 
-  public Map<String, MSQTaskReportDeserializable> fetchStatusReports(String taskId)
+  public Map<String, MSQTaskReport> fetchStatusReports(String taskId)
   {
     return overlordClient.getTaskReportForMsqTask(taskId);
   }
 
   public void compareResults(String taskId, MsqQueryWithResults expectedQueryWithResults)
   {
-    Map<String, MSQTaskReportDeserializable> statusReport = fetchStatusReports(taskId);
-    MSQTaskReportDeserializable taskReport = statusReport.get(MSQTaskReport.REPORT_KEY);
+    Map<String, MSQTaskReport> statusReport = fetchStatusReports(taskId);
+    MSQTaskReport taskReport = statusReport.get(MSQTaskReport.REPORT_KEY);
     if (taskReport == null) {
       throw new ISE("Unable to fetch the status report for the task [%]", taskId);
     }
-    MSQTaskReportPayloadDeserializable taskReportPayload = Preconditions.checkNotNull(
-        (MSQTaskReportPayloadDeserializable) taskReport.getPayload(),
+    MSQTaskReportPayload taskReportPayload = Preconditions.checkNotNull(
+        taskReport.getPayload(),
         "payload"
     );
-    MSQResultsReportDeserializable resultsReport = Preconditions.checkNotNull(
+    MSQResultsReport resultsReport = Preconditions.checkNotNull(
         taskReportPayload.getResults(),
         "Results report for the task id is empty"
     );
 
     List<Map<String, Object>> actualResults = new ArrayList<>();
 
-    List<Object[]> results = resultsReport.getResults();
+    Yielder<Object[]> yielder = resultsReport.getResultYielder();
     RowSignature rowSignature = resultsReport.getSignature();
 
-    for (Object[] row : results) {
+    while (!yielder.isDone()) {
+      Object[] row = yielder.get();
       Map<String, Object> rowWithFieldNames = new HashMap<>();
       for (int i = 0; i < row.length; ++i) {
         rowWithFieldNames.put(rowSignature.getColumnName(i), row[i]);
       }
       actualResults.add(rowWithFieldNames);
+      yielder = yielder.next(null);
     }
 
     QueryResultVerifier.compareResults(

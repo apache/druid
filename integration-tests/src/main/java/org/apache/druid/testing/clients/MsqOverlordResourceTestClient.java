@@ -32,7 +32,6 @@ import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
-import org.apache.druid.testing.guice.models.MSQTaskReportDeserializable;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.util.HashMap;
@@ -53,7 +52,7 @@ public class MsqOverlordResourceTestClient extends OverlordResourceTestClient
     this.jsonMapper = jsonMapper;
   }
 
-  public Map<String, MSQTaskReportDeserializable> getTaskReportForMsqTask(String taskId)
+  public Map<String, MSQTaskReport> getTaskReportForMsqTask(String taskId)
   {
     try {
       StatusResponseHolder response = makeRequest(
@@ -65,10 +64,10 @@ public class MsqOverlordResourceTestClient extends OverlordResourceTestClient
           )
       );
       jsonMapper.registerModules(new MSQIndexingModule().getJacksonModules());
-      jsonMapper.registerSubtypes(ImmutableList.of(MSQTaskReportDeserializable.class));
+      jsonMapper.registerSubtypes(ImmutableList.of(MSQTaskReport.class));
       return jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<Map<String, MSQTaskReportDeserializable>>()
+          new TypeReference<Map<String, MSQTaskReport>>()
           {
           }
       );

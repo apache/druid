@@ -23,9 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.MsqTestClient;
-import org.apache.druid.testing.guice.models.MSQTaskReportDeserializable;
 import org.apache.druid.testing.utils.MsqQueryWithResults;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testsEx.categories.MultiStageQuery;
@@ -78,7 +78,7 @@ public class ITMultiStageQuery
         + "PARTITIONED BY ALL TIME";
     String taskId = msqHelper.submitMsqTask(query);
     msqHelper.pollTaskIdForCompletion(taskId, 0);
-    Map<String, MSQTaskReportDeserializable> reports = msqHelper.fetchStatusReports(taskId);
+    Map<String, MSQTaskReport> reports = msqHelper.fetchStatusReports(taskId);
 
     String resultsQuery = "SELECT * FROM dst";
     String resultsTaskId = msqHelper.submitMsqTask(resultsQuery);
