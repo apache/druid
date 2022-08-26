@@ -27,13 +27,13 @@ import React, { RefObject } from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import { v4 as uuidv4 } from 'uuid';
 
-import { Loader } from '../../components';
-import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
-import { QueryHistoryDialog } from '../../dialogs/query-history-dialog/query-history-dialog';
+import { Loader, QueryErrorPane } from '../../components';
+import { EditContextDialog } from '../../dialogs';
+import { QueryContext, QueryWithContext } from '../../druid-models';
 import { Api, AppToaster } from '../../singletons';
 import {
   ColumnMetadata,
-  downloadFile,
+  downloadQueryResults,
   DruidError,
   findEmptyLiteralPosition,
   localStorageGet,
@@ -45,22 +45,19 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
-  QueryWithContext,
   RowColumn,
-  stringifyValue,
 } from '../../utils';
-import { QueryContext } from '../../utils/query-context';
 import { QueryRecord, QueryRecordUtil } from '../../utils/query-history';
 
 import { ColumnTree } from './column-tree/column-tree';
-import { ExplainDialog } from './explain-dialog/explain-dialog';
+import { ExplainDialog, QueryContextEngine } from './explain-dialog/explain-dialog';
 import {
   LIVE_QUERY_MODES,
   LiveQueryMode,
-  LiveQueryModeSelector,
-} from './live-query-mode-selector/live-query-mode-selector';
-import { QueryError } from './query-error/query-error';
+  LiveQueryModeButton,
+} from './live-query-mode-button/live-query-mode-button';
 import { QueryExtraInfo } from './query-extra-info/query-extra-info';
+import { QueryHistoryDialog } from './query-history-dialog/query-history-dialog';
 import { QueryInput } from './query-input/query-input';
 import { QueryOutput } from './query-output/query-output';
 import { QueryTimer } from './query-timer/query-timer';
@@ -95,7 +92,7 @@ export interface QueryViewState {
 
   queryResultState: QueryState<QueryResult, DruidError>;
 
-  explainDialogQuery?: QueryWithContext;
+  explainDialogQuery?: QueryContextEngine;
 
   defaultSchema?: string;
   defaultTable?: string;
@@ -125,19 +122,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       return true;
     } catch {
       return false;
-    }
-  }
-
-  static formatStr(s: null | string | number | Date, format: 'csv' | 'tsv') {
-    // stringify and remove line break
-    const str = stringifyValue(s).replace(/(?:\r\n|\r|\n)/g, ' ');
-
-    if (format === 'csv') {
-      // csv: single quote => double quote, handle ','
-      return `"${str.replace(/"/g, '""')}"`;
-    } else {
-      // tsv: single quote => double quote, \t => ''
-      return str.replace(/\t/g, '').replace(/"/g, '""');
     }
   }
 
@@ -288,33 +272,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     const queryResult = queryResultState.data;
     if (!queryResult) return;
 
-    let lines: string[] = [];
-    let separator = '';
-
-    if (format === 'csv' || format === 'tsv') {
-      separator = format === 'csv' ? ',' : '\t';
-      lines.push(
-        queryResult.header.map(column => QueryView.formatStr(column.name, format)).join(separator),
-      );
-      lines = lines.concat(
-        queryResult.rows.map(r => r.map(cell => QueryView.formatStr(cell, format)).join(separator)),
-      );
-    } else {
-      // json
-      lines = queryResult.rows.map(r => {
-        const outputObject: Record<string, any> = {};
-        for (let k = 0; k < r.length; k++) {
-          const newName = queryResult.header[k];
-          if (newName) {
-            outputObject[newName.name] = r[k];
-          }
-        }
-        return JSONBig.stringify(outputObject);
-      });
-    }
-
-    const lineBreak = '\n';
-    downloadFile(lines.join(lineBreak), format, filename);
+    downloadQueryResults(queryResult, filename, format);
   };
 
   private readonly handleLoadMore = () => {
@@ -335,8 +293,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       <ExplainDialog
         queryWithContext={explainDialogQuery}
         mandatoryQueryContext={mandatoryQueryContext}
-        setQueryString={this.handleQueryStringChange}
+        onOpenQuery={this.handleQueryStringChange}
         onClose={() => this.setState({ explainDialogQuery: undefined })}
+        openQueryLabel="Open query"
       />
     );
   }
@@ -372,15 +331,16 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
-  private renderLiveQueryModeSelector() {
+  private renderLiveQueryModeButton() {
     const { liveQueryMode, queryString } = this.state;
     if (QueryView.isJsonLike(queryString)) return;
 
     return (
-      <LiveQueryModeSelector
+      <LiveQueryModeButton
         liveQueryMode={liveQueryMode}
         onLiveQueryModeChange={this.handleLiveQueryModeChange}
         autoLiveQueryModeShouldRun={this.autoLiveQueryModeShouldRun()}
+        minimal
       />
     );
   }
@@ -462,7 +422,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
               loading={queryResultState.loading}
             />
             {this.renderWrapQueryLimitSelector()}
-            {this.renderLiveQueryModeSelector()}
+            {this.renderLiveQueryModeButton()}
             {queryResult && (
               <QueryExtraInfo
                 queryResult={queryResult}
@@ -483,7 +443,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             />
           )}
           {queryResultState.error && (
-            <QueryError
+            <QueryErrorPane
               error={queryResultState.error}
               moveCursorTo={position => {
                 this.moveToPosition(position);
@@ -603,6 +563,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
     this.setState({
       explainDialogQuery: {
+        engine: 'sql-native',
         queryString,
         queryContext,
         wrapQueryLimit,

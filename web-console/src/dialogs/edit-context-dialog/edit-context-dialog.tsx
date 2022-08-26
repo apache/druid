@@ -21,7 +21,7 @@ import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
-import { QueryContext } from '../../utils/query-context';
+import { QueryContext } from '../../druid-models';
 
 import './edit-context-dialog.scss';
 

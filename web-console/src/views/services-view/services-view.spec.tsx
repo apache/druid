@@ -81,9 +81,7 @@ jest.mock('../../utils', () => {
 
 describe('ServicesView', () => {
   it('renders data', () => {
-    const comp = (
-      <ServicesView goToQuery={() => {}} goToTask={() => {}} capabilities={Capabilities.FULL} />
-    );
+    const comp = <ServicesView goToQuery={() => {}} capabilities={Capabilities.FULL} />;
 
     const servicesView = shallow(comp);
     expect(servicesView).toMatchSnapshot();

@@ -16,27 +16,36 @@
  * limitations under the License.
  */
 
+import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { DatasourceColumnsTable } from '../../components/datasource-columns-table/datasource-columns-table';
 import { BasicAction } from '../../utils/basic-action';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
+import { DatasourceColumnsTable } from './datasource-columns-table/datasource-columns-table';
+import { DatasourcePreviewPane } from './datasource-preview-pane/datasource-preview-pane';
+
 interface DatasourceTableActionDialogProps {
-  datasourceId?: string;
+  datasource: string;
   actions: BasicAction[];
-  onClose: () => void;
+  onClose(): void;
 }
 
 export const DatasourceTableActionDialog = React.memo(function DatasourceTableActionDialog(
   props: DatasourceTableActionDialogProps,
 ) {
-  const { onClose, datasourceId, actions } = props;
-  const [activeTab, setActiveTab] = useState('columns');
+  const { datasource, actions, onClose } = props;
+  const [activeTab, setActiveTab] = useState<'records' | 'columns'>('records');
 
-  const taskTableSideButtonMetadata: SideButtonMetaData[] = [
+  const sideButtonMetadata: SideButtonMetaData[] = [
     {
-      icon: 'list-columns',
+      icon: IconNames.TH,
+      text: 'Records',
+      active: activeTab === 'records',
+      onClick: () => setActiveTab('records'),
+    },
+    {
+      icon: IconNames.LIST_COLUMNS,
       text: 'Columns',
       active: activeTab === 'columns',
       onClick: () => setActiveTab('columns'),
@@ -45,17 +54,13 @@ export const DatasourceTableActionDialog = React.memo(function DatasourceTableAc
 
   return (
     <TableActionDialog
-      sideButtonMetadata={taskTableSideButtonMetadata}
+      sideButtonMetadata={sideButtonMetadata}
       onClose={onClose}
-      title={`Datasource: ${datasourceId}`}
+      title={`Datasource: ${datasource}`}
       actions={actions}
     >
-      {activeTab === 'columns' && (
-        <DatasourceColumnsTable
-          datasourceId={datasourceId ? datasourceId : ''}
-          downloadFilename={`datasource-dimensions-${datasourceId}.json`}
-        />
-      )}
+      {activeTab === 'records' && <DatasourcePreviewPane datasource={datasource} />}
+      {activeTab === 'columns' && <DatasourceColumnsTable datasource={datasource} />}
     </TableActionDialog>
   );
 });

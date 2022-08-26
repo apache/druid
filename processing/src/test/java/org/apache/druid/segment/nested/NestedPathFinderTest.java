@@ -228,6 +228,18 @@ public class NestedPathFinderTest
     Assert.assertEquals(".\"x\"[1]", NestedPathFinder.toNormalizedJqPath(pathParts));
     Assert.assertEquals("$.x[1]", NestedPathFinder.toNormalizedJsonPath(pathParts));
 
+
+    // { "x" : ["a", "b"]}
+    pathParts = NestedPathFinder.parseJsonPath("$.x[-1]");
+    Assert.assertEquals(2, pathParts.size());
+
+    Assert.assertTrue(pathParts.get(0) instanceof NestedPathField);
+    Assert.assertEquals("x", pathParts.get(0).getPartIdentifier());
+    Assert.assertTrue(pathParts.get(1) instanceof NestedPathArrayElement);
+    Assert.assertEquals("-1", pathParts.get(1).getPartIdentifier());
+    Assert.assertEquals(".\"x\"[-1]", NestedPathFinder.toNormalizedJqPath(pathParts));
+    Assert.assertEquals("$.x[-1]", NestedPathFinder.toNormalizedJsonPath(pathParts));
+
     // { "x" : ["a", "b"]}
     pathParts = NestedPathFinder.parseJsonPath("$['x'][1]");
     Assert.assertEquals(2, pathParts.size());
@@ -421,6 +433,18 @@ public class NestedPathFinderTest
     pathParts = NestedPathFinder.parseJqPath(".x[1]");
     Assert.assertEquals("b", NestedPathFinder.find(NESTER, pathParts));
     Assert.assertEquals("b", NestedPathFinder.findStringLiteral(NESTER, pathParts));
+
+    pathParts = NestedPathFinder.parseJqPath(".x[-1]");
+    Assert.assertEquals("c", NestedPathFinder.find(NESTER, pathParts));
+    Assert.assertEquals("c", NestedPathFinder.findStringLiteral(NESTER, pathParts));
+
+    pathParts = NestedPathFinder.parseJqPath(".x[-2]");
+    Assert.assertEquals("b", NestedPathFinder.find(NESTER, pathParts));
+    Assert.assertEquals("b", NestedPathFinder.findStringLiteral(NESTER, pathParts));
+
+    pathParts = NestedPathFinder.parseJqPath(".x[-4]");
+    Assert.assertNull(NestedPathFinder.find(NESTER, pathParts));
+    Assert.assertNull(NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     // nonexistent
     pathParts = NestedPathFinder.parseJqPath(".x[1].y.z");

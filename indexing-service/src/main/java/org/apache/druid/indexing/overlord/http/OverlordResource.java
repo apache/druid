@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
@@ -100,6 +99,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -1008,9 +1008,9 @@ public class OverlordResource
   )
   {
     try {
-      final Optional<ByteSource> stream = taskLogStreamer.streamTaskLog(taskid, offset);
+      final Optional<InputStream> stream = taskLogStreamer.streamTaskLog(taskid, offset);
       if (stream.isPresent()) {
-        return Response.ok(stream.get().openStream()).build();
+        return Response.ok(stream.get()).build();
       } else {
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(
@@ -1035,9 +1035,9 @@ public class OverlordResource
   )
   {
     try {
-      final Optional<ByteSource> stream = taskLogStreamer.streamTaskReports(taskid);
+      final Optional<InputStream> stream = taskLogStreamer.streamTaskReports(taskid);
       if (stream.isPresent()) {
-        return Response.ok(stream.get().openStream()).build();
+        return Response.ok(stream.get()).build();
       } else {
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(
