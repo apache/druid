@@ -791,9 +791,9 @@ All Druid components can communicate with each other over HTTP.
 
 This section contains the configuration options for endpoints that are supported by all processes.
 
-|Property| Description                                                                                                                                  |Default|
-|--------|----------------------------------------------------------------------------------------------------------------------------------------------|-------|
-|`druid.server.hiddenProperties`| If property names or substring of property names (case insensitive) is in this list, responses of the `/status/properties` endpoint do not show these properties |`["druid.s3.accessKey","druid.s3.secretKey","druid.metadata.storage.connector.password"]`|
+|Property| Description                                                                                                                                  | Default                                                                                     |
+|--------|----------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+|`druid.server.hiddenProperties`| If property names or substring of property names (case insensitive) is in this list, responses of the `/status/properties` endpoint do not show these properties | `["druid.s3.accessKey","druid.s3.secretKey","druid.metadata.storage.connector.password", "password", "key", "token", "pwd"]` |
 
 ## Master Server
 

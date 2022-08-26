@@ -77,24 +77,24 @@ public class StatusResource
   public Map<String, String> getProperties()
   {
     Map<String, String> allProperties = Maps.fromProperties(properties);
-    Set<String> hidderProperties = druidServerConfig.getHiddenProperties();
-    return filterHiddenProperties(hidderProperties, allProperties);
+    Set<String> hiddenProperties = druidServerConfig.getHiddenProperties();
+    return filterHiddenProperties(hiddenProperties, allProperties);
   }
 
   /**
-   * filter out entries from allProperties with key containing elements in hidderProperties (case insensitive)
+   * filter out entries from allProperties with key containing elements in hiddenProperties (case insensitive)
    *
    * @return map of properties that are not filtered out.
    */
   @Nonnull
   private Map<String, String> filterHiddenProperties(
-      Set<String> hidderProperties,
+      Set<String> hiddenProperties,
       Map<String, String> allProperties
   )
   {
     return Maps.filterEntries(
         allProperties,
-        (entry) -> hidderProperties
+        (entry) -> hiddenProperties
             .stream()
             .anyMatch(
                 hiddenPropertyElement ->
