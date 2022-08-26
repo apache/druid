@@ -2131,7 +2131,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT "
-        + "JSON_KEYS(nester, '.'), "
+        + "JSON_KEYS(nester, '$'), "
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1",
         ImmutableList.of(
@@ -2142,7 +2142,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             new ExpressionVirtualColumn(
                                 "v0",
-                                "json_keys(\"nester\",'.')",
+                                "json_keys(\"nester\",'$')",
                                 ColumnType.STRING_ARRAY,
                                 macroTable
                             )
@@ -2215,7 +2215,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT "
-        + "JSON_KEYS(nest, '.'), "
+        + "JSON_KEYS(nest, '$'), "
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1",
         ImmutableList.of(
@@ -2226,7 +2226,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             new ExpressionVirtualColumn(
                                 "v0",
-                                "json_keys(\"nest\",'.')",
+                                "json_keys(\"nest\",'$')",
                                 ColumnType.STRING_ARRAY,
                                 macroTable
                             )

@@ -66,6 +66,9 @@ import java.util.List;
 
 public class NestedDataOperatorConversions
 {
+  public static final DruidJsonValueConvertletFactory DRUID_JSON_VALUE_CONVERTLET_FACTORY_INSTANCE =
+      new DruidJsonValueConvertletFactory();
+
   public static final SqlReturnTypeInference NESTED_RETURN_TYPE_INFERENCE = opBinding -> RowSignatures.makeComplexType(
       opBinding.getTypeFactory(),
       NestedDataComplexTypeSerde.TYPE,
@@ -331,10 +334,12 @@ public class NestedDataOperatorConversions
    * cast(json_value_any(..), type).
    *
    * This is not that useful for us, so we have our own convertlet, to translate into specialized operators such
-   * as 'JSON_VALUE_BIGINT', 'JSON_VALUE_DOUBLE', and so on, before falling back to JSON_VALUE_ANY.
+   * as {@link JsonValueBigintOperatorConversion}, {@link JsonValueDoubleOperatorConversion}, or
+   * {@link JsonValueVarcharOperatorConversion}, before falling back to {@link JsonValueAnyOperatorConversion}.
    *
-   * This convertlet still always wraps the function in a cast, to smooth out type mismatches such as
-   * VARCHAR(2000) vs VARCHAR or whatever else various type checkers like to complain about not exactly matching.
+   * This convertlet still always wraps the function in a {@link SqlStdOperatorTable#CAST}, to smooth out type
+   * mismatches, such as VARCHAR(2000) vs VARCHAR or whatever else various type checkers like to complain about not
+   * exactly matching.
    */
   public static class DruidJsonValueConvertletFactory implements DruidConvertletFactory
   {
@@ -358,7 +363,7 @@ public class NestedDataOperatorConversions
               call.operand(1)
           );
         } else if (SqlTypeName.STRING_TYPES.contains(sqlType.getSqlTypeName())) {
-          rewrite = JsonValueStringOperatorConversion.FUNCTION.createCall(
+          rewrite = JsonValueVarcharOperatorConversion.FUNCTION.createCall(
               SqlParserPos.ZERO,
               call.operand(0),
               call.operand(1)
@@ -509,19 +514,16 @@ public class NestedDataOperatorConversions
     }
   }
 
-  public static class JsonValueStringOperatorConversion extends JsonValueReturningTypeOperatorConversion
+  public static class JsonValueVarcharOperatorConversion extends JsonValueReturningTypeOperatorConversion
   {
     private static final SqlFunction FUNCTION = buildFunction("JSON_VALUE_VARCHAR", SqlTypeName.VARCHAR);
 
-    public JsonValueStringOperatorConversion()
+    public JsonValueVarcharOperatorConversion()
     {
       super(FUNCTION, ColumnType.STRING);
     }
   }
 
-  /**
-   * Calcites {@link org.apache.calcite.sql2rel.StandardConvertletTable} translates JSON_VALUE
-   */
   public static class JsonValueAnyOperatorConversion implements SqlOperatorConversion
   {
     private static final SqlFunction FUNCTION =

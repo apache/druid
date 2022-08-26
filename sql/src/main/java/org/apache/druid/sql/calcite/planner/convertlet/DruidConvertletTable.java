@@ -45,7 +45,7 @@ public class DruidConvertletTable implements SqlRexConvertletTable
       ImmutableList.<DruidConvertletFactory>builder()
                    .add(CurrentTimestampAndFriendsConvertletFactory.INSTANCE)
                    .add(TimeInIntervalConvertletFactory.INSTANCE)
-                   .add(new NestedDataOperatorConversions.DruidJsonValueConvertletFactory())
+                   .add(NestedDataOperatorConversions.DRUID_JSON_VALUE_CONVERTLET_FACTORY_INSTANCE)
                    .build();
 
   // Operators we don't have standard conversions for, but which can be converted into ones that do by

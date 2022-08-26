@@ -73,8 +73,6 @@ public class ExpressionModule implements Module
                    .add(NestedDataExpressions.StructExprMacro.class)
                    .add(NestedDataExpressions.JsonObjectExprMacro.class)
                    .add(NestedDataExpressions.GetPathExprMacro.class)
-                   .add(NestedDataExpressions.ListKeysExprMacro.class)
-                   .add(NestedDataExpressions.ListPathsExprMacro.class)
                    .add(NestedDataExpressions.JsonKeysExprMacro.class)
                    .add(NestedDataExpressions.JsonPathsExprMacro.class)
                    .add(NestedDataExpressions.JsonValueExprMacro.class)
