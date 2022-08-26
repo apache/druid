@@ -114,7 +114,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
         }
       }
     }
-    LOG.info("User [%s] is not allowed to [%s] the resource [%s:%s]",
+    LOG.info("User [%s] does not have [%s] permission for the resource [%s:%s]",
         authenticationResult.getIdentity(),
         action.name(),
         resource.getType(), resource.getName());
