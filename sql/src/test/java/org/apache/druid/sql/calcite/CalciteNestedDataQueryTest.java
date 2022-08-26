@@ -2551,4 +2551,46 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .build()
     );
   }
+
+  @Test
+  public void testJsonValueUnDocumentedButSupportedOptions()
+  {
+    testQuery(
+        "SELECT "
+        + "SUM(JSON_VALUE(nest, '$.z' RETURNING BIGINT NULL ON EMPTY NULL ON ERROR)) "
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("nest", "$.z", "v0", ColumnType.LONG))
+                  .aggregators(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{700L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testJsonValueUnsupportedOptions()
+  {
+    testQueryThrows(
+        "SELECT "
+        + "SUM(JSON_VALUE(nest, '$.z' RETURNING BIGINT ERROR ON EMPTY ERROR ON ERROR)) "
+        + "FROM druid.nested",
+        exception -> {
+          expectedException.expect(IllegalArgumentException.class);
+          expectedException.expectMessage(
+              "Unsupported JSON_VALUE parameter 'ON EMPTY' defined - please re-issue this query without this argument"
+          );
+        }
+    );
+  }
 }

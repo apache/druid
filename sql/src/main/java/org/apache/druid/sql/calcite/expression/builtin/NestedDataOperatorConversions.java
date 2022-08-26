@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -347,6 +348,23 @@ public class NestedDataOperatorConversions
     public SqlRexConvertlet createConvertlet(PlannerContext plannerContext)
     {
       return (cx, call) -> {
+        // we don't support modifying the behavior to be anything other than 'NULL ON EMPTY' / 'NULL ON ERROR'
+        Preconditions.checkArgument(
+            "SQLJSONVALUEEMPTYORERRORBEHAVIOR[NULL]".equals(call.operand(2).toString()),
+            "Unsupported JSON_VALUE parameter 'ON EMPTY' defined - please re-issue this query without this argument"
+        );
+        Preconditions.checkArgument(
+            "NULL".equals(call.operand(3).toString()),
+            "Unsupported JSON_VALUE parameter 'ON EMPTY' defined - please re-issue this query without this argument"
+        );
+        Preconditions.checkArgument(
+            "SQLJSONVALUEEMPTYORERRORBEHAVIOR[NULL]".equals(call.operand(4).toString()),
+            "Unsupported JSON_VALUE parameter 'ON ERROR' defined - please re-issue this query without this argument"
+        );
+        Preconditions.checkArgument(
+            "NULL".equals(call.operand(5).toString()),
+            "Unsupported JSON_VALUE parameter 'ON ERROR' defined - please re-issue this query without this argument"
+        );
         SqlDataTypeSpec dataType = call.operand(6);
         RelDataType sqlType = dataType.deriveType(cx.getValidator());
         SqlNode rewrite;
