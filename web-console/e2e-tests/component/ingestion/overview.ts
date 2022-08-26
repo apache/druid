@@ -30,10 +30,10 @@ enum TaskColumn {
   GROUP_ID,
   TYPE,
   DATASOURCE,
-  LOCATION,
-  CREATED_TIME,
   STATUS,
+  CREATED_TIME,
   DURATION,
+  LOCATION,
 }
 
 /**

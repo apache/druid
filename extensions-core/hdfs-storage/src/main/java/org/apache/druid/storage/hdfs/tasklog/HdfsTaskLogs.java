@@ -20,7 +20,6 @@
 package org.apache.druid.storage.hdfs.tasklog;
 
 import com.google.common.base.Optional;
-import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
 import org.apache.druid.guice.Hdfs;
@@ -88,44 +87,35 @@ public class HdfsTaskLogs implements TaskLogs
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskId, final long offset) throws IOException
+  public Optional<InputStream> streamTaskLog(final String taskId, final long offset) throws IOException
   {
     final Path path = getTaskLogFileFromId(taskId);
     return streamTaskFile(path, offset);
   }
 
   @Override
-  public Optional<ByteSource> streamTaskReports(String taskId) throws IOException
+  public Optional<InputStream> streamTaskReports(String taskId) throws IOException
   {
     final Path path = getTaskReportsFileFromId(taskId);
     return streamTaskFile(path, 0);
   }
 
-  private Optional<ByteSource> streamTaskFile(final Path path, final long offset) throws IOException
+  private Optional<InputStream> streamTaskFile(final Path path, final long offset) throws IOException
   {
     final FileSystem fs = path.getFileSystem(hadoopConfig);
     if (fs.exists(path)) {
-      return Optional.of(
-          new ByteSource()
-          {
-            @Override
-            public InputStream openStream() throws IOException
-            {
-              log.info("Reading task log from: %s", path);
-              final long seekPos;
-              if (offset < 0) {
-                final FileStatus stat = fs.getFileStatus(path);
-                seekPos = Math.max(0, stat.getLen() + offset);
-              } else {
-                seekPos = offset;
-              }
-              final FSDataInputStream inputStream = fs.open(path);
-              inputStream.seek(seekPos);
-              log.info("Read task log from: %s (seek = %,d)", path, seekPos);
-              return inputStream;
-            }
-          }
-      );
+      log.info("Reading task log from: %s", path);
+      final long seekPos;
+      if (offset < 0) {
+        final FileStatus stat = fs.getFileStatus(path);
+        seekPos = Math.max(0, stat.getLen() + offset);
+      } else {
+        seekPos = offset;
+      }
+      final FSDataInputStream inputStream = fs.open(path);
+      inputStream.seek(seekPos);
+      log.info("Read task log from: %s (seek = %,d)", path, seekPos);
+      return Optional.of(inputStream);
     } else {
       return Optional.absent();
     }

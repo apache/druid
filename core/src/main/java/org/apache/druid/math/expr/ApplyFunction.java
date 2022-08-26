@@ -407,7 +407,7 @@ public interface ApplyFunction
         return ExprEval.of(null);
       }
       if (hadEmpty) {
-        return ExprEval.ofStringArray(new String[0]);
+        return ExprEval.ofStringArray(new Object[0]);
       }
       Expr accExpr = argsExpr.get(argsExpr.size() - 1);
 
@@ -576,9 +576,12 @@ public interface ApplyFunction
     @Override
     public ExprEval match(Object[] values, LambdaExpr expr, SettableLambdaBinding bindings)
     {
-      boolean anyMatch = Arrays.stream(values)
-                               .anyMatch(o -> expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean());
-      return ExprEval.ofLongBoolean(anyMatch);
+      for (Object o : values) {
+        if (expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean()) {
+          return ExprEval.ofLongBoolean(true);
+        }
+      }
+      return ExprEval.ofLongBoolean(false);
     }
   }
 
@@ -599,9 +602,12 @@ public interface ApplyFunction
     @Override
     public ExprEval match(Object[] values, LambdaExpr expr, SettableLambdaBinding bindings)
     {
-      boolean allMatch = Arrays.stream(values)
-                               .allMatch(o -> expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean());
-      return ExprEval.ofLongBoolean(allMatch);
+      for (Object o : values) {
+        if (!expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean()) {
+          return ExprEval.ofLongBoolean(false);
+        }
+      }
+      return ExprEval.ofLongBoolean(true);
     }
   }
 

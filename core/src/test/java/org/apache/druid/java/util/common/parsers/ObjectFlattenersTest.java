@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -45,9 +46,12 @@ public class ObjectFlattenersTest
   {
     JsonNode node = OBJECT_MAPPER.readTree(SOME_JSON);
     Map<String, Object> flat = FLATTENER.flatten(node);
+    Assert.assertEquals(ImmutableSet.of("extract", "foo", "bar"), flat.keySet());
+    Assert.assertFalse(flat.isEmpty());
     Assert.assertNull(flat.get("foo"));
     Assert.assertEquals(1L, flat.get("bar"));
     Assert.assertEquals(1L, flat.get("extract"));
+    Assert.assertEquals("{\"extract\":1,\"foo\":null,\"bar\":1}", OBJECT_MAPPER.writeValueAsString(flat));
   }
 
   @Test

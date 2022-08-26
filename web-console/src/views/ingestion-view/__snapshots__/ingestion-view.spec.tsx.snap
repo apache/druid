@@ -359,10 +359,10 @@ exports[`IngestionView matches snapshot 1`] = `
               "Group ID",
               "Type",
               "Datasource",
-              "Location",
-              "Created time",
               "Status",
+              "Created time",
               "Duration",
+              "Location",
               "Actions",
             ]
           }
@@ -458,12 +458,13 @@ exports[`IngestionView matches snapshot 1`] = `
               "width": 200,
             },
             Object {
-              "Aggregated": [Function],
               "Cell": [Function],
-              "Header": "Location",
-              "accessor": "location",
+              "Header": "Status",
+              "accessor": [Function],
+              "id": "status",
               "show": true,
-              "width": 200,
+              "sortMethod": [Function],
+              "width": 110,
             },
             Object {
               "Aggregated": [Function],
@@ -474,17 +475,6 @@ exports[`IngestionView matches snapshot 1`] = `
               "width": 190,
             },
             Object {
-              "Cell": [Function],
-              "Header": "Status",
-              "accessor": [Function],
-              "className": "padded",
-              "filterMethod": [Function],
-              "id": "status",
-              "show": true,
-              "sortMethod": [Function],
-              "width": 110,
-            },
-            Object {
               "Aggregated": [Function],
               "Cell": [Function],
               "Header": "Duration",
@@ -493,6 +483,14 @@ exports[`IngestionView matches snapshot 1`] = `
               "filterable": false,
               "show": true,
               "width": 80,
+            },
+            Object {
+              "Aggregated": [Function],
+              "Cell": [Function],
+              "Header": "Location",
+              "accessor": "location",
+              "show": true,
+              "width": 200,
             },
             Object {
               "Aggregated": [Function],

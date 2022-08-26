@@ -619,7 +619,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(
-        new PlannerConfig(),
+        PlannerConfig.builder().useNativeQueryExplain(false).build(),
         ImmutableMap.of("sqlQueryId", "dummy"),
         Collections.emptyList(),
         StringUtils.format(
