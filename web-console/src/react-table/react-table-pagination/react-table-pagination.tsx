@@ -101,7 +101,7 @@ export const ReactTablePagination = React.memo(function ReactTablePagination(
   const start = page * pageSize + 1;
   let end = page * pageSize + pageSize;
   if (nonEmptyArray(sortedData)) {
-    end = Math.min(end, sortedData.length);
+    end = Math.min(end, page * pageSize + sortedData.length);
   }
 
   let pageInfo = 'Showing';

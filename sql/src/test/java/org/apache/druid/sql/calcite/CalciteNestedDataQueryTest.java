@@ -2417,6 +2417,97 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testGroupByNegativeJsonPathIndex()
+  {
+    // negative array index cannot vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nester, '$.array[-1]'), "
+        + "SUM(cnt) "
+        + "FROM druid.nested GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn("nester", "$.array[-1]", "v0", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 5L},
+            new Object[]{"b", 2L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testJsonPathNegativeIndex()
+  {
+    testQuery(
+        "SELECT JSON_VALUE(nester, '$.array[-1]'), JSON_QUERY(nester, '$.array[-1]'), JSON_KEYS(nester, '$.array[-1]') FROM druid.nested",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new NestedFieldVirtualColumn(
+                          "nester",
+                          "v0",
+                          ColumnType.STRING,
+                          null,
+                          false,
+                          "$.array[-1]",
+                          false
+                      ),
+                      new NestedFieldVirtualColumn(
+                          "nester",
+                          "v1",
+                          NestedDataComplexTypeSerde.TYPE,
+                          null,
+                          true,
+                          "$.array[-1]",
+                          false
+                      ),
+                      expressionVirtualColumn("v2", "json_keys(\"nester\",'$.array[-1]')", ColumnType.STRING_ARRAY)
+                  )
+                  .columns("v0", "v1", "v2")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b", "\"b\"", null},
+            new Object[]{NullHandling.defaultStringValue(), null, null},
+            new Object[]{NullHandling.defaultStringValue(), null, null},
+            new Object[]{NullHandling.defaultStringValue(), null, null},
+            new Object[]{NullHandling.defaultStringValue(), null, null},
+            new Object[]{"b", "\"b\"", null},
+            new Object[]{NullHandling.defaultStringValue(), null, null}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", NestedDataComplexTypeSerde.TYPE)
+                    .add("EXPR$2", ColumnType.STRING_ARRAY)
+                    .build()
+
+    );
+  }
+
+  @Test
   public void testJsonPathsNonJsonInput()
   {
     testQuery(
