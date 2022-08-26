@@ -40,7 +40,7 @@ public class StringToArrayOperatorConversion extends DirectOperatorConversion
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeNullableArray(SqlTypeName.VARCHAR)
+      .returnTypeNullableArrayWithNullableElements(SqlTypeName.VARCHAR)
       .build();
 
   public StringToArrayOperatorConversion()

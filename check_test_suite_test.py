@@ -128,6 +128,7 @@ class CheckTestSuite(unittest.TestCase):
             ['check_test_suite_test.py'],
             ['website/core/Footer.js'],
             ['web-console/src/views/index.ts'],
+            ['licenses/foo.mit'],
             ['check_test_suite_test.py', 'website/core/Footer.js', 'web-console/unified-console.html', 'owasp-dependency-check-suppressions.xml']
         ]
         some_java_diffs = [

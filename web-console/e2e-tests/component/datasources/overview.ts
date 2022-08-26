@@ -141,7 +141,7 @@ export class DatasourcesOverview {
   }
 
   private async clickMoreButton(options: any): Promise<void> {
-    await this.page.click('//button[span[@icon="more"]]', options);
+    await this.page.click('.more-button button', options);
     await this.waitForPopupMenu();
   }
 }

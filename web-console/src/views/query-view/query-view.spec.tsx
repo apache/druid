@@ -31,13 +31,4 @@ describe('QueryView', () => {
     const sqlView = shallow(<QueryView initQuery="SELECT +3" />);
     expect(sqlView).toMatchSnapshot();
   });
-
-  it('.formatStr', () => {
-    expect(QueryView.formatStr(null, 'csv')).toEqual('"null"');
-    expect(QueryView.formatStr('hello\nworld', 'csv')).toEqual('"hello world"');
-    expect(QueryView.formatStr(123, 'csv')).toEqual('"123"');
-    expect(QueryView.formatStr(new Date('2021-01-02T03:04:05.678Z'), 'csv')).toEqual(
-      '"2021-01-02T03:04:05.678Z"',
-    );
-  });
 });

@@ -75,6 +75,7 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.util.component.LifeCycle;
+import org.eclipse.jetty.util.ssl.KeyStoreScanner;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
@@ -347,6 +348,11 @@ public class JettyServerModule extends JerseyServletModule
       }
       connector.setPort(node.getTlsPort());
       serverConnectors.add(connector);
+      if (tlsServerConfig.isReloadSslContext()) {
+        KeyStoreScanner keyStoreScanner = new KeyStoreScanner(sslContextFactory);
+        keyStoreScanner.setScanInterval(tlsServerConfig.getReloadSslContextSeconds());
+        server.addBean(keyStoreScanner);
+      }
     } else {
       sslContextFactory = null;
     }

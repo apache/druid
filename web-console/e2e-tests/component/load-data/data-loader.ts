@@ -34,7 +34,7 @@ export class DataLoader {
 
   constructor(props: DataLoaderProps) {
     Object.assign(this, props);
-    this.baseUrl = props.unifiedConsoleUrl + '#load-data';
+    this.baseUrl = props.unifiedConsoleUrl + '#data-loader';
   }
 
   /**
