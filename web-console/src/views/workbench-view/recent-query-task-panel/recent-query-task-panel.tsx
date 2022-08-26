@@ -190,7 +190,7 @@ LIMIT 100`,
                   )}
                 <MenuItem
                   icon={IconNames.ARCHIVE}
-                  text="Download query detail archive"
+                  text="Get query detail archive"
                   onClick={() => downloadQueryDetailArchive(w.taskId)}
                 />
                 {w.taskStatus === 'RUNNING' && (

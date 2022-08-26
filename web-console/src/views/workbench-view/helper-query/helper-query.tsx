@@ -353,7 +353,7 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
                 ) : execution.isSuccessfulInsert() ? (
                   <IngestSuccessPane
                     execution={execution}
-                    onDetails={() => onDetails(statsTaskId!)}
+                    onDetails={onDetails}
                     onQueryTab={onQueryTab}
                   />
                 ) : execution.error ? (

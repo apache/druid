@@ -178,7 +178,7 @@ public class NestedDataOperatorConversions
         .operatorBuilder("JSON_PATHS")
         .operandTypeChecker(OperandTypes.ANY)
         .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
-        .returnTypeNullableArray(SqlTypeName.VARCHAR)
+        .returnTypeArrayWithNullableElements(SqlTypeName.VARCHAR)
         .build();
 
     @Override
@@ -220,7 +220,7 @@ public class NestedDataOperatorConversions
             )
         )
         .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
-        .returnTypeNullableArray(SqlTypeName.VARCHAR)
+        .returnTypeNullableArrayWithNullableElements(SqlTypeName.VARCHAR)
         .build();
 
     @Override

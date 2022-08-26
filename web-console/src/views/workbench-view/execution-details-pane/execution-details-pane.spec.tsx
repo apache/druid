@@ -16,17 +16,31 @@
  * limitations under the License.
  */
 
-@import '../../../variables';
+import { shallow } from 'enzyme';
+import React from 'react';
 
-.execution-error-pane {
-  overflow: hidden;
+import { EXECUTION_INGEST_ERROR } from '../../../druid-models/execution/execution-ingest-error.mock';
 
-  .#{$bp-ns}-dark & {
-    background: $dark-gray3;
-  }
+import { ExecutionDetailsPane } from './execution-details-pane';
 
-  .error-message-text {
-    max-height: 75px;
-    overflow: auto;
-  }
-}
+describe('ExecutionDetailsPane', () => {
+  it('matches snapshot no init tab', () => {
+    const comp = shallow(
+      <ExecutionDetailsPane execution={EXECUTION_INGEST_ERROR} goToIngestion={() => {}} />,
+    );
+
+    expect(comp).toMatchSnapshot();
+  });
+
+  it('matches snapshot with init tab', () => {
+    const comp = shallow(
+      <ExecutionDetailsPane
+        execution={EXECUTION_INGEST_ERROR}
+        initTab="warnings"
+        goToIngestion={() => {}}
+      />,
+    );
+
+    expect(comp).toMatchSnapshot();
+  });
+});

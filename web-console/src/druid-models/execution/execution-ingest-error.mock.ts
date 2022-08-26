@@ -19,26 +19,32 @@
 import { Execution } from './execution';
 
 /*
-For query:
+===== Query =====
 
 REPLACE INTO "kttm_simple" OVERWRITE ALL
 SELECT TIME_PARSE("timestamp") AS "__time", agent_type
 FROM TABLE(
   EXTERN(
-    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz_"]}',
+    '{"type":"http","uris":["https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz"]}',
     '{"type":"json"}',
     '[{"name":"timestamp","type":"string"},{"name":"agent_type","type":"string"}]'
   )
 )
 PARTITIONED BY ALL
+
+===== Context =====
+
+{
+  "maxParseExceptions": 10
+}
 */
 
 export const EXECUTION_INGEST_ERROR = Execution.fromTaskPayloadAndReport(
   {
-    task: 'query-0cf1a40a-aaef-4d17-bda4-5afa7edf07e7',
+    task: 'query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb',
     payload: {
       type: 'query_controller',
-      id: 'query-0cf1a40a-aaef-4d17-bda4-5afa7edf07e7',
+      id: 'query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb',
       spec: {
         query: {
           queryType: 'scan',
@@ -46,7 +52,7 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskPayloadAndReport(
             type: 'external',
             inputSource: {
               type: 'http',
-              uris: ['https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz_'],
+              uris: ['https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz'],
               httpAuthenticationUsername: null,
               httpAuthenticationPassword: null,
             },
@@ -80,9 +86,10 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskPayloadAndReport(
             finalize: false,
             finalizeAggregations: false,
             groupByEnableMultiValueUnnesting: false,
+            maxParseExceptions: 10,
             scanSignature: '[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]',
             sqlInsertSegmentGranularity: '{"type":"all"}',
-            sqlQueryId: '0cf1a40a-aaef-4d17-bda4-5afa7edf07e7',
+            sqlQueryId: 'c6bffa9d-43c4-45a0-95f8-0c8c453655fb',
             sqlReplaceTimeChunks: 'all',
           },
           granularity: { type: 'all' },
@@ -101,21 +108,21 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskPayloadAndReport(
         tuningConfig: { maxNumWorkers: 1, maxRowsInMemory: 100000, rowsPerSegment: 3000000 },
       },
       sqlQuery:
-        'REPLACE INTO "kttm_simple" OVERWRITE ALL\nSELECT TIME_PARSE("timestamp") AS "__time", agent_type\nFROM TABLE(\n  EXTERN(\n    \'{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz_"]}\',\n    \'{"type":"json"}\',\n    \'[{"name":"timestamp","type":"string"},{"name":"agent_type","type":"string"}]\'\n  )\n)\nPARTITIONED BY ALL',
+        'REPLACE INTO "kttm_simple" OVERWRITE ALL\nSELECT TIME_PARSE("timestamp") AS "__time", agent_type\nFROM TABLE(\n  EXTERN(\n    \'{"type":"http","uris":["https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz"]}\',\n    \'{"type":"json"}\',\n    \'[{"name":"timestamp","type":"string"},{"name":"agent_type","type":"string"}]\'\n  )\n)\nPARTITIONED BY ALL',
       sqlQueryContext: {
         finalizeAggregations: false,
         groupByEnableMultiValueUnnesting: false,
-        maxParseExceptions: 0,
+        maxParseExceptions: 10,
         sqlInsertSegmentGranularity: '{"type":"all"}',
-        sqlQueryId: '0cf1a40a-aaef-4d17-bda4-5afa7edf07e7',
+        sqlQueryId: 'c6bffa9d-43c4-45a0-95f8-0c8c453655fb',
         sqlReplaceTimeChunks: 'all',
       },
       sqlTypeNames: ['TIMESTAMP', 'VARCHAR'],
       context: { forceTimeChunkLock: true, useLineageBasedSegmentAllocation: true },
-      groupId: 'query-0cf1a40a-aaef-4d17-bda4-5afa7edf07e7',
+      groupId: 'query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb',
       dataSource: 'kttm_simple',
       resource: {
-        availabilityGroup: 'query-0cf1a40a-aaef-4d17-bda4-5afa7edf07e7',
+        availabilityGroup: 'query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb',
         requiredCapacity: 1,
       },
     },
@@ -123,40 +130,98 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskPayloadAndReport(
 
   {
     multiStageQuery: {
-      taskId: 'query-0cf1a40a-aaef-4d17-bda4-5afa7edf07e7',
+      type: 'multiStageQuery',
+      taskId: 'query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb',
       payload: {
         status: {
           status: 'FAILED',
           errorReport: {
-            taskId: 'query-0cf1a40a-aaef-4d17-bda4-5afa7edf07e7-worker0',
-            host: 'localhost:8101',
-            stageNumber: 0,
+            taskId: 'query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb',
+            host: 'localhost',
             error: {
-              errorCode: 'UnknownError',
-              message:
-                'java.lang.RuntimeException: java.lang.RuntimeException: Error occured while trying to read uri: https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz_',
+              errorCode: 'TooManyWarnings',
+              maxWarnings: 10,
+              rootErrorCode: 'CannotParseExternalData',
               errorMessage:
-                'java.lang.RuntimeException: java.lang.RuntimeException: Error occured while trying to read uri: https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz_',
+                'Too many warnings of type CannotParseExternalData generated (max = 10)',
             },
-            exceptionStackTrace:
-              'java.lang.RuntimeException: java.lang.RuntimeException: Error occured while trying to read uri: https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz_\n\tat org.apache.druid.java.util.common.Either.valueOrThrow(Either.java:91)\n\tat org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:258)\n\tat org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)\n\tat org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)\n\tat java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)\n\tat java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)\n\tat org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)\n\tat java.base/java.lang.Thread.run(Thread.java:829)\nCaused by: java.lang.RuntimeException: Error occured while trying to read uri: https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz_\n\tat org.apache.druid.data.input.impl.InputEntityIteratingReader.lambda$read$0(InputEntityIteratingReader.java:83)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:84)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$2.<init>(CloseableIterator.java:69)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator.flatMap(CloseableIterator.java:67)\n\tat org.apache.druid.data.input.impl.InputEntityIteratingReader.createIterator(InputEntityIteratingReader.java:105)\n\tat org.apache.druid.data.input.impl.InputEntityIteratingReader.read(InputEntityIteratingReader.java:74)\n\tat org.apache.druid.msq.indexing.CountableInputSourceReader.read(CountableInputSourceReader.java:47)\n\tat org.apache.druid.msq.input.external.ExternalInputSliceReader$1.make(ExternalInputSliceReader.java:162)\n\tat org.apache.druid.msq.input.external.ExternalInputSliceReader$1.make(ExternalInputSliceReader.java:157)\n\tat org.apache.druid.java.util.common.guava.BaseSequence.toYielder(BaseSequence.java:66)\n\tat org.apache.druid.java.util.common.guava.Yielders.each(Yielders.java:32)\n\tat org.apache.druid.segment.RowWalker.<init>(RowWalker.java:48)\n\tat org.apache.druid.segment.RowBasedStorageAdapter.makeCursors(RowBasedStorageAdapter.java:175)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.makeCursors(ScanQueryFrameProcessor.java:307)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:166)\n\tat org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)\n\tat org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)\n\tat org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)\n\t... 8 more\nCaused by: java.io.IOException: Server returned HTTP response code: 403 for URL: https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz_\n\tat java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)\n\tat java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)\n\tat java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)\n\tat java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:490)\n\tat java.base/sun.net.www.protocol.http.HttpURLConnection$10.run(HttpURLConnection.java:1974)\n\tat java.base/sun.net.www.protocol.http.HttpURLConnection$10.run(HttpURLConnection.java:1969)\n\tat java.base/java.security.AccessController.doPrivileged(Native Method)\n\tat java.base/sun.net.www.protocol.http.HttpURLConnection.getChainedException(HttpURLConnection.java:1968)\n\tat java.base/sun.net.www.protocol.http.HttpURLConnection.getInputStream0(HttpURLConnection.java:1536)\n\tat java.base/sun.net.www.protocol.http.HttpURLConnection.getInputStream(HttpURLConnection.java:1520)\n\tat java.base/sun.net.www.protocol.https.HttpsURLConnectionImpl.getInputStream(HttpsURLConnectionImpl.java:250)\n\tat org.apache.druid.data.input.impl.HttpEntity.openInputStream(HttpEntity.java:108)\n\tat org.apache.druid.data.input.impl.HttpEntity.readFrom(HttpEntity.java:68)\n\tat org.apache.druid.data.input.RetryingInputEntity.readFromStart(RetryingInputEntity.java:60)\n\tat org.apache.druid.data.input.RetryingInputEntity$RetryingInputEntityOpenFunction.open(RetryingInputEntity.java:84)\n\tat org.apache.druid.data.input.RetryingInputEntity$RetryingInputEntityOpenFunction.open(RetryingInputEntity.java:79)\n\tat org.apache.druid.data.input.impl.RetryingInputStream.<init>(RetryingInputStream.java:78)\n\tat org.apache.druid.data.input.RetryingInputEntity.open(RetryingInputEntity.java:43)\n\tat org.apache.druid.data.input.TextReader.intermediateRowIteratorWithMetadata(TextReader.java:59)\n\tat org.apache.druid.data.input.IntermediateRowParsingReader.read(IntermediateRowParsingReader.java:49)\n\tat org.apache.druid.data.input.impl.InputEntityIteratingReader.lambda$read$0(InputEntityIteratingReader.java:78)\n\t... 26 more\nCaused by: java.io.IOException: Server returned HTTP response code: 403 for URL: https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz_\n\tat java.base/sun.net.www.protocol.http.HttpURLConnection.getInputStream0(HttpURLConnection.java:1924)\n\tat java.base/sun.net.www.protocol.http.HttpURLConnection.getInputStream(HttpURLConnection.java:1520)\n\tat java.base/sun.net.www.protocol.http.HttpURLConnection.getHeaderField(HttpURLConnection.java:3099)\n\tat java.base/sun.net.www.protocol.https.HttpsURLConnectionImpl.getHeaderField(HttpsURLConnectionImpl.java:287)\n\tat org.apache.druid.data.input.impl.HttpEntity.openInputStream(HttpEntity.java:96)\n\t... 35 more\n',
           },
-          startTime: '2022-08-22T20:15:04.783Z',
-          durationMs: 18297,
+          warnings: [
+            {
+              taskId: 'query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0',
+              host: 'localhost:8101',
+              stageNumber: 0,
+              error: {
+                errorCode: 'CannotParseExternalData',
+                errorMessage:
+                  'Unable to parse row [] (Path: https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz, Record: 13588, Line: 13588)',
+              },
+              exceptionStackTrace:
+                'org.apache.druid.java.util.common.parsers.ParseException: Unable to parse row [] (Path: https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz, Record: 13588, Line: 13588)\n\tat org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:79)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)\n\tat org.apache.druid.msq.input.external.ExternalInputSliceReader$1$1.hasNext(ExternalInputSliceReader.java:179)\n\tat org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)\n\tat org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)\n\tat org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)\n\tat org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)\n\tat org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)\n\tat org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)\n\tat org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)\n\tat org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)\n\tat org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)\n\tat java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)\n\tat java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)\n\tat org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)\n\tat java.base/java.lang.Thread.run(Thread.java:829)\nCaused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input\n at [Source: (String)""; line: 1, column: 0]\n\tat com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)\n\tat com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4360)\n\tat com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4205)\n\tat com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3214)\n\tat com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3182)\n\tat org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:69)\n\tat org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)\n\tat org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)\n\t... 22 more\n',
+            },
+            {
+              taskId: 'query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0',
+              host: 'localhost:8101',
+              stageNumber: 0,
+              error: {
+                errorCode: 'CannotParseExternalData',
+                errorMessage:
+                  'Unable to parse row [] (Path: https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz, Record: 27029, Line: 27030)',
+              },
+              exceptionStackTrace:
+                'org.apache.druid.java.util.common.parsers.ParseException: Unable to parse row [] (Path: https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz, Record: 27029, Line: 27030)\n\tat org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:79)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)\n\tat org.apache.druid.msq.input.external.ExternalInputSliceReader$1$1.hasNext(ExternalInputSliceReader.java:179)\n\tat org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)\n\tat org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)\n\tat org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)\n\tat org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)\n\tat org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)\n\tat org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)\n\tat org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)\n\tat org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)\n\tat org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)\n\tat java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)\n\tat java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)\n\tat org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)\n\tat java.base/java.lang.Thread.run(Thread.java:829)\nCaused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input\n at [Source: (String)""; line: 1, column: 0]\n\tat com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)\n\tat com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4360)\n\tat com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4205)\n\tat com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3214)\n\tat com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3182)\n\tat org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:69)\n\tat org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)\n\tat org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)\n\t... 22 more\n',
+            },
+            {
+              taskId: 'query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0',
+              host: 'localhost:8101',
+              stageNumber: 0,
+              error: {
+                errorCode: 'CannotParseExternalData',
+                errorMessage:
+                  'Unable to parse row [] (Path: https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz, Record: 42034, Line: 42036)',
+              },
+              exceptionStackTrace:
+                'org.apache.druid.java.util.common.parsers.ParseException: Unable to parse row [] (Path: https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz, Record: 42034, Line: 42036)\n\tat org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:79)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)\n\tat org.apache.druid.msq.input.external.ExternalInputSliceReader$1$1.hasNext(ExternalInputSliceReader.java:179)\n\tat org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)\n\tat org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)\n\tat org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)\n\tat org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)\n\tat org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)\n\tat org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)\n\tat org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)\n\tat org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)\n\tat org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)\n\tat java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)\n\tat java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)\n\tat org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)\n\tat java.base/java.lang.Thread.run(Thread.java:829)\nCaused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input\n at [Source: (String)""; line: 1, column: 0]\n\tat com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)\n\tat com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4360)\n\tat com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4205)\n\tat com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3214)\n\tat com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3182)\n\tat org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:69)\n\tat org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)\n\tat org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)\n\t... 22 more\n',
+            },
+            {
+              taskId: 'query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0',
+              host: 'localhost:8101',
+              stageNumber: 0,
+              error: {
+                errorCode: 'CannotParseExternalData',
+                errorMessage:
+                  'Unable to parse row [] (Path: https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz, Record: 54912, Line: 54915)',
+              },
+              exceptionStackTrace:
+                'org.apache.druid.java.util.common.parsers.ParseException: Unable to parse row [] (Path: https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz, Record: 54912, Line: 54915)\n\tat org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:79)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)\n\tat org.apache.druid.msq.input.external.ExternalInputSliceReader$1$1.hasNext(ExternalInputSliceReader.java:179)\n\tat org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)\n\tat org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)\n\tat org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)\n\tat org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)\n\tat org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)\n\tat org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)\n\tat org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)\n\tat org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)\n\tat org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)\n\tat java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)\n\tat java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)\n\tat org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)\n\tat java.base/java.lang.Thread.run(Thread.java:829)\nCaused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input\n at [Source: (String)""; line: 1, column: 0]\n\tat com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)\n\tat com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4360)\n\tat com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4205)\n\tat com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3214)\n\tat com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3182)\n\tat org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:69)\n\tat org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)\n\tat org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)\n\t... 22 more\n',
+            },
+            {
+              taskId: 'query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0',
+              host: 'localhost:8101',
+              stageNumber: 0,
+              error: {
+                errorCode: 'CannotParseExternalData',
+                errorMessage:
+                  'Unable to parse row [] (Path: https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz, Record: 63995, Line: 63999)',
+              },
+              exceptionStackTrace:
+                'org.apache.druid.java.util.common.parsers.ParseException: Unable to parse row [] (Path: https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz, Record: 63995, Line: 63999)\n\tat org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:79)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)\n\tat org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)\n\tat org.apache.druid.msq.input.external.ExternalInputSliceReader$1$1.hasNext(ExternalInputSliceReader.java:179)\n\tat org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)\n\tat org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)\n\tat org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)\n\tat org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)\n\tat org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)\n\tat org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)\n\tat org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)\n\tat org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)\n\tat org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)\n\tat org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)\n\tat java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)\n\tat java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)\n\tat org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)\n\tat java.base/java.lang.Thread.run(Thread.java:829)\nCaused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input\n at [Source: (String)""; line: 1, column: 0]\n\tat com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)\n\tat com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4360)\n\tat com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4205)\n\tat com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3214)\n\tat com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3182)\n\tat org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:69)\n\tat org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)\n\tat org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)\n\t... 22 more\n',
+            },
+          ],
+          startTime: '2022-08-25T18:00:03.140Z',
+          durationMs: 20813,
         },
         stages: [
           {
             stageNumber: 0,
             definition: {
-              id: '36d4ec93-9367-419f-91c5-68aeaaab2397_0',
+              id: '47e8d8a9-80ed-4b71-adcb-44dc5b1dace3_0',
               input: [
                 {
                   type: 'external',
                   inputSource: {
                     type: 'http',
-                    uris: [
-                      'https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz_',
-                    ],
+                    uris: ['https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz'],
                     httpAuthenticationUsername: null,
                     httpAuthenticationPassword: null,
                   },
@@ -197,10 +262,11 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskPayloadAndReport(
                     finalize: false,
                     finalizeAggregations: false,
                     groupByEnableMultiValueUnnesting: false,
+                    maxParseExceptions: 10,
                     scanSignature:
                       '[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]',
                     sqlInsertSegmentGranularity: '{"type":"all"}',
-                    sqlQueryId: '0cf1a40a-aaef-4d17-bda4-5afa7edf07e7',
+                    sqlQueryId: 'c6bffa9d-43c4-45a0-95f8-0c8c453655fb',
                     sqlReplaceTimeChunks: 'all',
                   },
                   granularity: { type: 'all' },
@@ -219,15 +285,16 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskPayloadAndReport(
               maxWorkerCount: 1,
               shuffleCheckHasMultipleValues: true,
             },
+            phase: 'FAILED',
             workerCount: 1,
-            startTime: '2022-08-22T20:15:07.190Z',
-            duration: 15890,
+            startTime: '2022-08-25T18:00:05.539Z',
+            duration: 18414,
             sort: true,
           },
           {
             stageNumber: 1,
             definition: {
-              id: '36d4ec93-9367-419f-91c5-68aeaaab2397_1',
+              id: '47e8d8a9-80ed-4b71-adcb-44dc5b1dace3_1',
               input: [{ type: 'stage', stage: 0 }],
               processor: {
                 type: 'segmentGenerator',
@@ -273,7 +340,8 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskPayloadAndReport(
         counters: {
           '0': {
             '0': {
-              input0: { type: 'channel', totalFiles: [1] },
+              input0: { type: 'channel', rows: [200322], totalFiles: [1] },
+              output: { type: 'channel', rows: [141660], bytes: [7685544], frames: [1] },
               sortProgress: {
                 type: 'sortProgress',
                 totalMergingLevels: -1,
@@ -281,6 +349,7 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskPayloadAndReport(
                 levelToMergedBatches: {},
                 totalMergersForUltimateLevel: -1,
               },
+              warnings: { type: 'warnings', CannotParseExternalData: 17 },
             },
           },
         },
