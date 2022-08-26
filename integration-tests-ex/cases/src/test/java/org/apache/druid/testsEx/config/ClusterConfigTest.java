@@ -85,14 +85,16 @@ public class ClusterConfigTest
     assertEquals("http://localhost:8888", service.clientUrl());
     assertEquals("http://localhost:8888", resolved.routerUrl());
 
-    File userEnv = new File(
-        new File(
-            System.getProperty("user.home"),
-            "druid-it"),
-        "Test.env");
-    try (PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(userEnv), StandardCharsets.UTF_8))) {
-      out.println("druid_user_var=user");
-    }
+    // This test is user-specific. Enable it only if this particular feature changes.
+    //    File userEnv = new File(
+    //        new File(
+    //            System.getProperty("user.home"),
+    //            "druid-it"),
+    //        "Test.env");
+    //    try (PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(userEnv),
+    //                                           StandardCharsets.UTF_8))) {
+    //      out.println("druid_user_var=user");
+    //    }
 
     System.setProperty("druid_sys_prop", "sys");
     Map<String, Object> props = resolved.toProperties();
