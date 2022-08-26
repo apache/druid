@@ -8,7 +8,7 @@ sidebar_label: Examples
 
 These example queries show you some of the things you can do when modifying queries for your use case. Copy the example queries into the **Query** view of the Druid console and run them to see what they do.
 
-### INSERT with no rollup
+## INSERT with no rollup
 
 This example inserts data into a table named `w000` without performing any data rollup:
 

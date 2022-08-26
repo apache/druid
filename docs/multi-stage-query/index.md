@@ -76,7 +76,7 @@ For more information about the syntax, see [EXTERN](./msq-reference.md#extern).
 
 With the MSQ task engine, Druid can use the results of a query task to create a new datasource or to append to an existing datasource. Syntactically, there is no difference between the two. These operations use the INSERT INTO ... SELECT syntax.
 
-All SELECT capabilities are available for INSERT queries. However, the MSQ task engine does not include all the existing SQL query features of Druid. See [Known issues](./msq-release-notes.md) for a list of capabilities that aren't available.
+All SELECT capabilities are available for INSERT queries. However, the MSQ task engine does not include all the existing SQL query features of Druid. See [Known issues](./msq-known-issues.md) for a list of capabilities that aren't available.
 
 The following example query inserts data from an external source into a table named `w000` and partitions it by day:
 
@@ -102,7 +102,7 @@ For more information about the syntax, see [INSERT](./msq-reference.md#insert).
 
 The syntax for REPLACE is similar to INSERT. All SELECT functionality is available for REPLACE queries.
 Note that the MSQ task engine does not yet implement all native Druid query features.
-For details, see [Known issues](./msq-release-notes.md).
+For details, see [Known issues](./msq-known-issues.md).
 
 When working with REPLACE queries, keep the following in mind:
 

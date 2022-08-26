@@ -6,7 +6,7 @@ sidebar_label: Known issues
 
 > SQL-based ingestion and the multi-stage query task engine are experimental features available starting in Druid 24.0. You can use it in place of the existing native batch and Hadoop based ingestion systems. As an experimental feature, functionality documented on this page is subject to change or removal in future releases. Review the release notes and this page to stay up to date on changes.
 
-### General query execution
+## General query execution
 
 - There's no fault tolerance. If any task fails, the entire query fails. 
 
@@ -28,7 +28,7 @@ sidebar_label: Known issues
   input sources where file sizes are not known ahead of time. This includes the `http` input source, where the system
   generates one task per URI.
 
-### Memory usage
+## Memory usage
 
 - INSERT queries can consume excessive memory when using complex types due to inaccurate footprint
   estimation. This can appear as an OutOfMemoryError during the SegmentGenerator stage when using
@@ -45,7 +45,7 @@ sidebar_label: Known issues
   which requires more memory than is available, the service might throw OutOfMemoryError. If you run into this
   issue, allocate enough memory to be able to store the largest row to the indexer. (16919)
 
-### SELECT queries
+## SELECT queries
 
 - SELECT query results do not include real-time data until it has been published.
 
@@ -80,7 +80,7 @@ sidebar_label: Known issues
   will fail.
 - The numeric flavors of the EARLIEST and LATEST aggregators do not work properly. Attempting to use the numeric flavors of these aggregators will lead to an error like `java.lang.ClassCastException: class java.lang.Double cannot be cast to class org.apache.druid.collections.SerializablePair`. The string flavors, however, do work properly.
 
-###  INSERT queries
+##  INSERT queries
 
 - The [schemaless dimensions](https://docs.imply.io/latest/druid/ingestion/ingestion-spec.html#inclusions-and-exclusions)
 feature is not available. All columns and their types must be specified explicitly.
@@ -110,10 +110,10 @@ feature is not available. All columns and their types must be specified explicit
 - INSERT with column lists, like
   `INSERT INTO tbl (a, b, c) SELECT ...`, is not implemented.
 
-### EXTERN queries
+## EXTERN queries
 
 - EXTERN does not accept `druid` input sources.
 
-### Missing guardrails
+## Missing guardrails
 
 - Maximum amount of local disk space to use for temporary data when durable storage is turned off. No guardrail today means worker tasks may exhaust all available disk space. In this case, you will receive an [UnknownError](./msq-reference.md#error-codes)) with a message including "No space left on device".
