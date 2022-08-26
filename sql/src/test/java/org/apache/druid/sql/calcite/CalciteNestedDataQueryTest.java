@@ -2506,4 +2506,82 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     );
   }
+
+  @Test
+  public void testJsonPathsNonJsonInput()
+  {
+    testQuery(
+        "SELECT JSON_PATHS(string), JSON_PATHS(1234), JSON_PATHS('1234'), JSON_PATHS(1.1), JSON_PATHS(null)\n"
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "json_paths(\"string\")", ColumnType.STRING_ARRAY),
+                      expressionVirtualColumn("v1", "array('$')", ColumnType.STRING_ARRAY)
+                  )
+                  .columns("v0", "v1")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]"},
+            new Object[]{"[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]"},
+            new Object[]{"[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]"},
+            new Object[]{"[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]"},
+            new Object[]{"[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]"},
+            new Object[]{"[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]"},
+            new Object[]{"[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]"}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING_ARRAY)
+                    .add("EXPR$1", ColumnType.STRING_ARRAY)
+                    .add("EXPR$2", ColumnType.STRING_ARRAY)
+                    .add("EXPR$3", ColumnType.STRING_ARRAY)
+                    .add("EXPR$4", ColumnType.STRING_ARRAY)
+                    .build()
+
+    );
+  }
+
+  @Test
+  public void testJsonKeysNonJsonInput()
+  {
+    testQuery(
+        "SELECT JSON_KEYS(string, '$'), JSON_KEYS(1234, '$'), JSON_KEYS('1234', '$'), JSON_KEYS(1.1, '$'), JSON_KEYS(null, '$')\n"
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "json_keys(\"string\",'$')", ColumnType.STRING_ARRAY),
+                      expressionVirtualColumn("v1", "null", ColumnType.STRING_ARRAY)
+                  )
+                  .columns("v0", "v1")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, null, null, null, null},
+            new Object[]{null, null, null, null, null},
+            new Object[]{null, null, null, null, null},
+            new Object[]{null, null, null, null, null},
+            new Object[]{null, null, null, null, null},
+            new Object[]{null, null, null, null, null},
+            new Object[]{null, null, null, null, null}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING_ARRAY)
+                    .add("EXPR$1", ColumnType.STRING_ARRAY)
+                    .add("EXPR$2", ColumnType.STRING_ARRAY)
+                    .add("EXPR$3", ColumnType.STRING_ARRAY)
+                    .add("EXPR$4", ColumnType.STRING_ARRAY)
+                    .build()
+
+    );
+  }
 }
