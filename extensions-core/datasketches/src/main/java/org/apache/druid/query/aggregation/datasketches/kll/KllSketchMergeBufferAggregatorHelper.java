@@ -109,5 +109,5 @@ abstract class KllSketchMergeBufferAggregatorHelper<SketchType extends KllSketch
    * Returns a copy of the union at the provided buffer position. The returned union does not reference the
    * provided buffer.
    */
-  abstract SketchType get(final ByteBuffer buffer, final int position);
+  abstract SketchType get(ByteBuffer buffer, int position);
 }
