@@ -60,6 +60,48 @@ You can access the [data loader](#data-loader) and [lookups view](#lookups) from
 
 ![home-view](../assets/web-console-01-home-view.png "home view")
 
+## Query
+
+SQL-based ingestion and the multi-stage query task engine use the **Query** view, which provides you with a UI to edit and use SQL queries. You should see this UI automatically in Druid 24.0 and later since the multi-stage query extension is loaded by default. 
+
+The following screenshot shows a populated enhanced **Query** view along with a description of its parts:
+
+![Annotated multi-stage Query view](../assets/multi-stage-query/ui-annotated.png)
+
+1. The multi-stage, tab-enabled, **Query** view is where you can issue queries and see results.
+All other views are unchanged from the non-enhanced version. You can still access the original **Query** view by navigating to `#query` in the URL.
+You can tell that you're looking at the updated **Query** view by the presence of the tabs (3).
+1. The **Resources** view shows the available schemas, datasources, and columns.
+2. Query tabs allow you to manage and run several queries at once.
+Click the plus icon to open a new tab.
+To manipulate existing tabs, click the tab name.
+3. The tab bar contains some helpful tools including the **Connect external data** button that samples external data and creates an initial query with the appropriate `EXTERN` definition that you can then edit as needed.
+5. The **Work history** panel lets you see currently running and previous queries from all users in the cluster.
+It is equivalent to the **Task** view in the **Ingestion** view with the filter of `type='query_controller'`.
+6. You can click on each query entry to attach to that query in a new tab.
+7. You can download an archive of all the pertinent details about the query that you can share.
+8. The **Run** button runs the query.
+9. The **Preview** button appears when you enter an INSERT/REPLACE query. It runs the query inline without the INSERT/REPLACE clause and with an added LIMIT to give you a preview of the data that would be ingested if you click **Run**.
+The added LIMIT makes the query run faster but provides incomplete results.
+10. The engine selector lets you choose which engine (API endpoint) to send a query to. By default, it automatically picks which endpoint to use based on an analysis of the query, but you can select a specific engine explicitly. You can also configure the engine specific context parameters from this menu.
+11. The **Max tasks** picker appears when you have the **sql-msq-task** engine selected. It lets you configure the degree of parallelism.
+12. The More menu (**...**) contains the following helpful tools:
+- **Explain SQL query** shows you the logical plan returned by `EXPLAIN PLAN FOR` for a SQL query.
+- **Query history** shows you previously executed queries.
+- **Convert ingestion spec to SQL** lets you convert a native batch ingestion spec to an equivalent SQL query.
+- **Attach tab from task ID** lets you create a new tab from the task ID of a query executed on this cluster.
+- **Open query detail archive** lets you open a detail archive generated on any cluster by (7).
+13. The query timer indicates how long the query has been running for.
+14. The **(cancel)** link cancels the currently running query.
+15. The main progress bar shows the overall progress of the query.
+The progress is computed from the various counters in the live reports (16).
+16. The **Current stage** progress bar shows the progress for the currently running query stage.
+If several stages are executing concurrently, it conservatively shows the information for the earliest executing stage.
+17. The live query reports show detailed information of all the stages (past, present, and future). The live reports are shown while the query is running. You can hide the report if you want.
+After queries finish, you can access them by clicking on the query time indicator or from the **Work history** panel (6).
+18. You can expand each stage of the live query report by clicking on the triangle to show per worker and per partition statistics.
+
+
 ## Data loader
 
 You can use the data loader to build an ingestion spec with a step-by-step wizard.
@@ -124,18 +166,6 @@ You can group the nodes by type or by tier to get meaningful summary statistics.
 
 ![servers](../assets/web-console-10-servers.png)
 
-## Query
-
-The **Query** view lets you issue [Druid SQL](../querying/sql.md) queries and display the results as a table.
-The view will attempt to infer your query and let you modify the query via contextual actions such as adding filters and changing the sort order when possible.
-
-From the ellipsis menu beside **Run**, you can view your query history, see the native query translation for a given Druid SQL query, and set the [query context](../querying/query-context.md).
-
-![query-sql](../assets/web-console-11-query-sql.png)
-
-You can also use the query editor to issue queries in Druid's [native query format](../querying/querying.md), which is JSON over HTTP.
-
-![query-rune](../assets/web-console-12-query-rune.png)
 
 ## Lookups
 
