@@ -134,7 +134,7 @@ public class DruidRexExecutor implements RexExecutor
                     expression,
                     Double.toString(exprResultDouble),
                     expression,
-                    expression);g
+                    expression);
               }
               bigDecimal = BigDecimal.valueOf(exprResult.asDouble());
             }
