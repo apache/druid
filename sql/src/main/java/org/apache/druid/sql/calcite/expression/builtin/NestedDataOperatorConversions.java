@@ -50,12 +50,10 @@ import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
-import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletFactory;
@@ -75,102 +73,6 @@ public class NestedDataOperatorConversions
       NestedDataComplexTypeSerde.TYPE,
       true
   );
-
-  public static class GetPathOperatorConversion implements SqlOperatorConversion
-  {
-    private static final String FUNCTION_NAME = StringUtils.toUpperCase("get_path");
-    private static final SqlFunction SQL_FUNCTION = OperatorConversions
-        .operatorBuilder(FUNCTION_NAME)
-        .operandTypeChecker(
-            OperandTypes.sequence(
-                "(expr,path)",
-                OperandTypes.family(SqlTypeFamily.ANY),
-                OperandTypes.family(SqlTypeFamily.STRING)
-            )
-        )
-        .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
-        .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
-        .build();
-
-    @Override
-    public SqlOperator calciteOperator()
-    {
-      return SQL_FUNCTION;
-    }
-
-    @Nullable
-    @Override
-    public DruidExpression toDruidExpression(
-        PlannerContext plannerContext,
-        RowSignature rowSignature,
-        RexNode rexNode
-    )
-    {
-      final RexCall call = (RexCall) rexNode;
-
-      final List<DruidExpression> druidExpressions = Expressions.toDruidExpressions(
-          plannerContext,
-          rowSignature,
-          call.getOperands()
-      );
-
-      if (druidExpressions == null || druidExpressions.size() != 2) {
-        return null;
-      }
-
-      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
-      if (!pathExpr.isLiteral()) {
-        return null;
-      }
-      // pre-normalize path so that the same expressions with different jq syntax are collapsed
-      final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
-      final List<NestedPathPart> parts;
-      try {
-        parts = NestedPathFinder.parseJqPath(path);
-      }
-      catch (IllegalArgumentException iae) {
-        throw new UnsupportedSQLQueryException(
-            "Cannot use [%s]: [%s]",
-            call.getOperator().getName(),
-            iae.getMessage()
-        );
-      }
-      final String normalized = NestedPathFinder.toNormalizedJqPath(parts);
-
-      if (druidExpressions.get(0).isSimpleExtraction()) {
-
-        return DruidExpression.ofVirtualColumn(
-            Calcites.getColumnTypeForRelDataType(call.getType()),
-            (args) -> "get_path(" + args.get(0).getExpression() + ",'" + normalized + "')",
-            ImmutableList.of(
-                DruidExpression.ofColumn(NestedDataComplexTypeSerde.TYPE, druidExpressions.get(0).getDirectColumn())
-            ),
-            (name, outputType, expression, macroTable) -> new NestedFieldVirtualColumn(
-                druidExpressions.get(0).getDirectColumn(),
-                name,
-                outputType,
-                parts,
-                false,
-                null,
-                null
-            )
-        );
-      }
-      throw new UnsupportedSQLQueryException(
-          "Cannot use [%s] on expression input: [%s]",
-          call.getOperator().getName(),
-          druidExpressions.get(0).getExpression()
-      );
-    }
-  }
-
-  public static class JsonGetPathAliasOperatorConversion extends AliasedOperatorConversion
-  {
-    public JsonGetPathAliasOperatorConversion()
-    {
-      super(new GetPathOperatorConversion(), StringUtils.toUpperCase("json_get_path"));
-    }
-  }
 
   public static class JsonPathsOperatorConversion implements SqlOperatorConversion
   {

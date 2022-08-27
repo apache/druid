@@ -46,8 +46,6 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(
       ImmutableList.of(
-          new NestedDataExpressions.StructExprMacro(),
-          new NestedDataExpressions.GetPathExprMacro(),
           new NestedDataExpressions.JsonPathsExprMacro(),
           new NestedDataExpressions.JsonKeysExprMacro(),
           new NestedDataExpressions.JsonObjectExprMacro(),
@@ -82,20 +80,6 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
           .put("nullDouble", new Pair<>(ExpressionType.DOUBLE, () -> null))
           .build()
   );
-
-  @Test
-  public void testStructExpression()
-  {
-    Expr expr = Parser.parse("struct('x',100,'y',200,'z',300)", MACRO_TABLE);
-    ExprEval eval = expr.eval(inputBindings);
-    Assert.assertEquals(NEST, eval.value());
-
-    expr = Parser.parse("struct('x',array('a','b','c'),'y',struct('a','hello','b','world'))", MACRO_TABLE);
-    eval = expr.eval(inputBindings);
-    // decompose because of array equals
-    Assert.assertArrayEquals(new Object[]{"a", "b", "c"}, (Object[]) ((Map) eval.value()).get("x"));
-    Assert.assertEquals(ImmutableMap.of("a", "hello", "b", "world"), ((Map) eval.value()).get("y"));
-  }
 
   @Test
   public void testJsonObjectExpression()
@@ -151,45 +135,6 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     eval = expr.eval(inputBindings);
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
     Assert.assertArrayEquals(new Object[]{"$.x[0]", "$.x[1]", "$.x[2]", "$.y.b", "$.y.a"}, (Object[]) eval.value());
-  }
-
-  @Test
-  public void testGetPathExpression()
-  {
-    Expr expr = Parser.parse("get_path(nest, '.x')", MACRO_TABLE);
-    ExprEval eval = expr.eval(inputBindings);
-    Assert.assertEquals(100L, eval.value());
-    Assert.assertEquals(ExpressionType.LONG, eval.type());
-
-    expr = Parser.parse("get_path(nester, '.x')", MACRO_TABLE);
-    eval = expr.eval(inputBindings);
-    Assert.assertNull(eval.value());
-
-    expr = Parser.parse("get_path(nester, '.x[1]')", MACRO_TABLE);
-    eval = expr.eval(inputBindings);
-    Assert.assertEquals("b", eval.value());
-    Assert.assertEquals(ExpressionType.STRING, eval.type());
-
-    expr = Parser.parse("get_path(nester, '.x[23]')", MACRO_TABLE);
-    eval = expr.eval(inputBindings);
-    Assert.assertNull(eval.value());
-
-    expr = Parser.parse("get_path(nester, '.x[1].b')", MACRO_TABLE);
-    eval = expr.eval(inputBindings);
-    Assert.assertNull(eval.value());
-
-    expr = Parser.parse("get_path(nester, '.y[1]')", MACRO_TABLE);
-    eval = expr.eval(inputBindings);
-    Assert.assertNull(eval.value());
-
-    expr = Parser.parse("get_path(nester, '.y.a')", MACRO_TABLE);
-    eval = expr.eval(inputBindings);
-    Assert.assertEquals("hello", eval.value());
-    Assert.assertEquals(ExpressionType.STRING, eval.type());
-
-    expr = Parser.parse("get_path(nester, '.y.a.b.c[12]')", MACRO_TABLE);
-    eval = expr.eval(inputBindings);
-    Assert.assertNull(eval.value());
   }
 
   @Test

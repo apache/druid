@@ -49,9 +49,9 @@ public class NestedDataExpressions
       ExpressionType.fromColumnType(NestedDataComplexTypeSerde.TYPE)
   );
 
-  public static class StructExprMacro implements ExprMacroTable.ExprMacro
+  public static class JsonObjectExprMacro implements ExprMacroTable.ExprMacro
   {
-    public static final String NAME = "struct";
+    public static final String NAME = "json_object";
 
     @Override
     public String name()
@@ -103,17 +103,6 @@ public class NestedDataExpressions
     }
   }
 
-  public static class JsonObjectExprMacro extends StructExprMacro
-  {
-    public static final String NAME = "json_object";
-
-    @Override
-    public String name()
-    {
-      return NAME;
-    }
-  }
-
   public static class ToJsonStringExprMacro implements ExprMacroTable.ExprMacro
   {
     public static final String NAME = "to_json_string";
@@ -137,7 +126,7 @@ public class NestedDataExpressions
     @Override
     public Expr apply(List<Expr> args)
     {
-      class ToJsonStringExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+      final class ToJsonStringExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
         public ToJsonStringExpr(List<Expr> args)
         {
@@ -202,7 +191,7 @@ public class NestedDataExpressions
     @Override
     public Expr apply(List<Expr> args)
     {
-      class ParseJsonExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+      final class ParseJsonExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
         public ParseJsonExpr(List<Expr> args)
         {
@@ -277,7 +266,7 @@ public class NestedDataExpressions
     @Override
     public Expr apply(List<Expr> args)
     {
-      class ParseJsonExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+      final class ParseJsonExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
         public ParseJsonExpr(List<Expr> args)
         {
@@ -326,26 +315,6 @@ public class NestedDataExpressions
     }
   }
 
-
-
-  public static class GetPathExprMacro implements ExprMacroTable.ExprMacro
-  {
-    public static final String NAME = "get_path";
-
-    @Override
-    public String name()
-    {
-      return NAME;
-    }
-
-    @Override
-    public Expr apply(List<Expr> args)
-    {
-      final List<NestedPathPart> parts = getJsonPathOrJqPathPartsFromLiteral(name(), args.get(1));
-      return new NestedPathExtractLiteralExpr(name(), parts, args);
-    }
-  }
-
   public static class JsonValueExprMacro implements ExprMacroTable.ExprMacro
   {
     public static final String NAME = "json_value";
@@ -365,9 +334,71 @@ public class NestedDataExpressions
         if (castTo == null) {
           throw new IAE("Invalid output type: [%s]", args.get(2).getLiteralValue());
         }
-        return new NestedPathExtractLiteralAndCastExpr(name(), parts, castTo, args);
+        final class JsonValueCastExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+        {
+          public JsonValueCastExpr(List<Expr> args)
+          {
+            super(name(), args);
+          }
+
+          @Override
+          public ExprEval eval(ObjectBinding bindings)
+          {
+            ExprEval input = args.get(0).eval(bindings);
+            return ExprEval.bestEffortOf(
+                NestedPathFinder.findLiteral(unwrap(input), parts)
+            ).castTo(castTo);
+          }
+
+          @Override
+          public Expr visit(Shuttle shuttle)
+          {
+            List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+            return shuttle.visit(new JsonValueCastExpr(newArgs));
+          }
+
+          @Nullable
+          @Override
+          public ExpressionType getOutputType(InputBindingInspector inspector)
+          {
+            return castTo;
+          }
+        }
+        return new JsonValueCastExpr(args);
       } else {
-        return new NestedPathExtractLiteralExpr(name(), parts, args);
+        final class JsonValueExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+        {
+
+          public JsonValueExpr(List<Expr> args)
+          {
+            super(name(), args);
+          }
+
+          @Override
+          public ExprEval eval(ObjectBinding bindings)
+          {
+            ExprEval input = args.get(0).eval(bindings);
+            return ExprEval.bestEffortOf(
+                NestedPathFinder.findLiteral(unwrap(input), parts)
+            );
+          }
+
+          @Override
+          public Expr visit(Shuttle shuttle)
+          {
+            List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+            return shuttle.visit(new JsonValueExpr(newArgs));
+          }
+
+          @Nullable
+          @Override
+          public ExpressionType getOutputType(InputBindingInspector inspector)
+          {
+            // we cannot infer output type because there could be anything at the path, and, we lack a proper VARIANT type
+            return null;
+          }
+        }
+        return new JsonValueExpr(args);
       }
     }
   }
@@ -386,7 +417,39 @@ public class NestedDataExpressions
     public Expr apply(List<Expr> args)
     {
       final List<NestedPathPart> parts = getJsonPathPartsFromLiteral(name(), args.get(1));
-      return new NestedPathExtractExpr(name(), parts, args);
+      final class JsonQueryExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+      {
+        public JsonQueryExpr(List<Expr> args)
+        {
+          super(name(), args);
+        }
+
+        @Override
+        public ExprEval eval(ObjectBinding bindings)
+        {
+          ExprEval input = args.get(0).eval(bindings);
+          return ExprEval.ofComplex(
+              TYPE,
+              NestedPathFinder.find(unwrap(input), parts)
+          );
+        }
+
+        @Override
+        public Expr visit(Shuttle shuttle)
+        {
+          List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+          return shuttle.visit(new JsonQueryExpr(newArgs));
+        }
+
+        @Nullable
+        @Override
+        public ExpressionType getOutputType(InputBindingInspector inspector)
+        {
+          // call all the output JSON typed
+          return TYPE;
+        }
+      }
+      return new JsonQueryExpr(args);
     }
   }
 
@@ -413,7 +476,7 @@ public class NestedDataExpressions
         }
       };
 
-      class JsonPathsExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+      final class JsonPathsExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
         public JsonPathsExpr(List<Expr> args)
         {
@@ -468,7 +531,7 @@ public class NestedDataExpressions
     public Expr apply(List<Expr> args)
     {
       final List<NestedPathPart> parts = getJsonPathPartsFromLiteral(name(), args.get(1));
-      class JsonKeysExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+      final class JsonKeysExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
         public JsonKeysExpr(List<Expr> args)
         {
@@ -519,27 +582,6 @@ public class NestedDataExpressions
   }
 
 
-  static List<NestedPathPart> getJsonPathOrJqPathPartsFromLiteral(String fnName, Expr arg)
-  {
-    if (!(arg.isLiteral() && arg.getLiteralValue() instanceof String)) {
-      throw new IAE(
-          "Function[%s] second argument [%s] must be a literal [%s] value",
-          fnName,
-          arg.stringify(),
-          ExpressionType.STRING
-      );
-    }
-    final String path = (String) arg.getLiteralValue();
-    List<NestedPathPart> parts;
-    try {
-      parts = NestedPathFinder.parseJsonPath(path);
-    }
-    catch (IllegalArgumentException iae) {
-      parts = NestedPathFinder.parseJqPath(path);
-    }
-    return parts;
-  }
-
   static List<NestedPathPart> getJsonPathPartsFromLiteral(String fnName, Expr arg)
   {
     if (!(arg.isLiteral() && arg.getLiteralValue() instanceof String)) {
@@ -554,107 +596,5 @@ public class NestedDataExpressions
         (String) arg.getLiteralValue()
     );
     return parts;
-  }
-
-  private static class NestedPathExtractLiteralExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
-  {
-    protected final List<NestedPathPart> parts;
-
-    public NestedPathExtractLiteralExpr(String name, List<NestedPathPart> parts, List<Expr> args)
-    {
-      super(name, args);
-      this.parts = parts;
-    }
-
-    @Override
-    public ExprEval eval(ObjectBinding bindings)
-    {
-      ExprEval input = args.get(0).eval(bindings);
-      return ExprEval.bestEffortOf(
-          NestedPathFinder.findLiteral(unwrap(input), parts)
-      );
-    }
-
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new NestedPathExtractLiteralExpr(name, parts, newArgs));
-    }
-
-    @Nullable
-    @Override
-    public ExpressionType getOutputType(InputBindingInspector inspector)
-    {
-      // we cannot infer output type because there could be anything at the path, and, we lack a proper VARIANT type
-      return null;
-    }
-  }
-
-  private static class NestedPathExtractLiteralAndCastExpr extends NestedPathExtractLiteralExpr
-  {
-    private final ExpressionType castTo;
-
-    public NestedPathExtractLiteralAndCastExpr(String name, List<NestedPathPart> parts, ExpressionType castTo, List<Expr> args)
-    {
-      super(name, parts, args);
-      this.castTo = castTo;
-    }
-
-    @Override
-    public ExprEval eval(ObjectBinding bindings)
-    {
-      return super.eval(bindings).castTo(castTo);
-    }
-
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new NestedPathExtractLiteralAndCastExpr(name, parts, castTo, newArgs));
-    }
-
-    @Nullable
-    @Override
-    public ExpressionType getOutputType(InputBindingInspector inspector)
-    {
-      return castTo;
-    }
-  }
-
-  private static class NestedPathExtractExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
-  {
-    private final List<NestedPathPart> parts;
-
-    public NestedPathExtractExpr(String name, List<NestedPathPart> parts, List<Expr> args)
-    {
-      super(name, args);
-      this.parts = parts;
-    }
-
-    @Override
-    public ExprEval eval(ObjectBinding bindings)
-    {
-      ExprEval input = args.get(0).eval(bindings);
-      return ExprEval.ofComplex(
-          TYPE,
-          NestedPathFinder.find(unwrap(input), parts)
-      );
-    }
-
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new NestedPathExtractExpr(name, parts, newArgs));
-    }
-
-    @Nullable
-    @Override
-    public ExpressionType getOutputType(InputBindingInspector inspector)
-    {
-      // call all the output JSON typed
-      return TYPE;
-    }
   }
 }
