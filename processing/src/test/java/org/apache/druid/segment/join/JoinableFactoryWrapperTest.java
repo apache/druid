@@ -834,6 +834,42 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
   }
 
   @Test
+  public void test_convertJoinsToFilters_dontConvertJoinsDependedOnByLaterJoins()
+  {
+    // in this multi-join, a join matching two right sides is kept first to ensure :
+    // 1. there is no filter on the right side table column j.k
+    // 2. the right side matching join gets considered for join conversion always (since it is the first join clause)
+    final ImmutableList<JoinableClause> clauses = ImmutableList.of(
+        new JoinableClause(
+            "_j.",
+            LookupJoinable.wrap(new MapLookupExtractor(TEST_LOOKUP, false)),
+            JoinType.INNER,
+            JoinConditionAnalysis.forExpression("\"j.k\" == \"_j.k\"", "_j.", ExprMacroTable.nil())
+        ),
+        new JoinableClause(
+            "j.",
+            LookupJoinable.wrap(new MapLookupExtractor(TEST_LOOKUP, false)),
+            JoinType.INNER,
+            JoinConditionAnalysis.forExpression("x == \"j.k\"", "j.", ExprMacroTable.nil())
+        )
+    );
+
+    final Pair<List<Filter>, List<JoinableClause>> conversion = JoinableFactoryWrapper.convertJoinsToFilters(
+        clauses,
+        ImmutableSet.of("x"),
+        Integer.MAX_VALUE
+    );
+
+    Assert.assertEquals(
+        Pair.of(
+            ImmutableList.of(),
+            clauses
+        ),
+        conversion
+    );
+  }
+
+  @Test
   public void test_convertJoinsToFilters_partialConvertJoinsDependedOnByLaterJoins()
   {
     final ImmutableList<JoinableClause> clauses = ImmutableList.of(

@@ -120,12 +120,6 @@ public class ResourcePool<K, V> implements Closeable
       }
 
       @Override
-      public boolean isPresent()
-      {
-        return !returned.get();
-      }
-
-      @Override
       public void returnResource()
       {
         if (returned.getAndSet(true)) {

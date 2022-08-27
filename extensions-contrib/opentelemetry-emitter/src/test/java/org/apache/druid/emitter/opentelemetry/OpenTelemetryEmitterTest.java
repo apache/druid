@@ -32,6 +32,7 @@ import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -39,7 +40,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -98,9 +98,9 @@ public class OpenTelemetryEmitterTest
         new Event()
         {
           @Override
-          public Map<String, Object> toMap()
+          public EventMap toMap()
           {
-            return Collections.emptyMap();
+            return new EventMap();
           }
 
           @Override

@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
@@ -50,12 +51,12 @@ import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
-import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -77,6 +78,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -94,7 +96,6 @@ public class SqlBenchmark
 {
   static {
     NullHandling.initializeForTests();
-    Calcites.setSystemProperties();
   }
 
   private static final Logger log = new Logger(SqlBenchmark.class);
@@ -418,6 +419,7 @@ public class SqlBenchmark
   @Param({STORAGE_MMAP, STORAGE_FRAME_ROW, STORAGE_FRAME_COLUMNAR})
   private String storageType;
 
+  private SqlEngine engine;
   @Nullable
   private PlannerFactory plannerFactory;
   private final Closer closer = Closer.create();
@@ -463,9 +465,9 @@ public class SqlBenchmark
 
     final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
     plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
@@ -540,7 +542,7 @@ public class SqlBenchmark
         QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
     );
     final String sql = QUERIES.get(Integer.parseInt(query));
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, new QueryContext(context))) {
       final PlannerResult plannerResult = planner.plan();
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
@@ -558,7 +560,7 @@ public class SqlBenchmark
         QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
     );
     final String sql = QUERIES.get(Integer.parseInt(query));
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, new QueryContext(context))) {
       final PlannerResult plannerResult = planner.plan();
       blackhole.consume(plannerResult);
     }

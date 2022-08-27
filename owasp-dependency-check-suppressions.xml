@@ -360,6 +360,7 @@
      <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop\-.*@.*$</packageUrl>
      <cve>CVE-2018-11765</cve>
      <cve>CVE-2020-9492</cve>
+     <cve>CVE-2022-25168</cve>
      <cve>CVE-2022-26612</cve>
      <cve>CVE-2018-8009</cve>
   </suppress>
@@ -600,6 +601,22 @@
    file name: parquet-format-structures-1.12.0.jar
    ]]></notes>
     <cve>CVE-2021-41561</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Avatica server itself is not affected. Vulnerability exists only on client. -->
+    <notes><![CDATA[
+   file name: avatica-server-1.17.0.jar
+   ]]></notes>
+    <cve>CVE-2022-36364</cve>
+  </suppress>
+
+  <suppress>
+    <!-- False positive. 42.3.3 is not affected by the CVE. And we don't use Resultset.refreshRow method either  -->
+    <notes><![CDATA[
+   file name: postgresql-42.3.3.jar
+   ]]></notes>
+    <cve>CVE-2022-31197</cve>
   </suppress>
 
 </suppressions>

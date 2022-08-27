@@ -119,14 +119,14 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     Assert.assertFalse(response1.isFinished());
     Assert.assertTrue(response1.isContinueReading());
     Assert.assertFalse(response1.getObj().isExceptionCaught());
-    Assert.assertFalse(response1.getObj().isEmptyFetch());
+    Assert.assertFalse(response1.getObj().isLastFetch());
 
     final ClientResponse<FrameFilePartialFetch> response2 = handler.done(response1);
 
     Assert.assertTrue(response2.isFinished());
     Assert.assertTrue(response2.isContinueReading());
     Assert.assertFalse(response2.getObj().isExceptionCaught());
-    Assert.assertFalse(response2.getObj().isEmptyFetch());
+    Assert.assertFalse(response2.getObj().isLastFetch());
 
     final ListenableFuture<?> backpressureFuture = response2.getObj().backpressureFuture();
     Assert.assertFalse(backpressureFuture.isDone());
@@ -143,7 +143,7 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
   }
 
   @Test
-  public void testEmptyResponse()
+  public void testEmptyResponseWithoutLastFetchHeader()
   {
     final ClientResponse<FrameFilePartialFetch> response1 = handler.handleResponse(
         makeResponse(HttpResponseStatus.OK, ByteArrays.EMPTY_ARRAY),
@@ -153,14 +153,42 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     Assert.assertFalse(response1.isFinished());
     Assert.assertTrue(response1.isContinueReading());
     Assert.assertFalse(response1.getObj().isExceptionCaught());
-    Assert.assertTrue(response1.getObj().isEmptyFetch());
+    Assert.assertFalse(response1.getObj().isLastFetch());
 
     final ClientResponse<FrameFilePartialFetch> response2 = handler.done(response1);
 
     Assert.assertTrue(response2.isFinished());
     Assert.assertTrue(response2.isContinueReading());
     Assert.assertFalse(response2.getObj().isExceptionCaught());
-    Assert.assertTrue(response2.getObj().isEmptyFetch());
+    Assert.assertFalse(response2.getObj().isLastFetch());
+    Assert.assertTrue(response2.getObj().backpressureFuture().isDone());
+  }
+
+  @Test
+  public void testEmptyResponseWithLastFetchHeader()
+  {
+    final HttpResponse serverResponse = makeResponse(HttpResponseStatus.OK, ByteArrays.EMPTY_ARRAY);
+    serverResponse.headers().set(
+        FrameFileHttpResponseHandler.HEADER_LAST_FETCH_NAME,
+        FrameFileHttpResponseHandler.HEADER_LAST_FETCH_VALUE
+    );
+
+    final ClientResponse<FrameFilePartialFetch> response1 = handler.handleResponse(
+        serverResponse,
+        null
+    );
+
+    Assert.assertFalse(response1.isFinished());
+    Assert.assertTrue(response1.isContinueReading());
+    Assert.assertFalse(response1.getObj().isExceptionCaught());
+    Assert.assertTrue(response1.getObj().isLastFetch());
+
+    final ClientResponse<FrameFilePartialFetch> response2 = handler.done(response1);
+
+    Assert.assertTrue(response2.isFinished());
+    Assert.assertTrue(response2.isContinueReading());
+    Assert.assertFalse(response2.getObj().isExceptionCaught());
+    Assert.assertTrue(response2.getObj().isLastFetch());
     Assert.assertTrue(response2.getObj().backpressureFuture().isDone());
   }
 
@@ -186,7 +214,7 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
 
       Assert.assertFalse(response.isFinished());
       Assert.assertFalse(response.getObj().isExceptionCaught());
-      Assert.assertFalse(response.getObj().isEmptyFetch());
+      Assert.assertFalse(response.getObj().isLastFetch());
     }
 
     final ClientResponse<FrameFilePartialFetch> finalResponse = handler.done(response);
@@ -194,7 +222,7 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     Assert.assertTrue(finalResponse.isFinished());
     Assert.assertTrue(finalResponse.isContinueReading());
     Assert.assertFalse(response.getObj().isExceptionCaught());
-    Assert.assertFalse(response.getObj().isEmptyFetch());
+    Assert.assertFalse(response.getObj().isLastFetch());
 
     final ListenableFuture<?> backpressureFuture = response.getObj().backpressureFuture();
     Assert.assertFalse(backpressureFuture.isDone());

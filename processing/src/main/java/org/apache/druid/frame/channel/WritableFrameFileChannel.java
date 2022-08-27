@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.file.FrameFileWriter;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 /**
@@ -44,8 +45,9 @@ public class WritableFrameFileChannel implements WritableFrameChannel
   }
 
   @Override
-  public void fail() throws IOException
+  public void fail(@Nullable Throwable cause) throws IOException
   {
+    // Cause is ignored when writing to frame files. Readers can tell the file is truncated, but they won't know why.
     writer.abort();
   }
 

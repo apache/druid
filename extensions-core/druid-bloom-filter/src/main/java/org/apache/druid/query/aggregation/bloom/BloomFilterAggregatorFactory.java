@@ -208,6 +208,12 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new BloomFilterAggregatorFactory(newName, getField(), getMaxNumEntries());
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     return new CacheKeyBuilder(AggregatorUtil.BLOOM_FILTER_CACHE_TYPE_ID)

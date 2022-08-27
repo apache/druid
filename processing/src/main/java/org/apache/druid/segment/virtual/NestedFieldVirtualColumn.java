@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.nested.NestedDataComplexColumn;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
+import org.apache.druid.segment.nested.NestedPathArrayElement;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.nested.StructuredData;
@@ -89,6 +90,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   private final List<NestedPathPart> parts;
   private final boolean processFromRaw;
 
+  private final boolean hasNegativeArrayIndex;
+
   @JsonCreator
   public NestedFieldVirtualColumn(
       @JsonProperty("columnName") String columnName,
@@ -114,6 +117,17 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       boolean isInputJq = useJqSyntax != null && useJqSyntax;
       this.parts = isInputJq ? NestedPathFinder.parseJqPath(path) : NestedPathFinder.parseJsonPath(path);
     }
+    boolean hasNegative = false;
+    for (NestedPathPart part : this.parts) {
+      if (part instanceof NestedPathArrayElement) {
+        NestedPathArrayElement elementPart = (NestedPathArrayElement) part;
+        if (elementPart.getIndex() < 0) {
+          hasNegative = true;
+          break;
+        }
+      }
+    }
+    this.hasNegativeArrayIndex = hasNegative;
     this.expectedType = expectedType;
     this.processFromRaw = processFromRaw == null ? false : processFromRaw;
   }
@@ -144,6 +158,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   {
     final String partsString = NestedPathFinder.toNormalizedJsonPath(parts);
     return new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_USER_DEFINED).appendString("nested-field")
+                                                                                   .appendString(outputName)
                                                                                    .appendString(columnName)
                                                                                    .appendString(partsString)
                                                                                    .appendBoolean(processFromRaw)
@@ -191,27 +206,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     // written to segment, so we fall back to processing the structured data from a column value selector on the
     // complex column
     ColumnValueSelector valueSelector = makeColumnValueSelector(dimensionSpec.getOutputName(), factory);
-
-    class FieldDimensionSelector extends BaseSingleValueDimensionSelector
-    {
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("valueSelector", valueSelector);
-      }
-
-      @Nullable
-      @Override
-      protected String getValue()
-      {
-        Object val = valueSelector.getObject();
-        if (val == null || val instanceof String) {
-          return (String) val;
-        }
-        return String.valueOf(val);
-      }
-    }
-    return new FieldDimensionSelector();
+    return new FieldDimensionSelector(valueSelector);
   }
 
   @Override
@@ -243,6 +238,14 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       // complex column itself didn't exist
       return DimensionSelector.constant(null);
     }
+    if (hasNegativeArrayIndex) {
+      return new FieldDimensionSelector(
+          new RawFieldLiteralColumnValueSelector(
+              column.makeColumnValueSelector(offset),
+              parts
+          )
+      );
+    }
     return column.makeDimensionSelector(parts, offset, dimensionSpec.getExtractionFn());
   }
 
@@ -264,13 +267,15 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     // is JSON_VALUE which only returns literals, so we can use the nested columns value selector
     return processFromRaw
            ? new RawFieldColumnSelector(column.makeColumnValueSelector(offset), parts)
-           : column.makeColumnValueSelector(parts, offset);
+           : hasNegativeArrayIndex
+             ? new RawFieldLiteralColumnValueSelector(column.makeColumnValueSelector(offset), parts)
+             : column.makeColumnValueSelector(parts, offset);
   }
 
   @Override
   public boolean canVectorize(ColumnInspector inspector)
   {
-    return true;
+    return !hasNegativeArrayIndex;
   }
 
   @Nullable
@@ -285,6 +290,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (column == null) {
       return NilVectorSelector.create(offset);
     }
+
     return column.makeSingleValueDimensionVectorSelector(parts, offset);
   }
 
@@ -614,7 +620,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public Object getObject()
     {
-      StructuredData data = StructuredData.possiblyWrap(baseSelector.getObject());
+      StructuredData data = StructuredData.wrap(baseSelector.getObject());
       return NestedPathFinder.findLiteral(data == null ? null : data.getValue(), parts);
     }
 
@@ -688,8 +694,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public Object getObject()
     {
-      StructuredData data = StructuredData.possiblyWrap(baseSelector.getObject());
-      return StructuredData.possiblyWrap(NestedPathFinder.find(data == null ? null : data.getValue(), parts));
+      StructuredData data = StructuredData.wrap(baseSelector.getObject());
+      return StructuredData.wrap(NestedPathFinder.find(data == null ? null : data.getValue(), parts));
     }
 
     @Override
@@ -743,8 +749,35 @@ public class NestedFieldVirtualColumn implements VirtualColumn
 
     private Object compute(Object input)
     {
-      StructuredData data = StructuredData.possiblyWrap(input);
-      return StructuredData.possiblyWrap(NestedPathFinder.find(data == null ? null : data.getValue(), parts));
+      StructuredData data = StructuredData.wrap(input);
+      return StructuredData.wrap(NestedPathFinder.find(data == null ? null : data.getValue(), parts));
+    }
+  }
+
+  public static class FieldDimensionSelector extends BaseSingleValueDimensionSelector
+  {
+    private final ColumnValueSelector valueSelector;
+
+    public FieldDimensionSelector(ColumnValueSelector valueSelector)
+    {
+      this.valueSelector = valueSelector;
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("valueSelector", valueSelector);
+    }
+
+    @Nullable
+    @Override
+    protected String getValue()
+    {
+      Object val = valueSelector.getObject();
+      if (val == null || val instanceof String) {
+        return (String) val;
+      }
+      return String.valueOf(val);
     }
   }
 }

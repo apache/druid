@@ -285,7 +285,10 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
         authConfig,
         sql,
         context,
-        CalciteTests.REGULAR_USER_AUTH_RESULT
+        // Use superuser because, in tests, only the superuser has
+        // permission on system tables, and we must do authorization to
+        // obtain resources.
+        CalciteTests.SUPER_USER_AUTH_RESULT
     );
     final Set<ResourceAction> expectedResources = new HashSet<>();
     if (name != null) {

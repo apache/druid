@@ -53,7 +53,7 @@ export const TableActionDialog = React.memo(function TableActionDialog(
           {sideButtonMetadata.map((d, i) => (
             <Button
               className="tab-button"
-              icon={<Icon icon={d.icon} iconSize={20} />}
+              icon={<Icon icon={d.icon} size={20} />}
               key={i}
               text={d.text}
               intent={d.active ? Intent.PRIMARY : Intent.NONE}

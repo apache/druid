@@ -99,7 +99,13 @@ public class ExpressionTransform implements Transform
     @Override
     public Object eval(final Row row)
     {
-      return ExpressionSelectors.coerceEvalToSelectorObject(
+      // this will need adjusted if we want to allow expression transforms to produce true arrays. Currently, calling
+      // this method will coerce any expression output into:
+      //    - the expression value if the value is not an array
+      //    - the single array element if the value is an array with 1 element
+      //    - a list with all of the array elements if the value is an array with more than 1 element
+      // and so is tuned towards multi-value strings
+      return ExpressionSelectors.coerceEvalToObjectOrList(
           expr.eval(InputBindings.forFunction(name -> getValueFromRow(row, name)))
       );
     }
