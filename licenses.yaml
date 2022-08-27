@@ -2160,16 +2160,6 @@ notice: |
 
 ---
 
-name: JVM Attach API
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.5
-libraries:
-  - org.gridkit.lab: jvm-attach-api
-
----
-
 name: Hibernate Validator Engine
 license_category: binary
 module: java-core

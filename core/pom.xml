@@ -276,10 +276,6 @@
       dependency are copied as resources. See maven-dependency-plugin configuration and <resources> below. -->
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>org.gridkit.lab</groupId>
-      <artifactId>jvm-attach-api</artifactId>
-    </dependency>
 
     <!-- Extra dependency for http-client -->
     <dependency>
