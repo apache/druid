@@ -303,6 +303,7 @@ public class ReadableByteChunksFrameChannelTest
       ListenableFuture<?> backpressureFuture = null;
 
       int iteration = 0;
+      long totalSize = 0;
 
       try (final Chunker chunker = new Chunker(new FileInputStream(file), chunkSize)) {
         byte[] chunk;
@@ -327,9 +328,11 @@ public class ReadableByteChunksFrameChannelTest
           }
 
           iteration++;
+          totalSize += chunk.length;
 
           // Write next chunk.
           final ListenableFuture<?> addVal = channel.addChunk(chunk);
+          Assert.assertEquals(channel.getBytesAdded(), totalSize);
 
           // Minimally-sized channel means backpressure is exerted as soon as a single frame is available.
           Assert.assertEquals(channel.canRead(), addVal != null);
