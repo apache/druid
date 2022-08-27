@@ -188,14 +188,14 @@ public class FrameFileWriter implements Closeable
 
     tocCursor.memory().putInt(tocCursor.start(), numFrames);
     tocCursor.memory().putInt(tocCursor.start() + Integer.BYTES, numPartitions);
-    tocCursor.memory().putInt(tocCursor.start() + Integer.BYTES * 2, footerLength(numFrames, numPartitions));
+    tocCursor.memory().putInt(tocCursor.start() + Integer.BYTES * 2L, footerLength(numFrames, numPartitions));
     tableOfContents.advanceCursor(Integer.BYTES * 3);
 
     // Buffer up the footer so we can compute its checksum.
     final ByteBuffer footerBuf = ByteBuffer.allocate(footerLength(numFrames, numPartitions));
     final WritableMemory footerMemory = WritableMemory.writableWrap(footerBuf, ByteOrder.LITTLE_ENDIAN);
     assert Byte.BYTES + partitions.size() + tableOfContents.size() + Integer.BYTES == footerMemory.getCapacity();
-    int p = Byte.BYTES;
+    long p = Byte.BYTES;
     footerMemory.putByte(0, MARKER_NO_MORE_FRAMES);
     p += partitions.writeTo(footerMemory, p);
     partitions.close();

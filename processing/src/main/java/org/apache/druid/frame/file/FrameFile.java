@@ -200,8 +200,8 @@ public class FrameFile implements Closeable
 
       final int numFrames = bufMemory.getInt(0);
       final int numPartitions = bufMemory.getInt(Integer.BYTES);
-      final int footerLength = bufMemory.getInt(Integer.BYTES * 2);
-      final int expectedFooterChecksum = bufMemory.getInt(Integer.BYTES * 3);
+      final int footerLength = bufMemory.getInt(Integer.BYTES * 2L);
+      final int expectedFooterChecksum = bufMemory.getInt(Integer.BYTES * 3L);
 
       if (footerLength > fileLength) {
         throw new ISE("Oversize footer. Corrupt or truncated file?");
