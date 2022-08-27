@@ -75,7 +75,7 @@ public class PlannerConfig
   private boolean authorizeSystemTablesDirectly = false;
 
   @JsonProperty
-  private boolean useNativeQueryExplain = false;
+  private boolean useNativeQueryExplain = true;
 
   @JsonProperty
   private boolean forceExpressionVirtualColumns = false;

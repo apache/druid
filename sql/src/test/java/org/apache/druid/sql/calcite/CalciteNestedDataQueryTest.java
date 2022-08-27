@@ -2362,7 +2362,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public void testToJsonAndParseJson()
   {
     testQuery(
-        "SELECT string, TO_JSON(string), PARSE_JSON(string), PARSE_JSON('{\"foo\":1}'), PARSE_JSON(TO_JSON_STRING(nester))\n"
+        "SELECT string, TRY_PARSE_JSON(TO_JSON_STRING(string)), PARSE_JSON('{\"foo\":1}'), PARSE_JSON(TO_JSON_STRING(nester))\n"
         + "FROM druid.nested",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -2371,30 +2371,24 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .virtualColumns(
                       new ExpressionVirtualColumn(
                           "v0",
-                          "to_json(\"string\")",
+                          "try_parse_json(to_json_string(\"string\"))",
                           NestedDataComplexTypeSerde.TYPE,
                           macroTable
                       ),
                       new ExpressionVirtualColumn(
                           "v1",
-                          "parse_json(\"string\")",
-                          NestedDataComplexTypeSerde.TYPE,
-                          macroTable
-                      ),
-                      new ExpressionVirtualColumn(
-                          "v2",
                           "parse_json('{\\u0022foo\\u0022:1}')",
                           NestedDataComplexTypeSerde.TYPE,
                           macroTable
                       ),
                       new ExpressionVirtualColumn(
-                          "v3",
+                          "v2",
                           "parse_json(to_json_string(\"nester\"))",
                           NestedDataComplexTypeSerde.TYPE,
                           macroTable
                       )
                   )
-                  .columns("string", "v0", "v1", "v2", "v3")
+                  .columns("string", "v0", "v1", "v2")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)
                   .build()
@@ -2403,24 +2397,191 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{
                 "aaa",
                 "\"aaa\"",
-                "\"aaa\"",
                 "{\"foo\":1}",
                 "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}"
             },
-            new Object[]{"bbb", "\"bbb\"", "\"bbb\"", "{\"foo\":1}", "\"hello\""},
-            new Object[]{"ccc", "\"ccc\"", "\"ccc\"", "{\"foo\":1}", null},
-            new Object[]{"ddd", "\"ddd\"", "\"ddd\"", "{\"foo\":1}", null},
-            new Object[]{"eee", "\"eee\"", "\"eee\"", "{\"foo\":1}", null},
-            new Object[]{"aaa", "\"aaa\"", "\"aaa\"", "{\"foo\":1}", "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"},
-            new Object[]{"ddd", "\"ddd\"", "\"ddd\"", "{\"foo\":1}", "2"}
+            new Object[]{"bbb", "\"bbb\"", "{\"foo\":1}", "\"hello\""},
+            new Object[]{"ccc", "\"ccc\"", "{\"foo\":1}", null},
+            new Object[]{"ddd", "\"ddd\"", "{\"foo\":1}", null},
+            new Object[]{"eee", "\"eee\"", "{\"foo\":1}", null},
+            new Object[]{"aaa", "\"aaa\"", "{\"foo\":1}", "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"},
+            new Object[]{"ddd", "\"ddd\"", "{\"foo\":1}", "2"}
         ),
         RowSignature.builder()
                     .add("string", ColumnType.STRING)
                     .add("EXPR$1", NestedDataComplexTypeSerde.TYPE)
                     .add("EXPR$2", NestedDataComplexTypeSerde.TYPE)
                     .add("EXPR$3", NestedDataComplexTypeSerde.TYPE)
-                    .add("EXPR$4", NestedDataComplexTypeSerde.TYPE)
                     .build()
+    );
+  }
+
+  @Test
+  public void testGroupByNegativeJsonPathIndex()
+  {
+    // negative array index cannot vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nester, '$.array[-1]'), "
+        + "SUM(cnt) "
+        + "FROM druid.nested GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn("nester", "$.array[-1]", "v0", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 5L},
+            new Object[]{"b", 2L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testJsonPathNegativeIndex()
+  {
+    testQuery(
+        "SELECT JSON_VALUE(nester, '$.array[-1]'), JSON_QUERY(nester, '$.array[-1]'), JSON_KEYS(nester, '$.array[-1]') FROM druid.nested",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new NestedFieldVirtualColumn(
+                          "nester",
+                          "v0",
+                          ColumnType.STRING,
+                          null,
+                          false,
+                          "$.array[-1]",
+                          false
+                      ),
+                      new NestedFieldVirtualColumn(
+                          "nester",
+                          "v1",
+                          NestedDataComplexTypeSerde.TYPE,
+                          null,
+                          true,
+                          "$.array[-1]",
+                          false
+                      ),
+                      expressionVirtualColumn("v2", "json_keys(\"nester\",'$.array[-1]')", ColumnType.STRING_ARRAY)
+                  )
+                  .columns("v0", "v1", "v2")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b", "\"b\"", null},
+            new Object[]{NullHandling.defaultStringValue(), null, null},
+            new Object[]{NullHandling.defaultStringValue(), null, null},
+            new Object[]{NullHandling.defaultStringValue(), null, null},
+            new Object[]{NullHandling.defaultStringValue(), null, null},
+            new Object[]{"b", "\"b\"", null},
+            new Object[]{NullHandling.defaultStringValue(), null, null}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", NestedDataComplexTypeSerde.TYPE)
+                    .add("EXPR$2", ColumnType.STRING_ARRAY)
+                    .build()
+
+    );
+  }
+
+  @Test
+  public void testJsonPathsNonJsonInput()
+  {
+    testQuery(
+        "SELECT JSON_PATHS(string), JSON_PATHS(1234), JSON_PATHS('1234'), JSON_PATHS(1.1), JSON_PATHS(null)\n"
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "json_paths(\"string\")", ColumnType.STRING_ARRAY),
+                      expressionVirtualColumn("v1", "array('$')", ColumnType.STRING_ARRAY)
+                  )
+                  .columns("v0", "v1")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]"},
+            new Object[]{"[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]"},
+            new Object[]{"[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]"},
+            new Object[]{"[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]"},
+            new Object[]{"[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]"},
+            new Object[]{"[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]"},
+            new Object[]{"[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]", "[\"$\"]"}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING_ARRAY)
+                    .add("EXPR$1", ColumnType.STRING_ARRAY)
+                    .add("EXPR$2", ColumnType.STRING_ARRAY)
+                    .add("EXPR$3", ColumnType.STRING_ARRAY)
+                    .add("EXPR$4", ColumnType.STRING_ARRAY)
+                    .build()
+
+    );
+  }
+
+  @Test
+  public void testJsonKeysNonJsonInput()
+  {
+    testQuery(
+        "SELECT JSON_KEYS(string, '$'), JSON_KEYS(1234, '$'), JSON_KEYS('1234', '$'), JSON_KEYS(1.1, '$'), JSON_KEYS(null, '$')\n"
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "json_keys(\"string\",'$')", ColumnType.STRING_ARRAY),
+                      expressionVirtualColumn("v1", "null", ColumnType.STRING_ARRAY)
+                  )
+                  .columns("v0", "v1")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, null, null, null, null},
+            new Object[]{null, null, null, null, null},
+            new Object[]{null, null, null, null, null},
+            new Object[]{null, null, null, null, null},
+            new Object[]{null, null, null, null, null},
+            new Object[]{null, null, null, null, null},
+            new Object[]{null, null, null, null, null}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING_ARRAY)
+                    .add("EXPR$1", ColumnType.STRING_ARRAY)
+                    .add("EXPR$2", ColumnType.STRING_ARRAY)
+                    .add("EXPR$3", ColumnType.STRING_ARRAY)
+                    .add("EXPR$4", ColumnType.STRING_ARRAY)
+                    .build()
+
     );
   }
 }

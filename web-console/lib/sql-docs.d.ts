@@ -16,5 +16,5 @@
  * limitations under the License.
  */
 
-export const SQL_DATA_TYPES: [name: string, runtime: string, description: string][];
+export const SQL_DATA_TYPES: Record<string, [runtime: string, description: string][]>;
 export const SQL_FUNCTIONS: Record<string, [args: string, description: string][]>;

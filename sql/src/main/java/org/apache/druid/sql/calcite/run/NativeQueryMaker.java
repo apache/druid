@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.run;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -355,7 +356,8 @@ public class NativeQueryMaker implements QueryMaker
   }
 
 
-  private static Object maybeCoerceArrayToList(Object value, boolean mustCoerce)
+  @VisibleForTesting
+  static Object maybeCoerceArrayToList(Object value, boolean mustCoerce)
   {
     if (value instanceof List) {
       return value;
@@ -366,10 +368,21 @@ public class NativeQueryMaker implements QueryMaker
     } else if (value instanceof Double[]) {
       return Arrays.asList((Double[]) value);
     } else if (value instanceof Object[]) {
-      Object[] array = (Object[]) value;
-      ArrayList<Object> lst = new ArrayList<>(array.length);
+      final Object[] array = (Object[]) value;
+      final ArrayList<Object> lst = new ArrayList<>(array.length);
       for (Object o : array) {
         lst.add(maybeCoerceArrayToList(o, false));
+      }
+      return lst;
+    } else if (value instanceof long[]) {
+      return Arrays.stream((long[]) value).boxed().collect(Collectors.toList());
+    } else if (value instanceof double[]) {
+      return Arrays.stream((double[]) value).boxed().collect(Collectors.toList());
+    } else if (value instanceof float[]) {
+      final float[] array = (float[]) value;
+      final ArrayList<Object> lst = new ArrayList<>(array.length);
+      for (float f : array) {
+        lst.add(f);
       }
       return lst;
     } else if (value instanceof ComparableStringArray) {

@@ -30,6 +30,8 @@ import java.util.Map;
  */
 public class MetadataStorageTablesConfig
 {
+  public static final String PROPERTY_BASE = "druid.metadata.storage.tables";
+
   public static MetadataStorageTablesConfig fromBase(String base)
   {
     return new MetadataStorageTablesConfig(base, null, null, null, null, null, null, null, null, null, null);

@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
@@ -312,7 +313,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   public void testSelectConstantExpressionEquivalentToNaN()
   {
     expectedException.expectMessage(
-        "'(log10(0) - log10(0))' evaluates to 'NaN' that is not supported in SQL. You can either cast the expression as bigint ('cast((log10(0) - log10(0)) as bigint)') or char ('cast((log10(0) - log10(0)) as char)') or change the expression itself");
+        "'(log10(0) - log10(0))' evaluates to 'NaN' that is not supported in SQL. You can either cast the expression as BIGINT ('CAST((log10(0) - log10(0)) as BIGINT)') or VARCHAR ('CAST((log10(0) - log10(0)) as VARCHAR)') or change the expression itself");
     testQuery(
         "SELECT log10(0) - log10(0), dim1 FROM foo LIMIT 1",
         ImmutableList.of(),
@@ -324,7 +325,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   public void testSelectConstantExpressionEquivalentToInfinity()
   {
     expectedException.expectMessage(
-        "'log10(0)' evaluates to '-Infinity' that is not supported in SQL. You can either cast the expression as bigint ('cast(log10(0) as bigint)') or char ('cast(log10(0) as char)') or change the expression itself");
+        "'log10(0)' evaluates to '-Infinity' that is not supported in SQL. You can either cast the expression as BIGINT ('CAST(log10(0) as BIGINT)') or VARCHAR ('CAST(log10(0) as VARCHAR)') or change the expression itself");
     testQuery(
         "SELECT log10(0), dim1 FROM foo LIMIT 1",
         ImmutableList.of(),
@@ -545,7 +546,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     final String resources = "[]";
 
     testQuery(
+        PlannerConfig.builder().useNativeQueryExplain(false).build(),
         query,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{
@@ -1286,7 +1289,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
 
     testQuery(
+        PlannerConfig.builder().useNativeQueryExplain(false).build(),
         query,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{

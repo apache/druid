@@ -1366,11 +1366,12 @@ public class DruidQuery
       final RowSignature signature = scanSignatureBuilder.build();
 
       try {
-        queryContext.addSystemParam(
+        final QueryContext newContext = queryContext.copy();
+        newContext.addSystemParam(
             CTX_SCAN_SIGNATURE,
             plannerContext.getJsonMapper().writeValueAsString(signature)
         );
-        return queryContext;
+        return newContext;
       }
       catch (JsonProcessingException e) {
         throw new RuntimeException(e);

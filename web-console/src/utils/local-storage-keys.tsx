@@ -21,6 +21,8 @@ import * as JSONBig from 'json-bigint-native';
 export const LocalStorageKeys = {
   CAPABILITIES_OVERRIDE: 'capabilities-override' as const,
   INGESTION_SPEC: 'ingestion-spec' as const,
+  BATCH_INGESTION_SPEC: 'batch-ingestion-spec' as const,
+  STREAMING_INGESTION_SPEC: 'streaming-ingestion-spec' as const,
   DATASOURCE_TABLE_COLUMN_SELECTION: 'datasource-table-column-selection' as const,
   SEGMENT_TABLE_COLUMN_SELECTION: 'segment-table-column-selection' as const,
   SUPERVISOR_TABLE_COLUMN_SELECTION: 'supervisor-table-column-selection' as const,
@@ -39,6 +41,14 @@ export const LocalStorageKeys = {
   LOOKUPS_REFRESH_RATE: 'lookups-refresh-rate' as const,
   QUERY_HISTORY: 'query-history' as const,
   LIVE_QUERY_MODE: 'live-query-mode' as const,
+
+  WORKBENCH_QUERIES: 'workbench-queries' as const,
+  WORKBENCH_LAST_TAB: 'workbench-last-tab' as const,
+  WORKBENCH_PANE_SIZE: 'workbench-pane-size' as const,
+  WORKBENCH_HISTORY: 'workbench-history' as const,
+  WORKBENCH_TASK_PANEL: 'workbench-task-panel' as const,
+
+  SQL_DATA_LOADER_CONTENT: 'sql-data-loader-content' as const,
 };
 export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorageKeys];
 

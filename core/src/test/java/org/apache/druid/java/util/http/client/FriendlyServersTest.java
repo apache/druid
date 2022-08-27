@@ -31,6 +31,7 @@ import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.util.ssl.KeyStoreScanner;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -275,6 +276,8 @@ public class FriendlyServersTest
 
     sslConnector.setPort(0);
     server.setConnectors(new Connector[]{sslConnector});
+    KeyStoreScanner keyStoreScanner = new KeyStoreScanner(sslContextFactory);
+    server.addBean(keyStoreScanner);
     server.start();
 
     try {

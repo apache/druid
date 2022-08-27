@@ -54,7 +54,6 @@ import java.util.function.BinaryOperator;
 import java.util.function.DoubleBinaryOperator;
 import java.util.function.LongBinaryOperator;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Base interface describing the mechanism used to evaluate a {@link FunctionExpr}. All {@link Function} implementations
@@ -507,12 +506,13 @@ public interface Function
       if (!scalarExpr.type().equals(arrayExpr.elementType())) {
         // try to cast
         ExprEval coerced = scalarExpr.castTo(arrayExpr.elementType());
-        return ExprEval.ofArray(arrayType, add(arrayType.getElementType(), arrayExpr.asArray(), coerced.value()).toArray());
+        return ExprEval.ofArray(arrayType, add(arrayType.getElementType(), arrayExpr.asArray(), coerced.value()));
       }
-      return ExprEval.ofArray(arrayType, add(arrayType.getElementType(), arrayExpr.asArray(), scalarExpr.value()).toArray());
+
+      return ExprEval.ofArray(arrayType, add(arrayType.getElementType(), arrayExpr.asArray(), scalarExpr.value()));
     }
 
-    abstract <T> Stream<T> add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val);
+    abstract <T> Object[] add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val);
   }
 
   /**
@@ -558,13 +558,13 @@ public interface Function
       if (!lhsExpr.asArrayType().equals(rhsExpr.asArrayType())) {
         // try to cast if they types don't match
         ExprEval coerced = rhsExpr.castTo(arrayType);
-        ExprEval.ofArray(arrayType, merge(arrayType.getElementType(), lhsExpr.asArray(), coerced.asArray()).toArray());
+        ExprEval.ofArray(arrayType, merge(arrayType.getElementType(), lhsExpr.asArray(), coerced.asArray()));
       }
 
-      return ExprEval.ofArray(arrayType, merge(arrayType.getElementType(), lhsExpr.asArray(), rhsExpr.asArray()).toArray());
+      return ExprEval.ofArray(arrayType, merge(arrayType.getElementType(), lhsExpr.asArray(), rhsExpr.asArray()));
     }
 
-    abstract <T> Stream<T> merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2);
+    abstract <T> Object[] merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2);
   }
 
   abstract class ReduceFunction implements Function
@@ -3406,11 +3406,14 @@ public interface Function
     }
 
     @Override
-    <T> Stream<T> add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val)
+    <T> Object[] add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val)
     {
-      List<T> l = new ArrayList<>(Arrays.asList(array));
-      l.add(val);
-      return l.stream();
+      final Object[] output = new Object[array.length + 1];
+      for (int i = 0; i < array.length; i++) {
+        output[i] = array[i];
+      }
+      output[array.length] = val;
+      return output;
     }
   }
 
@@ -3435,11 +3438,14 @@ public interface Function
     }
 
     @Override
-    <T> Stream<T> add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val)
+    <T> Object[] add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val)
     {
-      List<T> l = new ArrayList<>(Arrays.asList(array));
-      l.add(0, val);
-      return l.stream();
+      final Object[] output = new Object[array.length + 1];
+      output[0] = val;
+      for (int i = 0; i < array.length; i++) {
+        output[i + 1] = array[i];
+      }
+      return output;
     }
   }
 
@@ -3452,11 +3458,16 @@ public interface Function
     }
 
     @Override
-    <T> Stream<T> merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2)
+    <T> Object[] merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2)
     {
-      List<T> l = new ArrayList<>(Arrays.asList(array1));
-      l.addAll(Arrays.asList(array2));
-      return l.stream();
+      final Object[] output = new Object[array1.length + array2.length];
+      for (int i = 0; i < array1.length; i++) {
+        output[i] = array1[i];
+      }
+      for (int i = array1.length, j = 0; j < array2.length; i++, j++) {
+        output[i] = array2[j];
+      }
+      return output;
     }
   }
 
@@ -3469,12 +3480,12 @@ public interface Function
     }
 
     @Override
-    <T> Stream<T> add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val)
+    <T> Object[] add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val)
     {
-      Set<T> l = new TreeSet<>(elementType.getNullableStrategy());
-      l.addAll(Arrays.asList(array));
-      l.add(val);
-      return l.stream();
+      Set<T> set = new TreeSet<>(elementType.getNullableStrategy());
+      set.addAll(Arrays.asList(array));
+      set.add(val);
+      return set.toArray();
     }
   }
 
@@ -3487,12 +3498,12 @@ public interface Function
     }
 
     @Override
-    <T> Stream<T> merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2)
+    <T> Object[] merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2)
     {
       Set<T> l = new TreeSet<>(elementType.getNullableStrategy());
       l.addAll(Arrays.asList(array1));
       l.addAll(Arrays.asList(array2));
-      return l.stream();
+      return l.toArray();
     }
   }
 
@@ -3574,7 +3585,8 @@ public interface Function
     @Override
     public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return args.get(0).getOutputType(inspector);
+      ExpressionType arrayType = args.get(0).getOutputType(inspector);
+      return Optional.ofNullable(ExpressionType.asArrayType(arrayType)).orElse(arrayType);
     }
 
     @Override

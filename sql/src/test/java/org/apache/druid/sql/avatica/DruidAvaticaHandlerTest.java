@@ -397,8 +397,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
           ImmutableList.of(
               ImmutableMap.of(
                   "PLAN",
-                  StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"context\":{\"sqlQueryId\":\"%s\",\"sqlStringifyArrays\":false,\"sqlTimeZone\":\"America/Los_Angeles\"}}], signature=[{a0:LONG}])\n",
-                                     DUMMY_SQL_QUERY_ID
+                  StringUtils.format(
+                      "[{\"query\":{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"context\":{\"sqlQueryId\":\"%s\",\"sqlStringifyArrays\":false,\"sqlTimeZone\":\"America/Los_Angeles\"}},\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}]}]",
+                      DUMMY_SQL_QUERY_ID
                   ),
                   "RESOURCES",
                   "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]"
@@ -1097,6 +1098,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       Assert.assertEquals(true, stats.get("success"));
       Assert.assertEquals("regularUser", stats.get("identity"));
       Assert.assertTrue(stats.containsKey("sqlQuery/time"));
+      Assert.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
       Assert.assertTrue(stats.containsKey("sqlQuery/bytes"));
     }
 
@@ -1151,6 +1153,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       Assert.assertEquals(true, stats.get("success"));
       Assert.assertEquals("regularUser", stats.get("identity"));
       Assert.assertTrue(stats.containsKey("sqlQuery/time"));
+      Assert.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
       Assert.assertTrue(stats.containsKey("sqlQuery/bytes"));
     }
 

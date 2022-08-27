@@ -28,7 +28,7 @@ import {
 } from '../react-table';
 import { countBy } from '../utils';
 
-const NoData = React.memo(function NoData(props) {
+const NoData = React.memo(function NoData(props: { children?: React.ReactNode }) {
   const { children } = props;
   if (!children) return null;
   return <div className="rt-noData">{children}</div>;
