@@ -160,3 +160,4 @@ REPLACE consists of the following parts:
 4. A clause for the actual data you want to use for the replacement.
 5. A [PARTITIONED BY](./index.md#partitioned-by) clause to your REPLACE statement. For example, use PARTITIONED BY DAY for daily partitioning, or PARTITIONED BY ALL TIME to skip time partitioning completely.
 6. An optional [CLUSTERED BY](./index.md#clustered-by) clause.
+ 

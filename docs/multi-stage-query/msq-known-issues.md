@@ -19,7 +19,7 @@ sidebar_label: Known issues
   execution. If your servers have multiple local filesystems, this causes queries to exhaust
   available disk space earlier than expected. As a workaround, you can use [durable storage for shuffle meshes](./msq-durable-storage.md).
 
-- When `msqMaxNumTasks` (formerly `msqNumTasks`) is higher than the total
+- When `msqMaxNumTasks` is higher than the total
   capacity of the cluster, more tasks may be launched than can run at once. This leads to a
   [TaskStartTimeout](./msq-reference.md#context-parameters) error code, as there is never enough capacity to run the query.
   To avoid this, set `msqMaxNumTasks` to a number of tasks that can run simultaneously on your cluster.
