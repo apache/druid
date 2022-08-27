@@ -1690,10 +1690,6 @@
             </activation>
             <properties>
                 <jdk.surefire.argLine>
-                    <!-- required for JvmMonitor on Java 11+ -->
-                    --add-exports=java.base/jdk.internal.perf=ALL-UNNAMED
-                    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
-
                     <!-- required for DataSketches Memory on Java 11+ -->
                     --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
                     --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
