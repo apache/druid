@@ -1,6 +1,6 @@
 ---
-id: datasketches-quantiles
-title: "DataSketches Quantiles Sketch module"
+id: datasketches-kll
+title: "DataSketches KLL Sketch module"
 ---
 
 <!--
@@ -23,7 +23,7 @@ title: "DataSketches Quantiles Sketch module"
   -->
 
 
-This module provides Apache Druid aggregators based on numeric quantiles DoublesSketch from [Apache DataSketches](https://datasketches.apache.org/) library. Quantiles sketch is a mergeable streaming algorithm to estimate the distribution of values, and approximately answer queries about the rank of a value, probability mass function of the distribution (PMF) or histogram, cumulative distribution function (CDF), and quantiles (median, min, max, 95th percentile and such). See [Quantiles Sketch Overview](https://datasketches.apache.org/docs/Quantiles/QuantilesOverview).
+This module provides Apache Druid aggregators based on numeric quantiles KllFloatsSketch and KllDoublesSketch from [Apache DataSketches](https://datasketches.apache.org/) library. KLL quantiles sketch is a mergeable streaming algorithm to estimate the distribution of values, and approximately answer queries about the rank of a value, probability mass function of the distribution (PMF) or histogram, cumulative distribution function (CDF), and quantiles (median, min, max, 95th percentile and such). See [Quantiles Sketch Overview](https://datasketches.apache.org/docs/Quantiles/QuantilesOverview). This document applies to both KllFloatsSketch and KllDoublesSketch. Only one of them will be used in the examples.
 
 There are three major modes of operation:
 
@@ -39,11 +39,11 @@ druid.extensions.loadList=["druid-datasketches"]
 
 ### Aggregator
 
-The result of the aggregation is a DoublesSketch that is the union of all sketches either built from raw data or read from the segments.
+The result of the aggregation is a KllFloatsSketch or KllDoublesSketch that is the union of all sketches either built from raw data or read from the segments.
 
 ```json
 {
-  "type" : "quantilesDoublesSketch",
+  "type" : "KllDoublesSketch",
   "name" : <output_name>,
   "fieldName" : <metric_name>,
   "k": <parameter that controls size and accuracy>
@@ -52,10 +52,10 @@ The result of the aggregation is a DoublesSketch that is the union of all sketch
 
 |property|description|required?|
 |--------|-----------|---------|
-|type|This String should always be "quantilesDoublesSketch"|yes|
+|type|This String should be "KllFloatsSketch" or "KllDoublesSketch"|yes|
 |name|A String for the output (result) name of the calculation.|yes|
 |fieldName|A String for the name of the input field (can contain sketches or raw numeric values).|yes|
-|k|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2 from 2 to 32768. See [accuracy information](https://datasketches.apache.org/docs/Quantiles/OrigQuantilesSketch) in the DataSketches documentation for details.|no, defaults to 128|
+|k|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be from 8 to 65535. See [KLL Sketch Accuracy and Size](https://datasketches.apache.org/docs/KLL/KLLAccuracyAndSize.html).|no, defaults to 200|
 |maxStreamLength|This parameter defines the number of items that can be presented to each sketch before it may need to move from off-heap to on-heap memory. This is relevant to query types that use off-heap memory, including [TopN](../../querying/topnquery.md) and [GroupBy](../../querying/groupbyquery.md). Ideally, should be set high enough such that most sketches can stay off-heap.|no, defaults to 1000000000|
 
 ### Post Aggregators
@@ -66,9 +66,9 @@ This returns an approximation to the value that would be preceded by a given fra
 
 ```json
 {
-  "type"  : "quantilesDoublesSketchToQuantile",
+  "type"  : "KllDoublesSketchToQuantile",
   "name": <output name>,
-  "field"  : <post aggregator that refers to a DoublesSketch (fieldAccess or another post aggregator)>,
+  "field"  : <post aggregator that refers to a KllDoublesSketch (fieldAccess or another post aggregator)>,
   "fraction" : <fractional position in the hypothetical sorted stream, number from 0 to 1 inclusive>
 }
 ```
@@ -79,9 +79,9 @@ This returns an array of quantiles corresponding to a given array of fractions
 
 ```json
 {
-  "type"  : "quantilesDoublesSketchToQuantiles",
+  "type"  : "KllDoublesSketchToQuantiles",
   "name": <output name>,
-  "field"  : <post aggregator that refers to a DoublesSketch (fieldAccess or another post aggregator)>,
+  "field"  : <post aggregator that refers to a KllDoublesSketch (fieldAccess or another post aggregator)>,
   "fractions" : <array of fractional positions in the hypothetical sorted stream, number from 0 to 1 inclusive>
 }
 ```
@@ -92,9 +92,9 @@ This returns an approximation to the histogram given an array of split points th
 
 ```json
 {
-  "type"  : "quantilesDoublesSketchToHistogram",
+  "type"  : "KllDoublesSketchToHistogram",
   "name": <output name>,
-  "field"  : <post aggregator that refers to a DoublesSketch (fieldAccess or another post aggregator)>,
+  "field"  : <post aggregator that refers to a KllDoublesSketch (fieldAccess or another post aggregator)>,
   "splitPoints" : <array of split points (optional)>,
   "numBins" : <number of bins (optional, defaults to 10)>
 }
@@ -106,9 +106,9 @@ This returns an approximation to the rank of a given value that is the fraction 
 
 ```json
 {
-  "type"  : "quantilesDoublesSketchToRank",
+  "type"  : "KllDoublesSketchToRank",
   "name": <output name>,
-  "field"  : <post aggregator that refers to a DoublesSketch (fieldAccess or another post aggregator)>,
+  "field"  : <post aggregator that refers to a KllDoublesSketch (fieldAccess or another post aggregator)>,
   "value" : <value>
 }
 ```
@@ -118,9 +118,9 @@ This returns an approximation to the Cumulative Distribution Function given an a
 
 ```json
 {
-  "type"  : "quantilesDoublesSketchToCDF",
+  "type"  : "KllDoublesSketchToCDF",
   "name": <output name>,
-  "field"  : <post aggregator that refers to a DoublesSketch (fieldAccess or another post aggregator)>,
+  "field"  : <post aggregator that refers to a KllDoublesSketch (fieldAccess or another post aggregator)>,
   "splitPoints" : <array of split points>
 }
 ```
@@ -131,8 +131,8 @@ This returns a summary of the sketch that can be used for debugging. This is the
 
 ```json
 {
-  "type"  : "quantilesDoublesSketchToString",
+  "type"  : "KllDoublesSketchToString",
   "name": <output name>,
-  "field"  : <post aggregator that refers to a DoublesSketch (fieldAccess or another post aggregator)>
+  "field"  : <post aggregator that refers to a KllDoublesSketch (fieldAccess or another post aggregator)>
 }
 ```
