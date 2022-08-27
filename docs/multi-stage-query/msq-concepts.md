@@ -62,7 +62,7 @@ The [`maxNumTasks`](./msq-reference.md#context-parameters) query parameter deter
 The `druid.worker.capacity` server property on each Middle Manager determines the maximum number
 of worker tasks that can run on each server at once. Worker tasks run single-threaded, which
 also determines the maximum number of processors on the server that can contribute towards
-multi-stage queries. In Imply Enterprise, where data servers are shared between Historicals and
+multi-stage queries. Since data servers are shared between Historicals and
 Middle Managers, the default setting for `druid.worker.capacity` is lower than the number of
 processors on the server. Advanced users may consider enhancing parallelism by increasing this
 value to one less than the number of processors on the server. In most cases, this increase must

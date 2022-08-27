@@ -87,11 +87,11 @@ FROM TABLE(
   )
 )
 ```
-
+/native-batch.html#input-sources
 EXTERN consists of the following parts:
 
-1.  Any [Druid input source](https://docs.imply.io/latest/druid/ingestion/native-batch.html#input-sources) as a JSON-encoded string.
-2.  Any [Druid input format](https://docs.imply.io/latest/druid/ingestion/data-formats.html#input-format) as a JSON-encoded string.
+1.  Any [Druid input source](../ingestion/native-batch-input-source.md) as a JSON-encoded string.
+2.  Any [Druid input format](../ingestion/data-formats.md) as a JSON-encoded string.
 3.  A row signature, as a JSON-encoded array of column descriptors. Each column descriptor must have a `name` and a `type`. The type can be `string`, `long`, `double`, or `float`. This row signature is used to map the external data into the SQL layer.
 
 ### INSERT

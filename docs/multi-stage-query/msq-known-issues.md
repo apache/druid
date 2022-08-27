@@ -19,7 +19,7 @@ sidebar_label: Known issues
   execution. If your servers have multiple local filesystems, this causes queries to exhaust
   available disk space earlier than expected. As a workaround, you can use [durable storage for shuffle meshes](./msq-durable-storage.md).
 
-- When `msqMaxNumTasks` (formerly `msqNumTasks`, formerly `talariaNumTasks`) is higher than the total
+- When `msqMaxNumTasks` (formerly `msqNumTasks`) is higher than the total
   capacity of the cluster, more tasks may be launched than can run at once. This leads to a
   [TaskStartTimeout](./msq-reference.md#context-parameters) error code, as there is never enough capacity to run the query.
   To avoid this, set `msqMaxNumTasks` to a number of tasks that can run simultaneously on your cluster.
@@ -43,24 +43,11 @@ sidebar_label: Known issues
 
 - Ingesting a very long row may consume excessive memory and result in an OutOfMemoryError. If a row is read 
   which requires more memory than is available, the service might throw OutOfMemoryError. If you run into this
-  issue, allocate enough memory to be able to store the largest row to the indexer. (16919)
+  issue, allocate enough memory to be able to store the largest row to the indexer. 
 
 ## SELECT queries
 
 - SELECT query results do not include real-time data until it has been published.
-
-<!-- 
-- SELECT query results are funneled through the controller task
-  so they can be written to the query report.
-  This is a bottleneck for queries with large resultsets. In the future,
-  we will provide a mechanism for writing query results to multiple
-  files in parallel. (14728)
--->
-<!--
-- SELECT query results are materialized in memory on the Broker when
-  using the query results API. Large result sets
-  can cause the Broker to run out of memory. (15963)
--->
 
 - TIMESTAMP types are formatted as numbers rather than ISO8601 timestamp
   strings, which differs from Druid's standard result format. 
@@ -82,10 +69,10 @@ sidebar_label: Known issues
 
 ##  INSERT queries
 
-- The [schemaless dimensions](https://docs.imply.io/latest/druid/ingestion/ingestion-spec.html#inclusions-and-exclusions)
+- The [schemaless dimensions](../ingestion/ingestion-spec.md#inclusions-and-exclusions)
 feature is not available. All columns and their types must be specified explicitly.
 
-- [Segment metadata queries](https://docs.imply.io/latest/druid/querying/segmentmetadataquery.html)
+- [Segment metadata queries](../querying/segmentmetadataquery.md)
   on datasources ingested with the Multi-Stage Query Engine will return values for`timestampSpec` that are not usable
   for introspection.
 - Figuring out `rollup`, `query-granularity`, and `aggregatorFactories` is on a best effort basis. In
