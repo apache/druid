@@ -87,7 +87,7 @@ FROM TABLE(
   )
 )
 ```
-/native-batch.html#input-sources
+
 EXTERN consists of the following parts:
 
 1.  Any [Druid input source](../ingestion/native-batch-input-source.md) as a JSON-encoded string.
@@ -111,9 +111,9 @@ PARTITIONED BY <time frame>
 INSERT consists of the following parts:
 
 1. Optional [context parameters](./msq-reference.md#context-parameters).
-2. An `INSERT INTO <dataSource>` clause at the start of your query, such as `INSERT INTO w000`.
+2. An `INSERT INTO <dataSource>` clause at the start of your query, such as `INSERT INTO your-table`.
 3. A clause for the data you want to insert, such as `SELECT...FROM TABLE...`. You can use EXTERN to reference external tables using the following format: ``TABLE(EXTERN(...))`.
-4. A [PARTITIONED BY](./index.md#partitioned-by) clause for your INSERT statement. For example, use `PARTITIONED BY DAY` for daily partitioning or `PARTITIONED BY ALL TIME` to skip time partitioning completely.
+4. A [PARTITIONED BY](./index.md#partitioned-by) clause for your INSERT statement. For example, use PARTITIONED BY DAY for daily partitioning or PARTITIONED BY ALL TIME to skip time partitioning completely.
 5. An optional [CLUSTERED BY](./index.md#clustered-by) clause.
 
 ### REPLACE
@@ -153,11 +153,10 @@ PARTITIONED BY <time>
 REPLACE consists of the following parts:
 
 1. Optional [context parameters](./msq-reference.md#context-parameters).
-2. A `REPLACE INTO <dataSource>` clause at the start of your query, such as `REPLACE INTO w000`.
+2. A `REPLACE INTO <dataSource>` clause at the start of your query, such as `REPLACE INTO your-table.`
 3. An OVERWRITE clause after the datasource, either OVERWRITE ALL or OVERWRITE WHERE:
   - OVERWRITE ALL replaces the entire existing datasource with the results of the query.
   - OVERWRITE WHERE drops the time segments that match the condition you set. Conditions are based on the `__time` column and use the format `__time [< > = <= >=] TIMESTAMP`. Use them with AND, OR, and NOT between them, inclusive of the timestamps specified. For example, see [REPLACE INTO ... OVERWRITE WHERE ... SELECT](./index.md#replace-some-data).
 4. A clause for the actual data you want to use for the replacement.
 5. A [PARTITIONED BY](./index.md#partitioned-by) clause to your REPLACE statement. For example, use PARTITIONED BY DAY for daily partitioning, or PARTITIONED BY ALL TIME to skip time partitioning completely.
 6. An optional [CLUSTERED BY](./index.md#clustered-by) clause.
- 

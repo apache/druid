@@ -15,8 +15,8 @@ sidebar_label: Known issues
   under `druid.msq.intermediate.storage.prefix`. A good start would be to delete the objects after 3 days if they are
   not automatically deleted.
 
-- Only one local filesystem per server is used for stage output data during multi-stage query
-  execution. If your servers have multiple local filesystems, this causes queries to exhaust
+- Only one local file system per server is used for stage output data during multi-stage query
+  execution. If your servers have multiple local file systems, this causes queries to exhaust
   available disk space earlier than expected. As a workaround, you can use [durable storage for shuffle meshes](./msq-durable-storage.md).
 
 - When `msqMaxNumTasks` is higher than the total
@@ -81,7 +81,7 @@ feature is not available. All columns and their types must be specified explicit
   can still be created manually.
 
 - When INSERT with GROUP BY does the match the criteria mentioned in [GROUP BY](./index.md#group-by),  the multi-stage engine generates segments that Druid's compaction
-  functionality is not able to further roll up. This applies to autocompaction as well as manually
+  functionality is not able to further roll up. This applies to automatic compaction as well as manually
   issued `compact` tasks. Individual queries executed with the multi-stage engine always guarantee
   perfect rollup for their output, so this only matters if you are performing a sequence of INSERT
   queries that each append data to the same time chunk. If necessary, you can compact such data
