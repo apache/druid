@@ -2061,6 +2061,13 @@ protobuf
 Golang
 multiValueHandling
 _n_
+KLL
+KllFloatsSketch
+KllDoublesSketch
+PMF
+CDF
+maxStreamLength
+toString
 100TB
  - ../docs/querying/sql-functions.md
 ANY_VALUE 
