@@ -20,6 +20,7 @@
 package org.apache.druid.testing.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -41,30 +42,36 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.MsqOverlordResourceTestClient;
 import org.apache.druid.testing.clients.MsqTestClient;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.junit.Assert;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+/**
+ * Helper class to aid out ITs for MSQ
+ */
 public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResults>
 {
-  final ObjectMapper jsonMapper;
-  final IntegrationTestingConfig config;
-  final MsqOverlordResourceTestClient overlordClient;
-  final MsqTestClient msqClient;
+
+  private final ObjectMapper jsonMapper;
+  private final IntegrationTestingConfig config;
+  private final MsqOverlordResourceTestClient overlordClient;
+  private final MsqTestClient msqClient;
 
 
   @Inject
   MsqTestQueryHelper(
-      ObjectMapper jsonMapper,
-      MsqTestClient queryClient,
-      IntegrationTestingConfig config,
-      MsqOverlordResourceTestClient overlordClient,
-      MsqTestClient msqClient
+      final ObjectMapper jsonMapper,
+      final MsqTestClient queryClient,
+      final IntegrationTestingConfig config,
+      final MsqOverlordResourceTestClient overlordClient,
+      final MsqTestClient msqClient
   )
   {
     super(jsonMapper, queryClient, config);
@@ -80,12 +87,20 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     return StringUtils.format("%s/druid/v2/sql/task", schemeAndHost);
   }
 
+  /**
+   * Submits a task to the MSQ API with the given query string, and default headers and parameters
+   */
   public String submitMsqTask(String sqlQueryString) throws ExecutionException, InterruptedException
   {
     return submitMsqTask(new SqlQuery(sqlQueryString, null, false, false, false, ImmutableMap.of(), null));
   }
 
   // Run the task, wait for it to complete, fetch the reports, verify the results,
+
+  /**
+   * Submits a {@link SqlQuery} to the MSQ API for execution. This method waits for the task to be accepted by the cluster
+   * and returns the task id associated with the submitted task
+   */
   public String submitMsqTask(SqlQuery sqlQuery) throws ExecutionException, InterruptedException
   {
     String queryUrl = getQueryURL(config.getBrokerUrl());
@@ -93,9 +108,15 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     // It is okay to block here for the result because MSQ tasks return the task Id associated with it, which shouldn't
     // consume a lot of time
     StatusResponseHolder statusResponseHolder = responseHolderFuture.get();
+
+    // Check if the task has been accepted successfully
     HttpResponseStatus httpResponseStatus = statusResponseHolder.getStatus();
     if (!httpResponseStatus.equals(HttpResponseStatus.ACCEPTED)) {
-      throw new ISE("Unable to submit the task successfully");
+      throw new ISE(
+          "Unable to submit the task successfully. Received response status code [%d], and response content:\n[%s]",
+          httpResponseStatus,
+          statusResponseHolder.getContent()
+      );
     }
     String content = statusResponseHolder.getContent();
     SqlTaskStatus sqlTaskStatus;
@@ -111,6 +132,10 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     return sqlTaskStatus.getTaskId();
   }
 
+  /**
+   * Polls the overlord API every 1 second and waits for a submitted MSQ task to be completed. Alternatively, one can
+   * specify the maximum time to poll. The method returns the last fetched {@link TaskState} of the task
+   */
   public TaskState pollTaskIdForCompletion(String taskId, long maxTimeoutSeconds)
   {
     if (maxTimeoutSeconds < 0) {
@@ -135,11 +160,17 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     return overlordClient.getTaskStatus(taskId).getStatusCode();
   }
 
+  /**
+   * Fetches status reports for a given task
+   */
   public Map<String, MSQTaskReport> fetchStatusReports(String taskId)
   {
     return overlordClient.getTaskReportForMsqTask(taskId);
   }
 
+  /**
+   * Compares the results for a given taskId. It is required that the task has produced some results that can be verified
+   */
   public void compareResults(String taskId, MsqQueryWithResults expectedQueryWithResults)
   {
     Map<String, MSQTaskReport> statusReport = fetchStatusReports(taskId);
@@ -163,7 +194,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
 
     while (!yielder.isDone()) {
       Object[] row = yielder.get();
-      Map<String, Object> rowWithFieldNames = new HashMap<>();
+      Map<String, Object> rowWithFieldNames = new LinkedHashMap<>();
       for (int i = 0; i < row.length; ++i) {
         rowWithFieldNames.put(rowSignature.getColumnName(i), row[i]);
       }
@@ -171,10 +202,34 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
       yielder = yielder.next(null);
     }
 
-    QueryResultVerifier.compareResults(
+    boolean resultsComparison = QueryResultVerifier.compareResults(
         actualResults,
         expectedQueryWithResults.getExpectedResults(),
         Collections.emptyList()
     );
+    Assert.assertTrue("Expected query result is different from the actual result", resultsComparison);
+  }
+
+  /**
+   * Runs queries from files using MSQ and compares the results with the ones provided
+   */
+  public void testQueriesFromFileUsingMsq(String filePath, String fullDatasourcePath)
+      throws IOException, ExecutionException, InterruptedException
+  {
+    LOG.info("Starting query tests for [%s]", filePath);
+    List<MsqQueryWithResults> queries =
+        jsonMapper.readValue(
+            TestQueryHelper.class.getResourceAsStream(filePath),
+            new TypeReference<List<MsqQueryWithResults>>()
+            {
+            }
+        );
+    for (MsqQueryWithResults queryWithResults : queries) {
+      String queryString = queryWithResults.getQuery();
+      String queryWithDatasource = StringUtils.replace(queryString, "%%DATASOURCE%%", fullDatasourcePath);
+      String taskId = submitMsqTask(queryWithDatasource);
+      pollTaskIdForCompletion(taskId, 0);
+      compareResults(taskId, queryWithResults);
+    }
   }
 }

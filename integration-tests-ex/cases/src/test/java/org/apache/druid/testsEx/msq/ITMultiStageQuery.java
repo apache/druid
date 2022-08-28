@@ -20,21 +20,18 @@
 package org.apache.druid.testsEx.msq;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.druid.msq.indexing.report.MSQTaskReport;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.MsqTestClient;
-import org.apache.druid.testing.utils.MsqQueryWithResults;
+import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testsEx.categories.MultiStageQuery;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
-
-import java.util.Map;
 
 @RunWith(DruidTestRunner.class)
 @Category(MultiStageQuery.class)
@@ -48,49 +45,71 @@ public class ITMultiStageQuery
 
   @Inject
   private IntegrationTestingConfig config;
-  @Inject
 
+  @Inject
   private ObjectMapper jsonMapper;
+
+  @Inject
+  private DataLoaderHelper dataLoaderHelper;
+
+  @Inject
+  private CoordinatorResourceTestClient coordinatorClient;
+
+  private static final String QUERY_FILE = "/indexer/wikipedia_index_data1_query.json";
 
   @Test
   public void test() throws Exception
   {
-    String query =
-        "INSERT INTO dst SELECT *\n"
-        + "FROM TABLE(extern(\n"
-        + "   '{\n"
-        + "     \"type\": \"inline\",\n"
-        + "     \"data\": \"a,b,1\\nc,d,2\\n\"\n"
-        + "    }',\n"
-        + "  '{\n"
-        + "    \"type\": \"csv\",\n"
-        + "    \"columns\": [\"x\",\"y\",\"z\"],\n"
-        + "    \"listDelimiter\": null,\n"
-        + "    \"findColumnsFromHeader\": false,\n"
-        + "    \"skipHeaderRows\": 0\n"
-        + "   }',\n"
-        + "   '[\n"
-        + "     {\"name\": \"x\", \"type\": \"STRING\"},\n"
-        + "     {\"name\": \"y\", \"type\": \"STRING\"},\n"
-        + "     {\"name\": \"z\", \"type\": \"LONG\"}\n"
-        + "   ]'\n"
-        + "))\n"
-        + "PARTITIONED BY ALL TIME";
-    String taskId = msqHelper.submitMsqTask(query);
-    msqHelper.pollTaskIdForCompletion(taskId, 0);
-    Map<String, MSQTaskReport> reports = msqHelper.fetchStatusReports(taskId);
+    String datasource = "dst";
 
-    String resultsQuery = "SELECT * FROM dst";
-    String resultsTaskId = msqHelper.submitMsqTask(resultsQuery);
-    msqHelper.pollTaskIdForCompletion(resultsTaskId, 0);
-    msqHelper.compareResults(resultsTaskId, new MsqQueryWithResults(
-        query,
-        ImmutableList.of(
-            ImmutableMap.of("x", "a", "y", "b", "z", 1),
-            ImmutableMap.of("x", "c", "y", "d", "z", 2)
-        )
-    ));
-    int x = 5;
-    x += 1;
+    // Clear up the datasource from the previous runs
+    coordinatorClient.unloadSegmentsForDataSource(datasource);
+
+    String queryLocal =
+        StringUtils.format(
+            "INSERT INTO %s\n"
+            + "SELECT\n"
+            + "  TIME_PARSE(\"timestamp\") AS __time,\n"
+            + "  isRobot,\n"
+            + "  diffUrl,\n"
+            + "  added,\n"
+            + "  countryIsoCode,\n"
+            + "  regionName,\n"
+            + "  channel,\n"
+            + "  flags,\n"
+            + "  delta,\n"
+            + "  isUnpatrolled,\n"
+            + "  isNew,\n"
+            + "  deltaBucket,\n"
+            + "  isMinor,\n"
+            + "  isAnonymous,\n"
+            + "  deleted,\n"
+            + "  cityName,\n"
+            + "  metroCode,\n"
+            + "  namespace,\n"
+            + "  comment,\n"
+            + "  page,\n"
+            + "  commentLength,\n"
+            + "  countryName,\n"
+            + "  user,\n"
+            + "  regionIsoCode\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
+            + "    '{\"type\":\"json\"}',\n"
+            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
+            + "  )\n"
+            + ")\n"
+            + "PARTITIONED BY DAY\n"
+            + "CLUSTERED BY \"__time\"",
+            datasource
+        );
+
+    // Submit the task and wait for the datasource to get loaded
+    String taskId = msqHelper.submitMsqTask(queryLocal);
+    msqHelper.pollTaskIdForCompletion(taskId, 0);
+    dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
+
+    msqHelper.testQueriesFromFileUsingMsq(QUERY_FILE, datasource);
   }
 }

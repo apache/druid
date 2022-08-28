@@ -30,13 +30,16 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
-import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Overlord resource client for MSQ Tasks
+ */
 public class MsqOverlordResourceTestClient extends OverlordResourceTestClient
 {
   ObjectMapper jsonMapper;
@@ -64,13 +67,10 @@ public class MsqOverlordResourceTestClient extends OverlordResourceTestClient
           )
       );
       jsonMapper.registerModules(new MSQIndexingModule().getJacksonModules());
-      jsonMapper.registerSubtypes(ImmutableList.of(MSQTaskReport.class));
-      return jsonMapper.readValue(
-          response.getContent(),
-          new TypeReference<Map<String, MSQTaskReport>>()
-          {
-          }
-      );
+      jsonMapper.registerSubtypes(ImmutableList.of(MSQTaskReport.class, ExpressionVirtualColumn.class));
+      return jsonMapper.readValue(response.getContent(), new TypeReference<Map<String, MSQTaskReport>>()
+      {
+      });
     }
     catch (ISE e) {
       throw e;
@@ -78,10 +78,5 @@ public class MsqOverlordResourceTestClient extends OverlordResourceTestClient
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  private static class MsqTaskReportType extends HashMap<String, MSQTaskReport>
-  {
-
   }
 }
