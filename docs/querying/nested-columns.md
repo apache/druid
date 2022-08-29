@@ -273,7 +273,6 @@ WITH source AS (SELECT * FROM TABLE(
   )
 ))
 SELECT
-  -- The spec contained transforms that could not be automatically converted.
   TIME_PARSE("time") AS __time,
   "product",
   "department",
