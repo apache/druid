@@ -602,7 +602,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
     Assert.assertEquals(
         sql,
-        StringUtils.format("Cannot build plan for query. %s", expectedError),
+        StringUtils.format("Query not supported. %s SQL was: %s", expectedError, sql),
         e.getMessage()
     );
   }
