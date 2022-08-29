@@ -327,19 +327,8 @@ public final class DimensionHandlerUtils
         throw new ParseException((String) valObj, "could not convert value [%s] to long", valObj);
       }
       return ret;
-    } else if (valObj instanceof List) {
-      throw new ParseException(
-          valObj.getClass().toString(),
-          "Could not ingest value %s as long. A long column cannot have multiple values in the same row.",
-          valObj
-      );
     } else {
-      throw new ParseException(
-          valObj.getClass().toString(),
-          "Could not convert value [%s] to long. Invalid type: [%s]",
-          valObj,
-          valObj.getClass()
-      );
+      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
     }
   }
 
@@ -366,19 +355,8 @@ public final class DimensionHandlerUtils
         throw new ParseException((String) valObj, "could not convert value [%s] to float", valObj);
       }
       return ret;
-    } else if (valObj instanceof List) {
-      throw new ParseException(
-          valObj.getClass().toString(),
-          "Could not ingest value %s as float. A float column cannot have multiple values in the same row.",
-          valObj
-      );
     } else {
-      throw new ParseException(
-          valObj.getClass().toString(),
-          "Could not convert value [%s] to float. Invalid type: [%s]",
-          valObj,
-          valObj.getClass()
-      );
+      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
     }
   }
 
@@ -559,19 +537,8 @@ public final class DimensionHandlerUtils
         throw new ParseException((String) valObj, "could not convert value [%s] to double", valObj);
       }
       return ret;
-    } else if (valObj instanceof List) {
-      throw new ParseException(
-          valObj.getClass().toString(),
-          "Could not ingest value %s as double. A double column cannot have multiple values in the same row.",
-          valObj
-      );
     } else {
-      throw new ParseException(
-          valObj.getClass().toString(),
-          "Could not convert value [%s] to double. Invalid type: [%s]",
-          valObj,
-          valObj.getClass()
-      );
+      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
     }
   }
 

@@ -1263,7 +1263,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(
         exception.getMessage()
-                 .contains("Query not supported. " +
+                 .contains("Cannot build plan for query. " +
                            "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.")
     );
     checkSqlRequestLog(false);
@@ -1288,7 +1288,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(
         exception.getMessage()
-                 .contains("Query not supported. " +
+                 .contains("Cannot build plan for query. " +
                            "Possible error: Max aggregation is not supported for 'STRING' type")
     );
     checkSqlRequestLog(false);

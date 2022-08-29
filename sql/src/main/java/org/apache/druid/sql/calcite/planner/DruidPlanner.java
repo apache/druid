@@ -836,13 +836,13 @@ public class DruidPlanner implements Closeable
       errorMessage = exception.getMessage();
     }
     if (null == errorMessage) {
-      errorMessage = "Please check Broker logs for additional details.";
+      errorMessage = "Please check Broker logs for more details.";
     } else {
-      // Planning errors are more like hints: it isn't guaranteed that the planning error is actually what went wrong.
+      // Re-phrase since planning errors are more like hints
       errorMessage = "Possible error: " + errorMessage;
     }
     // Finally, add the query itself to error message that user will get.
-    return StringUtils.format("Query not supported. %s SQL was: %s", errorMessage, plannerContext.getSql());
+    return StringUtils.format("Cannot build plan for query. %s", errorMessage);
   }
 
   private static Set<RelOptTable> getBindableTables(final RelNode relNode)
