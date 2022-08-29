@@ -266,8 +266,7 @@ ingestion query context.
 Check out the [INSERT with rollup example query](./msq-example-queries.md#insert-with-rollup) to see this feature in
 action.
 
-Druid needs information for aggregating measures of different segments while working with Pivot and compaction
-tasks. For example, to aggregate `count("col") as example_measure`, Druid needs to sum the value of `example_measure`
+Druid needs information for aggregating measures of different segments to compact. For example, to aggregate `count("col") as example_measure`, Druid needs to sum the value of `example_measure`
 across the segments. This information is stored inside the metadata of the segment. For the SQL-based ingestion, Druid only populates the
 aggregator information of a column in the segment metadata when:
 

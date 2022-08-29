@@ -75,10 +75,6 @@ feature is not available. All columns and their types must be specified explicit
 - [Segment metadata queries](../querying/segmentmetadataquery.md)
   on datasources ingested with the Multi-Stage Query Engine will return values for`timestampSpec` that are not usable
   for introspection.
-- Figuring out `rollup`, `query-granularity`, and `aggregatorFactories` is on a best effort basis. In
-  particular, Pivot will not be able to automatically create data cubes that properly reflect the
-  rollup configurations if the insert query does not meet the conditions defined in [Rollup](./index.md#group-by). Proper data cubes
-  can still be created manually.
 
 - When INSERT with GROUP BY does the match the criteria mentioned in [GROUP BY](./index.md#group-by),  the multi-stage engine generates segments that Druid's compaction
   functionality is not able to further roll up. This applies to automatic compaction as well as manually
