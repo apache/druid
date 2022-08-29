@@ -58,7 +58,7 @@ public class ITMultiStageQuery
   private static final String QUERY_FILE = "/indexer/wikipedia_index_data1_query.json";
 
   @Test
-  public void test() throws Exception
+  public void testMsqIngestionAndQuerying() throws Exception
   {
     String datasource = "dst";
 

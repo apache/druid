@@ -14,7 +14,7 @@
 # limitations under the License.
 #-------------------------------------------------------------------------
 
-# Definition of the batch index test cluster.
+# Definition of the multi stage query test cluster.
 # See https://yaml.org/spec/1.2.2 for more about YAML
 include:
   - /cluster/Common/zk-metastore.yaml
