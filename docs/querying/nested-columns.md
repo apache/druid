@@ -29,7 +29,7 @@ Apache Druid supports directly storing nested data structures in `COMPLEX<json>`
 
 Druid [SQL JSON functions](./sql-json-functions.md) allow you to extract, transform, and create `COMPLEX<json>` values in SQL queries, using the specialized virtual columns where appropriate. You can use the [JSON nested columns functions](../misc/math-expr.md#nested-columns-functions) in [native queries](./querying.md) using [expression virtual columns](./virtual-columns.md#expression-virtual-column), and in native ingestion with a [`transformSpec`](../ingestion/ingestion-spec.md#transformspec).
 
-You can use the JSON functions in INSERT and REPLACE statements in query-based ingestion, or in a `transformSpec` in native ingestion. This is an alternative to using a [`flattenSpec`](../ingestion/data-formats.md#flattenspec) object to 'flatten' nested data for ingestion.
+You can use the JSON functions in INSERT and REPLACE statements in SQL-based ingestion, or in a `transformSpec` in native ingestion. This is an alternative to using a [`flattenSpec`](../ingestion/data-formats.md#flattenspec) object to 'flatten' nested data for ingestion.
 
 ### Example nested data
 
