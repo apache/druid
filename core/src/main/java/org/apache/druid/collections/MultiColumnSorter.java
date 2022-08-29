@@ -46,7 +46,10 @@ public class MultiColumnSorter<T>
    */
   public void add(T element, List<Comparable> orderByColumns)
   {
-    queue.offer(new MultiColumnSorterElement<>(element, orderByColumns));
+    if (Objects.nonNull(element)) {
+      //Skip empty element
+      queue.offer(new MultiColumnSorterElement<>(element, orderByColumns));
+    }
   }
 
   /**
