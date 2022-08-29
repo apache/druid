@@ -221,7 +221,7 @@ PARTITIONED BY ALL
 
 You can use the [JSON nested columns functions](./sql-json-functions.md) to transform JSON data in your ingestion query.
 
-For example, the following ingestion query is the SQL-based version of the [batch example](#transform-data-during-batch-ingestion)&mdash;it extracts `firstName`, `lastName` and `address` from `shipTo` and creates a composite JSON object containing `product`, `details` and `department`.
+For example, the following ingestion query is the SQL-based version of the [batch example](#transform-data-during-batch-ingestion)&mdash;it extracts `firstName`, `lastName`, and `address` from `shipTo` and creates a composite JSON object containing `product`, `details`, and `department`.
 
 ![SQL-based ingestion](../assets/nested-msq-ingestion-transform.png)
 
