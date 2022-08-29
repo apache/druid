@@ -34,7 +34,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Objects;
 
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
@@ -46,10 +45,6 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public EncodedKeyComponent<Long> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
-    if (dimValues instanceof List) {
-      throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
-    }
-
     Long l = DimensionHandlerUtils.convertObjectToLong(dimValues, reportParseExceptions);
     if (l == null) {
       hasNulls = NullHandling.sqlCompatible();
