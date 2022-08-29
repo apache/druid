@@ -203,7 +203,9 @@ public class FrameFile implements Closeable
       final int footerLength = bufMemory.getInt(Integer.BYTES * 2L);
       final int expectedFooterChecksum = bufMemory.getInt(Integer.BYTES * 3L);
 
-      if (footerLength > fileLength) {
+      if (footerLength < 0) {
+        throw new ISE("Negative-size footer. Corrupt or truncated file?");
+      } else if (footerLength > fileLength) {
         throw new ISE("Oversize footer. Corrupt or truncated file?");
       }
 
@@ -215,7 +217,14 @@ public class FrameFile implements Closeable
         final MappedByteBufferHandler mapHandle = FileUtils.map(randomAccessFile, 0, fileLength);
         sharedMapCloser = mapHandle;
         wholeFileMemory = Memory.wrap(mapHandle.get(), ByteOrder.LITTLE_ENDIAN);
-        footerMemory = wholeFileMemory.region(wholeFileMemory.getCapacity() - footerLength, footerLength);
+
+        if (wholeFileMemory.getCapacity() != fileLength) {
+          // Check that the mapped file is the expected length. May differ if the file was updated while we're trying
+          // to map it.
+          throw new ISE("Memory map size does not match file size");
+        }
+
+        footerMemory = wholeFileMemory.region(fileLength - footerLength, footerLength, ByteOrder.LITTLE_ENDIAN);
       } else {
         // Map footer only. Will map the entire file in pages later, using "remap".
         final MappedByteBufferHandler footerMapHandle =
