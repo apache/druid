@@ -42,7 +42,6 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.MsqOverlordResourceTestClient;
 import org.apache.druid.testing.clients.MsqTestClient;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.Assert;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -207,7 +206,9 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
         expectedQueryWithResults.getExpectedResults(),
         Collections.emptyList()
     );
-    Assert.assertTrue("Expected query result is different from the actual result", resultsComparison);
+    if (!resultsComparison) {
+      throw new IAE("Expected query result is different from the actual result");
+    }
   }
 
   /**
