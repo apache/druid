@@ -493,7 +493,7 @@ Before you start using the nested columns feature, consider the following known 
 - Input validation for JSON SQL operators is currently incomplete, which sometimes results in undefined behavior or unhelpful error messages.
 - Ingesting JSON columns with a very complex nested structure is potentially an expensive operation, and may require you to tune ingestion tasks and/or cluster parameters to account for increased memory usage or overall task run time. When you tune your ingestion configuration, treat each nested literal field inside a JSON object as a flattened top-level Druid column.
 
-## Learn more
+## Further reading
 
 For more information, see the following pages:
 
