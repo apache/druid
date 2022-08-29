@@ -31,7 +31,7 @@ Druid [SQL JSON functions](./sql-json-functions.md) allow you to extract, transf
 
 You can use the JSON functions in INSERT and REPLACE statements in SQL-based ingestion, or in a `transformSpec` in native ingestion. This is an alternative to using a [`flattenSpec`](../ingestion/data-formats.md#flattenspec) object to 'flatten' nested data for ingestion.
 
-### Example nested data
+## Example nested data
 
 The examples in this topic use the data in [nested_example_data.json](https://static.imply.io/data/nested_example_data.json). The file contains a simple fascimile of an order tracking and shipping table. 
 
