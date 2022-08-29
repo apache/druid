@@ -221,7 +221,7 @@ PARTITIONED BY ALL
 
 You can use the [JSON nested columns functions](./sql-json-functions.md) to transform JSON data in your ingestion query.
 
-For example, the following ingestion query is the SQL-based version of the [batch example above](#transform-data-during-batch-ingestion)&mdash;it extracts `firstName`, `lastName` and `address` from `shipTo` and creates a composite JSON object containing `product`, `details` and `department`.
+For example, the following ingestion query is the SQL-based version of the [batch example](#transform-data-during-batch-ingestion)&mdash;it extracts `firstName`, `lastName` and `address` from `shipTo` and creates a composite JSON object containing `product`, `details` and `department`.
 
 ![SQL-based ingestion](../assets/nested-msq-ingestion-transform.png)
 
@@ -245,6 +245,101 @@ FROM (
 )
 PARTITIONED BY ALL
 ```
+
+## Ingest deserialized JSON as COMPLEX\<json>
+
+If your source data uses a string representation of your JSON column, you can still ingest the data as `COMPLEX<JSON>` as follows:
+- During native batch ingestion, call the `parse_json` function in a `transform` object in the `transformationSpec`.
+- During SQL-based ingestion, use the PARSE_JSON keyword within your SELECT statement to transform the string values to JSON.
+- If you are concerned that your data may not contain valid JSON, you can use `try_parse_json` for native batch or `TRY_PARSE_JSON` for SQL-based ingestion. For cases where the column does not contain valid JSON, Druid inserts a null value.
+
+For example, consider the following deserialized row of the sample data set:
+
+```
+{"time": "2022-06-13T10:10:35Z", "product": "Bike", "department":"Sports", "shipTo":"{\"firstName\": \"Henry\",\"lastName\": \"Wuckert\",\"address\": {\"street\": \"5643 Jan Walk\",\"city\": \"Lake Bridget\",\"state\": \"HI\",\"country\":\"ME\",\"postalCode\": \"70204-2939\"},\"phoneNumbers\": [{\"type\":\"primary\",\"number\":\"593.475.0449 x86733\" },{\"type\":\"secondary\",\"number\":\"638-372-1210\"}]}", "details":"{\"color\":\"ivory\", \"price\":955.00}"}
+```
+
+The following examples demonstrate how to ingest the `shipTo` and `details` columns both as string type and as `COMPLEX<json>` in the `shipTo_parsed` and `details_parsed` columns.
+
+<!--DOCUSAURUS_CODE_TABS-->
+<!--SQL-->
+```
+REPLACE INTO deserialized_example OVERWRITE ALL
+WITH source AS (SELECT * FROM TABLE(
+  EXTERN(
+    '{"type":"inline","data":"{\"time\": \"2022-06-13T10:10:35Z\", \"product\": \"Bike\", \"department\":\"Sports\", \"shipTo\":\"{\\\"firstName\\\": \\\"Henry\\\",\\\"lastName\\\": \\\"Wuckert\\\",\\\"address\\\": {\\\"street\\\": \\\"5643 Jan Walk\\\",\\\"city\\\": \\\"Lake Bridget\\\",\\\"state\\\": \\\"HI\\\",\\\"country\\\":\\\"ME\\\",\\\"postalCode\\\": \\\"70204-2939\\\"},\\\"phoneNumbers\\\": [{\\\"type\\\":\\\"primary\\\",\\\"number\\\":\\\"593.475.0449 x86733\\\" },{\\\"type\\\":\\\"secondary\\\",\\\"number\\\":\\\"638-372-1210\\\"}]}\", \"details\":\"{\\\"color\\\":\\\"ivory\\\", \\\"price\\\":955.00}\"}\n"}',
+    '{"type":"json"}',
+    '[{"name":"time","type":"string"},{"name":"product","type":"string"},{"name":"department","type":"string"},{"name":"shipTo","type":"string"},{"name":"details","type":"string"},{"name":"shipTo_parsed","type":"json"},{"name":"details_parsed","type":"json"}]'
+  )
+))
+SELECT
+  -- The spec contained transforms that could not be automatically converted.
+  TIME_PARSE("time") AS __time,
+  "product",
+  "department",
+  "shipTo",
+  "details",
+  PARSE_JSON("shipTo") as "ship_to_parsed", 
+  PARSE_JSON("details") as "details_parsed"
+FROM source
+PARTITIONED BY DAY
+```
+<!--Native batch-->
+```{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "inline",
+        "data": "{\"time\": \"2022-06-13T10:10:35Z\", \"product\": \"Bike\", \"department\":\"Sports\", \"shipTo\":\"{\\\"firstName\\\": \\\"Henry\\\",\\\"lastName\\\": \\\"Wuckert\\\",\\\"address\\\": {\\\"street\\\": \\\"5643 Jan Walk\\\",\\\"city\\\": \\\"Lake Bridget\\\",\\\"state\\\": \\\"HI\\\",\\\"country\\\":\\\"ME\\\",\\\"postalCode\\\": \\\"70204-2939\\\"},\\\"phoneNumbers\\\": [{\\\"type\\\":\\\"primary\\\",\\\"number\\\":\\\"593.475.0449 x86733\\\" },{\\\"type\\\":\\\"secondary\\\",\\\"number\\\":\\\"638-372-1210\\\"}]}\", \"details\":\"{\\\"color\\\":\\\"ivory\\\", \\\"price\\\":955.00}\"}\n"
+      },
+      "inputFormat": {
+        "type": "json"
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic"
+      }
+    },
+    "dataSchema": {
+      "dataSource": "deserialized_example",
+      "timestampSpec": {
+        "column": "time",
+        "format": "iso"
+      },
+      "transformSpec": {
+        "transforms": [
+          {
+            "type": "expression",
+            "name": "shipTo_parsed",
+            "expression": "parse_json(shipTo)"
+          },
+          {
+            "type": "expression",
+            "name": "details_parsed",
+            "expression": "parse_json(details)"
+          }
+        ]
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          "product",
+          "department",
+          "shipTo",
+          "details",
+          "shipTo_parsed",
+          "details_parsed"
+        ]
+      },
+      "granularitySpec": {
+        "queryGranularity": "none",
+        "rollup": false,
+        "segmentGranularity": "day"
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
 
 ## Querying nested columns
 
