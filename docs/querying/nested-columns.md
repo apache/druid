@@ -279,7 +279,7 @@ SELECT
   "department",
   "shipTo",
   "details",
-  PARSE_JSON("shipTo") as "ship_to_parsed", 
+  PARSE_JSON("shipTo") as "shipTo_parsed", 
   PARSE_JSON("details") as "details_parsed"
 FROM source
 PARTITIONED BY DAY
