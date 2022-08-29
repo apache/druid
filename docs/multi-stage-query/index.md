@@ -5,7 +5,7 @@ sidebar_label: Overview and syntax
 description: Introduces multi-stage query architecture and its features
 ---
 
-> SQL-based ingestion and the multi-stage query task engine are experimental features available starting in Druid 24.0. You can use it in place of the existing native batch and Hadoop based ingestion systems. As an experimental feature, functionality documented on this page is subject to change or removal in future releases. Review the release notes and this page to stay up to date on changes.
+> SQL-based ingestion using the multi-stage query task engine is our recommended solution starting in Druid 24.0. Alternative ingestion solutions, such as native batch and Hadoop-based ingestion systems, will still be supported. We recommend you read all [known issues](./msq-known-issues.md) and test the feature in a development environment before rolling it out in production. Using the multi-stage query task engine with `SELECT` statements that do not write to a datasource is experimental.
 
 SQL-based ingestion for Apache Druid uses a distributed multi-stage query architecture, which includes a query engine called the multi-stage query task engine (MSQ task engine). The MSQ task engine extends Druid's query capabilities, so you can write queries that reference [external data](#read-external-data) as well as perform ingestion with SQL [INSERT](#insert-data) and [REPLACE](#replace-data). Essentially, you can perform SQL-based ingestion instead of using JSON ingestion specs that Druid's native ingestion uses.
 

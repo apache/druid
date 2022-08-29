@@ -5,7 +5,7 @@ sidebar_label: Durable storage
 description: Using durable storage for mesh shuffle can improve the reliability of your SQL-based ingestion at the cost of some performance.
 ---
 
-> SQL-based ingestion and the multi-stage query task engine are experimental features available starting in Druid 24.0. You can use it in place of the existing native batch and Hadoop based ingestion systems. As an experimental feature, functionality documented on this page is subject to change or removal in future releases. Review the release notes and this page to stay up to date on changes.
+> SQL-based ingestion using the multi-stage query task engine is our recommended solution starting in Druid 24.0. Alternative ingestion solutions, such as native batch and Hadoop-based ingestion systems, will still be supported. We recommend you read all [known issues](./msq-known-issues.md) and test the feature in a development environment before rolling it out in production. Using the multi-stage query task engine with `SELECT` statements that do not write to a datasource is experimental.
 
 By default, the multi-stage query task engine (MSQ task engine) uses the local storage of a node to store data from intermediate steps when executing a query. Although this method provides better speed when executing a query, the data is lost if the node encounters an issue. When you enable durable storage, intermediate data is stored in Amazon S3 instead. Using this feature can improve the reliability of queries that use more than 20 workers. In essence, you trade some performance for better reliability. This is especially useful for long-running queries.
 
