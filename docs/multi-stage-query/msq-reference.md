@@ -82,6 +82,8 @@ EXTERN consists of the following parts:
 
 Use the INSERT function to insert data.
 
+Unlike standard SQL, INSERT inserts data according to column name and not positionally. This means that it is important for the output column names of subsequent INSERT queries to be the same as the table. Do not rely on their positions within the SELECT clause.
+
 Function format:
 
 ```sql
@@ -103,6 +105,8 @@ INSERT consists of the following parts:
 ### REPLACE
 
 You can use the REPLACE function to replace all or some of the data.
+
+Unlike standard SQL, REPLACE inserts data according to column name and not positionally. This means that it is important for the output column names of subsequent REPLACE queries to be the same as the table. Do not rely on their positions within the SELECT clause.
 
 #### REPLACE all data
 

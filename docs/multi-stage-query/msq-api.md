@@ -20,8 +20,7 @@ You submit queries to the MSQ task engine using the `POST /druid/v2/sql/task/` e
 ### Request
 
 Currently, the MSQ task engine ignores the provided values of `resultFormat`, `header`,
-`typesHeader`, and `sqlTypesHeader`. SQL SELECT queries always behave as if `resultFormat` is an array, `header` is
-true, `typesHeader` is true, and `sqlTypesHeader` is true.
+`typesHeader`, and `sqlTypesHeader`. SQL SELECT queries write out their results into the task report (in the `multiStageQuery.payload.results.results` key) formatted as if `resultFormat` is an `array`.
 
 For task queries similar to the [example queries](./msq-example-queries.md), you need to escape characters such as quotation marks (") if you use something like `curl`. 
 You don't need to escape characters if you use a method that can parse JSON seamlessly, such as Python.
@@ -101,8 +100,8 @@ print(response.text)
 
 |Field|Description|
 |-----|-----------|
- | taskId | Controller task ID. You can use Druid's standard [task APIs](../operations/api-reference.md#overlord) to interact with this controller task.|
- | state | Initial state for the query, which is "RUNNING".|
+| taskId | Controller task ID. You can use Druid's standard [task APIs](../operations/api-reference.md#overlord) to interact with this controller task.|
+| state | Initial state for the query, which is "RUNNING".|
 
 
 ## Get the payload for a query task
