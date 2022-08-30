@@ -25,17 +25,17 @@ sidebar_label: Nested columns
 
 > Nested columns is an experimental feature available starting in Apache Druid 24.0. Like most experimental features, functionality documented on this page is subject to change in future releases. However, the COMPLEX column type includes versioning to provide backward compatible support in future releases. We strongly encourage you you experiment with nested columns in your development environment to evaluate that they meet your use case. If so, you can use them in production scenarios. Review the release notes and this page to stay up to date with changes.
 
-Apache Druid supports directly storing nested data structures in `COMPLEX<json>` columns. `COMPLEX<json>` columns store a copy of the structured data in JSON format, and specialized internal columns and indexes for nested 'literal' values&mdash;STRING, LONG, and DOUBLE types. An optimized [virtual column](./virtual-columns.md#nested-field-virtual-column) allows Druid to read and filter these values at speeds consistent with standard Druid LONG, DOUBLE, and STRING columns.
+Apache Druid supports directly storing nested data structures in `COMPLEX<json>` columns. `COMPLEX<json>` columns store a copy of the structured data in JSON format and specialized internal columns and indexes for nested 'literal' values&mdash;STRING, LONG, and DOUBLE types. An optimized [virtual column](./virtual-columns.md#nested-field-virtual-column) allows Druid to read and filter these values at speeds consistent with standard Druid LONG, DOUBLE, and STRING columns.
 
-Druid [SQL JSON functions](./sql-json-functions.md) allow you to extract, transform, and create `COMPLEX<json>` values in SQL queries, using the specialized virtual columns where appropriate. You can use the [JSON nested columns functions](../misc/math-expr.md#nested-columns-functions) in [native queries](./querying.md) using [expression virtual columns](./virtual-columns.md#expression-virtual-column), and in native ingestion with a [`transformSpec`](../ingestion/ingestion-spec.md#transformspec).
+Druid [SQL JSON functions](./sql-json-functions.md) allow you to extract, transform, and create `COMPLEX<json>` values in SQL queries, using the specialized virtual columns where appropriate. You can use the [JSON nested columns functions](../misc/math-expr.md#json-functions) in [native queries](./querying.md) using [expression virtual columns](./virtual-columns.md#expression-virtual-column), and in native ingestion with a [`transformSpec`](../ingestion/ingestion-spec.md#transformspec).
 
-You can use the JSON functions in INSERT and REPLACE statements in SQL-based ingestion, or in a `transformSpec` in native ingestion. This is an alternative to using a [`flattenSpec`](../ingestion/data-formats.md#flattenspec) object to 'flatten' nested data for ingestion.
+You can use the JSON functions in INSERT and REPLACE statements in SQL-based ingestion, or in a `transformSpec` in native ingestion as an alternative to using a [`flattenSpec`](../ingestion/data-formats.md#flattenspec) object to "flatten" nested data for ingestion.
 
-### Example nested data
+## Example nested data
 
 The examples in this topic use the data in [nested_example_data.json](https://static.imply.io/data/nested_example_data.json). The file contains a simple fascimile of an order tracking and shipping table. 
 
-When pretty-printed a sample row in `nested_example_data` looks like this:
+When pretty-printed, a sample row in `nested_example_data` looks like this:
 
 ```json
 {
@@ -63,9 +63,9 @@ When pretty-printed a sample row in `nested_example_data` looks like this:
 
 ## Native batch ingestion
 
-For native batch ingestion, you can use the [JSON nested columns functions](./sql-json-functions.md) to extract nested data as an alternative to using the [flattenSpec](../ingestion/data-formats.md#flattenspec) input format.
+For native batch ingestion, you can use the [JSON nested columns functions](./sql-json-functions.md) to extract nested data as an alternative to using the [`flattenSpec`](../ingestion/data-formats.md#flattenspec) input format.
 
-To configure a dimension as a nested data type, include a `dimensions` object in the `dimensionsSpec` property of your ingestion spec.
+To configure a dimension as a nested data type, specify the `json` type for the dimension in the `dimensions` list in the `dimensionsSpec` property of your ingestion spec.
 
 For example, the following ingestion spec instructs Druid to ingest `shipTo` and `details` as JSON-type nested dimensions:
 
@@ -126,7 +126,7 @@ For example, the following ingestion spec instructs Druid to ingest `shipTo` and
 
 You can use the [JSON nested columns functions](./sql-json-functions.md) to transform JSON data and reference the transformed data in your ingestion spec. 
 
-To do this, include a `transforms` object in the `transformSpec` property of your ingestion spec.
+To do this, define the output name and expression in the `transforms` list in the `transformSpec` object of your ingestion spec.
 
 For example, the following ingestion spec extracts `firstName`, `lastName` and `address` from `shipTo` and creates a composite JSON object containing `product`, `details` and `department`.
 
@@ -192,7 +192,7 @@ For example, the following ingestion spec extracts `firstName`, `lastName` and `
 
 ## SQL-based ingestion
 
-To ingest nested data using multi-stage query architecture, specify `COMPLEX<json>` as the column `type` when you define the row signature&mdash;`shipTo` and `details` in the following example ingestion spec: 
+To ingest nested data using multi-stage query architecture, specify `COMPLEX<json>` as the value for `type` when you define the row signature&mdash;`shipTo` and `details` in the following example ingestion spec:
 
 ![SQL-based ingestion](../assets/nested-msq-ingestion.png)
 
@@ -221,7 +221,7 @@ PARTITIONED BY ALL
 
 You can use the [JSON nested columns functions](./sql-json-functions.md) to transform JSON data in your ingestion query.
 
-For example, the following ingestion query is the SQL-based version of the [batch example above](#transform-data-during-batch-ingestion)&mdash;it extracts `firstName`, `lastName` and `address` from `shipTo` and creates a composite JSON object containing `product`, `details` and `department`.
+For example, the following ingestion query is the SQL-based version of the [previous batch example](#transform-data-during-batch-ingestion)&mdash;it extracts `firstName`, `lastName`, and `address` from `shipTo` and creates a composite JSON object containing `product`, `details`, and `department`.
 
 ![SQL-based ingestion](../assets/nested-msq-ingestion-transform.png)
 
@@ -245,6 +245,100 @@ FROM (
 )
 PARTITIONED BY ALL
 ```
+
+## Ingest deserialized JSON as COMPLEX\<json>
+
+If your source data uses a string representation of your JSON column, you can still ingest the data as `COMPLEX<JSON>` as follows:
+- During native batch ingestion, call the `parse_json` function in a `transform` object in the `transformSpec`.
+- During SQL-based ingestion, use the PARSE_JSON keyword within your SELECT statement to transform the string values to JSON.
+- If you are concerned that your data may not contain valid JSON, you can use `try_parse_json` for native batch or `TRY_PARSE_JSON` for SQL-based ingestion. For cases where the column does not contain valid JSON, Druid inserts a null value.
+
+For example, consider the following deserialized row of the sample data set:
+
+```
+{"time": "2022-06-13T10:10:35Z", "product": "Bike", "department":"Sports", "shipTo":"{\"firstName\": \"Henry\",\"lastName\": \"Wuckert\",\"address\": {\"street\": \"5643 Jan Walk\",\"city\": \"Lake Bridget\",\"state\": \"HI\",\"country\":\"ME\",\"postalCode\": \"70204-2939\"},\"phoneNumbers\": [{\"type\":\"primary\",\"number\":\"593.475.0449 x86733\" },{\"type\":\"secondary\",\"number\":\"638-372-1210\"}]}", "details":"{\"color\":\"ivory\", \"price\":955.00}"}
+```
+
+The following examples demonstrate how to ingest the `shipTo` and `details` columns both as string type and as `COMPLEX<json>` in the `shipTo_parsed` and `details_parsed` columns.
+
+<!--DOCUSAURUS_CODE_TABS-->
+<!--SQL-->
+```
+REPLACE INTO deserialized_example OVERWRITE ALL
+WITH source AS (SELECT * FROM TABLE(
+  EXTERN(
+    '{"type":"inline","data":"{\"time\": \"2022-06-13T10:10:35Z\", \"product\": \"Bike\", \"department\":\"Sports\", \"shipTo\":\"{\\\"firstName\\\": \\\"Henry\\\",\\\"lastName\\\": \\\"Wuckert\\\",\\\"address\\\": {\\\"street\\\": \\\"5643 Jan Walk\\\",\\\"city\\\": \\\"Lake Bridget\\\",\\\"state\\\": \\\"HI\\\",\\\"country\\\":\\\"ME\\\",\\\"postalCode\\\": \\\"70204-2939\\\"},\\\"phoneNumbers\\\": [{\\\"type\\\":\\\"primary\\\",\\\"number\\\":\\\"593.475.0449 x86733\\\" },{\\\"type\\\":\\\"secondary\\\",\\\"number\\\":\\\"638-372-1210\\\"}]}\", \"details\":\"{\\\"color\\\":\\\"ivory\\\", \\\"price\\\":955.00}\"}\n"}',
+    '{"type":"json"}',
+    '[{"name":"time","type":"string"},{"name":"product","type":"string"},{"name":"department","type":"string"},{"name":"shipTo","type":"string"},{"name":"details","type":"string"},{"name":"shipTo_parsed","type":"json"},{"name":"details_parsed","type":"json"}]'
+  )
+))
+SELECT
+  TIME_PARSE("time") AS __time,
+  "product",
+  "department",
+  "shipTo",
+  "details",
+  PARSE_JSON("shipTo") as "shipTo_parsed", 
+  PARSE_JSON("details") as "details_parsed"
+FROM source
+PARTITIONED BY DAY
+```
+<!--Native batch-->
+```{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "inline",
+        "data": "{\"time\": \"2022-06-13T10:10:35Z\", \"product\": \"Bike\", \"department\":\"Sports\", \"shipTo\":\"{\\\"firstName\\\": \\\"Henry\\\",\\\"lastName\\\": \\\"Wuckert\\\",\\\"address\\\": {\\\"street\\\": \\\"5643 Jan Walk\\\",\\\"city\\\": \\\"Lake Bridget\\\",\\\"state\\\": \\\"HI\\\",\\\"country\\\":\\\"ME\\\",\\\"postalCode\\\": \\\"70204-2939\\\"},\\\"phoneNumbers\\\": [{\\\"type\\\":\\\"primary\\\",\\\"number\\\":\\\"593.475.0449 x86733\\\" },{\\\"type\\\":\\\"secondary\\\",\\\"number\\\":\\\"638-372-1210\\\"}]}\", \"details\":\"{\\\"color\\\":\\\"ivory\\\", \\\"price\\\":955.00}\"}\n"
+      },
+      "inputFormat": {
+        "type": "json"
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic"
+      }
+    },
+    "dataSchema": {
+      "dataSource": "deserialized_example",
+      "timestampSpec": {
+        "column": "time",
+        "format": "iso"
+      },
+      "transformSpec": {
+        "transforms": [
+          {
+            "type": "expression",
+            "name": "shipTo_parsed",
+            "expression": "parse_json(shipTo)"
+          },
+          {
+            "type": "expression",
+            "name": "details_parsed",
+            "expression": "parse_json(details)"
+          }
+        ]
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          "product",
+          "department",
+          "shipTo",
+          "details",
+          "shipTo_parsed",
+          "details_parsed"
+        ]
+      },
+      "granularitySpec": {
+        "queryGranularity": "none",
+        "rollup": false,
+        "segmentGranularity": "day"
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
 
 ## Querying nested columns
 
@@ -296,9 +390,9 @@ Example query results:
 
 ### Extracting nested data elements
 
-The `JSON_VALUE` function is specially optimized to provide 'native' Druid level performance when processing nested literal values, as if they were flattened, traditional, Druid column types. It does this by reading from the specialized nested columns and indexes that are built and stored in JSON objects when Druid creates segments. 
+The `JSON_VALUE` function is specially optimized to provide native Druid level performance when processing nested literal values, as if they were flattened, traditional, Druid column types. It does this by reading from the specialized nested columns and indexes that are built and stored in JSON objects when Druid creates segments. 
 
-Some operations using `JSON_VALUE` run faster than those using native Druid columns. For example, filtering numeric types uses the indexes built for nested numeric columns, which are not available for Druid double, float, or long columns.
+Some operations using `JSON_VALUE` run faster than those using native Druid columns. For example, filtering numeric types uses the indexes built for nested numeric columns, which are not available for Druid DOUBLE, FLOAT, or LONG columns.
 
 `JSON_VALUE` only returns literal types. Any paths that reference JSON objects or array types return null.
 
@@ -334,8 +428,6 @@ You can use the `RETURNING` keyword to provide type hints to the `JSON_VALUE` fu
 
 The following example query illustrates how to use `JSON_VALUE` and the `RETURNING` keyword to extract an element of nested data and return it as specified types.
 
-> Note to self: add screenshot
-
 ![Extract nested data elements as a suggested type](../assets/nested-extract-as-type.png)
 
 ```sql
@@ -361,7 +453,7 @@ You can use `JSON_VALUE` expressions in any context where you can use traditiona
 
 #### Example query: Grouping and filtering
 
-The following example query illustrates how to use SUM, WHERE, GROUP BY and ORDER BY operators with `JSON_VALUE`.
+The following example query illustrates how to use SUM, WHERE, GROUP BY, and ORDER BY operators with `JSON_VALUE`.
 
 ![Group, aggregate, filter](../assets/nested-group-aggregate.png)
 
@@ -386,18 +478,18 @@ Example query results:
 
 In addition to `JSON_VALUE`, Druid offers a number of operators that focus on transforming JSON object data: 
 
-- JSON_QUERY
-- JSON_OBJECT
-- PARSE_JSON
-- TO_JSON_STRING
+- `JSON_QUERY`
+- `JSON_OBJECT`
+- `PARSE_JSON`
+- `TO_JSON_STRING`
 
-These functions are primarily intended for use with the Multi-Stage Query Architecture to transform data during insert operations, but they also work in traditional Druid SQL queries. Because most of these functions output JSON objects, they have the same limitations when used in traditional Druid queries as interacting with the JSON objects directly.
+These functions are primarily intended for use with the multi-Stage Query Architecture to transform data during insert operations, but they also work in traditional Druid SQL queries. Because most of these functions output JSON objects, they have the same limitations when used in traditional Druid queries as interacting with the JSON objects directly.
 
 #### Example query: Return results in a JSON object
 
 You can use the `JSON_QUERY` function to extract a partial structure from any JSON input and return results in a JSON object. Unlike `JSON_VALUE` it can extract objects and arrays.
 
-The following example query illustrates the differences in output between `JSON_VALUE` and `JSON_QUERY`.
+The following example query illustrates the differences in output between `JSON_VALUE` and `JSON_QUERY`. The two output columns for JSON_VALUE contain null values only because JSON_VALUE only returns literal types.
 
 ![Return results in a JSON object](../assets/nested-return-json.png)
 
@@ -488,16 +580,16 @@ Example query results:
 
 Before you start using the nested columns feature, consider the following known issues:
 
-- Directly using `COMPLEX<json>` typed columns and expressions is not well integrated into the Druid query engine. It can result in errors or undefined behavior when grouping and filtering, and when you use using `COMPLEX<json>` objects as inputs to aggregators. As a workaround, consider using `TO_JSON_STRING` to coerce the values to strings before you perform these operations.
+- Directly using `COMPLEX<json>` columns and expressions is not well integrated into the Druid query engine. It can result in errors or undefined behavior when grouping and filtering, and when you use `COMPLEX<json>` objects as inputs to aggregators. As a workaround, consider using `TO_JSON_STRING` to coerce the values to strings before you perform these operations.
 - Directly using array-typed outputs from `JSON_KEYS` and `JSON_PATHS` is moderately supported by the Druid query engine. You can group on these outputs, and there are a number of array expressions that can operate on these values, such as `ARRAY_CONCAT_AGG`. However, some operations are not well defined for use outside array-specific functions, such as filtering using `=` or `IS NULL`.
 - Input validation for JSON SQL operators is currently incomplete, which sometimes results in undefined behavior or unhelpful error messages.
-- Ingesting JSON columns with a very complex nested structure is potentially an expensive operation, and may require you to tune ingestion tasks and/or cluster parameters to account for increased memory usage or overall task run time. When you tune your ingestion configuration, treat each nested literal field inside a JSON object as a flattened top-level Druid column.
+- Ingesting JSON columns with a very complex nested structure is potentially an expensive operation and may require you to tune ingestion tasks and/or cluster parameters to account for increased memory usage or overall task run time. When you tune your ingestion configuration, treat each nested literal field inside a JSON object as a flattened top-level Druid column.
 
 ## Further reading
 
 For more information, see the following pages:
 
 - [Nested columns functions reference](./sql-json-functions.md) for details of the functions used in the examples on this page.
-- [Ingestion spec reference](../ingestion/ingestion-spec.md) for information on native ingestion and [`transformSpec`](../ingestion/ingestion-spec.md#transformspec).
 - [Multi-stage query architecture overview](../multi-stage-query/index.md) for information on how to set up and use this feature.
+- [Ingestion spec reference](../ingestion/ingestion-spec.md) for information on native ingestion and [`transformSpec`](../ingestion/ingestion-spec.md#transformspec).
 - [Data formats](../ingestion/data-formats.md) for information on [`flattenSpec`](../ingestion/data-formats.md#flattenspec).
