@@ -61,7 +61,7 @@ public class OverlordResourceTestClient
   private final String indexer;
 
   @Inject
-  OverlordResourceTestClient(
+  protected OverlordResourceTestClient(
       ObjectMapper jsonMapper,
       @TestClient HttpClient httpClient,
       IntegrationTestingConfig config

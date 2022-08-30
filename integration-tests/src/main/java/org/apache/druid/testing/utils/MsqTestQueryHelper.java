@@ -29,6 +29,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
@@ -39,11 +40,10 @@ import org.apache.druid.msq.sql.SqlTaskStatus;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.MsqOverlordResourceTestClient;
-import org.apache.druid.testing.clients.MsqTestClient;
+import org.apache.druid.testing.clients.msq.MsqOverlordResourceTestClient;
+import org.apache.druid.testing.clients.SqlResourceTestClient;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -61,16 +61,16 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
   private final ObjectMapper jsonMapper;
   private final IntegrationTestingConfig config;
   private final MsqOverlordResourceTestClient overlordClient;
-  private final MsqTestClient msqClient;
+  private final SqlResourceTestClient msqClient;
 
 
   @Inject
   MsqTestQueryHelper(
       final ObjectMapper jsonMapper,
-      final MsqTestClient queryClient,
+      final SqlResourceTestClient queryClient,
       final IntegrationTestingConfig config,
       final MsqOverlordResourceTestClient overlordClient,
-      final MsqTestClient msqClient
+      final SqlResourceTestClient msqClient
   )
   {
     super(jsonMapper, queryClient, config);
@@ -135,28 +135,20 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
    * Polls the overlord API every 1 second and waits for a submitted MSQ task to be completed. Alternatively, one can
    * specify the maximum time to poll. The method returns the last fetched {@link TaskState} of the task
    */
-  public TaskState pollTaskIdForCompletion(String taskId, long maxTimeoutSeconds)
+  public TaskState pollTaskIdForCompletion(String taskId, long maxTimeoutSeconds) throws Exception
   {
-    if (maxTimeoutSeconds < 0) {
-      throw new IAE("Timeout cannot be negative");
-    } else if (maxTimeoutSeconds == 0) {
-      maxTimeoutSeconds = Long.MAX_VALUE;
-    }
-    long time = 0;
-    do {
-      TaskStatusPlus taskStatusPlus = overlordClient.getTaskStatus(taskId);
-      TaskState statusCode = taskStatusPlus.getStatusCode();
-      if (statusCode != null && statusCode.isComplete()) {
-        return taskStatusPlus.getStatusCode();
-      }
-      try {
-        Thread.sleep(1000);
-      }
-      catch (InterruptedException e) {
-        throw new ISE(e, "Interrupted while polling for task [%s] completion", taskId);
-      }
-    } while (time++ < maxTimeoutSeconds);
-    return overlordClient.getTaskStatus(taskId).getStatusCode();
+    return RetryUtils.retry(
+        () -> {
+          TaskStatusPlus taskStatusPlus = overlordClient.getTaskStatus(taskId);
+          TaskState statusCode = taskStatusPlus.getStatusCode();
+          if (statusCode != null && statusCode.isComplete()) {
+            return taskStatusPlus.getStatusCode();
+          }
+          throw new TaskStillRunningException();
+        },
+        (Throwable t) -> t instanceof TaskStillRunningException,
+        100
+    );
   }
 
   /**
@@ -170,7 +162,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
   /**
    * Compares the results for a given taskId. It is required that the task has produced some results that can be verified
    */
-  public void compareResults(String taskId, MsqQueryWithResults expectedQueryWithResults)
+  private void compareResults(String taskId, MsqQueryWithResults expectedQueryWithResults)
   {
     Map<String, MSQTaskReport> statusReport = fetchStatusReports(taskId);
     MSQTaskReport taskReport = statusReport.get(MSQTaskReport.REPORT_KEY);
@@ -214,8 +206,8 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
   /**
    * Runs queries from files using MSQ and compares the results with the ones provided
    */
-  public void testQueriesFromFileUsingMsq(String filePath, String fullDatasourcePath)
-      throws IOException, ExecutionException, InterruptedException
+  @Override
+  public void testQueriesFromFile(String filePath, String fullDatasourcePath) throws Exception
   {
     LOG.info("Starting query tests for [%s]", filePath);
     List<MsqQueryWithResults> queries =
@@ -232,5 +224,10 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
       pollTaskIdForCompletion(taskId, 0);
       compareResults(taskId, queryWithResults);
     }
+  }
+
+  private static class TaskStillRunningException extends Exception
+  {
+
   }
 }

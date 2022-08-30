@@ -24,7 +24,7 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
-import org.apache.druid.testing.clients.MsqTestClient;
+import org.apache.druid.testing.clients.SqlResourceTestClient;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testsEx.categories.MultiStageQuery;
@@ -41,7 +41,7 @@ public class ITMultiStageQuery
   private MsqTestQueryHelper msqHelper;
 
   @Inject
-  private MsqTestClient msqClient;
+  private SqlResourceTestClient msqClient;
 
   @Inject
   private IntegrationTestingConfig config;
@@ -55,7 +55,7 @@ public class ITMultiStageQuery
   @Inject
   private CoordinatorResourceTestClient coordinatorClient;
 
-  private static final String QUERY_FILE = "/indexer/wikipedia_index_data1_query.json";
+  private static final String QUERY_FILE = "/multi-stage-query/wikipedia_msq_select_query1.json";
 
   @Test
   public void testMsqIngestionAndQuerying() throws Exception
@@ -110,6 +110,6 @@ public class ITMultiStageQuery
     msqHelper.pollTaskIdForCompletion(taskId, 0);
     dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
 
-    msqHelper.testQueriesFromFileUsingMsq(QUERY_FILE, datasource);
+    msqHelper.testQueriesFromFile(QUERY_FILE, datasource);
   }
 }

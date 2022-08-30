@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.clients;
+package org.apache.druid.testing.clients.msq;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,8 +30,8 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
-import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
@@ -53,6 +53,7 @@ public class MsqOverlordResourceTestClient extends OverlordResourceTestClient
   {
     super(jsonMapper, httpClient, config);
     this.jsonMapper = jsonMapper;
+    this.jsonMapper.registerModules(new MSQIndexingModule().getJacksonModules());
   }
 
   public Map<String, MSQTaskReport> getTaskReportForMsqTask(String taskId)
@@ -66,8 +67,6 @@ public class MsqOverlordResourceTestClient extends OverlordResourceTestClient
               StringUtils.format("task/%s/reports", StringUtils.urlEncode(taskId))
           )
       );
-      jsonMapper.registerModules(new MSQIndexingModule().getJacksonModules());
-      jsonMapper.registerSubtypes(ImmutableList.of(MSQTaskReport.class, ExpressionVirtualColumn.class));
       return jsonMapper.readValue(response.getContent(), new TypeReference<Map<String, MSQTaskReport>>()
       {
       });
