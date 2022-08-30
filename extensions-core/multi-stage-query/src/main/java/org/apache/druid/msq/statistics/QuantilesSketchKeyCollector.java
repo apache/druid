@@ -42,23 +42,29 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
 {
   private final Comparator<RowKey> comparator;
   private ItemsSketch<RowKey> sketch;
+  private double averageKeyLength;
 
   QuantilesSketchKeyCollector(
       final Comparator<RowKey> comparator,
-      @Nullable final ItemsSketch<RowKey> sketch
+      @Nullable final ItemsSketch<RowKey> sketch,
+      double averageKeyLength
   )
   {
     this.comparator = comparator;
     this.sketch = sketch;
+    this.averageKeyLength = averageKeyLength;
   }
 
   @Override
   public void add(RowKey key, long weight)
   {
+    double total = averageKeyLength * sketch.getN();
+    total += key.array().length * weight;
     for (int i = 0; i < weight; i++) {
       // Add the same key multiple times to make it "heavier".
       sketch.update(key);
     }
+    averageKeyLength = (total / sketch.getN());
   }
 
   @Override
@@ -68,6 +74,10 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
         Math.max(sketch.getK(), other.sketch.getK()),
         comparator
     );
+
+    double sketchBytesCount = averageKeyLength * sketch.getN();
+    double otherBytesCount = other.averageKeyLength * other.getSketch().getN();
+    averageKeyLength = ((sketchBytesCount + otherBytesCount) / (sketch.getN() + other.sketch.getN()));
 
     union.update(sketch);
     union.update(other.sketch);
@@ -84,6 +94,12 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
   public long estimatedTotalWeight()
   {
     return sketch.getN();
+  }
+
+  @Override
+  public double estimatedRetainedBytes()
+  {
+    return averageKeyLength * estimatedRetainedKeys();
   }
 
   @Override
@@ -164,5 +180,13 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
   ItemsSketch<RowKey> getSketch()
   {
     return sketch;
+  }
+
+  /**
+   * Retrieves the average key length. Exists for usage by {@link QuantilesSketchKeyCollectorFactory}.
+   */
+  double getAverageKeyLength()
+  {
+    return averageKeyLength;
   }
 }

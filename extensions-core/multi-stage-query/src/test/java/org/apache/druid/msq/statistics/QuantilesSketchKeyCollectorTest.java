@@ -20,6 +20,7 @@
 package org.apache.druid.msq.statistics;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -27,6 +28,7 @@ import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.java.util.common.Pair;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -40,6 +42,11 @@ public class QuantilesSketchKeyCollectorTest
   private final ClusterBy clusterBy = new ClusterBy(ImmutableList.of(new SortColumn("x", false)), 0);
   private final Comparator<RowKey> comparator = clusterBy.keyComparator();
   private final int numKeys = 500_000;
+
+  @BeforeClass
+  public static void setup() {
+    NullHandling.initializeForTests();
+  }
 
   @Test
   public void test_empty()
@@ -103,6 +110,7 @@ public class QuantilesSketchKeyCollectorTest
     final List<Pair<RowKey, Integer>> keyWeights = KeyCollectorTestUtils.uniformRandomKeys(numKeys);
     final RowKey finalMinKey =
         ClusterByStatisticsCollectorImplTest.computeSortedKeyWeightsFromWeightedKeys(keyWeights, comparator).firstKey();
+    int expectedRetainedBytes = 22 * finalMinKey.array().length;
 
     KeyCollectorTestUtils.doTest(
         QuantilesSketchKeyCollectorFactory.create(clusterBy),
@@ -114,7 +122,7 @@ public class QuantilesSketchKeyCollectorTest
           }
 
           Assert.assertEquals(testName, 2, collector.getSketch().getK());
-          Assert.assertEquals(testName, 22, collector.estimatedRetainedKeys());
+          Assert.assertEquals(testName, expectedRetainedBytes, collector.estimatedRetainedBytes(), 0);
 
           // Don't use verifyCollector, since this collector is downsampled so aggressively that it can't possibly
           // hope to pass those tests. Grade on a curve.
