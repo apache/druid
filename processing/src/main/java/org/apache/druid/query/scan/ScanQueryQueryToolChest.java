@@ -67,7 +67,6 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   {
     return (queryPlus, responseContext) -> {
       final ScanQuery originalQuery = ((ScanQuery) (queryPlus.getQuery()));
-      ScanQuery.verifyOrderByForNativeExecution(originalQuery);
 
       // Remove "offset" and add it to the "limit" (we won't push the offset down, just apply it here, at the
       // merge at the top of the stack).
@@ -93,7 +92,23 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
       final Sequence<ScanResultValue> results;
 
-      if (!queryToRun.isLimited()) {
+      if (queryToRun.scanOrderByNonTime()) {
+        results = new BaseSequence<>(
+            new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
+            {
+              @Override
+              public ScanQueryLimitRowIterator make()
+              {
+                return new ScanQueryOrderByLimitRowIterator(runner, queryPlus.withQuery(queryToRun), responseContext);
+              }
+
+              @Override
+              public void cleanup(ScanQueryLimitRowIterator iterFromMake)
+              {
+                CloseableUtils.closeAndWrapExceptions(iterFromMake);
+              }
+            });
+      } else if (!queryToRun.isLimited()) {
         results = runner.run(queryPlus.withQuery(queryToRun), responseContext);
       } else {
         results = new BaseSequence<>(

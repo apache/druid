@@ -69,9 +69,12 @@ public class ScanQueryResultOrderingTest
 {
   private static final String DATASOURCE = "datasource";
   private static final String ID_COLUMN = "id";
+  private static final String CODE_COLUMN = "code";
 
   private static final RowAdapter<Object[]> ROW_ADAPTER = columnName -> {
-    if (ID_COLUMN.equals(columnName)) {
+    if (CODE_COLUMN.equals(columnName)) {
+      return row -> row[2];
+    } else if (ID_COLUMN.equals(columnName)) {
       return row -> row[1];
     } else if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
       return row -> ((DateTime) row[0]).getMillis();
@@ -83,6 +86,7 @@ public class ScanQueryResultOrderingTest
   private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
                                                                 .addTimeColumn()
                                                                 .add(ID_COLUMN, ColumnType.LONG)
+                                                                .add(CODE_COLUMN, ColumnType.STRING)
                                                                 .build();
 
   private static final List<RowBasedSegment<Object[]>> SEGMENTS = ImmutableList.of(
@@ -90,14 +94,14 @@ public class ScanQueryResultOrderingTest
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 0),
           Sequences.simple(
               ImmutableList.of(
-                  new Object[]{DateTimes.of("2000T01"), 101},
-                  new Object[]{DateTimes.of("2000T01"), 80},
-                  new Object[]{DateTimes.of("2000T01"), 232},
-                  new Object[]{DateTimes.of("2000T01"), 12},
-                  new Object[]{DateTimes.of("2000T02"), 808},
-                  new Object[]{DateTimes.of("2000T02"), 411},
-                  new Object[]{DateTimes.of("2000T02"), 383},
-                  new Object[]{DateTimes.of("2000T05"), 22}
+                  new Object[]{DateTimes.of("2000-01-01T01"), 101, "200"},
+                  new Object[]{DateTimes.of("2000-01-01T01"), 80, "201"},
+                  new Object[]{DateTimes.of("2000-01-01T01"), 232, "206"},
+                  new Object[]{DateTimes.of("2000-01-01T01"), 12, "300"},
+                  new Object[]{DateTimes.of("2000-01-01T02"), 808, "404"},
+                  new Object[]{DateTimes.of("2000-01-01T02"), 411, "201"},
+                  new Object[]{DateTimes.of("2000-01-01T02"), 383, "200"},
+                  new Object[]{DateTimes.of("2000-01-01T05"), 22, "500"}
               )
           ),
           ROW_ADAPTER,
@@ -107,14 +111,14 @@ public class ScanQueryResultOrderingTest
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 1),
           Sequences.simple(
               ImmutableList.of(
-                  new Object[]{DateTimes.of("2000T01"), 333},
-                  new Object[]{DateTimes.of("2000T01"), 222},
-                  new Object[]{DateTimes.of("2000T01"), 444},
-                  new Object[]{DateTimes.of("2000T01"), 111},
-                  new Object[]{DateTimes.of("2000T03"), 555},
-                  new Object[]{DateTimes.of("2000T03"), 999},
-                  new Object[]{DateTimes.of("2000T03"), 888},
-                  new Object[]{DateTimes.of("2000T05"), 777}
+                  new Object[]{DateTimes.of("2000-01-01T01"), 333, "500"},
+                  new Object[]{DateTimes.of("2000-01-01T01"), 222, "503"},
+                  new Object[]{DateTimes.of("2000-01-01T01"), 444, "201"},
+                  new Object[]{DateTimes.of("2000-01-01T01"), 111, "404"},
+                  new Object[]{DateTimes.of("2000-01-01T03"), 555, "403"},
+                  new Object[]{DateTimes.of("2000-01-01T03"), 999, "200"},
+                  new Object[]{DateTimes.of("2000-01-01T03"), 888, "200"},
+                  new Object[]{DateTimes.of("2000-01-01T05"), 777, "501"}
               )
           ),
           ROW_ADAPTER,
@@ -124,9 +128,9 @@ public class ScanQueryResultOrderingTest
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-02/P1D"), "1", 0),
           Sequences.simple(
               ImmutableList.of(
-                  new Object[]{DateTimes.of("2000-01-02T00"), 7},
-                  new Object[]{DateTimes.of("2000-01-02T02"), 9},
-                  new Object[]{DateTimes.of("2000-01-02T03"), 8}
+                  new Object[]{DateTimes.of("2000-01-02T00"), 7, "200"},
+                  new Object[]{DateTimes.of("2000-01-02T02"), 9, "400"},
+                  new Object[]{DateTimes.of("2000-01-02T03"), 8, "200"}
               )
           ),
           ROW_ADAPTER,
@@ -303,6 +307,290 @@ public class ScanQueryResultOrderingTest
     );
   }
 
+  @Test
+  public void testOrderIdAscending()
+  {
+    assertOrderByIdResultsEquals(
+        Druids.newScanQueryBuilder()
+              .dataSource("ds")
+              .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P1D"))))
+              .columns(ColumnHolder.TIME_COLUMN_NAME, ID_COLUMN)
+              .orderBy(ImmutableList.of(new ScanQuery.OrderBy(ID_COLUMN, ScanQuery.Order.ASCENDING)))
+              .build(),
+        ImmutableList.of(
+            7,
+            8,
+            9,
+            12,
+            22,
+            80,
+            101,
+            111,
+            222,
+            232,
+            333,
+            383,
+            411,
+            444,
+            555,
+            777,
+            808,
+            888,
+            999
+        )
+    );
+  }
+
+  @Test
+  public void testOrderDescending()
+  {
+    assertOrderByIdResultsEquals(
+        Druids.newScanQueryBuilder()
+              .dataSource("ds")
+              .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P1D"))))
+              .columns(ColumnHolder.TIME_COLUMN_NAME, ID_COLUMN)
+              .orderBy(ImmutableList.of(new ScanQuery.OrderBy(ID_COLUMN, ScanQuery.Order.DESCENDING)))
+              .build(),
+        ImmutableList.of(
+            999,
+            888,
+            808,
+            777,
+            555,
+            444,
+            411,
+            383,
+            333,
+            232,
+            222,
+            111,
+            101,
+            80,
+            22,
+            12,
+            9,
+            8,
+            7
+        )
+    );
+  }
+
+  @Test
+  public void testMultiColumnSort()
+  {
+    assertOrderByMultiColumnResultsEquals(
+        Druids.newScanQueryBuilder()
+              .dataSource("ds")
+              .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P1D"))))
+              .columns(ColumnHolder.TIME_COLUMN_NAME, ID_COLUMN, CODE_COLUMN)
+              .orderBy(ImmutableList.of(new ScanQuery.OrderBy(CODE_COLUMN, ScanQuery.Order.ASCENDING),
+                                        new ScanQuery.OrderBy(ID_COLUMN, ScanQuery.Order.DESCENDING)))
+              .build(),
+        ImmutableList.of(
+            new Object[]{999, "200"},
+            new Object[]{888, "200"},
+            new Object[]{383, "200"},
+            new Object[]{101, "200"},
+            new Object[]{8, "200"},
+            new Object[]{7, "200"},
+            new Object[]{444, "201"},
+            new Object[]{411, "201"},
+            new Object[]{80, "201"},
+            new Object[]{232, "206"},
+            new Object[]{12, "300"},
+            new Object[]{9, "400"},
+            new Object[]{555, "403"},
+            new Object[]{808, "404"},
+            new Object[]{111, "404"},
+            new Object[]{333, "500"},
+            new Object[]{22, "500"},
+            new Object[]{777, "501"},
+            new Object[]{222, "503"}
+        )
+    );
+  }
+
+  private void assertOrderByMultiColumnResultsEquals(final ScanQuery query, final List<Object[]> expectedResults)
+  {
+
+    final List<List<Pair<SegmentId, QueryRunner<ScanResultValue>>>> serverRunners = new ArrayList<>();
+    for (int i = 0; i <= segmentToServerMap.stream().max(Comparator.naturalOrder()).orElse(0); i++) {
+      serverRunners.add(new ArrayList<>());
+    }
+
+    for (int segmentNumber = 0; segmentNumber < segmentToServerMap.size(); segmentNumber++) {
+      final SegmentId segmentId = SEGMENTS.get(segmentNumber).getId();
+      final int serverNumber = segmentToServerMap.get(segmentNumber);
+
+      serverRunners.get(serverNumber).add(Pair.of(segmentId, segmentRunners.get(segmentNumber)));
+    }
+
+    // Simulates what the Historical servers would do.
+    final List<QueryRunner<ScanResultValue>> mergedServerRunners =
+        serverRunners.stream()
+                     .filter(runners -> !runners.isEmpty())
+                     .map(
+                         runners ->
+                             queryRunnerFactory.getToolchest().mergeResults(
+                                 new QueryRunner<ScanResultValue>()
+                                 {
+                                   @Override
+                                   public Sequence<ScanResultValue> run(
+                                       final QueryPlus<ScanResultValue> queryPlus,
+                                       final ResponseContext responseContext
+                                   )
+                                   {
+                                     return queryRunnerFactory.mergeRunners(
+                                         Execs.directExecutor(),
+                                         runners.stream().map(p -> p.rhs).collect(Collectors.toList())
+                                     ).run(
+                                         queryPlus.withQuery(
+                                             queryPlus.getQuery()
+                                                      .withQuerySegmentSpec(
+                                                          new MultipleSpecificSegmentSpec(
+                                                              runners.stream()
+                                                                     .map(p -> p.lhs.toDescriptor())
+                                                                     .collect(Collectors.toList())
+                                                          )
+                                                      )
+                                         ),
+                                         responseContext
+                                     );
+                                   }
+                                 }
+                             )
+                     )
+                     .collect(Collectors.toList());
+
+    // Simulates what the Broker would do.
+    final QueryRunner<ScanResultValue> brokerRunner = queryRunnerFactory.getToolchest().mergeResults(
+        (queryPlus, responseContext) -> {
+          final List<Sequence<ScanResultValue>> sequences =
+              mergedServerRunners.stream()
+                                 .map(runner -> runner.run(queryPlus.withoutThreadUnsafeState()))
+                                 .collect(Collectors.toList());
+
+          return new MergeSequence<>(
+              queryPlus.getQuery().getResultOrdering(),
+              Sequences.simple(sequences)
+          );
+        }
+    );
+
+    // Finally: run the query.
+    final List<Object[]> results = runMultiColumnQuery(
+        (ScanQuery) Druids.ScanQueryBuilder.copy(query)
+                                           .limit(limit <= 0 ? 10 : limit)
+                                           .batchSize(batchSize)
+                                           .build()
+                                           .withOverriddenContext(
+                                               ImmutableMap.of(
+                                                   ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING,
+                                                   maxRowsQueuedForOrdering
+                                               )
+                                           ),
+        brokerRunner
+    );
+
+    Assert.assertEquals(
+        expectedResults.stream().limit(limit <= 0 ? 10 : limit).map(rs -> rs[0]).collect(Collectors.toList()),
+        results.stream().map(rs -> rs[0]).collect(Collectors.toList())
+    );
+
+    Assert.assertEquals(
+        expectedResults.stream().limit(limit <= 0 ? 10 : limit).map(rs -> rs[1]).collect(Collectors.toList()),
+        results.stream().map(rs -> rs[1]).collect(Collectors.toList())
+    );
+  }
+
+  private void assertOrderByIdResultsEquals(final ScanQuery query, final List<Integer> expectedResults)
+  {
+
+    final List<List<Pair<SegmentId, QueryRunner<ScanResultValue>>>> serverRunners = new ArrayList<>();
+    for (int i = 0; i <= segmentToServerMap.stream().max(Comparator.naturalOrder()).orElse(0); i++) {
+      serverRunners.add(new ArrayList<>());
+    }
+
+    for (int segmentNumber = 0; segmentNumber < segmentToServerMap.size(); segmentNumber++) {
+      final SegmentId segmentId = SEGMENTS.get(segmentNumber).getId();
+      final int serverNumber = segmentToServerMap.get(segmentNumber);
+
+      serverRunners.get(serverNumber).add(Pair.of(segmentId, segmentRunners.get(segmentNumber)));
+    }
+
+    // Simulates what the Historical servers would do.
+    final List<QueryRunner<ScanResultValue>> mergedServerRunners =
+        serverRunners.stream()
+                     .filter(runners -> !runners.isEmpty())
+                     .map(
+                         runners ->
+                             queryRunnerFactory.getToolchest().mergeResults(
+                                 new QueryRunner<ScanResultValue>()
+                                 {
+                                   @Override
+                                   public Sequence<ScanResultValue> run(
+                                       final QueryPlus<ScanResultValue> queryPlus,
+                                       final ResponseContext responseContext
+                                   )
+                                   {
+                                     return queryRunnerFactory.mergeRunners(
+                                         Execs.directExecutor(),
+                                         runners.stream().map(p -> p.rhs).collect(Collectors.toList())
+                                     ).run(
+                                         queryPlus.withQuery(
+                                             queryPlus.getQuery()
+                                                      .withQuerySegmentSpec(
+                                                          new MultipleSpecificSegmentSpec(
+                                                              runners.stream()
+                                                                     .map(p -> p.lhs.toDescriptor())
+                                                                     .collect(Collectors.toList())
+                                                          )
+                                                      )
+                                         ),
+                                         responseContext
+                                     );
+                                   }
+                                 }
+                             )
+                     )
+                     .collect(Collectors.toList());
+
+    // Simulates what the Broker would do.
+    final QueryRunner<ScanResultValue> brokerRunner = queryRunnerFactory.getToolchest().mergeResults(
+        (queryPlus, responseContext) -> {
+          final List<Sequence<ScanResultValue>> sequences =
+              mergedServerRunners.stream()
+                                 .map(runner -> runner.run(queryPlus.withoutThreadUnsafeState()))
+                                 .collect(Collectors.toList());
+
+          return new MergeSequence<>(
+              queryPlus.getQuery().getResultOrdering(),
+              Sequences.simple(sequences)
+          );
+        }
+    );
+
+    // Finally: run the query.
+    final List<Integer> results = runQuery(
+        (ScanQuery) Druids.ScanQueryBuilder.copy(query)
+                                           .limit(limit <= 0 ? 10 : limit)
+                                           .batchSize(batchSize)
+                                           .build()
+                                           .withOverriddenContext(
+                                               ImmutableMap.of(
+                                                   ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING,
+                                                   maxRowsQueuedForOrdering
+                                               )
+                                           ),
+        brokerRunner
+    );
+
+    Assert.assertEquals(
+        expectedResults.stream().limit(limit <= 0 ? 10 : limit).collect(Collectors.toList()),
+        results
+    );
+  }
+
   private void assertResultsEquals(final ScanQuery query, final List<Integer> expectedResults)
   {
     final List<List<Pair<SegmentId, QueryRunner<ScanResultValue>>>> serverRunners = new ArrayList<>();
@@ -398,5 +686,14 @@ public class ScanQueryResultOrderingTest
     ).toList();
 
     return results.stream().mapToInt(row -> (int) row[1]).boxed().collect(Collectors.toList());
+  }
+
+  private List<Object[]> runMultiColumnQuery(final ScanQuery query, final QueryRunner<ScanResultValue> brokerRunner)
+  {
+    final List<Object[]> results = queryRunnerFactory.getToolchest().resultsAsArrays(
+        query,
+        brokerRunner.run(QueryPlus.wrap(query))
+    ).toList();
+    return results.stream().map(row -> new Object[]{row[1], row[2]}).collect(Collectors.toList());
   }
 }

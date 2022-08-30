@@ -21,6 +21,7 @@ package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -335,7 +336,7 @@ public class ScanQueryTest
               .intervals(intervalSpec)
               .build();
 
-    Assert.assertThrows("Cannot execute query with orderBy [quality ASC]", ISE.class, scanQuery::getResultOrdering);
+    Assert.assertEquals(Ordering.natural(), scanQuery.getResultOrdering());
   }
 
   @Test

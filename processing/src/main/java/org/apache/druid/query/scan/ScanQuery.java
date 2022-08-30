@@ -28,7 +28,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -248,19 +247,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     this.maxSegmentPartitionsOrderedInMemory = validateAndGetMaxSegmentPartitionsOrderedInMemory();
   }
 
-  /**
-   * Verifies that the ordering of a query is solely determined by {@link #getTimeOrder()}. Required to actually
-   * execute queries, because {@link #getOrderBys()} is not yet understood by the query engines.
-   *
-   * @throws IllegalStateException if the ordering is not solely determined by {@link #getTimeOrder()}
-   */
-  public static void verifyOrderByForNativeExecution(final ScanQuery query)
-  {
-    if (query.getTimeOrder() == Order.NONE && !query.getOrderBys().isEmpty()) {
-      throw new ISE("Cannot execute query with orderBy %s", query.getOrderBys());
-    }
-  }
-
   private Integer validateAndGetMaxRowsQueuedForOrdering()
   {
     final Integer maxRowsQueuedForOrdering =
@@ -430,9 +416,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   @Override
   public Ordering<ScanResultValue> getResultOrdering()
   {
-    // No support yet for actually executing queries with non-time orderBy.
-    verifyOrderByForNativeExecution(this);
-
     if (timeOrder == Order.NONE) {
       return Ordering.natural();
     }
@@ -494,6 +477,14 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   public ScanQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return Druids.ScanQueryBuilder.copy(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
+  }
+
+  public boolean scanOrderByNonTime()
+  {
+    if (orderBys.size() > 1 || (orderBys.size() > 0 && !ColumnHolder.TIME_COLUMN_NAME.equals(orderBys.get(0).getColumnName()))) {
+      return true;
+    }
+    return false;
   }
 
   @Override
