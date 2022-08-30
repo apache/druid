@@ -76,7 +76,6 @@
       "multi-stage-query/examples",
       "multi-stage-query/api",
       "multi-stage-query/security",
-      "multi-stage-query/durable-storage",
       "multi-stage-query/reference",
       "multi-stage-query/known-issues"
     ],

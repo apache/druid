@@ -37,24 +37,8 @@ The following table lists the context parameters for the MSQ task engine:
 | segmentSortOrder | INSERT or REPLACE<br /><br />Normally, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](./index.md#clustered-by) clause. When you set `segmentSortOrder`, Druid sorts rows in segments using this column list first, followed by the CLUSTERED BY order.<br /><br />You provide the column list as comma-separated values or as a JSON array in string form. If your query includes `__time`, then this list must begin with `__time`. For example, consider an INSERT query that uses `CLUSTERED BY country` and has `segmentSortOrder` set to `__time,city`. Within each time chunk, Druid assigns rows to segments based on `country`, and then within each of those segments, Druid sorts those rows by `__time` first, then `city`, then `country`. | empty list |
 | maxParseExceptions| SELECT, INSERT, REPLACE<br /><br />Maximum number of parse exceptions that are ignored while executing the query before it stops with `TooManyWarningsFault`. To ignore all the parse exceptions, set the value to -1.| 0 |
 | rowsPerSegment | INSERT or REPLACE<br /><br />The number of rows per segment to target. The actual number of rows per segment may be somewhat higher or lower than this number. In most cases, use the default. For general information about sizing rows per segment, see [Segment Size Optimization](../operations/segment-optimization.md). | 3,000,000 |
-| durableShuffleStorage | SELECT, INSERT, REPLACE <br /><br />Whether to use durable storage for shuffle mesh. To use this feature, configure the durable storage at the server level using `druid.msq.intermediate.storage.enable=true` and its [associated properties](./msq-durable-storage.md). If these properties are not configured, any query with the context variable `durableShuffleStorage=true` fails with a configuration error. <br /><br /> | false |
 | sqlTimeZone | Sets the time zone for this connection, which affects how time functions and timestamp literals behave. Use a time zone name like "America/Los_Angeles" or offset like "-08:00".| `druid.sql.planner.sqlTimeZone` on the Broker (default: UTC)|
 | useApproximateCountDistinct | Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.| `druid.sql.planner.useApproximateCountDistinct` on the Broker (default: true)|
-
-## Durable storage properties
-
-The following table describes the properties used to configure durable storage:
-
-| Config | Description | Required | Default |
-|--------|-------------|----------|---------|
-| `druid.msq.intermediate.storage.enable` | Set to `true` to enable this feature. | Yes | |
-| `druid.msq.intermediate.storage.type` | Set the value to `s3`. | Yes | |
-| `druid.msq.intermediate.storage.bucket` | S3 bucket to store intermediate stage results. | Yes | |
-| `druid.msq.intermediate.storage.prefix` | S3 prefix to store intermediate stage results. Provide a unique value for the prefix. Don't share the same prefix between clusters. | Yes | |
-| `druid.msq.intermediate.storage.tempDir`| Directory path on the local disk to temporarily store intermediate stage results. | Yes | |
-| `druid.msq.intermediate.storage.maxResultsSize` | Max size of each partition file per stage. It should be between 5 MiB and 5 TiB. Supports a human-readable format. For example, if a stage has 50 partitions and each partition file is below or equal to 5 TiB, you can effectively use S3 up to 250 TiB of stage output. | No | 100 MiB |
-| `druid.msq.intermediate.storage.chunkSize` | Defines the size of each chunk to temporarily store in `druid.msq.intermediate.storage.tempDir`. The chunk size must be between 5 MiB and 5 GiB. Druid computes the chunk size automatically if no value is provided.| No | |
-| `druid.msq.intermediate.storage.maxTriesOnTransientErrors` | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors. | No | 10 |
 
 ## Error codes
 

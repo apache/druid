@@ -10,14 +10,9 @@ sidebar_label: Known issues
 
 - There's no fault tolerance. If any task fails, the entire query fails. 
 
-- In case of a worker crash, stage outputs on S3 are not deleted automatically. You may need to delete
-  the file using an external process or create an S3 lifecycle policy to remove the objects
-  under `druid.msq.intermediate.storage.prefix`. A good start would be to delete the objects after 3 days if they are
-  not automatically deleted.
-
 - Only one local file system per server is used for stage output data during multi-stage query
   execution. If your servers have multiple local file systems, this causes queries to exhaust
-  available disk space earlier than expected. As a workaround, you can use [durable storage for shuffle meshes](./msq-durable-storage.md).
+  available disk space earlier than expected. 
 
 - When `msqMaxNumTasks` is higher than the total
   capacity of the cluster, more tasks may be launched than can run at once. This leads to a
@@ -101,4 +96,4 @@ feature is not available. All columns and their types must be specified explicit
 
 - Maximum number of input files. Since there's no 
 
-- Maximum amount of local disk space to use for temporary data when durable storage is turned off. No guardrail today means worker tasks may exhaust all available disk space. In this case, you will receive an [UnknownError](./msq-reference.md#error-codes)) with a message including "No space left on device".
+- Maximum amount of local disk space to use for temporary data. No guardrail today means worker tasks may exhaust all available disk space. In this case, you will receive an [UnknownError](./msq-reference.md#error-codes)) with a message including "No space left on device".
