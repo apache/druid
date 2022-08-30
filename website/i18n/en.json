@@ -354,40 +354,6 @@
       "misc/papers-and-talks": {
         "title": "Papers"
       },
-      "multi-stage-query/index": {
-        "title": "SQL-based ingestion overview and syntax",
-        "sidebar_label": "Overview and syntax"
-      },
-      "multi-stage-query/api": {
-        "title": "APIs for SQL-based ingestion",
-        "sidebar_label": "API"
-      },
-      "multi-stage-query/concepts": {
-        "title": "SQL-based ingestion concepts",
-        "sidebar_label": "Key concepts"
-      },
-      "multi-stage-query/examples": {
-        "title": "SQL-based ingestion query examples",
-        "sidebar_label": "Examples"
-      },
-      "multi-stage-query/known-issues": {
-        "title": "SQL-based ingestion known issues",
-        "sidebar_label": "Known issues"
-      },
-      "multi-stage-query/reference": {
-        "title": "SQL-based ingestion reference",
-        "sidebar_label": "Reference"
-      },
-      "multi-stage-query/security": {
-        "title": "SQL-based ingestion security",
-        "sidebar_label": "Security"
-      },
-      "multi-stage-query/connect-external-data": {
-        "title": "Tutorial - Connect external data for SQL-based ingestion"
-      },
-      "multi-stage-query/convert-json-spec": {
-        "title": "Tutorial - Convert an ingestion spec for SQL-based ingestion"
-      },
       "operations/alerts": {
         "title": "Alerts"
       },
@@ -593,10 +559,6 @@
         "title": "SQL JDBC driver API",
         "sidebar_label": "JDBC driver API"
       },
-      "querying/sql-json-functions": {
-        "title": "SQL JSON functions",
-        "sidebar_label": "JSON functions"
-      },
       "querying/sql-metadata-tables": {
         "title": "SQL metadata tables",
         "sidebar_label": "SQL metadata tables"
@@ -663,9 +625,6 @@
         "title": "Tutorial: Load batch data using Apache Hadoop",
         "sidebar_label": "Load from Apache Hadoop"
       },
-      "tutorials/tutorial-batch-native": {
-        "title": "Load data with native batch ingestion"
-      },
       "tutorials/tutorial-batch": {
         "title": "Tutorial: Loading a file",
         "sidebar_label": "Loading files natively"
@@ -690,14 +649,6 @@
         "title": "Configuring Apache Druid to use Kerberized Apache Hadoop as deep storage",
         "sidebar_label": "Kerberized HDFS deep storage"
       },
-      "tutorials/tutorial-msq-external-data": {
-        "title": "Connect external data",
-        "sidebar_label": "Connect external data"
-      },
-      "tutorials/tutorial-msq-convert-json": {
-        "title": "Convert JSON ingestion spec to SQL",
-        "sidebar_label": "Convert JSON ingestion spec"
-      },
       "tutorials/tutorial-query": {
         "title": "Tutorial: Querying data",
         "sidebar_label": "Querying data"
@@ -709,10 +660,6 @@
       "tutorials/tutorial-rollup": {
         "title": "Tutorial: Roll-up",
         "sidebar_label": "Roll-up"
-      },
-      "tutorials/tutorial-sketches-theta": {
-        "title": "Approximations with Theta sketches",
-        "sidebar_label": "Theta sketches"
       },
       "tutorials/tutorial-transform-spec": {
         "title": "Tutorial: Transforming input data",
@@ -737,7 +684,6 @@
       "Tutorials": "Tutorials",
       "Design": "Design",
       "Ingestion": "Ingestion",
-      "SQL-based ingestion": "SQL-based ingestion",
       "Querying": "Querying",
       "Configuration": "Configuration",
       "Operations": "Operations",
