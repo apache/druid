@@ -483,7 +483,7 @@ In addition to `JSON_VALUE`, Druid offers a number of operators that focus on tr
 - `PARSE_JSON`
 - `TO_JSON_STRING`
 
-These functions are primarily intended for use with the multi-Stage Query Architecture to transform data during insert operations, but they also work in traditional Druid SQL queries. Because most of these functions output JSON objects, they have the same limitations when used in traditional Druid queries as interacting with the JSON objects directly.
+These functions are primarily intended for use with the multi-stage query architecture to transform data during insert operations, but they also work in traditional Druid SQL queries. Because most of these functions output JSON objects, they have the same limitations when used in traditional Druid queries as interacting with the JSON objects directly.
 
 #### Example query: Return results in a JSON object
 
