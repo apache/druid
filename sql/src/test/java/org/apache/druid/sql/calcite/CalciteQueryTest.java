@@ -5389,10 +5389,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // It's also here so when we do support these features, we can have "real" tests for these queries.
 
     final Map<String, String> queries = ImmutableMap.of(
-        // SELECT query with order by non-__time.
-        "SELECT dim1 FROM druid.foo ORDER BY dim1",
-        "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.",
-
         // JOIN condition with not-equals (<>).
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
         + "FROM foo INNER JOIN lookup.lookyloo l ON foo.dim2 <> l.k",
@@ -5407,6 +5403,33 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     for (final Map.Entry<String, String> queryErrorPair : queries.entrySet()) {
       assertQueryIsUnplannable(queryErrorPair.getKey(), queryErrorPair.getValue());
     }
+  }
+
+  @Test
+  public void testScanOrderByLimit()
+  {
+    testQuery(
+        "SELECT dim1 FROM druid.foo ORDER BY dim1 limit 100",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("dim1")
+                  .orderBy(ImmutableList.of(new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)))
+                  .limit(100)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"1"},
+            new Object[]{"10.1"},
+            new Object[]{"2"},
+            new Object[]{"abc"},
+            new Object[]{"def"}
+        )
+    );
   }
 
   @Test
