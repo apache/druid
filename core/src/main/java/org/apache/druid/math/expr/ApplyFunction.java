@@ -19,12 +19,10 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
@@ -106,6 +104,44 @@ public interface ApplyFunction
   void validateArguments(LambdaExpr lambdaExpr, List<Expr> args);
 
   /**
+   * Check that the argument list is the expected size. The list of arguments should not include the
+   * {@link LambdaExpr} and so the error message will indicate that count + 1 arguments are required.
+   */
+  default void validateArgumentCount(LambdaExpr lambdaExpr, List<Expr> args, int count)
+  {
+    if (args.size() != count) {
+      throw new ValidationException(this, "needs %s arguments", count + 1);
+    }
+    if (args.size() != lambdaExpr.identifierCount()) {
+      throw new ValidationException(
+          this,
+          "lambda expression argument count of %s does not match count of %s arguments passed to it ",
+          lambdaExpr.identifierCount(),
+          args.size()
+      );
+    }
+  }
+
+  /**
+   * Check that the argument list is at least the expected size. The list of arguments should not include the
+   * {@link LambdaExpr} and so the error message will indicate that at least count + 1 arguments are required.
+   */
+  default void validateMinArgumentCount(LambdaExpr lambdaExpr, List<Expr> args, int count)
+  {
+    if (args.size() < count) {
+      throw new ValidationException(this, "needs at least %s arguments", name(), count + 1);
+    }
+    if (args.size() != lambdaExpr.identifierCount()) {
+      throw new ValidationException(
+          this,
+          "lambda expression argument count does not match %s count of arguments passed to it %s",
+          lambdaExpr.identifierCount(),
+          args.size()
+      );
+    }
+  }
+
+  /**
    * Compute the output type of this function for a given lambda and the argument expressions which will be applied as
    * its inputs.
    *
@@ -113,6 +149,14 @@ public interface ApplyFunction
    */
   @Nullable
   ExpressionType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args);
+
+  class ValidationException extends IllegalArgumentException
+  {
+    public ValidationException(ApplyFunction fn, String msg, Object... formatArgs)
+    {
+      super(StringUtils.format("ApplyFunction[%s] %s", fn.name(), StringUtils.format(msg, formatArgs)));
+    }
+  }
 
   /**
    * Base class for "map" functions, which are a class of {@link ApplyFunction} which take a lambda function that is
@@ -194,13 +238,8 @@ public interface ApplyFunction
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      Preconditions.checkArgument(args.size() == 1);
-      if (lambdaExpr.identifierCount() > 0) {
-        Preconditions.checkArgument(
-            args.size() == lambdaExpr.identifierCount(),
-            StringUtils.format("lambda expression argument count does not match %s argument count", name())
-        );
-      }
+      validateArgumentCount(lambdaExpr, args, 1);
+
     }
   }
 
@@ -260,13 +299,7 @@ public interface ApplyFunction
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      Preconditions.checkArgument(args.size() > 0);
-      if (lambdaExpr.identifierCount() > 0) {
-        Preconditions.checkArgument(
-            args.size() == lambdaExpr.identifierCount(),
-            StringUtils.format("lambda expression argument count does not match %s argument count", name())
-        );
-      }
+      validateMinArgumentCount(lambdaExpr, args, 1);
     }
   }
 
@@ -358,11 +391,7 @@ public interface ApplyFunction
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      Preconditions.checkArgument(args.size() == 2);
-      Preconditions.checkArgument(
-          args.size() == lambdaExpr.identifierCount(),
-          StringUtils.format("lambda expression argument count does not match %s argument count", name())
-      );
+      validateArgumentCount(lambdaExpr, args, 2);
     }
   }
 
@@ -432,10 +461,7 @@ public interface ApplyFunction
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      Preconditions.checkArgument(
-          args.size() == lambdaExpr.identifierCount(),
-          StringUtils.format("lambda expression argument count does not match %s argument count", name())
-      );
+      validateMinArgumentCount(lambdaExpr, args, 1);
     }
   }
 
@@ -477,21 +503,13 @@ public interface ApplyFunction
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
-      if (args.size() != 1) {
-        throw new IAE("ApplyFunction[%s] needs 1 argument", name());
-      }
-
       return ImmutableSet.of(args.get(0));
     }
 
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      Preconditions.checkArgument(args.size() == 1);
-      Preconditions.checkArgument(
-          args.size() == lambdaExpr.identifierCount(),
-          StringUtils.format("lambda expression argument count does not match %s argument count", name())
-      );
+      validateArgumentCount(lambdaExpr, args, 1);
     }
 
     @Nullable
@@ -532,21 +550,13 @@ public interface ApplyFunction
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
-      if (args.size() != 1) {
-        throw new IAE("ApplyFunction[%s] needs 1 argument", name());
-      }
-
       return ImmutableSet.of(args.get(0));
     }
 
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      Preconditions.checkArgument(args.size() == 1);
-      Preconditions.checkArgument(
-          args.size() == lambdaExpr.identifierCount(),
-          StringUtils.format("lambda expression argument count does not match %s argument count", name())
-      );
+      validateArgumentCount(lambdaExpr, args, 1);
     }
 
     @Nullable

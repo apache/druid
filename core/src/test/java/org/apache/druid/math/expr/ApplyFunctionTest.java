@@ -65,7 +65,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
 
     assertExpr("map((x) -> x + 1, map((x) -> x + 1, [1, 2, 3, 4, 5]))", new Long[] {3L, 4L, 5L, 6L, 7L});
     assertExpr("map((x) -> x + 1, map((x) -> x + 1, b))", new Long[] {3L, 4L, 5L, 6L, 7L});
-    assertExpr("map(() -> 1, [1, 2, 3, 4, 5])", new Long[] {1L, 1L, 1L, 1L, 1L});
+    assertExpr("map((x) -> 1, [1, 2, 3, 4, 5])", new Long[] {1L, 1L, 1L, 1L, 1L});
   }
 
   @Test
@@ -73,7 +73,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
   {
     assertExpr("cartesian_map((x, y) -> concat(x, y), ['foo', 'bar', 'baz', 'foobar'], ['bar', 'baz'])", new String[] {"foobar", "foobaz", "barbar", "barbaz", "bazbar", "bazbaz", "foobarbar", "foobarbaz"});
     assertExpr("cartesian_map((x, y, z) -> concat(concat(x, y), z), ['foo', 'bar', 'baz', 'foobar'], ['bar', 'baz'], ['omg'])", new String[] {"foobaromg", "foobazomg", "barbaromg", "barbazomg", "bazbaromg", "bazbazomg", "foobarbaromg", "foobarbazomg"});
-    assertExpr("cartesian_map(() -> 1, [1, 2], [1, 2, 3])", new Long[] {1L, 1L, 1L, 1L, 1L, 1L});
+    assertExpr("cartesian_map((x, y) -> 1, [1, 2], [1, 2, 3])", new Long[] {1L, 1L, 1L, 1L, 1L, 1L});
     assertExpr("cartesian_map((x, y) -> concat(x, y), d, d)", new String[] {null});
     assertExpr("cartesian_map((x, y) -> concat(x, y), d, f)", new String[0]);
     if (NullHandling.replaceWithDefault()) {
@@ -142,9 +142,13 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
   @Test
   public void testInvalidArgCount()
   {
+    expectedException.expectMessage("ApplyFunction[fold] needs 3 arguments");
+    assertExpr("fold((x, y) -> x + 1, [1, 1, 1, 1, 1])", null);
+
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("lambda expression argument count does not match fold argument count");
+    expectedException.expectMessage("ApplyFunction[fold] lambda expression argument count does not match fold argument count");
     assertExpr("fold(() -> 1, [1, 1, 1, 1, 1], 0)", null);
+
 
     expectedException.expectMessage("lambda expression argument count does not match cartesian_fold argument count");
     assertExpr("cartesian_fold(() -> 1, [1, 1, 1, 1, 1], [1, 1], 0)", null);

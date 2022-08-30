@@ -479,8 +479,8 @@ public class ParserTest extends InitializedNullHandlingTest
   public void testApplyFunctions()
   {
     validateParser(
-        "map(() -> 1, x)",
-        "(map ([] -> 1), [x])",
+        "map((x) -> 1, x)",
+        "(map ([x] -> 1), [x])",
         ImmutableList.of("x"),
         ImmutableSet.of(),
         ImmutableSet.of("x")
