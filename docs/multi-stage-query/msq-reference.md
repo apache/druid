@@ -1,6 +1,6 @@
 ---
 id: reference
-title: Multi-stage query reference
+title: SQL-based ingestion reference
 sidebar_label: Reference
 ---
 

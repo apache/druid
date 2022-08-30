@@ -1,6 +1,6 @@
 ---
 id: convert-json-spec
-title: Tutorial - Convert ingestion spec to SQL
+title: Tutorial - Convert an ingestion spec for SQL-based ingestion
 description: How to convert an ingestion spec to a query for SQL-based ingestion in the Druid console.
 ---
 

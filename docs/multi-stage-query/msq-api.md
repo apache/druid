@@ -1,6 +1,6 @@
 ---
 id: api
-title: APIs for SQL-based ingestion
+title: SQL-based ingestion APIs
 sidebar_label: API
 ---
 

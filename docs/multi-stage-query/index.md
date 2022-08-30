@@ -2,7 +2,7 @@
 id: index
 title: SQL-based ingestion overview and syntax
 sidebar_label: Overview and syntax
-description: Introduces multi-stage query architecture and its features
+description: Introduces multi-stage query architecture and its task engine
 ---
 
 > SQL-based ingestion using the multi-stage query task engine is our recommended solution starting in Druid 24.0. Alternative ingestion solutions, such as native batch and Hadoop-based ingestion systems, will still be supported. We recommend you read all [known issues](./msq-known-issues.md) and test the feature in a development environment before rolling it out in production. Using the multi-stage query task engine with `SELECT` statements that do not write to a datasource is experimental.

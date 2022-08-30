@@ -1,6 +1,6 @@
 ---
 id: concepts
-title: Multi-stage query architecture concepts
+title: SQL-based ingestion concepts
 sidebar_label: Key concepts
 ---
 

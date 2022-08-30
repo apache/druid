@@ -363,7 +363,7 @@
         "sidebar_label": "API"
       },
       "multi-stage-query/concepts": {
-        "title": "Multi-stage query architecture concepts",
+        "title": "SQL-based ingestion concepts",
         "sidebar_label": "Key concepts"
       },
       "multi-stage-query/examples": {
@@ -375,18 +375,18 @@
         "sidebar_label": "Known issues"
       },
       "multi-stage-query/reference": {
-        "title": "Multi-stage query reference",
+        "title": "SQL-based ingestion reference",
         "sidebar_label": "Reference"
       },
       "multi-stage-query/security": {
-        "title": "Security for the multi-stage query architecture",
+        "title": "SQL-based ingestion security",
         "sidebar_label": "Security"
       },
       "multi-stage-query/connect-external-data": {
-        "title": "Tutorial - Connect external data"
+        "title": "Tutorial - Connect external data for SQL-based ingestion"
       },
       "multi-stage-query/convert-json-spec": {
-        "title": "Tutorial - Convert ingestion spec to SQL"
+        "title": "Tutorial - Convert an ingestion spec for SQL-based ingestion"
       },
       "operations/alerts": {
         "title": "Alerts"

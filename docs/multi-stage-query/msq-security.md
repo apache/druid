@@ -1,6 +1,6 @@
 ---
 id: security
-title: Security for the multi-stage query architecture
+title: SQL-based ingestion security
 sidebar_label: Security
 ---
 

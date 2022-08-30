@@ -1,6 +1,6 @@
 ---
 id: connect-external-data
-title: Tutorial - Connect external data
+title: Tutorial - Connect external data for SQL-based ingestion
 description: How to generate a query that references externally hosted data
 ---
 
