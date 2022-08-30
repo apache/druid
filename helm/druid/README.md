@@ -150,6 +150,8 @@ The following table lists the configurable parameters of the Druid chart and the
 | `historical.port`                        | port of historical component                            | `8083`                                     |
 | `historical.serviceType`                 | service type for service                                | `ClusterIP`                                |
 | `historical.resources`                   | historical node resources requests & limits             | `{}`                                       |
+| `historical.livenessProbeInitialDelaySeconds`  | historical node liveness probe initial delay in seconds  | `60`                                |
+| `historical.readinessProbeInitialDelaySeconds` | historical node readiness probe initial delay in seconds | `60`                                |
 | `historical.podAnnotations`              | historical Deployment annotations                       | `{}`                                       |
 | `historical.nodeSelector`                | node labels for historical pod assignment               | `{}`                                       |
 | `historical.securityContext`             | custom security context for historical containers       | `{ fsGroup: 1000 }`                        |
