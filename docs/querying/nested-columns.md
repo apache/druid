@@ -489,7 +489,7 @@ These functions are primarily intended for use with the multi-stage query archit
 
 You can use the `JSON_QUERY` function to extract a partial structure from any JSON input and return results in a JSON object. Unlike `JSON_VALUE` it can extract objects and arrays.
 
-The following example query illustrates the differences in output between `JSON_VALUE` and `JSON_QUERY`. The two output columns for JSON_VALUE contain null values only because JSON_VALUE only returns literal types.
+The following example query illustrates the differences in output between `JSON_VALUE` and `JSON_QUERY`. The two output columns for `JSON_VALUE` contain null values only because `JSON_VALUE` only returns literal types.
 
 ![Return results in a JSON object](../assets/nested-return-json.png)
 
