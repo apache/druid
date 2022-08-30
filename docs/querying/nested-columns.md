@@ -253,6 +253,8 @@ If your source data uses a string representation of your JSON column, you can st
 - During SQL-based ingestion, use the PARSE_JSON keyword within your SELECT statement to transform the string values to JSON.
 - If you are concerned that your data may not contain valid JSON, you can use `try_parse_json` for native batch or `TRY_PARSE_JSON` for SQL-based ingestion. For cases where the column does not contain valid JSON, Druid inserts a null value.
 
+If you are using a text input format like `tsv`, you need to use this method to ingest data into a `COMPLEX<json>` column.
+
 For example, consider the following deserialized row of the sample data set:
 
 ```
