@@ -5409,6 +5409,26 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testScanOrderByLimit()
   {
+    //Note: set parameters -Ddruid.generic.useDefaultValueForNull=true/false
+    List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{""},
+        new Object[]{"1"},
+        new Object[]{"10.1"},
+        new Object[]{"2"},
+        new Object[]{"abc"},
+        new Object[]{"def"}
+    );
+
+    if ("true".equals(System.getProperty("druid.generic.useDefaultValueForNull", "true"))) {
+      expectedResults = ImmutableList.of(
+          new Object[]{"1"},
+          new Object[]{"10.1"},
+          new Object[]{"2"},
+          new Object[]{"abc"},
+          new Object[]{"def"}
+      );
+    }
+
     testQuery(
         "SELECT dim1 FROM druid.foo where dim1 IS NOT NULL ORDER BY dim1 limit 100",
         ImmutableList.of(
@@ -5424,13 +5444,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
-        ImmutableList.of(
-            new Object[]{"1"},
-            new Object[]{"10.1"},
-            new Object[]{"2"},
-            new Object[]{"abc"},
-            new Object[]{"def"}
-        )
+        expectedResults
     );
   }
 
