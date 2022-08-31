@@ -25,5 +25,5 @@ README
 .pmdruleset.xml
 .java-version
 integration-tests/gen-scripts/
-bin/
+/bin/
 *.hprof
