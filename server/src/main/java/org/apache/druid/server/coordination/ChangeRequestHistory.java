@@ -79,6 +79,11 @@ public class ChangeRequestHistory<T>
    */
   public synchronized void addChangeRequests(List<T> requests)
   {
+    // We don't want to resolve our futures if there aren't actually any change requests being added!
+    if (requests.isEmpty()) {
+      return;
+    }
+
     for (T request : requests) {
       changes.add(new Holder<>(request, getLastCounter().inc()));
     }
