@@ -23,12 +23,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
-import org.apache.datasketches.memory.MapHandle;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
-import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
@@ -59,9 +57,7 @@ import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RunWith(Enclosed.class)
 public class FrameTest
@@ -288,47 +284,6 @@ public class FrameTest
               FRAME_DATA_COMPRESSED.length
           );
         }
-      },
-      MEMORY_FILE {
-        @Override
-        Frame wrap(Closer closer) throws IOException
-        {
-          final File file = File.createTempFile("frame-test", "");
-          closer.register(file::delete);
-          Files.write(FRAME_DATA, file);
-          final MapHandle mapHandle = Memory.map(file);
-          closer.register(
-              () -> {
-                try {
-                  mapHandle.close();
-                }
-                catch (Exception e) {
-                  throw new RuntimeException(e);
-                }
-              }
-          );
-          return Frame.wrap(mapHandle.get());
-        }
-
-        @Override
-        Frame decompress(Closer closer) throws IOException
-        {
-          final File file = File.createTempFile("frame-test", "");
-          closer.register(file::delete);
-          Files.write(FRAME_DATA_COMPRESSED, file);
-          final MapHandle mapHandle = Memory.map(file);
-          closer.register(
-              () -> {
-                try {
-                  mapHandle.close();
-                }
-                catch (Exception e) {
-                  throw new RuntimeException(e);
-                }
-              }
-          );
-          return Frame.decompress(mapHandle.get(), 0, FRAME_DATA_COMPRESSED.length);
-        }
       };
 
       abstract Frame wrap(Closer closer) throws IOException;
@@ -351,10 +306,7 @@ public class FrameTest
     {
       final List<Object[]> constructors = new ArrayList<>();
 
-      for (MemType memType :
-          Arrays.stream(MemType.values())
-                .filter(m -> FrameTestUtil.jdkCanDataSketchesMemoryMap() || m != MemType.MEMORY_FILE)
-                .collect(Collectors.toList())) {
+      for (MemType memType : MemType.values()) {
         for (boolean compressed : new boolean[]{true, false}) {
           constructors.add(new Object[]{memType, compressed});
         }
