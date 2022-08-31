@@ -148,10 +148,20 @@ public class ChangeRequestHistory<T>
   {
     Counter lastCounter = getLastCounter();
 
-    if (counter.counter >= lastCounter.counter) {
+    if (counter.counter == lastCounter.counter) {
+      // We don't want to trigger a counter reset if the client counter matches the last counter! Return an empty list
+      // of changes instead.
+      if (counter.matches(lastCounter)) {
+        return ChangeRequestsSnapshot.success(counter, new ArrayList<>());
+      } else {
+        return ChangeRequestsSnapshot.fail(
+            StringUtils.format("counter[%s] failed to match with [%s]", counter, lastCounter)
+        );
+      }
+    } else if (counter.counter > lastCounter.counter) {
       return ChangeRequestsSnapshot.fail(
           StringUtils.format(
-              "counter[%s] >= last counter[%s]",
+              "counter[%s] > last counter[%s]",
               counter,
               lastCounter
           )
