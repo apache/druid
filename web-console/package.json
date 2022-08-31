@@ -32,7 +32,7 @@
     "test-base": "npm run eslint && npm run sasslint && npm run prettify-check && npm run jest",
     "test": "npm run test-base -- --silent 2>&1",
     "test-ci": "npm run test-base -- --coverage",
-    "test-e2e": "jest --config jest.e2e.config.js e2e-tests",
+    "test-e2e": "jest --runInBand --config jest.e2e.config.js e2e-tests",
     "codecov": "codecov --disable=gcov -p ..",
     "coverage": "jest --coverage src",
     "update-snapshots": "jest -u --config jest.unit.config.js",
