@@ -31,7 +31,7 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.math.expr.Function;
+import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.filter.RegexDimFilter;
@@ -1099,7 +1099,7 @@ public class ExpressionsTest extends ExpressionTestBase
 
     if (!NullHandling.sqlCompatible()) {
       expectException(
-          Function.ValidationException.class,
+          ExpressionValidationException.class,
           "Function[round] first argument should be a LONG or DOUBLE but got STRING instead"
       );
     }
@@ -1123,7 +1123,7 @@ public class ExpressionsTest extends ExpressionTestBase
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
     expectException(
-        Function.ValidationException.class,
+        ExpressionValidationException.class,
         "Function[round] second argument should be a LONG but got STRING instead"
     );
     testHelper.testExpressionString(
@@ -2083,7 +2083,7 @@ public class ExpressionsTest extends ExpressionTestBase
   public void testAbnormalReverseWithWrongType()
   {
     expectException(
-        Function.ValidationException.class,
+        ExpressionValidationException.class,
         "Function[reverse] needs a STRING argument but got LONG instead"
     );
 
@@ -2159,7 +2159,7 @@ public class ExpressionsTest extends ExpressionTestBase
   public void testAbnormalRightWithNegativeNumber()
   {
     expectException(
-        Function.ValidationException.class,
+        ExpressionValidationException.class,
         "Function[right] needs a positive integer as the second argument"
     );
 
@@ -2178,8 +2178,8 @@ public class ExpressionsTest extends ExpressionTestBase
   public void testAbnormalRightWithWrongType()
   {
     expectException(
-        Function.ValidationException.class,
-        "Function[right] needs a STRING as first argument and an LONG as second argument"
+        ExpressionValidationException.class,
+        "Function[right] needs a STRING as first argument and a LONG as second argument"
     );
 
     testHelper.testExpressionString(
@@ -2251,7 +2251,7 @@ public class ExpressionsTest extends ExpressionTestBase
   public void testAbnormalLeftWithNegativeNumber()
   {
     expectException(
-        Function.ValidationException.class,
+        ExpressionValidationException.class,
         "Function[left] needs a postive integer as second argument"
     );
 
@@ -2270,8 +2270,8 @@ public class ExpressionsTest extends ExpressionTestBase
   public void testAbnormalLeftWithWrongType()
   {
     expectException(
-        Function.ValidationException.class,
-        "Function[left] needs a STRING as first argument and an LONG as second argument"
+        ExpressionValidationException.class,
+        "Function[left] needs a STRING as first argument and a LONG as second argument"
     );
 
     testHelper.testExpressionString(
@@ -2323,8 +2323,8 @@ public class ExpressionsTest extends ExpressionTestBase
   public void testAbnormalRepeatWithWrongType()
   {
     expectException(
-        Function.ValidationException.class,
-        "Function[repeat] needs a STRING as first argument and an LONG as second argument"
+        ExpressionValidationException.class,
+        "Function[repeat] needs a STRING as first argument and a LONG as second argument"
     );
 
     testHelper.testExpressionString(

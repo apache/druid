@@ -99,42 +99,56 @@ public interface ApplyFunction
   }
 
   /**
-   * Validate apply function arguments, throwing an exception if incorrect
+   * Validate function arguments. This method is called whenever a {@link ApplyFunctionExpr} is created, and should
+   * validate everything that is feasible up front. Note that input type information is typically unavailable at the
+   * time {@link Expr} are parsed, and so this method is incapable of performing complete validation.
    */
   void validateArguments(LambdaExpr lambdaExpr, List<Expr> args);
 
   /**
-   * Check that the argument list is the expected size. The list of arguments should not include the
-   * {@link LambdaExpr} and so the error message will indicate that count + 1 arguments are required.
+   * Helper method for implementors of {@link #validateArguments(LambdaExpr, List)} that checks that the argument list
+   * is some expected size.
+   *
+   * The parser decomposes a function like 'fold((x, acc) -> x + acc, col, 0)' into the {@link LambdaExpr}
+   * '(x, acc) -> x + acc' and the list of arguments, ['col', 0], and so does not include the {@link LambdaExpr} here.
+   * To compensate for this, the error message will indicate that at least count + 1 arguments are required to count
+   * the lambda.
    */
-  default void validateArgumentCount(LambdaExpr lambdaExpr, List<Expr> args, int count)
+  default void validationHelperCheckArgumentCount(LambdaExpr lambdaExpr, List<Expr> args, int count)
   {
     if (args.size() != count) {
-      throw new ValidationException(this, "needs %s arguments", count + 1);
+      throw new ExpressionValidationException(this, "needs %s arguments", count + 1);
     }
-    if (args.size() != lambdaExpr.identifierCount()) {
-      throw new ValidationException(
-          this,
-          "lambda expression argument count of %s does not match count of %s arguments passed to it ",
-          lambdaExpr.identifierCount(),
-          args.size()
-      );
-    }
+    validationHelperCheckLambaArgumentCount(lambdaExpr, args);
   }
 
   /**
-   * Check that the argument list is at least the expected size. The list of arguments should not include the
-   * {@link LambdaExpr} and so the error message will indicate that at least count + 1 arguments are required.
+   * Helper method for implementors of {@link #validateArguments(LambdaExpr, List)} that checks that the argument list
+   * is at least some expected size.
+   *
+   * The parser decomposes a function like 'fold((x, acc) -> x + acc, col, 0)' into the {@link LambdaExpr}
+   * '(x, acc) -> x + acc' and the list of arguments, ['col', 0], and so does not include the {@link LambdaExpr} here.
+   * To compensate for this, the error message will indicate that at least count + 1 arguments are required to count
+   * the lambda.
    */
-  default void validateMinArgumentCount(LambdaExpr lambdaExpr, List<Expr> args, int count)
+  default void validationHelperCheckMinArgumentCount(LambdaExpr lambdaExpr, List<Expr> args, int count)
   {
     if (args.size() < count) {
-      throw new ValidationException(this, "needs at least %s arguments", name(), count + 1);
+      throw new ExpressionValidationException(this, "needs at least %d arguments", count + 1);
     }
+    validationHelperCheckLambaArgumentCount(lambdaExpr, args);
+  }
+
+  /**
+   * Helper method for implementors of {@link #validateArguments(LambdaExpr, List)} that checks that the
+   * {@link LambdaExpr#identifierCount()} matches the number of arguments being passed to it
+   */
+  default void validationHelperCheckLambaArgumentCount(LambdaExpr lambdaExpr, List<Expr> args)
+  {
     if (args.size() != lambdaExpr.identifierCount()) {
-      throw new ValidationException(
+      throw new ExpressionValidationException(
           this,
-          "lambda expression argument count does not match %s count of arguments passed to it %s",
+          "lambda expression argument count of %d does not match the %d arguments passed to it",
           lambdaExpr.identifierCount(),
           args.size()
       );
@@ -238,7 +252,7 @@ public interface ApplyFunction
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      validateArgumentCount(lambdaExpr, args, 1);
+      validationHelperCheckArgumentCount(lambdaExpr, args, 1);
 
     }
   }
@@ -299,7 +313,7 @@ public interface ApplyFunction
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      validateMinArgumentCount(lambdaExpr, args, 1);
+      validationHelperCheckMinArgumentCount(lambdaExpr, args, 1);
     }
   }
 
@@ -391,7 +405,7 @@ public interface ApplyFunction
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      validateArgumentCount(lambdaExpr, args, 2);
+      validationHelperCheckArgumentCount(lambdaExpr, args, 2);
     }
   }
 
@@ -461,7 +475,7 @@ public interface ApplyFunction
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      validateMinArgumentCount(lambdaExpr, args, 1);
+      validationHelperCheckMinArgumentCount(lambdaExpr, args, 1);
     }
   }
 
@@ -509,7 +523,7 @@ public interface ApplyFunction
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      validateArgumentCount(lambdaExpr, args, 1);
+      validationHelperCheckArgumentCount(lambdaExpr, args, 1);
     }
 
     @Nullable
@@ -556,7 +570,7 @@ public interface ApplyFunction
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      validateArgumentCount(lambdaExpr, args, 1);
+      validationHelperCheckArgumentCount(lambdaExpr, args, 1);
     }
 
     @Nullable

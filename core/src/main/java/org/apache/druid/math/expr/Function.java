@@ -109,33 +109,46 @@ public interface Function
   }
 
   /**
-   * Validate function arguments
+   * Validate function arguments. This method is called whenever a {@link FunctionExpr} is created, and should validate
+   * everything that is feasible up front. Note that input type information is typically unavailable at the time
+   * {@link Expr} are parsed, and so this method is incapable of performing complete validation.
    */
   void validateArguments(List<Expr> args);
 
-  default void validateArgumentCount(List<Expr> args, int count)
+  /**
+   * Helper method for implementors of {@link #validateArguments(List)} to check if the argument count is expected
+   */
+  default void validationHelperCheckArgumentCount(List<Expr> args, int count)
   {
     if (args.size() != count) {
       if (count == 0) {
-        throw new ValidationException(this, "takes no arguments");
+        throw new ExpressionValidationException(this, "takes no arguments");
       } else if (count == 1) {
-        throw new ValidationException(this, "needs 1 argument");
+        throw new ExpressionValidationException(this, "needs 1 argument");
       }
-      throw new ValidationException(this, "needs %s arguments", count);
+      throw new ExpressionValidationException(this, "needs %d arguments", count);
     }
   }
 
-  default void validateMinArgumentCount(List<Expr> args, int count)
+  /**
+   * Helper method for implementors of {@link #validateArguments(List)} to check if there are at least as many
+   * arguments as specified
+   */
+  default void validationHelperCheckMinArgumentCount(List<Expr> args, int count)
   {
     if (args.size() < count) {
       if (count == 1) {
-        throw new ValidationException(this, "needs at least 1 argument");
+        throw new ExpressionValidationException(this, "needs at least 1 argument");
       }
-      throw new ValidationException(this, "needs at least %s arguments", count);
+      throw new ExpressionValidationException(this, "needs at least %d arguments", count);
     }
   }
 
-  default void validateAnyOfArgumentCount(List<Expr> args, int... counts)
+  /**
+   * Helper method for implementors of {@link #validateArguments(List)} to check if argument count is any of supplied
+   * set of valid counts
+   */
+  default void validationHelperCheckAnyOfArgumentCount(List<Expr> args, int... counts)
   {
     boolean satisfied = false;
     for (int count : counts) {
@@ -145,24 +158,11 @@ public interface Function
       }
     }
     if (!satisfied) {
-      throw new ValidationException(
+      throw new ExpressionValidationException(
           this,
           "needs %s arguments",
           Strings.join(" or ", () -> Arrays.stream(counts).mapToObj(String::valueOf).iterator())
       );
-    }
-  }
-
-  class ValidationException extends IllegalArgumentException
-  {
-    public ValidationException(Function fn, String msg, Object... formatArgs)
-    {
-      super(StringUtils.format("Function[%s] %s", fn.name(), StringUtils.format(msg, formatArgs)));
-    }
-
-    public ValidationException(Function fn, Throwable e, String msg, Object... formatArgs)
-    {
-      super(StringUtils.format("Function[%s] %s", fn.name(), StringUtils.format(msg, formatArgs)), e);
     }
   }
 
@@ -207,7 +207,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 1);
+      validationHelperCheckArgumentCount(args, 1);
     }
 
     @Override
@@ -228,7 +228,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 2);
+      validationHelperCheckArgumentCount(args, 2);
     }
 
     @Override
@@ -270,7 +270,11 @@ public interface Function
     protected ExprEval eval(double param)
     {
       if (param < Long.MIN_VALUE || param > Long.MAX_VALUE) {
-        throw new ValidationException(this, "Possible data truncation, param [%f] is out of LONG value range", param);
+        throw new ExpressionValidationException(
+            this,
+            "Possible data truncation, param [%f] is out of LONG value range",
+            param
+        );
       }
       return eval((long) param);
     }
@@ -412,7 +416,7 @@ public interface Function
     protected final ExprEval eval(ExprEval x, ExprEval y)
     {
       if (!x.type().is(ExprType.STRING) || !y.type().is(ExprType.LONG)) {
-        throw new ValidationException(this, "needs a STRING as first argument and an LONG as second argument");
+        throw new ExpressionValidationException(this, "needs a STRING as first argument and a LONG as second argument");
       }
       return eval(x.asString(), y.asInt());
     }
@@ -428,7 +432,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 2);
+      validationHelperCheckArgumentCount(args, 2);
     }
 
     @Override
@@ -481,7 +485,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 2);
+      validationHelperCheckArgumentCount(args, 2);
     }
 
     @Override
@@ -698,7 +702,7 @@ public interface Function
         case STRING:
           return true;
         default:
-          throw new ValidationException(this, "does not accept %s types", exprType);
+          throw new ExpressionValidationException(this, "does not accept %s types", exprType);
       }
     }
   }
@@ -716,7 +720,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateAnyOfArgumentCount(args, 1, 2);
+      validationHelperCheckAnyOfArgumentCount(args, 1, 2);
     }
 
     @Nullable
@@ -791,7 +795,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 0);
+      validationHelperCheckArgumentCount(args, 0);
     }
 
     @Nullable
@@ -1507,7 +1511,7 @@ public interface Function
       }
 
       if (!value1.type().anyOf(ExprType.LONG, ExprType.DOUBLE)) {
-        throw new ValidationException(
+        throw new ExpressionValidationException(
             this,
             "first argument should be a LONG or DOUBLE but got %s instead",
             value1.type()
@@ -1519,7 +1523,11 @@ public interface Function
       } else {
         ExprEval value2 = args.get(1).eval(bindings);
         if (!value2.type().is(ExprType.LONG)) {
-          throw new ValidationException(this, "second argument should be a LONG but got %s instead", value2.type());
+          throw new ExpressionValidationException(
+              this,
+              "second argument should be a LONG but got %s instead",
+              value2.type()
+          );
         }
         return eval(value1, value2.asInt());
       }
@@ -1528,7 +1536,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateAnyOfArgumentCount(args, 1, 2);
+      validationHelperCheckAnyOfArgumentCount(args, 1, 2);
     }
 
     @Nullable
@@ -2003,7 +2011,7 @@ public interface Function
         castTo = ExpressionType.fromString(StringUtils.toUpperCase(y.asString()));
       }
       catch (IllegalArgumentException e) {
-        throw new ValidationException(this, "invalid type %s", y.asString());
+        throw new ExpressionValidationException(this, "invalid type %s", y.asString());
       }
       return x.castTo(castTo);
     }
@@ -2131,7 +2139,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 3);
+      validationHelperCheckArgumentCount(args, 3);
     }
 
     @Nullable
@@ -2172,7 +2180,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateMinArgumentCount(args, 2);
+      validationHelperCheckMinArgumentCount(args, 2);
     }
 
     @Nullable
@@ -2219,7 +2227,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateMinArgumentCount(args, 3);
+      validationHelperCheckMinArgumentCount(args, 3);
     }
 
     @Nullable
@@ -2254,7 +2262,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 2);
+      validationHelperCheckArgumentCount(args, 2);
     }
 
     @Nullable
@@ -2295,7 +2303,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 1);
+      validationHelperCheckArgumentCount(args, 1);
     }
 
     @Nullable
@@ -2336,7 +2344,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 1);
+      validationHelperCheckArgumentCount(args, 1);
     }
 
     @Nullable
@@ -2443,7 +2451,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 1);
+      validationHelperCheckArgumentCount(args, 1);
     }
 
     @Nullable
@@ -2482,7 +2490,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateMinArgumentCount(args, 1);
+      validationHelperCheckMinArgumentCount(args, 1);
     }
 
     @Nullable
@@ -2525,7 +2533,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateAnyOfArgumentCount(args, 2, 3);
+      validationHelperCheckAnyOfArgumentCount(args, 2, 3);
     }
 
     @Nullable
@@ -2573,7 +2581,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 3);
+      validationHelperCheckArgumentCount(args, 3);
     }
 
     @Nullable
@@ -2603,7 +2611,7 @@ public interface Function
     protected ExprEval eval(@Nullable String x, int y)
     {
       if (y < 0) {
-        throw new ValidationException(this, "needs a positive integer as the second argument");
+        throw new ExpressionValidationException(this, "needs a positive integer as the second argument");
       }
       if (x == null) {
         return ExprEval.of(null);
@@ -2632,7 +2640,7 @@ public interface Function
     protected ExprEval eval(@Nullable String x, int y)
     {
       if (y < 0) {
-        throw new ValidationException(this, "needs a postive integer as second argument");
+        throw new ExpressionValidationException(this, "needs a postive integer as second argument");
       }
       if (x == null) {
         return ExprEval.of(null);
@@ -2664,7 +2672,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 3);
+      validationHelperCheckArgumentCount(args, 3);
     }
 
     @Nullable
@@ -2696,7 +2704,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 1);
+      validationHelperCheckArgumentCount(args, 1);
     }
 
     @Nullable
@@ -2728,7 +2736,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 1);
+      validationHelperCheckArgumentCount(args, 1);
     }
 
     @Nullable
@@ -2758,7 +2766,7 @@ public interface Function
     protected ExprEval eval(ExprEval param)
     {
       if (!param.type().is(ExprType.STRING)) {
-        throw new ValidationException(this, "needs a STRING argument but got %s instead", param.type());
+        throw new ExpressionValidationException(this, "needs a STRING argument but got %s instead", param.type());
       }
       final String arg = param.asString();
       return ExprEval.of(arg == null ? NullHandling.defaultStringValue() : new StringBuilder(arg).reverse().toString());
@@ -2816,7 +2824,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 3);
+      validationHelperCheckArgumentCount(args, 3);
     }
 
     @Nullable
@@ -2853,7 +2861,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 3);
+      validationHelperCheckArgumentCount(args, 3);
     }
 
     @Nullable
@@ -2877,14 +2885,22 @@ public interface Function
     {
       ExprEval value = args.get(0).eval(bindings);
       if (!value.type().is(ExprType.STRING)) {
-        throw new ValidationException(this, "first argument should be a STRING but got %s instead", value.type());
+        throw new ExpressionValidationException(
+            this,
+            "first argument should be a STRING but got %s instead",
+            value.type()
+        );
       }
 
       DateTimes.UtcFormatter formatter = DateTimes.ISO_DATE_OPTIONAL_TIME;
       if (args.size() > 1) {
         ExprEval format = args.get(1).eval(bindings);
         if (!format.type().is(ExprType.STRING)) {
-          throw new ValidationException(this, "second argument should be STRING but got %s instead", format.type());
+          throw new ExpressionValidationException(
+              this,
+              "second argument should be STRING but got %s instead",
+              format.type()
+          );
         }
         formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format.asString()));
       }
@@ -2893,7 +2909,13 @@ public interface Function
         date = formatter.parse(value.asString());
       }
       catch (IllegalArgumentException e) {
-        throw new ValidationException(this, e, "Function[%s] invalid value %s", name(), value.asString());
+        throw new ExpressionValidationException(
+            this,
+            e,
+            "Function[%s] invalid value %s",
+            name(),
+            value.asString()
+        );
       }
       return toValue(date);
     }
@@ -2901,7 +2923,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateAnyOfArgumentCount(args, 1, 2);
+      validationHelperCheckAnyOfArgumentCount(args, 1, 2);
     }
 
     @Nullable
@@ -2958,7 +2980,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 3);
+      validationHelperCheckArgumentCount(args, 3);
     }
 
     @Nullable
@@ -2986,11 +3008,11 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 1);
+      validationHelperCheckArgumentCount(args, 1);
       IdentifierExpr expr = args.get(0).getIdentifierExprIfIdentifierExpr();
 
       if (expr == null) {
-        throw new ValidationException(
+        throw new ExpressionValidationException(
             this,
             "argument %s should be an identifier expression. Use array() instead",
             args.get(0).toString()
@@ -3076,7 +3098,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateMinArgumentCount(args, 1);
+      validationHelperCheckMinArgumentCount(args, 1);
     }
 
     @Nullable
@@ -3150,7 +3172,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 1);
+      validationHelperCheckArgumentCount(args, 1);
     }
 
     @Nullable
@@ -3178,7 +3200,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 2);
+      validationHelperCheckArgumentCount(args, 2);
     }
 
     @Nullable
@@ -3332,7 +3354,7 @@ public interface Function
           }
           return index < 0 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null) : ExprEval.ofLong(index);
         default:
-          throw new ValidationException(
+          throw new ExpressionValidationException(
               this,
               "second argument must be a a scalar type but got %s instead",
               scalarExpr.type()
@@ -3375,7 +3397,7 @@ public interface Function
                  ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null)
                  : ExprEval.ofLong(index + 1);
         default:
-          throw new ValidationException(
+          throw new ExpressionValidationException(
               this,
               "second argument must be a a scalar type but got %s instead",
               scalarExpr.type()
@@ -3563,7 +3585,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateAnyOfArgumentCount(args, 2, 3);
+      validationHelperCheckAnyOfArgumentCount(args, 2, 3);
     }
 
     @Nullable
@@ -3643,7 +3665,11 @@ public interface Function
        * For a DOUBLE, it will be cast to LONG before format
        */
       if (valueParam.value() != null && !valueParam.type().anyOf(ExprType.LONG, ExprType.DOUBLE)) {
-        throw new ValidationException(this, "needs a number as its first argument but got %s instead", valueParam.type());
+        throw new ExpressionValidationException(
+            this,
+            "needs a number as its first argument but got %s instead",
+            valueParam.type()
+        );
       }
 
       /**
@@ -3653,11 +3679,19 @@ public interface Function
       if (args.size() > 1) {
         ExprEval precisionParam = args.get(1).eval(bindings);
         if (!precisionParam.type().is(ExprType.LONG)) {
-          throw new ValidationException(this, "needs a LONG as its second argument but got %s instead", precisionParam.type());
+          throw new ExpressionValidationException(
+              this,
+              "needs a LONG as its second argument but got %s instead",
+              precisionParam.type()
+          );
         }
         precision = precisionParam.asLong();
         if (precision < 0 || precision > 3) {
-          throw new ValidationException(this, "given precision[%d] must be in the range of [0,3]", precision);
+          throw new ExpressionValidationException(
+              this,
+              "given precision[%d] must be in the range of [0,3]",
+              precision
+          );
         }
       }
 
@@ -3667,7 +3701,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateAnyOfArgumentCount(args, 1, 2);
+      validationHelperCheckAnyOfArgumentCount(args, 1, 2);
     }
 
     @Nullable
@@ -3736,7 +3770,7 @@ public interface Function
     {
       ExprEval arg0 = args.get(0).eval(bindings);
       if (!arg0.type().is(ExprType.STRING)) {
-        throw new ValidationException(
+        throw new ExpressionValidationException(
             this,
             "first argument must be constant STRING expression containing a valid complex type name but got %s instead",
             arg0.type()
@@ -3748,7 +3782,7 @@ public interface Function
         strategy = type.getStrategy();
       }
       catch (IllegalArgumentException illegal) {
-        throw new ValidationException(
+        throw new ExpressionValidationException(
             this,
             "first argument must be a valid COMPLEX type name, got unknown COMPLEX type [%s]",
             type.asTypeString()
@@ -3756,7 +3790,7 @@ public interface Function
       }
       ExprEval base64String = args.get(1).eval(bindings);
       if (!base64String.type().is(ExprType.STRING)) {
-        throw new ValidationException(
+        throw new ExpressionValidationException(
             this,
             "second argument must be a base64 encoded STRING value but got %s instead",
             base64String.type()
@@ -3773,9 +3807,9 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      validateArgumentCount(args, 2);
+      validationHelperCheckArgumentCount(args, 2);
       if (!args.get(0).isLiteral() || args.get(0).isNullLiteral()) {
-        throw new ValidationException(
+        throw new ExpressionValidationException(
             this,
             "first argument must be constant STRING expression containing a valid COMPLEX type name"
         );
@@ -3791,7 +3825,7 @@ public interface Function
     {
       ExpressionType arg0Type = args.get(0).getOutputType(inspector);
       if (arg0Type == null || !arg0Type.is(ExprType.STRING)) {
-        throw new ValidationException(
+        throw new ExpressionValidationException(
             this,
             "first argument must be constant STRING expression containing a valid COMPLEX type name"
         );
