@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common;
 
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -39,8 +38,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class ByteBufferUtils
 {
-  private static final Logger log = new Logger(ByteBufferUtils.class);
-
   // the following MethodHandle lookup code is adapted from Apache Kafka
   // https://github.com/apache/kafka/blob/e554dc518eaaa0747899e708160275f95c4e525f/clients/src/main/java/org/apache/kafka/common/utils/MappedByteBuffers.java
 

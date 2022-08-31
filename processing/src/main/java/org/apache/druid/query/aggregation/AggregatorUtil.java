@@ -143,6 +143,11 @@ public class AggregatorUtil
   // expression lambda aggregator
   public static final byte EXPRESSION_LAMBDA_CACHE_TYPE_ID = 0x47;
 
+  // KLL sketch aggregator
+  public static final byte KLL_DOUBLES_SKETCH_BUILD_CACHE_TYPE_ID = 0x48;
+  public static final byte KLL_DOUBLES_SKETCH_MERGE_CACHE_TYPE_ID = 0x49;
+  public static final byte KLL_FLOATS_SKETCH_BUILD_CACHE_TYPE_ID = 0x4A;
+  public static final byte KLL_FLOATS_SKETCH_MERGE_CACHE_TYPE_ID = 0x4B;
 
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg

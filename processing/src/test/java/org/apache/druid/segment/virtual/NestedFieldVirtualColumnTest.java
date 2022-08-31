@@ -91,6 +91,7 @@ public class NestedFieldVirtualColumnTest
   {
     EqualsVerifier.forClass(NestedFieldVirtualColumn.class)
                   .withNonnullFields("columnName", "outputName")
+                  .withIgnoredFields("hasNegativeArrayIndex")
                   .usingGetClass()
                   .verify();
   }

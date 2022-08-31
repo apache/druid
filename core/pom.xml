@@ -29,7 +29,7 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>0.24.0-SNAPSHOT</version>
+    <version>25.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -287,10 +287,6 @@
       <!-- "Provided" because this dependency is used only during the build itself: some files from this
       dependency are copied as resources. See maven-dependency-plugin configuration and <resources> below. -->
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.gridkit.lab</groupId>
-      <artifactId>jvm-attach-api</artifactId>
     </dependency>
 
     <!-- Tests -->

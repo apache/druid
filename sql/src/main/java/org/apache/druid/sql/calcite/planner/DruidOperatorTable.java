@@ -299,13 +299,13 @@ public class DruidOperatorTable implements SqlOperatorTable
 
   private static final List<SqlOperatorConversion> NESTED_DATA_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
-                   .add(new NestedDataOperatorConversions.GetPathOperatorConversion())
-                   .add(new NestedDataOperatorConversions.JsonGetPathAliasOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonKeysOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonPathsOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonQueryOperatorConversion())
-                   .add(new NestedDataOperatorConversions.JsonValueOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonValueAnyOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueBigintOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueDoubleOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueVarcharOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonObjectOperatorConversion())
                    .add(new NestedDataOperatorConversions.ToJsonStringOperatorConversion())
                    .add(new NestedDataOperatorConversions.ParseJsonOperatorConversion())

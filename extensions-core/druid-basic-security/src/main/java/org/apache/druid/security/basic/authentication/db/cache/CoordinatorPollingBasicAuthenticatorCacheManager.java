@@ -127,7 +127,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
               LOG.debug("Scheduled user cache poll is done");
             }
             catch (Throwable t) {
-              LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();
+              LOG.makeAlert(t, "Error occurred while polling for cachedUserMaps.").emit();
             }
           }
       );

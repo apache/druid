@@ -34,7 +34,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -611,7 +610,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskId, final long offset)
+  public Optional<InputStream> streamTaskLog(final String taskId, final long offset) throws IOException
   {
     final ZkWorker zkWorker = findWorkerRunningTask(taskId);
 
@@ -626,34 +625,26 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           taskId,
           Long.toString(offset)
       );
-      return Optional.of(
-          new ByteSource()
-          {
-            @Override
-            public InputStream openStream() throws IOException
-            {
-              try {
-                return httpClient.go(
-                    new Request(HttpMethod.GET, url),
-                    new InputStreamResponseHandler()
-                ).get();
-              }
-              catch (InterruptedException e) {
-                throw new RuntimeException(e);
-              }
-              catch (ExecutionException e) {
-                // Unwrap if possible
-                Throwables.propagateIfPossible(e.getCause(), IOException.class);
-                throw new RuntimeException(e);
-              }
-            }
-          }
-      );
+      try {
+        return Optional.of(httpClient.go(
+            new Request(HttpMethod.GET, url),
+            new InputStreamResponseHandler()
+        ).get());
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      catch (ExecutionException e) {
+        // Unwrap if possible
+        Throwables.propagateIfPossible(e.getCause(), IOException.class);
+        throw new RuntimeException(e);
+      }
     }
   }
 
+
   @Override
-  public Optional<ByteSource> streamTaskReports(final String taskId)
+  public Optional<InputStream> streamTaskReports(final String taskId) throws IOException
   {
     final ZkWorker zkWorker = findWorkerRunningTask(taskId);
 
@@ -681,30 +672,23 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         "/druid/worker/v1/chat/%s/liveReports",
         taskId
     );
-    return Optional.of(
-        new ByteSource()
-        {
-          @Override
-          public InputStream openStream() throws IOException
-          {
-            try {
-              return httpClient.go(
-                  new Request(HttpMethod.GET, url),
-                  new InputStreamResponseHandler()
-              ).get();
-            }
-            catch (InterruptedException e) {
-              throw new RuntimeException(e);
-            }
-            catch (ExecutionException e) {
-              // Unwrap if possible
-              Throwables.propagateIfPossible(e.getCause(), IOException.class);
-              throw new RuntimeException(e);
-            }
-          }
-        }
-    );
+
+    try {
+      return Optional.of(httpClient.go(
+          new Request(HttpMethod.GET, url),
+          new InputStreamResponseHandler()
+      ).get());
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    catch (ExecutionException e) {
+      // Unwrap if possible
+      Throwables.propagateIfPossible(e.getCause(), IOException.class);
+      throw new RuntimeException(e);
+    }
   }
+
 
   /**
    * Adds a task to the pending queue.

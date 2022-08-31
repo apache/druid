@@ -19,16 +19,16 @@
 
 package org.apache.druid.java.util.common;
 
+import org.apache.druid.collections.ResourceHolder;
+
 import java.nio.MappedByteBuffer;
 
 /**
- * Facilitates using try-with-resources with {@link MappedByteBuffer}s which don't implement {@link AutoCloseable}.
- *
- * <p>This interface is a specialization of {@code org.apache.druid.collections.ResourceHandler}.
+ * Facilitates using try-with-resources with {@link MappedByteBuffer}.
  *
  * @see FileUtils#map
  */
-public final class MappedByteBufferHandler implements AutoCloseable
+public final class MappedByteBufferHandler implements ResourceHolder<MappedByteBuffer>
 {
   private final MappedByteBuffer mappedByteBuffer;
 
@@ -40,6 +40,7 @@ public final class MappedByteBufferHandler implements AutoCloseable
   /**
    * Returns the wrapped buffer.
    */
+  @Override
   public MappedByteBuffer get()
   {
     return mappedByteBuffer;

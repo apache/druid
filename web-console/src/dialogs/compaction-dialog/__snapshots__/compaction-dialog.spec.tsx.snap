@@ -281,6 +281,20 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "type": "number",
           },
           Object {
+            "defaultValue": -1,
+            "info": <React.Fragment>
+              <p>
+                Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
+              </p>
+              <p>
+                Default: -1 (unlimited)
+              </p>
+            </React.Fragment>,
+            "min": -1,
+            "name": "tuningConfig.maxColumnsToMerge",
+            "type": "number",
+          },
+          Object {
             "defaultValue": 10,
             "defined": [Function],
             "info": <React.Fragment>
@@ -640,6 +654,20 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             </React.Fragment>,
             "min": 1,
             "name": "tuningConfig.maxNumConcurrentSubTasks",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": -1,
+            "info": <React.Fragment>
+              <p>
+                Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
+              </p>
+              <p>
+                Default: -1 (unlimited)
+              </p>
+            </React.Fragment>,
+            "min": -1,
+            "name": "tuningConfig.maxColumnsToMerge",
             "type": "number",
           },
           Object {
@@ -1005,6 +1033,20 @@ exports[`CompactionDialog matches snapshot with compactionConfig (range partitio
             "type": "number",
           },
           Object {
+            "defaultValue": -1,
+            "info": <React.Fragment>
+              <p>
+                Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
+              </p>
+              <p>
+                Default: -1 (unlimited)
+              </p>
+            </React.Fragment>,
+            "min": -1,
+            "name": "tuningConfig.maxColumnsToMerge",
+            "type": "number",
+          },
+          Object {
             "defaultValue": 10,
             "defined": [Function],
             "info": <React.Fragment>
@@ -1364,6 +1406,20 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             </React.Fragment>,
             "min": 1,
             "name": "tuningConfig.maxNumConcurrentSubTasks",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": -1,
+            "info": <React.Fragment>
+              <p>
+                Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
+              </p>
+              <p>
+                Default: -1 (unlimited)
+              </p>
+            </React.Fragment>,
+            "min": -1,
+            "name": "tuningConfig.maxColumnsToMerge",
             "type": "number",
           },
           Object {

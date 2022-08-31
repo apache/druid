@@ -20,8 +20,7 @@ import classNames from 'classnames';
 import React from 'react';
 import ReactTable from 'react-table';
 
-import { TableCell } from '../../../components';
-import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
+import { TableCell, TableCellUnparseable } from '../../../components';
 import {
   getTimestampDetailFromSpec,
   getTimestampSpecColumnFromSpec,

@@ -1799,6 +1799,12 @@ keytabs
 dsql
  - ../docs/tutorials/tutorial-retention.md
 2015-09-12T12
+ - ../docs/tutorials/tutorial-sketches-theta.md
+clickstreams
+uid
+_k_
+Bridgerton
+Hellmar
  - ../docs/tutorials/tutorial-update-data.md
 bear-111
  - ../docs/configuration/index.md
@@ -2055,6 +2061,13 @@ protobuf
 Golang
 multiValueHandling
 _n_
+KLL
+KllFloatsSketch
+KllDoublesSketch
+PMF
+CDF
+maxStreamLength
+toString
 100TB
  - ../docs/querying/sql-functions.md
 ANY_VALUE 

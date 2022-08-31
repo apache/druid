@@ -198,9 +198,13 @@ public class CliOverlord extends ServerRunnable
             )
                   .toProvider(
                       new ListProvider<TaskLogStreamer>()
-                          .add(TaskRunnerTaskLogStreamer.class)
                           .add(TaskLogs.class)
                   )
+                  .in(LazySingleton.class);
+
+            binder.bind(TaskLogStreamer.class)
+                  .annotatedWith(Names.named("taskstreamer"))
+                  .to(TaskRunnerTaskLogStreamer.class)
                   .in(LazySingleton.class);
 
             binder.bind(TaskActionClientFactory.class).to(LocalTaskActionClientFactory.class).in(LazySingleton.class);

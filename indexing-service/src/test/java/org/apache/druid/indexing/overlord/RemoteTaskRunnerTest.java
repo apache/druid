@@ -1116,7 +1116,7 @@ public class RemoteTaskRunnerTest
     );
 
     // Stream task reports from a running task.
-    final InputStream in = remoteTaskRunner.streamTaskReports(task.getId()).get().openStream();
+    final InputStream in = remoteTaskRunner.streamTaskReports(task.getId()).get();
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     ByteStreams.copy(in, baos);
     Assert.assertEquals(reportString, StringUtils.fromUtf8(baos.toByteArray()));
