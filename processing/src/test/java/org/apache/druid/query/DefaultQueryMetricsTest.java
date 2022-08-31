@@ -67,7 +67,10 @@ public class DefaultQueryMetricsTest
         .build();
     queryMetrics.query(query);
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
-    queryMetrics.sqlQueryId("dummy"); // done just to pacify the code coverage tool
+    // No way to verify this right now since DefaultQueryMetrics implements a no-op for sqlQueryId(String) and queryId(String)
+    // This change is done to keep the code coverage tool happy by exercising the implementation
+    queryMetrics.sqlQueryId("dummy");
+    queryMetrics.queryId("dummy");
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals(13, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));

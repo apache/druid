@@ -133,6 +133,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public void queryId(String queryId)
+  {
+    setDimension(DruidMetrics.ID, StringUtils.nullToEmptyNonDruidDataString(queryId));
+  }
+
+  @Override
   public void subQueryId(QueryType query)
   {
     // Emit nothing by default.

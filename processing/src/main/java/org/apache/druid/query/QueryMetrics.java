@@ -203,6 +203,12 @@ public interface QueryMetrics<QueryType extends Query<?>>
   void queryId(QueryType query);
 
   /**
+   * Sets id of the given query as dimension.
+   */
+  @PublicApi
+  void queryId(@SuppressWarnings("UnusedParameters") String queryId);
+
+  /**
    * Sets {@link Query#getSubQueryId()} of the given query as dimension.
    */
   @PublicApi
@@ -217,6 +223,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
   /**
    * Sets sqlQueryId as a dimension
    */
+  @PublicApi
   void sqlQueryId(@SuppressWarnings("UnusedParameters") String sqlQueryId);
 
   /**

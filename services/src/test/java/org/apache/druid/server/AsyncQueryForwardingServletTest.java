@@ -49,7 +49,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
@@ -72,7 +71,6 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.sql.http.SqlResource;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.HttpResponse;
@@ -219,12 +217,13 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         false,
         false,
         false,
-        ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "dummy"),
+        ImmutableMap.of("sqlQueryId", "dummy"),
         null
     );
     final QueryHostFinder hostFinder = EasyMock.createMock(QueryHostFinder.class);
-    EasyMock.expect(hostFinder.findServerSql(query))
-            .andReturn(new TestServer("http", "1.2.3.4", 9999)).once();
+    EasyMock.expect(hostFinder.findServerSql(
+        query.withOverridenContext(ImmutableMap.of("sqlQueryId", "dummy", "queryId", "dummy")))
+    ).andReturn(new TestServer("http", "1.2.3.4", 9999)).once();
     EasyMock.replay(hostFinder);
 
     Properties properties = new Properties();
@@ -556,13 +555,16 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       }
     };
     final HttpServletRequest requestMock = EasyMock.createMock(HttpServletRequest.class);
-    final boolean isAnySql = isJDBCSql || isNativeSql;
     EasyMock.expect(requestMock.getContentType()).andReturn("application/json").times(2);
     requestMock.setAttribute("org.apache.druid.proxy.objectMapper", jsonMapper);
     EasyMock.expectLastCall();
     EasyMock.expect(requestMock.getRequestURI())
             .andReturn(isNativeSql ? "/druid/v2/sql" : (isJDBCSql ? "/druid/v2/sql/avatica" : "/druid/v2/"));
     EasyMock.expect(requestMock.getMethod()).andReturn("POST");
+    if (isNativeSql) {
+      SqlQuery sqlQuery = (SqlQuery) query;
+      query = sqlQuery.withOverridenContext(ImmutableMap.of("sqlQueryId", "dummy", "queryId", "dummy"));
+    }
     requestMock.setAttribute(
         "org.apache.druid.proxy." + (isNativeSql ? "sqlQuery" : (isJDBCSql ? "avaticaQuery" : "query")),
         isJDBCSql ? jsonMapper.writeValueAsBytes(query) : query
@@ -594,9 +596,10 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           public HttpFields getHeaders()
           {
             HttpFields httpFields = new HttpFields();
-            httpFields.add(new HttpField(QueryResource.QUERY_ID_RESPONSE_HEADER, "dummy"));
-            if (isAnySql) {
-              httpFields.add(new HttpField(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER, "sql"));
+            if (isJDBCSql) {
+              httpFields.add(new HttpField("X-Druid-SQL-Query-Id", "jdbcDummy"));
+            } else if (isNativeSql) {
+              httpFields.add(new HttpField("X-Druid-SQL-Query-Id", "dummy"));
             }
             return httpFields;
           }
@@ -639,7 +642,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     catch (NullPointerException ignored) {
     }
     Assert.assertEquals("query/time", stubServiceEmitter.getEvents().get(0).toMap().get("metric"));
-    if (!isAnySql) {
+    if (!isJDBCSql) {
       Assert.assertEquals("dummy", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
     }
 

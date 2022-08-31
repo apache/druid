@@ -302,14 +302,18 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   }
 
   /**
-   * Rebuilds the {@link SqlQuery} object with a sqlQueryId context paramenter if not present
+   * Rebuilds the {@link SqlQuery} object with sqlQueryId and queryId context parameters if not present
    * @param sqlQuery the original SqlQuery
-   * @return an updated sqlQuery object with sqlQueryId context parameter
+   * @return an updated sqlQuery object with sqlQueryId and queryId context parameters
    */
   private SqlQuery buildSqlQueryWithId(SqlQuery sqlQuery)
   {
     Map<String, Object> context = new HashMap<>(sqlQuery.getContext());
-    context.putIfAbsent(BaseQuery.SQL_QUERY_ID, UUID.randomUUID().toString());
+    String sqlQueryId = (String) context.getOrDefault(BaseQuery.SQL_QUERY_ID, UUID.randomUUID().toString());
+    // set queryId to sqlQueryId if not overridden
+    String queryId = (String) context.getOrDefault(BaseQuery.QUERY_ID, sqlQueryId);
+    context.put(BaseQuery.SQL_QUERY_ID, sqlQueryId);
+    context.put(BaseQuery.QUERY_ID, queryId);
     return sqlQuery.withOverridenContext(context);
   }
 
@@ -721,6 +725,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         sqlQueryId = result.getResponse().getHeaders().get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
       } else if (sqlQuery != null) {
         sqlQueryId = (String) sqlQuery.getContext().getOrDefault(BaseQuery.SQL_QUERY_ID, null);
+        queryId = (String) sqlQuery.getContext().getOrDefault(BaseQuery.QUERY_ID, null);
       } else if (query != null) {
         queryId = query.getId();
       }
@@ -737,7 +742,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       } else {
         failedQueryCount.incrementAndGet();
       }
-      emitQueryTime(requestTimeNs, success, sqlQueryId);
+      emitQueryTime(requestTimeNs, success, sqlQueryId, queryId);
 
       //noinspection VariableNotUsedInsideIf
       if (sqlQueryId != null) {
@@ -806,6 +811,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         sqlQueryId = response.getHeaders().get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
       } else if (sqlQuery != null) {
         sqlQueryId = (String) sqlQuery.getContext().getOrDefault(BaseQuery.SQL_QUERY_ID, null);
+        queryId = (String) sqlQuery.getContext().getOrDefault(BaseQuery.QUERY_ID, null);
       } else if (query != null) {
         queryId = query.getId();
       }
@@ -817,7 +823,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       }
 
       failedQueryCount.incrementAndGet();
-      emitQueryTime(requestTimeNs, false, sqlQueryId);
+      emitQueryTime(requestTimeNs, false, sqlQueryId, queryId);
 
       //noinspection VariableNotUsedInsideIf
       if (sqlQueryId != null) {
@@ -884,14 +890,17 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       super.onFailure(response, failure);
     }
 
-    private void emitQueryTime(long requestTimeNs, boolean success, @Nullable String sqlQueryId)
+    private void emitQueryTime(long requestTimeNs, boolean success, @Nullable String sqlQueryId, @Nullable String queryId)
     {
       QueryMetrics queryMetrics;
       if (sqlQueryId != null) {
         queryMetrics = queryMetricsFactory.makeMetrics();
         queryMetrics.remoteAddress(req.getRemoteAddr());
-        // Setting sqlQueryId dimension to the metric
+        // Setting sqlQueryId and queryId dimensions to the metric
         queryMetrics.sqlQueryId(sqlQueryId);
+        if (queryId != null) { // query id is null for JDBC SQL
+          queryMetrics.queryId(queryId);
+        }
       } else {
         queryMetrics = DruidMetrics.makeRequestMetrics(
             queryMetricsFactory,
