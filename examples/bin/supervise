@@ -55,12 +55,13 @@ sub read_config_file
 
   my @commands;
   my @verify;
+  my @notify;
   my $kill_timeout;
   while (my $line = <$config_fh>) {
     chomp $line;
     next if $line =~ /^(\s*\#.*|\s*)$/;
 
-    if ($line =~ /^(:verify|:kill-timeout|(?:\!p[0-9]+\s+)?[^:]\S+)\s+(.+)$/) {
+    if ($line =~ /^(:verify|:notify|:kill-timeout|(?:\!p[0-9]+\s+)?[^:]\S+)\s+(.+)$/) {
       my $name = $1;
       my $order = 50;
       my $command = $2;
@@ -72,6 +73,8 @@ sub read_config_file
 
       if ($name eq ':verify') {
         push @verify, $command;
+      } elsif ($name eq ':notify') {
+        push @notify, $command;
       } elsif ($name eq ':kill-timeout') {
         $kill_timeout = int($command);
       } else {
@@ -92,7 +95,7 @@ sub read_config_file
   }
 
   close $config_fh;
-  return { commands => \@commands, verify => \@verify, 'kill-timeout' => $kill_timeout };
+  return { commands => \@commands, verify => \@verify, notify => \@notify, 'kill-timeout' => $kill_timeout };
 }
 
 sub stringify_exit_status
@@ -236,8 +239,13 @@ $SIG{TERM} = sub { if (!$killed) { $killed = 15; $killkill = time + $opt{'kill-t
 # Build up control fifo command over multiple sysreads, potentially
 my $fifobuffer = '';
 
+# Print notification lines
+for my $notify_line (@{$config->{notify}}) {
+  logit $notify_line;
+}
+
 if (defined $opt{svlogd}) {
-  logit "Staring services with log directory [svdir].";
+  logit "Starting services with log directory [$svdir].";
 } else {
   logit "Starting services with log directory [$logdir].";
 }
