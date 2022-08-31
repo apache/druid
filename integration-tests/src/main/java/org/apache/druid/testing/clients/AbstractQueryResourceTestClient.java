@@ -30,6 +30,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -157,19 +158,23 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
 
       ITRetryUtil.retryUntil(() -> {
         try {
-          responseRef.set(httpClient.go(
+          final BytesFullResponseHolder response = httpClient.go(
               request,
               new BytesFullResponseHandler()
-          ).get());
+          ).get();
+          responseRef.set(response);
+          LOG.info("%s %s", response.getStatus(), StringUtils.fromUtf8(response.getContent()));
+          return response.getStatus().equals(HttpResponseStatus.OK);
         }
         catch (Throwable t) {
           ChannelException ce = Throwables.getCauseOfType(t, ChannelException.class);
           if (ce != null) {
             LOG.info(ce, "Encountered a channel exception. Retrying the query request");
-            return false;
+          } else {
+            LOG.error(t, "Encountered a unknown exception. Retrying the query request");
           }
+          return false;
         }
-        return true;
       },
           true,
           1000,
