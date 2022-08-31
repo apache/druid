@@ -94,6 +94,6 @@ feature is not available. All columns and their types must be specified explicit
 
 ## Missing guardrails
 
-- Maximum number of input files. Since there's no 
+- Maximum number of input files. Since there's no limit, the controller can potentially run out of memory tracking all input files
 
 - Maximum amount of local disk space to use for temporary data. No guardrail today means worker tasks may exhaust all available disk space. In this case, you will receive an [UnknownError](./msq-reference.md#error-codes)) with a message including "No space left on device".
