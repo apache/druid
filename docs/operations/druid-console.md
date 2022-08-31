@@ -71,12 +71,12 @@ The following screenshot shows a populated enhanced **Query** view along with a 
 1. The multi-stage, tab-enabled, **Query** view is where you can issue queries and see results.
 All other views are unchanged from the non-enhanced version. You can still access the original **Query** view by navigating to `#query` in the URL.
 You can tell that you're looking at the updated **Query** view by the presence of the tabs (3).
-1. The **Resources** view shows the available schemas, datasources, and columns.
-2. Query tabs allow you to manage and run several queries at once.
+2. The **druid** panel shows the available schemas, datasources, and columns.
+3. Query tabs allow you to manage and run several queries at once.
 Click the plus icon to open a new tab.
 To manipulate existing tabs, click the tab name.
-3. The tab bar contains some helpful tools including the **Connect external data** button that samples external data and creates an initial query with the appropriate `EXTERN` definition that you can then edit as needed.
-5. The **Work history** panel lets you see currently running and previous queries from all users in the cluster.
+4. The tab bar contains some helpful tools including the **Connect external data** button that samples external data and creates an initial query with the appropriate `EXTERN` definition that you can then edit as needed.
+5. The **Recent query tasks** panel lets you see currently running and previous queries from all users in the cluster.
 It is equivalent to the **Task** view in the **Ingestion** view with the filter of `type='query_controller'`.
 6. You can click on each query entry to attach to that query in a new tab.
 7. You can download an archive of all the pertinent details about the query that you can share.
@@ -98,7 +98,7 @@ The progress is computed from the various counters in the live reports (16).
 16. The **Current stage** progress bar shows the progress for the currently running query stage.
 If several stages are executing concurrently, it conservatively shows the information for the earliest executing stage.
 17. The live query reports show detailed information of all the stages (past, present, and future). The live reports are shown while the query is running. You can hide the report if you want.
-After queries finish, you can access them by clicking on the query time indicator or from the **Work history** panel (6).
+After queries finish, you can access them by clicking on the query time indicator or from the **Recent query tasks** panel (6).
 18. You can expand each stage of the live query report by clicking on the triangle to show per worker and per partition statistics.
 
 
