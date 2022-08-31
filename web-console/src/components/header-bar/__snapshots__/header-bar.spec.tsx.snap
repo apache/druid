@@ -15,24 +15,91 @@ exports[`HeaderBar matches snapshot 1`] = `
     <Blueprint4.NavbarDivider />
     <Blueprint4.AnchorButton
       active={true}
+      className="header-entry"
       disabled={false}
-      href="#load-data"
-      icon="cloud-upload"
-      intent="none"
+      href="#workbench"
+      icon="application"
       minimal={true}
-      text="Load data"
+      onClick={[Function]}
+      text="Query"
     />
+    <Blueprint4.Popover2
+      boundary="clippingParents"
+      captureDismiss={false}
+      content={
+        <Blueprint4.Menu>
+          <Blueprint4.MenuItem
+            active={false}
+            disabled={false}
+            href="#streaming-data-loader"
+            icon="feed"
+            multiline={false}
+            popoverProps={Object {}}
+            selected={false}
+            shouldDismissPopover={true}
+            text="Streaming"
+          />
+          <Blueprint4.MenuItem
+            active={false}
+            disabled={false}
+            href="#sql-data-loader"
+            icon="clean"
+            labelElement={
+              <Blueprint4.Tag
+                minimal={true}
+              >
+                multi-stage-query
+              </Blueprint4.Tag>
+            }
+            multiline={false}
+            popoverProps={Object {}}
+            selected={false}
+            shouldDismissPopover={true}
+            text="Batch - SQL"
+          />
+          <Blueprint4.MenuItem
+            active={false}
+            disabled={false}
+            href="#classic-batch-data-loader"
+            icon="list"
+            multiline={false}
+            popoverProps={Object {}}
+            selected={false}
+            shouldDismissPopover={true}
+            text="Batch - classic"
+          />
+        </Blueprint4.Menu>
+      }
+      defaultIsOpen={false}
+      disabled={false}
+      fill={false}
+      hasBackdrop={false}
+      hoverCloseDelay={300}
+      hoverOpenDelay={150}
+      inheritDarkTheme={true}
+      interactionKind="click"
+      minimal={false}
+      openOnTargetFocus={true}
+      position="bottom-left"
+      positioningStrategy="absolute"
+      shouldReturnFocusOnClose={false}
+      targetTagName="span"
+      transitionDuration={300}
+      usePortal={true}
+    >
+      <Blueprint4.Button
+        active={false}
+        className="header-entry"
+        disabled={false}
+        icon="cloud-upload"
+        minimal={true}
+        text="Load data"
+      />
+    </Blueprint4.Popover2>
     <Blueprint4.NavbarDivider />
     <Blueprint4.AnchorButton
       active={false}
-      disabled={false}
-      href="#ingestion"
-      icon="gantt-chart"
-      minimal={true}
-      text="Ingestion"
-    />
-    <Blueprint4.AnchorButton
-      active={false}
+      className="header-entry"
       disabled={false}
       href="#datasources"
       icon="multi-select"
@@ -41,6 +108,16 @@ exports[`HeaderBar matches snapshot 1`] = `
     />
     <Blueprint4.AnchorButton
       active={false}
+      className="header-entry"
+      disabled={false}
+      href="#ingestion"
+      icon="gantt-chart"
+      minimal={true}
+      text="Ingestion"
+    />
+    <Blueprint4.AnchorButton
+      active={false}
+      className="header-entry"
       disabled={false}
       href="#segments"
       icon="stacked-chart"
@@ -49,21 +126,55 @@ exports[`HeaderBar matches snapshot 1`] = `
     />
     <Blueprint4.AnchorButton
       active={false}
+      className="header-entry"
       disabled={false}
       href="#services"
       icon="database"
       minimal={true}
       text="Services"
     />
-    <Blueprint4.NavbarDivider />
-    <Blueprint4.AnchorButton
-      active={false}
+    <Blueprint4.Popover2
+      boundary="clippingParents"
+      captureDismiss={false}
+      content={
+        <Blueprint4.Menu>
+          <Blueprint4.MenuItem
+            active={false}
+            disabled={false}
+            href="#lookups"
+            icon="properties"
+            multiline={false}
+            popoverProps={Object {}}
+            selected={false}
+            shouldDismissPopover={true}
+            text="Lookups"
+          />
+        </Blueprint4.Menu>
+      }
+      defaultIsOpen={false}
       disabled={false}
-      href="#query"
-      icon="application"
-      minimal={true}
-      text="Query"
-    />
+      fill={false}
+      hasBackdrop={false}
+      hoverCloseDelay={300}
+      hoverOpenDelay={150}
+      inheritDarkTheme={true}
+      interactionKind="click"
+      minimal={false}
+      openOnTargetFocus={true}
+      position="bottom-left"
+      positioningStrategy="absolute"
+      shouldReturnFocusOnClose={false}
+      targetTagName="span"
+      transitionDuration={300}
+      usePortal={true}
+    >
+      <Blueprint4.Button
+        active={false}
+        className="header-entry"
+        icon="more"
+        minimal={true}
+      />
+    </Blueprint4.Popover2>
   </Blueprint4.NavbarGroup>
   <Blueprint4.NavbarGroup
     align="right"
@@ -72,6 +183,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       capabilities={
         Capabilities {
           "coordinator": true,
+          "multiStageQuery": true,
           "overlord": true,
           "queryType": "nativeAndSql",
         }
@@ -115,17 +227,6 @@ exports[`HeaderBar matches snapshot 1`] = `
             selected={false}
             shouldDismissPopover={true}
             text="Overlord dynamic config"
-          />
-          <Blueprint4.MenuItem
-            active={false}
-            disabled={false}
-            href="#lookups"
-            icon="properties"
-            multiline={false}
-            popoverProps={Object {}}
-            selected={false}
-            shouldDismissPopover={true}
-            text="Lookups"
           />
           <Blueprint4.MenuDivider />
           <Blueprint4.MenuItem
@@ -201,6 +302,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       usePortal={true}
     >
       <Blueprint4.Button
+        className="header-entry"
         icon="cog"
         minimal={true}
       />
@@ -224,7 +326,7 @@ exports[`HeaderBar matches snapshot 1`] = `
           <Blueprint4.MenuItem
             active={false}
             disabled={false}
-            href="https://druid.apache.org/docs/0.20.0"
+            href="https://druid.apache.org/docs/latest"
             icon="th"
             multiline={false}
             popoverProps={Object {}}
@@ -289,6 +391,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       usePortal={true}
     >
       <Blueprint4.Button
+        className="header-entry"
         icon="help"
         minimal={true}
       />

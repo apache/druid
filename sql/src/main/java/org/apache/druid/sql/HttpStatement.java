@@ -68,9 +68,4 @@ public class HttpStatement extends DirectStatement
           sqlToolbox.plannerFactory.getAuthorizerMapper()
     );
   }
-
-  public SqlRowTransformer createRowTransformer()
-  {
-    return new SqlRowTransformer(plannerContext.getTimeZone(), plannerResult.rowType());
-  }
 }

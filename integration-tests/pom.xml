@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.24.0-SNAPSHOT</version>
+        <version>25.0.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -333,6 +333,7 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-kqueue</artifactId>
             <classifier>osx-x86_64</classifier>
+            <!--<classifier>osx-aarch_64</classifier> - Use for M1 Macs -->
             <scope>runtime</scope>
         </dependency>
         <dependency>

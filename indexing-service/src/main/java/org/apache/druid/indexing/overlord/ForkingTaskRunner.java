@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSink;
-import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
@@ -652,7 +651,7 @@ public class ForkingTaskRunner
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset)
+  public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final ProcessHolder processHolder;
 
@@ -664,17 +663,7 @@ public class ForkingTaskRunner
         return Optional.absent();
       }
     }
-
-    return Optional.of(
-        new ByteSource()
-        {
-          @Override
-          public InputStream openStream() throws IOException
-          {
-            return LogUtils.streamFile(processHolder.logFile, offset);
-          }
-        }
-    );
+    return Optional.of(LogUtils.streamFile(processHolder.logFile, offset));
   }
 
   /**

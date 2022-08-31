@@ -50,7 +50,6 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
@@ -311,15 +310,6 @@ public class FrameTestUtil
     finally {
       cursor.close();
     }
-  }
-
-  /**
-   * Whether the current JDK supports {@link org.apache.datasketches.memory.Memory#map}. This is needed to read
-   * frame files 2GB+ in size.
-   */
-  public static boolean jdkCanDataSketchesMemoryMap()
-  {
-    return JvmUtils.majorVersion() < 14;
   }
 
   private static Supplier<Object> dimensionSelectorReader(final DimensionSelector selector)

@@ -54,6 +54,13 @@ exports.SQL_KEYWORDS = [
   'ROWS',
   'ONLY',
   'VALUES',
+  'PARTITIONED BY',
+  'CLUSTERED BY',
+  'TIME',
+  'INSERT INTO',
+  'REPLACE INTO',
+  'OVERWRITE',
+  'RETURNING',
 ];
 
 exports.SQL_EXPRESSION_PARTS = [

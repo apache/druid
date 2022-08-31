@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -45,6 +46,7 @@ import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.sql.DirectStatement.ResultSet;
 import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -68,6 +70,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.servlet.http.HttpServletRequest;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -75,6 +78,9 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class SqlStatementTest
@@ -213,10 +219,53 @@ public class SqlStatementTest
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
         CalciteTests.REGULAR_USER_AUTH_RESULT);
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
-    List<Object[]> results = stmt.execute().toList();
+    ResultSet resultSet = stmt.plan();
+    assertTrue(resultSet.runnable());
+    List<Object[]> results = resultSet.run().toList();
     assertEquals(1, results.size());
     assertEquals(6L, results.get(0)[0]);
     assertEquals("foo", results.get(0)[1]);
+    assertSame(stmt.reporter(), resultSet.reporter());
+    assertSame(stmt.resources(), resultSet.resources());
+    assertSame(stmt.query(), resultSet.query());
+    assertFalse(resultSet.runnable());
+    resultSet.close();
+    stmt.close();
+  }
+
+  @Test
+  public void testDirectPlanTwice()
+  {
+    SqlQueryPlus sqlReq = queryPlus(
+        "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
+        CalciteTests.REGULAR_USER_AUTH_RESULT);
+    DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+    stmt.plan();
+    try {
+      stmt.plan();
+      fail();
+    }
+    catch (ISE e) {
+      stmt.closeWithError(e);
+    }
+  }
+
+  @Test
+  public void testDirectExecTwice()
+  {
+    SqlQueryPlus sqlReq = queryPlus(
+        "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
+        CalciteTests.REGULAR_USER_AUTH_RESULT);
+    DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+    ResultSet resultSet = stmt.plan();
+    resultSet.run();
+    try {
+      resultSet.run();
+      fail();
+    }
+    catch (ISE e) {
+      stmt.closeWithError(e);
+    }
   }
 
   @Test
@@ -352,7 +401,7 @@ public class SqlStatementTest
   // Prepared statements: using a prepare/execute model.
 
   @Test
-  public void testJdbcHappyPath()
+  public void testPreparedHappyPath()
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
@@ -381,7 +430,7 @@ public class SqlStatementTest
   }
 
   @Test
-  public void testJdbcSyntaxError()
+  public void testPrepareSyntaxError()
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS",
@@ -398,7 +447,7 @@ public class SqlStatementTest
   }
 
   @Test
-  public void testJdbcValidationError()
+  public void testPrepareValidationError()
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus",
@@ -415,7 +464,7 @@ public class SqlStatementTest
   }
 
   @Test
-  public void testJdbcPermissionError()
+  public void testPreparePermissionError()
   {
     SqlQueryPlus sqlReq = queryPlus(
         "select count(*) from forbiddenDatasource",
@@ -442,7 +491,7 @@ public class SqlStatementTest
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
-    Map<String, Object> context = stmt.sqlRequest().context().getMergedParams();
+    Map<String, Object> context = stmt.query().context().getMergedParams();
     Assert.assertEquals(2, context.size());
     // should contain only query id, not bySegment since it is not valid for SQL
     Assert.assertTrue(context.containsKey(PlannerContext.CTX_SQL_QUERY_ID));
@@ -457,7 +506,7 @@ public class SqlStatementTest
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
-    Map<String, Object> context = stmt.sqlRequest().context().getMergedParams();
+    Map<String, Object> context = stmt.query().context().getMergedParams();
     Assert.assertEquals(2, context.size());
     // Statement should contain default query context values
     for (String defaultContextKey : defaultQueryConfig.getContext().keySet()) {

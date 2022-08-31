@@ -102,7 +102,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
       public int compare(Object o1, Object o2)
       {
         return Comparators.<StructuredData>naturalNullsFirst()
-                          .compare(StructuredData.possiblyWrap(o1), StructuredData.possiblyWrap(o2));
+                          .compare(StructuredData.wrap(o1), StructuredData.wrap(o2));
       }
 
       @Override
