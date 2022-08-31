@@ -237,6 +237,9 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
                               f2.cause()
                           )
                       );
+                      if (f.channel().isOpen()) {
+                        f.channel().close();
+                      }
                     }
                   }
               );
@@ -247,6 +250,9 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
                       f.cause()
                   )
               );
+              if (f.channel().isOpen()) {
+                f.channel().close();
+              }
             }
           }
       );
