@@ -87,6 +87,7 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
+import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -5409,13 +5410,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testScanOrderByLimit()
   {
     testQuery(
-        "SELECT dim1 FROM druid.foo ORDER BY dim1 limit 100",
+        "SELECT dim1 FROM druid.foo where dim1 IS NOT NULL ORDER BY dim1 limit 100",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("dim1")
                   .orderBy(ImmutableList.of(new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)))
+                  .filters(new NotDimFilter(new SelectorDimFilter("dim1", null, null)))
                   .limit(100)
                   .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)

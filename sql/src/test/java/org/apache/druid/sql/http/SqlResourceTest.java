@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -1259,7 +1260,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     Assert.assertNotNull(exception);
     Assert.assertEquals("Unsupported operation", exception.getErrorCode());
-    Assert.assertEquals(org.apache.druid.java.util.common.UOE.class.getName(), exception.getErrorClass());
+    Assert.assertEquals(UOE.class.getName(), exception.getErrorClass());
     Assert.assertTrue(
         exception.getMessage()
                  .contains(

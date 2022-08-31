@@ -109,24 +109,5 @@ public class MultiColumnSorter<T>
       return orderByColumValues;
     }
 
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      MultiColumnSorterElement<?> that = (MultiColumnSorterElement<?>) o;
-      return orderByColumValues == that.orderByColumValues &&
-             Objects.equals(element, that.element);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(element, orderByColumValues);
-    }
   }
 }
