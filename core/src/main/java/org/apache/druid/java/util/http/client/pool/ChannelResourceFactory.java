@@ -124,30 +124,34 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg)
                 {
-                  final ChannelPipeline pipeline = ctx.pipeline();
-                  pipeline.remove(DRUID_PROXY_HANDLER);
+                  try {
+                    final ChannelPipeline pipeline = ctx.pipeline();
+                    pipeline.remove(DRUID_PROXY_HANDLER);
 
-                  if (msg instanceof HttpResponse) {
-                    HttpResponse httpResponse = (HttpResponse) msg;
-                    if (HttpResponseStatus.OK.equals(httpResponse.status())) {
-                      connectPromise.setSuccess();
+                    if (msg instanceof HttpResponse) {
+                      HttpResponse httpResponse = (HttpResponse) msg;
+                      if (HttpResponseStatus.OK.equals(httpResponse.status())) {
+                        connectPromise.setSuccess();
+                      } else {
+                        connectPromise.setFailure(
+                            new ChannelException(
+                                StringUtils.format(
+                                    "Got status[%s] from CONNECT request to proxy[%s]",
+                                    httpResponse.status(),
+                                    proxyUri
+                                )
+                            )
+                        );
+                      }
                     } else {
-                      connectPromise.setFailure(
-                          new ChannelException(
-                              StringUtils.format(
-                                  "Got status[%s] from CONNECT request to proxy[%s]",
-                                  httpResponse.status(),
-                                  proxyUri
-                              )
-                          )
-                      );
+                      connectPromise.setFailure(new ChannelException(StringUtils.format(
+                          "Got message of type[%s], don't know what to do.", msg.getClass()
+                      )));
                     }
-                  } else {
-                    connectPromise.setFailure(new ChannelException(StringUtils.format(
-                        "Got message of type[%s], don't know what to do.", msg.getClass()
-                    )));
                   }
-                  ReferenceCountUtil.release(msg);
+                  finally {
+                    ReferenceCountUtil.release(msg);
+                  }
                 }
 
                 @Override
