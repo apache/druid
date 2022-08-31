@@ -132,7 +132,7 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
       try {
         // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
         // after done is set to true, regardless of the rest of the stream's state.
-        queue.put(new ByteBufInputStream(Unpooled.EMPTY_BUFFER)); // lgtm [java/input-resource-leak]
+        queue.put(new ByteBufInputStream(Unpooled.EMPTY_BUFFER, true)); // lgtm [java/input-resource-leak]
         log.debug("Added terminal empty stream");
       }
       catch (InterruptedException e) {
