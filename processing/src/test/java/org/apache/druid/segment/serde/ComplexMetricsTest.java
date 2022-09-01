@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.serde;
 
-import org.apache.druid.query.aggregation.SerializablePairLongStringSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -67,9 +67,9 @@ public class ComplexMetricsTest
     Assert.assertTrue(serde instanceof HyperUniquesSerde);
 
     expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("Incompatible serializer for type[hyperUnique] already exists. Expected [org.apache.druid.query.aggregation.SerializablePairLongStringSerde], found [org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde");
+    expectedException.expectMessage("Incompatible serializer for type[hyperUnique] already exists. Expected [org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde], found [org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde");
 
-    ComplexMetrics.registerSerde("hyperUnique", new SerializablePairLongStringSerde());
+    ComplexMetrics.registerSerde("hyperUnique", new SerializablePairLongStringComplexMetricSerde());
 
     serde = ComplexMetrics.getSerdeForType("hyperUnique");
     Assert.assertNotNull(serde);
