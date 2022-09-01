@@ -72,8 +72,7 @@ public class OpenTelemetryBenchmark
       new DimensionsSpec(ImmutableList.of(
           new StringDimensionSchema("name"),
           new StringDimensionSchema("value"),
-          new StringDimensionSchema("foo_key")),
-          null, null),
+          new StringDimensionSchema("foo_key"))),
       null);
 
   private static final OpenTelemetryMetricsProtobufInputFormat INPUT_FORMAT =
