@@ -309,7 +309,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     );
     IngestionMode ingestionMode = getIngestionMode();
     final boolean useSharedLock = ingestionMode == IngestionMode.APPEND
-                                  && getContextValue(Tasks.USE_SHARED_LOCK, false);
+                                  && getContextValue(Tasks.USE_SHARED_LOCK, true);
     // Respect task context value most.
     if (forceTimeChunkLock || ingestionMode == IngestionMode.REPLACE) {
       log.info(
@@ -353,7 +353,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
         Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
     );
-    final boolean useSharedLock = getContextValue(Tasks.USE_SHARED_LOCK, false);
+    final boolean useSharedLock = getContextValue(Tasks.USE_SHARED_LOCK, true);
 
     if (forceTimeChunkLock) {
       log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
