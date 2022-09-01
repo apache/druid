@@ -81,7 +81,7 @@ public class OpenTelemetryMetricsProtobufReaderTest
       new StringDimensionSchema("descriptor." + METRIC_ATTRIBUTE_FOO_KEY),
       new StringDimensionSchema("custom." + RESOURCE_ATTRIBUTE_ENV),
       new StringDimensionSchema("custom." + RESOURCE_ATTRIBUTE_COUNTRY)
-  ), null, null);
+  ));
 
   public static final String TOPIC = "telemetry.metrics.otel";
   public static final int PARTITION = 2;
@@ -291,11 +291,11 @@ public class OpenTelemetryMetricsProtobufReaderTest
             .setKey(METRIC_ATTRIBUTE_FOO_KEY)
             .setValue(AnyValue.newBuilder().setStringValue(METRIC_ATTRIBUTE_FOO_VAL).build()).build()));
 
-    DimensionsSpec dimensionsSpecWithExclusions = new DimensionsSpec(null,
+    DimensionsSpec dimensionsSpecWithExclusions = DimensionsSpec.builder().setDimensionExclusions(
         ImmutableList.of(
           "descriptor." + METRIC_ATTRIBUTE_COLOR,
           "custom." + RESOURCE_ATTRIBUTE_COUNTRY
-        ), null);
+        )).build();
 
     MetricsData metricsData = metricsDataBuilder.build();
     ConsumerRecord consumerRecord = new ConsumerRecord(TOPIC, PARTITION, OFFSET, TS, TSTYPE,
