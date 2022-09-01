@@ -787,7 +787,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testSizeFormatInvalidArgumentSize()
   {
     expectedException.expect(ExpressionValidationException.class);
-    expectedException.expectMessage("Function[human_readable_binary_byte_format] needs 1 or 2 arguments");
+    expectedException.expectMessage("Function[human_readable_binary_byte_format] requires 1 or 2 arguments");
     Parser.parse("human_readable_binary_byte_format(1024, 2, 3)", ExprMacroTable.nil())
           .eval(bindings);
   }
@@ -917,7 +917,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testComplexDecodeBaseWrongArgCount()
   {
     expectedException.expect(ExpressionValidationException.class);
-    expectedException.expectMessage("Function[complex_decode_base64] needs 2 arguments");
+    expectedException.expectMessage("Function[complex_decode_base64] requires 2 arguments");
     assertExpr(
         "complex_decode_base64(string)",
         null
@@ -977,7 +977,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testMVToArrayWithMoreArgs()
   {
     expectedException.expect(ExpressionValidationException.class);
-    expectedException.expectMessage("Function[mv_to_array] needs 1 argument");
+    expectedException.expectMessage("Function[mv_to_array] requires 1 argument");
     assertArrayExpr("mv_to_array(x,y)", null);
   }
 
@@ -985,7 +985,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testMVToArrayWithNoArgs()
   {
     expectedException.expect(ExpressionValidationException.class);
-    expectedException.expectMessage("Function[mv_to_array] needs 1 argument");
+    expectedException.expectMessage("Function[mv_to_array] requires 1 argument");
     assertArrayExpr("mv_to_array()", null);
   }
 

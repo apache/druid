@@ -143,7 +143,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
   public void testInvalidArgCountFold()
   {
     expectedException.expect(ExpressionValidationException.class);
-    expectedException.expectMessage("ApplyFunction[fold] needs 3 arguments");
+    expectedException.expectMessage("Function[fold] requires 3 arguments");
     assertExpr("fold((x, y) -> x + 1, [1, 1, 1, 1, 1])", null);
   }
 
@@ -151,7 +151,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
   public void testInvalidArgCountFoldLambda()
   {
     expectedException.expect(ExpressionValidationException.class);
-    expectedException.expectMessage("ApplyFunction[fold] lambda expression argument count of 0 does not match the 2 arguments passed to it");
+    expectedException.expectMessage("Function[fold] lambda expression argument count of 0 does not match the 2 arguments passed to it");
     assertExpr("fold(() -> 1, [1, 1, 1, 1, 1], 0)", null);
 
   }
@@ -160,7 +160,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
   public void testInvalidArgCountCartesianFoldLambda()
   {
     expectedException.expect(ExpressionValidationException.class);
-    expectedException.expectMessage("ApplyFunction[cartesian_fold] lambda expression argument count of 0 does not match the 3 arguments passed to it");
+    expectedException.expectMessage("Function[cartesian_fold] lambda expression argument count of 0 does not match the 3 arguments passed to it");
     assertExpr("cartesian_fold(() -> 1, [1, 1, 1, 1, 1], [1, 1], 0)", null);
   }
 
@@ -168,7 +168,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
   public void testInvalidArgCountAny()
   {
     expectedException.expect(ExpressionValidationException.class);
-    expectedException.expectMessage("ApplyFunction[any] needs 2 arguments");
+    expectedException.expectMessage("Function[any] requires 2 arguments");
     assertExpr("any((x) -> 1, [1, 2, 3, 4], y)", null);
   }
 
@@ -176,7 +176,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
   public void testInvalidArgCountAnyLambda()
   {
     expectedException.expect(ExpressionValidationException.class);
-    expectedException.expectMessage("ApplyFunction[any] lambda expression argument count of 0 does not match the 1 arguments passed to it");
+    expectedException.expectMessage("Function[any] lambda expression argument count of 0 does not match the 1 arguments passed to it");
     assertExpr("any(() -> 1, [1, 2, 3, 4])", null);
   }
 
@@ -184,7 +184,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
   public void testInvalidArgCountAll()
   {
     expectedException.expect(ExpressionValidationException.class);
-    expectedException.expectMessage("ApplyFunction[all] needs 2 arguments");
+    expectedException.expectMessage("Function[all] requires 2 arguments");
     assertExpr("all((x) -> 0, [1, 2, 3, 4], y)", null);
   }
 
@@ -192,7 +192,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
   public void testInvalidArgCountAllLambda()
   {
     expectedException.expect(ExpressionValidationException.class);
-    expectedException.expectMessage("ApplyFunction[all] lambda expression argument count of 0 does not match the 1 arguments passed to it");
+    expectedException.expectMessage("Function[all] lambda expression argument count of 0 does not match the 1 arguments passed to it");
     assertExpr("all(() -> 0, [1, 2, 3, 4])", null);
   }
 

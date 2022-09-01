@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
@@ -41,13 +40,8 @@ import java.util.stream.Stream;
  * Base interface describing the mechanism used to evaluate an {@link ApplyFunctionExpr}, which 'applies' a
  * {@link LambdaExpr} to one or more array {@link Expr}.  All {@link ApplyFunction} implementations are immutable.
  */
-public interface ApplyFunction
+public interface ApplyFunction extends NamedFunction
 {
-  /**
-   * Name of the function
-   */
-  String name();
-
   /**
    * Check if an apply function can be 'vectorized', for a given {@link LambdaExpr} and set of {@link Expr} inputs.
    * If this method returns true, {@link #asVectorProcessor} is expected to produce a {@link ExprVectorProcessor} which
@@ -106,56 +100,6 @@ public interface ApplyFunction
   void validateArguments(LambdaExpr lambdaExpr, List<Expr> args);
 
   /**
-   * Helper method for implementors of {@link #validateArguments(LambdaExpr, List)} that checks that the argument list
-   * is some expected size.
-   *
-   * The parser decomposes a function like 'fold((x, acc) -> x + acc, col, 0)' into the {@link LambdaExpr}
-   * '(x, acc) -> x + acc' and the list of arguments, ['col', 0], and so does not include the {@link LambdaExpr} here.
-   * To compensate for this, the error message will indicate that at least count + 1 arguments are required to count
-   * the lambda.
-   */
-  default void validationHelperCheckArgumentCount(LambdaExpr lambdaExpr, List<Expr> args, int count)
-  {
-    if (args.size() != count) {
-      throw new ExpressionValidationException(this, "needs %s arguments", count + 1);
-    }
-    validationHelperCheckLambaArgumentCount(lambdaExpr, args);
-  }
-
-  /**
-   * Helper method for implementors of {@link #validateArguments(LambdaExpr, List)} that checks that the argument list
-   * is at least some expected size.
-   *
-   * The parser decomposes a function like 'fold((x, acc) -> x + acc, col, 0)' into the {@link LambdaExpr}
-   * '(x, acc) -> x + acc' and the list of arguments, ['col', 0], and so does not include the {@link LambdaExpr} here.
-   * To compensate for this, the error message will indicate that at least count + 1 arguments are required to count
-   * the lambda.
-   */
-  default void validationHelperCheckMinArgumentCount(LambdaExpr lambdaExpr, List<Expr> args, int count)
-  {
-    if (args.size() < count) {
-      throw new ExpressionValidationException(this, "needs at least %d arguments", count + 1);
-    }
-    validationHelperCheckLambaArgumentCount(lambdaExpr, args);
-  }
-
-  /**
-   * Helper method for implementors of {@link #validateArguments(LambdaExpr, List)} that checks that the
-   * {@link LambdaExpr#identifierCount()} matches the number of arguments being passed to it
-   */
-  default void validationHelperCheckLambaArgumentCount(LambdaExpr lambdaExpr, List<Expr> args)
-  {
-    if (args.size() != lambdaExpr.identifierCount()) {
-      throw new ExpressionValidationException(
-          this,
-          "lambda expression argument count of %d does not match the %d arguments passed to it",
-          lambdaExpr.identifierCount(),
-          args.size()
-      );
-    }
-  }
-
-  /**
    * Compute the output type of this function for a given lambda and the argument expressions which will be applied as
    * its inputs.
    *
@@ -163,14 +107,6 @@ public interface ApplyFunction
    */
   @Nullable
   ExpressionType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args);
-
-  class ValidationException extends IllegalArgumentException
-  {
-    public ValidationException(ApplyFunction fn, String msg, Object... formatArgs)
-    {
-      super(StringUtils.format("ApplyFunction[%s] %s", fn.name(), StringUtils.format(msg, formatArgs)));
-    }
-  }
 
   /**
    * Base class for "map" functions, which are a class of {@link ApplyFunction} which take a lambda function that is

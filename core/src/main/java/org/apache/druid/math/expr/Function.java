@@ -20,7 +20,6 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableSet;
-import net.thisptr.jackson.jq.internal.misc.Strings;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -62,13 +61,8 @@ import java.util.stream.Collectors;
  * Do NOT remove "unused" members in this class. They are used by generated Antlr
  */
 @SuppressWarnings("unused")
-public interface Function
+public interface Function extends NamedFunction
 {
-  /**
-   * Name of the function.
-   */
-  String name();
-
   /**
    * Evaluate the function, given a list of arguments and a set of bindings to provide values for {@link IdentifierExpr}.
    */
@@ -115,56 +109,6 @@ public interface Function
    */
   void validateArguments(List<Expr> args);
 
-  /**
-   * Helper method for implementors of {@link #validateArguments(List)} to check if the argument count is expected
-   */
-  default void validationHelperCheckArgumentCount(List<Expr> args, int count)
-  {
-    if (args.size() != count) {
-      if (count == 0) {
-        throw new ExpressionValidationException(this, "takes no arguments");
-      } else if (count == 1) {
-        throw new ExpressionValidationException(this, "needs 1 argument");
-      }
-      throw new ExpressionValidationException(this, "needs %d arguments", count);
-    }
-  }
-
-  /**
-   * Helper method for implementors of {@link #validateArguments(List)} to check if there are at least as many
-   * arguments as specified
-   */
-  default void validationHelperCheckMinArgumentCount(List<Expr> args, int count)
-  {
-    if (args.size() < count) {
-      if (count == 1) {
-        throw new ExpressionValidationException(this, "needs at least 1 argument");
-      }
-      throw new ExpressionValidationException(this, "needs at least %d arguments", count);
-    }
-  }
-
-  /**
-   * Helper method for implementors of {@link #validateArguments(List)} to check if argument count is any of supplied
-   * set of valid counts
-   */
-  default void validationHelperCheckAnyOfArgumentCount(List<Expr> args, int... counts)
-  {
-    boolean satisfied = false;
-    for (int count : counts) {
-      if (args.size() == count) {
-        satisfied = true;
-        break;
-      }
-    }
-    if (!satisfied) {
-      throw new ExpressionValidationException(
-          this,
-          "needs %s arguments",
-          Strings.join(" or ", () -> Arrays.stream(counts).mapToObj(String::valueOf).iterator())
-      );
-    }
-  }
 
   /**
    * Compute the output type of this function for a given set of argument expression inputs.
@@ -270,8 +214,7 @@ public interface Function
     protected ExprEval eval(double param)
     {
       if (param < Long.MIN_VALUE || param > Long.MAX_VALUE) {
-        throw new ExpressionValidationException(
-            this,
+        throw validationFailed(
             "Possible data truncation, param [%f] is out of LONG value range",
             param
         );
@@ -416,7 +359,7 @@ public interface Function
     protected final ExprEval eval(ExprEval x, ExprEval y)
     {
       if (!x.type().is(ExprType.STRING) || !y.type().is(ExprType.LONG)) {
-        throw new ExpressionValidationException(this, "needs a STRING as first argument and a LONG as second argument");
+        throw validationFailed("needs a STRING as first argument and a LONG as second argument");
       }
       return eval(x.asString(), y.asInt());
     }
@@ -702,7 +645,7 @@ public interface Function
         case STRING:
           return true;
         default:
-          throw new ExpressionValidationException(this, "does not accept %s types", exprType);
+          throw validationFailed("does not accept %s types", exprType);
       }
     }
   }
@@ -1511,8 +1454,7 @@ public interface Function
       }
 
       if (!value1.type().anyOf(ExprType.LONG, ExprType.DOUBLE)) {
-        throw new ExpressionValidationException(
-            this,
+        throw validationFailed(
             "first argument should be a LONG or DOUBLE but got %s instead",
             value1.type()
         );
@@ -1523,8 +1465,7 @@ public interface Function
       } else {
         ExprEval value2 = args.get(1).eval(bindings);
         if (!value2.type().is(ExprType.LONG)) {
-          throw new ExpressionValidationException(
-              this,
+          throw validationFailed(
               "second argument should be a LONG but got %s instead",
               value2.type()
           );
@@ -2011,7 +1952,7 @@ public interface Function
         castTo = ExpressionType.fromString(StringUtils.toUpperCase(y.asString()));
       }
       catch (IllegalArgumentException e) {
-        throw new ExpressionValidationException(this, "invalid type %s", y.asString());
+        throw validationFailed("invalid type %s", y.asString());
       }
       return x.castTo(castTo);
     }
@@ -2611,7 +2552,7 @@ public interface Function
     protected ExprEval eval(@Nullable String x, int y)
     {
       if (y < 0) {
-        throw new ExpressionValidationException(this, "needs a positive integer as the second argument");
+        throw validationFailed("needs a positive integer as the second argument");
       }
       if (x == null) {
         return ExprEval.of(null);
@@ -2640,7 +2581,7 @@ public interface Function
     protected ExprEval eval(@Nullable String x, int y)
     {
       if (y < 0) {
-        throw new ExpressionValidationException(this, "needs a postive integer as second argument");
+        throw validationFailed("needs a postive integer as second argument");
       }
       if (x == null) {
         return ExprEval.of(null);
@@ -2766,7 +2707,7 @@ public interface Function
     protected ExprEval eval(ExprEval param)
     {
       if (!param.type().is(ExprType.STRING)) {
-        throw new ExpressionValidationException(this, "needs a STRING argument but got %s instead", param.type());
+        throw validationFailed("needs a STRING argument but got %s instead", param.type());
       }
       final String arg = param.asString();
       return ExprEval.of(arg == null ? NullHandling.defaultStringValue() : new StringBuilder(arg).reverse().toString());
@@ -2885,8 +2826,7 @@ public interface Function
     {
       ExprEval value = args.get(0).eval(bindings);
       if (!value.type().is(ExprType.STRING)) {
-        throw new ExpressionValidationException(
-            this,
+        throw validationFailed(
             "first argument should be a STRING but got %s instead",
             value.type()
         );
@@ -2896,8 +2836,7 @@ public interface Function
       if (args.size() > 1) {
         ExprEval format = args.get(1).eval(bindings);
         if (!format.type().is(ExprType.STRING)) {
-          throw new ExpressionValidationException(
-              this,
+          throw validationFailed(
               "second argument should be STRING but got %s instead",
               format.type()
           );
@@ -2909,13 +2848,7 @@ public interface Function
         date = formatter.parse(value.asString());
       }
       catch (IllegalArgumentException e) {
-        throw new ExpressionValidationException(
-            this,
-            e,
-            "Function[%s] invalid value %s",
-            name(),
-            value.asString()
-        );
+        throw validationFailed(e, "invalid value %s", value.asString());
       }
       return toValue(date);
     }
@@ -3012,8 +2945,7 @@ public interface Function
       IdentifierExpr expr = args.get(0).getIdentifierExprIfIdentifierExpr();
 
       if (expr == null) {
-        throw new ExpressionValidationException(
-            this,
+        throw validationFailed(
             "argument %s should be an identifier expression. Use array() instead",
             args.get(0).toString()
         );
@@ -3354,8 +3286,7 @@ public interface Function
           }
           return index < 0 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null) : ExprEval.ofLong(index);
         default:
-          throw new ExpressionValidationException(
-              this,
+          throw validationFailed(
               "second argument must be a a scalar type but got %s instead",
               scalarExpr.type()
           );
@@ -3397,8 +3328,7 @@ public interface Function
                  ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null)
                  : ExprEval.ofLong(index + 1);
         default:
-          throw new ExpressionValidationException(
-              this,
+          throw validationFailed(
               "second argument must be a a scalar type but got %s instead",
               scalarExpr.type()
           );
@@ -3665,8 +3595,7 @@ public interface Function
        * For a DOUBLE, it will be cast to LONG before format
        */
       if (valueParam.value() != null && !valueParam.type().anyOf(ExprType.LONG, ExprType.DOUBLE)) {
-        throw new ExpressionValidationException(
-            this,
+        throw validationFailed(
             "needs a number as its first argument but got %s instead",
             valueParam.type()
         );
@@ -3679,16 +3608,14 @@ public interface Function
       if (args.size() > 1) {
         ExprEval precisionParam = args.get(1).eval(bindings);
         if (!precisionParam.type().is(ExprType.LONG)) {
-          throw new ExpressionValidationException(
-              this,
+          throw validationFailed(
               "needs a LONG as its second argument but got %s instead",
               precisionParam.type()
           );
         }
         precision = precisionParam.asLong();
         if (precision < 0 || precision > 3) {
-          throw new ExpressionValidationException(
-              this,
+          throw validationFailed(
               "given precision[%d] must be in the range of [0,3]",
               precision
           );
@@ -3770,8 +3697,7 @@ public interface Function
     {
       ExprEval arg0 = args.get(0).eval(bindings);
       if (!arg0.type().is(ExprType.STRING)) {
-        throw new ExpressionValidationException(
-            this,
+        throw validationFailed(
             "first argument must be constant STRING expression containing a valid complex type name but got %s instead",
             arg0.type()
         );
@@ -3782,16 +3708,14 @@ public interface Function
         strategy = type.getStrategy();
       }
       catch (IllegalArgumentException illegal) {
-        throw new ExpressionValidationException(
-            this,
+        throw validationFailed(
             "first argument must be a valid COMPLEX type name, got unknown COMPLEX type [%s]",
             type.asTypeString()
         );
       }
       ExprEval base64String = args.get(1).eval(bindings);
       if (!base64String.type().is(ExprType.STRING)) {
-        throw new ExpressionValidationException(
-            this,
+        throw validationFailed(
             "second argument must be a base64 encoded STRING value but got %s instead",
             base64String.type()
         );
@@ -3809,8 +3733,7 @@ public interface Function
     {
       validationHelperCheckArgumentCount(args, 2);
       if (!args.get(0).isLiteral() || args.get(0).isNullLiteral()) {
-        throw new ExpressionValidationException(
-            this,
+        throw validationFailed(
             "first argument must be constant STRING expression containing a valid COMPLEX type name"
         );
       }
@@ -3825,8 +3748,7 @@ public interface Function
     {
       ExpressionType arg0Type = args.get(0).getOutputType(inspector);
       if (arg0Type == null || !arg0Type.is(ExprType.STRING)) {
-        throw new ExpressionValidationException(
-            this,
+        throw validationFailed(
             "first argument must be constant STRING expression containing a valid COMPLEX type name"
         );
       }

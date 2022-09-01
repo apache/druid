@@ -19,17 +19,17 @@
 
 package org.apache.druid.math.expr;
 
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 
-public class ExpressionValidationException extends IAE
+public class ExpressionProcessingException extends ISE
 {
-  public ExpressionValidationException(NamedFunction fn, String msg, Object... formatArgs)
+  public ExpressionProcessingException(NamedFunction fn, String msg, Object... formatArgs)
   {
     super("Function[%s] %s", fn.name(), StringUtils.format(msg, formatArgs));
   }
 
-  public ExpressionValidationException(NamedFunction fn, Throwable e, String msg, Object... formatArgs)
+  public ExpressionProcessingException(NamedFunction fn, Throwable e, String msg, Object... formatArgs)
   {
     super(e, "Function[%s] %s", fn.name(), StringUtils.format(msg, formatArgs));
   }

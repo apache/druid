@@ -36,14 +36,14 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   @Test
   public void testErrorZeroArguments()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_like] must have 2 arguments");
+    expectException(IllegalArgumentException.class, "Function[regexp_like] requires 2 arguments");
     eval("regexp_like()", InputBindings.withMap(ImmutableMap.of()));
   }
 
   @Test
   public void testErrorThreeArguments()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_like] must have 2 arguments");
+    expectException(IllegalArgumentException.class, "Function[regexp_like] requires 2 arguments");
     eval("regexp_like('a', 'b', 'c')", InputBindings.withMap(ImmutableMap.of()));
   }
 
