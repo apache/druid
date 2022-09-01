@@ -89,7 +89,7 @@ public class OpenCensusProtobufReader implements InputEntityReader
       return parseMetric(Metric.parseFrom(source.getBuffer()));
     }
     catch (InvalidProtocolBufferException e) {
-      throw new ParseException(e, "Protobuf message could not be parsed");
+      throw new ParseException(null, e, "Protobuf message could not be parsed");
     }
   }
 
