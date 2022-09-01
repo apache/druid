@@ -6241,6 +6241,49 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testCountDistinctMultipleFields()
+  {
+    testQuery(
+        "SELECT SUM(cnt), COUNT(distinct dim2, dim1) FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(
+                    aggregators(
+                        new LongSumAggregatorFactory("a0", "cnt"),
+                        new CardinalityAggregatorFactory(
+                            "a1",
+                            null,
+                            dimensions(
+                                new DefaultDimensionSpec("dim2", null),
+                                new DefaultDimensionSpec("dim1", null)),
+                            false,
+                            true
+                        )
+                    )
+                )
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[] {6L, 7L}
+        )
+    );
+  }
+
+  @Test
+  public void testUnplannableCountDistinctMultiplelFields()
+  {
+    assertQueryIsUnplannable(
+        "SELECT SUM(cnt), COUNT(distinct dim2, unique_dim1) FROM druid.foo",
+        "Possible error: cannot use count distinct on multiple fields since one field 'unique_dim1' is complex: " +
+            "Optional[COMPLEX<hyperUnique>] SQL was: SELECT SUM(cnt), COUNT(distinct dim2, unique_dim1) FROM druid.foo"
+    );
+  }
+
+  @Test
   public void testCountDistinctOfCaseWhen()
   {
     testQuery(

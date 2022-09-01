@@ -19,8 +19,6 @@
 
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
@@ -50,9 +48,12 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -82,26 +83,33 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
       final boolean finalizeAggregations
   )
   {
-    // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
-    // for string columns.
-    final RexNode rexNode = Expressions.fromFieldAccess(
-        rowSignature,
-        project,
-        Iterables.getOnlyElement(aggregateCall.getArgList())
-    );
-
-    final DruidExpression arg = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
-    if (arg == null) {
-      return null;
-    }
-
-    final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
+    final List<DimensionSpec> specs = new ArrayList<>();
+    AggregatorFactory aggregatorFactory = null;
+    for (int fieldNumber : aggregateCall.getArgList()) {
+      // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
+      // for string columns.
+      final RexNode rexNode = Expressions.fromFieldAccess(
+          rowSignature,
+          project,
+          fieldNumber
+      );
 
-    if (arg.isDirectColumnAccess()
-        && rowSignature.getColumnType(arg.getDirectColumn()).map(type -> type.is(ValueType.COMPLEX)).orElse(false)) {
-      aggregatorFactory = new HyperUniquesAggregatorFactory(aggregatorName, arg.getDirectColumn(), false, true);
-    } else {
+      final DruidExpression arg = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
+      if (arg == null) {
+        return null;
+      }
+
+      if (arg.isDirectColumnAccess()
+          && rowSignature.getColumnType(arg.getDirectColumn()).map(type -> type.is(ValueType.COMPLEX)).orElse(false)) {
+        if (aggregateCall.getArgList().size() > 1) {
+          throw new UnsupportedSQLQueryException("cannot use count distinct on multiple fields since one field '%s' is complex: %s",
+              arg.getDirectColumn(),
+              rowSignature.getColumnType(arg.getDirectColumn()));
+        }
+        aggregatorFactory = new HyperUniquesAggregatorFactory(aggregatorName, arg.getDirectColumn(), false, true);
+      }
+
       final RelDataType dataType = rexNode.getType();
       final ColumnType inputType = Calcites.getColumnTypeForRelDataType(dataType);
       if (inputType == null) {
@@ -120,11 +128,14 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
         String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, dataType);
         dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
       }
+      specs.add(dimensionSpec);
+    }
 
+    if (aggregatorFactory == null) {
       aggregatorFactory = new CardinalityAggregatorFactory(
           aggregatorName,
           null,
-          ImmutableList.of(dimensionSpec),
+          specs,
           false,
           true
       );
