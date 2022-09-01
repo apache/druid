@@ -71,7 +71,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   public void testNullPattern()
   {
     if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a string literal");
+      expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a STRING literal");
     }
 
     final ExprEval<?> result = eval("regexp_like(a, null)", InputBindings.withMap(ImmutableMap.of("a", "foo")));
@@ -95,7 +95,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   public void testNullPatternOnEmptyString()
   {
     if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a string literal");
+      expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a STRING literal");
     }
 
     final ExprEval<?> result = eval("regexp_like(a, null)", InputBindings.withMap(ImmutableMap.of("a", "")));
@@ -119,7 +119,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   public void testNullPatternOnNull()
   {
     if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a string literal");
+      expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a STRING literal");
     }
 
     final ExprEval<?> result = eval("regexp_like(a, null)", InputBindings.nilBindings());

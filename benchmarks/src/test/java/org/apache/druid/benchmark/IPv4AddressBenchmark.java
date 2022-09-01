@@ -292,7 +292,7 @@ public class IPv4AddressBenchmark
       subnetUtils = new SubnetUtils(subnet);
     }
     catch (IllegalArgumentException e) {
-      throw new IAE(e,"getSubnetInfo() arg has an invalid format: " + subnet);
+      throw new IAE(e, "getSubnetInfo() arg has an invalid format: " + subnet);
     }
     subnetUtils.setInclusiveHostCount(true);  // make network and broadcast addresses match
     return subnetUtils.getInfo();
