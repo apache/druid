@@ -6241,7 +6241,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountDistinctMultipleFields()
+  public void testCountDistinctMultipleColumns()
   {
     testQuery(
         "SELECT SUM(cnt), COUNT(distinct dim2, dim1) FROM druid.foo",
@@ -6269,6 +6269,49 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[] {6L, 7L}
+        )
+    );
+  }
+
+  @Test
+  public void testExactCountDistinctMultiplelColumns()
+  {
+    testQuery(
+        PLANNER_CONFIG_NO_HLL,
+        "SELECT SUM(cnt), COUNT(distinct dim2, dim1) FROM druid.foo",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                .setDataSource(
+                    new QueryDataSource(
+                        GroupByQuery.builder()
+                            .setDataSource(CalciteTests.DATASOURCE1)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(dimensions(
+                                new DefaultDimensionSpec("dim2", "d0"),
+                                new DefaultDimensionSpec("dim1", "d1")))
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_DEFAULT)
+                            .build()
+                    )
+                )
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setAggregatorSpecs(aggregators(
+                    new LongSumAggregatorFactory("_a0", "a0"),
+                    new FilteredAggregatorFactory(
+                        new CountAggregatorFactory("_a1"),
+                        and(
+                            not(selector("d0", null, null)),
+                            not(selector("d1", null, null)))
+                    )
+                ))
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[] {6L, 2L}
         )
     );
   }

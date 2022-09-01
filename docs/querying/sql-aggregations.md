@@ -66,7 +66,7 @@ In the aggregation functions supported by Druid, only `COUNT`, `ARRAY_AGG`, and 
 |Function|Notes|Default|
 |--------|-----|-------|
 |`COUNT(*)`|Counts the number of rows.|`0`|
-|`COUNT(DISTINCT expr)`|Counts distinct values of `expr`.<br><br>When `useApproximateCountDistinct` is set to "true" (the default), this is an alias for `APPROX_COUNT_DISTINCT`. The specific algorithm depends on the value of [`druid.sql.approxCountDistinct.function`](../configuration/index.md#sql). In this mode, you can use strings, numbers, or prebuilt sketches. If counting prebuilt sketches, the prebuilt sketch type must match the selected algorithm.<br><br>When `useApproximateCountDistinct` is set to "false", the computation will be exact. In this case, `expr` must be string or numeric, since exact counts are not possible using prebuilt sketches. In exact mode, only one distinct count per query is permitted unless `useGroupingSetForExactDistinct` is enabled.|`0`|
+|`COUNT(DISTINCT expr, expr...)`|Counts distinct values of `expr`.<br><br>When `useApproximateCountDistinct` is set to "true" (the default), this is an alias for `APPROX_COUNT_DISTINCT`. The specific algorithm depends on the value of [`druid.sql.approxCountDistinct.function`](../configuration/index.md#sql). In this mode, you can use strings, numbers, or prebuilt sketches. If counting prebuilt sketches, the prebuilt sketch type must match the selected algorithm.<br><br>When `useApproximateCountDistinct` is set to "false", the computation will be exact. In this case, each `expr` must be string or numeric, since exact counts are not possible using prebuilt sketches. In exact mode, only one distinct count per query is permitted unless `useGroupingSetForExactDistinct` is enabled.|`0`|
 |`SUM(expr)`|Sums numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`MIN(expr)`|Takes the minimum of numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `9223372036854775807` (maximum LONG value)|
 |`MAX(expr)`|Takes the maximum of numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `-9223372036854775808` (minimum LONG value)|
@@ -115,7 +115,7 @@ Load the [DataSketches extension](../development/extensions-core/datasketches-ex
 
 |Function|Notes|Default|
 |--------|-----|-------|
-|`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of `expr`, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](sql-query-context.md). The `lgK` and `tgtHllType` parameters here are, like the equivalents in the [aggregator](../development/extensions-core/datasketches-hll.md#aggregators), described in the HLL sketch documentation. See also `COUNT(DISTINCT expr)`.|`0`|
+|`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of `expr`, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](sql-query-context.md). The `lgK` and `tgtHllType` parameters here are, like the equivalents in the [aggregator](../development/extensions-core/datasketches-hll.md#aggregators), described in the HLL sketch documentation. See also `COUNT(DISTINCT expr, expr...)`.|`0`|
 |`DS_HLL(expr, [lgK, tgtHllType])`|Creates an [HLL sketch](../development/extensions-core/datasketches-hll.md) on the values of `expr`, which can be a regular column or a column containing HLL sketches. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation.|`'0'` (STRING)|
 
 
@@ -125,7 +125,7 @@ Load the [DataSketches extension](../development/extensions-core/datasketches-ex
 
 |Function|Notes|Default|
 |--------|-----|-------|
-|`APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`|Counts distinct values of `expr`, which can be a regular column or a [Theta sketch](../development/extensions-core/datasketches-theta.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](sql-query-context.md). The `size` parameter is described in the Theta sketch documentation. See also `COUNT(DISTINCT expr)`.|`0`|
+|`APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`|Counts distinct values of `expr`, which can be a regular column or a [Theta sketch](../development/extensions-core/datasketches-theta.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](sql-query-context.md). The `size` parameter is described in the Theta sketch documentation. See also `COUNT(DISTINCT expr, expr...)`.|`0`|
 |`DS_THETA(expr, [size])`|Creates a [Theta sketch](../development/extensions-core/datasketches-theta.md) on the values of `expr`, which can be a regular column or a column containing Theta sketches. The `size` parameter is described in the Theta sketch documentation.|`'0.0'` (STRING)|
 
 

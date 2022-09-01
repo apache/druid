@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -44,6 +45,8 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+
+import java.util.ArrayList;
 import java.util.List;
 
 public class CountSqlAggregator implements SqlAggregator
@@ -72,28 +75,40 @@ public class CountSqlAggregator implements SqlAggregator
       final Project project
   )
   {
-    final RexNode rexNode = Expressions.fromFieldAccess(
-        rowSignature,
-        project,
-        Iterables.getOnlyElement(aggregateCall.getArgList())
-    );
-
-    if (rexNode.getType().isNullable()) {
-      final DimFilter nonNullFilter = Expressions.toFilter(
-          plannerContext,
+    List<DimFilter> nonNullFilterList = new ArrayList<>();
+    for (int field : aggregateCall.getArgList()) {
+      final RexNode rexNode = Expressions.fromFieldAccess(
           rowSignature,
-          virtualColumnRegistry,
-          rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, ImmutableList.of(rexNode))
+          project,
+          field
       );
 
-      if (nonNullFilter == null) {
-        // Don't expect this to happen.
-        throw new ISE("Could not create not-null filter for rexNode[%s]", rexNode);
-      }
+      if (rexNode.getType().isNullable()) {
+        final DimFilter nonNullFilter = Expressions.toFilter(
+            plannerContext,
+            rowSignature,
+            virtualColumnRegistry,
+            rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, ImmutableList.of(rexNode))
+        );
 
-      return new FilteredAggregatorFactory(new CountAggregatorFactory(countName), nonNullFilter);
-    } else {
+        if (nonNullFilter == null) {
+          // Don't expect this to happen.
+          throw new ISE("Could not create not-null filter for rexNode[%s]", rexNode);
+        }
+        nonNullFilterList.add(nonNullFilter);
+      }
+    }
+
+    if (nonNullFilterList.isEmpty()) {
       return new CountAggregatorFactory(countName);
+    } else if (nonNullFilterList.size() == 1) {
+      return new FilteredAggregatorFactory(
+          new CountAggregatorFactory(countName),
+          Iterables.getOnlyElement(nonNullFilterList));
+    } else {
+      return new FilteredAggregatorFactory(
+          new CountAggregatorFactory(countName),
+          new AndDimFilter(nonNullFilterList));
     }
   }
 
