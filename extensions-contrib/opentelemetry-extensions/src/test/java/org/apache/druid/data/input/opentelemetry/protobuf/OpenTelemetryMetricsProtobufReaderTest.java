@@ -70,7 +70,7 @@ public class OpenTelemetryMetricsProtobufReaderTest
       new StringDimensionSchema("descriptor." + METRIC_ATTRIBUTE_FOO_KEY),
       new StringDimensionSchema("custom." + RESOURCE_ATTRIBUTE_ENV),
       new StringDimensionSchema("custom." + RESOURCE_ATTRIBUTE_COUNTRY)
-  ), null, null);
+  ));
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -256,11 +256,10 @@ public class OpenTelemetryMetricsProtobufReaderTest
 
     MetricsData metricsData = metricsDataBuilder.build();
 
-    DimensionsSpec dimensionsSpecWithExclusions = new DimensionsSpec(null,
-        ImmutableList.of(
+    DimensionsSpec dimensionsSpecWithExclusions = DimensionsSpec.builder().setDimensionExclusions(ImmutableList.of(
             "descriptor." + METRIC_ATTRIBUTE_COLOR,
             "custom." + RESOURCE_ATTRIBUTE_COUNTRY
-        ), null);
+    )).build();
 
     CloseableIterator<InputRow> rows = new OpenTelemetryMetricsProtobufReader(
         dimensionsSpecWithExclusions,

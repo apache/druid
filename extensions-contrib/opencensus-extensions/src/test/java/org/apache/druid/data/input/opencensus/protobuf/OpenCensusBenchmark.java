@@ -41,6 +41,7 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.nio.ByteBuffer;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,7 +55,7 @@ public class OpenCensusBenchmark
 
   private static final JSONParseSpec PARSE_SPEC = new JSONParseSpec(
       new TimestampSpec("timestamp", "millis", null),
-      new DimensionsSpec(null, null, null),
+      new DimensionsSpec(Collections.emptyList()),
       new JSONPathSpec(
           true,
           Lists.newArrayList(

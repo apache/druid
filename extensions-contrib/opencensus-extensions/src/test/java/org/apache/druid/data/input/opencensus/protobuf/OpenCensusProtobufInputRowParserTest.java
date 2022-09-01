@@ -63,7 +63,7 @@ public class OpenCensusProtobufInputRowParserTest
 
   static final JSONParseSpec PARSE_SPEC = new JSONParseSpec(
       new TimestampSpec("timestamp", "millis", null),
-      new DimensionsSpec(null, null, null),
+      new DimensionsSpec(Collections.emptyList()),
       new JSONPathSpec(
           true,
           Lists.newArrayList(
@@ -79,7 +79,7 @@ public class OpenCensusProtobufInputRowParserTest
       new DimensionsSpec(ImmutableList.of(
           new StringDimensionSchema("foo_key"),
           new StringDimensionSchema("env_key")
-      ), null, null),
+      )),
       new JSONPathSpec(
           true,
           Lists.newArrayList(
