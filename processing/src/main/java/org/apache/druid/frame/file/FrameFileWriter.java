@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
 /**
@@ -42,7 +43,8 @@ public class FrameFileWriter implements Closeable
   public static final byte[] MAGIC = {(byte) 0xff, 0x01};
   public static final byte MARKER_FRAME = (byte) 0x01;
   public static final byte MARKER_NO_MORE_FRAMES = (byte) 0x02;
-  public static final int TRAILER_LENGTH = Integer.BYTES * 2;
+  public static final int TRAILER_LENGTH = Integer.BYTES * 4;
+  public static final int CHECKSUM_SEED = 0;
   public static final int NO_PARTITION = -1;
 
   private final WritableByteChannel channel;
@@ -177,18 +179,33 @@ public class FrameFileWriter implements Closeable
 
     writeMagicIfNeeded();
 
-    if (!tableOfContents.reserveAdditional(TRAILER_LENGTH)) {
+    if (!tableOfContents.reserveAdditional(Integer.BYTES * 3)) {
       throw new ISE("Can't finish table of contents");
     }
+
     final MemoryRange<WritableMemory> tocCursor = tableOfContents.cursor();
+    final int numPartitions = Ints.checkedCast(partitions.size() / Integer.BYTES);
+
     tocCursor.memory().putInt(tocCursor.start(), numFrames);
-    tocCursor.memory().putInt(tocCursor.start() + Integer.BYTES, Ints.checkedCast(partitions.size() / Integer.BYTES));
-    tableOfContents.advanceCursor(TRAILER_LENGTH);
-    channel.write(ByteBuffer.wrap(new byte[]{MARKER_NO_MORE_FRAMES}));
-    partitions.writeTo(channel);
+    tocCursor.memory().putInt(tocCursor.start() + Integer.BYTES, numPartitions);
+    tocCursor.memory().putInt(tocCursor.start() + Integer.BYTES * 2L, footerLength(numFrames, numPartitions));
+    tableOfContents.advanceCursor(Integer.BYTES * 3);
+
+    // Buffer up the footer so we can compute its checksum.
+    final ByteBuffer footerBuf = ByteBuffer.allocate(footerLength(numFrames, numPartitions));
+    final WritableMemory footerMemory = WritableMemory.writableWrap(footerBuf, ByteOrder.LITTLE_ENDIAN);
+    assert Byte.BYTES + partitions.size() + tableOfContents.size() + Integer.BYTES == footerMemory.getCapacity();
+    long p = Byte.BYTES;
+    footerMemory.putByte(0, MARKER_NO_MORE_FRAMES);
+    p += partitions.writeTo(footerMemory, p);
     partitions.close();
-    tableOfContents.writeTo(channel);
+    p += tableOfContents.writeTo(footerMemory, p);
     tableOfContents.close();
+    final int checksum = (int) footerMemory.xxHash64(0, p, CHECKSUM_SEED);
+    footerMemory.putInt(p, checksum);
+
+    // Write footer to the channel.
+    Channels.writeFully(channel, footerBuf);
     channel.close();
     compressionBuffer = null;
     closed = true;
@@ -212,5 +229,19 @@ public class FrameFileWriter implements Closeable
     }
 
     return compressionBuffer;
+  }
+
+  /**
+   * Length of the footer: everything from MARKER_NO_MORE_FRAMES to EOF. See class-level javadoc from {@link FrameFile}
+   * for details on the format.
+   */
+  static int footerLength(final int numFrames, final int numPartitions)
+  {
+    return Ints.checkedCast(
+        Byte.BYTES // MARKER_NO_MORE_FRAMES
+        + (long) Integer.BYTES * numPartitions
+        + (long) Long.BYTES * numFrames
+        + TRAILER_LENGTH
+    );
   }
 }

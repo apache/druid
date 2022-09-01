@@ -65,7 +65,6 @@ public class ColumnType extends BaseTypeSignature<ValueType>
    */
   public static final ColumnType FLOAT = new ColumnType(ValueType.FLOAT, null, null);
   // currently, arrays only come from expressions or aggregators
-  // and there are no native float expressions (or aggs which produce float arrays)
   /**
    * An array of Strings. Values will be represented as Object[]
    * @see ValueType#ARRAY
@@ -84,6 +83,12 @@ public class ColumnType extends BaseTypeSignature<ValueType>
    * @see ValueType#DOUBLE
    */
   public static final ColumnType DOUBLE_ARRAY = new ColumnType(ValueType.ARRAY, null, DOUBLE);
+  /**
+   * An array of Floats. Values will be represented as Object[] or float[].
+   * @see ValueType#ARRAY
+   * @see ValueType#FLOAT
+   */
+  public static final ColumnType FLOAT_ARRAY = new ColumnType(ValueType.ARRAY, null, FLOAT);
   /**
    * Placeholder type for an "unknown" complex, which is used when the complex type name was "lost" or unavailable for
    * whatever reason, to indicate an opaque type that cannot be generically handled with normal complex type handling
