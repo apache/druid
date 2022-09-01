@@ -85,7 +85,7 @@ public class DefaultQueryMetricsTest
     Assert.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));
     Assert.assertEquals("true", actualEvent.get("hasFilters"));
     Assert.assertEquals(expectedIntervals.get(0).toDuration().toString(), actualEvent.get("duration"));
-    Assert.assertEquals("", actualEvent.get(DruidMetrics.ID));
+    Assert.assertEquals("dummy", actualEvent.get(DruidMetrics.ID));
     Assert.assertEquals("query/time", actualEvent.get("metric"));
     Assert.assertEquals(0L, actualEvent.get("value"));
     Assert.assertEquals(ImmutableMap.of("testKey", "testValue"), actualEvent.get("context"));
