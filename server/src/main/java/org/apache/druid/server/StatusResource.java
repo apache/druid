@@ -32,6 +32,7 @@ import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 
+import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -48,6 +49,7 @@ import java.util.Properties;
 import java.util.Set;
 
 /**
+ *
  */
 @Path("/status")
 public class StatusResource
@@ -60,7 +62,8 @@ public class StatusResource
   public StatusResource(
       final Properties properties,
       final DruidServerConfig druidServerConfig,
-      final ExtensionsLoader extnLoader)
+      final ExtensionsLoader extnLoader
+  )
   {
     this.properties = properties;
     this.druidServerConfig = druidServerConfig;
@@ -74,8 +77,30 @@ public class StatusResource
   public Map<String, String> getProperties()
   {
     Map<String, String> allProperties = Maps.fromProperties(properties);
-    Set<String> hidderProperties = druidServerConfig.getHiddenProperties();
-    return Maps.filterEntries(allProperties, (entry) -> !hidderProperties.contains(entry.getKey()));
+    Set<String> hiddenProperties = druidServerConfig.getHiddenProperties();
+    return filterHiddenProperties(hiddenProperties, allProperties);
+  }
+
+  /**
+   * filter out entries from allProperties with key containing elements in hiddenProperties (case insensitive)
+   *
+   * @return map of properties that are not filtered out.
+   */
+  @Nonnull
+  private Map<String, String> filterHiddenProperties(
+      Set<String> hiddenProperties,
+      Map<String, String> allProperties
+  )
+  {
+    return Maps.filterEntries(
+        allProperties,
+        (entry) -> hiddenProperties
+            .stream()
+            .anyMatch(
+                hiddenPropertyElement ->
+                    !StringUtils.toLowerCase(entry.getKey()).contains(StringUtils.toLowerCase(hiddenPropertyElement))
+            )
+    );
   }
 
   @GET
