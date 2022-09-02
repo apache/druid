@@ -163,7 +163,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       log.debug("Querying queryId[%s] url[%s]", query.getId(), url);
 
       final long requestStartTimeNs = System.nanoTime();
-      final long timeoutAt = query.getContextValue(QUERY_FAIL_TIME);
+      final long timeoutAt = query.getContextAsLong(QUERY_FAIL_TIME);
       final long maxScatterGatherBytes = QueryContexts.getMaxScatterGatherBytes(query);
       final AtomicLong totalBytesGathered = context.getTotalBytes();
       final long maxQueuedBytes = QueryContexts.getMaxQueuedBytes(query, 0);

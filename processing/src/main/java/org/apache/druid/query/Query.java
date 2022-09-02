@@ -124,18 +124,129 @@ public interface Query<T>
     return null;
   }
 
-  <ContextType> ContextType getContextValue(String key);
+  default boolean containsContextValue(String key)
+  {
+    if (getQueryContext() != null) {
+      return getQueryContext().containsKey(key);
+    } else {
+      return false;
+    }
+  }
 
-  <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
+  /**
+   * Get context value and cast it to ContextType.
+   * NOTE: If value is not type of ContextType, {@link java.lang.ClassCastException} is raised.
+   *
+   * For safe conversion, please use following methods:
+   * {@link #getContextBoolean(String, boolean)}
+   * {@link #getContextAsString(String)}
+   * {@link #getContextAsInt(String)}
+   * {@link #getContextAsLong(String)}
+   * {@link #getContextAsFloat(String, float)}
+   * {@link #getContextAsEnum(String, Class, Enum)}
+   * {@link #getContextHumanReadableBytes(String, HumanReadableBytes)}
+   */
+  @Nullable
+  default <ContextType> ContextType getContextValue(String key)
+  {
+    if (getQueryContext() != null) {
+      //noinspection unchecked
+      return (ContextType) getQueryContext().get(key);
+    } else {
+      return null;
+    }
+  }
 
-  boolean getContextBoolean(String key, boolean defaultValue);
+  @Nullable
+  default String getContextAsString(String key)
+  {
+    if (getQueryContext() != null) {
+      return getQueryContext().getAsString(key);
+    } else {
+      return null;
+    }
+  }
+
+  default String getContextAsString(String key, String defaultValue)
+  {
+    if (getQueryContext() != null) {
+      return getQueryContext().getAsString(key, defaultValue);
+    } else {
+      return defaultValue;
+    }
+  }
+
+  @Nullable
+  default Integer getContextAsInt(String key)
+  {
+    if (getQueryContext() != null) {
+      return getQueryContext().getAsInt(key);
+    } else {
+      return null;
+    }
+  }
+
+  default int getContextAsInt(String key, int defaultValue)
+  {
+    if (getQueryContext() != null) {
+      return getQueryContext().getAsInt(key, defaultValue);
+    } else {
+      return defaultValue;
+    }
+  }
+
+  @Nullable
+  default Long getContextAsLong(String key)
+  {
+    if (getQueryContext() != null) {
+      return getQueryContext().getAsLong(key);
+    } else {
+      return null;
+    }
+  }
+
+  default long getContextAsLong(String key, long defaultValue)
+  {
+    if (getQueryContext() != null) {
+      return getQueryContext().getAsLong(key, defaultValue);
+    } else {
+      return defaultValue;
+    }
+  }
+
+  default float getContextAsFloat(String key, float defaultValue)
+  {
+    if (getQueryContext() != null) {
+      return getQueryContext().getAsFloat(key, defaultValue);
+    } else {
+      return defaultValue;
+    }
+  }
+
+  default <E extends Enum<E>> E getContextAsEnum(String key, Class<E> clazz, E defaultValue)
+  {
+    if (getQueryContext() != null) {
+      return getQueryContext().getAsEnum(key, clazz, defaultValue);
+    } else {
+      return defaultValue;
+    }
+  }
+
+  default boolean getContextBoolean(String key, boolean defaultValue)
+  {
+    if (getQueryContext() != null) {
+      return getQueryContext().getAsBoolean(key, defaultValue);
+    } else {
+      return defaultValue;
+    }
+  }
 
   /**
    * Returns {@link HumanReadableBytes} for a specified context key. If the context is null or the key doesn't exist
    * a caller specified default value is returned. A default implementation is provided since Query is an extension
    * point. Extensions can choose to rely on this default to retain compatibility with core Druid.
    *
-   * @param key The context key value being looked up
+   * @param key          The context key value being looked up
    * @param defaultValue The default to return if the key value doesn't exist or the context is null.
    * @return {@link HumanReadableBytes}
    */
@@ -204,7 +315,7 @@ public interface Query<T>
   @Nullable
   default String getSqlQueryId()
   {
-    return getContextValue(BaseQuery.SQL_QUERY_ID);
+    return getContextAsString(BaseQuery.SQL_QUERY_ID);
   }
 
   /**

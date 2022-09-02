@@ -168,7 +168,14 @@ public class QueryContext
   @Nullable
   public String getAsString(String key)
   {
-    return (String) get(key);
+    Object val = get(key);
+    return val == null ? null : val.toString();
+  }
+
+  public String getAsString(String key, String defaultValue)
+  {
+    Object val = get(key);
+    return val == null ? defaultValue : val.toString();
   }
 
   public boolean getAsBoolean(
@@ -179,12 +186,22 @@ public class QueryContext
     return QueryContexts.getAsBoolean(parameter, get(parameter), defaultValue);
   }
 
+  public Integer getAsInt(final String parameter)
+  {
+    return QueryContexts.getAsInt(parameter, get(parameter));
+  }
+
   public int getAsInt(
       final String parameter,
       final int defaultValue
   )
   {
     return QueryContexts.getAsInt(parameter, get(parameter), defaultValue);
+  }
+
+  public Long getAsLong(final String parameter)
+  {
+    return QueryContexts.getAsLong(parameter, get(parameter));
   }
 
   public long getAsLong(final String parameter, final long defaultValue)
@@ -195,6 +212,16 @@ public class QueryContext
   public HumanReadableBytes getAsHumanReadableBytes(final String parameter, final HumanReadableBytes defaultValue)
   {
     return QueryContexts.getAsHumanReadableBytes(parameter, get(parameter), defaultValue);
+  }
+
+  public float getAsFloat(final String parameter, final float defaultValue)
+  {
+    return QueryContexts.getAsFloat(parameter, get(parameter), defaultValue);
+  }
+
+  public <E extends Enum<E>> E getAsEnum(String parameter, Class<E> clazz, E defaultValue)
+  {
+    return QueryContexts.getAsEnum(parameter, get(parameter), clazz, defaultValue);
   }
 
   public Map<String, Object> getMergedParams()

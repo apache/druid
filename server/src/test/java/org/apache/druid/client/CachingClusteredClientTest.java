@@ -2301,7 +2301,7 @@ public class CachingClusteredClientTest
           Assert.assertEquals(true, capturedQuery.getContextValue(QueryContexts.BY_SEGMENT_KEY));
         } else {
           Assert.assertTrue(
-              capturedQuery.getContextValue(QueryContexts.BY_SEGMENT_KEY) == null ||
+              !capturedQuery.containsContextValue(QueryContexts.BY_SEGMENT_KEY) ||
               capturedQuery.getContextValue(QueryContexts.BY_SEGMENT_KEY).equals(false)
           );
         }
