@@ -423,7 +423,7 @@ public class QueryContexts
       Preconditions.checkState(timeout >= 0, "Timeout must be a non negative value, but was [%s]", timeout);
       return timeout;
     }
-    catch (NumberFormatException e) {
+    catch (IAE e) {
       throw new BadQueryContextException(e);
     }
   }
@@ -487,7 +487,7 @@ public class QueryContexts
     } else if (value instanceof String) {
       return (String) value;
     } else {
-      throw new IAE("Expected parameter [%s] to be String", parameter);
+      throw new IAE("Expected parameter [%s] to be a String, but got [%s]", parameter, value.getClass().getName());
     }
   }
 
@@ -504,7 +504,7 @@ public class QueryContexts
     } else if (value instanceof Boolean) {
       return (Boolean) value;
     } else {
-      throw new IAE("Expected parameter [%s] to be a boolean", parameter);
+      throw new IAE("Expected parameter [%s] to be a Boolean, but got [%s]", parameter, value.getClass().getName());
     }
   }
 
@@ -534,10 +534,11 @@ public class QueryContexts
         return Numbers.parseInt(value);
       }
       catch (NumberFormatException ignored) {
+        throw new IAE("Expected parameter [%s] in integer format, but got [%s]", parameter, value);
       }
     }
 
-    throw new IAE("Expected parameter [%s] to be an integer", parameter);
+    throw new IAE("Expected parameter [%s] to be an Integer, but got [%s]", parameter, value.getClass().getName());
   }
 
   /**
@@ -566,9 +567,10 @@ public class QueryContexts
         return Numbers.parseLong(value);
       }
       catch (NumberFormatException ignored) {
+        throw new IAE("Expected parameter [%s] in long format, but got [%s]", parameter, value);
       }
     }
-    throw new IAE("Expected parameter [%s] to be a long", parameter);
+    throw new IAE("Expected parameter [%s] to be a Long, but got [%s]", parameter, value.getClass().getName());
   }
 
   /**
@@ -596,10 +598,15 @@ public class QueryContexts
     } else if (value instanceof Number) {
       return HumanReadableBytes.valueOf(Numbers.parseLong(value));
     } else if (value instanceof String) {
-      return new HumanReadableBytes((String) value);
-    } else {
-      throw new IAE("Expected parameter [%s] to be in human readable format", parameter);
+      try {
+        return HumanReadableBytes.valueOf(HumanReadableBytes.parse((String) value));
+      }
+      catch (IAE e) {
+        throw new IAE("Expected parameter [%s] in human readable format, but got [%s]", parameter, value);
+      }
     }
+
+    throw new IAE("Expected parameter [%s] to be a human readable number, but got [%s]", parameter, value.getClass().getName());
   }
 
   public static float getAsFloat(String parameter, Object value, float defaultValue)
@@ -613,9 +620,10 @@ public class QueryContexts
         return Float.parseFloat((String) value);
       }
       catch (NumberFormatException ignored) {
+        throw new IAE("Expected parameter [%s] in float format, but got [%s]", parameter, value);
       }
     }
-    throw new IAE("Expected parameter [%s] to be a float", parameter);
+    throw new IAE("Expected parameter [%s] to be a Float, but got [%s]", parameter, value.getClass().getName());
   }
 
   public static Map<String, Object> override(

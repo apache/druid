@@ -1705,7 +1705,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertNotNull(queryContextException);
     Assert.assertEquals(BadQueryContextException.ERROR_CODE, queryContextException.getErrorCode());
     Assert.assertEquals(BadQueryContextException.ERROR_CLASS, queryContextException.getErrorClass());
-    Assert.assertTrue(queryContextException.getMessage().contains("For input string: \"2000'\""));
+    Assert.assertTrue(queryContextException.getMessage().contains("2000'"));
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
   }
