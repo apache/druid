@@ -194,7 +194,7 @@ public abstract class BaseQuery<T> implements Query<T>
   }
 
   @Override
-  public HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
+  public HumanReadableBytes getContextAsHumanReadableBytes(String key, HumanReadableBytes defaultValue)
   {
     return context.getAsHumanReadableBytes(key, defaultValue);
   }

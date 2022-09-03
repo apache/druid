@@ -26,7 +26,6 @@ import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -428,14 +427,14 @@ public class QueryContextTest
     }
 
     @Override
-    public HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
+    public HumanReadableBytes getContextAsHumanReadableBytes(String key, HumanReadableBytes defaultValue)
     {
       if (null == context || !context.containsKey(key)) {
         return defaultValue;
       }
       Object value = context.get(key);
       if (value instanceof Number) {
-        return HumanReadableBytes.valueOf(Numbers.parseLong(value));
+        return HumanReadableBytes.valueOf(((Number) value).longValue());
       } else if (value instanceof String) {
         return new HumanReadableBytes((String) value);
       } else {

@@ -144,7 +144,7 @@ public interface Query<T>
    * {@link #getContextAsLong(String)}
    * {@link #getContextAsFloat(String, float)}
    * {@link #getContextAsEnum(String, Class, Enum)}
-   * {@link #getContextHumanReadableBytes(String, HumanReadableBytes)}
+   * {@link #getContextAsHumanReadableBytes(String, HumanReadableBytes)}
    */
   @Nullable
   default <ContextType> ContextType getContextValue(String key)
@@ -250,7 +250,7 @@ public interface Query<T>
    * @param defaultValue The default to return if the key value doesn't exist or the context is null.
    * @return {@link HumanReadableBytes}
    */
-  default HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
+  default HumanReadableBytes getContextAsHumanReadableBytes(String key, HumanReadableBytes defaultValue)
   {
     if (null != getQueryContext()) {
       return getQueryContext().getAsHumanReadableBytes(key, defaultValue);
