@@ -78,11 +78,10 @@ public class TimeBoundaryQueryTest
         ), TimeBoundaryQuery.class
     );
 
-
     Assert.assertEquals(new Integer(1), serdeQuery.getContextAsInt(QueryContexts.PRIORITY_KEY));
-    Assert.assertEquals(true, serdeQuery.getContextBoolean(QueryContexts.USE_CACHE_KEY, false));
-    Assert.assertEquals(true, serdeQuery.getContextBoolean(QueryContexts.POPULATE_CACHE_KEY, false));
-    Assert.assertEquals(true, serdeQuery.getContextBoolean(QueryContexts.FINALIZE_KEY, false));
+    Assert.assertEquals(true, serdeQuery.getContextAsBoolean(QueryContexts.USE_CACHE_KEY));
+    Assert.assertEquals(true, serdeQuery.getContextAsBoolean(QueryContexts.POPULATE_CACHE_KEY));
+    Assert.assertEquals(true, serdeQuery.getContextAsBoolean(QueryContexts.FINALIZE_KEY));
   }
 
   @Test
