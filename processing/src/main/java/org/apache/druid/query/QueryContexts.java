@@ -491,6 +491,23 @@ public class QueryContexts
     }
   }
 
+  @Nullable
+  public static Boolean getAsBoolean(
+      final String parameter,
+      final Object value
+  )
+  {
+    if (value == null) {
+      return null;
+    } else if (value instanceof String) {
+      return Boolean.parseBoolean((String) value);
+    } else if (value instanceof Boolean) {
+      return (Boolean) value;
+    } else {
+      throw new IAE("Expected parameter [%s] to be a boolean", parameter);
+    }
+  }
+
   /**
    * Get the value of a parameter as a {@code boolean}. The parameter is expected
    * to be {@code null}, a string or a {@code Boolean} object.
@@ -501,15 +518,8 @@ public class QueryContexts
       final boolean defaultValue
   )
   {
-    if (value == null) {
-      return defaultValue;
-    } else if (value instanceof String) {
-      return Boolean.parseBoolean((String) value);
-    } else if (value instanceof Boolean) {
-      return (Boolean) value;
-    } else {
-      throw new IAE("Expected parameter [%s] to be a boolean", parameter);
-    }
+    Boolean val = getAsBoolean(parameter, value);
+    return val == null ? defaultValue : val;
   }
 
   @Nullable

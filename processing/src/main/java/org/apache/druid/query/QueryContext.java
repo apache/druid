@@ -178,6 +178,12 @@ public class QueryContext
     return val == null ? defaultValue : val.toString();
   }
 
+  @Nullable
+  public Boolean getAsBoolean(String parameter)
+  {
+    return QueryContexts.getAsBoolean(parameter, get(parameter));
+  }
+
   public boolean getAsBoolean(
       final String parameter,
       final boolean defaultValue

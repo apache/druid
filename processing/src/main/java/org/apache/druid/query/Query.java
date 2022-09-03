@@ -232,6 +232,16 @@ public interface Query<T>
     }
   }
 
+  @Nullable
+  default Boolean getContextAsBoolean(String key)
+  {
+    if (getQueryContext() != null) {
+      return getQueryContext().getAsBoolean(key);
+    } else {
+      return null;
+    }
+  }
+
   default boolean getContextBoolean(String key, boolean defaultValue)
   {
     if (getQueryContext() != null) {
