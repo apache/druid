@@ -6244,7 +6244,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testCountDistinctMultipleColumns()
   {
     testQuery(
-        "SELECT SUM(cnt), COUNT(distinct dim2, dim1) FROM druid.foo",
+        "SELECT SUM(cnt), COUNT(distinct dim2, dim1 ignore nulls) FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)

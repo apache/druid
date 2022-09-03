@@ -136,7 +136,7 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
           aggregatorName,
           null,
           specs,
-          false,
+          true,
           true
       );
     }
