@@ -91,6 +91,12 @@ public class TypeStrategiesTest
       }
 
       @Override
+      public boolean readRetainsBufferReference()
+      {
+        return false;
+      }
+
+      @Override
       public int write(ByteBuffer buffer, String value, int maxSizeBytes)
       {
         return 1;
@@ -656,6 +662,12 @@ public class TypeStrategiesTest
       Long lhs = longTypeStrategy.read(buffer);
       Long rhs = longTypeStrategy.read(buffer);
       return new NullableLongPair(lhs, rhs);
+    }
+
+    @Override
+    public boolean readRetainsBufferReference()
+    {
+      return false;
     }
 
     @Override

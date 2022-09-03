@@ -26,9 +26,11 @@ sidebar_label: "SQL query translation"
 > Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
 > This document describes the SQL language.
 
+Druid uses [Apache Calcite](https://calcite.apache.org/) to parse and plan SQL queries.
+Druid translates SQL statements into its [native JSON-based query language](querying.md).
+In general, the slight overhead of translating SQL on the Broker is the only minor performance penalty to using Druid SQL compared to native queries.
 
-Druid SQL translates SQL queries to [native queries](querying.md) before running them, and understanding how this
-translation works is key to getting good performance.
+This topic includes best practices and tools to help you achieve good performance and minimize the impact of translation.
 
 ## Best practices
 
@@ -60,7 +62,7 @@ appreciated.
 
 ## Interpreting EXPLAIN PLAN output
 
-The [EXPLAIN PLAN](sql-syntax.md#explain-plan) functionality can help you understand how a given SQL query will
+The [EXPLAIN PLAN](sql.md#explain-plan) functionality can help you understand how a given SQL query will
 be translated to native. For simple queries that do not involve subqueries or joins, the output of EXPLAIN PLAN
 is easy to interpret. The native query that will run is embedded as JSON inside a "DruidQueryRel" line:
 
@@ -227,4 +229,28 @@ To workaround the issue, increase value of the maximum string length with the `a
 in the query context. Since it is set to 1,000,000,000 by default, you don't need to override it in most cases.
 See [accuracy information](https://datasketches.apache.org/docs/Quantiles/OrigQuantilesSketch) in the DataSketches documentation for how many bytes are required per stream length.
 This query context  parameter is a temporary solution to avoid the known issue. It may be removed in a future release after the bug is fixed.
+
+## Unsupported features
+
+Druid does not support all SQL features. In particular, the following features are not supported.
+
+- JOIN between native datasources (table, lookup, subquery) and [system tables](sql-metadata-tables.md).
+- JOIN conditions that are not an equality between expressions from the left- and right-hand sides.
+- JOIN conditions containing a constant value inside the condition.
+- JOIN conditions on a column which contains a multi-value dimension.
+- OVER clauses, and analytic functions such as `LAG` and `LEAD`.
+- ORDER BY for a non-aggregating query, except for `ORDER BY __time` or `ORDER BY __time DESC`, which are supported.
+  This restriction only applies to non-aggregating queries; you can ORDER BY any column in an aggregating query.
+- DDL and DML.
+- Using Druid-specific functions like `TIME_PARSE` and `APPROX_QUANTILE_DS` on [system tables](sql-metadata-tables.md).
+
+Additionally, some Druid native query features are not supported by the SQL language. Some unsupported Druid features
+include:
+
+- [Inline datasources](datasource.md#inline).
+- [Spatial filters](../development/geo.md).
+- [Multi-value dimensions](sql-data-types.md#multi-value-strings) are only partially implemented in Druid SQL. There are known
+inconsistencies between their behavior in SQL queries and in native queries due to how they are currently treated by
+the SQL planner.
+
 

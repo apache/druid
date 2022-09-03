@@ -232,6 +232,19 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
     return overlordLeaderSelector.getCurrentLeader();
   }
 
+  public Optional<String> getRedirectLocation()
+  {
+    String leader = overlordLeaderSelector.getCurrentLeader();
+    // do not redirect when
+    // leader is not elected
+    // leader is the current node
+    if (leader == null || leader.isEmpty() || overlordLeaderSelector.isLeader()) {
+      return Optional.absent();
+    } else {
+      return Optional.of(leader);
+    }
+  }
+
   public Optional<TaskRunner> getTaskRunner()
   {
     if (isLeader()) {

@@ -106,7 +106,6 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
         tuningConfig.getRecordBufferSize(),
         tuningConfig.getRecordBufferOfferTimeout(),
         tuningConfig.getRecordBufferFullWait(),
-        tuningConfig.getFetchSequenceNumberTimeout(),
         tuningConfig.getMaxRecordsPerPoll(),
         false,
         useListShards

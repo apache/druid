@@ -121,7 +121,7 @@ public class InputEntityIteratingReaderTest
         ).iterator(),
         temporaryFolder.newFolder()
     );
-    String expectedMessage = "Error occured while trying to read uri: testscheme://some/path";
+    String expectedMessage = "Error occurred while trying to read uri: testscheme://some/path";
     Exception exception = Assert.assertThrows(RuntimeException.class, firehose::read);
 
     Assert.assertTrue(exception.getMessage().contains(expectedMessage));

@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation;
 
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -38,6 +39,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -215,6 +217,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableNumericAggrega
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getFieldName()
   {
     return fieldName;
@@ -222,6 +225,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableNumericAggrega
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getExpression()
   {
     return expression;

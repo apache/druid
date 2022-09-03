@@ -465,7 +465,7 @@ Update overlord dynamic worker configuration.
 * `/druid/coordinator/v1/compaction/progress?dataSource={dataSource}`
 
 Returns the total size of segments awaiting compaction for the given dataSource. 
-The specified dataSource must have automatic compaction enabled.
+The specified dataSource must have [automatic compaction](../ingestion/automatic-compaction.md) enabled.
 
 ##### GET
 
@@ -517,7 +517,7 @@ will be set for them.
 
 * `/druid/coordinator/v1/config/compaction`
 
-Creates or updates the automatic compaction config for a dataSource.
+Creates or updates the [automatic compaction](../ingestion/automatic-compaction.md) config for a dataSource.
 See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for configuration details.
 
 

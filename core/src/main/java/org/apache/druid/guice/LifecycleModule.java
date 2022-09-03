@@ -61,7 +61,7 @@ public class LifecycleModule implements Module
    * is materialized and injected, meaning that objects are not actually instantiated in dependency order.
    * Registering with the LifecyceModule, on the other hand, will instantiate the objects after the normal object
    * graph has already been instantiated, meaning that objects will be created in dependency order and this will
-   * only actually instantiate something that wasn't actually dependend upon.
+   * only actually instantiate something that wasn't actually depended upon.
    *
    * @param clazz the class to instantiate
    * @return this, for chaining.

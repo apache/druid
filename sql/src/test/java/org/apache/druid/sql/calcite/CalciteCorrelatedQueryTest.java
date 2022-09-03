@@ -58,7 +58,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testCorrelatedSubquery(Map<String, Object> queryContext) throws Exception
+  public void testCorrelatedSubquery(Map<String, Object> queryContext)
   {
     cannotVectorize();
     queryContext = withLeftDirectAccessEnabled(queryContext);
@@ -175,7 +175,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testCorrelatedSubqueryWithLeftFilter(Map<String, Object> queryContext) throws Exception
+  public void testCorrelatedSubqueryWithLeftFilter(Map<String, Object> queryContext)
   {
     cannotVectorize();
     queryContext = withLeftDirectAccessEnabled(queryContext);
@@ -264,7 +264,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testCorrelatedSubqueryWithLeftFilter_leftDirectAccessDisabled(Map<String, Object> queryContext) throws Exception
+  public void testCorrelatedSubqueryWithLeftFilter_leftDirectAccessDisabled(Map<String, Object> queryContext)
   {
     cannotVectorize();
 
@@ -355,7 +355,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testCorrelatedSubqueryWithCorrelatedQueryFilter(Map<String, Object> queryContext) throws Exception
+  public void testCorrelatedSubqueryWithCorrelatedQueryFilter(Map<String, Object> queryContext)
   {
     cannotVectorize();
     queryContext = withLeftDirectAccessEnabled(queryContext);
@@ -449,7 +449,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testCorrelatedSubqueryWithCorrelatedQueryFilter_Scan(Map<String, Object> queryContext) throws Exception
+  public void testCorrelatedSubqueryWithCorrelatedQueryFilter_Scan(Map<String, Object> queryContext)
   {
     cannotVectorize();
     queryContext = withLeftDirectAccessEnabled(queryContext);

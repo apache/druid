@@ -222,6 +222,12 @@ public class LongAnyAggregatorFactory extends AggregatorFactory
     return Long.BYTES + Byte.BYTES;
   }
 
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new LongAnyAggregatorFactory(newName, getFieldName());
+  }
+
 
   @Override
   public boolean equals(Object o)

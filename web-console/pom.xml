@@ -28,13 +28,13 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.24.0-SNAPSHOT</version>
+    <version>25.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
     <resources.directory>${project.build.directory}/resources</resources.directory>
     <druid.console.skip>false</druid.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
-    <node.version>v14.19.0</node.version>
+    <node.version>v14.19.3</node.version>
     <npm.version>6.14.16</npm.version>
   </properties>
 
@@ -45,6 +45,7 @@
         <artifactId>frontend-maven-plugin</artifactId>
         <configuration>
           <skip>${druid.console.skip}</skip>
+          <skipTests>${skipUTs}</skipTests>
         </configuration>
         <executions>
           <execution>

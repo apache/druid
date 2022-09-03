@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.filter.DimFilter;
@@ -101,7 +102,14 @@ public interface Query<T>
   Map<String, Object> getContext();
 
   /**
-   * Returns QueryContext for this query.
+   * Returns QueryContext for this query. This type distinguishes between user provided, system default, and system
+   * generated query context keys so that authorization may be employed directly against the user supplied context
+   * values.
+   *
+   * This method is marked @Nullable, but is only so for backwards compatibility with Druid versions older than 0.23.
+   * Callers should check if the result of this method is null, and if so, they are dealing with a legacy query
+   * implementation, and should fall back to using {@link #getContext()} and {@link #withOverriddenContext(Map)} to
+   * manipulate the query context.
    *
    * Note for query context serialization and deserialization.
    * Currently, once a query is serialized, its queryContext can be different from the original queryContext
@@ -110,13 +118,35 @@ public interface Query<T>
    * after it is deserialized. This is because {@link BaseQuery#getContext()} uses
    * {@link QueryContext#getMergedParams()} for serialization, and queries accept a map for deserialization.
    */
-  QueryContext getQueryContext();
+  @Nullable
+  default QueryContext getQueryContext()
+  {
+    return null;
+  }
 
   <ContextType> ContextType getContextValue(String key);
 
   <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
 
   boolean getContextBoolean(String key, boolean defaultValue);
+
+  /**
+   * Returns {@link HumanReadableBytes} for a specified context key. If the context is null or the key doesn't exist
+   * a caller specified default value is returned. A default implementation is provided since Query is an extension
+   * point. Extensions can choose to rely on this default to retain compatibility with core Druid.
+   *
+   * @param key The context key value being looked up
+   * @param defaultValue The default to return if the key value doesn't exist or the context is null.
+   * @return {@link HumanReadableBytes}
+   */
+  default HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
+  {
+    if (null != getQueryContext()) {
+      return getQueryContext().getAsHumanReadableBytes(key, defaultValue);
+    } else {
+      return defaultValue;
+    }
+  }
 
   boolean isDescending();
 

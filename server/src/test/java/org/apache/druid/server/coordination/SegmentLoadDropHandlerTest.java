@@ -57,8 +57,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ScheduledExecutorService;
@@ -501,9 +503,13 @@ public class SegmentLoadDropHandlerTest
     ListenableFuture<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>> future = segmentLoadDropHandler
         .processBatch(batch);
 
+    Map<DataSegmentChangeRequest, SegmentLoadDropHandler.Status> expectedStatusMap = new HashMap<>();
+    expectedStatusMap.put(batch.get(0), SegmentLoadDropHandler.Status.PENDING);
+    expectedStatusMap.put(batch.get(1), SegmentLoadDropHandler.Status.SUCCESS);
     List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> result = future.get();
-    Assert.assertEquals(SegmentLoadDropHandler.Status.PENDING, result.get(0).getStatus());
-    Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, result.get(1).getStatus());
+    for (SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus requestAndStatus : result) {
+      Assert.assertEquals(expectedStatusMap.get(requestAndStatus.getRequest()), requestAndStatus.getStatus());
+    }
 
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();

@@ -90,7 +90,7 @@ public class JsonParserIteratorTest
     }
 
     @Test
-    public void testConvertFutureCancelationToQueryInterruptedException()
+    public void testConvertFutureCancellationToQueryInterruptedException()
     {
       JsonParserIterator<Object> iterator = new JsonParserIterator<>(
           JAVA_TYPE,

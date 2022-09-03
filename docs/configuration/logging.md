@@ -23,9 +23,12 @@ title: "Logging"
   -->
 
 
-Apache Druid processes will emit logs that are useful for debugging to the console. Druid processes also emit periodic metrics about their state. For more about metrics, see [Configuration](../configuration/index.md#enabling-metrics). Metric logs are printed to the console by default, and can be disabled with `-Ddruid.emitter.logging.logLevel=debug`.
+Apache Druid processes will emit logs that are useful for debugging to log files. 
+These processes also emit periodic [metrics](../configuration/index.md#enabling-metrics) about their state.
+Metric info logs can be disabled with `-Ddruid.emitter.logging.logLevel=debug`.
 
-Druid uses [log4j2](http://logging.apache.org/log4j/2.x/) for logging. The default configuration file log4j2.xml ships with Druid under conf/druid/{config}/_common/log4j2.xml .
+Druid uses [log4j2](http://logging.apache.org/log4j/2.x/) for logging.
+The default configuration file log4j2.xml ships with Druid under conf/druid/{config}/_common/log4j2.xml .
 
 By default, Druid uses `RollingRandomAccessFile` for rollover daily, and keeps log files up to 7 days. 
 If that's not suitable in your case, you could modify the log4j2.xml to meet your need.
@@ -67,11 +70,42 @@ An example log4j2.xml file is shown below:
 </Configuration>
 ```
 
-## How to change log directory
-By default, Druid outputs the logs to a directory `log` under the directory where Druid is launched from.
-For example, if Druid is started from its `bin` directory, there will be a subdirectory `log` generated under `bin` directory to hold the log files.
-If you want to change the log directory, set environment variable `DRUID_LOG_DIR` to the right directory before you start Druid.
+> NOTE:
+> Although the log4j configuration file is shared with Druid's task peon processes,
+> the appenders in this file DO NOT take effect for peon processes, which always output logs to standard output.
+> Middle Managers redirect task logs from standard output to [long-term storage](index.md#log-long-term-storage).
+>
+> However, log level settings do take effect for these task peon processes,
+> which means you can still configure loggers at different logging level for task logs using `log4j2.xml`.
 
+## Log directory
+The included log4j2.xml configuration for Druid and ZooKeeper will output logs to the `log` directory at the root of the distribution.
+
+If you want to change the log directory, set the environment variable `DRUID_LOG_DIR` to the right directory before you start Druid.
+
+## All-in-one start commands
+
+If you use one of the all-in-one start commands, such as `bin/start-micro-quickstart`, then in the default configuration
+each service has two kind of log files. The main log file (for example, `log/historical.log`) is written by log4j2 and
+is rotated periodically.
+
+The secondary log file (for example, `log/historical.stdout.log`) contains anything that is written by the component
+directly to standard output or standard error without going through log4j2. This consists mainly of messages from the
+Java runtime itself. This file is not rotated, but it is generally small due to the low volume of messages. If
+necessary, you can truncate it using the Linux command `truncate --size 0 log/historical.stdout.log`.
+
+## Avoid reflective access warnings in logs
+
+On Java 11, you may see warnings like this in log files:
+
+```
+WARNING: An illegal reflective access operation has occurred
+WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
+WARNING: All illegal access operations will be denied in a future release
+```
+
+To avoid these, add the `--add-exports` and `--add-opens` command line parameters described in the documentation section
+about [Java strong encapsulation](../operations/java.md#strong-encapsulation).
 
 ## My logs are really chatty, can I set them to asynchronously write?
 

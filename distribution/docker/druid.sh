@@ -20,11 +20,11 @@
 #
 
 # NOTE: this is a 'run' script for the stock tarball
-# It takes 1 required argument (the name of the service,
+# It takes one required argument (the name of the service,
 # e.g. 'broker', 'historical' etc). Any additional arguments
 # are passed to that service.
 #
-# It accepts 'JAVA_OPTS' as an environment variable
+# This script accepts JAVA_OPTS as an environment variable
 #
 # Additional env vars:
 # - DRUID_LOG4J -- set the entire log4j.xml verbatim
@@ -37,6 +37,7 @@
 #
 # - DRUID_CONFIG_COMMON -- full path to a file for druid 'common' properties
 # - DRUID_CONFIG_${service} -- full path to a file for druid 'service' properties
+# - DRUID_SINGLE_NODE_CONF -- config to use at runtime. Choose from: {large, medium, micro-quickstart, nano-quickstart, small, xlarge}
 
 set -e
 SERVICE="$1"
@@ -50,6 +51,27 @@ test -d /tmp/conf/druid && rm -r /tmp/conf/druid
 cp -r /opt/druid/conf/druid /tmp/conf/druid
 
 getConfPath() {
+    if [ -n "$DRUID_SINGLE_NODE_CONF" ]
+    then
+      getSingleServerConfPath $1
+    else
+      getClusterConfPath $1
+    fi
+}
+getSingleServerConfPath() {
+    cluster_conf_base=/tmp/conf/druid/single-server
+    case "$1" in
+    _common) echo $cluster_conf_base/$DRUID_SINGLE_NODE_CONF/_common ;;
+    historical) echo $cluster_conf_base/$DRUID_SINGLE_NODE_CONF/historical ;;
+    middleManager) echo $cluster_conf_base/$DRUID_SINGLE_NODE_CONF/middleManager ;;
+#    indexer) echo $cluster_conf_base/data/indexer ;;
+    coordinator | overlord) echo $cluster_conf_base/$DRUID_SINGLE_NODE_CONF/coordinator-overlord ;;
+    broker) echo $cluster_conf_base/$DRUID_SINGLE_NODE_CONF/broker ;;
+    router) echo $cluster_conf_base/$DRUID_SINGLE_NODE_CONF/router ;;
+    *) echo $cluster_conf_base/misc/$1 ;;
+    esac
+}
+getClusterConfPath() {
     cluster_conf_base=/tmp/conf/druid/cluster
     case "$1" in
     _common) echo $cluster_conf_base/_common ;;

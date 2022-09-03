@@ -33,10 +33,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSink;
-import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
+import com.google.common.math.IntMath;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -47,6 +47,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.tasklogs.ConsoleLoggingEnforcementConfigurationFactory;
 import org.apache.druid.indexing.common.tasklogs.LogUtils;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
@@ -57,6 +58,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidMetrics;
@@ -66,6 +68,7 @@ import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -74,6 +77,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -104,6 +108,7 @@ public class ForkingTaskRunner
   private final StartupLoggingConfig startupLoggingConfig;
   private final WorkerConfig workerConfig;
 
+  private volatile int numProcessorsPerTask = -1;
   private volatile boolean stopping = false;
 
   private static final AtomicLong LAST_REPORTED_FAILED_TASK_COUNT = new AtomicLong();
@@ -212,6 +217,13 @@ public class ForkingTaskRunner
                         command.add(config.getJavaCommand());
                         command.add("-cp");
                         command.add(taskClasspath);
+
+                        if (numProcessorsPerTask < 1) {
+                          // numProcessorsPerTask is set by start()
+                          throw new ISE("Not started");
+                        }
+
+                        command.add(StringUtils.format("-XX:ActiveProcessorCount=%d", numProcessorsPerTask));
 
                         Iterables.addAll(command, new QuotableWhiteSpaceSplitter(config.getJavaOpts()));
                         Iterables.addAll(command, config.getJavaOptsArray());
@@ -339,6 +351,7 @@ public class ForkingTaskRunner
                         command.add(
                             StringUtils.format("-Ddruid.task.executor.enableTlsPort=%s", node.isEnableTlsPort())
                         );
+                        command.add(StringUtils.format("-Dlog4j2.configurationFactory=%s", ConsoleLoggingEnforcementConfigurationFactory.class.getName()));
 
                         // These are not enabled per default to allow the user to either set or not set them
                         // Users are highly suggested to be set in druid.indexer.runner.javaOpts
@@ -631,13 +644,14 @@ public class ForkingTaskRunner
   }
 
   @Override
+  @LifecycleStart
   public void start()
   {
-    // No state setup required
+    setNumProcessorsPerTask();
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset)
+  public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final ProcessHolder processHolder;
 
@@ -649,17 +663,7 @@ public class ForkingTaskRunner
         return Optional.absent();
       }
     }
-
-    return Optional.of(
-        new ByteSource()
-        {
-          @Override
-          public InputStream openStream() throws IOException
-          {
-            return LogUtils.streamFile(processHolder.logFile, offset);
-          }
-        }
-    );
+    return Optional.of(LogUtils.streamFile(processHolder.logFile, offset));
   }
 
   /**
@@ -784,6 +788,20 @@ public class ForkingTaskRunner
     long lastReportedSuccessfulTaskCount = LAST_REPORTED_SUCCESSFUL_TASK_COUNT.get();
     LAST_REPORTED_SUCCESSFUL_TASK_COUNT.set(successfulTaskCount);
     return successfulTaskCount - lastReportedSuccessfulTaskCount;
+  }
+
+  @VisibleForTesting
+  void setNumProcessorsPerTask()
+  {
+    // Divide number of available processors by the number of tasks.
+    // This prevents various automatically-sized thread pools from being unreasonably large (we don't want each
+    // task to size its pools as if it is the only thing on the entire machine).
+
+    final int availableProcessors = JvmUtils.getRuntimeInfo().getAvailableProcessors();
+    numProcessorsPerTask = Math.max(
+        1,
+        IntMath.divide(availableProcessors, workerConfig.getCapacity(), RoundingMode.CEILING)
+    );
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem

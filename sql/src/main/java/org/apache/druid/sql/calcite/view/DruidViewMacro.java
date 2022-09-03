@@ -57,8 +57,10 @@ public class DruidViewMacro implements TableMacro
   public TranslatableTable apply(final List<Object> arguments)
   {
     final RelDataType rowType;
-    try (final DruidPlanner planner = plannerFactory.createPlanner(viewSql, new QueryContext())) {
-      rowType = planner.plan().rowType();
+    try (final DruidPlanner planner =
+             plannerFactory.createPlanner(ViewSqlEngine.INSTANCE, viewSql, new QueryContext())) {
+      planner.validate();
+      rowType = planner.prepare().getValidatedRowType();
     }
     catch (Exception e) {
       throw new RuntimeException(e);

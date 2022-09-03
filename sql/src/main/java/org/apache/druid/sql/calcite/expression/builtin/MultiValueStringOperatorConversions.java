@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
@@ -29,6 +29,7 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
@@ -44,6 +45,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -336,9 +338,13 @@ public class MultiValueStringOperatorConversions
       if (!expr.isLiteral()) {
         return null;
       }
-      String[] lit = expr.eval(InputBindings.nilBindings()).asStringArray();
+      Object[] lit = expr.eval(InputBindings.nilBindings()).asArray();
       if (lit == null || lit.length == 0) {
         return null;
+      }
+      HashSet<String> literals = Sets.newHashSetWithExpectedSize(lit.length);
+      for (Object o : lit) {
+        literals.add(Evals.asString(o));
       }
 
       final DruidExpression.ExpressionGenerator builder = (args) -> {
@@ -364,7 +370,7 @@ public class MultiValueStringOperatorConversions
             (name, outputType, expression, macroTable) -> new ListFilteredVirtualColumn(
                 name,
                 druidExpressions.get(0).getSimpleExtraction().toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
-                ImmutableSet.copyOf(lit),
+                literals,
                 isAllowList()
             )
         );

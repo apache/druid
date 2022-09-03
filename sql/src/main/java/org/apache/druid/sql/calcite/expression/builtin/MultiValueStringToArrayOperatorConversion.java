@@ -38,7 +38,7 @@ public class MultiValueStringToArrayOperatorConversion extends DirectOperatorCon
       .operatorBuilder("MV_TO_ARRAY")
       .operandTypeChecker(OperandTypes.family(SqlTypeFamily.STRING))
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeNullableArray(SqlTypeName.VARCHAR)
+      .returnTypeNullableArrayWithNullableElements(SqlTypeName.VARCHAR)
       .build();
 
   public MultiValueStringToArrayOperatorConversion()

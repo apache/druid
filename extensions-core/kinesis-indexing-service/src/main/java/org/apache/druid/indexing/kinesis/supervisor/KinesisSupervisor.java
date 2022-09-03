@@ -212,7 +212,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         taskTuningConfig.getRecordBufferSize(),
         taskTuningConfig.getRecordBufferOfferTimeout(),
         taskTuningConfig.getRecordBufferFullWait(),
-        taskTuningConfig.getFetchSequenceNumberTimeout(),
         taskTuningConfig.getMaxRecordsPerPoll(),
         ioConfig.isUseEarliestSequenceNumber(),
         spec.getSpec().getTuningConfig().isUseListShards()

@@ -49,7 +49,7 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
   {
     try (final Closer closer = Closer.create()) {
       final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
-      final DruidSchema druidSchema = new DruidSchema(
+      final SegmentMetadataCache cache = new SegmentMetadataCache(
           CalciteTests.createMockQueryLifecycleFactory(
               new SpecificSegmentsQuerySegmentWalker(conglomerate),
               conglomerate
@@ -59,14 +59,14 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
           new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
           PLANNER_CONFIG_DEFAULT,
           new NoopEscalator(),
-          new BrokerInternalQueryConfig(),
-          null
+          new BrokerInternalQueryConfig()
       );
 
-      druidSchema.start();
-      druidSchema.awaitInitialization();
+      cache.start();
+      cache.awaitInitialization();
+      final DruidSchema druidSchema = new DruidSchema(cache, null);
 
-      Assert.assertEquals(ImmutableMap.of(), druidSchema.getTableMap());
+      Assert.assertEquals(ImmutableSet.of(), druidSchema.getTableNames());
     }
   }
 }

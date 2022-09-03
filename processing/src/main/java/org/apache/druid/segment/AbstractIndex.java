@@ -36,38 +36,38 @@ public abstract class AbstractIndex
   @Override
   public String toString()
   {
-    StringBuilder sb = new StringBuilder();
-    StorageAdapter storageAdapter = toStorageAdapter();
-    List<Cursor> cursors = storageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    ).toList();
     List<String> columnNames = new ArrayList<>();
     columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
     columnNames.addAll(getColumnNames());
-    for (Cursor cursor : cursors) {
-      ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-      List<ColumnValueSelector> selectors =
-          columnNames.stream().map(columnSelectorFactory::makeColumnValueSelector).collect(Collectors.toList());
-      while (!cursor.isDone()) {
-        sb.append('[');
-        for (int i = 0; i < selectors.size(); i++) {
-          sb.append(columnNames.get(i)).append('=');
-          ColumnValueSelector selector = selectors.get(i);
-          Object columnValue = selector.getObject();
-          sb.append(columnValue);
-          sb.append(", ");
-        }
-        sb.setLength(sb.length() - 2);
-        sb.append("]\n");
-        cursor.advance();
-      }
-      sb.append("\n");
-    }
-    return sb.toString();
+
+    return toStorageAdapter()
+        .makeCursors(
+            null,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        )
+        .accumulate(new StringBuilder(), (sb, cursor) -> {
+          ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+          List<ColumnValueSelector> selectors =
+              columnNames.stream().map(columnSelectorFactory::makeColumnValueSelector).collect(Collectors.toList());
+          while (!cursor.isDone()) {
+            sb.append('[');
+            for (int i = 0; i < selectors.size(); i++) {
+              sb.append(columnNames.get(i)).append('=');
+              ColumnValueSelector selector = selectors.get(i);
+              Object columnValue = selector.getObject();
+              sb.append(columnValue);
+              sb.append(", ");
+            }
+            sb.setLength(sb.length() - 2);
+            sb.append("]\n");
+            cursor.advance();
+          }
+          sb.append("\n");
+          return sb;
+        }).toString();
   }
 }
