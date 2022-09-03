@@ -124,20 +124,8 @@ public interface Query<T>
     return null;
   }
 
-  default boolean containsContextValue(String key)
-  {
-    if (getQueryContext() != null) {
-      return getQueryContext().containsKey(key);
-    } else {
-      return false;
-    }
-  }
-
   /**
-   * Get context value and cast it to ContextType.
-   * NOTE: If value is not type of ContextType, {@link java.lang.ClassCastException} is raised.
-   *
-   * For safe conversion, please use following methods:
+   * Get context value. It's recommended to use following methods instead
    * {@link #getContextBoolean(String, boolean)}
    * {@link #getContextAsString(String)}
    * {@link #getContextAsInt(String)}
@@ -147,11 +135,10 @@ public interface Query<T>
    * {@link #getContextAsHumanReadableBytes(String, HumanReadableBytes)}
    */
   @Nullable
-  default <ContextType> ContextType getContextValue(String key)
+  default Object getContextValue(String key)
   {
     if (getQueryContext() != null) {
-      //noinspection unchecked
-      return (ContextType) getQueryContext().get(key);
+      return getQueryContext().get(key);
     } else {
       return null;
     }

@@ -1454,7 +1454,7 @@ public class ControllerImpl implements Controller
   )
   {
     if (isRollupQuery) {
-      final String queryGranularity = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, "");
+      final String queryGranularity = query.getContextAsString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, "");
 
       if (timeIsGroupByDimension((GroupByQuery) query, columnMappings) && !queryGranularity.isEmpty()) {
         return new ArbitraryGranularitySpec(
@@ -1483,7 +1483,7 @@ public class ControllerImpl implements Controller
   {
     if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME)) {
       final String queryTimeColumn = columnMappings.getQueryColumnForOutputColumn(ColumnHolder.TIME_COLUMN_NAME);
-      return queryTimeColumn.equals(groupByQuery.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD));
+      return queryTimeColumn.equals(groupByQuery.getContextAsString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD));
     } else {
       return false;
     }

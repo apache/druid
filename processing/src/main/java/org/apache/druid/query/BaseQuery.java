@@ -182,12 +182,6 @@ public abstract class BaseQuery<T> implements Query<T>
   }
 
   @Override
-  public <ContextType> ContextType getContextValue(String key)
-  {
-    return (ContextType) context.get(key);
-  }
-
-  @Override
   public boolean getContextBoolean(String key, boolean defaultValue)
   {
     return context.getAsBoolean(key, defaultValue);

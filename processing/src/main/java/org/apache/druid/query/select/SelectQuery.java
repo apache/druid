@@ -117,12 +117,6 @@ public class SelectQuery implements Query<Object>
   }
 
   @Override
-  public <ContextType> ContextType getContextValue(String key)
-  {
-    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
-  }
-
-  @Override
   public boolean isDescending()
   {
     throw new RuntimeException(REMOVED_ERROR_MESSAGE);

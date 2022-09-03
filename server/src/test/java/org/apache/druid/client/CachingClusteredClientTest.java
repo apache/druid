@@ -2298,11 +2298,11 @@ public class CachingClusteredClientTest
         QueryPlus capturedQueryPlus = (QueryPlus) queryCapture.getValue();
         Query capturedQuery = capturedQueryPlus.getQuery();
         if (expectBySegment) {
-          Assert.assertEquals(true, capturedQuery.getContextValue(QueryContexts.BY_SEGMENT_KEY));
+          Assert.assertEquals(true, capturedQuery.getContextAsBoolean(QueryContexts.BY_SEGMENT_KEY));
         } else {
           Assert.assertTrue(
-              !capturedQuery.containsContextValue(QueryContexts.BY_SEGMENT_KEY) ||
-              capturedQuery.getContextValue(QueryContexts.BY_SEGMENT_KEY).equals(false)
+              capturedQuery.getContextValue(QueryContexts.BY_SEGMENT_KEY) == null ||
+              capturedQuery.getContextAsBoolean(QueryContexts.BY_SEGMENT_KEY).equals(false)
           );
         }
       }
