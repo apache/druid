@@ -69,7 +69,7 @@ public class JsonConfigurator
       ),
       null,
       false
-  ));
+  )).setEnableSubstitutionInVariables(true).setEnableUndefinedVariableException(true);
 
   @Inject
   public JsonConfigurator(
@@ -79,8 +79,6 @@ public class JsonConfigurator
   {
     this.jsonMapper = jsonMapper;
     this.validator = validator;
-    this.stringSubstitutor.setEnableSubstitutionInVariables(true);
-    this.stringSubstitutor.setEnableUndefinedVariableException(true);
   }
 
   public <T> T configurate(Properties props, String propertyPrefix, Class<T> clazz) throws ProvisionException
