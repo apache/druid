@@ -69,7 +69,7 @@ public class JsonConfigurator
       ),
       null,
       false
-  ));;
+  ));
 
   @Inject
   public JsonConfigurator(
