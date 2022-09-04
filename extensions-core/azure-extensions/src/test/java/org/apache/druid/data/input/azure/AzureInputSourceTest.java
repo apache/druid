@@ -22,7 +22,6 @@ package org.apache.druid.data.input.azure;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
@@ -42,6 +41,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.URI;
+import java.nio.file.FileSystems;
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -186,9 +188,11 @@ public class AzureInputSourceTest extends EasyMockSupport
     Iterator<CloudBlobHolder> expectedCloudBlobsIterator = expectedCloudBlobs.iterator();
     String filter = "*.csv";
 
+    PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filter);
+
     expectedCloudBlobsIterator = Iterators.filter(
         expectedCloudBlobsIterator,
-        object -> FilenameUtils.wildcardMatch(object.getName(), filter)
+        object -> m.matches(Paths.get(object.getName()))
     );
 
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_LISTING_LENGTH);

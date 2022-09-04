@@ -28,7 +28,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterators;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
@@ -45,6 +44,9 @@ import org.apache.druid.utils.Streams;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.nio.file.FileSystems;
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -184,9 +186,11 @@ public class OssInputSource extends CloudObjectInputSource
 
       // Skip files that didn't match filter.
       if (StringUtils.isNotBlank(getFilter())) {
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getFilter());
+
         iterator = Iterators.filter(
             iterator,
-            object -> FilenameUtils.wildcardMatch(object.getKey(), getFilter())
+            object -> m.matches(Paths.get(object.getKey()))
         );
       }
 

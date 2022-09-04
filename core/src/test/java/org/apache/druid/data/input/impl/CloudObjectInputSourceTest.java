@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -29,6 +30,9 @@ import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
 import java.net.URI;
+import java.nio.file.FileSystems;
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -202,5 +206,26 @@ public class CloudObjectInputSourceTest
 
     Assert.assertEquals(null, inputSource.getFilter());
     Assert.assertEquals(OBJECTS, returnedLocations);
+  }
+
+  @Test
+  public void testGlobSubdirectories() throws Exception
+  {
+    PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:**.parquet");
+    Assert.assertTrue(m.matches(Paths.get("db/date=2022-08-01/001.parquet")));
+    Assert.assertTrue(m.matches(Paths.get("db/date=2022-08-01/002.parquet")));
+
+    PathMatcher m2 = FileSystems.getDefault().getPathMatcher("glob:db/date=2022-08-01/*.parquet");
+    Assert.assertTrue(m2.matches(Paths.get("db/date=2022-08-01/001.parquet")));
+    Assert.assertFalse(m2.matches(Paths.get("db/date=2022-08-01/_junk/0/001.parquet")));
+  }
+
+  @Test
+  public void testGlobSubdirectories2() throws Exception
+  {
+    Assert.assertTrue(FilenameUtils.wildcardMatch("db/date=2022-08-01/001.parquet", "db/date=2022-08-01/*.parquet"));
+
+    // This proved that FilenameUtils did the wrong thing. It should have been false.
+    Assert.assertTrue(FilenameUtils.wildcardMatch("db/date=2022-08-01/_junk/0/001.parquet", "db/date=2022-08-01/*.parquet"));
   }
 }

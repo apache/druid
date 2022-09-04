@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.services.storage.model.StorageObject;
 import com.google.common.collect.Iterators;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
@@ -44,6 +43,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.net.URI;
+import java.nio.file.FileSystems;
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -134,9 +136,11 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
 
       // Skip files that didn't match filter.
       if (StringUtils.isNotBlank(getFilter())) {
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getFilter());
+
         iterator = Iterators.filter(
             iterator,
-            object -> FilenameUtils.wildcardMatch(object.getName(), getFilter())
+            object -> m.matches(Paths.get(object.getName()))
         );
       }
 
