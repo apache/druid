@@ -209,7 +209,7 @@ public class CloudObjectInputSourceTest
   }
 
   @Test
-  public void testGlobSubdirectories() throws Exception
+  public void testGlobSubdirectories()
   {
     PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:**.parquet");
     Assert.assertTrue(m.matches(Paths.get("db/date=2022-08-01/001.parquet")));
@@ -221,7 +221,7 @@ public class CloudObjectInputSourceTest
   }
 
   @Test
-  public void testGlobSubdirectories2() throws Exception
+  public void testGlobSubdirectories2()
   {
     Assert.assertTrue(FilenameUtils.wildcardMatch("db/date=2022-08-01/001.parquet", "db/date=2022-08-01/*.parquet"));
 
