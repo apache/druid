@@ -649,12 +649,26 @@ public class QueryContexts
     if (val == null) {
       return defaultValue;
     }
-    if (val instanceof String) {
-      return Enum.valueOf(clazz, StringUtils.toUpperCase((String) val));
-    } else if (val instanceof Boolean) {
-      return Enum.valueOf(clazz, StringUtils.toUpperCase(String.valueOf(val)));
-    } else {
-      throw new ISE("Expected parameter [%s] must be type of [%s], actual type is [%s]. ", parameter, val.getClass());
+
+    try {
+      if (val instanceof String) {
+        return Enum.valueOf(clazz, StringUtils.toUpperCase((String) val));
+      } else if (val instanceof Boolean) {
+        return Enum.valueOf(clazz, StringUtils.toUpperCase(String.valueOf(val)));
+      }
     }
+    catch (IllegalArgumentException e) {
+      throw new IAE("Expected parameter [%s] must be value of enum [%s], but got [%s].",
+                    parameter,
+                    clazz.getName(),
+                    val.toString());
+    }
+
+    throw new ISE(
+        "Expected parameter [%s] must be type of [%s], actual type is [%s].",
+        parameter,
+        clazz.getName(),
+        val.getClass()
+    );
   }
 }

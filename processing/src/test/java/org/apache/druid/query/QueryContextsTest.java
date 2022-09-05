@@ -137,15 +137,19 @@ public class QueryContextsTest
   @Test
   public void testDefaultInSubQueryThreshold()
   {
-    Assert.assertEquals(QueryContexts.DEFAULT_IN_SUB_QUERY_THRESHOLD,
-                        QueryContexts.getInSubQueryThreshold(ImmutableMap.of()));
+    Assert.assertEquals(
+        QueryContexts.DEFAULT_IN_SUB_QUERY_THRESHOLD,
+        QueryContexts.getInSubQueryThreshold(ImmutableMap.of())
+    );
   }
 
   @Test
   public void testDefaultPlanTimeBoundarySql()
   {
-    Assert.assertEquals(QueryContexts.DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING,
-                        QueryContexts.isTimeBoundaryPlanningEnabled(ImmutableMap.of()));
+    Assert.assertEquals(
+        QueryContexts.DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING,
+        QueryContexts.isTimeBoundaryPlanningEnabled(ImmutableMap.of())
+    );
   }
 
   @Test
@@ -279,8 +283,43 @@ public class QueryContextsTest
   @Test
   public void testGetAsHumanReadableBytes()
   {
-    Assert.assertEquals(new HumanReadableBytes("500M").getBytes(), QueryContexts.getAsHumanReadableBytes("maxOnDiskStorage", 500_000_000, HumanReadableBytes.ZERO).getBytes());
-    Assert.assertEquals(new HumanReadableBytes("500M").getBytes(), QueryContexts.getAsHumanReadableBytes("maxOnDiskStorage", "500000000", HumanReadableBytes.ZERO).getBytes());
-    Assert.assertEquals(new HumanReadableBytes("500M").getBytes(), QueryContexts.getAsHumanReadableBytes("maxOnDiskStorage", "500M", HumanReadableBytes.ZERO).getBytes());
+    Assert.assertEquals(
+        new HumanReadableBytes("500M").getBytes(),
+        QueryContexts.getAsHumanReadableBytes("maxOnDiskStorage", 500_000_000, HumanReadableBytes.ZERO)
+                     .getBytes()
+    );
+    Assert.assertEquals(
+        new HumanReadableBytes("500M").getBytes(),
+        QueryContexts.getAsHumanReadableBytes("maxOnDiskStorage", "500000000", HumanReadableBytes.ZERO)
+                     .getBytes()
+    );
+    Assert.assertEquals(
+        new HumanReadableBytes("500M").getBytes(),
+        QueryContexts.getAsHumanReadableBytes("maxOnDiskStorage", "500M", HumanReadableBytes.ZERO)
+                     .getBytes()
+    );
+  }
+
+  @Test
+  public void testGetEnum()
+  {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        ImmutableMap.of("e1", "FORCE",
+                        "e2", "INVALID_ENUM"
+        )
+    );
+
+    Assert.assertEquals(
+        QueryContexts.Vectorize.FORCE,
+        query.getContextAsEnum("e1", QueryContexts.Vectorize.class, QueryContexts.Vectorize.FALSE)
+    );
+
+    Assert.assertThrows(
+        IAE.class,
+        () -> query.getContextAsEnum("e2", QueryContexts.Vectorize.class, QueryContexts.Vectorize.FALSE)
+    );
   }
 }
