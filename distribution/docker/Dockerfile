@@ -19,7 +19,7 @@
 
 ARG JDK_VERSION=11
 
-FROM maven:3.8.4-jdk-11-slim as builder
+FROM maven:3.8.6-jdk-11-slim as builder
 
 # Rebuild from source in this stage
 # This can be unset if the tarball was already built outside of Docker
@@ -32,10 +32,11 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 COPY . /src
 WORKDIR /src
 RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
-      mvn -B -ff -ntp dependency:go-offline \
+      mvn -B -ff -q dependency:go-offline \
       install \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
+      -P-druid-benchmarks -P-druid-integration-tests -P-druid-testing-tools \
       -Dmaven.javadoc.skip=true \
       ; fi
 

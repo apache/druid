@@ -19,15 +19,23 @@
 
 ## Build
 
-From the root of the repo, run `docker build -t apache/druid:tag -f distribution/docker/Dockerfile .`
+From the root of the repo, run following command:
+
+```bash
+DOCKER_BUILDKIT=1 docker build -t apache/druid:tag -f distribution/docker/Dockerfile .
+```
+
+> NOTE:
+> By default, the Druid image is built and run in Java 11 environment.
+> If you want to run Druid in Java 8 environment, you need to add `--build-arg JDK_VERSION=8` to above command.
 
 ## Run
 
-Edit `environment` to suite. Run `docker-compose -f distribution/docker/docker-compose.yml up`
+Edit `environment` file to suite. Run:
 
-## Java 11
-
-From the root of the repo, run `docker build -t apache/druid:tag -f distribution/docker/Dockerfile.java11 .` which will build Druid to run in a Java 11 environment.
+```bash
+docker-compose -f distribution/docker/docker-compose.yml up
+```
 
 ## MySQL Database Connector
 
@@ -35,6 +43,8 @@ This image contains solely the postgres metadata storage connector. If you
 need the mysql metadata storage connector, you can use Dockerfile.mysql to add
 it to the base image above.
 
-`docker build -t apache/druid:tag-mysql --build-arg DRUID_RELEASE=apache/druid:tag -f distribution/docker/Dockerfile.mysql .`
+```bash
+docker build -t apache/druid:tag-mysql --build-arg DRUID_RELEASE=apache/druid:tag -f distribution/docker/Dockerfile.mysql .
+```
 
-where `druid:tag` is the version to use as the base.
+where `druid:tag` is the version of Druid image to use as the base.
