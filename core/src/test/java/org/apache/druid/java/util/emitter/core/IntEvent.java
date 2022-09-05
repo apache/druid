@@ -19,8 +19,6 @@
 
 package org.apache.druid.java.util.emitter.core;
 
-import java.util.Map;
-
 class IntEvent implements Event
 {
   int index;
@@ -30,7 +28,7 @@ class IntEvent implements Event
   }
 
   @Override
-  public Map<String, Object> toMap()
+  public EventMap toMap()
   {
     return null;
   }

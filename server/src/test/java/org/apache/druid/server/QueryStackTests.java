@@ -70,6 +70,7 @@ import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.LookupJoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -159,25 +160,25 @@ public class QueryStackTests
 
   public static TestClusterQuerySegmentWalker createClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
-      JoinableFactory joinableFactory,
+      JoinableFactoryWrapper joinableFactoryWraper,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler
   )
   {
-    return new TestClusterQuerySegmentWalker(timelines, joinableFactory, conglomerate, scheduler);
+    return new TestClusterQuerySegmentWalker(timelines, joinableFactoryWraper, conglomerate, scheduler);
   }
 
   public static LocalQuerySegmentWalker createLocalQuerySegmentWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SegmentWrangler segmentWrangler,
-      final JoinableFactory joinableFactory,
+      final JoinableFactoryWrapper joinableFactoryWrapper,
       final QueryScheduler scheduler
   )
   {
     return new LocalQuerySegmentWalker(
         conglomerate,
         segmentWrangler,
-        joinableFactory,
+        joinableFactoryWrapper,
         scheduler,
         EMITTER
     );

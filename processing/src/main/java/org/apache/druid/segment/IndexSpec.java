@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -68,6 +69,9 @@ public class IndexSpec
   private final CompressionFactory.LongEncodingStrategy longEncoding;
 
   @Nullable
+  private final CompressionStrategy jsonCompression;
+
+  @Nullable
   private final SegmentizerFactory segmentLoader;
 
   /**
@@ -75,7 +79,7 @@ public class IndexSpec
    */
   public IndexSpec()
   {
-    this(null, null, null, null, null);
+    this(null, null, null, null, null, null);
   }
 
   @VisibleForTesting
@@ -86,7 +90,19 @@ public class IndexSpec
       @Nullable CompressionFactory.LongEncodingStrategy longEncoding
   )
   {
-    this(bitmapSerdeFactory, dimensionCompression, metricCompression, longEncoding, null);
+    this(bitmapSerdeFactory, dimensionCompression, metricCompression, longEncoding, null, null);
+  }
+
+  @VisibleForTesting
+  public IndexSpec(
+      @Nullable BitmapSerdeFactory bitmapSerdeFactory,
+      @Nullable CompressionStrategy dimensionCompression,
+      @Nullable CompressionStrategy metricCompression,
+      @Nullable CompressionFactory.LongEncodingStrategy longEncoding,
+      @Nullable SegmentizerFactory segmentLoader
+  )
+  {
+    this(bitmapSerdeFactory, dimensionCompression, metricCompression, longEncoding, null, segmentLoader);
   }
 
   /**
@@ -112,6 +128,7 @@ public class IndexSpec
       @JsonProperty("dimensionCompression") @Nullable CompressionStrategy dimensionCompression,
       @JsonProperty("metricCompression") @Nullable CompressionStrategy metricCompression,
       @JsonProperty("longEncoding") @Nullable CompressionFactory.LongEncodingStrategy longEncoding,
+      @JsonProperty("jsonCompression") @Nullable CompressionStrategy jsonCompression,
       @JsonProperty("segmentLoader") @Nullable SegmentizerFactory segmentLoader
   )
   {
@@ -130,6 +147,7 @@ public class IndexSpec
     this.dimensionCompression = dimensionCompression == null ? DEFAULT_DIMENSION_COMPRESSION : dimensionCompression;
     this.metricCompression = metricCompression == null ? DEFAULT_METRIC_COMPRESSION : metricCompression;
     this.longEncoding = longEncoding == null ? DEFAULT_LONG_ENCODING : longEncoding;
+    this.jsonCompression = jsonCompression;
     this.segmentLoader = segmentLoader;
   }
 
@@ -164,6 +182,14 @@ public class IndexSpec
     return segmentLoader;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public CompressionStrategy getJsonCompression()
+  {
+    return jsonCompression;
+  }
+
   public Map<String, Object> asMap(ObjectMapper objectMapper)
   {
     return objectMapper.convertValue(
@@ -186,13 +212,14 @@ public class IndexSpec
            dimensionCompression == indexSpec.dimensionCompression &&
            metricCompression == indexSpec.metricCompression &&
            longEncoding == indexSpec.longEncoding &&
+           Objects.equals(jsonCompression, indexSpec.jsonCompression) &&
            Objects.equals(segmentLoader, indexSpec.segmentLoader);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(bitmapSerdeFactory, dimensionCompression, metricCompression, longEncoding, segmentLoader);
+    return Objects.hash(bitmapSerdeFactory, dimensionCompression, metricCompression, longEncoding, jsonCompression, segmentLoader);
   }
 
   @Override
@@ -203,6 +230,7 @@ public class IndexSpec
            ", dimensionCompression=" + dimensionCompression +
            ", metricCompression=" + metricCompression +
            ", longEncoding=" + longEncoding +
+           ", jsonCompression=" + jsonCompression +
            ", segmentLoader=" + segmentLoader +
            '}';
   }

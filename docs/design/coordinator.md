@@ -27,6 +27,8 @@ title: "Coordinator Process"
 
 For Apache Druid Coordinator Process Configuration, see [Coordinator Configuration](../configuration/index.md#coordinator).
 
+For basic tuning guidance for the Coordinator process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#coordinator).
+
 ### HTTP endpoints
 
 For a list of API endpoints supported by the Coordinator, see [Coordinator API](../operations/api-reference.md#coordinator).
@@ -113,7 +115,7 @@ need compaction.
 A set of segments needs compaction if all conditions below are satisfied:
 
 1) Total size of segments in the time chunk is smaller than or equal to the configured `inputSegmentSizeBytes`.
-2) Segments have never been compacted yet or compaction spec has been updated since the last compaction, especially `maxRowsPerSegment`, `maxTotalRows`, and `indexSpec`.
+2) Segments have never been compacted yet or compaction spec has been updated since the last compaction: `maxTotalRows` or `indexSpec`.
 
 Here are some details with an example. Suppose we have two dataSources (`foo`, `bar`) as seen below:
 

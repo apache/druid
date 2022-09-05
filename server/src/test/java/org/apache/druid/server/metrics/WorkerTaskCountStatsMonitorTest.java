@@ -174,23 +174,23 @@ public class WorkerTaskCountStatsMonitorTest
     Assert.assertEquals(5, emitter.getEvents().size());
     Assert.assertEquals("worker/task/failed/count", emitter.getEvents().get(0).toMap().get("metric"));
     Assert.assertEquals("workerCategory", emitter.getEvents().get(0).toMap().get("category"));
-    Assert.assertEquals("workerVersion", emitter.getEvents().get(0).toMap().get("version"));
+    Assert.assertEquals("workerVersion", emitter.getEvents().get(0).toMap().get("workerVersion"));
     Assert.assertEquals(4L, emitter.getEvents().get(0).toMap().get("value"));
     Assert.assertEquals("worker/task/success/count", emitter.getEvents().get(1).toMap().get("metric"));
     Assert.assertEquals("workerCategory", emitter.getEvents().get(1).toMap().get("category"));
-    Assert.assertEquals("workerVersion", emitter.getEvents().get(1).toMap().get("version"));
+    Assert.assertEquals("workerVersion", emitter.getEvents().get(1).toMap().get("workerVersion"));
     Assert.assertEquals(2L, emitter.getEvents().get(1).toMap().get("value"));
     Assert.assertEquals("worker/taskSlot/idle/count", emitter.getEvents().get(2).toMap().get("metric"));
     Assert.assertEquals("workerCategory", emitter.getEvents().get(2).toMap().get("category"));
-    Assert.assertEquals("workerVersion", emitter.getEvents().get(2).toMap().get("version"));
+    Assert.assertEquals("workerVersion", emitter.getEvents().get(2).toMap().get("workerVersion"));
     Assert.assertEquals(3L, emitter.getEvents().get(2).toMap().get("value"));
     Assert.assertEquals("worker/taskSlot/total/count", emitter.getEvents().get(3).toMap().get("metric"));
     Assert.assertEquals("workerCategory", emitter.getEvents().get(3).toMap().get("category"));
-    Assert.assertEquals("workerVersion", emitter.getEvents().get(3).toMap().get("version"));
+    Assert.assertEquals("workerVersion", emitter.getEvents().get(3).toMap().get("workerVersion"));
     Assert.assertEquals(5L, emitter.getEvents().get(3).toMap().get("value"));
     Assert.assertEquals("worker/taskSlot/used/count", emitter.getEvents().get(4).toMap().get("metric"));
     Assert.assertEquals("workerCategory", emitter.getEvents().get(4).toMap().get("category"));
-    Assert.assertEquals("workerVersion", emitter.getEvents().get(4).toMap().get("version"));
+    Assert.assertEquals("workerVersion", emitter.getEvents().get(4).toMap().get("workerVersion"));
     Assert.assertEquals(1L, emitter.getEvents().get(4).toMap().get("value"));
   }
 

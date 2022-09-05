@@ -63,7 +63,7 @@ The following built-in functions are available.
 
 |name|description|
 |----|-----------|
-|cast|cast(expr,'LONG' or 'DOUBLE' or 'STRING' or 'LONG_ARRAY', or 'DOUBLE_ARRAY' or 'STRING_ARRAY') returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
+|cast|cast(expr,'LONG' or 'DOUBLE' or 'STRING' or 'ARRAY<LONG>', or 'ARRAY<DOUBLE>' or 'ARRAY<STRING>') returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
 |nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
@@ -170,7 +170,6 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |toradians|toradians(x) converts an angle measured in degrees to an approximately equivalent angle measured in radians|
 |ulp|ulp(x) returns the size of an ulp of the argument x|
 
-
 ## Array functions
 
 | function | description |
@@ -226,6 +225,34 @@ will map each element of `some_multi_value_column` to the identifier `x` so that
 map((x) -> x + 1, x)
 ```
 in this case, the `x` when evaluating `x + 1` is the lambda argument, thus an element of the multi-valued column `x`, rather than the column `x` itself.
+
+
+## JSON functions
+JSON functions provide facilities to extract, transform, and create `COMPLEX<json>` values. 
+
+| function | description |
+|---|---|
+| json_value(expr, path[, type]) | Extract a Druid literal (`STRING`, `LONG`, `DOUBLE`) value from `expr` using JSONPath syntax of `path`. The optional `type` argument can be set to `'LONG'`,`'DOUBLE'` or `'STRING'` to cast values to that type. |
+| json_query(expr, path) | Extract a `COMPLEX<json>` value from `expr` using JSONPath syntax of `path` |
+| json_object(expr1, expr2[, expr3, expr4 ...]) | Construct a `COMPLEX<json>` with alternating 'key' and 'value' arguments|
+| parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>`. If the input is not a `STRING` or it is invalid JSON, this function will result in an error.|
+| try_parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>`. If the input is not a `STRING` or it is invalid JSON, this function will result in a `NULL` value. |
+| to_json_string(expr) | Convert `expr` into a JSON `STRING` value |
+| json_keys(expr, path) | Get array of field names from `expr` at the specified JSONPath `path`, or null if the data does not exist or have any fields |
+| json_paths(expr) | Get array of all JSONPath paths available from `expr` |
+
+### JSONPath syntax
+
+Druid supports a small, simplified subset of the [JSONPath syntax](https://github.com/json-path/JsonPath/blob/master/README.md) operators, primarily limited to extracting individual values from nested data structures.
+
+|Operator|Description|
+| --- | --- |
+|`$`| Root element. All JSONPath expressions start with this operator. |
+|`.<name>`| Child element in dot notation. |
+|`['<name>']`| Child element in bracket notation. |
+|`[<number>]`| Array index. |
+
+See [SQL JSON documentation](../querying/sql-json-functions.md#jsonpath-syntax) for examples.
 
 ## Reduction functions
 

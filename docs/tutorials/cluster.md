@@ -130,7 +130,7 @@ The [basic cluster tuning guide](../operations/basic-cluster-tuning.md) has info
 
 ## Select OS
 
-We recommend running your favorite Linux distribution. You will also need Java 8 or 11.
+We recommend running your favorite Linux distribution. You will also need [Java 8 or 11](../operations/java.md).
 
 > If needed, you can specify where to find Java using the environment variables
 > `DRUID_JAVA_HOME` or `JAVA_HOME`. For more details run the `bin/verify-java` script.

@@ -25,8 +25,8 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.NoopOverlordClient;
-import org.apache.druid.client.indexing.TaskStatus;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.ShuffleMetrics.PerDatasourceShuffleMetrics;
@@ -112,7 +112,7 @@ public class ShuffleResourceTest
       {
         final Map<String, TaskStatus> result = new HashMap<>();
         for (String taskId : taskIds) {
-          result.put(taskId, new TaskStatus(taskId, TaskState.SUCCESS, 10));
+          result.put(taskId, new TaskStatus(taskId, TaskState.SUCCESS, 10, null, null));
         }
         return Futures.immediateFuture(result);
       }

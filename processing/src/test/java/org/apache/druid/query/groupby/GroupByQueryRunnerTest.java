@@ -34,6 +34,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -283,9 +284,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public long getMaxOnDiskStorage()
+      public HumanReadableBytes getMaxOnDiskStorage()
       {
-        return 10L * 1024 * 1024;
+        return HumanReadableBytes.valueOf(10L * 1024 * 1024);
       }
 
       @Override
@@ -303,21 +304,21 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public long getMaxSelectorDictionarySize()
+      public long getConfiguredMaxSelectorDictionarySize()
       {
         return 20;
       }
 
       @Override
-      public long getMaxMergingDictionarySize()
+      public long getConfiguredMaxMergingDictionarySize()
       {
         return 400;
       }
 
       @Override
-      public long getMaxOnDiskStorage()
+      public HumanReadableBytes getMaxOnDiskStorage()
       {
-        return 10L * 1024 * 1024;
+        return HumanReadableBytes.valueOf(10L * 1024 * 1024);
       }
 
       @Override
@@ -2956,7 +2957,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     List<ResultRow> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       expectedException.expect(ResourceLimitExceededException.class);
-      expectedException.expectMessage("Not enough aggregation buffer space to execute this query");
+      expectedException.expectMessage("Not enough merge buffer memory to execute this query");
     } else {
       expectedResults = Arrays.asList(
           makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
@@ -3004,68 +3005,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNotEnoughDictionarySpaceThroughContextOverride()
-  {
-    GroupByQuery query = makeQueryBuilder()
-        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
-        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(ImmutableMap.of("maxOnDiskStorage", 0, "maxMergingDictionarySize", 1))
-        .build();
-
-    List<ResultRow> expectedResults = null;
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
-      expectedException.expect(ResourceLimitExceededException.class);
-      expectedException.expectMessage("Not enough dictionary space to execute this query");
-    } else {
-      expectedResults = Arrays.asList(
-          makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
-          makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-          makeRow(
-              query,
-              "2011-04-01",
-              "alias",
-              "entertainment",
-              "rows",
-              1L,
-              "idx",
-              158L
-          ),
-          makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-          makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-          makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-          makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-          makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
-          makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
-
-          makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
-          makeRow(query, "2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
-          makeRow(
-              query,
-              "2011-04-02",
-              "alias",
-              "entertainment",
-              "rows",
-              1L,
-              "idx",
-              166L
-          ),
-          makeRow(query, "2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
-          makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-          makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
-          makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
-          makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
-          makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
-      );
-    }
-
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "dictionary-space");
-  }
-
-  @Test
   public void testNotEnoughDiskSpaceThroughContextOverride()
   {
     GroupByQuery query = makeQueryBuilder()
@@ -3074,17 +3013,17 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(ImmutableMap.of("maxOnDiskStorage", 1, "maxMergingDictionarySize", 1))
+        .overrideContext(ImmutableMap.of("maxOnDiskStorage", 1, GroupByQueryConfig.CTX_KEY_BUFFER_GROUPER_MAX_SIZE, 1))
         .build();
 
     List<ResultRow> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       expectedException.expect(ResourceLimitExceededException.class);
-      if (config.getMaxOnDiskStorage() > 0) {
+      if (config.getMaxOnDiskStorage().getBytes() > 0) {
         // The error message always mentions disk if you have spilling enabled (maxOnDiskStorage > 0)
         expectedException.expectMessage("Not enough disk space to execute this query");
       } else {
-        expectedException.expectMessage("Not enough dictionary space to execute this query");
+        expectedException.expectMessage("Not enough merge buffer memory to execute this query");
       }
     } else {
       expectedResults = Arrays.asList(
@@ -3173,7 +3112,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     } else {
       expectedException.expect(ResourceLimitExceededException.class);
-      expectedException.expectMessage("Not enough aggregation buffer space to execute this query");
+      expectedException.expectMessage("Not enough merge buffer memory to execute this query");
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     }
   }

@@ -477,6 +477,12 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     }
 
     @Override
+    public AggregatorFactory withName(String newName)
+    {
+      return new InvalidAggregatorFactory(newName, fieldName);
+    }
+
+    @Override
     public byte[] getCacheKey()
     {
       return new byte[0];

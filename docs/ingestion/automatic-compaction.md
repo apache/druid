@@ -53,7 +53,7 @@ Use the Druid console to enable automatic compaction for a datasource as follows
 5. Refresh the **Datasources** view. The **Compaction** column for the datasource changes from “Not enabled” to “Awaiting first run.”
 
 The following screenshot shows the compaction config dialog for a datasource with auto-compaction enabled.
-![Compaction config in web console](../assets/compaction-dialog.png)
+![Compaction config in web console](../assets/compaction-config.png)
 
 To disable auto-compaction for a datasource, click **Delete** from the **Compaction config** dialog. Druid does not retain your auto-compaction configuration.
 

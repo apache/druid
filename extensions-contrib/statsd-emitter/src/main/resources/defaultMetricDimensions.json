@@ -63,11 +63,11 @@
   "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
 
-  "worker/task/failed/count" : { "dimensions" : ["category", "version"], "type" : "count" },
-  "worker/task/success/count" : { "dimensions" : ["category", "version"], "type" : "count" },
-  "worker/taskSlot/idle/count" : { "dimensions" : ["category", "version"], "type" : "gauge" },
-  "worker/taskSlot/total/count" : { "dimensions" : ["category", "version"], "type" : "gauge" },
-  "worker/taskSlot/used/count" : { "dimensions" : ["category", "version"], "type" : "gauge" },
+  "worker/task/failed/count" : { "dimensions" : ["category", "workerVersion"], "type" : "count" },
+  "worker/task/success/count" : { "dimensions" : ["category", "workerVersion"], "type" : "count" },
+  "worker/taskSlot/idle/count" : { "dimensions" : ["category", "workerVersion"], "type" : "gauge" },
+  "worker/taskSlot/total/count" : { "dimensions" : ["category", "workerVersion"], "type" : "gauge" },
+  "worker/taskSlot/used/count" : { "dimensions" : ["category", "workerVersion"], "type" : "gauge" },
 
   "taskSlot/total/count" : { "dimensions" : ["category"], "type" : "gauge" },
   "taskSlot/idle/count" : { "dimensions" : ["category"], "type" : "gauge" },

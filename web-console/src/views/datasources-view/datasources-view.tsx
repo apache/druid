@@ -42,6 +42,7 @@ import {
   CompactionConfig,
   CompactionStatus,
   formatCompactionConfigAndStatus,
+  QueryWithContext,
   zeroCompactionStatus,
 } from '../../druid-models';
 import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
@@ -233,9 +234,9 @@ interface CompactionDialogOpenOn {
 }
 
 export interface DatasourcesViewProps {
-  goToQuery: (initSql: string) => void;
-  goToTask: (datasource?: string, openDialog?: string) => void;
-  goToSegments: (datasource: string, onlyUnavailable?: boolean) => void;
+  goToQuery(queryWithContext: QueryWithContext): void;
+  goToTask(datasource?: string, openDialog?: string): void;
+  goToSegments(datasource: string, onlyUnavailable?: boolean): void;
   capabilities: Capabilities;
   initDatasource?: string;
 }
@@ -274,6 +275,7 @@ export class DatasourcesView extends React.PureComponent<
   DatasourcesViewState
 > {
   static UNUSED_COLOR = '#0a1500';
+  static EMPTY_COLOR = '#868686';
   static FULLY_AVAILABLE_COLOR = '#57d500';
   static PARTIALLY_AVAILABLE_COLOR = '#ffbf00';
 
@@ -673,7 +675,8 @@ ORDER BY 1`;
         altExtra={
           <MenuItem
             icon={IconNames.COMPRESSED}
-            text="Force compaction run (debug)"
+            text="Force compaction run"
+            label="(debug)"
             intent={Intent.DANGER}
             onClick={() => {
               this.setState({ showForceCompact: true });
@@ -688,7 +691,7 @@ ORDER BY 1`;
             disabled={!lastDatasourcesQuery}
             onClick={() => {
               if (!lastDatasourcesQuery) return;
-              goToQuery(lastDatasourcesQuery);
+              goToQuery({ queryString: lastDatasourcesQuery });
             }}
           />
         )}
@@ -827,7 +830,8 @@ ORDER BY 1`;
       goToActions.push({
         icon: IconNames.APPLICATION,
         title: 'Query with SQL',
-        onAction: () => goToQuery(SqlQuery.create(SqlTableRef.create(datasource)).toString()),
+        onAction: () =>
+          goToQuery({ queryString: SqlQuery.create(SqlTableRef.create(datasource)).toString() }),
       });
     }
 
@@ -1069,6 +1073,13 @@ ORDER BY 1`;
               );
               if (typeof num_segments_to_load !== 'number' || typeof num_segments !== 'number') {
                 return '-';
+              } else if (num_segments === 0) {
+                return (
+                  <span>
+                    <span style={{ color: DatasourcesView.EMPTY_COLOR }}>&#x25cf;&nbsp;</span>
+                    Empty
+                  </span>
+                );
               } else if (num_segments_to_load === 0) {
                 return (
                   <span>
@@ -1127,7 +1138,7 @@ ORDER BY 1`;
             show: capabilities.hasSql() && visibleColumns.shown('Segment rows'),
             accessor: 'avg_segment_rows',
             filterable: false,
-            width: 220,
+            width: 230,
             className: 'padded',
             Cell: ({ value, original }) => {
               const { min_segment_rows, max_segment_rows } = original as Datasource;
@@ -1238,7 +1249,7 @@ ORDER BY 1`;
             show: capabilities.hasSql() && visibleColumns.shown('Total rows'),
             accessor: 'total_rows',
             filterable: false,
-            width: 100,
+            width: 110,
             className: 'padded',
             Cell: ({ value }) => {
               if (isNumberLikeNaN(value)) return '-';
@@ -1506,7 +1517,7 @@ ORDER BY 1`;
         {this.renderDatasourcesTable()}
         {datasourceTableActionDialogId && (
           <DatasourceTableActionDialog
-            datasourceId={datasourceTableActionDialogId}
+            datasource={datasourceTableActionDialogId}
             actions={actions}
             onClose={() => this.setState({ datasourceTableActionDialogId: undefined })}
           />

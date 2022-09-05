@@ -24,9 +24,12 @@ import it.unimi.dsi.fastutil.ints.IntObjectPair;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
+import org.apache.druid.frame.channel.FrameChannelSequence;
+import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
+import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -58,7 +61,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.StringTokenizer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -156,6 +158,27 @@ public class FrameTestUtil
         FrameReader.create(adapter.getRowSignature()),
         segmentId
     );
+  }
+
+  /**
+   * Reads a sequence of rows from a frame channel using a non-vectorized cursor from
+   * {@link FrameStorageAdapter#makeCursors}.
+   *
+   * @param channel     the channel
+   * @param frameReader reader for this channel
+   */
+  public static Sequence<List<Object>> readRowsFromFrameChannel(
+      final ReadableFrameChannel channel,
+      final FrameReader frameReader
+  )
+  {
+    return new FrameChannelSequence(channel)
+        .flatMap(
+            frame ->
+                new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
+                    .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null)
+                    .flatMap(cursor -> readRowsFromCursor(cursor, frameReader.signature()))
+        );
   }
 
   /**
@@ -287,16 +310,6 @@ public class FrameTestUtil
     finally {
       cursor.close();
     }
-  }
-
-  /**
-   * Whether the current JDK supports {@link org.apache.datasketches.memory.Memory#map}. This is needed to read
-   * frame files 2GB+ in size.
-   */
-  public static boolean jdkCanDataSketchesMemoryMap()
-  {
-    final StringTokenizer st = new StringTokenizer(System.getProperty("java.specification.version"), ".");
-    return Integer.parseInt(st.nextToken()) < 14;
   }
 
   private static Supplier<Object> dimensionSelectorReader(final DimensionSelector selector)

@@ -89,7 +89,7 @@ public class ObjectFlatteners
           @Override
           public boolean isEmpty()
           {
-            throw new UnsupportedOperationException();
+            return keySet().isEmpty();
           }
 
           @Override
@@ -251,7 +251,9 @@ public class ObjectFlatteners
         Map<String, Object> actualMap = new HashMap<>();
         for (String key : jsonProvider.getPropertyKeys(o)) {
           Object field = jsonProvider.getMapValue(o, key);
-          if (jsonProvider.isMap(field) || jsonProvider.isArray(field)) {
+          if (field == null) {
+            actualMap.put(key, null);
+          } else if (jsonProvider.isMap(field) || jsonProvider.isArray(field)) {
             actualMap.put(key, toMapHelper(finalizeConversionForMap(field)));
           } else {
             actualMap.put(key, finalizeConversionForMap(field));

@@ -118,7 +118,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   private final int maxRowsPerFrame;
   private final boolean partitioned;
   private final AdapterType adapterType;
-  private final FrameFile.Flag openMode;
+  private final int maxMmapSize;
 
   private StorageAdapter adapter;
   private File file;
@@ -128,14 +128,14 @@ public class FrameFileTest extends InitializedNullHandlingTest
       final int maxRowsPerFrame,
       final boolean partitioned,
       final AdapterType adapterType,
-      final FrameFile.Flag openMode
+      final int maxMmapSize
   )
   {
     this.frameType = frameType;
     this.maxRowsPerFrame = maxRowsPerFrame;
     this.partitioned = partitioned;
     this.adapterType = adapterType;
-    this.openMode = openMode;
+    this.maxMmapSize = maxMmapSize;
   }
 
   @Parameterized.Parameters(
@@ -143,27 +143,26 @@ public class FrameFileTest extends InitializedNullHandlingTest
              + "maxRowsPerFrame = {1}, "
              + "partitioned = {2}, "
              + "adapter = {3}, "
-             + "openMode = {4}"
+             + "maxMmapSize = {4}"
   )
   public static Iterable<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
-    final List<FrameFile.Flag> openModes = new ArrayList<>();
-    openModes.add(FrameFile.Flag.BB_MEMORY_MAP);
-
-    if (FrameTestUtil.jdkCanDataSketchesMemoryMap()) {
-      // datasketches-memory mapping only works up through JDK 13. Higher JDK versions are unable to load 2GB+ files.
-      // Skip these tests on higher JDK versions, since we test with JDK 15 in CI even though we don't officially
-      // support it yet.
-      openModes.add(FrameFile.Flag.DS_MEMORY_MAP);
-    }
 
     for (FrameType frameType : FrameType.values()) {
       for (int maxRowsPerFrame : new int[]{1, 17, 50, PARTITION_SIZE, Integer.MAX_VALUE}) {
         for (boolean partitioned : new boolean[]{true, false}) {
           for (AdapterType adapterType : AdapterType.values()) {
-            for (FrameFile.Flag openMode : openModes) {
-              constructors.add(new Object[]{frameType, maxRowsPerFrame, partitioned, adapterType, openMode});
+            final int[] maxMmapSizes;
+
+            if (maxRowsPerFrame == 1) {
+              maxMmapSizes = new int[]{1_000, 10_000, Integer.MAX_VALUE};
+            } else {
+              maxMmapSizes = new int[]{Integer.MAX_VALUE};
+            }
+
+            for (int maxMmapSize : maxMmapSizes) {
+              constructors.add(new Object[]{frameType, maxRowsPerFrame, partitioned, adapterType, maxMmapSize});
             }
           }
         }
@@ -212,7 +211,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_numFrames() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, openMode)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
       Assert.assertEquals(computeExpectedNumFrames(), frameFile.numFrames());
     }
   }
@@ -220,7 +219,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_numPartitions() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, openMode)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
       Assert.assertEquals(computeExpectedNumPartitions(), frameFile.numPartitions());
     }
   }
@@ -228,7 +227,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_frame_first() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, openMode)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
       // Skip test for empty files.
       Assume.assumeThat(frameFile.numFrames(), Matchers.greaterThan(0));
 
@@ -240,7 +239,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_frame_last() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, openMode)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
       // Skip test for empty files.
       Assume.assumeThat(frameFile.numFrames(), Matchers.greaterThan(0));
 
@@ -257,7 +256,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_frame_outOfBoundsNegative() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, openMode)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
       expectedException.expect(IllegalArgumentException.class);
       expectedException.expectMessage("Frame [-1] out of bounds");
       frameFile.frame(-1);
@@ -267,7 +266,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_frame_outOfBoundsTooLarge() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, openMode)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
       expectedException.expect(IllegalArgumentException.class);
       expectedException.expectMessage(StringUtils.format("Frame [%,d] out of bounds", frameFile.numFrames()));
       frameFile.frame(frameFile.numFrames());
@@ -279,7 +278,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   {
     final FrameReader frameReader = FrameReader.create(adapter.getRowSignature());
 
-    try (final FrameFile frameFile = FrameFile.open(file, openMode)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
       final Sequence<List<Object>> frameFileRows = Sequences.concat(
           () -> IntStream.range(0, frameFile.numFrames())
                          .mapToObj(frameFile::frame)
@@ -296,7 +295,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_getPartitionStartFrame() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, openMode)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
       if (partitioned) {
         for (int partitionNum = 0; partitionNum < frameFile.numPartitions(); partitionNum++) {
           Assert.assertEquals(
@@ -321,7 +320,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_file() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, openMode)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
       Assert.assertEquals(file, frameFile.file());
     }
   }
@@ -329,7 +328,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_open_withDeleteOnClose() throws IOException
   {
-    FrameFile.open(file, openMode).close();
+    FrameFile.open(file, maxMmapSize).close();
     Assert.assertTrue(file.exists());
 
     FrameFile.open(file, FrameFile.Flag.DELETE_ON_CLOSE).close();

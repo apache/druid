@@ -70,7 +70,6 @@ public class KinesisSamplerSpec extends SeekableStreamSamplerSpec
         tuningConfig.getRecordBufferSize(),
         tuningConfig.getRecordBufferOfferTimeout(),
         tuningConfig.getRecordBufferFullWait(),
-        tuningConfig.getFetchSequenceNumberTimeout(),
         tuningConfig.getMaxRecordsPerPoll(),
         ioConfig.isUseEarliestSequenceNumber(),
         tuningConfig.isUseListShards()

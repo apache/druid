@@ -13,6 +13,7 @@
       "tutorials/tutorial-batch-hadoop",
       "tutorials/tutorial-query",
       "tutorials/tutorial-rollup",
+      "tutorials/tutorial-sketches-theta",
       "tutorials/tutorial-retention",
       "tutorials/tutorial-update-data",
       "tutorials/tutorial-compaction",
@@ -76,6 +77,7 @@
           "querying/sql-scalar",
           "querying/sql-aggregations",
           "querying/sql-multivalue-string-functions",
+          "querying/sql-functions",
           "querying/sql-api",
           "querying/sql-jdbc",
           "querying/sql-query-context",
@@ -142,6 +144,7 @@
     "Operations": [
       "operations/druid-console",
       "operations/getting-started",
+      "operations/java",
       {
         "type": "subcategory",
         "label": "Security",

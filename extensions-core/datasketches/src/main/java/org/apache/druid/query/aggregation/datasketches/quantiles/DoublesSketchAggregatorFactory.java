@@ -304,6 +304,12 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
     return DoublesSketch.getUpdatableStorageBytes(k, rows);
   }
 
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new DoublesSketchAggregatorFactory(newName, getFieldName(), getK(), getMaxStreamLength(), cacheTypeId);
+  }
+
   // Quantiles sketches never stop growing, but they do so very slowly.
   // This size must suffice for overwhelming majority of sketches,
   // but some sketches may request more memory on heap and move there

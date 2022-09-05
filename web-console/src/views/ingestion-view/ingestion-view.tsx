@@ -40,8 +40,8 @@ import {
   SupervisorTableActionDialog,
   TaskTableActionDialog,
 } from '../../dialogs';
+import { QueryWithContext } from '../../druid-models';
 import {
-  booleanCustomTableFilter,
   SMALL_TABLE_PAGE_SIZE,
   SMALL_TABLE_PAGE_SIZE_OPTIONS,
   syncFilterClauseById,
@@ -73,17 +73,20 @@ const supervisorTableColumns: string[] = [
   'Status',
   ACTION_COLUMN_LABEL,
 ];
+
 const taskTableColumns: string[] = [
   'Task ID',
   'Group ID',
   'Type',
   'Datasource',
-  'Location',
-  'Created time',
   'Status',
+  'Created time',
   'Duration',
+  'Location',
   ACTION_COLUMN_LABEL,
 ];
+
+const CANCELED_ERROR_MSG = 'Shutdown request from user';
 
 interface SupervisorQueryResultRow {
   supervisor_id: string;
@@ -104,16 +107,17 @@ interface TaskQueryResultRow {
   error_msg: string | null;
   location: string | null;
   status: string;
-  rank: number;
 }
 
 export interface IngestionViewProps {
+  taskId: string | undefined;
   taskGroupId: string | undefined;
   datasourceId: string | undefined;
   openDialog: string | undefined;
-  goToDatasource: (datasource: string) => void;
-  goToQuery: (initSql: string) => void;
-  goToLoadData: (supervisorId?: string, taskId?: string) => void;
+  goToDatasource(datasource: string): void;
+  goToQuery(queryWithContext: QueryWithContext): void;
+  goToStreamingDataLoader(supervisorId?: string): void;
+  goToClassicBatchDataLoader(taskId?: string): void;
   capabilities: Capabilities;
 }
 
@@ -163,6 +167,8 @@ function statusToColor(status: string): string {
       return '#57d500';
     case 'FAILED':
       return '#d5100a';
+    case 'CANCELED':
+      return '#858585';
     default:
       return '#0a1500';
   }
@@ -203,22 +209,29 @@ export class IngestionView extends React.PureComponent<IngestionViewProps, Inges
 FROM sys.supervisors
 ORDER BY "supervisor_id"`;
 
-  static TASK_SQL = `SELECT
+  static TASK_SQL = `WITH tasks AS (SELECT
   "task_id", "group_id", "type", "datasource", "created_time", "location", "duration", "error_msg",
-  CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
+  CASE WHEN "error_msg" = '${CANCELED_ERROR_MSG}' THEN 'CANCELED' WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status"
+  FROM sys.tasks
+)
+SELECT "task_id", "group_id", "type", "datasource", "created_time", "location", "duration", "error_msg", "status"
+FROM tasks
+ORDER BY
   (
-    CASE WHEN "status" = 'RUNNING' THEN
-     (CASE "runner_status" WHEN 'RUNNING' THEN 4 WHEN 'PENDING' THEN 3 ELSE 2 END)
+    CASE "status"
+    WHEN 'RUNNING' THEN 4
+    WHEN 'PENDING' THEN 3
+    WHEN 'WAITING' THEN 2
     ELSE 1
     END
-  ) AS "rank"
-FROM sys.tasks
-ORDER BY "rank" DESC, "created_time" DESC`;
+  ) DESC,
+  "created_time" DESC`;
 
   constructor(props: IngestionViewProps, context: any) {
     super(props, context);
 
     const taskFilter: Filter[] = [];
+    if (props.taskId) taskFilter.push({ id: 'task_id', value: `=${props.taskId}` });
     if (props.taskGroupId) taskFilter.push({ id: 'group_id', value: `=${props.taskGroupId}` });
     if (props.datasourceId) taskFilter.push({ id: 'datasource', value: `=${props.datasourceId}` });
 
@@ -306,7 +319,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   }
 
   static parseTasks = (data: any[]): TaskQueryResultRow[] => {
-    return data.map((d: any) => {
+    return data.map(d => {
       return {
         task_id: d.id,
         group_id: d.groupId,
@@ -317,9 +330,6 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         error_msg: d.errorMsg,
         location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
         status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
-        rank: IngestionView.statusRanking[
-          d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode
-        ],
       };
     });
   };
@@ -388,7 +398,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     supervisorSuspended: boolean,
     type: string,
   ): BasicAction[] {
-    const { goToDatasource, goToLoadData } = this.props;
+    const { goToDatasource, goToStreamingDataLoader } = this.props;
 
     const actions: BasicAction[] = [];
     if (oneOf(type, 'kafka', 'kinesis')) {
@@ -401,7 +411,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         {
           icon: IconNames.CLOUD_UPLOAD,
           title: 'Open in data loader',
-          onAction: () => goToLoadData(id),
+          onAction: () => goToStreamingDataLoader(id),
         },
       );
     }
@@ -688,7 +698,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     status: string,
     type: string,
   ): BasicAction[] {
-    const { goToDatasource, goToLoadData } = this.props;
+    const { goToDatasource, goToClassicBatchDataLoader } = this.props;
 
     const actions: BasicAction[] = [];
     if (datasource && status === 'SUCCESS') {
@@ -702,7 +712,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       actions.push({
         icon: IconNames.CLOUD_UPLOAD,
         title: 'Open in data loader',
-        onAction: () => goToLoadData(undefined, id),
+        onAction: () => goToClassicBatchDataLoader(id),
       });
     }
     if (oneOf(status, 'RUNNING', 'WAITING', 'PENDING')) {
@@ -838,26 +848,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             show: hiddenTaskColumns.shown('Datasource'),
           },
           {
-            Header: 'Location',
-            accessor: 'location',
-            width: 200,
-            Cell: this.renderTaskFilterableCell('location'),
-            Aggregated: () => '',
-            show: hiddenTaskColumns.shown('Location'),
-          },
-          {
-            Header: 'Created time',
-            accessor: 'created_time',
-            width: 190,
-            Cell: this.renderTaskFilterableCell('created_time'),
-            Aggregated: () => '',
-            show: hiddenTaskColumns.shown('Created time'),
-          },
-          {
             Header: 'Status',
             id: 'status',
             width: 110,
-            className: 'padded',
             accessor: row => ({
               status: row.status,
               created_time: row.created_time,
@@ -868,15 +861,25 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               const { status } = row.original;
               const errorMsg = row.original.error_msg;
               return (
-                <span>
-                  <span style={{ color: statusToColor(status) }}>&#x25cf;&nbsp;</span>
-                  {status}
-                  {errorMsg && (
-                    <a onClick={() => this.setState({ alertErrorMsg: errorMsg })} title={errorMsg}>
-                      &nbsp;?
-                    </a>
-                  )}
-                </span>
+                <TableFilterableCell
+                  field="status"
+                  value={status}
+                  filters={taskFilter}
+                  onFiltersChange={filters => this.setState({ taskFilter: filters })}
+                >
+                  <span>
+                    <span style={{ color: statusToColor(status) }}>&#x25cf;&nbsp;</span>
+                    {status}
+                    {errorMsg && errorMsg !== CANCELED_ERROR_MSG && (
+                      <a
+                        onClick={() => this.setState({ alertErrorMsg: errorMsg })}
+                        title={errorMsg}
+                      >
+                        &nbsp;?
+                      </a>
+                    )}
+                  </span>
+                </TableFilterableCell>
               );
             },
             sortMethod: (d1, d2) => {
@@ -898,10 +901,15 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                   return 0;
               }
             },
-            filterMethod: (filter: Filter, row: any) => {
-              return booleanCustomTableFilter(filter, row.status.status);
-            },
             show: hiddenTaskColumns.shown('Status'),
+          },
+          {
+            Header: 'Created time',
+            accessor: 'created_time',
+            width: 190,
+            Cell: this.renderTaskFilterableCell('created_time'),
+            Aggregated: () => '',
+            show: hiddenTaskColumns.shown('Created time'),
           },
           {
             Header: 'Duration',
@@ -909,9 +917,26 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             width: 80,
             filterable: false,
             className: 'padded',
-            Cell: row => (row.value > 0 ? formatDuration(row.value) : ''),
+            Cell({ value, original }) {
+              if (value > 0) {
+                return formatDuration(value);
+              }
+              if (original.created_time) {
+                // Compute running duration from the created time if it exists
+                return formatDuration(Date.now() - Date.parse(original.created_time));
+              }
+              return '';
+            },
             Aggregated: () => '',
             show: hiddenTaskColumns.shown('Duration'),
+          },
+          {
+            Header: 'Location',
+            accessor: 'location',
+            width: 200,
+            Cell: this.renderTaskFilterableCell('location'),
+            Aggregated: () => '',
+            show: hiddenTaskColumns.shown('Location'),
           },
           {
             Header: ACTION_COLUMN_LABEL,
@@ -950,7 +975,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             <MenuItem
               icon={IconNames.APPLICATION}
               text="View SQL query for table"
-              onClick={() => goToQuery(IngestionView.SUPERVISOR_SQL)}
+              onClick={() => goToQuery({ queryString: IngestionView.SUPERVISOR_SQL })}
             />
           )}
           <MenuItem
@@ -1069,7 +1094,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
-            onClick={() => goToQuery(IngestionView.TASK_SQL)}
+            onClick={() => goToQuery({ queryString: IngestionView.TASK_SQL })}
           />
         )}
         <MenuItem

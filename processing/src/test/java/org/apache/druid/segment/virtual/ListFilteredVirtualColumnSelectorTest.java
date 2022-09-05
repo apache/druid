@@ -196,7 +196,6 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     EasyMock.expect(index.getValue(2)).andReturn("c").atLeastOnce();
 
     EasyMock.expect(index.getBitmap(2)).andReturn(bitmap).once();
-    EasyMock.expect(index.hasNulls()).andReturn(true).once();
 
     EasyMock.replay(selector, holder, timeHolder, indexSupplier, index, bitmap, bitmapFactory);
 
@@ -211,14 +210,10 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
     DictionaryEncodedStringValueIndex listFilteredIndex =
         bitmapIndexSelector.getIndexSupplier(ALLOW_VIRTUAL_NAME).as(DictionaryEncodedStringValueIndex.class);
-    Assert.assertEquals(-1, listFilteredIndex.getIndex("a"));
-    Assert.assertEquals(0, listFilteredIndex.getIndex("b"));
-    Assert.assertEquals(1, listFilteredIndex.getIndex("c"));
     Assert.assertEquals(2, listFilteredIndex.getCardinality());
     Assert.assertEquals("b", listFilteredIndex.getValue(0));
     Assert.assertEquals("c", listFilteredIndex.getValue(1));
     Assert.assertEquals(bitmap, listFilteredIndex.getBitmap(1));
-    Assert.assertTrue(listFilteredIndex.hasNulls());
 
     EasyMock.verify(selector, holder, timeHolder, indexSupplier, index, bitmap, bitmapFactory);
   }
@@ -260,7 +255,6 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     EasyMock.expect(index.getValue(2)).andReturn("c").atLeastOnce();
 
     EasyMock.expect(index.getBitmap(0)).andReturn(bitmap).once();
-    EasyMock.expect(index.hasNulls()).andReturn(true).once();
 
     EasyMock.replay(selector, holder, timeHolder, indexSupplier, index, bitmap, bitmapFactory);
 
@@ -275,12 +269,8 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
     DictionaryEncodedStringValueIndex listFilteredIndex =
         bitmapIndexSelector.getIndexSupplier(DENY_VIRTUAL_NAME).as(DictionaryEncodedStringValueIndex.class);
-    Assert.assertEquals(-1, listFilteredIndex.getIndex("a"));
-    Assert.assertEquals(-1, listFilteredIndex.getIndex("b"));
-    Assert.assertEquals(0, listFilteredIndex.getIndex("c"));
     Assert.assertEquals(1, listFilteredIndex.getCardinality());
     Assert.assertEquals(bitmap, listFilteredIndex.getBitmap(1));
-    Assert.assertTrue(listFilteredIndex.hasNulls());
 
     EasyMock.verify(selector, holder, timeHolder, indexSupplier, index, bitmap, bitmapFactory);
   }

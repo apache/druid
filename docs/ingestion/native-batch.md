@@ -222,12 +222,11 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The task type. Set the value to`index_parallel`.|none|yes|
-|maxRowsPerSegment|Deprecated. Use `partitionsSpec` instead. Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |maxRowsInMemory|Determines when Druid should perform intermediate persists to disk. Normally you do not need to set this. Depending on the nature of your data, if rows are short in terms of bytes. For example, you may not want to store a million rows in memory. In this case, set this value.|1000000|no|
 |maxBytesInMemory|Use to determine when Druid should perform intermediate persists to disk. Normally Druid computes this internally and you do not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists). Note that `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until next persist will decrease. Tasks fail when the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory`.|1/6 of max JVM memory|no|
 |maxColumnsToMerge|Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.|-1 (unlimited)|no|
 |maxTotalRows|Deprecated. Use `partitionsSpec` instead. Total number of rows in segments waiting to be pushed. Used to determine when intermediate pushing should occur.|20000000|no|
-|numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create when using a `hashed` `partitionsSpec`. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
+|numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create when using a `hashed` `partitionsSpec`. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data.|null|no|
 |splitHintSpec|Hint to control the amount of data that each first phase task reads. Druid may ignore the hint depending on the implementation of the input source. See [Split hint spec](#split-hint-spec) for more details.|size-based split hint spec|no|
 |partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` or `single_dim` if `forceGuaranteedRollup` = true|no|
 |indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](ingestion-spec.md#indexspec)|null|no|
@@ -394,9 +393,7 @@ them to create the final segments. Finally, they push the final segments to the 
 
 #### Multi-dimension range partitioning
 
-> Multiple dimension (multi-dimension) range partitioning is an experimental feature.
-> Multi-dimension range partitioning is not supported in the sequential mode of the
-> `index_parallel` task type.
+> Multi-dimension range partitioning is not supported in the sequential mode of the `index_parallel` task type.
 
 Range partitioning has [several benefits](#benefits-of-range-partitioning) related to storage footprint and query
 performance. Multi-dimension range partitioning improves over single-dimension range partitioning by allowing
@@ -436,8 +433,8 @@ For example, if you configure the following `range` partitioning during ingestio
 ```json
 "partitionsSpec": {
   "type": "range",
-  "partitionDimensions": ["coutryName", "cityName"],
-  "targetRowsPerSegment": 5000
+  "partitionDimensions": ["countryName", "cityName"],
+  "targetRowsPerSegment": 5000000
 }
 ```
 
@@ -615,7 +612,9 @@ An example of the result is
       },
       "tuningConfig": {
         "type": "index_parallel",
-        "maxRowsPerSegment": 5000000,
+        "partitionsSpec": {
+          "type": "dynamic"
+        },
         "maxRowsInMemory": 1000000,
         "maxTotalRows": 20000000,
         "numShards": null,
@@ -717,6 +716,6 @@ For details on available input sources see:
 - [Druid input Source](./native-batch-input-source.md#druid-input-source) (`druid`) reads data from a Druid datasource.
 - [SQL input Source](./native-batch-input-source.md#sql-input-source) (`sql`) reads data from a RDBMS source.
 
-For information on how to combine input sources, see [Combining input sources](./native-batch-input-source.md#combining-input-sources).
+For information on how to combine input sources, see [Combining input source](./native-batch-input-source.md#combining-input-source).
 
 

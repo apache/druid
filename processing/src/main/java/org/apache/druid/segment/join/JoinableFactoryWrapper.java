@@ -22,11 +22,14 @@ package org.apache.druid.segment.join;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultiset;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.google.inject.Inject;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -55,6 +58,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * A wrapper class over {@link JoinableFactory} for working with {@link Joinable} related classes.
@@ -67,9 +71,15 @@ public class JoinableFactoryWrapper
 
   private final JoinableFactory joinableFactory;
 
+  @Inject
   public JoinableFactoryWrapper(final JoinableFactory joinableFactory)
   {
     this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
+  }
+
+  public JoinableFactory getJoinableFactory()
+  {
+    return joinableFactory;
   }
 
   /**
@@ -141,7 +151,12 @@ public class JoinableFactoryWrapper
             );
 
             return baseSegment ->
-                new HashJoinSegment(baseSegment, baseFilterToUse, clausesToUse, joinFilterPreAnalysis);
+                new HashJoinSegment(
+                    baseSegment,
+                    baseFilterToUse,
+                    GuavaUtils.firstNonNull(clausesToUse, ImmutableList.of()),
+                    joinFilterPreAnalysis
+                );
           }
         }
     );
@@ -219,6 +234,7 @@ public class JoinableFactoryWrapper
       }
     }
 
+    Set<String> rightPrefixes = clauses.stream().map(JoinableClause::getPrefix).collect(Collectors.toSet());
     // Walk through the list of clauses, picking off any from the start of the list that can be converted to filters.
     boolean atStart = true;
     for (JoinableClause clause : clauses) {
@@ -232,7 +248,8 @@ public class JoinableFactoryWrapper
             convertJoinToFilter(
                 clause,
                 Sets.union(requiredColumns, columnsRequiredByJoinClauses.elementSet()),
-                maxNumFilterValues
+                maxNumFilterValues,
+                rightPrefixes
             );
 
         // add the converted filter to the filter list
@@ -273,7 +290,8 @@ public class JoinableFactoryWrapper
   static JoinClauseToFilterConversion convertJoinToFilter(
       final JoinableClause clause,
       final Set<String> requiredColumns,
-      final int maxNumFilterValues
+      final int maxNumFilterValues,
+      final Set<String> rightPrefixes
   )
   {
     if (clause.getJoinType() == JoinType.INNER
@@ -289,6 +307,12 @@ public class JoinableFactoryWrapper
 
         if (leftColumn == null) {
           return new JoinClauseToFilterConversion(null, false);
+        }
+
+        // don't add a filter on any right side table columns. only filter on left base table is supported as of now.
+        if (rightPrefixes.stream().anyMatch(leftColumn::startsWith)) {
+          joinClauseFullyConverted = false;
+          continue;
         }
 
         Joinable.ColumnValuesWithUniqueFlag columnValuesWithUniqueFlag =
