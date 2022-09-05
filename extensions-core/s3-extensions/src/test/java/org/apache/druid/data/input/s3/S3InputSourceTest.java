@@ -228,16 +228,15 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         EXPECTED_URIS,
         null,
         null,
-        "*.parquet",
+        "**.parquet",
         null,
         null,
         null,
         null
-
     );
 
     Assert.assertEquals(
-        "*.parquet",
+        "**.parquet",
         withUris.getFilter()
     );
   }
@@ -680,7 +679,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         URIS_BEFORE_FILTER,
         null,
         null,
-        "*.csv",
+        "**.csv",
         null,
         null,
         null,
@@ -705,7 +704,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         OBJECTS_BEFORE_FILTER,
-        "*.csv",
+        "**.csv",
         null,
         null,
         null,
@@ -791,7 +790,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         PREFIXES,
         null,
-        "*.csv",
+        "**.csv",
         null,
         null,
         null,

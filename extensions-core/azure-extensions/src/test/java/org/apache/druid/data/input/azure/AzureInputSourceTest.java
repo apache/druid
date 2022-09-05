@@ -186,7 +186,7 @@ public class AzureInputSourceTest extends EasyMockSupport
     List<List<CloudObjectLocation>> expectedCloudLocations = ImmutableList.of(ImmutableList.of(CLOUD_OBJECT_LOCATION_1));
     List<CloudBlobHolder> expectedCloudBlobs = ImmutableList.of(cloudBlobDruid1);
     Iterator<CloudBlobHolder> expectedCloudBlobsIterator = expectedCloudBlobs.iterator();
-    String filter = "*.csv";
+    String filter = "**.csv";
 
     PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filter);
 

@@ -101,28 +101,28 @@ public class CloudObjectInputSourceTest
   public void testGetFilter()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS, null, null, "*.parquet")
+        .useConstructor(SCHEME, URIS, null, null, "**.parquet")
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
-    Assert.assertEquals("*.parquet", inputSource.getFilter());
+    Assert.assertEquals("**.parquet", inputSource.getFilter());
   }
 
   @Test
   public void testInequality()
   {
     CloudObjectInputSource inputSource1 = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS, null, null, "*.parquet")
+        .useConstructor(SCHEME, URIS, null, null, "**.parquet")
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
     CloudObjectInputSource inputSource2 = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS, null, null, "*.csv")
+        .useConstructor(SCHEME, URIS, null, null, "**.csv")
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
-    Assert.assertEquals("*.parquet", inputSource1.getFilter());
-    Assert.assertEquals("*.csv", inputSource2.getFilter());
+    Assert.assertEquals("**.parquet", inputSource1.getFilter());
+    Assert.assertEquals("**.csv", inputSource2.getFilter());
     Assert.assertFalse(inputSource2.equals(inputSource1));
   }
 
@@ -130,7 +130,7 @@ public class CloudObjectInputSourceTest
   public void testWithUrisFilter()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS2, null, null, "*.csv")
+        .useConstructor(SCHEME, URIS2, null, null, "**.csv")
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
@@ -143,7 +143,7 @@ public class CloudObjectInputSourceTest
 
     List<URI> returnedLocationUris = returnedLocations.stream().map(object -> object.toUri(SCHEME)).collect(Collectors.toList());
 
-    Assert.assertEquals("*.csv", inputSource.getFilter());
+    Assert.assertEquals("**.csv", inputSource.getFilter());
     Assert.assertEquals(URIS, returnedLocationUris);
   }
 
@@ -172,7 +172,7 @@ public class CloudObjectInputSourceTest
   public void testWithObjectsFilter()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, null, null, OBJECTS_BEFORE_FILTER, "*.csv")
+        .useConstructor(SCHEME, null, null, OBJECTS_BEFORE_FILTER, "**.csv")
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
@@ -185,7 +185,7 @@ public class CloudObjectInputSourceTest
 
     List<URI> returnedLocationUris = returnedLocations.stream().map(object -> object.toUri(SCHEME)).collect(Collectors.toList());
 
-    Assert.assertEquals("*.csv", inputSource.getFilter());
+    Assert.assertEquals("**.csv", inputSource.getFilter());
     Assert.assertEquals(URIS, returnedLocationUris);
   }
 

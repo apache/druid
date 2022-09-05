@@ -123,7 +123,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
    * Calling if {@link #prefixes} is not set is likely to either lead to an empty iterator or null pointer exception.
    *
    * If {@link #filter} is set, the filter will be applied on {@link #uris} or {@link #objects}.
-   * {@link #filter} uses a glob notation, for example: "*.parquet".
+   * {@link #filter} uses a glob notation, for example: "**.parquet".
    */
   protected abstract Stream<InputSplit<List<CloudObjectLocation>>> getPrefixesSplitStream(SplitHintSpec splitHintSpec);
 

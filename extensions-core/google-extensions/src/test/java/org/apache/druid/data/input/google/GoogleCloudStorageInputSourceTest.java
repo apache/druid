@@ -174,7 +174,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         URIS_BEFORE_FILTER,
         null,
         null,
-        "*.csv"
+        "**.csv"
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
@@ -195,7 +195,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         null,
         PREFIXES,
         EXPECTED_OBJECTS.get(0),
-        "*.csv"
+        "**.csv"
     );
   }
 
@@ -210,7 +210,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         URIS_BEFORE_FILTER,
         PREFIXES,
         null,
-        "*.csv"
+        "**.csv"
     );
   }
 

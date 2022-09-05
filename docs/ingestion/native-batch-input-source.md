@@ -63,7 +63,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "filter": "*.parquet",
+        "filter": "**.parquet",
         "prefixes": ["s3://foo/bar/", "s3://bar/foo/"]
       },
       "inputFormat": {
@@ -243,7 +243,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
-        "filter": "*.parquet",
+        "filter": "**.parquet",
         "prefixes": ["gs://foo/bar/", "gs://bar/foo/"]
       },
       "inputFormat": {
@@ -324,7 +324,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
-        "filter": "*.parquet",
+        "filter": "**.parquet",
         "prefixes": ["azure://container/prefix1/", "azure://container/prefix2/"]
       },
       "inputFormat": {
@@ -586,7 +586,7 @@ Sample spec:
       "type": "index_parallel",
       "inputSource": {
         "type": "local",
-        "filter" : "*.csv",
+        "filter" : "**.csv",
         "baseDir": "/data/directory",
         "files": ["/bar/foo", "/foo/bar"]
       },
@@ -773,7 +773,7 @@ The following is an example of a Combining input source spec:
         "delegates" : [
          {
           "type": "local",
-          "filter" : "*.csv",
+          "filter" : "**.csv",
           "baseDir": "/data/directory",
           "files": ["/bar/foo", "/foo/bar"]
          },
