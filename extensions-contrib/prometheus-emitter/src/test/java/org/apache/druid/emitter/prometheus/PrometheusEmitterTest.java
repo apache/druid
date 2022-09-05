@@ -157,4 +157,48 @@ public class PrometheusEmitterTest
     pushEmitter.start();
     Assert.assertNotNull(pushEmitter.getPushGateway());
   }
+
+  @Test
+  public void testEmitterConfig()
+  {
+    Assert.assertThrows(
+        "For `exporter` strategy, port must be specified.",
+        IllegalArgumentException.class,
+        () -> new PrometheusEmitterConfig(
+            PrometheusEmitterConfig.Strategy.exporter,
+            "namespace5",
+            null,
+            null,
+            "https://pushgateway",
+            true,
+            true
+        )
+    );
+
+    // For pushgateway strategy, port can be null
+    new PrometheusEmitterConfig(
+        PrometheusEmitterConfig.Strategy.pushgateway,
+        "namespace5",
+        null,
+        null,
+        "https://pushgateway",
+        true,
+        true
+    );
+
+    // For pushgateway stategy, pushGatewayAddress should not be null
+    Assert.assertThrows(
+        "For `pushgateway` strategy, pushGatewayAddress must be specified.",
+        IllegalArgumentException.class,
+        () -> new PrometheusEmitterConfig(
+            PrometheusEmitterConfig.Strategy.pushgateway,
+            "namespace5",
+            null,
+            null,
+            null,
+            true,
+            true
+        )
+    );
+  }
 }
