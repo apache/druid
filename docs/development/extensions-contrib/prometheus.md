@@ -28,22 +28,38 @@ To use this Apache Druid extension, [include](../../development/extensions.md#lo
 ## Introduction
 
 This extension exposes [Druid metrics](https://druid.apache.org/docs/latest/operations/metrics.html) for collection by a Prometheus server (https://prometheus.io/).
+
 Emitter is enabled by setting `druid.emitter=prometheus` [configs](https://druid.apache.org/docs/latest/configuration/index.html#emitting-metrics) or include `prometheus` in the composing emitter list. 
 
 ## Configuration
 
 All the configuration parameters for the Prometheus emitter are under `druid.emitter.prometheus`.
 
-| property                                      | description                                                                                                                                                                                                                                  | required? | default                              |
-|-----------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|--------------------------------------|
-| `druid.emitter.prometheus.strategy`           | The strategy to expose prometheus metrics. <br/> Should be one of `exporter` and `pushgateway`. Default strategy `exporter` would expose metrics for scraping purpose. Only peon task (short-lived jobs) need to use `pushgateway` strategy. | yes       | exporter                             |
-| `druid.emitter.prometheus.port`               | The port on which to expose the prometheus HTTPServer. Required if using `exporter` strategy.                                                                                                                                                | no        | none                                 |
-| `druid.emitter.prometheus.namespace`          | Optional metric namespace. Must match the regex `[a-zA-Z_:][a-zA-Z0-9_:]*`                                                                                                                                                                   | no        | druid                                |
-| `druid.emitter.prometheus.dimensionMapPath`   | JSON file defining the Prometheus metric type, desired dimensions, help text, and conversionFactor for every Druid metric.                                                                                                                   | no        | Default mapping provided. See below. |
-| `druid.emitter.prometheus.addHostAsLabel`     | Flag to include the hostname as a prometheus label.                                                                                                                                                                                          | no        | false                                |
-| `druid.emitter.prometheus.addServiceAsLabel`  | Flag to include the druid service name (e.g. `druid/broker`, `druid/coordinator`, etc.) as a prometheus label.                                                                                                                               | no        | false                                |
-| `druid.emitter.prometheus.pushGatewayAddress` | Pushgateway address. Required if using `pushgateway` strategy.                                                                                                                                                                               | no        | none                                 |
+| property                                      | description                                                                                                                                                                                                                                 | required? | default                              |
+|-----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|--------------------------------------|
+| `druid.emitter.prometheus.strategy`           | The strategy to expose prometheus metrics. <br/>Should be one of `exporter` and `pushgateway`. Default strategy `exporter` would expose metrics for scraping purpose. Only peon task (short-lived jobs) need to use `pushgateway` strategy. | yes       | exporter                             |
+| `druid.emitter.prometheus.port`               | The port on which to expose the prometheus HTTPServer. Required if using `exporter` strategy.                                                                                                                                               | no        | none                                 |
+| `druid.emitter.prometheus.namespace`          | Optional metric namespace. Must match the regex `[a-zA-Z_:][a-zA-Z0-9_:]*`                                                                                                                                                                  | no        | druid                                |
+| `druid.emitter.prometheus.dimensionMapPath`   | JSON file defining the Prometheus metric type, desired dimensions, help text, and conversionFactor for every Druid metric.                                                                                                                  | no        | Default mapping provided. See below. |
+| `druid.emitter.prometheus.addHostAsLabel`     | Flag to include the hostname as a prometheus label.                                                                                                                                                                                         | no        | false                                |
+| `druid.emitter.prometheus.addServiceAsLabel`  | Flag to include the druid service name (e.g. `druid/broker`, `druid/coordinator`, etc.) as a prometheus label.                                                                                                                              | no        | false                                |
+| `druid.emitter.prometheus.pushGatewayAddress` | Pushgateway address. Required if using `pushgateway` strategy.                                                                                                                                                                              | no        | none                                 |
 
+### Override propertyies for Peon Tasks
+
+Since peon tasks are created dynamically by MiddleManagers, it's not able to use `exporter` strategy for these tasks to let promethues read metrics from fixed addresses.
+So, these tasks need to be configured to use `pushgateway` strategy to push metrics from Druid to prometheus gateway.
+
+If this emitter is configured to use `exporter` strategy globally, some above configurations need to be overridden in the MiddleManager's configuration file for peon tasks as shown below.
+
+```
+#
+# Override global prometheus emitter configuration for peon tasks to use `pushgateway` strategy.
+# Other configurations can also be overridden by adding `druid.indexer.fork.property.` prefix to above configuration properties.
+# 
+druid.indexer.fork.property.druid.emitter.prometheus.strategy=pushgateway
+druid.indexer.fork.property.druid.emitter.prometheus.pushGatewayAddress=http://<push-gateway-address>
+```
 
 ### Metric names
 
