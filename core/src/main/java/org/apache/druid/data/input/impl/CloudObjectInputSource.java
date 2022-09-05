@@ -21,7 +21,6 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Ints;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputEntity;
@@ -35,6 +34,9 @@ import org.apache.druid.utils.CollectionUtils;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URI;
+import java.nio.file.FileSystems;
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -135,7 +137,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       Stream<CloudObjectLocation> objectStream = objects.stream();
 
       if (StringUtils.isNotBlank(filter)) {
-        objectStream = objectStream.filter(object -> FilenameUtils.wildcardMatch(object.getPath(), filter));
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filter);
+        objectStream = objectStream.filter(object -> m.matches(Paths.get(object.getPath())));
       }
 
       return objectStream.map(object -> new InputSplit<>(Collections.singletonList(object)));
@@ -145,7 +148,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       Stream<URI> uriStream = uris.stream();
 
       if (StringUtils.isNotBlank(filter)) {
-        uriStream = uriStream.filter(uri -> FilenameUtils.wildcardMatch(uri.toString(), filter));
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filter);
+        uriStream = uriStream.filter(uri -> m.matches(Paths.get(uri.toString())));
       }
 
       return uriStream.map(CloudObjectLocation::new).map(object -> new InputSplit<>(Collections.singletonList(object)));
