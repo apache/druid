@@ -22,13 +22,13 @@ import React from 'react';
 
 import { NumberMenuItems } from './number-menu-items';
 
-describe('number menu', () => {
+describe('NumberMenuItems', () => {
   it('matches snapshot when menu is opened for column not inside group by', () => {
     const numberMenu = (
       <NumberMenuItems
         schema="schema"
         table="table"
-        columnName={'added'}
+        columnName="added"
         parsedQuery={SqlQuery.parse(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />
@@ -43,7 +43,7 @@ describe('number menu', () => {
       <NumberMenuItems
         schema="schema"
         table="table"
-        columnName={'added'}
+        columnName="added"
         parsedQuery={SqlQuery.parse(`SELECT added, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />

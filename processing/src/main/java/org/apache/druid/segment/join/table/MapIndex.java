@@ -24,7 +24,7 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Map;
 
@@ -33,7 +33,7 @@ import java.util.Map;
  */
 public class MapIndex implements IndexedTable.Index
 {
-  private final ValueType keyType;
+  private final ColumnType keyType;
   private final Map<Object, IntList> index;
   private final boolean keysUnique;
   private final boolean isLong2ObjectMap;
@@ -47,7 +47,7 @@ public class MapIndex implements IndexedTable.Index
    *
    * @see RowBasedIndexBuilder#build() the main caller
    */
-  MapIndex(final ValueType keyType, final Map<Object, IntList> index, final boolean keysUnique)
+  MapIndex(final ColumnType keyType, final Map<Object, IntList> index, final boolean keysUnique)
   {
     this.keyType = Preconditions.checkNotNull(keyType, "keyType");
     this.index = Preconditions.checkNotNull(index, "index");
@@ -56,7 +56,7 @@ public class MapIndex implements IndexedTable.Index
   }
 
   @Override
-  public ValueType keyType()
+  public ColumnType keyType()
   {
     return keyType;
   }

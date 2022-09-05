@@ -61,6 +61,7 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
       DateTime overrrideFirstEventTime
   )
   {
+    serializer.initialize(streamTopic);
     // The idea here is that we will send [eventsPerSecond] events that will either use [nowFlooredToSecond]
     // or the [overrrideFirstEventTime] as the primary timestamp.
     // Having a fixed number of events that use the same timestamp will help in allowing us to determine if any events

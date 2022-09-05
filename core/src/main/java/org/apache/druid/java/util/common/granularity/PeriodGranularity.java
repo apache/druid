@@ -110,6 +110,18 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   }
 
   @Override
+  public long bucketStart(long time)
+  {
+    return truncate(time);
+  }
+
+  @Override
+  public long increment(long t)
+  {
+    return chronology.add(period, t, 1);
+  }
+
+  @Override
   public DateTime increment(DateTime time)
   {
     return new DateTime(increment(time.getMillis()), getTimeZone());
@@ -217,11 +229,6 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       }
     }
     return false;
-  }
-
-  private long increment(long t)
-  {
-    return chronology.add(period, t, 1);
   }
 
   private long truncate(long t)

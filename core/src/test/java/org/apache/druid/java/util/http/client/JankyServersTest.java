@@ -41,6 +41,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.URL;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -298,6 +299,7 @@ public class JankyServersTest
   public boolean isChannelClosedException(Throwable e)
   {
     return e instanceof ChannelException ||
+           (e instanceof SocketException && e.getMessage().contains("Connection reset")) ||
            (e instanceof IOException && e.getMessage().contains("Connection reset by peer"));
   }
 

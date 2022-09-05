@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.parquet;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -31,7 +32,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -46,12 +46,12 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schemaAsString = new InputRowSchema(
         new TimestampSpec("date_as_string", "Y-M-d", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        Collections.emptyList()
+        ColumnsFilter.all()
     );
     InputRowSchema schemaAsDate = new InputRowSchema(
         new TimestampSpec("date_as_date", null, null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        Collections.emptyList()
+        ColumnsFilter.all()
     );
     InputEntityReader readerAsString = createReader(
         file,
@@ -104,7 +104,7 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("ts", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        Collections.emptyList()
+        ColumnsFilter.all()
     );
     InputEntityReader reader = createReader(file, schema, JSONPathSpec.DEFAULT);
 
@@ -130,7 +130,7 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("time", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        Collections.emptyList()
+        ColumnsFilter.all()
     );
     InputEntityReader reader = createReader(
         file,

@@ -68,7 +68,10 @@ public abstract class AbstractAzureInputSourceParallelIndexTest extends Abstract
     };
   }
 
-  void doTest(Pair<String, List> azureInputSource) throws Exception
+  void doTest(
+      Pair<String, List> azureInputSource,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
+  ) throws Exception
   {
     final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     try (
@@ -125,7 +128,8 @@ public abstract class AbstractAzureInputSourceParallelIndexTest extends Abstract
           INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          segmentAvailabilityConfirmationPair
       );
     }
   }

@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -42,24 +41,24 @@ public class IdUtils
 
   private static final Joiner UNDERSCORE_JOINER = Joiner.on("_");
 
-  public static void validateId(String thingToValidate, String stringToValidate)
+  public static String validateId(String thingToValidate, String stringToValidate)
   {
     Preconditions.checkArgument(
         !Strings.isNullOrEmpty(stringToValidate),
-        StringUtils.format("%s cannot be null or empty. Please provide a %s.", thingToValidate, thingToValidate)
+        "%s cannot be null or empty. Please provide a %s.", thingToValidate, thingToValidate
     );
     Preconditions.checkArgument(
         !stringToValidate.startsWith("."),
-        StringUtils.format("%s cannot start with the '.' character.", thingToValidate)
+        "%s cannot start with the '.' character.", thingToValidate
     );
     Preconditions.checkArgument(
         !stringToValidate.contains("/"),
-        StringUtils.format("%s cannot contain the '/' character.", thingToValidate)
+        "%s cannot contain the '/' character.", thingToValidate
     );
     Matcher m = INVALIDCHARS.matcher(stringToValidate);
     Preconditions.checkArgument(
         !m.matches(),
-        StringUtils.format("%s cannot contain whitespace character except space.", thingToValidate)
+        "%s cannot contain whitespace character except space.", thingToValidate
     );
 
     for (int i = 0; i < stringToValidate.length(); i++) {
@@ -72,6 +71,8 @@ public class IdUtils
         throw new IAE("%s cannot contain character #%d (at position %d).", thingToValidate, (int) c, i);
       }
     }
+
+    return stringToValidate;
   }
 
   public static String getRandomId()

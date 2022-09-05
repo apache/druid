@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -271,6 +272,9 @@ public class AuthorizationUtils
           if (resourceActions == null) {
             return false;
           }
+          if (authorizer instanceof AllowAllAuthorizer) {
+            return true;
+          }
           for (ResourceAction resourceAction : resourceActions) {
             Access access = resultCache.computeIfAbsent(
                 resourceAction,
@@ -357,6 +361,29 @@ public class AuthorizationUtils
   }
 
   /**
+   * This method constructs a 'superuser' set of permissions composed of {@link Action#READ} and {@link Action#WRITE}
+   * permissions for all known {@link ResourceType#knownTypes()} for any {@link Authorizer} implementation which is
+   * built on pattern matching with a regex.
+   *
+   * Note that if any {@link Resource} exist that use custom types not registered with
+   * {@link ResourceType#registerResourceType}, those permissions will not be included in this list and will need to
+   * be added manually.
+   */
+  public static List<ResourceAction> makeSuperUserPermissions()
+  {
+    List<ResourceAction> allReadAndWrite = new ArrayList<>(ResourceType.knownTypes().size() * 2);
+    for (String type : ResourceType.knownTypes()) {
+      allReadAndWrite.add(
+          new ResourceAction(new Resource(".*", type), Action.READ)
+      );
+      allReadAndWrite.add(
+          new ResourceAction(new Resource(".*", type), Action.WRITE)
+      );
+    }
+    return allReadAndWrite;
+  }
+
+  /**
    * Function for the common pattern of generating a resource-action for reading from a datasource, using the
    * datasource name.
    */
@@ -372,5 +399,22 @@ public class AuthorizationUtils
   public static final Function<String, ResourceAction> DATASOURCE_WRITE_RA_GENERATOR = input -> new ResourceAction(
       new Resource(input, ResourceType.DATASOURCE),
       Action.WRITE
+  );
+
+  /**
+   * Function for the common pattern of generating a resource-action for reading from a view, using the
+   * view name.
+   */
+  public static final Function<String, ResourceAction> VIEW_READ_RA_GENERATOR = input -> new ResourceAction(
+      new Resource(input, ResourceType.VIEW),
+      Action.READ
+  );
+
+  /**
+   * Function for the pattern of generating a {@link ResourceAction} for reading from a given {@link Resource}
+   */
+  public static final Function<Resource, ResourceAction> RESOURCE_READ_RA_GENERATOR = input -> new ResourceAction(
+      input,
+      Action.READ
   );
 }

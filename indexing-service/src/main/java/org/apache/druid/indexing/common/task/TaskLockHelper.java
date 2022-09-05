@@ -57,6 +57,7 @@ public class TaskLockHelper
   private final Map<Interval, OverwritingRootGenerationPartitions> overwritingRootGenPartitions = new HashMap<>();
   private final Set<DataSegment> lockedExistingSegments = new HashSet<>();
   private final boolean useSegmentLock;
+  private final boolean useSharedLock;
 
   @Nullable
   private Granularity knownSegmentGranularity;
@@ -90,9 +91,10 @@ public class TaskLockHelper
     }
   }
 
-  public TaskLockHelper(boolean useSegmentLock)
+  public TaskLockHelper(boolean useSegmentLock, boolean useSharedLock)
   {
     this.useSegmentLock = useSegmentLock;
+    this.useSharedLock = useSharedLock;
   }
 
   public boolean isUseSegmentLock()
@@ -103,6 +105,16 @@ public class TaskLockHelper
   public LockGranularity getLockGranularityToUse()
   {
     return useSegmentLock ? LockGranularity.SEGMENT : LockGranularity.TIME_CHUNK;
+  }
+
+  public boolean isUseSharedLock()
+  {
+    return useSharedLock;
+  }
+
+  public TaskLockType getLockTypeToUse()
+  {
+    return useSharedLock ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
   }
 
   public boolean hasLockedExistingSegments()
@@ -281,16 +293,28 @@ public class TaskLockHelper
         atomicUpdateGroupSize++;
       } else {
         if (curSegment.getEndRootPartitionId() != nextSegment.getStartRootPartitionId()) {
-          throw new ISE("Can't compact segments of non-consecutive rootPartition range");
+          throw new ISE(
+              "Can't compact segments of non-consecutive rootPartition range. Missing partitionIds between [%s] and [%s]",
+              curSegment.getEndRootPartitionId(),
+              nextSegment.getStartRootPartitionId()
+          );
         }
         if (atomicUpdateGroupSize != curSegment.getAtomicUpdateGroupSize()) {
-          throw new ISE("All atomicUpdateGroup must be compacted together");
+          throw new ISE(
+              "All atomicUpdateGroup must be compacted together. Expected size[%s] but current size[%s]",
+              curSegment.getAtomicUpdateGroupSize(),
+              atomicUpdateGroupSize
+          );
         }
         atomicUpdateGroupSize = 1;
       }
     }
     if (atomicUpdateGroupSize != sortedSegments.get(sortedSegments.size() - 1).getAtomicUpdateGroupSize()) {
-      throw new ISE("All atomicUpdateGroup must be compacted together");
+      throw new ISE(
+          "All atomicUpdateGroup must be compacted together. Expected size[%s] but current size[%s]",
+          sortedSegments.get(sortedSegments.size() - 1).getAtomicUpdateGroupSize(),
+          atomicUpdateGroupSize
+      );
     }
   }
 }

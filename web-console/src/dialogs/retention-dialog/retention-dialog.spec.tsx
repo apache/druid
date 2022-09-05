@@ -21,11 +21,11 @@ import React from 'react';
 
 import { RetentionDialog } from './retention-dialog';
 
-describe('retention dialog', () => {
+describe('RetentionDialog', () => {
   it('matches snapshot', () => {
     const retentionDialog = (
       <RetentionDialog
-        datasource={'test-datasource'}
+        datasource="test-datasource"
         rules={[
           {
             period: 'P1000Y',

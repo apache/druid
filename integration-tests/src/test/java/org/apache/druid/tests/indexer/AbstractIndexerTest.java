@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -31,7 +32,9 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.clients.TaskResponseObject;
+import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.joda.time.Interval;
 
@@ -62,9 +65,13 @@ public abstract class AbstractIndexerTest
   protected ObjectMapper smileMapper;
   @Inject
   protected TestQueryHelper queryHelper;
+  @Inject
+  protected SqlTestQueryHelper sqlQueryHelper;
+  @Inject
+  protected DataLoaderHelper dataLoaderHelper;
 
   @Inject
-  private IntegrationTestingConfig config;
+  protected IntegrationTestingConfig config;
 
   protected Closeable unloader(final String dataSource)
   {
@@ -101,6 +108,32 @@ public abstract class AbstractIndexerTest
     unloadAndKillData(dataSource, first, last);
   }
 
+  protected String submitIndexTask(String indexTask, final String fullDatasourceName) throws Exception
+  {
+    String taskSpec = getResourceAsString(indexTask);
+    taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
+    taskSpec = StringUtils.replace(
+        taskSpec,
+        "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+        jsonMapper.writeValueAsString("0")
+    );
+    final String taskID = indexer.submitTask(taskSpec);
+    LOG.info("TaskID for loading index task %s", taskID);
+
+    return taskID;
+  }
+
+  protected void loadData(String indexTask, final String fullDatasourceName) throws Exception
+  {
+    final String taskID = submitIndexTask(indexTask, fullDatasourceName);
+    indexer.waitUntilTaskCompletes(taskID);
+
+    ITRetryUtil.retryUntilTrue(
+        () -> coordinator.areSegmentsLoaded(fullDatasourceName),
+        "Segment Load"
+    );
+  }
+
   private void unloadAndKillData(final String dataSource, String start, String end)
   {
     // Wait for any existing index tasks to complete before disabling the datasource otherwise
@@ -133,6 +166,9 @@ public abstract class AbstractIndexerTest
   public static String getResourceAsString(String file) throws IOException
   {
     try (final InputStream inputStream = getResourceAsStream(file)) {
+      if (inputStream == null) {
+        throw new ISE("Failed to load resource: [%s]", file);
+      }
       return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
     }
   }

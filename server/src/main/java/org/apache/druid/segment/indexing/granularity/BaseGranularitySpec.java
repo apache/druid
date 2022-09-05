@@ -20,10 +20,13 @@
 package org.apache.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -31,21 +34,22 @@ import org.joda.time.Interval;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeSet;
 
-abstract class BaseGranularitySpec implements GranularitySpec
+public abstract class BaseGranularitySpec implements GranularitySpec
 {
-  protected List<Interval> inputIntervals;
+  public static final Boolean DEFAULT_ROLLUP = Boolean.TRUE;
+  public static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.DAY;
+  public static final Granularity DEFAULT_QUERY_GRANULARITY = Granularities.NONE;
+
+  protected final List<Interval> inputIntervals;
   protected final Boolean rollup;
 
   public BaseGranularitySpec(List<Interval> inputIntervals, Boolean rollup)
   {
-    if (inputIntervals != null) {
-      this.inputIntervals = ImmutableList.copyOf(inputIntervals);
-    } else {
-      this.inputIntervals = Collections.emptyList();
-    }
-    this.rollup = rollup == null ? Boolean.TRUE : rollup;
+    this.inputIntervals = inputIntervals == null ? Collections.emptyList() : inputIntervals;
+    this.rollup = rollup == null ? DEFAULT_ROLLUP : rollup;
   }
 
   @Override
@@ -75,6 +79,15 @@ abstract class BaseGranularitySpec implements GranularitySpec
   }
 
   protected abstract LookupIntervalBuckets getLookupTableBuckets();
+
+  @Override
+  public Map<String, Object> asMap(ObjectMapper objectMapper)
+  {
+    return objectMapper.convertValue(
+        this,
+        new TypeReference<Map<String, Object>>() {}
+    );
+  }
 
   /**
    * This is a helper class to facilitate sharing the code for sortedBucketIntervals among

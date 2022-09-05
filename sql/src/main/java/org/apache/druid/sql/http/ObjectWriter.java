@@ -21,21 +21,34 @@ package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
 
 public class ObjectWriter implements ResultFormat.Writer
 {
+  static final String TYPE_HEADER_NAME = "type";
+  static final String SQL_TYPE_HEADER_NAME = "sqlType";
+
+  private final SerializerProvider serializers;
   private final JsonGenerator jsonGenerator;
   private final OutputStream outputStream;
 
   public ObjectWriter(final OutputStream outputStream, final ObjectMapper jsonMapper) throws IOException
   {
+    this.serializers = jsonMapper.getSerializerProviderInstance();
     this.jsonGenerator = jsonMapper.getFactory().createGenerator(outputStream);
     this.outputStream = outputStream;
+
+    // Disable automatic JSON termination, so clients can detect truncated responses.
+    jsonGenerator.configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
   }
 
   @Override
@@ -55,15 +68,13 @@ public class ObjectWriter implements ResultFormat.Writer
   }
 
   @Override
-  public void writeHeader(final List<String> columnNames) throws IOException
+  public void writeHeader(
+      final RelDataType rowType,
+      final boolean includeTypes,
+      final boolean includeSqlTypes
+  ) throws IOException
   {
-    jsonGenerator.writeStartObject();
-
-    for (String columnName : columnNames) {
-      jsonGenerator.writeNullField(columnName);
-    }
-
-    jsonGenerator.writeEndObject();
+    writeHeader(jsonGenerator, rowType, includeTypes, includeSqlTypes);
   }
 
   @Override
@@ -76,7 +87,7 @@ public class ObjectWriter implements ResultFormat.Writer
   public void writeRowField(final String name, @Nullable final Object value) throws IOException
   {
     jsonGenerator.writeFieldName(name);
-    jsonGenerator.writeObject(value);
+    JacksonUtils.writeObjectUsingSerializerProvider(jsonGenerator, serializers, value);
   }
 
   @Override
@@ -89,5 +100,45 @@ public class ObjectWriter implements ResultFormat.Writer
   public void close() throws IOException
   {
     jsonGenerator.close();
+  }
+
+  static void writeHeader(
+      final JsonGenerator jsonGenerator,
+      final RelDataType rowType,
+      final boolean includeTypes,
+      final boolean includeSqlTypes
+  ) throws IOException
+  {
+    final RowSignature signature = RowSignatures.fromRelDataType(rowType.getFieldNames(), rowType);
+
+    jsonGenerator.writeStartObject();
+
+    for (int i = 0; i < signature.size(); i++) {
+      jsonGenerator.writeFieldName(signature.getColumnName(i));
+
+      if (!includeTypes && !includeSqlTypes) {
+        jsonGenerator.writeNull();
+      } else {
+        jsonGenerator.writeStartObject();
+
+        if (includeTypes) {
+          jsonGenerator.writeStringField(
+              ObjectWriter.TYPE_HEADER_NAME,
+              signature.getColumnType(i).map(TypeSignature::asTypeString).orElse(null)
+          );
+        }
+
+        if (includeSqlTypes) {
+          jsonGenerator.writeStringField(
+              ObjectWriter.SQL_TYPE_HEADER_NAME,
+              rowType.getFieldList().get(i).getType().getSqlTypeName().getName()
+          );
+        }
+
+        jsonGenerator.writeEndObject();
+      }
+    }
+
+    jsonGenerator.writeEndObject();
   }
 }

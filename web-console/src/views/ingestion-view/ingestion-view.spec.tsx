@@ -23,16 +23,18 @@ import { Capabilities } from '../../utils';
 
 import { IngestionView } from './ingestion-view';
 
-describe('tasks view', () => {
+describe('IngestionView', () => {
   it('matches snapshot', () => {
     const taskView = shallow(
       <IngestionView
-        openDialog={'test'}
-        taskGroupId={'test'}
-        datasourceId={'datasource'}
+        openDialog="test"
+        taskId={undefined}
+        taskGroupId="test"
+        datasourceId="datasource"
         goToDatasource={() => {}}
         goToQuery={() => {}}
-        goToLoadData={() => {}}
+        goToStreamingDataLoader={() => {}}
+        goToClassicBatchDataLoader={() => {}}
         capabilities={Capabilities.FULL}
       />,
     );

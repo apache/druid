@@ -41,12 +41,14 @@ export const RefreshButton = React.memo(function RefreshButton(props: RefreshBut
 
   return (
     <TimedButton
+      className="refresh-button"
       defaultDelay={30000}
       label="Auto refresh every"
       delays={DELAYS}
       icon={IconNames.REFRESH}
       text="Refresh"
       onRefresh={onRefresh}
+      foregroundOnly
       localStorageKey={localStorageKey}
     />
   );

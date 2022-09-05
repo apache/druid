@@ -28,7 +28,7 @@ describe('utils', () => {
         type: 'index_parallel',
         inputSource: {
           type: 'http',
-          uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+          uris: ['https://website.com/wikipedia.json.gz'],
         },
         inputFormat: {
           type: 'json',
@@ -69,13 +69,17 @@ describe('utils', () => {
   it('spec-utils applyCache', () => {
     expect(
       applyCache(
-        Object.assign({}, ingestionSpec, {
+        {
+          ...ingestionSpec,
           samplerConfig: {
             numRows: 500,
             timeoutMs: 15000,
           },
-        }),
-        [{ make: 'Honda', model: 'Accord' }, { make: 'Toyota', model: 'Prius' }],
+        },
+        [
+          { make: 'Honda', model: 'Accord' },
+          { make: 'Toyota', model: 'Prius' },
+        ],
       ),
     ).toMatchInlineSnapshot(`
       Object {

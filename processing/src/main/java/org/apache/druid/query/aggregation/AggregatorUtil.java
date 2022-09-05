@@ -20,9 +20,11 @@
 package org.apache.druid.query.aggregation;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -33,17 +35,18 @@ import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @PublicApi
@@ -137,6 +140,14 @@ public class AggregatorUtil
   // GROUPING aggregator
   public static final byte GROUPING_CACHE_TYPE_ID = 0x46;
 
+  // expression lambda aggregator
+  public static final byte EXPRESSION_LAMBDA_CACHE_TYPE_ID = 0x47;
+
+  // KLL sketch aggregator
+  public static final byte KLL_DOUBLES_SKETCH_BUILD_CACHE_TYPE_ID = 0x48;
+  public static final byte KLL_DOUBLES_SKETCH_MERGE_CACHE_TYPE_ID = 0x49;
+  public static final byte KLL_FLOATS_SKETCH_BUILD_CACHE_TYPE_ID = 0x4A;
+  public static final byte KLL_FLOATS_SKETCH_MERGE_CACHE_TYPE_ID = 0x4B;
 
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
@@ -331,7 +342,7 @@ public class AggregatorUtil
   {
     if (fieldName != null) {
       final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
-      return capabilities == null || ValueType.isNumeric(capabilities.getType());
+      return capabilities == null || capabilities.isNumeric();
     }
     if (expression != null) {
       return fieldExpression.get().canVectorize(columnInspector);
@@ -356,5 +367,26 @@ public class AggregatorUtil
       return ExpressionVectorSelectors.makeVectorValueSelector(columnSelectorFactory, fieldExpression.get());
     }
     return columnSelectorFactory.makeValueSelector(fieldName);
+  }
+
+  public static Supplier<byte[]> getSimpleAggregatorCacheKeySupplier(
+      byte aggregatorType,
+      String fieldName,
+      Supplier<Expr> fieldExpression
+  )
+  {
+    return Suppliers.memoize(() -> {
+      byte[] fieldNameBytes = StringUtils.toUtf8WithNullToEmpty(fieldName);
+      byte[] expressionBytes = Optional.ofNullable(fieldExpression.get())
+                                       .map(Expr::getCacheKey)
+                                       .orElse(StringUtils.EMPTY_BYTES);
+
+      return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
+                       .put(aggregatorType)
+                       .put(fieldNameBytes)
+                       .put(AggregatorUtil.STRING_SEPARATOR)
+                       .put(expressionBytes)
+                       .array();
+    });
   }
 }

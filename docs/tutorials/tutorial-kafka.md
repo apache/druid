@@ -112,9 +112,9 @@ You do not need to enter anything in these steps as applying ingestion time tran
 
 ![Data loader schema](../assets/tutorial-kafka-data-loader-05.png "Data loader schema")
 
-In the `Configure schema` step, you can configure which [dimensions](../ingestion/index.md#dimensions) and [metrics](../ingestion/index.md#metrics) will be ingested into Druid.
+In the `Configure schema` step, you can configure which [dimensions](../ingestion/data-model.md#dimensions) and [metrics](../ingestion/data-model.md#metrics) will be ingested into Druid.
 This is exactly what the data will appear like in Druid once it is ingested.
-Since our dataset is very small, go ahead and turn off [`Rollup`](../ingestion/index.md#rollup) by clicking on the switch and confirming the change.
+Since our dataset is very small, go ahead and turn off [`Rollup`](../ingestion/rollup.md) by clicking on the switch and confirming the change.
 
 Once you are satisfied with the schema, click `Next` to go to the `Partition` step where you can fine tune how the data will be partitioned into segments.
 
@@ -254,7 +254,7 @@ If the supervisor was successfully created, you will get a response containing t
 For more details about what's going on here, check out the
 [Druid Kafka indexing service documentation](../development/extensions-core/kafka-ingestion.md).
 
-You can view the current supervisors and tasks in the Druid Console: [http://localhost:8888/unified-console.md#tasks](http://localhost:8888/unified-console.html#tasks).
+You can view the current supervisors and tasks in the Druid console: [http://localhost:8888/unified-console.md#tasks](http://localhost:8888/unified-console.html#tasks).
 
 ## Querying your data
 

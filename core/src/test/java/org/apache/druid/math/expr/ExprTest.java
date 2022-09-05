@@ -19,8 +19,14 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class ExprTest
 {
@@ -134,6 +140,7 @@ public class ExprTest
   {
     EqualsVerifier.forClass(StringExpr.class)
                   .withIgnoredFields("outputType")
+                  .withPrefabValues(ExpressionType.class, ExpressionType.STRING, ExpressionType.DOUBLE)
                   .usingGetClass()
                   .verify();
   }
@@ -143,6 +150,7 @@ public class ExprTest
   {
     EqualsVerifier.forClass(DoubleExpr.class)
                   .withIgnoredFields("outputType")
+                  .withPrefabValues(ExpressionType.class, ExpressionType.DOUBLE, ExpressionType.LONG)
                   .usingGetClass()
                   .verify();
   }
@@ -152,33 +160,33 @@ public class ExprTest
   {
     EqualsVerifier.forClass(LongExpr.class)
                   .withIgnoredFields("outputType")
+                  .withPrefabValues(ExpressionType.class, ExpressionType.LONG, ExpressionType.STRING)
                   .usingGetClass()
                   .verify();
   }
 
   @Test
-  public void testEqualsContractForStringArrayExpr()
+  public void testEqualsContractForArrayExpr()
   {
-    EqualsVerifier.forClass(StringArrayExpr.class)
-                  .withIgnoredFields("outputType")
+    EqualsVerifier.forClass(ArrayExpr.class)
+                  .withPrefabValues(Object.class, new Object[]{1L}, new Object[0])
+                  .withPrefabValues(ExpressionType.class, ExpressionType.LONG_ARRAY, ExpressionType.DOUBLE_ARRAY)
+                  .withNonnullFields("outputType")
                   .usingGetClass()
                   .verify();
   }
 
   @Test
-  public void testEqualsContractForLongArrayExpr()
+  public void testEqualsContractForComplexExpr()
   {
-    EqualsVerifier.forClass(LongArrayExpr.class)
-                  .withIgnoredFields("outputType")
-                  .usingGetClass()
-                  .verify();
-  }
-
-  @Test
-  public void testEqualsContractForDoubleArrayExpr()
-  {
-    EqualsVerifier.forClass(DoubleArrayExpr.class)
-                  .withIgnoredFields("outputType")
+    EqualsVerifier.forClass(ComplexExpr.class)
+                  .withPrefabValues(Object.class, new Object[]{1L}, new Object[0])
+                  .withPrefabValues(
+                      ExpressionType.class,
+                      ExpressionTypeFactory.getInstance().ofComplex("foo"),
+                      ExpressionTypeFactory.getInstance().ofComplex("bar")
+                  )
+                  .withNonnullFields("outputType")
                   .usingGetClass()
                   .verify();
   }
@@ -194,11 +202,13 @@ public class ExprTest
   {
     EqualsVerifier.forClass(LambdaExpr.class).usingGetClass().verify();
   }
+
   @Test
   public void testEqualsContractForNullLongExpr()
   {
     EqualsVerifier.forClass(NullLongExpr.class)
-                  .withIgnoredFields("outputType")
+                  .withIgnoredFields("outputType", "value")
+                  .withPrefabValues(ExpressionType.class, ExpressionType.LONG, ExpressionType.STRING)
                   .verify();
   }
 
@@ -206,7 +216,35 @@ public class ExprTest
   public void testEqualsContractForNullDoubleExpr()
   {
     EqualsVerifier.forClass(NullDoubleExpr.class)
-                  .withIgnoredFields("outputType")
+                  .withIgnoredFields("outputType", "value")
+                  .withPrefabValues(ExpressionType.class, ExpressionType.DOUBLE, ExpressionType.STRING)
                   .verify();
+  }
+
+  @Test
+  public void testShuttleVisitAll()
+  {
+    final List<Expr> visitedExprs = new ArrayList<>();
+
+    final Expr.Shuttle shuttle = expr -> {
+      visitedExprs.add(expr);
+      return expr;
+    };
+
+    shuttle.visitAll(Collections.emptyList());
+    Assert.assertEquals("Visiting an empty list", Collections.emptyList(), visitedExprs);
+
+    final List<Expr> oneIdentifier = Collections.singletonList(new IdentifierExpr("ident"));
+    visitedExprs.clear();
+    shuttle.visitAll(oneIdentifier);
+    Assert.assertEquals("One identifier", oneIdentifier, visitedExprs);
+
+    final List<Expr> twoIdentifiers = ImmutableList.of(
+        new IdentifierExpr("ident1"),
+        new IdentifierExpr("ident2")
+    );
+    visitedExprs.clear();
+    shuttle.visitAll(twoIdentifiers);
+    Assert.assertEquals("Two identifiers", twoIdentifiers, visitedExprs);
   }
 }

@@ -19,8 +19,9 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -56,7 +57,11 @@ public class TaskMonitorTest
 
   private final ExecutorService taskRunner = Execs.multiThreaded(5, "task-monitor-test-%d");
   private final ConcurrentMap<String, TaskState> tasks = new ConcurrentHashMap<>();
-  private final TaskMonitor<TestTask> monitor = new TaskMonitor<>(new TestIndexingServiceClient(), 3, SPLIT_NUM);
+  private final TaskMonitor<TestTask, SimpleSubTaskReport> monitor = new TaskMonitor<>(
+      new TestOverlordClient(),
+      3,
+      SPLIT_NUM
+  );
 
   @Before
   public void setup()
@@ -180,7 +185,7 @@ public class TaskMonitorTest
     }
   }
 
-  private static class TestTaskSpec extends SubTaskSpec<TestTask>
+  private class TestTaskSpec extends SubTaskSpec<TestTask>
   {
     private final long runTime;
     private final int numMaxFails;
@@ -218,7 +223,7 @@ public class TaskMonitorTest
     }
   }
 
-  private static class TestTask extends NoopTask
+  private class TestTask extends NoopTask
   {
     private final boolean shouldFail;
     private final boolean throwUnknownTypeIdError;
@@ -233,19 +238,20 @@ public class TaskMonitorTest
     @Override
     public TaskStatus run(TaskToolbox toolbox) throws Exception
     {
+      monitor.collectReport(new SimpleSubTaskReport(getId()));
       if (shouldFail) {
         Thread.sleep(getRunTime());
-        return TaskStatus.failure(getId());
+        return TaskStatus.failure(getId(), "Dummy task status failure for testing");
       } else {
         return super.run(toolbox);
       }
     }
   }
 
-  private class TestIndexingServiceClient extends NoopIndexingServiceClient
+  private class TestOverlordClient extends NoopOverlordClient
   {
     @Override
-    public String runTask(String taskId, Object taskObject)
+    public ListenableFuture<Void> runTask(String taskId, Object taskObject)
     {
       final TestTask task = (TestTask) taskObject;
       tasks.put(task.getId(), TaskState.RUNNING);
@@ -253,13 +259,13 @@ public class TaskMonitorTest
         throw new RuntimeException(new ISE("Could not resolve type id 'test_task_id'"));
       }
       taskRunner.submit(() -> tasks.put(task.getId(), task.run(null).getStatusCode()));
-      return task.getId();
+      return Futures.immediateFuture(null);
     }
 
     @Override
-    public TaskStatusResponse getTaskStatus(String taskId)
+    public ListenableFuture<TaskStatusResponse> taskStatus(String taskId)
     {
-      return new TaskStatusResponse(
+      final TaskStatusResponse retVal = new TaskStatusResponse(
           taskId,
           new TaskStatusPlus(
               taskId,
@@ -275,6 +281,8 @@ public class TaskMonitorTest
               null
           )
       );
+
+      return Futures.immediateFuture(retVal);
     }
   }
 
@@ -283,6 +291,22 @@ public class TaskMonitorTest
     IntegerInputSplit(int split)
     {
       super(split);
+    }
+  }
+
+  private static class SimpleSubTaskReport implements SubTaskReport
+  {
+    private final String taskId;
+
+    private SimpleSubTaskReport(String taskId)
+    {
+      this.taskId = taskId;
+    }
+
+    @Override
+    public String getTaskId()
+    {
+      return taskId;
     }
   }
 }

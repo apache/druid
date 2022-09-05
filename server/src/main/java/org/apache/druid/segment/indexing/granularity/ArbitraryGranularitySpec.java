@@ -143,5 +143,4 @@ public class ArbitraryGranularitySpec extends BaseGranularitySpec
   {
     return lookupTableBucketByDateTime;
   }
-
 }

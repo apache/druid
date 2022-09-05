@@ -16,55 +16,56 @@
  * limitations under the License.
  */
 
-import { Code, Intent, Switch, Tooltip } from '@blueprintjs/core';
+import { Code, Intent, Switch } from '@blueprintjs/core';
+import { Tooltip2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
-import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
+import { QueryResult, QueryRunner, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import memoizeOne from 'memoize-one';
 import React, { RefObject } from 'react';
 import SplitterLayout from 'react-splitter-layout';
+import { v4 as uuidv4 } from 'uuid';
 
-import { Loader } from '../../components';
-import { QueryPlanDialog } from '../../dialogs';
-import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
-import { QueryHistoryDialog } from '../../dialogs/query-history-dialog/query-history-dialog';
+import { Loader, QueryErrorPane } from '../../components';
+import { EditContextDialog } from '../../dialogs';
+import { QueryContext, QueryWithContext } from '../../druid-models';
 import { Api, AppToaster } from '../../singletons';
 import {
-  BasicQueryExplanation,
   ColumnMetadata,
-  downloadFile,
+  downloadQueryResults,
   DruidError,
   findEmptyLiteralPosition,
-  getDruidErrorMessage,
   localStorageGet,
   localStorageGetJson,
   LocalStorageKeys,
   localStorageSet,
   localStorageSetJson,
-  parseQueryPlan,
+  QueryAction,
   queryDruidSql,
   QueryManager,
   QueryState,
   RowColumn,
-  SemiJoinQueryExplanation,
 } from '../../utils';
-import { isEmptyContext, QueryContext } from '../../utils/query-context';
 import { QueryRecord, QueryRecordUtil } from '../../utils/query-history';
 
 import { ColumnTree } from './column-tree/column-tree';
+import { ExplainDialog, QueryContextEngine } from './explain-dialog/explain-dialog';
 import {
   LIVE_QUERY_MODES,
   LiveQueryMode,
-  LiveQueryModeSelector,
-} from './live-query-mode-selector/live-query-mode-selector';
-import { QueryError } from './query-error/query-error';
+  LiveQueryModeButton,
+} from './live-query-mode-button/live-query-mode-button';
 import { QueryExtraInfo } from './query-extra-info/query-extra-info';
+import { QueryHistoryDialog } from './query-history-dialog/query-history-dialog';
 import { QueryInput } from './query-input/query-input';
 import { QueryOutput } from './query-output/query-output';
+import { QueryTimer } from './query-timer/query-timer';
 import { RunButton } from './run-button/run-button';
 
 import './query-view.scss';
+
+const LAST_DAY = SqlExpression.parse(`__time >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
 
 const parser = memoizeOne((sql: string): SqlQuery | undefined => {
   try {
@@ -73,12 +74,6 @@ const parser = memoizeOne((sql: string): SqlQuery | undefined => {
     return;
   }
 });
-
-interface QueryWithContext {
-  queryString: string;
-  queryContext: QueryContext;
-  wrapQueryLimit: number | undefined;
-}
 
 export interface QueryViewProps {
   initQuery: string | undefined;
@@ -97,8 +92,7 @@ export interface QueryViewState {
 
   queryResultState: QueryState<QueryResult, DruidError>;
 
-  explainDialogOpen: boolean;
-  explainResultState: QueryState<BasicQueryExplanation | SemiJoinQueryExplanation | string>;
+  explainDialogQuery?: QueryContextEngine;
 
   defaultSchema?: string;
   defaultTable?: string;
@@ -109,27 +103,17 @@ export interface QueryViewState {
 }
 
 export class QueryView extends React.PureComponent<QueryViewProps, QueryViewState> {
-  static trimSemicolon(query: string): string {
-    // Trims out a trailing semicolon while preserving space (https://bit.ly/1n1yfkJ)
-    return query.replace(/;+((?:\s*--[^\n]*)?\s*)$/, '$1');
-  }
-
   static isEmptyQuery(query: string): boolean {
     return query.trim() === '';
   }
 
-  static isExplainQuery(query: string): boolean {
-    return /EXPLAIN\sPLAN\sFOR/i.test(query);
-  }
-
-  static wrapInExplainIfNeeded(query: string): string {
-    query = QueryView.trimSemicolon(query);
-    if (QueryView.isExplainQuery(query)) return query;
-    return `EXPLAIN PLAN FOR (${query}\n)`;
-  }
-
   static isJsonLike(queryString: string): boolean {
     return queryString.trim().startsWith('{');
+  }
+
+  static isSql(query: any): boolean {
+    if (typeof query === 'string') return true;
+    return typeof query.query === 'string';
   }
 
   static validRune(queryString: string): boolean {
@@ -141,30 +125,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     }
   }
 
-  static formatStr(s: string | number, format: 'csv' | 'tsv') {
-    if (format === 'csv') {
-      // remove line break, single quote => double quote, handle ','
-      return `"${String(s)
-        .replace(/(?:\r\n|\r|\n)/g, ' ')
-        .replace(/"/g, '""')}"`;
-    } else {
-      // tsv
-      // remove line break, single quote => double quote, \t => ''
-      return String(s)
-        .replace(/(?:\r\n|\r|\n)/g, ' ')
-        .replace(/\t/g, '')
-        .replace(/"/g, '""');
-    }
-  }
+  private readonly metadataQueryManager: QueryManager<null, ColumnMetadata[]>;
+  private readonly queryManager: QueryManager<QueryWithContext, QueryResult>;
 
-  private metadataQueryManager: QueryManager<null, ColumnMetadata[]>;
-  private queryManager: QueryManager<QueryWithContext, QueryResult>;
-  private explainQueryManager: QueryManager<
-    QueryWithContext,
-    BasicQueryExplanation | SemiJoinQueryExplanation | string
-  >;
-
-  private queryInputRef: RefObject<QueryInput>;
+  private readonly queryInputRef: RefObject<QueryInput>;
 
   constructor(props: QueryViewProps, context: any) {
     super(props, context);
@@ -197,9 +161,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
       queryResultState: QueryState.INIT,
 
-      explainDialogOpen: false,
-      explainResultState: QueryState.INIT,
-
       editContextDialogOpen: false,
       historyDialogOpen: false,
       queryHistory,
@@ -224,8 +185,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       },
     });
 
-    const queryRunner = new QueryRunner((payload, isSql, cancelToken) => {
-      return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
+    const queryRunner = new QueryRunner({
+      inflateDateStrategy: 'none',
     });
 
     this.queryManager = new QueryManager({
@@ -234,21 +195,34 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         cancelToken,
       ): Promise<QueryResult> => {
         const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
-
         const query = QueryView.isJsonLike(queryString) ? Hjson.parse(queryString) : queryString;
+        const isSql = QueryView.isSql(query);
+        const extraQueryContext = { ...queryContext, ...(mandatoryQueryContext || {}) };
 
-        let context: Record<string, any> | undefined;
-        if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
-          context = Object.assign({}, queryContext, mandatoryQueryContext || {});
-          if (typeof wrapQueryLimit !== 'undefined') {
-            context.sqlOuterLimit = wrapQueryLimit;
-          }
+        if (isSql && typeof wrapQueryLimit !== 'undefined') {
+          extraQueryContext.sqlOuterLimit = wrapQueryLimit + 1;
         }
+
+        const queryIdKey = isSql ? 'sqlQueryId' : 'queryId';
+        // Look for an existing queryId in the JSON itself or in the extra context object.
+        let cancelQueryId = query.context?.[queryIdKey] || extraQueryContext[queryIdKey];
+        if (!cancelQueryId) {
+          // If the queryId (sqlQueryId) is not explicitly set on the context generate one thus making it possible to cancel the query.
+          cancelQueryId = extraQueryContext[queryIdKey] = uuidv4();
+        }
+
+        void cancelToken.promise
+          .then(() => {
+            return Api.instance.delete(
+              `/druid/v2${isSql ? '/sql' : ''}/${Api.encodePath(cancelQueryId)}`,
+            );
+          })
+          .catch(() => {});
 
         try {
           return await queryRunner.runQuery({
             query,
-            extraQueryContext: context,
+            extraQueryContext,
             cancelToken,
           });
         } catch (e) {
@@ -261,45 +235,15 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         });
       },
     });
-
-    this.explainQueryManager = new QueryManager({
-      processQuery: async (queryWithContext: QueryWithContext) => {
-        const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
-
-        let context: Record<string, any> | undefined;
-        if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
-          context = Object.assign({}, queryContext, mandatoryQueryContext || {});
-          if (typeof wrapQueryLimit !== 'undefined') {
-            context.sqlOuterLimit = wrapQueryLimit;
-          }
-        }
-
-        let result: QueryResult | undefined;
-        try {
-          result = await queryRunner.runQuery({
-            query: QueryView.wrapInExplainIfNeeded(queryString),
-            extraQueryContext: context,
-          });
-        } catch (e) {
-          throw new Error(getDruidErrorMessage(e));
-        }
-
-        return parseQueryPlan(result!.rows[0][0]);
-      },
-      onStateChange: explainResultState => {
-        this.setState({
-          explainResultState,
-        });
-      },
-    });
   }
 
   componentDidMount(): void {
-    const { liveQueryMode, queryString } = this.state;
+    const { initQuery } = this.props;
+    const { liveQueryMode } = this.state;
 
     this.metadataQueryManager.runQuery(null);
 
-    if (liveQueryMode !== 'off' && queryString) {
+    if (liveQueryMode !== 'off' && initQuery) {
       this.handleRun();
     }
   }
@@ -307,10 +251,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   componentWillUnmount(): void {
     this.metadataQueryManager.terminate();
     this.queryManager.terminate();
-    this.explainQueryManager.terminate();
   }
 
-  prettyPrintJson(): void {
+  private prettyPrintJson(): void {
     this.setState(prevState => {
       let parsed: any;
       try {
@@ -324,55 +267,40 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     });
   }
 
-  handleDownload = (filename: string, format: string) => {
+  private readonly handleDownload = (filename: string, format: string) => {
     const { queryResultState } = this.state;
     const queryResult = queryResultState.data;
     if (!queryResult) return;
 
-    let lines: string[] = [];
-    let separator: string = '';
-
-    if (format === 'csv' || format === 'tsv') {
-      separator = format === 'csv' ? ',' : '\t';
-      lines.push(
-        queryResult.header.map(column => QueryView.formatStr(column.name, format)).join(separator),
-      );
-      lines = lines.concat(
-        queryResult.rows.map(r => r.map(cell => QueryView.formatStr(cell, format)).join(separator)),
-      );
-    } else {
-      // json
-      lines = queryResult.rows.map(r => {
-        const outputObject: Record<string, any> = {};
-        for (let k = 0; k < r.length; k++) {
-          const newName = queryResult.header[k];
-          if (newName) {
-            outputObject[newName.name] = r[k];
-          }
-        }
-        return JSONBig.stringify(outputObject);
-      });
-    }
-
-    const lineBreak = '\n';
-    downloadFile(lines.join(lineBreak), format, filename);
+    downloadQueryResults(queryResult, filename, format);
   };
 
-  renderExplainDialog() {
-    const { explainDialogOpen, explainResultState } = this.state;
-    if (explainResultState.loading || !explainDialogOpen) return;
+  private readonly handleLoadMore = () => {
+    this.setState(
+      ({ wrapQueryLimit }) => ({
+        wrapQueryLimit: wrapQueryLimit ? wrapQueryLimit * 10 : undefined,
+      }),
+      this.handleRun,
+    );
+  };
+
+  private renderExplainDialog() {
+    const { mandatoryQueryContext } = this.props;
+    const { explainDialogQuery } = this.state;
+    if (!explainDialogQuery) return;
 
     return (
-      <QueryPlanDialog
-        explainResult={explainResultState.data}
-        explainError={explainResultState.error}
-        setQueryString={this.handleQueryStringChange}
-        onClose={() => this.setState({ explainDialogOpen: false })}
+      <ExplainDialog
+        queryWithContext={explainDialogQuery}
+        mandatoryQueryContext={mandatoryQueryContext}
+        onOpenQuery={this.handleQueryStringChange}
+        onClose={() => this.setState({ explainDialogQuery: undefined })}
+        openQueryLabel="Open query"
       />
     );
   }
 
-  renderHistoryDialog() {
+  private renderHistoryDialog() {
     const { historyDialogOpen, queryHistory } = this.state;
     if (!historyDialogOpen) return;
 
@@ -388,7 +316,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
-  renderEditContextDialog() {
+  private renderEditContextDialog() {
     const { editContextDialogOpen, queryContext } = this.state;
     if (!editContextDialogOpen) return;
 
@@ -403,25 +331,26 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
-  renderLiveQueryModeSelector() {
+  private renderLiveQueryModeButton() {
     const { liveQueryMode, queryString } = this.state;
     if (QueryView.isJsonLike(queryString)) return;
 
     return (
-      <LiveQueryModeSelector
+      <LiveQueryModeButton
         liveQueryMode={liveQueryMode}
         onLiveQueryModeChange={this.handleLiveQueryModeChange}
         autoLiveQueryModeShouldRun={this.autoLiveQueryModeShouldRun()}
+        minimal
       />
     );
   }
 
-  renderWrapQueryLimitSelector() {
+  private renderWrapQueryLimitSelector() {
     const { wrapQueryLimit, queryString } = this.state;
     if (QueryView.isJsonLike(queryString)) return;
 
     return (
-      <Tooltip
+      <Tooltip2
         content="Automatically wrap the query with a limit to protect against queries with very large result sets."
         hoverOpenDelay={800}
       >
@@ -431,11 +360,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           label="Auto limit"
           onChange={() => this.handleWrapQueryLimitChange(wrapQueryLimit ? undefined : 100)}
         />
-      </Tooltip>
+      </Tooltip2>
     );
   }
 
-  renderMainArea() {
+  private renderMainArea() {
     const { queryString, queryContext, queryResultState, columnMetadataState } = this.state;
     const emptyQuery = QueryView.isEmptyQuery(queryString);
     const queryResult = queryResultState.data;
@@ -465,9 +394,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       <SplitterLayout
         vertical
         percentage
-        secondaryInitialSize={
-          Number(localStorageGet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE) as string) || 60
-        }
+        secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE)!) || 60}
         primaryMinSize={30}
         secondaryMinSize={30}
         onSecondaryPaneSizeChange={this.handleSecondaryPaneSizeChange}
@@ -495,10 +422,15 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
               loading={queryResultState.loading}
             />
             {this.renderWrapQueryLimitSelector()}
-            {this.renderLiveQueryModeSelector()}
+            {this.renderLiveQueryModeButton()}
             {queryResult && (
-              <QueryExtraInfo queryResult={queryResult} onDownload={this.handleDownload} />
+              <QueryExtraInfo
+                queryResult={queryResult}
+                onDownload={this.handleDownload}
+                onLoadMore={this.handleLoadMore}
+              />
             )}
+            {queryResultState.loading && <QueryTimer />}
           </div>
         </div>
         <div className="output-pane">
@@ -506,11 +438,12 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             <QueryOutput
               runeMode={runeMode}
               queryResult={someQueryResult}
-              onQueryChange={this.handleQueryChange}
+              onQueryAction={this.handleQueryAction}
+              onLoadMore={this.handleLoadMore}
             />
           )}
           {queryResultState.error && (
-            <QueryError
+            <QueryErrorPane
               error={queryResultState.error}
               moveCursorTo={position => {
                 this.moveToPosition(position);
@@ -529,9 +462,15 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           )}
           {queryResultState.isInit() && (
             <div className="init-state">
-              <p>
-                Enter a query and click <Code>Run</Code>
-              </p>
+              {emptyQuery ? (
+                <p>
+                  Enter a query and click <Code>Run</Code>
+                </p>
+              ) : (
+                <p>
+                  Click <Code>Run</Code> to execute the query
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -545,7 +484,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     currentQueryInput.goToPosition(position);
   }
 
-  private handleQueryChange = (query: SqlQuery, preferablyRun?: boolean): void => {
+  private readonly handleQueryChange = (query: SqlQuery, preferablyRun?: boolean): void => {
     this.handleQueryStringChange(query.toString(), preferablyRun);
 
     // Possibly move the cursor of the QueryInput to the empty literal position
@@ -558,26 +497,34 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     }
   };
 
-  private handleQueryStringChange = (queryString: string, preferablyRun?: boolean): void => {
-    const parsedQuery = parser(queryString);
-    const newSate = { queryString, parsedQuery };
-    this.setState(newSate, preferablyRun ? this.handleRunIfLive : undefined);
+  private readonly handleQueryAction = (queryAction: QueryAction): void => {
+    const { parsedQuery } = this.state;
+    if (!parsedQuery) return;
+    this.handleQueryChange(parsedQuery.apply(queryAction), true);
   };
 
-  private handleQueryContextChange = (queryContext: QueryContext) => {
+  private readonly handleQueryStringChange = (
+    queryString: string,
+    preferablyRun?: boolean,
+  ): void => {
+    const parsedQuery = parser(queryString);
+    this.setState({ queryString, parsedQuery }, preferablyRun ? this.handleRunIfLive : undefined);
+  };
+
+  private readonly handleQueryContextChange = (queryContext: QueryContext) => {
     this.setState({ queryContext });
   };
 
-  private handleLiveQueryModeChange = (liveQueryMode: LiveQueryMode) => {
+  private readonly handleLiveQueryModeChange = (liveQueryMode: LiveQueryMode) => {
     this.setState({ liveQueryMode });
     localStorageSetJson(LocalStorageKeys.LIVE_QUERY_MODE, liveQueryMode);
   };
 
-  private handleWrapQueryLimitChange = (wrapQueryLimit: number | undefined) => {
+  private readonly handleWrapQueryLimitChange = (wrapQueryLimit: number | undefined) => {
     this.setState({ wrapQueryLimit });
   };
 
-  private handleRun = () => {
+  private readonly handleRun = () => {
     const { queryString, queryContext, wrapQueryLimit, queryHistory } = this.state;
     if (QueryView.isJsonLike(queryString) && !QueryView.validRune(queryString)) return;
 
@@ -604,29 +551,31 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
-  private handleRunIfLive = () => {
+  private readonly handleRunIfLive = () => {
     const { liveQueryMode } = this.state;
     if (liveQueryMode === 'off') return;
     if (liveQueryMode === 'auto' && !this.autoLiveQueryModeShouldRun()) return;
     this.handleRun();
   };
 
-  private handleExplain = () => {
+  private readonly handleExplain = () => {
     const { queryString, queryContext, wrapQueryLimit } = this.state;
 
-    this.setState({ explainDialogOpen: true });
-    this.explainQueryManager.runQuery({
-      queryString,
-      queryContext,
-      wrapQueryLimit,
+    this.setState({
+      explainDialogQuery: {
+        engine: 'sql-native',
+        queryString,
+        queryContext,
+        wrapQueryLimit,
+      },
     });
   };
 
-  private handleSecondaryPaneSizeChange = (secondaryPaneSize: number) => {
+  private readonly handleSecondaryPaneSizeChange = (secondaryPaneSize: number) => {
     localStorageSet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE, String(secondaryPaneSize));
   };
 
-  private getParsedQuery = () => {
+  private readonly getParsedQuery = () => {
     const { parsedQuery } = this.state;
     return parsedQuery;
   };
@@ -652,6 +601,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             getParsedQuery={this.getParsedQuery}
             columnMetadataLoading={columnMetadataState.loading}
             columnMetadata={columnMetadataState.data}
+            defaultWhere={LAST_DAY}
             onQueryChange={this.handleQueryChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
             defaultTable={defaultTable}

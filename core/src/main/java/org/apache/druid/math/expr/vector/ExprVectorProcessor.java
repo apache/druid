@@ -20,7 +20,7 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 /**
  * Interface describing vectorized expression processors, which can be specialized using input type information to
@@ -30,5 +30,5 @@ public interface ExprVectorProcessor<TOutput>
 {
   ExprEvalVector<TOutput> evalVector(Expr.VectorInputBinding bindings);
 
-  ExprType getOutputType();
+  ExpressionType getOutputType();
 }

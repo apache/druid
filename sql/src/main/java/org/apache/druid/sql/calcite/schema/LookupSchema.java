@@ -25,10 +25,10 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.lookup.LookupColumnSelectorFactory;
-import org.apache.druid.sql.calcite.table.DruidTable;
+import org.apache.druid.sql.calcite.table.LookupTable;
 
 import java.util.Map;
 
@@ -39,8 +39,8 @@ public class LookupSchema extends AbstractSchema
 {
   private static final RowSignature ROW_SIGNATURE =
       RowSignature.builder()
-                  .add(LookupColumnSelectorFactory.KEY_COLUMN, ValueType.STRING)
-                  .add(LookupColumnSelectorFactory.VALUE_COLUMN, ValueType.STRING)
+                  .add(LookupColumnSelectorFactory.KEY_COLUMN, ColumnType.STRING)
+                  .add(LookupColumnSelectorFactory.VALUE_COLUMN, ColumnType.STRING)
                   .build();
 
   private final LookupExtractorFactoryContainerProvider lookupProvider;
@@ -57,9 +57,13 @@ public class LookupSchema extends AbstractSchema
     final ImmutableMap.Builder<String, Table> tableMapBuilder = ImmutableMap.builder();
 
     for (final String lookupName : lookupProvider.getAllLookupNames()) {
-      // all lookups should be also joinable through lookup joinable factory, and lookups are effectively broadcast
-      // (if we ignore lookup tiers...)
-      tableMapBuilder.put(lookupName, new DruidTable(new LookupDataSource(lookupName), ROW_SIGNATURE, true, true));
+      tableMapBuilder.put(
+          lookupName,
+          new LookupTable(
+                new LookupDataSource(lookupName),
+                ROW_SIGNATURE
+          )
+      );
     }
 
     return tableMapBuilder.build();

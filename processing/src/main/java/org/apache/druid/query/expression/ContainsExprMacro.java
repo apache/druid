@@ -57,6 +57,6 @@ public class ContainsExprMacro implements ExprMacroTable.ExprMacro
 
     final Expr arg = args.get(0);
     final Expr searchStr = args.get(1);
-    return new ContainsExpr(FN_NAME, arg, searchStr, true);
+    return new ContainsExpr(FN_NAME, arg, searchStr, true, shuttle -> shuttle.visit(apply(shuttle.visitAll(args))));
   }
 }

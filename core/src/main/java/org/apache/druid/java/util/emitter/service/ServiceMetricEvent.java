@@ -27,6 +27,7 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.EventMap;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
@@ -34,6 +35,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
+ *
  */
 @PublicApi
 public class ServiceMetricEvent implements Event
@@ -105,28 +107,29 @@ public class ServiceMetricEvent implements Event
 
   @Override
   @JsonValue
-  public Map<String, Object> toMap()
+  public EventMap toMap()
   {
-    return ImmutableMap.<String, Object>builder()
-                       .put("feed", getFeed())
-                       .put("timestamp", createdTime.toString())
-                       .putAll(serviceDims)
-                       .put("metric", metric)
-                       .put("value", value)
-                       .putAll(
-                           Maps.filterEntries(
-                               userDims,
-                               new Predicate<Map.Entry<String, Object>>()
-                               {
-                                 @Override
-                                 public boolean apply(Map.Entry<String, Object> input)
-                                 {
-                                   return input.getKey() != null;
-                                 }
-                               }
-                           )
-                       )
-                       .build();
+    return EventMap
+        .builder()
+        .put("feed", getFeed())
+        .put("timestamp", createdTime.toString())
+        .putAll(serviceDims)
+        .put("metric", metric)
+        .put("value", value)
+        .putAll(
+            Maps.filterEntries(
+                userDims,
+                new Predicate<Map.Entry<String, Object>>()
+                {
+                  @Override
+                  public boolean apply(Map.Entry<String, Object> input)
+                  {
+                    return input.getKey() != null;
+                  }
+                }
+            )
+        )
+        .build();
   }
 
   public static class Builder

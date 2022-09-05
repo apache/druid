@@ -75,7 +75,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
 
   public PartialCompactionTest()
   {
-    super(LockGranularity.SEGMENT, true);
+    super(LockGranularity.SEGMENT, true, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
   }
 
   @Before
@@ -219,7 +219,8 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         partitionsSpec,
         2,
         expectedTaskState,
-        appendToExisting
+        appendToExisting,
+        false
     );
   }
 
@@ -227,7 +228,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
   {
     return new Builder(
         DATASOURCE,
-        getSegmentLoaderFactory(),
+        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
   }

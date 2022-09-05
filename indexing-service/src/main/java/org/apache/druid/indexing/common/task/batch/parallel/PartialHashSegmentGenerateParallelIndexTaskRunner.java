@@ -30,7 +30,7 @@ import java.util.Map;
  * {@link ParallelIndexTaskRunner} for the phase to create hash partitioned segments in multi-phase parallel indexing.
  */
 class PartialHashSegmentGenerateParallelIndexTaskRunner
-    extends InputSourceSplitParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>>
+    extends InputSourceSplitParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport>
 {
   private static final String PHASE_NAME = "partial segment generation";
 
@@ -41,12 +41,13 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
       TaskToolbox toolbox,
       String taskId,
       String groupId,
+      String baseSubtaskSpecName,
       ParallelIndexIngestionSpec ingestionSchema,
       Map<String, Object> context,
       @Nullable Map<Interval, Integer> intervalToNumShardsOverride
   )
   {
-    super(toolbox, taskId, groupId, ingestionSchema, context);
+    super(toolbox, taskId, groupId, baseSubtaskSpecName, ingestionSchema, context);
     this.intervalToNumShardsOverride = intervalToNumShardsOverride;
   }
 
@@ -82,6 +83,7 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
             groupId,
             null,
             supervisorTaskId,
+            id,
             numAttempts,
             subTaskIngestionSpec,
             context,

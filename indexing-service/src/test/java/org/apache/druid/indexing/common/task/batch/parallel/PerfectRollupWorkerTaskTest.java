@@ -164,13 +164,19 @@ public class PerfectRollupWorkerTaskTest
     @Override
     public String getType()
     {
-      throw new UnsupportedOperationException();
+      return "TestPerfectRollupWorkerTask";
     }
 
     @Override
     public boolean isReady(TaskActionClient taskActionClient)
     {
       throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String getSubtaskSpecId()
+    {
+      return "subtaskSpecId";
     }
   }
 }

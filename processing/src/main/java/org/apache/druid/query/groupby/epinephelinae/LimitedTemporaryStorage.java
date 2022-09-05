@@ -19,8 +19,9 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -82,7 +83,7 @@ public class LimitedTemporaryStorage implements Closeable
         throw new ISE("Closed");
       }
 
-      FileUtils.forceMkdir(storageDirectory);
+      FileUtils.mkdirp(storageDirectory);
       if (!createdStorageDirectory) {
         createdStorageDirectory = true;
       }
@@ -117,6 +118,12 @@ public class LimitedTemporaryStorage implements Closeable
   public long maxSize()
   {
     return maxBytesUsed;
+  }
+
+  @VisibleForTesting
+  long currentSize()
+  {
+    return bytesUsed.get();
   }
 
   @Override

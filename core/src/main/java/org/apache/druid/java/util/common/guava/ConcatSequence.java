@@ -28,6 +28,7 @@ public class ConcatSequence<T> implements Sequence<T>
 {
   private final Sequence<Sequence<T>> baseSequences;
 
+  @SuppressWarnings("unchecked")
   public ConcatSequence(
       Sequence<? extends Sequence<? extends T>> baseSequences
   )

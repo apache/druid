@@ -127,7 +127,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
               LOG.debug("Scheduled user cache poll is done");
             }
             catch (Throwable t) {
-              LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();
+              LOG.makeAlert(t, "Error occurred while polling for cachedUserMaps.").emit();
             }
           }
       );
@@ -235,7 +235,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
   private void writeUserMapToDisk(String prefix, byte[] userMapBytes) throws IOException
   {
     File cacheDir = new File(commonCacheConfig.getCacheDirectory());
-    cacheDir.mkdirs();
+    FileUtils.mkdirp(cacheDir);
     File userMapFile = new File(commonCacheConfig.getCacheDirectory(), getUserMapFilename(prefix));
     FileUtils.writeAtomically(
         userMapFile,

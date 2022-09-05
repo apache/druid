@@ -21,6 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -66,7 +67,7 @@ public class JsonLineReaderTest
         new InputRowSchema(
             new TimestampSpec("timestamp", "iso", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
-            Collections.emptyList()
+            ColumnsFilter.all()
         ),
         source,
         null
@@ -116,7 +117,7 @@ public class JsonLineReaderTest
         new InputRowSchema(
             new TimestampSpec("timestamp", "iso", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
-            Collections.emptyList()
+            ColumnsFilter.all()
         ),
         source,
         null
@@ -158,7 +159,7 @@ public class JsonLineReaderTest
         new InputRowSchema(
             new TimestampSpec("timestamp", "iso", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.emptyList())),
-            Collections.emptyList()
+            ColumnsFilter.all()
         ),
         source,
         null
@@ -200,7 +201,7 @@ public class JsonLineReaderTest
         new InputRowSchema(
             new TimestampSpec("timestamp", "iso", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.emptyList())),
-            Collections.emptyList()
+            ColumnsFilter.all()
         ),
         source,
         null
@@ -242,7 +243,7 @@ public class JsonLineReaderTest
         new InputRowSchema(
             new TimestampSpec("timestamp", "iso", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.emptyList())),
-            Collections.emptyList()
+            ColumnsFilter.all()
         ),
         source,
         null

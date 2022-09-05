@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.MapJoinableFactory;
@@ -33,7 +34,6 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestServerInventoryView;
-import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -49,7 +49,7 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
   {
     try (final Closer closer = Closer.create()) {
       final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
-      final DruidSchema druidSchema = new DruidSchema(
+      final SegmentMetadataCache cache = new SegmentMetadataCache(
           CalciteTests.createMockQueryLifecycleFactory(
               new SpecificSegmentsQuerySegmentWalker(conglomerate),
               conglomerate
@@ -58,14 +58,15 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
           new SegmentManager(EasyMock.createMock(SegmentLoader.class)),
           new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
           PLANNER_CONFIG_DEFAULT,
-          new NoopViewManager(),
-          new NoopEscalator()
+          new NoopEscalator(),
+          new BrokerInternalQueryConfig()
       );
 
-      druidSchema.start();
-      druidSchema.awaitInitialization();
+      cache.start();
+      cache.awaitInitialization();
+      final DruidSchema druidSchema = new DruidSchema(cache, null);
 
-      Assert.assertEquals(ImmutableMap.of(), druidSchema.getTableMap());
+      Assert.assertEquals(ImmutableSet.of(), druidSchema.getTableNames());
     }
   }
 }

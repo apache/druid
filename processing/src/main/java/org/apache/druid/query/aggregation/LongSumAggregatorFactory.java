@@ -22,14 +22,13 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.StringUtils;
+import com.google.common.base.Supplier;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 
@@ -37,6 +36,8 @@ import java.util.List;
  */
 public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
 {
+  private final Supplier<byte[]> cacheKey;
+
   @JsonCreator
   public LongSumAggregatorFactory(
       @JsonProperty("name") String name,
@@ -46,6 +47,11 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   )
   {
     super(macroTable, name, fieldName, expression);
+    this.cacheKey = AggregatorUtil.getSimpleAggregatorCacheKeySupplier(
+        AggregatorUtil.LONG_SUM_CACHE_TYPE_ID,
+        fieldName,
+        fieldExpression
+    );
   }
 
   public LongSumAggregatorFactory(String name, String fieldName)
@@ -100,6 +106,12 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new LongSumAggregatorFactory(newName, getFieldName(), getExpression(), macroTable);
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new LongSumAggregatorFactory(name, name, null, macroTable);
@@ -114,15 +126,7 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8WithNullToEmpty(fieldName);
-    byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
-
-    return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
-                     .put(AggregatorUtil.LONG_SUM_CACHE_TYPE_ID)
-                     .put(fieldNameBytes)
-                     .put(AggregatorUtil.STRING_SEPARATOR)
-                     .put(expressionBytes)
-                     .array();
+    return cacheKey.get();
   }
 
   @Override

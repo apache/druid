@@ -30,6 +30,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("ClassName")
 class LambdaExpr implements Expr
 {
   private final ImmutableList<IdentifierExpr> args;
@@ -67,6 +68,11 @@ class LambdaExpr implements Expr
     return args.stream().map(IdentifierExpr::toString).collect(Collectors.toList());
   }
 
+  public List<String> stringifyIdentifiers()
+  {
+    return args.stream().map(IdentifierExpr::stringify).collect(Collectors.toList());
+  }
+
   ImmutableList<IdentifierExpr> getIdentifierExprs()
   {
     return args;
@@ -98,7 +104,7 @@ class LambdaExpr implements Expr
   @Override
   public String stringify()
   {
-    return StringUtils.format("(%s) -> %s", ARG_JOINER.join(getIdentifiers()), expr.stringify());
+    return StringUtils.format("(%s) -> %s", ARG_JOINER.join(stringifyIdentifiers()), expr.stringify());
   }
 
   @Override
@@ -119,7 +125,7 @@ class LambdaExpr implements Expr
   }
 
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return expr.getOutputType(inspector);
   }
@@ -150,6 +156,7 @@ class LambdaExpr implements Expr
  * list of arguments that are passed to the {@link Function} along with the {@link Expr.ObjectBinding} when it is
  * evaluated.
  */
+@SuppressWarnings("ClassName")
 class FunctionExpr implements Expr
 {
   final Function function;
@@ -197,8 +204,7 @@ class FunctionExpr implements Expr
   @Override
   public Expr visit(Shuttle shuttle)
   {
-    List<Expr> newArgs = args.stream().map(shuttle::visit).collect(Collectors.toList());
-    return shuttle.visit(new FunctionExpr(function, name, newArgs));
+    return shuttle.visit(new FunctionExpr(function, name, shuttle.visitAll(args)));
   }
 
   @Override
@@ -216,7 +222,7 @@ class FunctionExpr implements Expr
   }
 
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return function.getOutputType(inspector, args);
   }
@@ -247,6 +253,7 @@ class FunctionExpr implements Expr
  * {@link LambdaExpr} and the list of {@link Expr} arguments that are combined with {@link Expr.ObjectBinding} to
  * evaluate the {@link LambdaExpr}.
  */
+@SuppressWarnings("ClassName")
 class ApplyFunctionExpr implements Expr
 {
   final ApplyFunction function;
@@ -326,8 +333,7 @@ class ApplyFunctionExpr implements Expr
   public Expr visit(Shuttle shuttle)
   {
     LambdaExpr newLambda = (LambdaExpr) lambdaExpr.visit(shuttle);
-    List<Expr> newArgs = argsExpr.stream().map(shuttle::visit).collect(Collectors.toList());
-    return shuttle.visit(new ApplyFunctionExpr(function, name, newLambda, newArgs));
+    return shuttle.visit(new ApplyFunctionExpr(function, name, newLambda, shuttle.visitAll(argsExpr)));
   }
 
   @Override
@@ -338,7 +344,7 @@ class ApplyFunctionExpr implements Expr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return function.getOutputType(inspector, lambdaExpr, argsExpr);
   }

@@ -42,7 +42,7 @@ public class StringFormatOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("STRING_FORMAT")
       .operandTypeChecker(new StringFormatOperandTypeChecker())
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeNonNull(SqlTypeName.VARCHAR)
+      .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
       .build();
 
   @Override
@@ -58,7 +58,7 @@ public class StringFormatOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, "format");
+    return OperatorConversions.convertDirectCall(plannerContext, rowSignature, rexNode, "format");
   }
 
   private static class StringFormatOperandTypeChecker implements SqlOperandTypeChecker

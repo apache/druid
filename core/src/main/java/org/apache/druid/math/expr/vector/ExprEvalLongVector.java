@@ -19,8 +19,7 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -33,9 +32,9 @@ public final class ExprEvalLongVector extends ExprEvalVector<long[]>
   }
 
   @Override
-  public ExprType getType()
+  public ExpressionType getType()
   {
-    return ExprType.LONG;
+    return ExpressionType.LONG;
   }
 
   @Override
@@ -51,19 +50,19 @@ public final class ExprEvalLongVector extends ExprEvalVector<long[]>
   }
 
   @Override
-  public <E> E asObjectVector(ExprType type)
+  public Object[] getObjectVector()
   {
-    switch (type) {
-      case STRING:
-        String[] s = new String[values.length];
-        if (nulls != null) {
-          for (int i = 0; i < values.length; i++) {
-            s[i] = nulls[i] ? null : String.valueOf(values[i]);
-          }
-        }
-        return (E) s;
-      default:
-        throw new IAE("Cannot convert %s to %s object vector", getType(), type);
+    Long[] objects = new Long[values.length];
+    if (nulls != null) {
+      for (int i = 0; i < values.length; i++) {
+        objects[i] = nulls[i] ? null : values[i];
+      }
+    } else {
+      for (int i = 0; i < values.length; i++) {
+        objects[i] = values[i];
+      }
     }
+    return objects;
   }
+
 }

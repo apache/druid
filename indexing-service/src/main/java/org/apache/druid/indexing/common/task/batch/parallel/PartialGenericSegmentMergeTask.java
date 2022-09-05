@@ -38,11 +38,11 @@ import java.util.Map;
 /**
  * {@link ParallelIndexTaskRunner} for the phase to merge generic partitioned segments in multi-phase parallel indexing.
  */
-public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<BuildingShardSpec, GenericPartitionLocation>
+public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<BuildingShardSpec>
 {
   public static final String TYPE = "partial_index_generic_merge";
 
-  private final PartialGenericSegmentMergeIngestionSpec ingestionSchema;
+  private final PartialSegmentMergeIngestionSpec ingestionSchema;
   private final Table<Interval, Integer, BuildingShardSpec<?>> intervalAndIntegerToShardSpec;
 
   @JsonCreator
@@ -52,8 +52,10 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
       @JsonProperty("groupId") final String groupId,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
+      // subtaskSpecId can be null only for old task versions.
+      @JsonProperty("subtaskSpecId") @Nullable final String subtaskSpecId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
-      @JsonProperty("spec") final PartialGenericSegmentMergeIngestionSpec ingestionSchema,
+      @JsonProperty("spec") final PartialSegmentMergeIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context
   )
   {
@@ -62,6 +64,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
         groupId,
         taskResource,
         supervisorTaskId,
+        subtaskSpecId,
         ingestionSchema.getDataSchema(),
         ingestionSchema.getIOConfig(),
         ingestionSchema.getTuningConfig(),
@@ -76,7 +79,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
   }
 
   private static Table<Interval, Integer, BuildingShardSpec<?>> createIntervalAndIntegerToShardSpec(
-      List<GenericPartitionLocation> partitionLocations
+      List<PartitionLocation> partitionLocations
   )
   {
     final Table<Interval, Integer, BuildingShardSpec<?>> intervalAndIntegerToShardSpec = HashBasedTable.create();
@@ -104,7 +107,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
   }
 
   @JsonProperty("spec")
-  private PartialGenericSegmentMergeIngestionSpec getIngestionSchema()
+  private PartialSegmentMergeIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
   }

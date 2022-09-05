@@ -31,14 +31,20 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -51,6 +57,8 @@ import java.util.Objects;
 @JsonTypeName("stringLast")
 public class StringLastAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex("serializablePairLongString");
+
   private static final Aggregator NIL_AGGREGATOR = new StringLastAggregator(
       NilColumnValueSelector.instance(),
       NilColumnValueSelector.instance(),
@@ -80,6 +88,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   };
 
   private final String fieldName;
+  private final String timeColumn;
   private final String name;
   protected final int maxStringBytes;
 
@@ -87,6 +96,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   public StringLastAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("timeColumn") @Nullable final String timeColumn,
       @JsonProperty("maxStringBytes") Integer maxStringBytes
   )
   {
@@ -99,6 +109,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
+    this.timeColumn = timeColumn == null ? ColumnHolder.TIME_COLUMN_NAME : timeColumn;
     this.maxStringBytes = maxStringBytes == null
                           ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE
                           : maxStringBytes;
@@ -112,7 +123,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
       return NIL_AGGREGATOR;
     } else {
       return new StringLastAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector,
           maxStringBytes,
           StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
@@ -128,12 +139,34 @@ public class StringLastAggregatorFactory extends AggregatorFactory
       return NIL_BUFFER_AGGREGATOR;
     } else {
       return new StringLastBufferAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector,
           maxStringBytes,
           StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
       );
     }
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+
+    ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+    VectorObjectSelector vSelector = selectorFactory.makeObjectSelector(fieldName);
+    BaseLongVectorValueSelector timeSelector = (BaseLongVectorValueSelector) selectorFactory.makeValueSelector(
+        timeColumn);
+    if (capabilities != null) {
+      return new StringLastVectorAggregator(timeSelector, vSelector, maxStringBytes);
+    } else {
+      return new StringLastVectorAggregator(null, vSelector, maxStringBytes);
+    }
+
   }
 
   @Override
@@ -157,13 +190,13 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new StringLastAggregatorFactory(name, name, maxStringBytes);
+    return new StringLastAggregatorFactory(name, name, timeColumn, maxStringBytes);
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new StringLastAggregatorFactory(fieldName, fieldName, maxStringBytes));
+    return Collections.singletonList(new StringLastAggregatorFactory(fieldName, fieldName, timeColumn, maxStringBytes));
   }
 
   @Override
@@ -194,6 +227,12 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   }
 
   @JsonProperty
+  public String getTimeColumn()
+  {
+    return timeColumn;
+  }
+
+  @JsonProperty
   public Integer getMaxStringBytes()
   {
     return maxStringBytes;
@@ -202,7 +241,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return ImmutableList.of(ColumnHolder.TIME_COLUMN_NAME, fieldName);
+    return ImmutableList.of(timeColumn, fieldName);
   }
 
   @Override
@@ -210,35 +249,36 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   {
     return new CacheKeyBuilder(AggregatorUtil.STRING_LAST_CACHE_TYPE_ID)
         .appendString(fieldName)
+        .appendString(timeColumn)
         .appendInt(maxStringBytes)
         .build();
-  }
-
-  @Override
-  public String getComplexTypeName()
-  {
-    return "serializablePairLongString";
   }
 
   /**
    * actual type is {@link SerializablePairLongString}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getIntermediateType()
   {
-    return ValueType.COMPLEX;
+    return TYPE;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getResultType()
   {
-    return ValueType.STRING;
+    return ColumnType.STRING;
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
     return Long.BYTES + Integer.BYTES + maxStringBytes;
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new StringLastAggregatorFactory(newName, getFieldName(), getTimeColumn(), getMaxStringBytes());
   }
 
   @Override

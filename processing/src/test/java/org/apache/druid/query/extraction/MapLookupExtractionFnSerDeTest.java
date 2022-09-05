@@ -21,11 +21,9 @@ package org.apache.druid.query.extraction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import org.apache.druid.guice.GuiceInjectors;
-import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -42,19 +40,20 @@ public class MapLookupExtractionFnSerDeTest
   private static ObjectMapper mapper;
   private static final Map<String, String> RENAMES = ImmutableMap.of(
       "foo", "bar",
-      "bar", "baz"
+      "bar", "baz",
+      "", "empty"
   );
 
   @BeforeClass
   public static void setup()
   {
-    Injector defaultInjector = GuiceInjectors.makeStartupInjector();
-    mapper = defaultInjector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    mapper = TestHelper.makeJsonMapper();
   }
 
   @Test
   public void testDeserialization() throws IOException
   {
+    NullHandling.initializeForTests();
     final DimExtractionFn fn = mapper.readerFor(DimExtractionFn.class).readValue(
         StringUtils.format(
             "{\"type\":\"lookup\",\"lookup\":{\"type\":\"map\", \"map\":%s}}",

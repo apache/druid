@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -54,23 +55,27 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   private static final boolean ROUND = true;
 
   private final AggregationTestHelper helper;
+  private final QueryContexts.Vectorize vectorize;
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  public HllSketchAggregatorTest(GroupByQueryConfig config)
+  public HllSketchAggregatorTest(GroupByQueryConfig config, String vectorize)
   {
     HllSketchModule.registerSerde();
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         new HllSketchModule().getJacksonModules(), config, tempFolder);
+    this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
   }
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "config = {0}, vectorize = {1}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      constructors.add(new Object[]{config});
+      for (String vectorize : new String[]{"false", "true", "force"}) {
+        constructors.add(new Object[]{config, vectorize});
+      }
     }
     return constructors;
   }
@@ -136,6 +141,35 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, results.size());
     ResultRow row = results.get(0);
     Assert.assertEquals(200, (double) row.get(0), 0.1);
+  }
+
+  @Test
+  public void unsuccessfulComplexTypesInHLL() throws Exception
+  {
+    String metricSpec = "[{"
+                        + "\"type\": \"hyperUnique\","
+                        + "\"name\": \"index_hll\","
+                        + "\"fieldName\": \"id\""
+                        + "}]";
+    try {
+      Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+          new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
+          buildParserJson(
+              Arrays.asList("dim", "multiDim", "id"),
+              Arrays.asList("timestamp", "dim", "multiDim", "id")
+          ),
+          metricSpec,
+          0, // minTimestamp
+          Granularities.NONE,
+          200, // maxRowCount
+          buildGroupByQueryJson("HLLSketchBuild", "index_hll", !ROUND)
+      );
+    }
+    catch (RuntimeException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Invalid input [index_hll] of type [COMPLEX<hyperUnique>] for [HLLSketchBuild]"));
+    }
+
   }
 
   @Test
@@ -224,10 +258,32 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
                         )
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
-                              new HllSketchToEstimatePostAggregator("estimate", new FieldAccessPostAggregator("f1", "sketch"), false),
-                              new HllSketchToEstimateWithBoundsPostAggregator("estimateWithBounds", new FieldAccessPostAggregator("f1", "sketch"), 2),
-                              new HllSketchToStringPostAggregator("summary", new FieldAccessPostAggregator("f1", "sketch")),
-                              new HllSketchUnionPostAggregator("union", ImmutableList.of(new FieldAccessPostAggregator("f1", "sketch"), new FieldAccessPostAggregator("f2", "sketch")), null, null)
+                                new HllSketchToEstimatePostAggregator(
+                                    "estimate",
+                                    new FieldAccessPostAggregator("f1", "sketch"),
+                                    false
+                                ),
+                                new HllSketchToEstimateWithBoundsPostAggregator(
+                                    "estimateWithBounds",
+                                    new FieldAccessPostAggregator(
+                                        "f1",
+                                        "sketch"
+                                    ),
+                                    2
+                                ),
+                                new HllSketchToStringPostAggregator(
+                                    "summary",
+                                    new FieldAccessPostAggregator("f1", "sketch")
+                                ),
+                                new HllSketchUnionPostAggregator(
+                                    "union",
+                                    ImmutableList.of(new FieldAccessPostAggregator(
+                                        "f1",
+                                        "sketch"
+                                    ), new FieldAccessPostAggregator("f2", "sketch")),
+                                    null,
+                                    null
+                                )
                             )
                         )
                         .build()
@@ -320,7 +376,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
     );
   }
 
-  private static String buildGroupByQueryJson(
+  private String buildGroupByQueryJson(
       String aggregationType,
       String aggregationFieldName,
       boolean aggregationRound
@@ -338,6 +394,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         .put("dimensions", Collections.emptyList())
         .put("aggregations", Collections.singletonList(aggregation))
         .put("intervals", Collections.singletonList("2017-01-01T00:00:00.000Z/2017-01-31T00:00:00.000Z"))
+        .put("context", ImmutableMap.of(QueryContexts.VECTORIZE_KEY, vectorize.toString()))
         .build();
     return toJson(object);
   }

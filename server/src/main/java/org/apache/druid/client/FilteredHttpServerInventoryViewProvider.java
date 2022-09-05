@@ -36,20 +36,20 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
   @JacksonInject
   @NotNull
   @EscalatedClient
-  HttpClient httpClient = null;
+  HttpClient httpClient;
 
   @JacksonInject
   @NotNull
   @Smile
-  ObjectMapper smileMapper = null;
+  ObjectMapper smileMapper;
 
   @JacksonInject
   @NotNull
-  HttpServerInventoryViewConfig config = null;
+  HttpServerInventoryViewConfig config;
 
   @JacksonInject
   @NotNull
-  private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = null;
+  private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
 
   @Override
   public HttpServerInventoryView get()
@@ -59,7 +59,8 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
         httpClient,
         druidNodeDiscoveryProvider,
         Predicates.alwaysFalse(),
-        config
+        config,
+        "FilteredHttpServerInventoryView"
     );
   }
 }

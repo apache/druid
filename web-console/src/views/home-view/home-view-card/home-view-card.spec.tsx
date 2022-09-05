@@ -22,14 +22,14 @@ import React from 'react';
 
 import { HomeViewCard } from './home-view-card';
 
-describe('home view card', () => {
+describe('HomeViewCard', () => {
   it('matches snapshot', () => {
     const homeViewCard = (
       <HomeViewCard
         className="some-card"
-        href={'#somewhere'}
+        href="#somewhere"
         icon={IconNames.DATABASE}
-        title={'Something'}
+        title="Something"
         loading={false}
         error={undefined}
       >

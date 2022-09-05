@@ -67,10 +67,10 @@ public class HadoopTuningConfig implements TuningConfig
         false,
         false,
         null,
-        true,
         DEFAULT_NUM_BACKGROUND_PERSIST_THREADS,
         false,
         false,
+        null,
         null,
         null,
         null,
@@ -101,6 +101,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
   private final boolean useYarnRMJobStatusFallback;
+  private final long awaitSegmentAvailabilityTimeoutMillis;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -122,15 +123,14 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("useCombiner") @Nullable Boolean useCombiner,
       // See https://github.com/apache/druid/pull/1922
       final @JsonProperty("rowFlushBoundary") @Nullable Integer maxRowsInMemoryCOMPAT,
-      // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
-      final @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       final @JsonProperty("numBackgroundPersistThreads") @Nullable Integer numBackgroundPersistThreads,
       final @JsonProperty("forceExtendableShardSpecs") boolean forceExtendableShardSpecs,
       final @JsonProperty("useExplicitVersion") boolean useExplicitVersion,
       final @JsonProperty("allowedHadoopPrefix") @Nullable List<String> allowedHadoopPrefix,
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback
+      final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback,
+      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
   )
   {
     this.workingPath = workingPath;
@@ -176,6 +176,12 @@ public class HadoopTuningConfig implements TuningConfig
     this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
 
     this.useYarnRMJobStatusFallback = useYarnRMJobStatusFallback == null ? true : useYarnRMJobStatusFallback;
+
+    if (awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis < 0) {
+      this.awaitSegmentAvailabilityTimeoutMillis = DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS;
+    } else {
+      this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
+    }
   }
 
   @Nullable
@@ -281,16 +287,6 @@ public class HadoopTuningConfig implements TuningConfig
     return useCombiner;
   }
 
-  /**
-   * Always returns true, doesn't affect the version being built.
-   */
-  @Deprecated
-  @JsonProperty
-  public Boolean getBuildV9Directly()
-  {
-    return true;
-  }
-
   @JsonProperty
   public int getNumBackgroundPersistThreads()
   {
@@ -334,6 +330,12 @@ public class HadoopTuningConfig implements TuningConfig
     return useYarnRMJobStatusFallback;
   }
 
+  @JsonProperty
+  public long getAwaitSegmentAvailabilityTimeoutMillis()
+  {
+    return awaitSegmentAvailabilityTimeoutMillis;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -354,14 +356,14 @@ public class HadoopTuningConfig implements TuningConfig
         combineText,
         useCombiner,
         null,
-        true,
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
         maxParseExceptions,
-        useYarnRMJobStatusFallback
+        useYarnRMJobStatusFallback,
+        awaitSegmentAvailabilityTimeoutMillis
     );
   }
 
@@ -385,14 +387,14 @@ public class HadoopTuningConfig implements TuningConfig
         combineText,
         useCombiner,
         null,
-        true,
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
         maxParseExceptions,
-        useYarnRMJobStatusFallback
+        useYarnRMJobStatusFallback,
+        awaitSegmentAvailabilityTimeoutMillis
     );
   }
 
@@ -416,14 +418,14 @@ public class HadoopTuningConfig implements TuningConfig
         combineText,
         useCombiner,
         null,
-        true,
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
         maxParseExceptions,
-        useYarnRMJobStatusFallback
+        useYarnRMJobStatusFallback,
+        awaitSegmentAvailabilityTimeoutMillis
     );
   }
 }

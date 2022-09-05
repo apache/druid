@@ -145,7 +145,7 @@ public class IndexGeneratorJobTest
             new StringInputRowParser(
                 new CSVParseSpec(
                     new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
@@ -194,7 +194,7 @@ public class IndexGeneratorJobTest
             new HadoopyStringInputRowParser(
                 new CSVParseSpec(
                     new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
@@ -242,7 +242,7 @@ public class IndexGeneratorJobTest
             new StringInputRowParser(
                 new CSVParseSpec(
                     new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
@@ -301,7 +301,7 @@ public class IndexGeneratorJobTest
             new HadoopyStringInputRowParser(
                 new CSVParseSpec(
                     new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
@@ -335,7 +335,7 @@ public class IndexGeneratorJobTest
             new StringInputRowParser(
                 new JSONParseSpec(
                     new TimestampSpec("ts", "yyyyMMddHH", null),
-                    new DimensionsSpec(null, null, null),
+                    DimensionsSpec.EMPTY,
                     null,
                     null,
                     null
@@ -376,7 +376,7 @@ public class IndexGeneratorJobTest
                         "Q",
                         "X",
                         "Y"
-                    )), null, null),
+                    ))),
                     null,
                     null,
                     null
@@ -540,10 +540,10 @@ public class IndexGeneratorJobTest
                 false,
                 useCombiner,
                 null,
-                true,
                 null,
                 forceExtendableShardSpecs,
                 false,
+                null,
                 null,
                 null,
                 null,
@@ -620,13 +620,21 @@ public class IndexGeneratorJobTest
 
   private void verifyJob(IndexGeneratorJob job) throws IOException
   {
-    Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job), config));
+    Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job)));
 
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
     IndexGeneratorJob
-        .getPublishedSegments(config)
-        .forEach(segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>())
-                                              .add(segment));
+        .getPublishedSegmentAndIndexZipFilePaths(config)
+        .forEach(segmentAndIndexZipFilePath -> intervalToSegments.computeIfAbsent(segmentAndIndexZipFilePath.getSegment().getInterval(), k -> new ArrayList<>())
+                                              .add(segmentAndIndexZipFilePath.getSegment()));
+
+    List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths =
+        IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(config);
+    JobHelper.renameIndexFilesForSegments(config.getSchema(), dataSegmentAndIndexZipFilePaths);
+
+    JobHelper.maybeDeleteIntermediatePath(true, config.getSchema());
+    File workingPath = new File(config.makeIntermediatePath().toUri().getPath());
+    Assert.assertTrue(workingPath.exists());
 
     final Map<Interval, List<File>> intervalToIndexFiles = new HashMap<>();
     int segmentNum = 0;

@@ -24,8 +24,8 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -46,7 +46,7 @@ public class InlineSegmentWranglerTest
           new Object[]{"foo", 1L},
           new Object[]{"bar", 2L}
       ),
-      RowSignature.builder().add("str", ValueType.STRING).add("long", ValueType.LONG).build()
+      RowSignature.builder().add("str", ColumnType.STRING).add("long", ColumnType.LONG).build()
   );
 
   @Test

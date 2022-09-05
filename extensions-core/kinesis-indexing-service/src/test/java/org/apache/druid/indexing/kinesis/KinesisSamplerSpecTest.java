@@ -40,6 +40,7 @@ import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.overlord.sampler.SamplerTestUtils;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -72,9 +73,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
               new StringDimensionSchema("dim2"),
               new LongDimensionSchema("dimLong"),
               new FloatDimensionSchema("dimFloat")
-          ),
-          null,
-          null
+          )
       ),
       new AggregatorFactory[]{
           new DoubleSumAggregatorFactory("met1sum", "met1"),
@@ -153,6 +152,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
             null,
             null,
             null,
+            null,
             false
         ),
         null,
@@ -171,8 +171,8 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
 
     KinesisSamplerSpec samplerSpec = new TestableKinesisSamplerSpec(
         supervisorSpec,
-        new SamplerConfig(5, null),
-        new InputSourceSampler(),
+        new SamplerConfig(5, null, null, null),
+        new InputSourceSampler(new DefaultObjectMapper()),
         null
     );
 

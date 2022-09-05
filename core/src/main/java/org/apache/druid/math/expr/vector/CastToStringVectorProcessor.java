@@ -19,8 +19,9 @@
 
 package org.apache.druid.math.expr.vector;
 
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 public final class CastToStringVectorProcessor extends CastToTypeVectorProcessor<String[]>
 {
@@ -33,12 +34,17 @@ public final class CastToStringVectorProcessor extends CastToTypeVectorProcessor
   public ExprEvalVector<String[]> evalVector(Expr.VectorInputBinding bindings)
   {
     ExprEvalVector<?> result = delegate.evalVector(bindings);
-    return new ExprEvalStringVector(result.asObjectVector(ExprType.STRING));
+    final Object[] objects = result.getObjectVector();
+    final String[] output = new String[objects.length];
+    for (int i = 0; i < objects.length; i++) {
+      output[i] = Evals.asString(objects[i]);
+    }
+    return new ExprEvalStringVector(output);
   }
 
   @Override
-  public ExprType getOutputType()
+  public ExpressionType getOutputType()
   {
-    return ExprType.STRING;
+    return ExpressionType.STRING;
   }
 }

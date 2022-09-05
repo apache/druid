@@ -35,10 +35,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchUtils;
-import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
+import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -46,7 +46,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
 public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
@@ -79,7 +78,7 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
         project,
         aggregateCall.getArgList().get(0)
     );
-    final DruidExpression input = Expressions.toDruidExpression(
+    final DruidExpression input = Aggregations.toDruidExpressionForNumericAggregator(
         plannerContext,
         rowSignature,
         inputOperand
@@ -111,9 +110,9 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
         if (factory instanceof TDigestSketchAggregatorFactory) {
           final TDigestSketchAggregatorFactory theFactory = (TDigestSketchAggregatorFactory) factory;
           final boolean matches = TDigestSketchUtils.matchingAggregatorFactoryExists(
+              virtualColumnRegistry,
               input,
               compression,
-              existing,
               (TDigestSketchAggregatorFactory) factory
           );
 
@@ -128,8 +127,6 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
     }
 
     // No existing match found. Create a new one.
-    final List<VirtualColumn> virtualColumns = new ArrayList<>();
-
     if (input.isDirectColumnAccess()) {
       aggregatorFactory = new TDigestSketchAggregatorFactory(
           aggName,
@@ -137,23 +134,14 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
           compression
       );
     } else {
-      VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-          plannerContext,
+      String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           input,
-          ValueType.FLOAT
+          ColumnType.FLOAT
       );
-      virtualColumns.add(virtualColumn);
-      aggregatorFactory = new TDigestSketchAggregatorFactory(
-          aggName,
-          virtualColumn.getOutputName(),
-          compression
-      );
+      aggregatorFactory = new TDigestSketchAggregatorFactory(aggName, virtualColumnName, compression);
     }
 
-    return Aggregation.create(
-        virtualColumns,
-        aggregatorFactory
-    );
+    return Aggregation.create(aggregatorFactory);
   }
 
   private static class TDigestGenerateSketchSqlAggFunction extends SqlAggFunction

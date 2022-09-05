@@ -72,6 +72,18 @@ public class TableLongEncodingReader implements CompressionFactory.LongEncodingR
   }
 
   @Override
+  public void read(long[] out, int outPosition, int startIndex, int length)
+  {
+    deserializer.getTable(out, outPosition, startIndex, length, table);
+  }
+
+  @Override
+  public int read(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit)
+  {
+    return deserializer.getTable(out, outPosition, indexes, length, indexOffset, limit, table);
+  }
+
+  @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
     return new TableLongEncodingReader(buffer.duplicate(), table, bitsPerValue);

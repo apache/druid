@@ -17,65 +17,41 @@
  */
 
 import {
-  alphanumericCompare,
+  arrangeWithPrefixSuffix,
   formatBytes,
   formatBytesCompact,
   formatInteger,
   formatMegabytes,
   formatMillions,
   formatPercent,
+  hashJoaat,
   moveElement,
-  sortWithPrefixSuffix,
-  sqlQueryCustomTableFilter,
+  moveToIndex,
+  objectHash,
+  parseCsvLine,
   swapElements,
 } from './general';
 
 describe('general', () => {
-  describe('sortWithPrefixSuffix', () => {
+  describe('arrangeWithPrefixSuffix', () => {
     it('works in simple case', () => {
       expect(
-        sortWithPrefixSuffix(
+        arrangeWithPrefixSuffix(
           'abcdefgh'.split('').reverse(),
           'gef'.split(''),
           'ba'.split(''),
-          alphanumericCompare,
         ).join(''),
-      ).toEqual('gefcdhba');
+      ).toEqual('gefhdcba');
     });
 
     it('dedupes', () => {
       expect(
-        sortWithPrefixSuffix(
+        arrangeWithPrefixSuffix(
           'abcdefgh'.split('').reverse(),
           'gefgef'.split(''),
           'baba'.split(''),
-          alphanumericCompare,
         ).join(''),
-      ).toEqual('gefcdhba');
-    });
-  });
-
-  describe('sqlQueryCustomTableFilter', () => {
-    it('works with contains', () => {
-      expect(
-        String(
-          sqlQueryCustomTableFilter({
-            id: 'datasource',
-            value: `Hello`,
-          }),
-        ),
-      ).toEqual(`LOWER("datasource") LIKE '%hello%'`);
-    });
-
-    it('works with exact', () => {
-      expect(
-        String(
-          sqlQueryCustomTableFilter({
-            id: 'datasource',
-            value: `"hello"`,
-          }),
-        ),
-      ).toEqual(`"datasource" = 'hello'`);
+      ).toEqual('gefhdcba');
     });
   });
 
@@ -103,6 +79,18 @@ describe('general', () => {
       expect(moveElement(['a', 'b', 'c'], 1, 1)).toEqual(['a', 'b', 'c']);
       expect(moveElement(['F', 'B', 'W', 'B'], 2, 1)).toEqual(['F', 'W', 'B', 'B']);
       expect(moveElement([1, 2, 3], 2, 1)).toEqual([1, 3, 2]);
+    });
+  });
+
+  describe('moveToIndex', () => {
+    it('works', () => {
+      expect(moveToIndex(['a', 'b', 'c', 'd', 'e'], x => ['e', 'c'].indexOf(x))).toEqual([
+        'e',
+        'c',
+        'a',
+        'b',
+        'd',
+      ]);
     });
   });
 
@@ -142,6 +130,45 @@ describe('general', () => {
       expect(formatMillions(1e6 + 1)).toEqual('1.000 M');
       expect(formatMillions(1234567)).toEqual('1.235 M');
       expect(formatMillions(345.2)).toEqual('345');
+    });
+  });
+
+  describe('parseCsvLine', () => {
+    it('works in general', () => {
+      expect(parseCsvLine(`Hello,,"",world,123,Hi "you","Quote, ""escapes"", work"\r\n`)).toEqual([
+        `Hello`,
+        ``,
+        ``,
+        `world`,
+        `123`,
+        `Hi "you"`,
+        `Quote, "escapes", work`,
+      ]);
+    });
+
+    it('works in empty case', () => {
+      expect(parseCsvLine(``)).toEqual([``]);
+    });
+
+    it('works in trivial case', () => {
+      expect(parseCsvLine(`Hello`)).toEqual([`Hello`]);
+    });
+
+    it('only parses first line', () => {
+      expect(parseCsvLine(`Hi,there\na,b\nx,y\n`)).toEqual([`Hi`, `there`]);
+    });
+  });
+
+  describe('hashJoaat', () => {
+    it('works', () => {
+      expect(hashJoaat('a')).toEqual(0xca2e9442);
+      expect(hashJoaat('The quick brown fox jumps over the lazy dog')).toEqual(0x7647f758);
+    });
+  });
+
+  describe('objectHash', () => {
+    it('works', () => {
+      expect(objectHash({ hello: 'world1' })).toEqual('cc14ad13');
     });
   });
 });

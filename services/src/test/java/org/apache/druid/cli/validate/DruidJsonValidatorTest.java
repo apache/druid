@@ -21,8 +21,8 @@ package org.apache.druid.cli.validate;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.Cli;
 import com.google.inject.Injector;
-import io.airlift.airline.Cli;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
@@ -169,7 +169,6 @@ public class DruidJsonValidatorTest
                 NoneShardSpec.instance(),
                 new IndexSpec(),
                 new IndexSpec(),
-                null,
                 0,
                 0,
                 true,

@@ -25,6 +25,7 @@ import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.timeline.DataSegment;
@@ -65,7 +66,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   public void setup()
   {
     expect(strategy.computeCacheKey(query)).andReturn(QUERY_CACHE_KEY).anyTimes();
-    expect(query.getContextValue("bySegment")).andReturn(false).anyTimes();
+    expect(query.getContextValue(QueryContexts.BY_SEGMENT_KEY)).andReturn(false).anyTimes();
   }
 
   @After
@@ -201,7 +202,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   {
     expect(dataSourceAnalysis.isJoin()).andReturn(false);
     reset(query);
-    expect(query.getContextValue("bySegment")).andReturn(true).anyTimes();
+    expect(query.getContextValue(QueryContexts.BY_SEGMENT_KEY)).andReturn(true).anyTimes();
     replayAll();
     CachingClusteredClient.CacheKeyManager<Object> keyManager = makeKeyManager();
     Set<SegmentServerSelector> selectors = ImmutableSet.of(
@@ -270,7 +271,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   public void testSegmentQueryCacheKey_noCachingIfBySegment()
   {
     reset(query);
-    expect(query.getContextValue("bySegment")).andReturn(true).anyTimes();
+    expect(query.getContextValue(QueryContexts.BY_SEGMENT_KEY)).andReturn(true).anyTimes();
     replayAll();
     byte[] cacheKey = makeKeyManager().computeSegmentLevelQueryCacheKey();
     Assert.assertNull(cacheKey);

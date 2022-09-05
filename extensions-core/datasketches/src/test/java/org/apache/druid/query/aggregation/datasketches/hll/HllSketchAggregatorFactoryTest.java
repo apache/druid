@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregat
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.easymock.EasyMock;
@@ -80,6 +81,17 @@ public class HllSketchAggregatorFactoryTest
     Assert.assertEquals(LG_K, aggregatorFactory.getLgK());
     Assert.assertEquals(TGT_HLL_TYPE, aggregatorFactory.getTgtHllType());
     Assert.assertEquals(ROUND, aggregatorFactory.isRound());
+  }
+
+
+  @Test
+  public void testWithName()
+  {
+    List<AggregatorFactory> aggregatorFactories = target.getRequiredColumns();
+    Assert.assertEquals(1, aggregatorFactories.size());
+    HllSketchAggregatorFactory aggregatorFactory = (HllSketchAggregatorFactory) aggregatorFactories.get(0);
+    Assert.assertEquals(aggregatorFactory, aggregatorFactory.withName(aggregatorFactory.getName()));
+    Assert.assertEquals("newTest", aggregatorFactory.withName("newTest").getName());
   }
 
   @Test
@@ -283,19 +295,19 @@ public class HllSketchAggregatorFactoryTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
+                    .add("count", ColumnType.LONG)
                     .add("hllBuild", null)
                     .add("hllBuildRound", null)
                     .add("hllMerge", null)
                     .add("hllMergeRound", null)
-                    .add("hllBuild-access", ValueType.COMPLEX)
-                    .add("hllBuild-finalize", ValueType.DOUBLE)
-                    .add("hllBuildRound-access", ValueType.COMPLEX)
-                    .add("hllBuildRound-finalize", ValueType.LONG)
-                    .add("hllMerge-access", ValueType.COMPLEX)
-                    .add("hllMerge-finalize", ValueType.DOUBLE)
-                    .add("hllMergeRound-access", ValueType.COMPLEX)
-                    .add("hllMergeRound-finalize", ValueType.LONG)
+                    .add("hllBuild-access", HllSketchBuildAggregatorFactory.TYPE)
+                    .add("hllBuild-finalize", ColumnType.DOUBLE)
+                    .add("hllBuildRound-access", HllSketchBuildAggregatorFactory.TYPE)
+                    .add("hllBuildRound-finalize", ColumnType.LONG)
+                    .add("hllMerge-access", HllSketchMergeAggregatorFactory.TYPE)
+                    .add("hllMerge-finalize", ColumnType.DOUBLE)
+                    .add("hllMergeRound-access", HllSketchMergeAggregatorFactory.TYPE)
+                    .add("hllMergeRound-finalize", ColumnType.LONG)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
@@ -351,15 +363,21 @@ public class HllSketchAggregatorFactoryTest
     }
 
     @Override
-    public String getComplexTypeName()
+    public ColumnType getIntermediateType()
     {
-      return DUMMY_TYPE_NAME;
+      return new ColumnType(ValueType.COMPLEX, DUMMY_TYPE_NAME, null);
     }
 
     @Override
     public int getMaxIntermediateSize()
     {
       return DUMMY_SIZE;
+    }
+
+    @Override
+    public AggregatorFactory withName(String newName)
+    {
+      return new TestHllSketchAggregatorFactory(newName, getFieldName(), getLgK(), getTgtHllType(), isRound());
     }
   }
 }

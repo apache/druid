@@ -39,6 +39,7 @@ import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -66,7 +67,7 @@ public class TimeseriesQueryEngine
   @VisibleForTesting
   public TimeseriesQueryEngine()
   {
-    this.bufferPool = new StupidPool<>("dummy", () -> ByteBuffer.allocate(1000000));
+    this.bufferPool = new StupidPool<>("dummy", () -> ByteBuffer.allocate(10000000));
   }
 
   @Inject
@@ -81,7 +82,11 @@ public class TimeseriesQueryEngine
    * Run a single-segment, single-interval timeseries query on a particular adapter. The query must have been
    * scoped down to a single interval before calling this method.
    */
-  public Sequence<Result<TimeseriesResultValue>> process(final TimeseriesQuery query, final StorageAdapter adapter)
+  public Sequence<Result<TimeseriesResultValue>> process(
+      final TimeseriesQuery query,
+      final StorageAdapter adapter,
+      @Nullable final TimeseriesQueryMetrics timeseriesQueryMetrics
+  )
   {
     if (adapter == null) {
       throw new SegmentMissingException(
@@ -94,18 +99,20 @@ public class TimeseriesQueryEngine
     final Granularity gran = query.getGranularity();
     final boolean descending = query.isDescending();
 
+    final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(adapter);
+
     final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
-        query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(adapter))
+        adapter.canVectorize(filter, query.getVirtualColumns(), descending)
         && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)
-        && adapter.canVectorize(filter, query.getVirtualColumns(), descending)
+        && query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(inspector))
     );
 
     final Sequence<Result<TimeseriesResultValue>> result;
 
     if (doVectorize) {
-      result = processVectorized(query, adapter, filter, interval, gran, descending);
+      result = processVectorized(query, adapter, filter, interval, gran, descending, timeseriesQueryMetrics);
     } else {
-      result = processNonVectorized(query, adapter, filter, interval, gran, descending);
+      result = processNonVectorized(query, adapter, filter, interval, gran, descending, timeseriesQueryMetrics);
     }
 
     final int limit = query.getLimit();
@@ -122,7 +129,8 @@ public class TimeseriesQueryEngine
       @Nullable final Filter filter,
       final Interval queryInterval,
       final Granularity gran,
-      final boolean descending
+      final boolean descending,
+      final TimeseriesQueryMetrics timeseriesQueryMetrics
   )
   {
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
@@ -134,7 +142,7 @@ public class TimeseriesQueryEngine
         query.getVirtualColumns(),
         descending,
         QueryContexts.getVectorSize(query),
-        null
+        timeseriesQueryMetrics
     );
 
     if (cursor == null) {
@@ -153,7 +161,7 @@ public class TimeseriesQueryEngine
       );
 
       if (granularizer == null) {
-        return Sequences.empty();
+        return Sequences.withBaggage(Sequences.empty(), closer);
       }
 
       final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
@@ -248,7 +256,8 @@ public class TimeseriesQueryEngine
       @Nullable final Filter filter,
       final Interval queryInterval,
       final Granularity gran,
-      final boolean descending
+      final boolean descending,
+      final TimeseriesQueryMetrics timeseriesQueryMetrics
   )
   {
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
@@ -296,7 +305,8 @@ public class TimeseriesQueryEngine
               agg.close();
             }
           }
-        }
+        },
+        timeseriesQueryMetrics
     );
   }
 }

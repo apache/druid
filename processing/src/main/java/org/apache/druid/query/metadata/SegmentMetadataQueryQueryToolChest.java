@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -55,19 +54,19 @@ import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.timeline.LogicalSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.function.BinaryOperator;
 
 public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
@@ -75,16 +74,10 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   private static final TypeReference<SegmentAnalysis> TYPE_REFERENCE = new TypeReference<SegmentAnalysis>()
   {
   };
-  private static final byte[] SEGMENT_METADATA_CACHE_PREFIX = new byte[]{0x4};
+  private static final byte SEGMENT_METADATA_CACHE_PREFIX = 0x4;
   private static final byte SEGMENT_METADATA_QUERY = 0x16;
-  private static final Function<SegmentAnalysis, SegmentAnalysis> MERGE_TRANSFORM_FN = new Function<SegmentAnalysis, SegmentAnalysis>()
-  {
-    @Override
-    public SegmentAnalysis apply(SegmentAnalysis analysis)
-    {
-      return finalizeAnalysis(analysis);
-    }
-  };
+  private static final Function<SegmentAnalysis, SegmentAnalysis> MERGE_TRANSFORM_FN =
+      SegmentMetadataQueryQueryToolChest::finalizeAnalysis;
 
   private final SegmentMetadataQueryConfig config;
   private final GenericQueryMetricsFactory queryMetricsFactory;
@@ -117,7 +110,8 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           ResponseContext context
       )
       {
-        SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) queryPlus.getQuery()).withFinalizedAnalysisTypes(config);
+        SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) queryPlus.getQuery()).withFinalizedAnalysisTypes(
+            config);
         QueryPlus<SegmentAnalysis> updatedQueryPlus = queryPlus.withQuery(updatedQuery);
         return new MappedSequence<>(
             CombiningSequence.create(
@@ -144,7 +138,12 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public BinaryOperator<SegmentAnalysis> createMergeFn(Query<SegmentAnalysis> query)
   {
-    return (arg1, arg2) -> mergeAnalyses(arg1, arg2, ((SegmentMetadataQuery) query).isLenientAggregatorMerge());
+    return (arg1, arg2) -> mergeAnalyses(
+        Iterables.getFirst(query.getDataSource().getTableNames(), null),
+        arg1,
+        arg2,
+        ((SegmentMetadataQuery) query).isLenientAggregatorMerge()
+    );
   }
 
   @Override
@@ -195,13 +194,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       public byte[] computeCacheKey(SegmentMetadataQuery query)
       {
         SegmentMetadataQuery updatedQuery = query.withFinalizedAnalysisTypes(config);
-        byte[] includerBytes = updatedQuery.getToInclude().getCacheKey();
-        byte[] analysisTypesBytes = updatedQuery.getAnalysisTypesCacheKey();
-        return ByteBuffer.allocate(1 + includerBytes.length + analysisTypesBytes.length)
-                         .put(SEGMENT_METADATA_CACHE_PREFIX)
-                         .put(includerBytes)
-                         .put(analysisTypesBytes)
-                         .array();
+        return new CacheKeyBuilder(SEGMENT_METADATA_CACHE_PREFIX).appendCacheable(updatedQuery.getToInclude())
+                                                                 .appendCacheables(updatedQuery.getAnalysisTypes())
+                                                                 .build();
       }
 
       @Override
@@ -223,27 +218,13 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       @Override
       public Function<SegmentAnalysis, SegmentAnalysis> prepareForCache(boolean isResultLevelCache)
       {
-        return new Function<SegmentAnalysis, SegmentAnalysis>()
-        {
-          @Override
-          public SegmentAnalysis apply(@Nullable SegmentAnalysis input)
-          {
-            return input;
-          }
-        };
+        return input -> input;
       }
 
       @Override
       public Function<SegmentAnalysis, SegmentAnalysis> pullFromCache(boolean isResultLevelCache)
       {
-        return new Function<SegmentAnalysis, SegmentAnalysis>()
-        {
-          @Override
-          public SegmentAnalysis apply(@Nullable SegmentAnalysis input)
-          {
-            return input;
-          }
-        };
+        return input -> input;
       }
     };
   }
@@ -266,22 +247,16 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     return Lists.newArrayList(
         Iterables.filter(
             segments,
-            new Predicate<T>()
-            {
-              @Override
-              public boolean apply(T input)
-              {
-                return (input.getInterval().overlaps(targetInterval));
-              }
-            }
+            input -> (input.getInterval().overlaps(targetInterval))
         )
     );
   }
 
   @VisibleForTesting
   public static SegmentAnalysis mergeAnalyses(
-      final SegmentAnalysis arg1,
-      final SegmentAnalysis arg2,
+      @Nullable String dataSource,
+      SegmentAnalysis arg1,
+      SegmentAnalysis arg2,
       boolean lenientAggregatorMerge
   )
   {
@@ -291,6 +266,19 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
     if (arg2 == null) {
       return arg1;
+    }
+
+    // Swap arg1, arg2 so the later-ending interval is first. This ensures we prefer the latest column order.
+    // We're preserving it so callers can see columns in their natural order.
+    if (dataSource != null) {
+      final SegmentId id1 = SegmentId.tryParse(dataSource, arg1.getId());
+      final SegmentId id2 = SegmentId.tryParse(dataSource, arg2.getId());
+
+      if (id1 != null && id2 != null && id2.getIntervalEnd().isAfter(id1.getIntervalEnd())) {
+        final SegmentAnalysis tmp = arg1;
+        arg1 = arg2;
+        arg2 = tmp;
+      }
     }
 
     List<Interval> newIntervals = null;
@@ -306,7 +294,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
     final Map<String, ColumnAnalysis> leftColumns = arg1.getColumns();
     final Map<String, ColumnAnalysis> rightColumns = arg2.getColumns();
-    Map<String, ColumnAnalysis> columns = new TreeMap<>();
+    final LinkedHashMap<String, ColumnAnalysis> columns = new LinkedHashMap<>();
 
     Set<String> rightColumnNames = Sets.newHashSet(rightColumns.keySet());
     for (Map.Entry<String, ColumnAnalysis> entry : leftColumns.entrySet()) {

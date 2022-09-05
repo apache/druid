@@ -26,12 +26,10 @@ import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.kafka.clients.admin.Admin;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.utils.Time;
 import scala.Some;
-import scala.collection.immutable.List$;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -89,14 +87,14 @@ public class TestBroker implements Closeable
         config,
         Time.SYSTEM,
         Some.apply(StringUtils.format("TestingBroker[%d]-", id)),
-        List$.MODULE$.empty()
+        false
     );
     server.startup();
   }
 
   public int getPort()
   {
-    return server.socketServer().config().port();
+    return server.advertisedListeners().apply(0).port();
   }
 
   public KafkaProducer<byte[], byte[]> newProducer()
@@ -114,11 +112,6 @@ public class TestBroker implements Closeable
     final Map<String, Object> props = new HashMap<>();
     commonClientProperties(props);
     return props;
-  }
-
-  public KafkaConsumer<byte[], byte[]> newConsumer()
-  {
-    return new KafkaConsumer<>(consumerProperties());
   }
 
   public Map<String, Object> producerProperties()

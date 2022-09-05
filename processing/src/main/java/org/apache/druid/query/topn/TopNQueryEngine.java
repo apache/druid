@@ -33,6 +33,7 @@ import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.Interval;
@@ -188,11 +189,11 @@ public class TopNQueryEngine
       return false;
     }
 
-    if (query.getDimensionSpec().getOutputType() != ValueType.STRING) {
+    if (!query.getDimensionSpec().getOutputType().is(ValueType.STRING)) {
       // non-string output cannot use the pooled algorith, even if the underlying selector supports it
       return false;
     }
-    if (capabilities != null && capabilities.getType() == ValueType.STRING) {
+    if (Types.is(capabilities, ValueType.STRING)) {
       // string columns must use the on heap algorithm unless they have the following capabilites
       return capabilities.isDictionaryEncoded().isTrue() && capabilities.areDictionaryValuesUnique().isTrue();
     } else {
@@ -202,7 +203,7 @@ public class TopNQueryEngine
   }
 
   /**
-   * {@link ExtractionFn} which are one to one may have their execution deferred until as late as possible, since the
+   * {@link ExtractionFn} which are one to one may have their execution deferred until as late as possible, since
    * which value is used as the grouping key itself doesn't particularly matter. For top-n, this method allows the
    * query to be transformed in {@link TopNQueryQueryToolChest#preMergeQueryDecoration} to strip off the
    * {@link ExtractionFn} on the broker, so that a more optimized algorithm (e.g. {@link PooledTopNAlgorithm}) can be

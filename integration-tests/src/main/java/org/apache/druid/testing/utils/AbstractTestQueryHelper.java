@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Druids;
@@ -40,33 +41,55 @@ import java.util.function.Function;
 
 public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQueryWithResults>
 {
-
   public static final Logger LOG = new Logger(TestQueryHelper.class);
 
-  private final AbstractQueryResourceTestClient queryClient;
-  private final ObjectMapper jsonMapper;
+  protected final AbstractQueryResourceTestClient queryClient;
+  protected final ObjectMapper jsonMapper;
   protected final String broker;
   protected final String brokerTLS;
   protected final String router;
   protected final String routerTLS;
 
-
   @Inject
   AbstractTestQueryHelper(
       ObjectMapper jsonMapper,
-      AbstractQueryResourceTestClient queryClient,
+      AbstractQueryResourceTestClient<?> queryClient,
       IntegrationTestingConfig config
+  )
+  {
+    this(
+        jsonMapper,
+        queryClient,
+        config.getBrokerUrl(),
+        config.getBrokerTLSUrl(),
+        config.getRouterUrl(),
+        config.getRouterTLSUrl()
+    );
+  }
+
+  AbstractTestQueryHelper(
+      ObjectMapper jsonMapper,
+      AbstractQueryResourceTestClient<?> queryClient,
+      String broker,
+      String brokerTLS,
+      String router,
+      String routerTLS
   )
   {
     this.jsonMapper = jsonMapper;
     this.queryClient = queryClient;
-    this.broker = config.getBrokerUrl();
-    this.brokerTLS = config.getBrokerTLSUrl();
-    this.router = config.getRouterUrl();
-    this.routerTLS = config.getRouterTLSUrl();
+    this.broker = broker;
+    this.brokerTLS = brokerTLS;
+    this.router = router;
+    this.routerTLS = routerTLS;
   }
 
   public abstract String getQueryURL(String schemeAndHost);
+
+  public String getCancelUrl(String schemaAndHost, String idToCancel)
+  {
+    return StringUtils.format("%s/%s", getQueryURL(schemaAndHost), idToCancel);
+  }
 
   public void testQueriesFromFile(String filePath) throws Exception
   {
@@ -79,9 +102,13 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
   public void testQueriesFromString(String str) throws Exception
   {
     testQueriesFromString(getQueryURL(broker), str);
-    testQueriesFromString(getQueryURL(brokerTLS), str);
+    if (!broker.equals(brokerTLS)) {
+      testQueriesFromString(getQueryURL(brokerTLS), str);
+    }
     testQueriesFromString(getQueryURL(router), str);
-    testQueriesFromString(getQueryURL(routerTLS), str);
+    if (!router.equals(routerTLS)) {
+      testQueriesFromString(getQueryURL(routerTLS), str);
+    }
   }
 
   public void testQueriesFromFile(String url, String filePath) throws Exception
@@ -119,7 +146,9 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
     for (QueryResultType queryWithResult : queries) {
       LOG.info("Running Query %s", queryWithResult.getQuery());
       List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
-      if (!QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults())) {
+      if (!QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults(),
+                                              queryWithResult.getFieldsToTest()
+      )) {
         LOG.error(
             "Failed while executing query %s \n expectedResults: %s \n actualResults : %s",
             queryWithResult.getQuery(),

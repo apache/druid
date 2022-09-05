@@ -39,13 +39,11 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
   private static final int DEFAULT_RECORD_BUFFER_SIZE = 10000;
   private static final int DEFAULT_RECORD_BUFFER_OFFER_TIMEOUT = 5000;
   private static final int DEFAULT_RECORD_BUFFER_FULL_WAIT = 5000;
-  private static final int DEFAULT_FETCH_SEQUENCE_NUMBER_TIMEOUT = 20000;
   private static final int DEFAULT_MAX_RECORDS_PER_POLL = 100;
 
   private final int recordBufferSize;
   private final int recordBufferOfferTimeout;
   private final int recordBufferFullWait;
-  private final int fetchSequenceNumberTimeout;
   private final Integer fetchThreads;
   private final int maxRecordsPerPoll;
 
@@ -62,7 +60,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
-      @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
@@ -70,7 +67,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @JsonProperty("recordBufferSize") Integer recordBufferSize,
       @JsonProperty("recordBufferOfferTimeout") Integer recordBufferOfferTimeout,
       @JsonProperty("recordBufferFullWait") Integer recordBufferFullWait,
-      @JsonProperty("fetchSequenceNumberTimeout") Integer fetchSequenceNumberTimeout,
       @JsonProperty("fetchThreads") Integer fetchThreads,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
@@ -92,7 +88,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         maxPendingPersists,
         indexSpec,
         indexSpecForIntermediatePersists,
-        true,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
@@ -108,8 +103,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
                                     ? DEFAULT_RECORD_BUFFER_OFFER_TIMEOUT
                                     : recordBufferOfferTimeout;
     this.recordBufferFullWait = recordBufferFullWait == null ? DEFAULT_RECORD_BUFFER_FULL_WAIT : recordBufferFullWait;
-    this.fetchSequenceNumberTimeout = fetchSequenceNumberTimeout
-                                      == null ? DEFAULT_FETCH_SEQUENCE_NUMBER_TIMEOUT : fetchSequenceNumberTimeout;
     this.fetchThreads = fetchThreads; // we handle this being null later
     this.maxRecordsPerPoll = maxRecordsPerPoll == null ? DEFAULT_MAX_RECORDS_PER_POLL : maxRecordsPerPoll;
 
@@ -135,12 +128,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
   public int getRecordBufferFullWait()
   {
     return recordBufferFullWait;
-  }
-
-  @JsonProperty
-  public int getFetchSequenceNumberTimeout()
-  {
-    return fetchSequenceNumberTimeout;
   }
 
   @JsonProperty
@@ -170,7 +157,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getMaxPendingPersists(),
         getIndexSpec(),
         getIndexSpecForIntermediatePersists(),
-        true,
         isReportParseExceptions(),
         getHandoffConditionTimeout(),
         isResetOffsetAutomatically(),
@@ -178,7 +164,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getRecordBufferSize(),
         getRecordBufferOfferTimeout(),
         getRecordBufferFullWait(),
-        getFetchSequenceNumberTimeout(),
         getFetchThreads(),
         getSegmentWriteOutMediumFactory(),
         isLogParseExceptions(),
@@ -205,7 +190,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
     return recordBufferSize == that.recordBufferSize &&
            recordBufferOfferTimeout == that.recordBufferOfferTimeout &&
            recordBufferFullWait == that.recordBufferFullWait &&
-           fetchSequenceNumberTimeout == that.fetchSequenceNumberTimeout &&
            maxRecordsPerPoll == that.maxRecordsPerPoll &&
            Objects.equals(fetchThreads, that.fetchThreads);
   }
@@ -218,7 +202,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         recordBufferSize,
         recordBufferOfferTimeout,
         recordBufferFullWait,
-        fetchSequenceNumberTimeout,
         fetchThreads,
         maxRecordsPerPoll
     );
@@ -244,7 +227,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            ", recordBufferSize=" + recordBufferSize +
            ", recordBufferOfferTimeout=" + recordBufferOfferTimeout +
            ", recordBufferFullWait=" + recordBufferFullWait +
-           ", fetchSequenceNumberTimeout=" + fetchSequenceNumberTimeout +
            ", fetchThreads=" + fetchThreads +
            ", segmentWriteOutMediumFactory=" + getSegmentWriteOutMediumFactory() +
            ", logParseExceptions=" + isLogParseExceptions() +

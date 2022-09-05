@@ -78,7 +78,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         DEFAULT_SHARD_SPEC,
         DEFAULT_INDEX_SPEC,
         DEFAULT_INDEX_SPEC,
-        true,
         0,
         0,
         DEFAULT_REPORT_PARSE_EXCEPTIONS,
@@ -127,8 +126,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
       @JsonProperty("shardSpec") ShardSpec shardSpec,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
-      // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
-      @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("persistThreadPriority") int persistThreadPriority,
       @JsonProperty("mergeThreadPriority") int mergeThreadPriority,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
@@ -268,16 +265,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
     return indexSpecForIntermediatePersists;
   }
 
-  /**
-   * Always returns true, doesn't affect the version being built.
-   */
-  @Deprecated
-  @JsonProperty
-  public Boolean getBuildV9Directly()
-  {
-    return true;
-  }
-
   @JsonProperty
   public int getPersistThreadPriority()
   {
@@ -340,7 +327,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         shardSpec,
         indexSpec,
         indexSpecForIntermediatePersists,
-        true,
         persistThreadPriority,
         mergeThreadPriority,
         reportParseExceptions,
@@ -368,7 +354,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         shardSpec,
         indexSpec,
         indexSpecForIntermediatePersists,
-        true,
         persistThreadPriority,
         mergeThreadPriority,
         reportParseExceptions,

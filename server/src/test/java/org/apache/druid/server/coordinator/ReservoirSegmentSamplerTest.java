@@ -174,10 +174,10 @@ public class ReservoirSegmentSamplerTest
     Map<DataSegment, Integer> segmentCountMap = new HashMap<>();
     for (int i = 0; i < iterations; i++) {
       // due to the pseudo-randomness of this method, we may not select a segment every single time no matter what.
-      BalancerSegmentHolder balancerSegmentHolder = ReservoirSegmentSampler.getRandomBalancerSegmentHolder(holderList, Collections.emptySet(), 100);
-      if (balancerSegmentHolder != null) {
-        segmentCountMap.put(balancerSegmentHolder.getSegment(), 1);
-      }
+      segmentCountMap.put(
+          ReservoirSegmentSampler.getRandomBalancerSegmentHolders(holderList, Collections.emptySet(), 1).get(0).getSegment(),
+          1
+      );
     }
 
     for (DataSegment segment : segments) {

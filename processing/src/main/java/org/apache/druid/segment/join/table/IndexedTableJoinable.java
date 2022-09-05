@@ -19,9 +19,13 @@
 
 package org.apache.druid.segment.join.table;
 
+import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinMatcher;
@@ -30,11 +34,11 @@ import org.apache.druid.segment.join.Joinable;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 
 public class IndexedTableJoinable implements Joinable
 {
@@ -89,6 +93,43 @@ public class IndexedTableJoinable implements Joinable
   }
 
   @Override
+  public ColumnValuesWithUniqueFlag getNonNullColumnValues(String columnName, final int maxNumValues)
+  {
+    final int columnPosition = table.rowSignature().indexOf(columnName);
+
+    if (columnPosition < 0) {
+      return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
+    }
+
+    try (final IndexedTable.Reader reader = table.columnReader(columnPosition)) {
+      // Sorted set to encourage "in" filters that result from this method to do dictionary lookups in order.
+      // The hopes are that this will improve locality and therefore improve performance.
+      final Set<String> allValues = createValuesSet();
+      boolean allUnique = true;
+
+      for (int i = 0; i < table.numRows(); i++) {
+        final String s = DimensionHandlerUtils.convertObjectToString(reader.read(i));
+
+        if (!NullHandling.isNullOrEquivalent(s)) {
+          if (!allValues.add(s)) {
+            // Duplicate found
+            allUnique = false;
+          }
+
+          if (allValues.size() > maxNumValues) {
+            return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
+          }
+        }
+      }
+
+      return new ColumnValuesWithUniqueFlag(allValues, allUnique);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
   public Optional<Set<String>> getCorrelatedColumnValues(
       String searchColumnName,
       String searchColumnValue,
@@ -104,7 +145,7 @@ public class IndexedTableJoinable implements Joinable
       return Optional.empty();
     }
     try (final Closer closer = Closer.create()) {
-      Set<String> correlatedValues = new HashSet<>();
+      Set<String> correlatedValues = createValuesSet();
       if (table.keyColumns().contains(searchColumnName)) {
         IndexedTable.Index index = table.columnIndex(filterColumnPosition);
         IndexedTable.Reader reader = table.columnReader(correlatedColumnPosition);
@@ -112,7 +153,7 @@ public class IndexedTableJoinable implements Joinable
         IntList rowIndex = index.find(searchColumnValue);
         for (int i = 0; i < rowIndex.size(); i++) {
           int rowNum = rowIndex.getInt(i);
-          String correlatedDimVal = Objects.toString(reader.read(rowNum), null);
+          String correlatedDimVal = DimensionHandlerUtils.convertObjectToString(reader.read(rowNum));
           correlatedValues.add(correlatedDimVal);
 
           if (correlatedValues.size() > maxCorrelationSetSize) {
@@ -132,7 +173,7 @@ public class IndexedTableJoinable implements Joinable
         for (int i = 0; i < table.numRows(); i++) {
           String dimVal = Objects.toString(dimNameReader.read(i), null);
           if (searchColumnValue.equals(dimVal)) {
-            String correlatedDimVal = Objects.toString(correlatedColumnReader.read(i), null);
+            String correlatedDimVal = DimensionHandlerUtils.convertObjectToString(correlatedColumnReader.read(i));
             correlatedValues.add(correlatedDimVal);
             if (correlatedValues.size() > maxCorrelationSetSize) {
               return Optional.empty();
@@ -152,5 +193,13 @@ public class IndexedTableJoinable implements Joinable
   public Optional<Closeable> acquireReferences()
   {
     return table.acquireReferences();
+  }
+
+  /**
+   * Create a Set that InDimFilter will accept without incurring a copy.
+   */
+  private static Set<String> createValuesSet()
+  {
+    return new TreeSet<>(Comparators.naturalNullsFirst());
   }
 }

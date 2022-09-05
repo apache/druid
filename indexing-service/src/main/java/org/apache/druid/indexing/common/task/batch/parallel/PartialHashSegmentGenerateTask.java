@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -33,7 +34,6 @@ import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalys
 import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.Interval;
 
@@ -57,6 +57,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
+  private final String subtaskSpecId;
   @Nullable
   private final Map<Interval, Integer> intervalToNumShardsOverride;
 
@@ -67,6 +68,8 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
       @JsonProperty("groupId") final String groupId,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
+      // subtaskSpecId can be null only for old task versions.
+      @JsonProperty("subtaskSpecId") @Nullable final String subtaskSpecId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty(PROP_SPEC) final ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
@@ -83,6 +86,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
         new DefaultIndexTaskInputRowIteratorBuilder()
     );
 
+    this.subtaskSpecId = subtaskSpecId;
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
@@ -105,6 +109,13 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
   public String getSupervisorTaskId()
   {
     return supervisorTaskId;
+  }
+
+  @JsonProperty
+  @Override
+  public String getSubtaskSpecId()
+  {
+    return subtaskSpecId;
   }
 
   @Nullable
@@ -139,7 +150,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
     return SegmentAllocators.forNonLinearPartitioning(
         toolbox,
         getDataSource(),
-        getId(),
+        getSubtaskSpecId(),
         granularitySpec,
         new SupervisorTaskAccess(supervisorTaskId, taskClient),
         createHashPartitionAnalysisFromPartitionsSpec(
@@ -151,25 +162,12 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
   }
 
   @Override
-  GeneratedPartitionsMetadataReport createGeneratedPartitionsReport(TaskToolbox toolbox, List<DataSegment> segments)
+  GeneratedPartitionsMetadataReport createGeneratedPartitionsReport(TaskToolbox toolbox, List<DataSegment> segments, Map<String, TaskReport> taskReport)
   {
-    List<GenericPartitionStat> partitionStats = segments.stream()
-                                                        .map(segment -> createPartitionStat(toolbox, segment))
+    List<PartitionStat> partitionStats = segments.stream()
+                                                        .map(segment -> toolbox.getIntermediaryDataManager().generatePartitionStat(toolbox, segment))
                                                         .collect(Collectors.toList());
-    return new GeneratedPartitionsMetadataReport(getId(), partitionStats);
-  }
-
-  private GenericPartitionStat createPartitionStat(TaskToolbox toolbox, DataSegment segment)
-  {
-    return new GenericPartitionStat(
-        toolbox.getTaskExecutorNode().getHost(),
-        toolbox.getTaskExecutorNode().getPortToUse(),
-        toolbox.getTaskExecutorNode().isEnableTlsPort(),
-        segment.getInterval(),
-        (BucketNumberedShardSpec) segment.getShardSpec(),
-        null, // numRows is not supported yet
-        null  // sizeBytes is not supported yet
-    );
+    return new GeneratedPartitionsMetadataReport(getId(), partitionStats, taskReport);
   }
 
   /**

@@ -64,6 +64,7 @@ public class QueryableModule implements DruidModule
     return Collections.singletonList(
         new SimpleModule("QueryableModule")
             .registerSubtypes(
+                NoopRequestLoggerProvider.class,
                 EmittingRequestLoggerProvider.class,
                 FileRequestLoggerProvider.class,
                 LoggingRequestLoggerProvider.class,

@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.last;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 
 /**
  * For backwards compatibility; equivalent to a regular StringLastAggregatorFactory.
@@ -29,6 +30,12 @@ public class StringLastFoldingAggregatorFactory extends StringLastAggregatorFact
   @JsonCreator
   public StringLastFoldingAggregatorFactory(String name, String fieldName, Integer maxStringBytes)
   {
-    super(name, fieldName, maxStringBytes);
+    super(name, fieldName, null, maxStringBytes);
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new StringLastFoldingAggregatorFactory(newName, getFieldName(), getMaxStringBytes());
   }
 }

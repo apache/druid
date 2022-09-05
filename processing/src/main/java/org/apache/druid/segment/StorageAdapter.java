@@ -19,13 +19,16 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.collect.Iterables;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Optional;
 
 /**
  */
@@ -37,14 +40,46 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
   Iterable<String> getAvailableMetrics();
 
   /**
-   * Returns the number of distinct values for the given column if known, or {@link Integer#MAX_VALUE} if unknown,
-   * e. g. the column is numeric. If the column doesn't exist, returns 0.
+   * Returns the row signature of the data available from this adapter. For mutable adapters, even though the signature
+   * may evolve over time, any particular object returned by this method is an immutable snapshot.
+   */
+  default RowSignature getRowSignature()
+  {
+    final RowSignature.Builder builder = RowSignature.builder();
+    builder.addTimeColumn();
+
+    for (final String column : Iterables.concat(getAvailableDimensions(), getAvailableMetrics())) {
+      builder.add(
+          column,
+          Optional.ofNullable(getColumnCapabilities(column)).map(ColumnCapabilities::toColumnType).orElse(null)
+      );
+    }
+
+    return builder.build();
+  }
+
+  /**
+   * Returns the number of distinct values for a column, or {@link DimensionDictionarySelector#CARDINALITY_UNKNOWN}
+   * if unknown.
+   *
+   * If the column doesn't exist, returns 1, because a column that doesn't exist is treated as a column of default
+   * (or null) values.
    */
   int getDimensionCardinality(String column);
   DateTime getMinTime();
   DateTime getMaxTime();
+
+  /**
+   * Returns the minimum value of the provided column, if known through an index, dictionary, or cache. Returns null
+   * if not known. Does not scan the column to find the minimum value.
+   */
   @Nullable
   Comparable getMinValue(String column);
+
+  /**
+   * Returns the minimum value of the provided column, if known through an index, dictionary, or cache. Returns null
+   * if not known. Does not scan the column to find the maximum value.
+   */
   @Nullable
   Comparable getMaxValue(String column);
 
@@ -66,14 +101,22 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
   @Nullable
   ColumnCapabilities getColumnCapabilities(String column);
 
-  /**
-   * Like {@link ColumnCapabilities#getType()}, but may return a more descriptive string for complex columns.
-   * @param column column name
-   * @return type name
-   */
-  @Nullable
-  String getColumnTypeName(String column);
   int getNumRows();
   DateTime getMaxIngestedEventTime();
+
+  @Nullable
   Metadata getMetadata();
+
+  /**
+   * Returns true if this storage adapter can filter some rows out. The actual column cardinality can be lower than
+   * what {@link #getDimensionCardinality} returns if this returns true. Dimension selectors for such storage adapter
+   * can return non-contiguous dictionary IDs because the dictionary IDs in filtered rows will not be returned.
+   * Note that the number of rows accessible via this storage adapter will not necessarily decrease because of
+   * the built-in filters. For inner joins, for example, the number of joined rows can be larger than
+   * the number of rows in the base adapter even though this method returns true.
+   */
+  default boolean hasBuiltInFilters()
+  {
+    return false;
+  }
 }

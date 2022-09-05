@@ -25,17 +25,21 @@ import org.apache.druid.java.util.common.StringUtils;
 import javax.annotation.Nullable;
 
 /**
- * This enumeration defines the Druid type system used to indicate the type of data stored in columns and produced by
- * expressions and aggregations, used to allow query processing engine algorithms to compute results, used to compute query result
- * row signatures, and all other type needs.
+ * This enumeration defines the high level classification of the Druid type system, used by {@link ColumnType} to
+ * indicate the type of data stored in columns and produced by expressions and aggregations, used to allow query
+ * processing engine algorithms to compute results, used to compute query result row signatures, and all other type
+ * needs.
  *
- * Currently only the primitive types ({@link #isPrimitive()} is true) and {@link #COMPLEX} can be stored in columns
+ * Currently, only the primitive types ({@link #isPrimitive()} is true) and {@link #COMPLEX} can be stored in columns
  * and are also the only types handled directly by the query engines. Array types can currently be produced by
  * expressions and by some post-aggregators, but do not currently have special engine handling, and should be used by
  * implementors sparingly until full engine support is in place. Aggregators should never specify array types as their
  * output type until the engines fully support these types.
+ *
+ * @see ColumnType
+ * @see TypeSignature
  */
-public enum ValueType
+public enum ValueType implements TypeDescriptor
 {
   /**
    * 64-bit double precision floating point number primitive type. This type may be used as a grouping key, or as an
@@ -59,39 +63,46 @@ public enum ValueType
    * String object type. This type may be used as a grouping key, an input to certain types of complex sketch
    * aggregators, and as an input to expression virtual columns. String types might potentially be 'multi-valued' when
    * stored in segments, and contextually at various layers of query processing, but this information is not available
-   * through this enum alone, and must be accompany this type indicator to properly handle.
+   * at this level.
+   *
+   * Strings are typically represented as {@link String}. Multi-value strings appear as {@link java.util.List<String>}
+   * when necessary to represent multiple values, and can vary between string and list from one row to the next.
    */
   STRING,
   /**
-   * Array object of 64-bit double precision floating point numbers. This type is not currently supported as a grouping
-   * key for aggregations, cannot be used as an input for numerical primitive aggregations such as sums, and may have
-   * limited support as an input among complex type sketch aggregators.
-   */
-  DOUBLE_ARRAY,
-  /**
-   * Array object of 64-bit integer numbers. This type is not currently supported as a grouping key for aggregations,
-   * and may have limited support as an input among complex type sketch aggregators.
-   */
-  LONG_ARRAY,
-  /**
-   * Array object of String objects. This type is not currently supported as a grouping key for aggregations,
-   * and may have limited support as an input among complex type sketch aggregators.
-   */
-  STRING_ARRAY,
-  /**
    * Placeholder for arbitrary 'complex' types, which have a corresponding serializer/deserializer implementation. Note
    * that knowing a type is complex alone isn't enough information to work with it directly, and additional information
-   * in the form of a type name that is registered in the complex type registry must be available to make this type
-   * meaningful. This type is not currently supported as a grouping key for aggregations, and may not be used as an
-   * input to expression virtual columns, and might only be supported by the specific aggregators crafted to handle
-   * this complex type.
+   * in the form of a type name which must be registered in the complex type registry. Complex types are not currently
+   * supported as a grouping key for aggregations. Complex types can be used as inputs to aggregators, in cases where
+   * the specific aggregator supports the specific complex type. Filtering on these types with standard filters is not
+   * well supported, and will be treated as null values.
+   *
+   * These types are represented by the individual Java type associated with the complex type name as defined in the
+   * type registry.
    */
-  COMPLEX;
+  COMPLEX,
+
+  /**
+   * Placeholder for arbitrary arrays of other {@link ValueType}. This type has limited support as a grouping
+   * key for aggregations, ARRAY of STRING, LONG, DOUBLE, and FLOAT are supported, but ARRAY types in general are not.
+   * ARRAY types cannot be used as an input for numerical primitive aggregations such as sums, and have limited support
+   * as an input among complex type sketch aggregators.
+   *
+   * There are currently no native ARRAY typed columns, but they may be produced by expression virtual columns,
+   * aggregators, and post-aggregators.
+   *
+   * Arrays are represented as Object[], long[], double[], or float[]. The preferred type is Object[], since the
+   * expression system is the main consumer of arrays, and the expression system uses Object[] internally. Some code
+   * represents arrays in other ways; in particular the groupBy engine and SQL result layer. Over time we expect these
+   * usages to migrate to Object[], long[], double[], and float[].
+   */
+  ARRAY;
 
 
   /**
    * Type is a numeric type, not including numeric array types
    */
+  @Override
   public boolean isNumeric()
   {
     return isNumeric(this);
@@ -100,6 +111,7 @@ public enum ValueType
   /**
    * Type is an array type
    */
+  @Override
   public boolean isArray()
   {
     return isArray(this);
@@ -107,11 +119,12 @@ public enum ValueType
 
   /**
    * Type is a 'primitive' type, which includes the {@link #isNumeric} types and {@link #STRING}, but not
-   * {@link #COMPLEX} or array types.
+   * {@link #COMPLEX} or {@link #ARRAY} types.
    *
    * Primitive types support being used for grouping to compute aggregates in both group by and top-n query engines,
-   * while non-primitive types currently do not
+   * while non-primitive types currently do not.
    */
+  @Override
   public boolean isPrimitive()
   {
     return this.equals(ValueType.STRING) || isNumeric(this);
@@ -134,6 +147,6 @@ public enum ValueType
 
   public static boolean isArray(ValueType type)
   {
-    return type == ValueType.DOUBLE_ARRAY || type == ValueType.LONG_ARRAY || type == ValueType.STRING_ARRAY;
+    return type == ValueType.ARRAY;
   }
 }

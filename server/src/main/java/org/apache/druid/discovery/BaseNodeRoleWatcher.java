@@ -108,7 +108,7 @@ public class BaseNodeRoleWatcher
               listener.nodesAdded(currNodes);
               listener.nodeViewInitialized();
             },
-            "Exception occured in nodesAdded([%s]) in listener [%s].", currNodes, listener
+            "Exception occurred in nodesAdded([%s]) in listener [%s].", currNodes, listener
         );
       }
       nodeListeners.add(listener);
@@ -120,7 +120,7 @@ public class BaseNodeRoleWatcher
     synchronized (lock) {
       if (!nodeRole.equals(druidNode.getNodeRole())) {
         LOGGER.error(
-            "Node[%s] of role[%s] addition ignored due to mismatched role (expected role[%s]).",
+            "Node [%s] of role [%s] addition ignored due to mismatched role (expected role [%s]).",
             druidNode.getDruidNode().getUriToUse(),
             druidNode.getNodeRole().getJsonName(),
             nodeRole.getJsonName()
@@ -128,7 +128,7 @@ public class BaseNodeRoleWatcher
         return;
       }
 
-      LOGGER.info("Node[%s] of role[%s] detected.", druidNode.getDruidNode().getUriToUse(), nodeRole.getJsonName());
+      LOGGER.info("Node [%s] of role [%s] detected.", druidNode.getDruidNode().getUriToUse(), nodeRole.getJsonName());
 
       addNode(druidNode);
     }
@@ -145,7 +145,7 @@ public class BaseNodeRoleWatcher
         for (DruidNodeDiscovery.Listener listener : nodeListeners) {
           safeSchedule(
               () -> listener.nodesAdded(newNode),
-              "Exception occured in nodeAdded(node=[%s]) in listener [%s].",
+              "Exception occurred in nodeAdded(node=[%s]) in listener [%s].",
               druidNode.getDruidNode().getHostAndPortToUse(),
               listener
           );
@@ -153,7 +153,7 @@ public class BaseNodeRoleWatcher
       }
     } else {
       LOGGER.error(
-          "Node[%s] of role[%s] discovered but existed already [%s].",
+          "Node [%s] of role [%s] discovered but existed already [%s].",
           druidNode.getDruidNode().getUriToUse(),
           nodeRole.getJsonName(),
           prev
@@ -166,7 +166,7 @@ public class BaseNodeRoleWatcher
     synchronized (lock) {
       if (!nodeRole.equals(druidNode.getNodeRole())) {
         LOGGER.error(
-            "Node[%s] of role[%s] removal ignored due to mismatched role (expected role[%s]).",
+            "Node [%s] of role [%s] removal ignored due to mismatched role (expected role [%s]).",
             druidNode.getDruidNode().getUriToUse(),
             druidNode.getNodeRole().getJsonName(),
             nodeRole.getJsonName()
@@ -174,7 +174,7 @@ public class BaseNodeRoleWatcher
         return;
       }
 
-      LOGGER.info("Node[%s] of role[%s] went offline.", druidNode.getDruidNode().getUriToUse(), nodeRole.getJsonName());
+      LOGGER.info("Node [%s] of role [%s] went offline.", druidNode.getDruidNode().getUriToUse(), nodeRole.getJsonName());
 
       removeNode(druidNode);
     }
@@ -187,7 +187,7 @@ public class BaseNodeRoleWatcher
 
     if (prev == null) {
       LOGGER.error(
-          "Noticed disappearance of unknown druid node [%s] of role[%s].",
+          "Noticed disappearance of unknown druid node [%s] of role [%s].",
           druidNode.getDruidNode().getUriToUse(),
           druidNode.getNodeRole().getJsonName()
       );
@@ -200,7 +200,7 @@ public class BaseNodeRoleWatcher
       for (DruidNodeDiscovery.Listener listener : nodeListeners) {
         safeSchedule(
             () -> listener.nodesRemoved(nodeRemoved),
-            "Exception occured in nodeRemoved(node[%s] of role[%s]) in listener [%s].",
+            "Exception occurred in nodeRemoved(node [%s] of role [%s]) in listener [%s].",
             druidNode.getDruidNode().getUriToUse(),
             druidNode.getNodeRole().getJsonName(),
             listener
@@ -219,18 +219,21 @@ public class BaseNodeRoleWatcher
         return;
       }
 
-      LOGGER.info("Node watcher of role[%s] is now initialized.", nodeRole.getJsonName());
+      // It is important to take a snapshot here as list of nodes might change by the time listeners process
+      // the changes.
+      List<DiscoveryDruidNode> currNodes = Lists.newArrayList(nodes.values());
+      LOGGER.info(
+          "Node watcher of role [%s] is now initialized with %d nodes.",
+          nodeRole.getJsonName(),
+          currNodes.size());
 
       for (DruidNodeDiscovery.Listener listener : nodeListeners) {
-        // It is important to take a snapshot here as list of nodes might change by the time listeners process
-        // the changes.
-        List<DiscoveryDruidNode> currNodes = Lists.newArrayList(nodes.values());
         safeSchedule(
             () -> {
               listener.nodesAdded(currNodes);
               listener.nodeViewInitialized();
             },
-            "Exception occured in nodesAdded([%s]) in listener [%s].",
+            "Exception occurred in nodesAdded([%s]) in listener [%s].",
             currNodes,
             listener
         );
@@ -279,7 +282,7 @@ public class BaseNodeRoleWatcher
                   listener.nodesRemoved(nodesDeleted);
                 }
               },
-              "Exception occured in resetNodes in listener [%s].",
+              "Exception occurred in resetNodes in listener [%s].",
               listener
           );
         }

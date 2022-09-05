@@ -25,7 +25,7 @@ title: "String comparators"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes the native
 > language. For information about functions available in SQL, refer to the
-> [SQL documentation](sql.md#scalar-functions).
+> [SQL documentation](sql-scalar.md).
 
 These sorting orders are used by the [TopNMetricSpec](./topnmetricspec.md), [SearchQuery](./searchquery.md), GroupByQuery's [LimitSpec](./limitspec.md), and [BoundFilter](./filters.md#bound-filter).
 
@@ -49,7 +49,7 @@ This sorting order will try to parse all string values as numbers. Unparseable v
 When comparing two unparseable values (e.g., "hello" and "world"), this ordering will sort by comparing the unparsed strings lexicographically.
 
 ## Strlen
-Sorts values by the their string lengths. When there is a tie, this comparator falls back to using the String compareTo method.
+Sorts values by their string lengths. When there is a tie, this comparator falls back to using the String compareTo method.
 
 ## Version
 Sorts values as versions, e.g.: "10.0 sorts after 9.0", "1.0.0-SNAPSHOT sorts after 1.0.0".

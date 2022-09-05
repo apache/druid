@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.initialization.DruidModule;
@@ -39,7 +40,8 @@ public class IndexingServiceTuningConfigModule implements DruidModule
         new SimpleModule(IndexingServiceTuningConfigModule.class.getSimpleName())
             .registerSubtypes(
                 new NamedType(IndexTuningConfig.class, "index"),
-                new NamedType(ParallelIndexTuningConfig.class, "index_parallel")
+                new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
+                new NamedType(CompactionTask.CompactionTuningConfig.class, "compaction")
             )
     );
   }

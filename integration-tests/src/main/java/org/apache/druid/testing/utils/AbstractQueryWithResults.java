@@ -22,6 +22,7 @@ package org.apache.druid.testing.utils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -29,15 +30,22 @@ public class AbstractQueryWithResults<QueryType>
 {
   private final QueryType query;
   private final List<Map<String, Object>> expectedResults;
+  private final List<String> fieldsToTest;
 
   @JsonCreator
   public AbstractQueryWithResults(
       @JsonProperty("query") QueryType query,
-      @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults
+      @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults,
+      @JsonProperty("fieldsToTest") List<String> fieldsToTest
   )
   {
     this.query = query;
     this.expectedResults = expectedResults;
+    if (fieldsToTest != null) {
+      this.fieldsToTest = fieldsToTest;
+    } else {
+      this.fieldsToTest = Collections.emptyList();
+    }
   }
 
   @JsonProperty
@@ -52,12 +60,19 @@ public class AbstractQueryWithResults<QueryType>
     return expectedResults;
   }
 
+  @JsonProperty
+  public List<String> getFieldsToTest()
+  {
+    return fieldsToTest;
+  }
+
   @Override
   public String toString()
   {
     return "QueryWithResults{" +
            "query=" + query +
            ", expectedResults=" + expectedResults +
+           ", fieldsToTest=" + fieldsToTest +
            '}';
   }
 }

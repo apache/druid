@@ -64,7 +64,7 @@ public class CachingLocalSegmentAllocator implements SegmentAllocatorForBatch
   CachingLocalSegmentAllocator(
       TaskToolbox toolbox,
       String dataSource,
-      String taskId,
+      String baseSequenceName,
       GranularitySpec granularitySpec,
       @Nullable SupervisorTaskAccess supervisorTaskAccess,
       CompletePartitionAnalysis<?, ?> partitionAnalysis
@@ -88,7 +88,7 @@ public class CachingLocalSegmentAllocator implements SegmentAllocatorForBatch
     );
 
     sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(
-        taskId,
+        baseSequenceName,
         new ShardSpecs(intervalToShardSpecs, granularitySpec.getQueryGranularity())
     );
 

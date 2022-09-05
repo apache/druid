@@ -20,10 +20,11 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -47,9 +48,12 @@ public class MultipleFileTaskReportFileWriter implements TaskReportFileWriter
     try {
       final File reportsFileParent = reportsFile.getParentFile();
       if (reportsFileParent != null) {
-        FileUtils.forceMkdir(reportsFileParent);
+        FileUtils.mkdirp(reportsFileParent);
       }
-      objectMapper.writeValue(reportsFile, reports);
+
+      try (final FileOutputStream outputStream = new FileOutputStream(reportsFile)) {
+        SingleFileTaskReportFileWriter.writeReportToStream(objectMapper, outputStream, reports);
+      }
     }
     catch (Exception e) {
       log.error(e, "Encountered exception in write().");

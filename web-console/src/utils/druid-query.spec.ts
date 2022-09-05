@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import { sane } from 'druid-query-toolkit/build/test-utils';
+import { sane } from 'druid-query-toolkit';
 
-import { DruidError, getDruidErrorMessage, parseHtmlError, parseQueryPlan } from './druid-query';
+import { DruidError, getDruidErrorMessage, parseHtmlError } from './druid-query';
 
 describe('DruidQuery', () => {
   describe('DruidError.parsePosition', () => {
@@ -94,6 +94,45 @@ describe('DruidQuery', () => {
       `);
     });
 
+    it('works for bad double quotes 1', () => {
+      const sql = sane`
+        SELECT * FROM “wikipedia”
+      `;
+      const suggestion = DruidError.getSuggestion(
+        'Lexical error at line 6, column 60.  Encountered: "\\u201c" (8220), after : ""',
+      );
+      expect(suggestion!.label).toEqual(`Replace fancy quotes with ASCII quotes`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT * FROM "wikipedia"
+      `);
+    });
+
+    it('works for bad double quotes 2', () => {
+      const sql = sane`
+        SELECT * FROM ”wikipedia”
+      `;
+      const suggestion = DruidError.getSuggestion(
+        'Lexical error at line 6, column 60.  Encountered: "\\u201d" (8221), after : ""',
+      );
+      expect(suggestion!.label).toEqual(`Replace fancy quotes with ASCII quotes`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT * FROM "wikipedia"
+      `);
+    });
+
+    it('works for bad double quotes 3', () => {
+      const sql = sane`
+        SELECT * FROM "wikipedia" WHERE "channel" = ‘lol‘
+      `;
+      const suggestion = DruidError.getSuggestion(
+        'Lexical error at line 1, column 45. Encountered: "\\u2018" (8216), after : ""',
+      );
+      expect(suggestion!.label).toEqual(`Replace fancy quotes with ASCII quotes`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT * FROM "wikipedia" WHERE "channel" = 'lol'
+      `);
+    });
+
     it('works for incorrectly quoted literal', () => {
       const sql = sane`
         SELECT *
@@ -111,12 +150,42 @@ describe('DruidQuery', () => {
       `);
     });
 
+    it('works for incorrectly quoted AS alias', () => {
+      const suggestion = DruidError.getSuggestion(`Encountered "AS \\'c\\'" at line 1, column 16.`);
+      expect(suggestion!.label).toEqual(`Replace 'c' with "c"`);
+      expect(suggestion!.fn(`SELECT channel AS 'c' FROM wikipedia`)).toEqual(
+        `SELECT channel AS "c" FROM wikipedia`,
+      );
+    });
+
     it('removes comma (,) before FROM', () => {
       const suggestion = DruidError.getSuggestion(
-        `Encountered "FROM" at line 1, column 14. Was expecting one of: "ABS" ...`,
+        `Encountered ", FROM" at line 1, column 12. Was expecting one of: "ABS" ...`,
       );
       expect(suggestion!.label).toEqual(`Remove , before FROM`);
       expect(suggestion!.fn(`SELECT page, FROM wikipedia WHERE channel = '#ar.wikipedia'`)).toEqual(
+        `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia'`,
+      );
+    });
+
+    it('removes comma (,) before ORDER', () => {
+      const suggestion = DruidError.getSuggestion(
+        `Encountered ", ORDER" at line 1, column 14. Was expecting one of: "ABS" ...`,
+      );
+      expect(suggestion!.label).toEqual(`Remove , before ORDER`);
+      expect(
+        suggestion!.fn(
+          `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia' GROUP BY 1, ORDER BY 1`,
+        ),
+      ).toEqual(`SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia' GROUP BY 1 ORDER BY 1`);
+    });
+
+    it('removes trailing semicolon (;)', () => {
+      const suggestion = DruidError.getSuggestion(
+        `Encountered ";" at line 1, column 59. Was expecting one of: "ABS" ...`,
+      );
+      expect(suggestion!.label).toEqual(`Remove trailing ;`);
+      expect(suggestion!.fn(`SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia';`)).toEqual(
         `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia'`,
       );
     });
@@ -136,10 +205,6 @@ describe('DruidQuery', () => {
 
     it('parseHtmlError', () => {
       expect(getDruidErrorMessage({})).toMatchInlineSnapshot(`undefined`);
-    });
-
-    it('parseQueryPlan', () => {
-      expect(parseQueryPlan('start')).toMatchInlineSnapshot(`"start"`);
     });
   });
 });

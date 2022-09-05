@@ -28,9 +28,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.ISE;
@@ -46,12 +43,10 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -60,24 +55,21 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
 {
   private static final Logger log = new Logger(GroupByMergedQueryRunner.class);
   private final Iterable<QueryRunner<T>> queryables;
-  private final ListeningExecutorService exec;
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final QueryWatcher queryWatcher;
-  private final NonBlockingPool<ByteBuffer> bufferPool;
+  private final QueryProcessingPool queryProcessingPool;
 
   public GroupByMergedQueryRunner(
-      ExecutorService exec,
+      QueryProcessingPool queryProcessingPool,
       Supplier<GroupByQueryConfig> configSupplier,
       QueryWatcher queryWatcher,
-      NonBlockingPool<ByteBuffer> bufferPool,
       Iterable<QueryRunner<T>> queryables
   )
   {
-    this.exec = MoreExecutors.listeningDecorator(exec);
+    this.queryProcessingPool = queryProcessingPool;
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
     this.configSupplier = configSupplier;
-    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -89,8 +81,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
         null,
-        querySpecificConfig,
-        bufferPool
+        querySpecificConfig
     );
     final Pair<Queue, Accumulator<Queue, T>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
     final boolean bySegment = QueryContexts.isBySegment(query);
@@ -109,8 +100,8 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
                       throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                     }
 
-                    ListenableFuture<Void> future = exec.submit(
-                        new AbstractPrioritizedCallable<Void>(priority)
+                    ListenableFuture<Void> future = queryProcessingPool.submitRunnerTask(
+                        new AbstractPrioritizedQueryRunnerCallable<Void, T>(priority, input)
                         {
                           @Override
                           public Void call()
@@ -118,10 +109,10 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
                             try {
                               if (bySegment) {
                                 input.run(threadSafeQueryPlus, responseContext)
-                                     .accumulate(bySegmentAccumulatorPair.lhs, bySegmentAccumulatorPair.rhs);
+                                    .accumulate(bySegmentAccumulatorPair.lhs, bySegmentAccumulatorPair.rhs);
                               } else {
                                 input.run(threadSafeQueryPlus, responseContext)
-                                     .accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+                                    .accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               }
 
                               return null;
@@ -176,7 +167,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
   private void waitForFutureCompletion(
       GroupByQuery query,
       List<ListenableFuture<Void>> futures,
-      IncrementalIndex<?> closeOnFailure
+      IncrementalIndex closeOnFailure
   )
   {
     ListenableFuture<List<Void>> future = Futures.allAsList(futures);

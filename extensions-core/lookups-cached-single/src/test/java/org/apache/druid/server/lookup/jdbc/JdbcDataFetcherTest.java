@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.lookup.jdbc;
 
+import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -26,6 +27,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.apache.druid.server.lookup.DataFetcher;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
@@ -74,7 +76,8 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
           "tableName",
           "keyColumn",
           "valueColumn",
-          100
+          100,
+          new JdbcAccessSecurityConfig()
       );
 
       handle = derbyConnectorRule.getConnector().getDBI().open();
@@ -155,14 +158,17 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
     @Test
     public void testSerDesr() throws IOException
     {
+      final JdbcAccessSecurityConfig securityConfig = new JdbcAccessSecurityConfig();
       JdbcDataFetcher jdbcDataFetcher = new JdbcDataFetcher(
           new MetadataStorageConnectorConfig(),
           "table",
           "keyColumn",
           "ValueColumn",
-          100
+          100,
+          securityConfig
       );
       DefaultObjectMapper mapper = new DefaultObjectMapper();
+      mapper.setInjectableValues(new Std().addValue(JdbcAccessSecurityConfig.class, securityConfig));
       String jdbcDataFetcherSer = mapper.writeValueAsString(jdbcDataFetcher);
       Assert.assertEquals(jdbcDataFetcher, mapper.readerFor(DataFetcher.class).readValue(jdbcDataFetcherSer));
     }
@@ -213,7 +219,8 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
           TABLE_NAME,
           KEY_COLUMN,
           VALUE_COLUMN,
-          null
+          null,
+          new JdbcAccessSecurityConfig()
       );
     }
 
@@ -244,7 +251,7 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
     private void test(Runnable runnable)
     {
       exception.expect(IllegalStateException.class);
-      exception.expectMessage("JDBC driver JAR files missing from extensions/druid-lookups-cached-single directory");
+      exception.expectMessage("JDBC driver JAR files missing in the classpath");
 
       runnable.run();
     }
@@ -252,8 +259,8 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
     @SuppressWarnings("SameParameterValue")
     private static MetadataStorageConnectorConfig createMissingMetadataStorageConnectorConfig()
     {
-      String type = "postgresql";
-      String json = "{\"connectURI\":\"jdbc:" + type + "://localhost:5432\"}";
+      String type = "mydb";
+      String json = "{\"connectURI\":\"jdbc:" + type + "://localhost:3306/\"}";
       try {
         return new ObjectMapper().readValue(json, MetadataStorageConnectorConfig.class);
       }

@@ -41,6 +41,7 @@ public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements
 {
   private final String expression;
   private final Supplier<Expr> parsed;
+  private final Supplier<byte[]> cacheKey;
   @Nullable
   private final FilterTuning filterTuning;
 
@@ -53,7 +54,12 @@ public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements
   {
     this.expression = expression;
     this.filterTuning = filterTuning;
-    this.parsed = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
+    this.parsed = Parser.lazyParse(expression, macroTable);
+    this.cacheKey = Suppliers.memoize(() -> {
+      return new CacheKeyBuilder(DimFilterUtils.EXPRESSION_CACHE_ID)
+          .appendCacheable(parsed.get())
+          .build();
+    });
   }
 
   @VisibleForTesting
@@ -103,9 +109,7 @@ public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(DimFilterUtils.EXPRESSION_CACHE_ID)
-        .appendString(expression)
-        .build();
+    return cacheKey.get();
   }
 
   @Override

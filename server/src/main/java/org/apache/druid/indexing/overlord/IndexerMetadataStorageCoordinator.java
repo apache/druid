@@ -26,6 +26,7 @@ import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
@@ -134,6 +135,16 @@ public interface IndexerMetadataStorageCoordinator
   List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval);
 
   /**
+   * Mark as unused segments which include ONLY data within the given interval.
+   *
+   * @param dataSource The data source the segments belong to
+   * @param interval   Filter the data segments to ones that include data in this interval exclusively.
+   *
+   * @return number of segments marked unused
+   */
+  int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval);
+
+  /**
    * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
    * with identifiers already in the metadata storage will not be added).
    *
@@ -207,13 +218,17 @@ public interface IndexerMetadataStorageCoordinator
    * If startMetadata and endMetadata are set, this insertion will be atomic with a compare-and-swap on dataSource
    * commit metadata.
    *
-   * @param segments      set of segments to add, must all be from the same dataSource
-   * @param startMetadata dataSource metadata pre-insert must match this startMetadata according to
-   *                      {@link DataSourceMetadata#matches(DataSourceMetadata)}. If null, this insert will
-   *                      not involve a metadata transaction
-   * @param endMetadata   dataSource metadata post-insert will have this endMetadata merged in with
-   *                      {@link DataSourceMetadata#plus(DataSourceMetadata)}. If null, this insert will not
-   *                      involve a metadata transaction
+   * If segmentsToDrop is not null and not empty, this insertion will be atomic with a insert-and-drop on inserting
+   * {@param segments} and dropping {@param segmentsToDrop}
+   *
+   * @param segments       set of segments to add, must all be from the same dataSource
+   * @param segmentsToDrop set of segments to drop, must all be from the same dataSource
+   * @param startMetadata  dataSource metadata pre-insert must match this startMetadata according to
+   *                       {@link DataSourceMetadata#matches(DataSourceMetadata)}. If null, this insert will
+   *                       not involve a metadata transaction
+   * @param endMetadata    dataSource metadata post-insert will have this endMetadata merged in with
+   *                       {@link DataSourceMetadata#plus(DataSourceMetadata)}. If null, this insert will not
+   *                       involve a metadata transaction
    *
    * @return segment publish result indicating transaction success or failure, and set of segments actually published.
    * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
@@ -224,6 +239,7 @@ public interface IndexerMetadataStorageCoordinator
    */
   SegmentPublishResult announceHistoricalSegments(
       Set<DataSegment> segments,
+      Set<DataSegment> segmentsToDrop,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata
   ) throws IOException;
@@ -261,6 +277,15 @@ public interface IndexerMetadataStorageCoordinator
    * @return true if the entry was inserted, false otherwise
    */
   boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata);
+
+  /**
+   * Remove datasource metadata created before the given timestamp and not in given excludeDatasources set.
+   *
+   * @param timestamp timestamp in milliseconds
+   * @param excludeDatasources set of datasource names to exclude from removal
+   * @return number of datasource metadata removed
+   */
+  int removeDataSourceMetadataOlderThan(long timestamp, @NotNull Set<String> excludeDatasources);
 
   /**
    * Similar to {@link #announceHistoricalSegments(Set)}, but meant for streaming ingestion tasks for handling

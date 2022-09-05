@@ -45,8 +45,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,31 +61,26 @@ import java.util.stream.Collectors;
 
 public class SegmentManagerTest
 {
+
   private static final SegmentLoader SEGMENT_LOADER = new SegmentLoader()
   {
     @Override
-    public boolean isSegmentLoaded(DataSegment segment)
+    public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
     {
-      return false;
-    }
-
-    @Override
-    public Segment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
-    {
-      return new SegmentForTesting(
+      return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
           MapUtils.getString(segment.getLoadSpec(), "version"),
           (Interval) segment.getLoadSpec().get("interval")
-      );
-    }
-
-    @Override
-    public File getSegmentFiles(DataSegment segment)
-    {
-      throw new UnsupportedOperationException();
+      ), segment.getShardSpec());
     }
 
     @Override
     public void cleanup(DataSegment segment)
+    {
+
+    }
+
+    @Override
+    public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
     {
 
     }
@@ -95,11 +90,14 @@ public class SegmentManagerTest
   {
     private final String version;
     private final Interval interval;
+    private final StorageAdapter storageAdapter;
 
     SegmentForTesting(String version, Interval interval)
     {
       this.version = version;
       this.interval = interval;
+      storageAdapter = Mockito.mock(StorageAdapter.class);
+      Mockito.when(storageAdapter.getNumRows()).thenReturn(1);
     }
 
     public String getVersion()
@@ -133,7 +131,7 @@ public class SegmentManagerTest
     @Override
     public StorageAdapter asStorageAdapter()
     {
-      throw new UnsupportedOperationException();
+      return storageAdapter;
     }
 
     @Override

@@ -22,11 +22,11 @@ import React from 'react';
 import { Capabilities } from '../../utils';
 import { SegmentsView } from '../segments-view/segments-view';
 
-describe('segments-view', () => {
+describe('SegmentsView', () => {
   it('matches snapshot', () => {
     const segmentsView = shallow(
       <SegmentsView
-        datasource={'test'}
+        datasource="test"
         onlyUnavailable={false}
         goToQuery={() => {}}
         capabilities={Capabilities.FULL}

@@ -27,28 +27,37 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.ClientTaskQuery;
-import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -81,9 +90,11 @@ public class ClientCompactionTaskQuerySerdeTest
             new ClientCompactionIntervalSpec(
                 Intervals.of("2019/2020"),
                 "testSha256OfSortedSegmentIds"
-            )
+            ),
+            true
         ),
         new ClientCompactionTaskQueryTuningConfig(
+            null,
             null,
             40000,
             2000L,
@@ -111,8 +122,13 @@ public class ClientCompactionTaskQuerySerdeTest
             new Duration(3000L),
             7,
             1000,
-            100
+            100,
+            2
         ),
+        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
+        new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
+        new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
         ImmutableMap.of("key", "value")
     );
 
@@ -186,7 +202,39 @@ public class ClientCompactionTaskQuerySerdeTest
         query.getTuningConfig().getTotalNumMergeTasks().intValue(),
         task.getTuningConfig().getTotalNumMergeTasks()
     );
+    Assert.assertEquals(
+        query.getGranularitySpec(),
+        task.getGranularitySpec()
+    );
+    Assert.assertEquals(
+        query.getGranularitySpec().getQueryGranularity(),
+        task.getGranularitySpec().getQueryGranularity()
+    );
+    Assert.assertEquals(
+        query.getGranularitySpec().getSegmentGranularity(),
+        task.getGranularitySpec().getSegmentGranularity()
+    );
+    Assert.assertEquals(
+        query.getGranularitySpec().isRollup(),
+        task.getGranularitySpec().isRollup()
+    );
+    Assert.assertEquals(
+        query.getIoConfig().isDropExisting(),
+        task.getIoConfig().isDropExisting()
+    );
     Assert.assertEquals(query.getContext(), task.getContext());
+    Assert.assertEquals(
+        query.getDimensionsSpec().getDimensions(),
+        task.getDimensionsSpec().getDimensions()
+    );
+    Assert.assertEquals(
+        query.getTransformSpec().getFilter(),
+        task.getTransformSpec().getFilter()
+    );
+    Assert.assertArrayEquals(
+        query.getMetricsSpec(),
+        task.getMetricsSpec()
+    );
   }
 
   @Test
@@ -195,16 +243,16 @@ public class ClientCompactionTaskQuerySerdeTest
     final ObjectMapper mapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         "datasource",
-        new SegmentLoaderFactory(null, mapper),
+        new SegmentCacheManagerFactory(mapper),
         new RetryPolicyFactory(new RetryPolicyConfig())
     );
     final CompactionTask task = builder
-        .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"))
+        .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
         .tuningConfig(
             new ParallelIndexTuningConfig(
                 null,
                 null,
-                null,
+                new OnheapIncrementalIndex.Spec(true),
                 40000,
                 2000L,
                 null,
@@ -240,9 +288,20 @@ public class ClientCompactionTaskQuerySerdeTest
                 null,
                 null,
                 null,
+                2,
+                null,
                 null
             )
         )
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true))
+        .dimensionsSpec(
+            DimensionsSpec.builder()
+                          .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")))
+                          .setDimensionExclusions(ImmutableList.of("__time", "val"))
+                          .build()
+        )
+        .metricsSpec(new AggregatorFactory[] {new CountAggregatorFactory("cnt")})
+        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
         .build();
 
     final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
@@ -252,10 +311,12 @@ public class ClientCompactionTaskQuerySerdeTest
             new ClientCompactionIntervalSpec(
                 Intervals.of("2019/2020"),
                 "testSha256OfSortedSegmentIds"
-            )
+            ),
+            true
         ),
         new ClientCompactionTaskQueryTuningConfig(
             100,
+            new OnheapIncrementalIndex.Spec(true),
             40000,
             2000L,
             30000L,
@@ -282,8 +343,13 @@ public class ClientCompactionTaskQuerySerdeTest
             new Duration(3000L),
             7,
             1000,
-            100
+            100,
+            2
         ),
+        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
+        new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
+        new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
         new HashMap<>()
     );
 
@@ -314,9 +380,9 @@ public class ClientCompactionTaskQuerySerdeTest
                   binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
                   binder.bind(RowIngestionMetersFactory.class).toInstance(ROW_INGESTION_METERS_FACTORY);
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
-                  binder.bind(SegmentLoaderFactory.class).toInstance(new SegmentLoaderFactory(null, objectMapper));
+                  binder.bind(SegmentCacheManagerFactory.class).toInstance(new SegmentCacheManagerFactory(objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(APPENDERATORS_MANAGER);
-                  binder.bind(IndexingServiceClient.class).toInstance(new NoopIndexingServiceClient());
+                  binder.bind(OverlordClient.class).toInstance(new NoopOverlordClient());
                 }
             )
         )

@@ -30,6 +30,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 public class StrposOperatorConversion implements SqlOperatorConversion
@@ -38,7 +39,7 @@ public class StrposOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("STRPOS")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeNonNull(SqlTypeName.INTEGER)
+      .returnTypeCascadeNullable(SqlTypeName.INTEGER)
       .build();
 
   @Override
@@ -58,12 +59,13 @@ public class StrposOperatorConversion implements SqlOperatorConversion
         plannerContext,
         rowSignature,
         rexNode,
-        druidExpressions -> DruidExpression.of(
-            null,
-            StringUtils.format(
+        druidExpressions -> DruidExpression.ofExpression(
+            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+            (args) -> StringUtils.format(
                 "(%s + 1)",
-                DruidExpression.functionCall("strpos", druidExpressions)
-            )
+                DruidExpression.functionCall("strpos").compile(args)
+            ),
+            druidExpressions
         )
     );
   }

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.TaskRunnerUtils;
 import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
@@ -149,6 +150,17 @@ public class WorkerHolder
     return currCapacity;
   }
 
+  private int getCurrParallelIndexCapcityUsed()
+  {
+    int currParallelIndexCapacityUsed = 0;
+    for (TaskAnnouncement taskAnnouncement : getRunningTasks().values()) {
+      if (taskAnnouncement.getTaskType().equals(ParallelIndexSupervisorTask.TYPE)) {
+        currParallelIndexCapacityUsed += taskAnnouncement.getTaskResource().getRequiredCapacity();
+      }
+    }
+    return currParallelIndexCapacityUsed;
+  }
+
   private Set<String> getAvailabilityGroups()
   {
     Set<String> retVal = new HashSet<>();
@@ -193,6 +205,7 @@ public class WorkerHolder
     return new ImmutableWorkerInfo(
         w,
         getCurrCapacityUsed(),
+        getCurrParallelIndexCapcityUsed(),
         getAvailabilityGroups(),
         getRunningTasks().keySet(),
         lastCompletedTaskTime.get(),
@@ -390,14 +403,20 @@ public class WorkerHolder
                 announcement.getStatus(),
                 worker.getHost()
             );
-            delta.add(TaskAnnouncement.create(
-                announcement.getTaskId(),
-                announcement.getTaskType(),
-                announcement.getTaskResource(),
-                TaskStatus.failure(announcement.getTaskId()),
-                announcement.getTaskLocation(),
-                announcement.getTaskDataSource()
-            ));
+            delta.add(
+                TaskAnnouncement.create(
+                    announcement.getTaskId(),
+                    announcement.getTaskType(),
+                    announcement.getTaskResource(),
+                    TaskStatus.failure(
+                        announcement.getTaskId(),
+                        "This task disappeared on the worker where it was assigned. "
+                        + "See overlord logs for more details."
+                    ),
+                    announcement.getTaskLocation(),
+                    announcement.getTaskDataSource()
+                )
+            );
           }
         }
 
@@ -427,14 +446,20 @@ public class WorkerHolder
                   announcement.getStatus(),
                   worker.getHost()
               );
-              delta.add(TaskAnnouncement.create(
-                  announcement.getTaskId(),
-                  announcement.getTaskType(),
-                  announcement.getTaskResource(),
-                  TaskStatus.failure(announcement.getTaskId()),
-                  announcement.getTaskLocation(),
-                  announcement.getTaskDataSource()
-              ));
+              delta.add(
+                  TaskAnnouncement.create(
+                      announcement.getTaskId(),
+                      announcement.getTaskType(),
+                      announcement.getTaskResource(),
+                      TaskStatus.failure(
+                          announcement.getTaskId(),
+                          "This task disappeared on the worker where it was assigned. "
+                          + "See overlord logs for more details."
+                      ),
+                      announcement.getTaskLocation(),
+                      announcement.getTaskDataSource()
+                  )
+              );
             }
           } else if (change instanceof WorkerHistoryItem.Metadata) {
             isWorkerDisabled = ((WorkerHistoryItem.Metadata) change).isDisabled();

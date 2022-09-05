@@ -35,6 +35,7 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.test.TestBroker;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
+import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.overlord.sampler.SamplerTestUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -51,7 +52,9 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -59,6 +62,9 @@ import java.util.List;
 
 public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final String TOPIC = "sampling";
   private static final DataSchema DATA_SCHEMA = new DataSchema(
@@ -71,9 +77,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
               new StringDimensionSchema("dim2"),
               new LongDimensionSchema("dimLong"),
               new FloatDimensionSchema("dimFloat")
-          ),
-          null,
-          null
+          )
       ),
       new AggregatorFactory[]{
           new DoubleSumAggregatorFactory("met1sum", "met1"),
@@ -134,6 +138,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
+            null,
             true,
             null,
             null,
@@ -155,8 +160,8 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,
-        new SamplerConfig(5, null),
-        new InputSourceSampler(),
+        new SamplerConfig(5, null, null, null),
+        new InputSourceSampler(OBJECT_MAPPER),
         OBJECT_MAPPER
     );
 
@@ -286,5 +291,57 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Test
+  public void testInvalidKafkaConfig()
+  {
+    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
+        null,
+        DATA_SCHEMA,
+        null,
+        new KafkaSupervisorIOConfig(
+            TOPIC,
+            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+            null,
+            null,
+            null,
+
+            // invalid bootstrap server
+            ImmutableMap.of("bootstrap.servers", "127.0.0.1"),
+
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null,
+            null
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
+        supervisorSpec,
+        new SamplerConfig(5, null, null, null),
+        new InputSourceSampler(OBJECT_MAPPER),
+        OBJECT_MAPPER
+    );
+
+    expectedException.expect(SamplerException.class);
+    expectedException.expectMessage("Invalid url in bootstrap.servers");
+    samplerSpec.sample();
   }
 }

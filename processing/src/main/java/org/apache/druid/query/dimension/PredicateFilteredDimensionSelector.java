@@ -51,8 +51,9 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
     row.ensureSize(baseRowSize);
     int resultSize = 0;
     for (int i = 0; i < baseRowSize; i++) {
-      if (predicate.apply(selector.lookupName(baseRow.get(i)))) {
-        row.setValue(resultSize, i);
+      int id = baseRow.get(i);
+      if (predicate.apply(selector.lookupName(id))) {
+        row.setValue(resultSize, id);
         resultSize++;
       }
     }
@@ -96,7 +97,7 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
   @Override
   public ValueMatcher makeValueMatcher(final Predicate<String> matcherPredicate)
   {
-    final boolean matchNull = predicate.apply(null);
+    final boolean matchNull = matcherPredicate.apply(null);
     return new ValueMatcher()
     {
       @Override

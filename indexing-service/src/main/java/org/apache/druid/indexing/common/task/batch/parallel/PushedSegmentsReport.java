@@ -22,8 +22,10 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -39,17 +41,20 @@ public class PushedSegmentsReport implements SubTaskReport
   private final String taskId;
   private final Set<DataSegment> oldSegments;
   private final Set<DataSegment> newSegments;
+  private final Map<String, TaskReport> taskReport;
 
   @JsonCreator
   public PushedSegmentsReport(
       @JsonProperty("taskId") String taskId,
       @JsonProperty("oldSegments") Set<DataSegment> oldSegments,
-      @JsonProperty("segments") Set<DataSegment> newSegments
+      @JsonProperty("segments") Set<DataSegment> newSegments,
+      @JsonProperty("taskReport") Map<String, TaskReport> taskReport
   )
   {
     this.taskId = Preconditions.checkNotNull(taskId, "taskId");
     this.oldSegments = Preconditions.checkNotNull(oldSegments, "oldSegments");
     this.newSegments = Preconditions.checkNotNull(newSegments, "newSegments");
+    this.taskReport = taskReport;
   }
 
   @Override
@@ -71,6 +76,12 @@ public class PushedSegmentsReport implements SubTaskReport
     return newSegments;
   }
 
+  @JsonProperty("taskReport")
+  public Map<String, TaskReport> getTaskReport()
+  {
+    return taskReport;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -81,14 +92,15 @@ public class PushedSegmentsReport implements SubTaskReport
       return false;
     }
     PushedSegmentsReport that = (PushedSegmentsReport) o;
-    return Objects.equals(taskId, that.taskId) &&
-           Objects.equals(oldSegments, that.oldSegments) &&
-           Objects.equals(newSegments, that.newSegments);
+    return Objects.equals(taskId, that.taskId)
+           && Objects.equals(oldSegments, that.oldSegments)
+           && Objects.equals(newSegments, that.newSegments)
+           && Objects.equals(taskReport, that.taskReport);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(taskId, oldSegments, newSegments);
+    return Objects.hash(taskId, oldSegments, newSegments, taskReport);
   }
 }

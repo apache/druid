@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Icon, IconName, Intent, Popover } from '@blueprintjs/core';
+import { Button, Classes, Dialog, Icon, IconName, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import React, { ReactNode } from 'react';
 
 import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
@@ -52,7 +53,7 @@ export const TableActionDialog = React.memo(function TableActionDialog(
           {sideButtonMetadata.map((d, i) => (
             <Button
               className="tab-button"
-              icon={<Icon icon={d.icon} iconSize={20} />}
+              icon={<Icon icon={d.icon} size={20} />}
               key={i}
               text={d.text}
               intent={d.active ? Intent.PRIMARY : Intent.NONE}
@@ -66,9 +67,9 @@ export const TableActionDialog = React.memo(function TableActionDialog(
       <div className={Classes.DIALOG_FOOTER}>
         {actionsMenu && (
           <div className="footer-actions-left">
-            <Popover content={actionsMenu}>
+            <Popover2 content={actionsMenu}>
               <Button icon={IconNames.WRENCH} text="Actions" rightIcon={IconNames.CARET_DOWN} />
-            </Popover>
+            </Popover2>
           </div>
         )}
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>

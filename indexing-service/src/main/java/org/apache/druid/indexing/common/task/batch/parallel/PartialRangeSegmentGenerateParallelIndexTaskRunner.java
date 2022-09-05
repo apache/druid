@@ -30,7 +30,7 @@ import java.util.Map;
  * {@link ParallelIndexTaskRunner} for the phase to create range partitioned segments in multi-phase parallel indexing.
  */
 class PartialRangeSegmentGenerateParallelIndexTaskRunner
-    extends InputSourceSplitParallelIndexTaskRunner<PartialRangeSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>>
+    extends InputSourceSplitParallelIndexTaskRunner<PartialRangeSegmentGenerateTask, GeneratedPartitionsReport>
 {
   private static final String PHASE_NAME = "partial segment generation";
 
@@ -40,12 +40,13 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
       TaskToolbox toolbox,
       String taskId,
       String groupId,
+      String baseSubtaskSpecName,
       ParallelIndexIngestionSpec ingestionSchema,
       Map<String, Object> context,
       Map<Interval, PartitionBoundaries> intervalToPartitions
   )
   {
-    super(toolbox, taskId, groupId, ingestionSchema, context);
+    super(toolbox, taskId, groupId, baseSubtaskSpecName, ingestionSchema, context);
     this.intervalToPartitions = intervalToPartitions;
   }
 
@@ -81,6 +82,7 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
             groupId,
             null,
             supervisorTaskId,
+            id,
             numAttempts,
             subTaskIngestionSpec,
             context,

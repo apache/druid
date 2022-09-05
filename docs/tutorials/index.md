@@ -32,25 +32,24 @@ Before starting, you may want to read the [general Druid overview](../design/ind
 
 ## Requirements
 
-You can follow these steps on a relatively small machine, such as a laptop with around 4 CPU and 16 GB of RAM. 
+You can follow these steps on a relatively small machine, such as a laptop with around 4 CPU and 16 GiB of RAM. 
 
 Druid comes with several startup configuration profiles for a range of machine sizes. 
 The `micro-quickstart`configuration profile shown here is suitable for evaluating Druid. If you want to 
 try out Druid's performance or scaling capabilities, you'll need a larger machine and configuration profile.
 
-The configuration profiles included with Druid range from the even smaller _Nano-Quickstart_ configuration (1 CPU, 4GB RAM) 
-to the _X-Large_ configuration (64 CPU, 512GB RAM). For more information, see 
+The configuration profiles included with Druid range from the even smaller _Nano-Quickstart_ configuration (1 CPU, 4GiB RAM) 
+to the _X-Large_ configuration (64 CPU, 512GiB RAM). For more information, see 
 [Single server deployment](../operations/single-server.md). Alternatively, see [Clustered deployment](./cluster.md) for 
 information on deploying Druid services across clustered machines. 
 
 The software requirements for the installation machine are:
 
-* Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
-* Java 8, Update 92 or later (8u92+)
+* Linux, Mac OS X, or other Unix-like OS (Windows is not supported).
+* Java 8, Update 92 or later (8u92+) or Java 11. See the [Java runtime](../operations/java.md) page for additional
+  information about selecting and configuring a Java runtime.
 
-> Druid officially supports Java 8 only. Support for later major versions of Java is currently in experimental status.
-
-> Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to find Java on the machine. You can set 
+> Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to find Java on the machine. You can set
 `DRUID_JAVA_HOME` if there is more than one instance of Java. To verify Java requirements for your environment, run the 
 `bin/verify-java` script.
 
@@ -73,7 +72,7 @@ the [{{DRUIDVERSION}} release](https://www.apache.org/dyn/closer.cgi?path=/druid
    ```
 In the directory, you'll find `LICENSE` and `NOTICE` files and subdirectories for executable files, configuration files, sample data and more.
 
-## Step 2: Start up Druid services
+## Step 2. Start up Druid services
 
 Start up Druid services using the `micro-quickstart` single-machine configuration. 
 
@@ -176,11 +175,11 @@ in the Druid root directory represents Wikipedia page edits for a given day.
    You do not need to adjust transformation or filtering settings, as applying ingestion time transforms and 
    filters are out of scope for this tutorial.
 
-8. The Configure schema settings are where you configure what [dimensions](../ingestion/index.md#dimensions) 
-   and [metrics](../ingestion/index.md#metrics) are ingested. The outcome of this configuration represents exactly how the 
+8. The Configure schema settings are where you configure what [dimensions](../ingestion/data-model.md#dimensions) 
+   and [metrics](../ingestion/data-model.md#metrics) are ingested. The outcome of this configuration represents exactly how the 
    data will appear in Druid after ingestion. 
 
-   Since our dataset is very small, you can turn off [rollup](../ingestion/index.md#rollup) 
+   Since our dataset is very small, you can turn off [rollup](../ingestion/rollup.md) 
    by unsetting the **Rollup** switch and confirming the change when prompted.
 
    ![Data loader schema](../assets/tutorial-batch-data-loader-05.png "Data loader schema")

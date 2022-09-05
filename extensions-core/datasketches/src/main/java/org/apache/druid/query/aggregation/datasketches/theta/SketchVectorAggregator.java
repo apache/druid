@@ -31,18 +31,18 @@ import java.util.function.Supplier;
 
 public class SketchVectorAggregator implements VectorAggregator
 {
-  private final Supplier<Object[]> toObjectProcessor;
   private final SketchBufferAggregatorHelper helper;
+  private final Supplier<Object[]> objectSupplier;
 
-  public SketchVectorAggregator(
-      VectorColumnSelectorFactory columnSelectorFactory,
-      String column,
-      int size,
-      int maxIntermediateSize
+  SketchVectorAggregator(
+      final VectorColumnSelectorFactory columnSelectorFactory,
+      final String column,
+      final int size,
+      final int maxIntermediateSize
   )
   {
     this.helper = new SketchBufferAggregatorHelper(size, maxIntermediateSize);
-    this.toObjectProcessor =
+    this.objectSupplier =
         ColumnProcessors.makeVectorProcessor(
             column,
             ToObjectVectorColumnProcessorFactory.INSTANCE,
@@ -60,7 +60,7 @@ public class SketchVectorAggregator implements VectorAggregator
   public void aggregate(final ByteBuffer buf, final int position, final int startRow, final int endRow)
   {
     final Union union = helper.getOrCreateUnion(buf, position);
-    final Object[] vector = toObjectProcessor.get();
+    final Object[] vector = objectSupplier.get();
 
     for (int i = startRow; i < endRow; i++) {
       final Object o = vector[i];
@@ -79,7 +79,7 @@ public class SketchVectorAggregator implements VectorAggregator
       final int positionOffset
   )
   {
-    final Object[] vector = toObjectProcessor.get();
+    final Object[] vector = objectSupplier.get();
 
     for (int i = 0; i < numRows; i++) {
       final Object o = vector[rows != null ? rows[i] : i];

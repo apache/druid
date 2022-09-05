@@ -115,7 +115,7 @@ public interface TopNColumnAggregatesProcessor<ValueSelectorType> extends Column
   void initAggregateStore();
 
   /**
-   * Closes all on heap {@link Aggregator} associated withe the aggregates processor
+   * Closes all on heap {@link Aggregator} associated with the aggregates processor
    */
   void closeAggregators();
 }

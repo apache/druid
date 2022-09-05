@@ -22,13 +22,16 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -156,6 +159,14 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
   }
 
   @Override
+  public boolean isOffsetAvailable(StreamPartition<Integer> partition, OrderedSequenceNumber<Long> offset)
+  {
+    final Long earliestOffset = getEarliestSequenceNumber(partition);
+    return earliestOffset != null
+           && offset.isAvailableWithEarliest(KafkaSequenceNumber.of(earliestOffset));
+  }
+
+  @Override
   public Long getPosition(StreamPartition<Integer> partition)
   {
     return wrapExceptions(() -> consumer.position(new TopicPartition(
@@ -255,6 +266,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
     final Properties props = new Properties();
     addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
     props.putIfAbsent("isolation.level", "read_committed");
+    props.putIfAbsent("group.id", StringUtils.format("kafka-supervisor-%s", IdUtils.getRandomId()));
     props.putAll(consumerConfigs);
 
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();

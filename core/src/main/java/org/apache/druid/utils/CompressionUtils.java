@@ -72,6 +72,7 @@ public class CompressionUtils
   private static final String ZIP_SUFFIX = ".zip";
   private static final String SNAPPY_SUFFIX = ".sz";
   private static final String ZSTD_SUFFIX = ".zst";
+  private static final int GZIP_BUFFER_SIZE = 8192; // Default is 512
 
   /**
    * Zip the contents of directory into the file indicated by outputZipFile. Sub directories are skipped
@@ -367,10 +368,11 @@ public class CompressionUtils
           {
             final int otherAvailable = super.available();
             // Hack. Docs say available() should return an estimate,
-            // so we estimate about 1KB to work around available == 0 bug in GZIPInputStream
+            // so we estimate about 1KiB to work around available == 0 bug in GZIPInputStream
             return otherAvailable == 0 ? 1 << 10 : otherAvailable;
           }
-        }
+        },
+        GZIP_BUFFER_SIZE
     );
   }
 

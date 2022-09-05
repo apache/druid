@@ -32,6 +32,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -328,11 +329,13 @@ public class DruidRelsTest
     EasyMock.expect(mockPartialQuery.getWhereFilter()).andReturn(whereFilter).anyTimes();
 
     final RelOptTable mockRelOptTable = EasyMock.mock(RelOptTable.class);
-    EasyMock.expect(mockRelOptTable.unwrap(DruidTable.class)).andReturn(druidTable).anyTimes();
 
     final T mockRel = EasyMock.mock(clazz);
     EasyMock.expect(mockRel.getPartialDruidQuery()).andReturn(mockPartialQuery).anyTimes();
     EasyMock.expect(mockRel.getTable()).andReturn(mockRelOptTable).anyTimes();
+    if (clazz == DruidQueryRel.class) {
+      EasyMock.expect(((DruidQueryRel) mockRel).getDruidTable()).andReturn(druidTable).anyTimes();
+    }
     additionalExpectationsFunction.accept(mockRel);
 
     EasyMock.replay(mockRel, mockPartialQuery, mockRelOptTable);

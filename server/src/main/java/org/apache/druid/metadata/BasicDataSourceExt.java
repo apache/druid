@@ -42,8 +42,17 @@ public class BasicDataSourceExt extends BasicDataSource
 {
   private static final Logger LOGGER = new Logger(BasicDataSourceExt.class);
 
-  private Properties connectionProperties;
   private final MetadataStorageConnectorConfig connectorConfig;
+
+  /**
+   * The properties that will be used for the JDBC connection.
+   *
+   * Note that these properties are not currently checked against any security configuration such as
+   * an allow list for JDBC properties. Instead, they are supposed to be checked before adding to this class.
+   *
+   * @see SQLFirehoseDatabaseConnector#validateConfigs
+   */
+  private Properties connectionProperties;
 
   public BasicDataSourceExt(MetadataStorageConnectorConfig connectorConfig)
   {

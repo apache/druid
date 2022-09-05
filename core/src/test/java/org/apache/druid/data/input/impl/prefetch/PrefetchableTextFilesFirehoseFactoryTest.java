@@ -22,6 +22,7 @@ package org.apache.druid.data.input.impl.prefetch;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.io.CountingOutputStream;
+import io.netty.util.SuppressForbidden;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.druid.common.config.NullHandling;
@@ -40,6 +41,7 @@ import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -72,11 +74,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
               "auto",
               null
           ),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b")),
-              new ArrayList<>(),
-              new ArrayList<>()
-          ),
+          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b"))),
           ",",
           Arrays.asList("timestamp", "a", "b"),
           false,
@@ -152,6 +150,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     Assert.assertEquals(expectedNumFiles, files.length);
   }
 
+  @SuppressForbidden(reason = "Files#createTempDirectory")
   private static File createFirehoseTmpDir(String dirPrefix) throws IOException
   {
     return Files.createTempDirectory(tempDir.getRoot().toPath(), dirPrefix).toFile();
@@ -251,6 +250,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   }
 
   @Test
+  @Ignore("See issue #12638")
   public void testWithLargeCacheAndSmallFetch() throws IOException
   {
     final TestPrefetchableTextFilesFirehoseFactory factory =
@@ -338,6 +338,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   }
 
   @Test
+  @Ignore("See issue #12638")
   public void testReconnectWithCacheAndPrefetch() throws IOException
   {
     final TestPrefetchableTextFilesFirehoseFactory factory =

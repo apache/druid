@@ -47,7 +47,7 @@ will generate a report to show the current code coverage on the code (not just y
 ## Git Checkstyle Verification Hook (Optional)
 Git Checkstyle pre-commit hook can be installed to automatically run checkstyle verification before committing, 
 saving cycle from avoiding the checkstyle failing later in Travis/CI environment.
-The hook can be setup easily by running the <DRUID_HOME>/setup-hooks.sh script.
+The hook can be setup easily by running the <DRUID_HOME>/hooks/install-hooks.sh script.
 
 ## Metadata
 The installation of a MySQL metadata store is outside the scope of this document, but instructions on setting up MySQL can be found at [docs/development/extensions-core/mysql.md](/docs/development/extensions-core/mysql.md). This assumes you followed the example there and have a database named `druid` with proper permissions for a user named `druid` and a password of `diurd`.
@@ -68,6 +68,21 @@ Before running or debugging the apps, you should do a `mvn clean install -Pdist 
 `-Pdist` is required because it puts all core extensions under `distribution\target\extensions` directory, where `runConfigurations` below could load extensions from.
 
 You may also add `-Ddruid.console.skip=true` to the command if you're focusing on backend servers instead of frontend project. This option saves great building time.
+
+## Debug a running Druid cluster using Intellij
+Intellij IDEA debugger can attach to a local or remote Java process (Druid process). 
+Follow these steps to debug a Druid process using the IntelliJ IDEA debugger.
+1. Enable debugging in the Druid process
+    1. For Druid services (such as Overlord, Coordinator, etc), include the following as JVM config `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=<PORT>` where `<PORT>` is any available port. Note that different port values should be chosen for each Druid service.
+    2. For the peons (workers on Middlemanager), include the following `agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0` in runtime properties `druid.indexer.runner.javaOpts` of the Middle Manager. Note that `address=0` will tell the debugger to assign ephemeral port.
+2. Find the port assigned to the Druid process.
+    1. For Druid services, the port value is what you chose in the JVM argument of step 1i above. The port value can also be found in the first line of each Druid service log.
+    2. For the peons (workers on Middlemanager), you can find the assigned ephemeral port by checking the first line of the task log.
+3. Attach Intellij IDEA debugger to the running process
+    1. Create a Remote configuration in the Run/Debug Configurations dialog of Intellij (see: https://www.jetbrains.com/help/idea/tutorial-remote-debug.html#debugger_rc)
+    2. Set the port value using the value from step 2 for the Druid service and/or peon (worker on Middlemanager) that you want to debug
+    3. Start (debug) the above remote configuration
+    4. Repeat step 3i to 3iii for each Druid service and/or peon (worker on Middlemanager) that you want to debug
 
 ## XML App Def
 You can configure application definitions in XML for import into IntelliJ. Below are a few examples. These should be placed in an XML file in `.idea/runConfigurations` in the Druid source code.

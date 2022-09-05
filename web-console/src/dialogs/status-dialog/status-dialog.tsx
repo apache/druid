@@ -17,18 +17,15 @@
  */
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
-import React from 'react';
+import React, { useState } from 'react';
 import ReactTable, { Filter } from 'react-table';
 
-import { Loader } from '../../components';
+import { Loader, TableFilterableCell } from '../../components';
 import { useQueryManager } from '../../hooks';
+import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, UrlBaser } from '../../singletons';
 
 import './status-dialog.scss';
-
-export function anywhereMatcher(filter: Filter, row: any): boolean {
-  return String(row[filter.id]).includes(filter.value);
-}
 
 interface StatusModule {
   artifact: string;
@@ -42,59 +39,80 @@ interface StatusResponse {
 }
 
 interface StatusDialogProps {
-  onClose: () => void;
+  onClose(): void;
 }
 
 export const StatusDialog = React.memo(function StatusDialog(props: StatusDialogProps) {
   const { onClose } = props;
+  const [moduleFilter, setModuleFilter] = useState<Filter[]>([]);
+
   const [responseState] = useQueryManager<null, StatusResponse>({
+    initQuery: null,
     processQuery: async () => {
       const resp = await Api.instance.get(`/status`);
       return resp.data;
     },
-    initQuery: null,
   });
 
   function renderContent(): JSX.Element | undefined {
     if (responseState.loading) return <Loader />;
 
     if (responseState.error) {
-      return <span>{`Error while loading status: ${responseState.error}`}</span>;
+      return <div>{`Error while loading status: ${responseState.error}`}</div>;
     }
 
     const response = responseState.data;
     if (!response) return;
 
+    const renderModuleFilterableCell = (field: string) => {
+      return function ModuleFilterableCell(row: { value: any }) {
+        return (
+          <TableFilterableCell
+            field={field}
+            value={row.value}
+            filters={moduleFilter}
+            onFiltersChange={setModuleFilter}
+          >
+            {row.value}
+          </TableFilterableCell>
+        );
+      };
+    };
+
     return (
       <div className="main-container">
         <div className="version">
-          Version:&nbsp;<strong>{response.version}</strong>
+          Version: <strong>{response.version}</strong>
         </div>
         <ReactTable
           data={response.modules}
-          columns={[
-            {
-              columns: [
-                {
-                  Header: 'Extension name',
-                  accessor: 'artifact',
-                  width: 200,
-                },
-                {
-                  Header: 'Fully qualified name',
-                  accessor: 'name',
-                },
-                {
-                  Header: 'Version',
-                  accessor: 'version',
-                  width: 200,
-                },
-              ],
-            },
-          ]}
           loading={responseState.loading}
           filterable
-          defaultFilterMethod={anywhereMatcher}
+          filtered={moduleFilter}
+          onFilteredChange={setModuleFilter}
+          defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+          pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+          showPagination={response.modules.length > SMALL_TABLE_PAGE_SIZE}
+          columns={[
+            {
+              Header: 'Extension name',
+              accessor: 'artifact',
+              width: 200,
+              Cell: renderModuleFilterableCell('artifact'),
+            },
+            {
+              Header: 'Version',
+              accessor: 'version',
+              width: 200,
+              Cell: renderModuleFilterableCell('version'),
+            },
+            {
+              Header: 'Fully qualified name',
+              accessor: 'name',
+              width: 500,
+              Cell: renderModuleFilterableCell('name'),
+            },
+          ]}
         />
       </div>
     );

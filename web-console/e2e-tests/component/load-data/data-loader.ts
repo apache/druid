@@ -21,6 +21,7 @@ import * as playwright from 'playwright-chromium';
 import { clickButton, setLabeledInput, setLabeledTextarea } from '../../util/playwright';
 
 import { ConfigureSchemaConfig } from './config/configure-schema';
+import { ConfigureTimestampConfig } from './config/configure-timestamp';
 import { PartitionConfig } from './config/partition';
 import { PublishConfig } from './config/publish';
 import { DataConnector } from './data-connector/data-connector';
@@ -33,7 +34,7 @@ export class DataLoader {
 
   constructor(props: DataLoaderProps) {
     Object.assign(this, props);
-    this.baseUrl = props.unifiedConsoleUrl! + '#load-data';
+    this.baseUrl = props.unifiedConsoleUrl + '#data-loader';
   }
 
   /**
@@ -45,7 +46,7 @@ export class DataLoader {
     await this.connect(this.connector, this.connectValidator);
     if (this.connector.needParse) {
       await this.parseData();
-      await this.parseTime();
+      await this.parseTime(this.configureTimestampConfig);
     }
     await this.transform();
     await this.filter();
@@ -57,7 +58,7 @@ export class DataLoader {
   }
 
   private async start() {
-    const cardSelector = `//*[contains(@class,"bp3-card")][p[contains(text(),"${this.connector.name}")]]`;
+    const cardSelector = `//*[contains(@class,"bp4-card")][p[contains(text(),"${this.connector.name}")]]`;
     await this.page.click(cardSelector);
     await clickButton(this.page, 'Connect data');
   }
@@ -73,7 +74,7 @@ export class DataLoader {
     const previewSelector = '.raw-lines';
     await this.page.waitForSelector(previewSelector);
     const preview = await this.page.$eval(previewSelector, el => (el as HTMLTextAreaElement).value);
-    validator(preview!);
+    validator(preview);
   }
 
   private async parseData() {
@@ -81,8 +82,11 @@ export class DataLoader {
     await clickButton(this.page, 'Next: Parse time');
   }
 
-  private async parseTime() {
+  private async parseTime(configureTimestampConfig?: ConfigureTimestampConfig) {
     await this.page.waitForSelector('.parse-time-table');
+    if (configureTimestampConfig) {
+      await this.applyConfigureTimestampConfig(configureTimestampConfig);
+    }
     await clickButton(this.page, 'Next: Transform');
   }
 
@@ -102,13 +106,19 @@ export class DataLoader {
     await clickButton(this.page, 'Next: Partition');
   }
 
+  private async applyConfigureTimestampConfig(configureTimestampConfig: ConfigureTimestampConfig) {
+    await clickButton(this.page, 'Expression');
+    await setLabeledInput(this.page, 'Expression', configureTimestampConfig.timestampExpression);
+    await clickButton(this.page, 'Apply');
+  }
+
   private async applyConfigureSchemaConfig(configureSchemaConfig: ConfigureSchemaConfig) {
     const rollupSelector = '//*[text()="Rollup"]';
     const rollupInput = await this.page.$(`${rollupSelector}/input`);
     const rollupChecked = await rollupInput!.evaluate(el => (el as HTMLInputElement).checked);
     if (rollupChecked !== configureSchemaConfig.rollup) {
       await this.page.click(rollupSelector);
-      const confirmationDialogSelector = '//*[contains(@class,"bp3-alert-body")]';
+      const confirmationDialogSelector = '//*[contains(@class,"bp4-alert-body")]';
       await this.page.waitForSelector(confirmationDialogSelector);
       await clickButton(this.page, 'Yes');
       const statusMessageSelector = '.recipe-toaster';
@@ -161,6 +171,7 @@ interface DataLoaderProps {
   readonly unifiedConsoleUrl: string;
   readonly connector: DataConnector;
   readonly connectValidator: (preview: string) => void;
+  readonly configureTimestampConfig?: ConfigureTimestampConfig;
   readonly configureSchemaConfig: ConfigureSchemaConfig;
   readonly partitionConfig: PartitionConfig;
   readonly publishConfig: PublishConfig;

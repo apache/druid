@@ -38,6 +38,7 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
@@ -58,6 +59,7 @@ import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -328,6 +330,17 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
   protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return false;
+  }
+
+  @Override
+  public LagStats computeLagStats()
+  {
+    Map<Integer, Long> partitionRecordLag = getPartitionRecordLag();
+    if (partitionRecordLag == null) {
+      return new LagStats(0, 0, 0);
+    }
+
+    return computeLags(partitionRecordLag);
   }
 
   @Override

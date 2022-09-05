@@ -24,10 +24,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.filter.DimFilter;
@@ -146,6 +148,12 @@ public class MaterializedViewQuery<T> implements Query<T>
   }
 
   @Override
+  public QueryContext getQueryContext()
+  {
+    return query.getQueryContext();
+  }
+
+  @Override
   public <ContextType> ContextType getContextValue(String key)
   {
     return (ContextType) query.getContextValue(key);
@@ -161,6 +169,12 @@ public class MaterializedViewQuery<T> implements Query<T>
   public boolean getContextBoolean(String key, boolean defaultValue) 
   {
     return query.getContextBoolean(key, defaultValue);
+  }
+
+  @Override
+  public HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
+  {
+    return query.getContextHumanReadableBytes(key, defaultValue);
   }
 
   @Override

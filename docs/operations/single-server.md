@@ -34,7 +34,7 @@ Druid includes a set of reference configurations and launch scripts for single-m
 
 The `micro-quickstart` is sized for small machines like laptops and is intended for quick evaluation use-cases.
 
-The `nano-quickstart` is an even smaller configuration, targeting a machine with 1 CPU and 4GB memory. It is meant for limited evaluations in resource constrained environments, such as small Docker containers.
+The `nano-quickstart` is an even smaller configuration, targeting a machine with 1 CPU and 4GiB memory. It is meant for limited evaluations in resource constrained environments, such as small Docker containers.
 
 The other configurations are intended for general use single-machine deployments. They are sized for hardware roughly based on Amazon's i3 series of EC2 instances.
 
@@ -46,32 +46,32 @@ While example configurations are provided for very large single machines, at hig
 
 ## Single server reference configurations
 
-### Nano-Quickstart: 1 CPU, 4GB RAM
+### Nano-Quickstart: 1 CPU, 4GiB RAM
 
 - Launch command: `bin/start-nano-quickstart`
 - Configuration directory: `conf/druid/single-server/nano-quickstart`
 
-### Micro-Quickstart: 4 CPU, 16GB RAM
+### Micro-Quickstart: 4 CPU, 16GiB RAM
 
 - Launch command: `bin/start-micro-quickstart`
 - Configuration directory: `conf/druid/single-server/micro-quickstart`
 
-### Small: 8 CPU, 64GB RAM (~i3.2xlarge)
+### Small: 8 CPU, 64GiB RAM (~i3.2xlarge)
 
 - Launch command: `bin/start-small`
 - Configuration directory: `conf/druid/single-server/small`
 
-### Medium: 16 CPU, 128GB RAM (~i3.4xlarge)
+### Medium: 16 CPU, 128GiB RAM (~i3.4xlarge)
 
 - Launch command: `bin/start-medium`
 - Configuration directory: `conf/druid/single-server/medium`
 
-### Large: 32 CPU, 256GB RAM (~i3.8xlarge)
+### Large: 32 CPU, 256GiB RAM (~i3.8xlarge)
 
 - Launch command: `bin/start-large`
 - Configuration directory: `conf/druid/single-server/large`
 
-### X-Large: 64 CPU, 512GB RAM (~i3.16xlarge)
+### X-Large: 64 CPU, 512GiB RAM (~i3.16xlarge)
 
 - Launch command: `bin/start-xlarge`
 - Configuration directory: `conf/druid/single-server/xlarge`

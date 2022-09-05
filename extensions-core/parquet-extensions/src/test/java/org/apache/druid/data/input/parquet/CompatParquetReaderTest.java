@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.parquet;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -34,7 +35,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -49,7 +49,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("ts", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("field"))),
-        ImmutableList.of()
+        ColumnsFilter.all()
     );
     InputEntityReader reader = createReader(
         file,
@@ -114,7 +114,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        ImmutableList.of("metric1")
+        ColumnsFilter.all()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "col", "col"),
@@ -200,7 +200,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        Collections.emptyList()
+        ColumnsFilter.all()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractByLogicalMap", "$.intToStringColumn.1"),
@@ -248,30 +248,30 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
     final String expectedJson = "{\n"
                                 + "  \"enumColumn\" : \"SPADES\",\n"
-                                + "  \"maybeStringColumn\" : { },\n"
-                                + "  \"maybeBinaryColumn\" : { },\n"
+                                + "  \"maybeStringColumn\" : null,\n"
+                                + "  \"maybeBinaryColumn\" : null,\n"
                                 + "  \"shortColumn\" : 1,\n"
                                 + "  \"byteColumn\" : 0,\n"
-                                + "  \"maybeBoolColumn\" : { },\n"
+                                + "  \"maybeBoolColumn\" : null,\n"
                                 + "  \"intColumn\" : 2,\n"
                                 + "  \"doubleColumn\" : 0.2,\n"
-                                + "  \"maybeByteColumn\" : { },\n"
+                                + "  \"maybeByteColumn\" : null,\n"
                                 + "  \"intSetColumn\" : [ 0 ],\n"
                                 + "  \"boolColumn\" : true,\n"
                                 + "  \"binaryColumn\" : \"val_0\",\n"
-                                + "  \"maybeIntColumn\" : { },\n"
+                                + "  \"maybeIntColumn\" : null,\n"
                                 + "  \"intToStringColumn\" : {\n"
                                 + "    \"0\" : \"val_0\",\n"
                                 + "    \"1\" : \"val_1\",\n"
                                 + "    \"2\" : \"val_2\"\n"
                                 + "  },\n"
-                                + "  \"maybeDoubleColumn\" : { },\n"
-                                + "  \"maybeEnumColumn\" : { },\n"
-                                + "  \"maybeLongColumn\" : { },\n"
+                                + "  \"maybeDoubleColumn\" : null,\n"
+                                + "  \"maybeEnumColumn\" : null,\n"
+                                + "  \"maybeLongColumn\" : null,\n"
                                 + "  \"stringsColumn\" : [ \"arr_0\", \"arr_1\", \"arr_2\" ],\n"
                                 + "  \"longColumn\" : 0,\n"
                                 + "  \"stringColumn\" : \"val_0\",\n"
-                                + "  \"maybeShortColumn\" : { },\n"
+                                + "  \"maybeShortColumn\" : null,\n"
                                 + "  \"complexColumn\" : {\n"
                                 + "    \"0\" : [ {\n"
                                 + "      \"nestedStringColumn\" : \"val_0\",\n"
@@ -315,7 +315,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("repeatedInt"))),
-        Collections.emptyList()
+        ColumnsFilter.all()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "repeatedInt", "repeatedInt")
@@ -353,7 +353,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("i32_dec", "extracted1", "extracted2"))),
-        Collections.emptyList()
+        ColumnsFilter.all()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "extracted1", "$.myComplex[0].id"),
@@ -395,7 +395,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        Collections.emptyList()
+        ColumnsFilter.all()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractedOptional", "$.optionalMessage.someId"),
@@ -426,9 +426,9 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
     final String expectedJson = "{\n"
-                                + "  \"optionalMessage\" : { },\n"
+                                + "  \"optionalMessage\" : null,\n"
                                 + "  \"requiredPrimitive\" : 9,\n"
-                                + "  \"repeatedPrimitive\" : { },\n"
+                                + "  \"repeatedPrimitive\" : null,\n"
                                 + "  \"repeatedMessage\" : [ 9, 10 ],\n"
                                 + "  \"optionalPrimitive\" : 10,\n"
                                 + "  \"requiredMessage\" : {\n"

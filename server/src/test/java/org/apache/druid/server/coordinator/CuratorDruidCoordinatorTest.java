@@ -52,6 +52,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -164,16 +165,14 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     curator.create().creatingParentsIfNeeded().forPath(DESTINATION_LOAD_PATH);
 
     objectMapper = new DefaultObjectMapper();
-    druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        new Duration(COORDINATOR_START_DELAY),
-        new Duration(COORDINATOR_PERIOD),
-        null,
-        null,
-        new Duration(COORDINATOR_PERIOD),
-        null,
-        10,
-        new Duration("PT0s")
-    );
+    druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withCoordinatorStartDelay(new Duration(COORDINATOR_START_DELAY))
+        .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
+        .withCoordinatorKillPeriod(new Duration(COORDINATOR_PERIOD))
+        .withCoordinatorKillMaxSegments(10)
+        .withLoadQueuePeonRepeatDelay(new Duration("PT0s"))
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     sourceLoadQueueChildrenCache = new PathChildrenCache(
         curator,
         SOURCE_LOAD_PATH,
@@ -247,6 +246,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         druidNode,
         loadManagementPeons,
         null,
+        null,
+        new CoordinatorCustomDutyGroups(ImmutableSet.of()),
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
@@ -463,7 +464,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         zkPathsConfig,
         curator,
         jsonMapper,
-        Predicates.alwaysTrue()
+        Predicates.alwaysTrue(),
+        "test"
     )
     {
       @Override
@@ -546,6 +548,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         druidNode,
         loadManagementPeons,
         null,
+        null,
+        new CoordinatorCustomDutyGroups(ImmutableSet.of()),
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),

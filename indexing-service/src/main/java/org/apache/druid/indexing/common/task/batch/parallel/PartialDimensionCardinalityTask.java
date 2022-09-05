@@ -36,7 +36,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
-import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -62,6 +61,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
+  private final String subtaskSpecId;
 
   private final ObjectMapper jsonMapper;
 
@@ -72,6 +72,8 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
       @JsonProperty("groupId") final String groupId,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
+      // subtaskSpecId can be null only for old task versions.
+      @JsonProperty("subtaskSpecId") @Nullable final String subtaskSpecId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty("spec") final ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
@@ -93,6 +95,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
         HashedPartitionsSpec.NAME
     );
 
+    this.subtaskSpecId = subtaskSpecId;
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
@@ -115,6 +118,13 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
   private String getSupervisorTaskId()
   {
     return supervisorTaskId;
+  }
+
+  @JsonProperty
+  @Override
+  public String getSubtaskSpecId()
+  {
+    return subtaskSpecId;
   }
 
   @Override
@@ -198,9 +208,9 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
       DateTime timestamp = inputRow.getTimestamp();
       final Interval interval;
       if (granularitySpec.inputIntervals().isEmpty()) {
-        interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());
+        interval = granularitySpec.getSegmentGranularity().bucket(timestamp);
       } else {
-        final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+        final Optional<Interval> optInterval = granularitySpec.bucketInterval(timestamp);
         // this interval must exist since it passed the rowFilter
         assert optInterval.isPresent();
         interval = optInterval.get();
@@ -239,14 +249,12 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
 
   private void sendReport(TaskToolbox toolbox, DimensionCardinalityReport report)
   {
-    final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
-        new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
-        getId(),
-        1, // always use a single http thread
-        ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
-        ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
-    );
-    taskClient.report(supervisorTaskId, report);
+    final ParallelIndexSupervisorTaskClient taskClient =
+        toolbox.getSupervisorTaskClientProvider().build(
+            supervisorTaskId,
+            ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
+            ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
+        );
+    taskClient.report(report);
   }
-
 }

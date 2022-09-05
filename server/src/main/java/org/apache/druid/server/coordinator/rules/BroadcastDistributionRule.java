@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorStats;
+import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
@@ -104,6 +105,21 @@ public abstract class BroadcastDistributionRule implements Rule
         return underReplicationPerDataSource;
       });
     }
+  }
+
+  @Override
+  public void updateUnderReplicatedWithClusterView(
+      Map<String, Object2LongMap<String>> underReplicatedPerTier,
+      SegmentReplicantLookup segmentReplicantLookup,
+      DruidCluster cluster,
+      DataSegment segment
+  )
+  {
+    updateUnderReplicated(
+        underReplicatedPerTier,
+        segmentReplicantLookup,
+        segment
+    );
   }
 
   private CoordinatorStats assign(

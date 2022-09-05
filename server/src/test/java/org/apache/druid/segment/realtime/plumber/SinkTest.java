@@ -78,7 +78,6 @@ public class SinkTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         0,
         0,
         null,
@@ -95,6 +94,7 @@ public class SinkTest extends InitializedNullHandlingTest
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemoryOrDefault(),
+        true,
         tuningConfig.getDedupColumn()
     );
 
@@ -235,7 +235,6 @@ public class SinkTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         0,
         0,
         null,
@@ -252,6 +251,7 @@ public class SinkTest extends InitializedNullHandlingTest
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemoryOrDefault(),
+        true,
         tuningConfig.getDedupColumn()
     );
 

@@ -26,7 +26,7 @@ sidebar_label: "Timeseries"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes a query
 > type in the native language. For information about when Druid SQL will use this query type, refer to the
-> [SQL documentation](sql.md#query-types).
+> [SQL documentation](sql-translation.md#query-types).
 
 These types of queries take a timeseries query object and return an array of JSON objects where each object represents a value asked for by the timeseries query.
 
@@ -78,6 +78,7 @@ There are 7 main parts to a timeseries query:
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |granularity|Defines the granularity to bucket query results. See [Granularities](../querying/granularities.md)|yes|
 |filter|See [Filters](../querying/filters.md)|no|
+|virtualColumns|A JSON list of [virtual columns](./virtual-columns.md). You can reference the virtual columns in `aggregations` or `postAggregations`.| no (default none)|
 |aggregations|See [Aggregations](../querying/aggregations.md)|no|
 |postAggregations|See [Post Aggregations](../querying/post-aggregations.md)|no|
 |limit|An integer that limits the number of results. The default is unlimited.|no|

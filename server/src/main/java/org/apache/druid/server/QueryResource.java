@@ -26,9 +26,9 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.ser.DateTimeSerializer;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
@@ -46,15 +46,15 @@ import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.BadQueryException;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryUnsupportedException;
-import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
@@ -106,7 +106,6 @@ public class QueryResource implements QueryCountStatsProvider
   protected final ObjectMapper serializeDateTimeAsLongJsonMapper;
   protected final ObjectMapper serializeDateTimeAsLongSmileMapper;
   protected final QueryScheduler queryScheduler;
-  protected final AuthConfig authConfig;
   protected final AuthorizerMapper authorizerMapper;
 
   private final ResponseContextConfig responseContextConfig;
@@ -135,7 +134,6 @@ public class QueryResource implements QueryCountStatsProvider
     this.serializeDateTimeAsLongJsonMapper = serializeDataTimeAsLong(jsonMapper);
     this.serializeDateTimeAsLongSmileMapper = serializeDataTimeAsLong(smileMapper);
     this.queryScheduler = queryScheduler;
-    this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
     this.responseContextConfig = responseContextConfig;
     this.selfNode = selfNode;
@@ -181,34 +179,19 @@ public class QueryResource implements QueryCountStatsProvider
   ) throws IOException
   {
     final QueryLifecycle queryLifecycle = queryLifecycleFactory.factorize();
-    Query<?> query = null;
 
-    String acceptHeader = req.getHeader("Accept");
-    if (Strings.isNullOrEmpty(acceptHeader)) {
-      //default to content-type
-      acceptHeader = req.getContentType();
-    }
-
-    final ResourceIOReaderWriter ioReaderWriter = createResourceIOReaderWriter(acceptHeader, pretty != null);
+    final ResourceIOReaderWriter ioReaderWriter = createResourceIOReaderWriter(req, pretty != null);
 
     final String currThreadName = Thread.currentThread().getName();
     try {
-      queryLifecycle.initialize(readQuery(req, in, ioReaderWriter));
-      query = queryLifecycle.getQuery();
-      final String queryId = query.getId();
-
-      final String queryThreadName = StringUtils.format(
-          "%s[%s_%s_%s]",
-          currThreadName,
-          query.getType(),
-          query.getDataSource().getTableNames(),
-          queryId
-      );
-
+      final Query<?> query = readQuery(req, in, ioReaderWriter);
+      queryLifecycle.initialize(query);
+      final String queryId = queryLifecycle.getQueryId();
+      final String queryThreadName = queryLifecycle.threadName(currThreadName);
       Thread.currentThread().setName(queryThreadName);
 
       if (log.isDebugEnabled()) {
-        log.debug("Got query [%s]", query);
+        log.debug("Got query [%s]", queryLifecycle.getQuery());
       }
 
       final Access authResult = queryLifecycle.authorize(req);
@@ -221,7 +204,7 @@ public class QueryResource implements QueryCountStatsProvider
       final ResponseContext responseContext = queryResponse.getResponseContext();
       final String prevEtag = getPreviousEtag(req);
 
-      if (prevEtag != null && prevEtag.equals(responseContext.get(ResponseContext.Key.ETAG))) {
+      if (prevEtag != null && prevEtag.equals(responseContext.getEntityTag())) {
         queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
         successfulQueryCount.incrementAndGet();
         return Response.notModified().build();
@@ -230,16 +213,7 @@ public class QueryResource implements QueryCountStatsProvider
       final Yielder<?> yielder = Yielders.each(results);
 
       try {
-        boolean shouldFinalize = QueryContexts.isFinalize(query, true);
-        boolean serializeDateTimeAsLong =
-            QueryContexts.isSerializeDateTimeAsLong(query, false)
-            || (!shouldFinalize && QueryContexts.isSerializeDateTimeAsLongInner(query, false));
-
-        final ObjectWriter jsonWriter = ioReaderWriter.newOutputWriter(
-            queryLifecycle.getToolChest(),
-            queryLifecycle.getQuery(),
-            serializeDateTimeAsLong
-        );
+        final ObjectWriter jsonWriter = queryLifecycle.newOutputWriter(ioReaderWriter);
 
         Response.ResponseBuilder responseBuilder = Response
             .ok(
@@ -276,20 +250,17 @@ public class QueryResource implements QueryCountStatsProvider
                     }
                   }
                 },
-                ioReaderWriter.getContentType()
+                ioReaderWriter.getResponseWriter().getResponseType()
             )
             .header("X-Druid-Query-Id", queryId);
 
-        Object entityTag = responseContext.remove(ResponseContext.Key.ETAG);
-        if (entityTag != null) {
-          responseBuilder.header(HEADER_ETAG, entityTag);
-        }
+        transferEntityTag(responseContext, responseBuilder);
 
         DirectDruidClient.removeMagicResponseContextFields(responseContext);
 
-        //Limit the response-context header, see https://github.com/apache/druid/issues/2331
-        //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
-        //and encodes the string using ASCII, so 1 char is = 1 byte
+        // Limit the response-context header, see https://github.com/apache/druid/issues/2331
+        // Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
+        // and encodes the string using ASCII, so 1 char is = 1 byte
         final ResponseContext.SerializationResult serializationResult = responseContext.serializeWith(
             jsonMapper,
             responseContextConfig.getMaxResponseContextHeaderSize()
@@ -337,27 +308,27 @@ public class QueryResource implements QueryCountStatsProvider
     catch (QueryInterruptedException e) {
       interruptedQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
-      return ioReaderWriter.gotError(e);
+      return ioReaderWriter.getResponseWriter().gotError(e);
     }
     catch (QueryTimeoutException timeout) {
       timedOutQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(timeout, req.getRemoteAddr(), -1);
-      return ioReaderWriter.gotTimeout(timeout);
+      return ioReaderWriter.getResponseWriter().gotTimeout(timeout);
     }
     catch (QueryCapacityExceededException cap) {
       failedQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(cap, req.getRemoteAddr(), -1);
-      return ioReaderWriter.gotLimited(cap);
+      return ioReaderWriter.getResponseWriter().gotLimited(cap);
     }
     catch (QueryUnsupportedException unsupported) {
       failedQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(unsupported, req.getRemoteAddr(), -1);
-      return ioReaderWriter.gotUnsupported(unsupported);
+      return ioReaderWriter.getResponseWriter().gotUnsupported(unsupported);
     }
-    catch (BadJsonQueryException | ResourceLimitExceededException e) {
+    catch (BadQueryException e) {
       interruptedQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
-      return ioReaderWriter.gotBadQuery(e);
+      return ioReaderWriter.getResponseWriter().gotBadQuery(e);
     }
     catch (ForbiddenException e) {
       // don't do anything for an authorization failure, ForbiddenExceptionMapper will catch this later and
@@ -370,11 +341,16 @@ public class QueryResource implements QueryCountStatsProvider
 
       log.noStackTrace()
          .makeAlert(e, "Exception handling request")
-         .addData("query", query != null ? jsonMapper.writeValueAsString(query) : "unparseable query")
+         .addData(
+             "query",
+             queryLifecycle.getQuery() != null
+             ? jsonMapper.writeValueAsString(queryLifecycle.getQuery())
+             : "unparseable query"
+         )
          .addData("peer", req.getRemoteAddr())
          .emit();
 
-      return ioReaderWriter.gotError(e);
+      return ioReaderWriter.getResponseWriter().gotError(e);
     }
     finally {
       Thread.currentThread().setName(currThreadName);
@@ -387,9 +363,9 @@ public class QueryResource implements QueryCountStatsProvider
       final ResourceIOReaderWriter ioReaderWriter
   ) throws IOException
   {
-    Query baseQuery;
+    final Query<?> baseQuery;
     try {
-      baseQuery = ioReaderWriter.getInputMapper().readValue(in, Query.class);
+      baseQuery = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
     }
     catch (JsonParseException e) {
       throw new BadJsonQueryException(e);
@@ -397,9 +373,14 @@ public class QueryResource implements QueryCountStatsProvider
     String prevEtag = getPreviousEtag(req);
 
     if (prevEtag != null) {
-      baseQuery = baseQuery.withOverriddenContext(
-          ImmutableMap.of(HEADER_IF_NONE_MATCH, prevEtag)
-      );
+      if (baseQuery.getQueryContext() == null) {
+        QueryContext context = new QueryContext(baseQuery.getContext());
+        context.addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
+
+        return baseQuery.withOverriddenContext(context.getMergedParams());
+      } else {
+        baseQuery.getQueryContext().addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
+      }
     }
 
     return baseQuery;
@@ -415,47 +396,71 @@ public class QueryResource implements QueryCountStatsProvider
     return mapper.copy().registerModule(new SimpleModule().addSerializer(DateTime.class, new DateTimeSerializer()));
   }
 
-  protected ResourceIOReaderWriter createResourceIOReaderWriter(String requestType, boolean pretty)
+  protected ResourceIOReaderWriter createResourceIOReaderWriter(HttpServletRequest req, boolean pretty)
   {
-    boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(requestType) ||
-                      APPLICATION_SMILE.equals(requestType);
-    String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
+    String requestType = req.getContentType();
+    String acceptHeader = req.getHeader("Accept");
+
+    // response type defaults to Content-Type if 'Accept' header not provided
+    String responseType = Strings.isNullOrEmpty(acceptHeader) ? requestType : acceptHeader;
+
+    boolean isRequestSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(requestType) || APPLICATION_SMILE.equals(requestType);
+    boolean isResponseSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(responseType) || APPLICATION_SMILE.equals(responseType);
+
     return new ResourceIOReaderWriter(
-        contentType,
-        isSmile ? smileMapper : jsonMapper,
-        isSmile ? serializeDateTimeAsLongSmileMapper : serializeDateTimeAsLongJsonMapper,
-        pretty
-    );
+        isRequestSmile ? smileMapper : jsonMapper,
+        new ResourceIOWriter(isResponseSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON,
+                             isResponseSmile ? smileMapper : jsonMapper,
+                             isResponseSmile ? serializeDateTimeAsLongSmileMapper : serializeDateTimeAsLongJsonMapper,
+                             pretty
+    ));
   }
 
   protected static class ResourceIOReaderWriter
   {
-    private final String contentType;
+    private final ObjectMapper requestMapper;
+    private final ResourceIOWriter writer;
+
+    public ResourceIOReaderWriter(ObjectMapper requestMapper, ResourceIOWriter writer)
+    {
+      this.requestMapper = requestMapper;
+      this.writer = writer;
+    }
+
+    public ObjectMapper getRequestMapper()
+    {
+      return requestMapper;
+    }
+
+    public ResourceIOWriter getResponseWriter()
+    {
+      return writer;
+    }
+  }
+
+  protected static class ResourceIOWriter
+  {
+    private final String responseType;
     private final ObjectMapper inputMapper;
     private final ObjectMapper serializeDateTimeAsLongInputMapper;
     private final boolean isPretty;
 
-    ResourceIOReaderWriter(
-        String contentType,
+    ResourceIOWriter(
+        String responseType,
         ObjectMapper inputMapper,
         ObjectMapper serializeDateTimeAsLongInputMapper,
         boolean isPretty
     )
     {
-      this.contentType = contentType;
+      this.responseType = responseType;
       this.inputMapper = inputMapper;
       this.serializeDateTimeAsLongInputMapper = serializeDateTimeAsLongInputMapper;
       this.isPretty = isPretty;
     }
 
-    String getContentType()
+    String getResponseType()
     {
-      return contentType;
-    }
-
-    ObjectMapper getInputMapper()
-    {
-      return inputMapper;
+      return responseType;
     }
 
     ObjectWriter newOutputWriter(
@@ -476,7 +481,7 @@ public class QueryResource implements QueryCountStatsProvider
 
     Response ok(Object object) throws IOException
     {
-      return Response.ok(newOutputWriter(null, null, false).writeValueAsString(object), contentType).build();
+      return Response.ok(newOutputWriter(null, null, false).writeValueAsString(object), responseType).build();
     }
 
     Response gotError(Exception e) throws IOException
@@ -510,7 +515,7 @@ public class QueryResource implements QueryCountStatsProvider
     Response buildNonOkResponse(int status, Exception e) throws JsonProcessingException
     {
       return Response.status(status)
-                     .type(contentType)
+                     .type(responseType)
                      .entity(newOutputWriter(null, null, false).writeValueAsBytes(e))
                      .build();
     }
@@ -538,5 +543,14 @@ public class QueryResource implements QueryCountStatsProvider
   public long getTimedOutQueryCount()
   {
     return timedOutQueryCount.get();
+  }
+
+  @VisibleForTesting
+  public static void transferEntityTag(ResponseContext context, Response.ResponseBuilder builder)
+  {
+    Object entityTag = context.remove(Keys.ETAG);
+    if (entityTag != null) {
+      builder.header(HEADER_ETAG, entityTag);
+    }
   }
 }

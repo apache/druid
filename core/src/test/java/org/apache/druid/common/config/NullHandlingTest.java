@@ -90,4 +90,19 @@ public class NullHandlingTest
   {
     Assert.assertNull(NullHandling.defaultValueForClass(Object.class));
   }
+
+  @Test
+  public void test_ignoreNullsStrings()
+  {
+    try {
+      NullHandling.initializeForTestsWithValues(false, true);
+      Assert.assertFalse(NullHandling.ignoreNullsForStringCardinality());
+
+      NullHandling.initializeForTestsWithValues(true, false);
+      Assert.assertFalse(NullHandling.ignoreNullsForStringCardinality());
+    }
+    finally {
+      NullHandling.initializeForTests();
+    }
+  }
 }

@@ -20,20 +20,42 @@
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-public class NoopDoublesSketchBufferAggregator implements BufferAggregator
+public class NoopDoublesSketchBufferAggregator implements BufferAggregator, VectorAggregator
 {
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
+    // Nothing to do.
   }
 
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
+    // Nothing to do.
+  }
+
+  @Override
+  public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
+  {
+    // Nothing to do.
+  }
+
+  @Override
+  public void aggregate(
+      ByteBuffer buf,
+      int numRows,
+      int[] positions,
+      @Nullable int[] rows,
+      int positionOffset
+  )
+  {
+    // Nothing to do.
   }
 
   @Override
@@ -55,12 +77,20 @@ public class NoopDoublesSketchBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
+  {
+    // Nothing to do.
+  }
+
+  @Override
   public void close()
   {
+    // Nothing to do.
   }
 
   @Override
   public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
   {
+    // Nothing to do.
   }
 }

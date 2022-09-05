@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
@@ -35,6 +34,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -96,7 +96,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
       return false;
     }
     if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
-      CloseQuietly.close(jp);
+      CloseableUtils.closeAndWrapExceptions(jp);
       return false;
     }
 
@@ -169,7 +169,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
           throw timeoutQuery();
         } else {
           // TODO: NettyHttpClient should check the actual cause of the failure and set it in the future properly.
-          throw new ResourceLimitExceededException(
+          throw ResourceLimitExceededException.withMessage(
               "Possibly max scatter-gather bytes limit reached while reading from url[%s].",
               url
           );
@@ -187,7 +187,10 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
           );
         }
       }
-      catch (IOException | InterruptedException | ExecutionException | CancellationException e) {
+      catch (ExecutionException | CancellationException e) {
+        throw convertException(e.getCause() == null ? e : e.getCause());
+      }
+      catch (IOException | InterruptedException e) {
         throw convertException(e);
       }
       catch (TimeoutException e) {
@@ -210,7 +213,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
    *   based on {@link QueryException#getErrorCode()}. During conversion, {@link QueryException#host} is overridden
    *   by {@link #host}.
    */
-  private QueryException convertException(Exception cause)
+  private QueryException convertException(Throwable cause)
   {
     LOG.warn(cause, "Query [%s] to host [%s] interrupted", queryId, host);
     if (cause instanceof QueryException) {

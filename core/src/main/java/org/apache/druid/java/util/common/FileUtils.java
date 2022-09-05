@@ -35,6 +35,7 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
@@ -164,13 +165,70 @@ public class FileUtils
    *
    * @return a {@link MappedByteBufferHandler}, wrapping a read-only buffer reflecting {@code file}
    *
-   * @throws FileNotFoundException if the {@code file} does not exist
-   * @throws IOException           if an I/O error occurs
+   * @throws FileNotFoundException    if the {@code file} does not exist
+   * @throws IOException              if an I/O error occurs
+   * @throws IllegalArgumentException if length is greater than {@link Integer#MAX_VALUE}
    * @see FileChannel#map(FileChannel.MapMode, long, long)
    */
   public static MappedByteBufferHandler map(File file) throws IOException
   {
-    MappedByteBuffer mappedByteBuffer = com.google.common.io.Files.map(file);
+    return map(file, 0, file.length());
+  }
+
+  /**
+   * Fully maps a file read-only in to memory as per
+   * {@link FileChannel#map(FileChannel.MapMode, long, long)}.
+   *
+   * @param file   the file to map
+   * @param offset starting offset for the mmap
+   * @param length length for the mmap
+   *
+   * @return a {@link MappedByteBufferHandler}, wrapping a read-only buffer reflecting {@code file}
+   *
+   * @throws FileNotFoundException    if the {@code file} does not exist
+   * @throws IOException              if an I/O error occurs
+   * @throws IllegalArgumentException if length is greater than {@link Integer#MAX_VALUE}
+   * @see FileChannel#map(FileChannel.MapMode, long, long)
+   */
+  public static MappedByteBufferHandler map(File file, long offset, long length) throws IOException
+  {
+    if (length > Integer.MAX_VALUE) {
+      throw new IAE("Cannot map region larger than %,d bytes", Integer.MAX_VALUE);
+    }
+
+    try (final RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
+         final FileChannel channel = randomAccessFile.getChannel()) {
+      final MappedByteBuffer mappedByteBuffer = channel.map(FileChannel.MapMode.READ_ONLY, offset, length);
+      return new MappedByteBufferHandler(mappedByteBuffer);
+    }
+  }
+
+  /**
+   * Fully maps a file read-only in to memory as per
+   * {@link FileChannel#map(FileChannel.MapMode, long, long)}.
+   *
+   * @param randomAccessFile the file to map. The file will not be closed.
+   * @param offset           starting offset for the mmap
+   * @param length           length for the mmap
+   *
+   * @return a {@link MappedByteBufferHandler}, wrapping a read-only buffer reflecting {@code randomAccessFile}
+   *
+   * @throws IOException              if an I/O error occurs
+   * @throws IllegalArgumentException if length is greater than {@link Integer#MAX_VALUE}
+   * @see FileChannel#map(FileChannel.MapMode, long, long)
+   */
+  public static MappedByteBufferHandler map(
+      RandomAccessFile randomAccessFile,
+      long offset,
+      long length
+  ) throws IOException
+  {
+    if (length > Integer.MAX_VALUE) {
+      throw new IAE("Cannot map region larger than %,d bytes", Integer.MAX_VALUE);
+    }
+
+    final FileChannel channel = randomAccessFile.getChannel();
+    final MappedByteBuffer mappedByteBuffer = channel.map(FileChannel.MapMode.READ_ONLY, offset, length);
     return new MappedByteBufferHandler(mappedByteBuffer);
   }
 
@@ -283,27 +341,21 @@ public class FileUtils
       String messageOnRetry
   ) throws IOException
   {
-    try {
-      return RetryUtils.retry(
-          () -> {
-            try (InputStream inputStream = objectOpenFunction.open(object);
-                 OutputStream out = new FileOutputStream(outFile)) {
-              return IOUtils.copyLarge(inputStream, out, fetchBuffer);
-            }
-          },
-          retryCondition,
-          outFile::delete,
-          numTries,
-          messageOnRetry
-      );
-    }
-    catch (Exception e) {
-      throw new IOException(e);
-    }
+    return copyLarge(
+        () -> objectOpenFunction.open(object),
+        outFile,
+        fetchBuffer,
+        retryCondition,
+        numTries,
+        messageOnRetry
+    );
   }
 
+  /**
+   * Copy a potentially large amount of data from an input source to a file.
+   */
   public static long copyLarge(
-      InputStream inputStream,
+      InputStreamSupplier inputSource,
       File outFile,
       byte[] fetchBuffer,
       Predicate<Throwable> retryCondition,
@@ -314,8 +366,9 @@ public class FileUtils
     try {
       return RetryUtils.retry(
           () -> {
-            try (OutputStream out = new FileOutputStream(outFile)) {
-              return IOUtils.copyLarge(inputStream, out, fetchBuffer);
+            try (InputStream in = inputSource.openStream();
+                 OutputStream out = new FileOutputStream(outFile)) {
+              return IOUtils.copyLarge(in, out, fetchBuffer);
             }
           },
           retryCondition,
@@ -380,6 +433,25 @@ public class FileUtils
   }
 
   /**
+   * Create "directory" and all intermediate directories as needed. If the directory is successfully created, or already
+   * exists, returns quietly. Otherwise, throws an IOException.
+   *
+   * Simpler to use than {@link File#mkdirs()}, and more reliable since it is safe from races where two threads try
+   * to create the same directory at the same time.
+   *
+   * The name is inspired by UNIX {@code mkdir -p}, which has the same behavior.
+   */
+  @SuppressForbidden(reason = "File#mkdirs")
+  public static void mkdirp(final File directory) throws IOException
+  {
+    // isDirectory check after mkdirs is necessary in case of concurrent calls to mkdirp, because two concurrent
+    // calls to mkdirs cannot both succeed.
+    if (!directory.mkdirs() && !directory.isDirectory()) {
+      throw new IOE("Cannot create directory [%s]", directory);
+    }
+  }
+
+  /**
    * Equivalent to {@link org.apache.commons.io.FileUtils#deleteDirectory(File)}. Exists here mostly so callers
    * can avoid dealing with our FileUtils and the Commons FileUtils having the same name.
    */
@@ -392,5 +464,13 @@ public class FileUtils
   public interface OutputStreamConsumer<T>
   {
     T apply(OutputStream outputStream) throws IOException;
+  }
+
+  /**
+   * Like {@link ByteSource}, but this is an interface, which allows use of lambdas.
+   */
+  public interface InputStreamSupplier
+  {
+    InputStream openStream() throws IOException;
   }
 }

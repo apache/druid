@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -30,6 +31,42 @@ final class ReservoirSegmentSampler
 {
 
   private static final EmittingLogger log = new EmittingLogger(ReservoirSegmentSampler.class);
+
+  static List<BalancerSegmentHolder> getRandomBalancerSegmentHolders(
+      final List<ServerHolder> serverHolders,
+      Set<String> broadcastDatasources,
+      int k
+  )
+  {
+    List<BalancerSegmentHolder> holders = new ArrayList<>(k);
+    int numSoFar = 0;
+
+    for (ServerHolder server : serverHolders) {
+      if (!server.getServer().getType().isSegmentReplicationTarget()) {
+        // if the server only handles broadcast segments (which don't need to be rebalanced), we have nothing to do
+        continue;
+      }
+
+      for (DataSegment segment : server.getServer().iterateAllSegments()) {
+        if (broadcastDatasources.contains(segment.getDataSource())) {
+          // we don't need to rebalance segments that were assigned via broadcast rules
+          continue;
+        }
+
+        if (numSoFar < k) {
+          holders.add(new BalancerSegmentHolder(server.getServer(), segment));
+          numSoFar++;
+          continue;
+        }
+        int randNum = ThreadLocalRandom.current().nextInt(numSoFar + 1);
+        if (randNum < k) {
+          holders.set(randNum, new BalancerSegmentHolder(server.getServer(), segment));
+        }
+        numSoFar++;
+      }
+    }
+    return holders;
+  }
 
   /**
    * Iterates over segments that live on the candidate servers passed in {@link ServerHolder} and (possibly) picks a
@@ -42,6 +79,7 @@ final class ReservoirSegmentSampler
    *                                   returning immediately.
    * @return
    */
+  @Deprecated
   static BalancerSegmentHolder getRandomBalancerSegmentHolder(
       final List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,

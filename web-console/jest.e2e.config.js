@@ -19,7 +19,6 @@
 const common = require('./jest.common.config');
 
 module.exports = Object.assign(common, {
-  "testMatch": [
-    "**/?(*.)+(spec).ts?(x)"
-  ]
+  testMatch: ['**/?(*.)+(spec).ts?(x)'],
+  testEnvironment: 'node',
 });

@@ -23,7 +23,7 @@ title: "Approximate Histogram aggregators"
   -->
 
 
-To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-histogram` as an extension.
+To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `druid-histogram` in the extensions load list.
 
 The `druid-histogram` extension provides an approximate histogram aggregator and a fixed buckets histogram aggregator.
 
@@ -43,13 +43,7 @@ to compute approximate histograms, with the following modifications:
   increasing accuracy when there are few data points, or when dealing with
   discrete data points. You can find some of the details in [this post](https://metamarkets.com/2013/histograms/).
 
-Approximate histogram sketches are still experimental for a reason, and you
-should understand the limitations of the current implementation before using
-them. The approximation is heavily data-dependent, which makes it difficult to
-give good general guidelines, so you should experiment and see what parameters
-work well for your data.
-
-Here are a few things to note before using them:
+Here are a few things to note before using approximate histograms:
 
 - As indicated in the original paper, there are no formal error bounds on the
   approximation. In practice, the approximation gets worse if the distribution

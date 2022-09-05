@@ -111,6 +111,7 @@ public class LookupExtractorFactoryContainerTest
     }
 
     @Override
+    @SuppressWarnings("EqualsHashCode")
     public boolean equals(Object other)
     {
       return other instanceof TestLookupExtractorFactory;

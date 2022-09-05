@@ -20,10 +20,15 @@
 package org.apache.druid.tests.indexer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.inject.Inject;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
@@ -48,6 +53,14 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
   private static final String INDEX_INGEST_SEGMENT_TASK = "/indexer/wikipedia_parallel_ingest_segment_index_task.json";
   private static final String INDEX_DRUID_INPUT_SOURCE_DATASOURCE = "wikipedia_parallel_druid_input_source_index_test";
   private static final String INDEX_DRUID_INPUT_SOURCE_TASK = "/indexer/wikipedia_parallel_druid_input_source_index_task.json";
+
+  private static final CoordinatorDynamicConfig DYNAMIC_CONFIG_PAUSED =
+      CoordinatorDynamicConfig.builder().withPauseCoordination(true).build();
+  private static final CoordinatorDynamicConfig DYNAMIC_CONFIG_DEFAULT =
+      CoordinatorDynamicConfig.builder().build();
+
+  @Inject
+  CoordinatorResourceTestClient coordinatorClient;
 
   @DataProvider
   public static Object[][] resources()
@@ -75,6 +88,11 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
               "%%FORCE_GUARANTEED_ROLLUP%%",
               Boolean.toString(false)
           );
+          spec = StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString("0")
+          );
           return StringUtils.replace(
               spec,
               "%%PARTITIONS_SPEC%%",
@@ -93,7 +111,8 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          new Pair<>(false, false)
       );
 
       // Index again, this time only choosing the second data file, and without explicit intervals chosen.
@@ -105,7 +124,8 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           REINDEX_QUERIES_RESOURCE,
           true,
           true,
-          true
+          true,
+          new Pair<>(false, false)
       );
 
       doReindexTest(
@@ -113,7 +133,8 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           INDEX_INGEST_SEGMENT_DATASOURCE,
           rollupTransform,
           INDEX_INGEST_SEGMENT_TASK,
-          REINDEX_QUERIES_RESOURCE
+          REINDEX_QUERIES_RESOURCE,
+          new Pair<>(false, false)
       );
 
       // with DruidInputSource instead of IngestSegmentFirehose
@@ -122,7 +143,118 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           INDEX_DRUID_INPUT_SOURCE_DATASOURCE,
           rollupTransform,
           INDEX_DRUID_INPUT_SOURCE_TASK,
-          REINDEX_QUERIES_RESOURCE
+          REINDEX_QUERIES_RESOURCE,
+          new Pair<>(false, false)
+      );
+    }
+  }
+
+  /**
+   * Test a non zero value for awaitSegmentAvailabilityTimeoutMillis. This will confirm that the report for the task
+   * indicates segments were confirmed to be available on the cluster before finishing the ingestion job.
+   *
+   * @param partitionsSpec
+   * @throws Exception
+   */
+  @Test(dataProvider = "resources")
+  public void testIndexDataVerifySegmentAvailability(PartitionsSpec partitionsSpec) throws Exception
+  {
+    try (
+        final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+    ) {
+      boolean forceGuaranteedRollup = partitionsSpec.isForceGuaranteedRollupCompatible();
+      Assert.assertFalse(forceGuaranteedRollup, "parititionSpec does not support best-effort rollup");
+
+      final Function<String, String> rollupTransform = spec -> {
+        try {
+          spec = StringUtils.replace(
+              spec,
+              "%%FORCE_GUARANTEED_ROLLUP%%",
+              Boolean.toString(false)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString("600000")
+          );
+          return StringUtils.replace(
+              spec,
+              "%%PARTITIONS_SPEC%%",
+              jsonMapper.writeValueAsString(partitionsSpec)
+          );
+        }
+        catch (JsonProcessingException e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      doIndexTest(
+          INDEX_DATASOURCE,
+          INDEX_TASK,
+          rollupTransform,
+          INDEX_QUERIES_RESOURCE,
+          false,
+          true,
+          true,
+          new Pair<>(true, true)
+      );
+    }
+  }
+
+  /**
+   * Test a non zero value for awaitSegmentAvailabilityTimeoutMillis. Setting the config value to 1 millis
+   * and pausing coordination to confirm that the task will still succeed even if the job was not able to confirm the
+   * segments were loaded by the time the timeout occurs.
+   *
+   * @param partitionsSpec
+   * @throws Exception
+   */
+  @Test(dataProvider = "resources")
+  public void testIndexDataAwaitSegmentAvailabilityFailsButTaskSucceeds(PartitionsSpec partitionsSpec) throws Exception
+  {
+    try (
+        final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+    ) {
+      coordinatorClient.postDynamicConfig(DYNAMIC_CONFIG_PAUSED);
+      boolean forceGuaranteedRollup = partitionsSpec.isForceGuaranteedRollupCompatible();
+      Assert.assertFalse(forceGuaranteedRollup, "parititionSpec does not support best-effort rollup");
+
+      final Function<String, String> rollupTransform = spec -> {
+        try {
+          spec = StringUtils.replace(
+              spec,
+              "%%FORCE_GUARANTEED_ROLLUP%%",
+              Boolean.toString(false)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString("1")
+          );
+          return StringUtils.replace(
+              spec,
+              "%%PARTITIONS_SPEC%%",
+              jsonMapper.writeValueAsString(partitionsSpec)
+          );
+        }
+        catch (JsonProcessingException e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      doIndexTest(
+          INDEX_DATASOURCE,
+          INDEX_TASK,
+          rollupTransform,
+          INDEX_QUERIES_RESOURCE,
+          false,
+          false,
+          false,
+          new Pair<>(true, false)
+      );
+      coordinatorClient.postDynamicConfig(DYNAMIC_CONFIG_DEFAULT);
+      ITRetryUtil.retryUntilTrue(
+          () -> coordinator.areSegmentsLoaded(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix()), "Segment Load"
       );
     }
   }

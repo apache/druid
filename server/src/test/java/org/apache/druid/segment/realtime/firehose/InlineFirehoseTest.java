@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,11 +53,7 @@ public class InlineFirehoseTest
               "auto",
               null
           ),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(DIMENSIONS),
-              Collections.emptyList(),
-              Collections.emptyList()
-          ),
+          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(DIMENSIONS)),
           DELIMITER,
           DIMENSIONS,
           false,
@@ -208,12 +203,7 @@ public class InlineFirehoseTest
 
   private static InlineFirehose create(String data)
   {
-    try {
-      return new InlineFirehose(data, PARSER);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    return new InlineFirehose(data, PARSER);
   }
 
   private static void assertRowValue(String expected, InputRow row)

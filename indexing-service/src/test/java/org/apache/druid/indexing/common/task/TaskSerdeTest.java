@@ -94,6 +94,7 @@ public class TaskSerdeTest
     );
 
     Assert.assertEquals(false, ioConfig.isAppendToExisting());
+    Assert.assertEquals(false, ioConfig.isDropExisting());
   }
 
   @Test
@@ -245,7 +246,7 @@ public class TaskSerdeTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true),
+            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
             new IndexTuningConfig(
                 null,
                 null,
@@ -269,7 +270,8 @@ public class TaskSerdeTest
                 null,
                 null,
                 null,
-                null
+                null,
+                1L
             )
         ),
         null
@@ -292,6 +294,7 @@ public class TaskSerdeTest
     Assert.assertTrue(taskIoConfig.getInputSource() instanceof LocalInputSource);
     Assert.assertTrue(task2IoConfig.getInputSource() instanceof LocalInputSource);
     Assert.assertEquals(taskIoConfig.isAppendToExisting(), task2IoConfig.isAppendToExisting());
+    Assert.assertEquals(taskIoConfig.isDropExisting(), task2IoConfig.isDropExisting());
 
     IndexTask.IndexTuningConfig taskTuningConfig = task.getIngestionSchema().getTuningConfig();
     IndexTask.IndexTuningConfig task2TuningConfig = task2.getIngestionSchema().getTuningConfig();
@@ -307,6 +310,7 @@ public class TaskSerdeTest
     Assert.assertEquals(taskTuningConfig.getNumShards(), task2TuningConfig.getNumShards());
     Assert.assertEquals(taskTuningConfig.getMaxRowsPerSegment(), task2TuningConfig.getMaxRowsPerSegment());
     Assert.assertEquals(taskTuningConfig.isReportParseExceptions(), task2TuningConfig.isReportParseExceptions());
+    Assert.assertEquals(taskTuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(), task2TuningConfig.getAwaitSegmentAvailabilityTimeoutMillis());
   }
 
   @Test
@@ -328,7 +332,7 @@ public class TaskSerdeTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true),
+            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
             new IndexTuningConfig(
                 null,
                 null,
@@ -345,6 +349,7 @@ public class TaskSerdeTest
                 null,
                 3,
                 false,
+                null,
                 null,
                 null,
                 null,
@@ -414,7 +419,6 @@ public class TaskSerdeTest
                 1,
                 NoneShardSpec.instance(),
                 indexSpec,
-                null,
                 null,
                 0,
                 0,

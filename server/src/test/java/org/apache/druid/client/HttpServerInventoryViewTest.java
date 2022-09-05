@@ -182,7 +182,8 @@ public class HttpServerInventoryViewTest
         httpClient,
         druidNodeDiscoveryProvider,
         (pair) -> !pair.rhs.getDataSource().equals("non-loading-datasource"),
-        new HttpServerInventoryViewConfig(null, null, null)
+        new HttpServerInventoryViewConfig(null, null, null),
+        "test"
     );
 
     CountDownLatch initializeCallback1 = new CountDownLatch(1);

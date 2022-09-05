@@ -21,9 +21,9 @@ import React from 'react';
 
 import { SpecDialog } from './spec-dialog';
 
-describe('spec dialog', () => {
+describe('SpecDialog', () => {
   it('matches snapshot no initSpec', () => {
-    const specDialog = <SpecDialog onSubmit={() => {}} onClose={() => {}} title={'test'} />;
+    const specDialog = <SpecDialog onSubmit={() => {}} onClose={() => {}} title="test" />;
     render(specDialog);
     expect(document.body.lastChild).toMatchSnapshot();
   });
@@ -34,7 +34,7 @@ describe('spec dialog', () => {
         initSpec={{ type: 'some-spec' }}
         onSubmit={() => {}}
         onClose={() => {}}
-        title={'test'}
+        title="test"
       />
     );
     render(specDialog);

@@ -22,12 +22,7 @@ package org.apache.druid.curator;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import io.netty.util.SuppressForbidden;
 import org.apache.curator.RetryPolicy;
-import org.apache.curator.ensemble.EnsembleProvider;
-import org.apache.curator.ensemble.exhibitor.DefaultExhibitorRestClient;
-import org.apache.curator.ensemble.exhibitor.ExhibitorEnsembleProvider;
-import org.apache.curator.ensemble.exhibitor.Exhibitors;
 import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -48,35 +43,25 @@ import java.util.List;
 
 public class CuratorModule implements Module
 {
-  static final String CURATOR_CONFIG_PREFIX = "druid.zk.service";
-
-  static final String EXHIBITOR_CONFIG_PREFIX = "druid.exhibitor.service";
-
-  private static final int BASE_SLEEP_TIME_MS = 1000;
-
-  private static final int MAX_SLEEP_TIME_MS = 45000;
-
-  private static final int MAX_RETRIES = 29;
-
   private static final Logger log = new Logger(CuratorModule.class);
+
+  static final int BASE_SLEEP_TIME_MS = 1000;
+  static final int MAX_SLEEP_TIME_MS = 45000;
+  private static final int MAX_RETRIES = 29;
 
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, CURATOR_CONFIG_PREFIX, ZkEnablementConfig.class);
-    JsonConfigProvider.bind(binder, CURATOR_CONFIG_PREFIX, CuratorConfig.class);
-    JsonConfigProvider.bind(binder, EXHIBITOR_CONFIG_PREFIX, ExhibitorConfig.class);
+    JsonConfigProvider.bind(binder, CuratorConfig.CONFIG_PREFIX, ZkEnablementConfig.class);
+    JsonConfigProvider.bind(binder, CuratorConfig.CONFIG_PREFIX, CuratorConfig.class);
   }
 
-  @Provides
-  @LazySingleton
-  @SuppressForbidden(reason = "System#err")
-  public CuratorFramework makeCurator(ZkEnablementConfig zkEnablementConfig, CuratorConfig config, EnsembleProvider ensembleProvider, Lifecycle lifecycle)
+  /**
+   * Create the Curator framework outside of Guice given the ZK config.
+   * Primarily for tests.
+   */
+  public static CuratorFramework createCurator(CuratorConfig config)
   {
-    if (!zkEnablementConfig.isEnabled()) {
-      throw new RuntimeException("Zookeeper is disabled, Can't create CuratorFramework.");
-    }
-
     final CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder();
     if (!Strings.isNullOrEmpty(config.getZkUser()) && !Strings.isNullOrEmpty(config.getZkPwd())) {
       builder.authorization(
@@ -87,14 +72,28 @@ public class CuratorModule implements Module
 
     RetryPolicy retryPolicy = new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES);
 
-    final CuratorFramework framework = builder
-        .ensembleProvider(ensembleProvider)
+    return builder
+        .ensembleProvider(new FixedEnsembleProvider(config.getZkHosts()))
         .sessionTimeoutMs(config.getZkSessionTimeoutMs())
         .connectionTimeoutMs(config.getZkConnectionTimeoutMs())
         .retryPolicy(retryPolicy)
         .compressionProvider(new PotentiallyGzippedCompressionProvider(config.getEnableCompression()))
         .aclProvider(config.getEnableAcl() ? new SecuredACLProvider() : new DefaultACLProvider())
         .build();
+  }
+
+  /**
+   * Provide the Curator framework via Guice, integrated with the Druid lifecycle.
+   */
+  @Provides
+  @LazySingleton
+  public CuratorFramework makeCurator(ZkEnablementConfig zkEnablementConfig, CuratorConfig config, Lifecycle lifecycle)
+  {
+    if (!zkEnablementConfig.isEnabled()) {
+      throw new RuntimeException("Zookeeper is disabled, cannot create CuratorFramework.");
+    }
+
+    final CuratorFramework framework = createCurator(config);
 
     framework.getUnhandledErrorListenable().addListener((message, e) -> {
       log.error(e, "Unhandled error in Curator, stopping server.");
@@ -121,43 +120,6 @@ public class CuratorModule implements Module
     );
 
     return framework;
-  }
-
-  @Provides
-  @LazySingleton
-  public EnsembleProvider makeEnsembleProvider(CuratorConfig config, ExhibitorConfig exConfig)
-  {
-    if (exConfig.getHosts().isEmpty()) {
-      return new FixedEnsembleProvider(config.getZkHosts());
-    }
-
-    RetryPolicy retryPolicy = new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES);
-
-    return new ExhibitorEnsembleProvider(
-        new Exhibitors(
-            exConfig.getHosts(),
-            exConfig.getRestPort(),
-            newBackupProvider(config.getZkHosts())
-        ),
-        new DefaultExhibitorRestClient(exConfig.getUseSsl()),
-        exConfig.getRestUriPath(),
-        exConfig.getPollingMs(),
-        retryPolicy
-    )
-    {
-      @Override
-      public void start() throws Exception
-      {
-        log.debug("Polling the list of ZooKeeper servers for the initial ensemble");
-        this.pollForInitialEnsemble();
-        super.start();
-      }
-    };
-  }
-
-  private Exhibitors.BackupConnectionStringProvider newBackupProvider(final String zkHosts)
-  {
-    return () -> zkHosts;
   }
 
   static class SecuredACLProvider implements ACLProvider

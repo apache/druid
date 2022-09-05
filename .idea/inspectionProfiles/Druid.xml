@@ -372,6 +372,16 @@
         <constraint name="l" within="" contains="" />
         <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
       </searchConfiguration>
+      <searchConfiguration name="Assign an ExecutorService instance to an ExecutorService variable, not an Executor variable" text="$x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA" >
+        <constraint name="__context__" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.Executor" within="" contains="" />
+        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ExecutorService" exprTypeWithinHierarchy="true" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Intialize an ExecutorService instance to an ExecutorService variable, not an Executor variable" text="Executor $x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA" >
+        <constraint name="__context__" within="" contains="" />
+        <constraint name="x"  within="" contains="" />
+        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ExecutorService" exprTypeWithinHierarchy="true"  within="" contains="" />
+      </searchConfiguration>
       <searchConfiguration name="Create a simple ExecutorService (not scheduled)" text="$x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
         <constraint name="__context__" within="" contains="" />
         <constraint name="x" nameOfExprType="java\.util\.concurrent\.ExecutorService" within="" contains="" />

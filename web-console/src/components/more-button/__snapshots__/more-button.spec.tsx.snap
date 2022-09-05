@@ -1,73 +1,67 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`more button matches snapshot (empty) 1`] = `
+exports[`MoreButton matches snapshot (empty) 1`] = `
 <span
-  class="bp3-popover-wrapper more-button"
+  aria-haspopup="true"
+  class="more-button bp4-popover2-target"
 >
-  <span
-    class="bp3-popover-target"
+  <button
+    class="bp4-button bp4-disabled"
+    disabled=""
+    tabindex="-1"
+    title="More actions"
+    type="button"
   >
-    <button
-      class="bp3-button bp3-disabled"
-      disabled=""
-      tabindex="-1"
-      type="button"
+    <span
+      aria-hidden="true"
+      class="bp4-icon bp4-icon-more"
+      icon="more"
+      tabindex="0"
     >
-      <span
-        class="bp3-icon bp3-icon-more"
-        icon="more"
+      <svg
+        data-icon="more"
+        height="16"
+        viewBox="0 0 16 16"
+        width="16"
       >
-        <svg
-          data-icon="more"
-          height="16"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <desc>
-            more
-          </desc>
-          <path
-            d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
-            fill-rule="evenodd"
-          />
-        </svg>
-      </span>
-    </button>
-  </span>
+        <path
+          d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
+          fill-rule="evenodd"
+        />
+      </svg>
+    </span>
+  </button>
 </span>
 `;
 
-exports[`more button matches snapshot (full) 1`] = `
+exports[`MoreButton matches snapshot (full) 1`] = `
 <span
-  class="bp3-popover-wrapper more-button"
+  aria-haspopup="true"
+  class="more-button bp4-popover2-target"
 >
-  <span
-    class="bp3-popover-target"
+  <button
+    class="bp4-button"
+    title="More actions"
+    type="button"
   >
-    <button
-      class="bp3-button"
-      type="button"
+    <span
+      aria-hidden="true"
+      class="bp4-icon bp4-icon-more"
+      icon="more"
+      tabindex="0"
     >
-      <span
-        class="bp3-icon bp3-icon-more"
-        icon="more"
+      <svg
+        data-icon="more"
+        height="16"
+        viewBox="0 0 16 16"
+        width="16"
       >
-        <svg
-          data-icon="more"
-          height="16"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <desc>
-            more
-          </desc>
-          <path
-            d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
-            fill-rule="evenodd"
-          />
-        </svg>
-      </span>
-    </button>
-  </span>
+        <path
+          d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
+          fill-rule="evenodd"
+        />
+      </svg>
+    </span>
+  </button>
 </span>
 `;

@@ -26,7 +26,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
- * This wrapper class is created to be able to access some of the the "protected" methods inside Hadoop's
+ * This wrapper class is created to be able to access some of the "protected" methods inside Hadoop's
  * FileSystem class. Those are supposed to become public eventually or more appropriate alternatives would be
  * provided.
  * This is a hack and should be removed when no longer necessary.

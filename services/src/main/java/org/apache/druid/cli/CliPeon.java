@@ -20,26 +20,25 @@
 package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.annotations.Arguments;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import io.airlift.airline.Arguments;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.indexing.HttpIndexingServiceClient;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
@@ -75,11 +74,11 @@ import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.batch.parallel.DeepStorageShuffleClient;
 import org.apache.druid.indexing.common.task.batch.parallel.HttpShuffleClient;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClientFactory;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProviderImpl;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -88,12 +87,18 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.worker.executor.ExecutorLifecycle;
 import org.apache.druid.indexing.worker.executor.ExecutorLifecycleConfig;
+import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
+import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
+import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.segment.handoff.CoordinatorBasedSegmentHandoffNotifierConfig;
+import org.apache.druid.segment.handoff.CoordinatorBasedSegmentHandoffNotifierFactory;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
@@ -106,9 +111,6 @@ import org.apache.druid.segment.realtime.appenderator.PeonAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
-import org.apache.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierConfig;
-import org.apache.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
@@ -138,7 +140,8 @@ import java.util.Set;
 public class CliPeon extends GuiceRunnable
 {
   @SuppressWarnings("WeakerAccess")
-  @Arguments(description = "task.json status.json report.json", required = true)
+  @Arguments(description = "task.json status.json report.json")
+  @Required
   public List<String> taskAndStatusFile;
 
   // path to store the task's stdout log
@@ -209,6 +212,7 @@ public class CliPeon extends GuiceRunnable
 
             bindRowIngestionMeters(binder);
             bindChatHandler(binder);
+            configureIntermediaryData(binder);
             bindTaskConfigAndClients(binder);
             bindPeonDataSegmentHandlers(binder);
 
@@ -293,7 +297,7 @@ public class CliPeon extends GuiceRunnable
   public void run()
   {
     try {
-      Injector injector = makeInjector();
+      Injector injector = makeInjector(ImmutableSet.of(NodeRole.PEON));
       try {
         final Lifecycle lifecycle = initLifecycle(injector);
         final Thread hook = new Thread(
@@ -422,11 +426,9 @@ public class CliPeon extends GuiceRunnable
     JsonConfigProvider.bind(binder, "druid.peon.taskActionClient.retry", RetryPolicyConfig.class);
 
     configureTaskActionClient(binder);
-    binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
-    binder.bind(ShuffleClient.class).to(HttpShuffleClient.class).in(LazySingleton.class);
 
-    binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>>(){})
-          .to(ParallelIndexTaskClientFactory.class)
+    binder.bind(ParallelIndexSupervisorTaskClientProvider.class)
+          .to(ParallelIndexSupervisorTaskClientProviderImpl.class)
           .in(LazySingleton.class);
 
     binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
@@ -452,4 +454,32 @@ public class CliPeon extends GuiceRunnable
     binder.bind(CoordinatorClient.class).in(LazySingleton.class);
   }
 
+  static void configureIntermediaryData(Binder binder)
+  {
+    PolyBind.createChoice(
+        binder,
+        "druid.processing.intermediaryData.storage.type",
+        Key.get(IntermediaryDataManager.class),
+        Key.get(LocalIntermediaryDataManager.class)
+    );
+    final MapBinder<String, IntermediaryDataManager> intermediaryDataManagerBiddy = PolyBind.optionBinder(
+        binder,
+        Key.get(IntermediaryDataManager.class)
+    );
+    intermediaryDataManagerBiddy.addBinding("local").to(LocalIntermediaryDataManager.class).in(LazySingleton.class);
+    intermediaryDataManagerBiddy.addBinding("deepstore").to(DeepStorageIntermediaryDataManager.class).in(LazySingleton.class);
+
+    PolyBind.createChoice(
+        binder,
+        "druid.processing.intermediaryData.storage.type",
+        Key.get(ShuffleClient.class),
+        Key.get(HttpShuffleClient.class)
+    );
+    final MapBinder<String, ShuffleClient> shuffleClientBiddy = PolyBind.optionBinder(
+        binder,
+        Key.get(ShuffleClient.class)
+    );
+    shuffleClientBiddy.addBinding("local").to(HttpShuffleClient.class).in(LazySingleton.class);
+    shuffleClientBiddy.addBinding("deepstore").to(DeepStorageShuffleClient.class).in(LazySingleton.class);
+  }
 }

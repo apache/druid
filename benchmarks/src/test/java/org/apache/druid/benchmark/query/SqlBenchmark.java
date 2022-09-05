@@ -21,27 +21,41 @@ package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.calcite.schema.SchemaPlus;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchApproxQuantileSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchObjectSqlAggregator;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
+import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
+import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
@@ -62,8 +76,11 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
+
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -77,10 +94,13 @@ public class SqlBenchmark
 {
   static {
     NullHandling.initializeForTests();
-    Calcites.setSystemProperties();
   }
 
   private static final Logger log = new Logger(SqlBenchmark.class);
+
+  private static final String STORAGE_MMAP = "mmap";
+  private static final String STORAGE_FRAME_ROW = "frame-row";
+  private static final String STORAGE_FRAME_COLUMNAR = "frame-columnar";
 
   private static final List<String> QUERIES = ImmutableList.of(
       // 0, 1, 2, 3: Timeseries, unfiltered
@@ -367,21 +387,30 @@ public class SqlBenchmark
       + "    GROUP BY dimSequential\n"
       + "  )\n"
       + ")\n"
-      + "SELECT * FROM matrix"
+      + "SELECT * FROM matrix",
+
+      // 20: GroupBy, doubles sketches
+      "SELECT dimZipf, APPROX_QUANTILE_DS(sumFloatNormal, 0.5), DS_QUANTILES_SKETCH(maxLongUniform) "
+      + "FROM foo "
+      + "GROUP BY 1"
   );
 
   @Param({"5000000"})
   private int rowsPerSegment;
 
-  @Param({"false", "force"})
+  @Param({"force"})
   private String vectorize;
 
-  @Param({"10", "15"})
+  @Param({"0", "10", "18"})
   private String query;
 
+  @Param({STORAGE_MMAP, STORAGE_FRAME_ROW, STORAGE_FRAME_COLUMNAR})
+  private String storageType;
+
+  private SqlEngine engine;
   @Nullable
   private PlannerFactory plannerFactory;
-  private Closer closer = Closer.create();
+  private final Closer closer = Closer.create();
 
   @Setup(Level.Trial)
   public void setup()
@@ -404,24 +433,71 @@ public class SqlBenchmark
 
     final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
 
-    final SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
-        dataSegment,
-        index
-    );
+    final SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate);
+    addSegmentToWalker(walker, dataSegment, index);
     closer.register(walker);
 
-    final SchemaPlus rootSchema =
+    final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
     plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-        CalciteTests.createOperatorTable(),
+        createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
-        CalciteTests.DRUID_SCHEMA_NAME
+        CalciteTests.DRUID_SCHEMA_NAME,
+        new CalciteRulesManager(ImmutableSet.of())
     );
+  }
+
+  private void addSegmentToWalker(
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final DataSegment descriptor,
+      final QueryableIndex index
+  )
+  {
+    if (STORAGE_MMAP.equals(storageType)) {
+      walker.add(descriptor, new QueryableIndexSegment(index, descriptor.getId()));
+    } else if (STORAGE_FRAME_ROW.equals(storageType)) {
+      walker.add(
+          descriptor,
+          FrameTestUtil.adapterToFrameSegment(
+              new QueryableIndexStorageAdapter(index),
+              FrameType.ROW_BASED,
+              descriptor.getId()
+          )
+      );
+    } else if (STORAGE_FRAME_COLUMNAR.equals(storageType)) {
+      walker.add(
+          descriptor,
+          FrameTestUtil.adapterToFrameSegment(
+              new QueryableIndexStorageAdapter(index),
+              FrameType.COLUMNAR,
+              descriptor.getId()
+          )
+      );
+    }
+  }
+
+  private static DruidOperatorTable createOperatorTable()
+  {
+    try {
+      final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
+      extractionOperators.add(CalciteTests.INJECTOR.getInstance(QueryLookupOperatorConversion.class));
+      final Set<SqlAggregator> aggregators = new HashSet<>();
+      aggregators.add(CalciteTests.INJECTOR.getInstance(DoublesSketchApproxQuantileSqlAggregator.class));
+      aggregators.add(CalciteTests.INJECTOR.getInstance(DoublesSketchObjectSqlAggregator.class));
+      final ApproxCountDistinctSqlAggregator countDistinctSqlAggregator =
+          new ApproxCountDistinctSqlAggregator(new HllSketchApproxCountDistinctSqlAggregator());
+      aggregators.add(new CountSqlAggregator(countDistinctSqlAggregator));
+      aggregators.add(countDistinctSqlAggregator);
+      return new DruidOperatorTable(aggregators, extractionOperators);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @TearDown(Level.Trial)
@@ -439,10 +515,9 @@ public class SqlBenchmark
         QueryContexts.VECTORIZE_KEY, vectorize,
         QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
     );
-    final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
-                                                                   .createEscalatedAuthenticationResult();
-    try (final DruidPlanner planner = plannerFactory.createPlanner(context, ImmutableList.of(), authenticationResult)) {
-      final PlannerResult plannerResult = planner.plan(QUERIES.get(Integer.parseInt(query)));
+    final String sql = QUERIES.get(Integer.parseInt(query));
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, new QueryContext(context))) {
+      final PlannerResult plannerResult = planner.plan();
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);
@@ -458,10 +533,9 @@ public class SqlBenchmark
         QueryContexts.VECTORIZE_KEY, vectorize,
         QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
     );
-    final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
-                                                                   .createEscalatedAuthenticationResult();
-    try (final DruidPlanner planner = plannerFactory.createPlanner(context, ImmutableList.of(), authenticationResult)) {
-      final PlannerResult plannerResult = planner.plan(QUERIES.get(Integer.parseInt(query)));
+    final String sql = QUERIES.get(Integer.parseInt(query));
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, new QueryContext(context))) {
+      final PlannerResult plannerResult = planner.plan();
       blackhole.consume(plannerResult);
     }
   }

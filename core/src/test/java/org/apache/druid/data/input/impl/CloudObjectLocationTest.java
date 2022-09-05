@@ -113,4 +113,29 @@ public class CloudObjectLocationTest
     // will never get here
     Assert.assertEquals(invalidBucket, new CloudObjectLocation(invalidBucket.toUri(SCHEME)));
   }
+
+  @Test
+  public void testBucketNameWithoutUnderscores()
+  {
+    CloudObjectLocation gsValidBucket = new CloudObjectLocation(URI.create("gs://1test.bucket-value/path/to/path"));
+    Assert.assertEquals("1test.bucket-value", gsValidBucket.getBucket());
+    Assert.assertEquals("path/to/path", gsValidBucket.getPath());
+
+    CloudObjectLocation s3ValidBucket = new CloudObjectLocation(URI.create("s3://2test.bucket-value/path/to/path"));
+    Assert.assertEquals("2test.bucket-value", s3ValidBucket.getBucket());
+    Assert.assertEquals("path/to/path", s3ValidBucket.getPath());
+  }
+
+  @Test
+  public void testBucketNameWithUnderscores()
+  {
+    // Underscore(_) character is allowed for bucket names by GCP
+    CloudObjectLocation gsValidBucket = new CloudObjectLocation(URI.create("gs://test_bucket/path/to/path"));
+    Assert.assertEquals("test_bucket", gsValidBucket.getBucket());
+    Assert.assertEquals("path/to/path", gsValidBucket.getPath());
+
+    CloudObjectLocation s3ValidBucket = new CloudObjectLocation(URI.create("s3://test_bucket/path/to/path"));
+    Assert.assertEquals("test_bucket", s3ValidBucket.getBucket());
+    Assert.assertEquals("path/to/path", s3ValidBucket.getPath());
+  }
 }

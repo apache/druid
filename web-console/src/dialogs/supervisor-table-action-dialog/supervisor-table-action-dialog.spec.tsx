@@ -23,11 +23,11 @@ import { SupervisorTableActionDialog } from './supervisor-table-action-dialog';
 
 const basicAction = { title: 'test', onAction: () => {} };
 
-describe('supervisor table action dialog', () => {
+describe('SupervisorTableActionDialog', () => {
   it('matches snapshot', () => {
     const supervisorTableActionDialog = (
       <SupervisorTableActionDialog
-        supervisorId={'test'}
+        supervisorId="test"
         actions={[basicAction, basicAction, basicAction, basicAction]}
         onClose={() => {}}
       />

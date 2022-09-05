@@ -26,7 +26,7 @@ sidebar_label: "TopN"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes a query
 > type in the native language. For information about when Druid SQL will use this query type, refer to the
-> [SQL documentation](sql.md#query-types).
+> [SQL documentation](sql-translation.md#query-types).
 
 Apache Druid TopN queries return a sorted set of results for the values in a given dimension according to some criteria. Conceptually, they can be thought of as an approximate [GroupByQuery](../querying/groupbyquery.md) over a single dimension with an [Ordering](../querying/limitspec.md) spec. TopNs are much faster and resource efficient than GroupBys for this use case. These types of queries take a topN query object and return an array of JSON objects where each object represents a value asked for by the topN query.
 
@@ -103,6 +103,7 @@ There are 11 parts to a topN query.
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |granularity|Defines the granularity to bucket query results. See [Granularities](../querying/granularities.md)|yes|
 |filter|See [Filters](../querying/filters.md)|no|
+|virtualColumns|A JSON list of [virtual columns](./virtual-columns.md). You can reference a virtual column as the grouping `dimension` or as an input in `aggregations` or `postAggregations`.| no (default none)|
 |aggregations|See [Aggregations](../querying/aggregations.md)|for numeric metricSpec, aggregations or postAggregations should be specified. Otherwise no.|
 |postAggregations|See [Post Aggregations](../querying/post-aggregations.md)|for numeric metricSpec, aggregations or postAggregations should be specified. Otherwise no.|
 |dimension|A String or JSON object defining the dimension that you want the top taken for. For more info, see [DimensionSpecs](../querying/dimensionspecs.md)|yes|
@@ -168,11 +169,11 @@ See [Multi-value dimensions](multi-value-dimensions.md) for more details.
 
 The current TopN algorithm is an approximate algorithm. The top 1000 local results from each segment are returned for merging to determine the global topN. As such, the topN algorithm is approximate in both rank and results. Approximate results *ONLY APPLY WHEN THERE ARE MORE THAN 1000 DIM VALUES*. A topN over a dimension with fewer than 1000 unique dimension values can be considered accurate in rank and accurate in aggregates.
 
-The threshold can be modified from it's default 1000 via the server parameter `druid.query.topN.minTopNThreshold` which need to restart servers to take effect or set `minTopNThreshold` in query context which take effect per query.
+The threshold can be modified from its default 1000 via the server parameter `druid.query.topN.minTopNThreshold`, which needs a restart of the servers to take effect, or via `minTopNThreshold` in the query context, which takes effect per query.
 
 If you are wanting the top 100 of a high cardinality, uniformly distributed dimension ordered by some low-cardinality, uniformly distributed dimension, you are potentially going to get aggregates back that are missing data.
 
-To put it another way, the best use cases for topN are when you can have confidence that the overall results are uniformly in the top. For example, if a particular site ID is in the top 10 for some metric for every hour of every day, then it will probably be accurate in the topN over multiple days. But if a site barely in the top 1000 for any given hour, but over the whole query granularity is in the top 500 (example: a site which gets highly uniform traffic co-mingling in the dataset with sites with highly periodic data), then a top500 query may not have that particular site a the exact rank, and may not be accurate for that particular site's aggregates.
+To put it another way, the best use cases for topN are when you can have confidence that the overall results are uniformly in the top. For example, if a particular site ID is in the top 10 for some metric for every hour of every day, then it will probably be accurate in the topN over multiple days. But if a site is barely in the top 1000 for any given hour, but over the whole query granularity is in the top 500 (example: a site which gets highly uniform traffic co-mingling in the dataset with sites with highly periodic data), then a top500 query may not have that particular site at the exact rank, and may not be accurate for that particular site's aggregates.
 
 Before continuing in this section, please consider if you really need exact results. Getting exact results is a very resource intensive process. For the vast majority of "useful" data results, an approximate topN algorithm supplies plenty of accuracy.
 

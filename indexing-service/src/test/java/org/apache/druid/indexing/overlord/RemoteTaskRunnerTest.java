@@ -22,14 +22,18 @@ package org.apache.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.io.ByteStreams;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
@@ -40,10 +44,15 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -54,7 +63,13 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
+import org.mockito.Mockito;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
@@ -64,18 +79,41 @@ import java.util.concurrent.TimeUnit;
 
 public class RemoteTaskRunnerTest
 {
+  private static final Logger LOG = new Logger(RemoteTaskRunnerTest.class);
   private static final Joiner JOINER = RemoteTaskRunnerTestUtils.JOINER;
   private static final String WORKER_HOST = "worker";
-  private static final String ANNOUCEMENTS_PATH = JOINER.join(RemoteTaskRunnerTestUtils.ANNOUNCEMENTS_PATH, WORKER_HOST);
+  private static final String ANNOUCEMENTS_PATH = JOINER.join(
+      RemoteTaskRunnerTestUtils.ANNOUNCEMENTS_PATH,
+      WORKER_HOST
+  );
   private static final String STATUS_PATH = JOINER.join(RemoteTaskRunnerTestUtils.STATUS_PATH, WORKER_HOST);
 
+  // higher timeout to reduce flakiness on CI pipeline
+  private static final Period TIMEOUT_PERIOD = Period.millis(30000);
+
   private RemoteTaskRunner remoteTaskRunner;
+  private HttpClient httpClient;
   private RemoteTaskRunnerTestUtils rtrTestUtils = new RemoteTaskRunnerTestUtils();
   private ObjectMapper jsonMapper;
   private CuratorFramework cf;
 
   private Task task;
   private Worker worker;
+
+  @Rule
+  public TestRule watcher = new TestWatcher() {
+    @Override
+    protected void starting(Description description)
+    {
+      LOG.info("Starting test: " + description.getMethodName());
+    }
+
+    @Override
+    protected void finished(Description description)
+    {
+      LOG.info("Finishing test: " + description.getMethodName());
+    }
+  };
 
   @Rule
   public final TestRule timeout = new DeadlockDetectingTimeout(60, TimeUnit.SECONDS);
@@ -88,6 +126,7 @@ public class RemoteTaskRunnerTest
     cf = rtrTestUtils.getCuratorFramework();
 
     task = TestTasks.unending("task id with spaces");
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
 
   @After
@@ -104,9 +143,9 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
 
-    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount());
-    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount());
-    Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount());
+    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
 
     ListenableFuture<TaskStatus> result = remoteTaskRunner.run(task);
 
@@ -121,9 +160,9 @@ public class RemoteTaskRunnerTest
 
     cf.delete().guaranteed().forPath(JOINER.join(STATUS_PATH, task.getId()));
 
-    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount());
-    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount());
-    Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount());
+    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
   }
 
   @Test
@@ -131,6 +170,7 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
     remoteTaskRunner.addPendingTask(task);
+    remoteTaskRunner.runPendingTasks();
     Assert.assertFalse(workerRunningTask(task.getId()));
 
     ListenableFuture<TaskStatus> result = remoteTaskRunner.run(task);
@@ -148,7 +188,7 @@ public class RemoteTaskRunnerTest
   @Test
   public void testStartWithNoWorker()
   {
-    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT1S")));
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD));
   }
 
   @Test
@@ -352,15 +392,16 @@ public class RemoteTaskRunnerTest
     TaskStatus status = future.get();
 
     Assert.assertEquals(status.getStatusCode(), TaskState.FAILED);
+    Assert.assertNotNull(status.getErrorMsg());
+    Assert.assertTrue(status.getErrorMsg().contains("The worker that this task was assigned disappeared"));
   }
 
   @Test
   public void testBootstrap() throws Exception
   {
-    Period timeoutPeriod = Period.millis(1000);
     makeWorker();
 
-    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD);
     rtrConfig.setMaxPercentageBlacklistWorkers(100);
 
     makeRemoteTaskRunner(rtrConfig);
@@ -370,7 +411,8 @@ public class RemoteTaskRunnerTest
         new TaskResource("first", 1),
         "foo",
         TaskStatus.running("first"),
-        jsonMapper);
+        jsonMapper
+    );
     remoteTaskRunner.run(task1);
     Assert.assertTrue(taskAnnounced(task1.getId()));
     mockWorkerRunningTask(task1);
@@ -380,15 +422,17 @@ public class RemoteTaskRunnerTest
         new TaskResource("task", 2),
         "foo",
         TaskStatus.running("task"),
-        jsonMapper);
+        jsonMapper
+    );
     remoteTaskRunner.run(task);
-    
+
     TestRealtimeTask task2 = new TestRealtimeTask(
         "second",
         new TaskResource("second", 2),
         "foo",
         TaskStatus.running("second"),
-        jsonMapper);
+        jsonMapper
+    );
     remoteTaskRunner.run(task2);
     Assert.assertTrue(taskAnnounced(task2.getId()));
     mockWorkerRunningTask(task2);
@@ -418,7 +462,8 @@ public class RemoteTaskRunnerTest
         new TaskResource("testTask", 2),
         "foo",
         TaskStatus.success("testTask"),
-        jsonMapper);
+        jsonMapper
+    );
     remoteTaskRunner.run(task1);
     Assert.assertTrue(taskAnnounced(task1.getId()));
     mockWorkerRunningTask(task1);
@@ -431,8 +476,8 @@ public class RemoteTaskRunnerTest
   public void testWorkerRemoved() throws Exception
   {
     doSetup();
-    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount());
-    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount());
+    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
 
     Future<TaskStatus> future = remoteTaskRunner.run(task);
 
@@ -446,6 +491,8 @@ public class RemoteTaskRunnerTest
     TaskStatus status = future.get();
 
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
+    Assert.assertNotNull(status.getErrorMsg());
+    Assert.assertTrue(status.getErrorMsg().contains("Canceled for worker cleanup"));
     RemoteTaskRunnerConfig config = remoteTaskRunner.getRemoteTaskRunnerConfig();
     Assert.assertTrue(
         TestUtils.conditionValid(
@@ -463,8 +510,8 @@ public class RemoteTaskRunnerTest
     );
     Assert.assertNull(cf.checkExists().forPath(STATUS_PATH));
 
-    Assert.assertEquals(0, remoteTaskRunner.getTotalTaskSlotCount());
-    Assert.assertEquals(0, remoteTaskRunner.getIdleTaskSlotCount());
+    Assert.assertFalse(remoteTaskRunner.getTotalTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
+    Assert.assertFalse(remoteTaskRunner.getIdleTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
   }
 
   @Test
@@ -501,7 +548,7 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(workerRunningTask(task.getId()));
 
     remoteTaskRunner.stop();
-    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT5S")));
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD));
     final RemoteTaskRunnerWorkItem newWorkItem = remoteTaskRunner
         .getKnownTasks()
         .stream()
@@ -517,15 +564,48 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(TaskState.SUCCESS, result.get().getStatusCode());
   }
 
+  @Test
+  public void testRunPendingTaskFailToAssignTask() throws Exception
+  {
+    doSetup();
+    RemoteTaskRunnerWorkItem originalItem = remoteTaskRunner.addPendingTask(task);
+    // modify taskId to make task assignment failed
+    RemoteTaskRunnerWorkItem wankyItem = Mockito.mock(RemoteTaskRunnerWorkItem.class);
+    Mockito.when(wankyItem.getTaskId()).thenReturn(originalItem.getTaskId()).thenReturn("wrongId");
+    remoteTaskRunner.runPendingTask(wankyItem);
+    TaskStatus taskStatus = originalItem.getResult().get(0, TimeUnit.MILLISECONDS);
+    Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
+    Assert.assertEquals(
+        "Failed to assign this task. See overlord logs for more details.",
+        taskStatus.getErrorMsg()
+    );
+  }
+
+  @Test
+  public void testRunPendingTaskTimeoutToAssign() throws Exception
+  {
+    makeWorker();
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD));
+    RemoteTaskRunnerWorkItem workItem = remoteTaskRunner.addPendingTask(task);
+    remoteTaskRunner.runPendingTask(workItem);
+    TaskStatus taskStatus = workItem.getResult().get(0, TimeUnit.MILLISECONDS);
+    Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
+    Assert.assertNotNull(taskStatus.getErrorMsg());
+    Assert.assertTrue(
+        taskStatus.getErrorMsg().startsWith("The worker that this task is assigned did not start it in timeout")
+    );
+  }
+
   private void doSetup() throws Exception
   {
     makeWorker();
-    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT5S")));
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD));
   }
 
   private void makeRemoteTaskRunner(RemoteTaskRunnerConfig config)
   {
-    remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(config);
+    httpClient = EasyMock.createMock(HttpClient.class);
+    remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(config, httpClient);
   }
 
   private void makeWorker() throws Exception
@@ -637,9 +717,9 @@ public class RemoteTaskRunnerTest
     );
     Assert.assertEquals(1, lazyworkers.size());
     Assert.assertEquals(1, remoteTaskRunner.getLazyWorkers().size());
-    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount());
-    Assert.assertEquals(0, remoteTaskRunner.getIdleTaskSlotCount());
-    Assert.assertEquals(3, remoteTaskRunner.getLazyTaskSlotCount());
+    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertFalse(remoteTaskRunner.getIdleTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
+    Assert.assertEquals(3, remoteTaskRunner.getLazyTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
   }
 
   @Test
@@ -729,10 +809,9 @@ public class RemoteTaskRunnerTest
   @Test
   public void testBlacklistZKWorkers() throws Exception
   {
-    Period timeoutPeriod = Period.millis(1000);
     makeWorker();
 
-    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD);
     rtrConfig.setMaxPercentageBlacklistWorkers(100);
 
     makeRemoteTaskRunner(rtrConfig);
@@ -780,7 +859,7 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(1, remoteTaskRunner.getBlackListedWorkers().size());
 
     ((RemoteTaskRunnerTestUtils.TestableRemoteTaskRunner) remoteTaskRunner)
-        .setCurrentTimeMillis(System.currentTimeMillis() + 2 * timeoutPeriod.toStandardDuration().getMillis());
+        .setCurrentTimeMillis(System.currentTimeMillis() + 2 * TIMEOUT_PERIOD.toStandardDuration().getMillis());
     remoteTaskRunner.checkBlackListedNodes();
 
     // After backOffTime the nodes are removed from blacklist
@@ -816,12 +895,10 @@ public class RemoteTaskRunnerTest
   @Test
   public void testBlacklistZKWorkers25Percent() throws Exception
   {
-    Period timeoutPeriod = Period.millis(1000);
-
     rtrTestUtils.makeWorker("worker", 10);
     rtrTestUtils.makeWorker("worker2", 10);
 
-    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD);
     rtrConfig.setMaxPercentageBlacklistWorkers(25);
 
     makeRemoteTaskRunner(rtrConfig);
@@ -873,12 +950,10 @@ public class RemoteTaskRunnerTest
   @Test
   public void testBlacklistZKWorkers50Percent() throws Exception
   {
-    Period timeoutPeriod = Period.millis(1000);
-
     rtrTestUtils.makeWorker("worker", 10);
     rtrTestUtils.makeWorker("worker2", 10);
 
-    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD);
     rtrConfig.setMaxPercentageBlacklistWorkers(50);
 
     makeRemoteTaskRunner(rtrConfig);
@@ -926,10 +1001,9 @@ public class RemoteTaskRunnerTest
   @Test
   public void testSuccessfulTaskOnBlacklistedWorker() throws Exception
   {
-    Period timeoutPeriod = Period.millis(1000);
     makeWorker();
 
-    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD);
     rtrConfig.setMaxPercentageBlacklistWorkers(100);
 
     makeRemoteTaskRunner(rtrConfig);
@@ -950,12 +1024,12 @@ public class RemoteTaskRunnerTest
     mockWorkerCompleteFailedTask(task1);
     Assert.assertTrue(taskFuture1.get().isFailure());
     Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
-    Assert.assertEquals(0, remoteTaskRunner.getBlacklistedTaskSlotCount());
+    Assert.assertFalse(remoteTaskRunner.getBlacklistedTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
 
     Future<TaskStatus> taskFuture2 = remoteTaskRunner.run(task2);
     Assert.assertTrue(taskAnnounced(task2.getId()));
     mockWorkerRunningTask(task2);
-    Assert.assertEquals(0, remoteTaskRunner.getBlacklistedTaskSlotCount());
+    Assert.assertFalse(remoteTaskRunner.getBlacklistedTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
 
     Future<TaskStatus> taskFuture3 = remoteTaskRunner.run(task3);
     Assert.assertTrue(taskAnnounced(task3.getId()));
@@ -963,12 +1037,15 @@ public class RemoteTaskRunnerTest
     mockWorkerCompleteFailedTask(task3);
     Assert.assertTrue(taskFuture3.get().isFailure());
     Assert.assertEquals(1, remoteTaskRunner.getBlackListedWorkers().size());
-    Assert.assertEquals(3, remoteTaskRunner.getBlacklistedTaskSlotCount());
+    Assert.assertEquals(
+        3,
+        remoteTaskRunner.getBlacklistedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue()
+    );
 
     mockWorkerCompleteSuccessfulTask(task2);
     Assert.assertTrue(taskFuture2.get().isSuccess());
     Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
-    Assert.assertEquals(0, remoteTaskRunner.getBlacklistedTaskSlotCount());
+    Assert.assertFalse(remoteTaskRunner.getBlacklistedTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
   }
 
   @Test
@@ -987,7 +1064,8 @@ public class RemoteTaskRunnerTest
 
     PathChildrenCache cache = new PathChildrenCache(cf, "/test", true);
     testStartWithNoWorker();
-    cache.getListenable().addListener(remoteTaskRunner.getStatusListener(worker, new ZkWorker(worker, cache, jsonMapper), null));
+    cache.getListenable()
+         .addListener(remoteTaskRunner.getStatusListener(worker, new ZkWorker(worker, cache, jsonMapper), null));
     cache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
 
     // Status listener will recieve event with null data
@@ -1002,5 +1080,57 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(alertDataMap.containsKey("znode"));
     Assert.assertNull(alertDataMap.get("znode"));
     // Status listener should successfully completes without throwing exception
+  }
+
+  @Test
+  public void testStreamTaskReportsUnknownTask() throws Exception
+  {
+    doSetup();
+    Assert.assertEquals(Optional.absent(), remoteTaskRunner.streamTaskReports("foo"));
+  }
+
+  @Test
+  public void testStreamTaskReportsKnownTask() throws Exception
+  {
+    doSetup();
+    final Capture<Request> capturedRequest = Capture.newInstance();
+    final String reportString = "my report!";
+    final ByteArrayInputStream reportResponse = new ByteArrayInputStream(StringUtils.toUtf8(reportString));
+    EasyMock.expect(httpClient.go(EasyMock.capture(capturedRequest), EasyMock.anyObject()))
+            .andReturn(Futures.immediateFuture(reportResponse));
+    EasyMock.replay(httpClient);
+
+    ListenableFuture<TaskStatus> result = remoteTaskRunner.run(task);
+    Assert.assertTrue(taskAnnounced(task.getId()));
+    mockWorkerRunningTask(task);
+
+    // Wait for the task to have a known location.
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            () ->
+                !remoteTaskRunner.getRunningTasks().isEmpty()
+                && !Iterables.getOnlyElement(remoteTaskRunner.getRunningTasks())
+                             .getLocation()
+                             .equals(TaskLocation.unknown())
+        )
+    );
+
+    // Stream task reports from a running task.
+    final InputStream in = remoteTaskRunner.streamTaskReports(task.getId()).get();
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ByteStreams.copy(in, baos);
+    Assert.assertEquals(reportString, StringUtils.fromUtf8(baos.toByteArray()));
+
+    // Stream task reports from a completed task.
+    mockWorkerCompleteSuccessfulTask(task);
+    Assert.assertTrue(workerCompletedTask(result));
+    Assert.assertEquals(Optional.absent(), remoteTaskRunner.streamTaskReports(task.getId()));
+
+    // Verify the HTTP request.
+    EasyMock.verify(httpClient);
+    Assert.assertEquals(
+        "http://dummy:9000/druid/worker/v1/chat/task%20id%20with%20spaces/liveReports",
+        capturedRequest.getValue().getUrl().toString()
+    );
   }
 }

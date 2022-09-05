@@ -20,12 +20,17 @@
 package org.apache.druid.tests.hadoop;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractITBatchIndexTest;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
@@ -67,6 +72,14 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
   private static final String REINDEX_TASK = "/hadoop/wikipedia_hadoop_reindex_task.json";
   private static final String REINDEX_QUERIES_RESOURCE = "/indexer/wikipedia_reindex_queries.json";
   private static final String REINDEX_DATASOURCE = "wikipedia_hadoop_reindex_test";
+
+  private static final CoordinatorDynamicConfig DYNAMIC_CONFIG_PAUSED =
+      CoordinatorDynamicConfig.builder().withPauseCoordination(true).build();
+  private static final CoordinatorDynamicConfig DYNAMIC_CONFIG_DEFAULT =
+      CoordinatorDynamicConfig.builder().build();
+
+  @Inject
+  CoordinatorResourceTestClient coordinatorClient;
 
   @DataProvider
   public static Object[][] resources()
@@ -114,7 +127,8 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
           BATCH_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          new Pair<>(false, false)
       );
     }
   }
@@ -142,6 +156,11 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
               "%%PARTITIONS_SPEC%%",
               jsonMapper.writeValueAsString(partitionsSpec)
           );
+          spec = StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString(0)
+          );
 
           return spec;
         }
@@ -157,14 +176,131 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
           INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          new Pair<>(false, false)
       );
 
       doReindexTest(
           indexDatasource,
           reindexDatasource,
           REINDEX_TASK,
-          REINDEX_QUERIES_RESOURCE
+          REINDEX_QUERIES_RESOURCE,
+          new Pair<>(false, false)
+      );
+    }
+  }
+
+  /**
+   * Test Hadoop Batch Ingestion with a non-zero value for awaitSegmentAvailabilityTimeoutMillis. This will confirm that
+   * the report for the task indicates segments were confirmed to be available on the cluster before finishing the job.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testIndexDataAwaitSegmentAvailability() throws Exception
+  {
+    String indexDatasource = INDEX_DATASOURCE + "_" + UUID.randomUUID();
+    try (
+        final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
+    ) {
+      final Function<String, String> specPathsTransform = spec -> {
+        try {
+          String path = "/batch_index/json";
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_PATHS%%",
+              path
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%PARTITIONS_SPEC%%",
+              jsonMapper.writeValueAsString(
+                  new HashedPartitionsSpec(3, null, null)
+              )
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString(600000)
+          );
+
+          return spec;
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      doIndexTest(
+          indexDatasource,
+          INDEX_TASK,
+          specPathsTransform,
+          INDEX_QUERIES_RESOURCE,
+          false,
+          true,
+          true,
+          new Pair<>(true, true)
+      );
+    }
+  }
+
+  /**
+   * Test Hadoop Batch Indexing with non-zero value for awaitSegmentAvailabilityTimeoutMillis. The coordinator
+   * is paused when the task runs. This should result in a successful task with a flag in the task report indicating
+   * that we did not confirm segment availability.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testIndexDataAwaitSegmentAvailabilityFailsButTaskSucceeds() throws Exception
+  {
+    String indexDatasource = INDEX_DATASOURCE + "_" + UUID.randomUUID();
+
+    try (
+        final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
+    ) {
+      coordinatorClient.postDynamicConfig(DYNAMIC_CONFIG_PAUSED);
+      final Function<String, String> specPathsTransform = spec -> {
+        try {
+          String path = "/batch_index/json";
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_PATHS%%",
+              path
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%PARTITIONS_SPEC%%",
+              jsonMapper.writeValueAsString(
+                  new HashedPartitionsSpec(3, null, null)
+              )
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString(1)
+          );
+
+          return spec;
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      doIndexTest(
+          indexDatasource,
+          INDEX_TASK,
+          specPathsTransform,
+          INDEX_QUERIES_RESOURCE,
+          false,
+          false,
+          false,
+          new Pair<>(true, false)
+      );
+      coordinatorClient.postDynamicConfig(DYNAMIC_CONFIG_DEFAULT);
+      ITRetryUtil.retryUntilTrue(
+          () -> coordinatorClient.areSegmentsLoaded(indexDatasource + config.getExtraDatasourceNameSuffix()), "Segment Load For: " + indexDatasource + config.getExtraDatasourceNameSuffix()
       );
     }
   }

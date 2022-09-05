@@ -55,15 +55,16 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
       InputEntity source,
       File temporaryDirectory,
       @Nullable Schema readerSchema,
-      JSONPathSpec flattenSpec,
-      boolean binaryAsString
+      @Nullable JSONPathSpec flattenSpec,
+      boolean binaryAsString,
+      boolean extractUnionsByType
   )
   {
     this.inputRowSchema = inputRowSchema;
     this.source = source;
     this.temporaryDirectory = temporaryDirectory;
     this.readerSchema = readerSchema;
-    this.recordFlattener = ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(false, binaryAsString));
+    this.recordFlattener = ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(false, binaryAsString, extractUnionsByType));
   }
 
   @Override
@@ -108,6 +109,12 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
       closer.close();
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  protected InputEntity source()
+  {
+    return source;
   }
 
   @Override

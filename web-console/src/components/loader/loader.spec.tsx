@@ -21,9 +21,9 @@ import React from 'react';
 
 import { Loader } from './loader';
 
-describe('loader', () => {
+describe('Loader', () => {
   it('matches snapshot', () => {
-    const loader = <Loader loadingText={'test'} />;
+    const loader = <Loader loadingText="test" />;
     const { container } = render(loader);
     expect(container.firstChild).toMatchSnapshot();
   });

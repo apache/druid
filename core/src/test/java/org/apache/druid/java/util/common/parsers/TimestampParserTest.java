@@ -204,7 +204,7 @@ public class TimestampParserTest
                         expectedDt, parser.apply(yearMonth));
 
     // Friday, May 15, 2020 8:20:40 PM GMT
-    long millis = 1589574040000l;
+    long millis = 1589574040000L;
     expectedDt = DateTimes.of("2020-05-15T20:20:40.000Z");
 
     parser = TimestampParser.createObjectTimestampParser("millis");
@@ -219,7 +219,7 @@ public class TimestampParserTest
     Assert.assertEquals("Timestamp of format posix not parsed correctly",
                         expectedDt, parser.apply(posix));
 
-    long micro = 1589574040000000l;
+    long micro = 1589574040000000L;
     parser = TimestampParser.createObjectTimestampParser("micro");
     Assert.assertEquals("Timestamp of format micro not parsed correctly",
                         expectedDt, parser.apply(micro));

@@ -117,7 +117,6 @@ public class GroupByRules
         if (doesMatch) {
           existingAggregationsWithSameFilter.add(
               Aggregation.create(
-                  existingAggregation.getVirtualColumns(),
                   existingAggregation.getAggregatorFactories().stream()
                                      .map(factory -> ((FilteredAggregatorFactory) factory).getAggregator())
                                      .collect(Collectors.toList()),

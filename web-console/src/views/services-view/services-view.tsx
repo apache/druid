@@ -20,8 +20,7 @@ import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core'
 import { IconNames } from '@blueprintjs/icons';
 import { sum } from 'd3-array';
 import React from 'react';
-import ReactTable from 'react-table';
-import { Filter } from 'react-table';
+import ReactTable, { Filter } from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -31,26 +30,31 @@ import {
   MoreButton,
   RefreshButton,
   TableColumnSelector,
+  TableFilterableCell,
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
+import { QueryWithContext } from '../../druid-models';
+import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api } from '../../singletons';
 import {
-  addFilter,
   Capabilities,
   CapabilitiesMode,
   deepGet,
   formatBytes,
   formatBytesCompact,
+  hasPopoverOpen,
+  LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
+  NumberLike,
   oneOf,
+  pluralIfNeeded,
   queryDruidSql,
   QueryManager,
   QueryState,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './services-view.scss';
 
@@ -60,7 +64,7 @@ const allColumns: string[] = [
   'Tier',
   'Host',
   'Port',
-  'Curr size',
+  'Current size',
   'Max size',
   'Usage',
   'Detail',
@@ -68,34 +72,37 @@ const allColumns: string[] = [
 ];
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  full: allColumns,
+  'full': allColumns,
   'no-sql': allColumns,
-  'no-proxy': ['Service', 'Type', 'Tier', 'Host', 'Port', 'Curr size', 'Max size', 'Usage'],
+  'no-proxy': ['Service', 'Type', 'Tier', 'Host', 'Port', 'Current size', 'Max size', 'Usage'],
 };
 
 function formatQueues(
-  segmentsToLoad: number,
-  segmentsToLoadSize: number,
-  segmentsToDrop: number,
-  segmentsToDropSize: number,
+  segmentsToLoad: NumberLike,
+  segmentsToLoadSize: NumberLike,
+  segmentsToDrop: NumberLike,
+  segmentsToDropSize: NumberLike,
 ): string {
   const queueParts: string[] = [];
   if (segmentsToLoad) {
     queueParts.push(
-      `${segmentsToLoad} segments to load (${formatBytesCompact(segmentsToLoadSize)})`,
+      `${pluralIfNeeded(segmentsToLoad, 'segment')} to load (${formatBytesCompact(
+        segmentsToLoadSize,
+      )})`,
     );
   }
   if (segmentsToDrop) {
     queueParts.push(
-      `${segmentsToDrop} segments to drop (${formatBytesCompact(segmentsToDropSize)})`,
+      `${pluralIfNeeded(segmentsToDrop, 'segment')} to drop (${formatBytesCompact(
+        segmentsToDropSize,
+      )})`,
     );
   }
   return queueParts.join(', ') || 'Empty load/drop queues';
 }
 
 export interface ServicesViewProps {
-  goToQuery: (initSql: string) => void;
-  goToTask: (taskId: string) => void;
+  goToQuery(queryWithContext: QueryWithContext): void;
   capabilities: Capabilities;
 }
 
@@ -107,41 +114,42 @@ export interface ServicesViewState {
   middleManagerDisableWorkerHost?: string;
   middleManagerEnableWorkerHost?: string;
 
-  hiddenColumns: LocalStorageBackedArray<string>;
+  visibleColumns: LocalStorageBackedVisibility;
 }
 
 interface ServiceQueryResultRow {
-  service: string;
-  service_type: string;
-  tier: string;
-  curr_size: number;
-  host: string;
-  max_size: number;
-  plaintext_port: number;
-  tls_port: number;
+  readonly service: string;
+  readonly service_type: string;
+  readonly tier: string;
+  readonly is_leader: number;
+  readonly host: string;
+  readonly curr_size: NumberLike;
+  readonly max_size: NumberLike;
+  readonly plaintext_port: number;
+  readonly tls_port: number;
 }
 
 interface LoadQueueStatus {
-  segmentsToDrop: number;
-  segmentsToDropSize: number;
-  segmentsToLoad: number;
-  segmentsToLoadSize: number;
+  readonly segmentsToDrop: NumberLike;
+  readonly segmentsToDropSize: NumberLike;
+  readonly segmentsToLoad: NumberLike;
+  readonly segmentsToLoadSize: NumberLike;
 }
 
 interface MiddleManagerQueryResultRow {
-  availabilityGroups: string[];
-  blacklistedUntil: string | null;
-  currCapacityUsed: number;
-  lastCompletedTaskTime: string;
-  category: string;
-  runningTasks: string[];
-  worker: {
-    capacity: number;
-    host: string;
-    ip: string;
-    scheme: string;
-    version: string;
-    category: string;
+  readonly availabilityGroups: string[];
+  readonly blacklistedUntil: string | null;
+  readonly currCapacityUsed: NumberLike;
+  readonly lastCompletedTaskTime: string;
+  readonly category: string;
+  readonly runningTasks: string[];
+  readonly worker: {
+    readonly capacity: NumberLike;
+    readonly host: string;
+    readonly ip: string;
+    readonly scheme: string;
+    readonly version: string;
+    readonly category: string;
   };
 }
 
@@ -151,7 +159,7 @@ interface ServiceResultRow
     Partial<MiddleManagerQueryResultRow> {}
 
 export class ServicesView extends React.PureComponent<ServicesViewProps, ServicesViewState> {
-  private serviceQueryManager: QueryManager<Capabilities, ServiceResultRow[]>;
+  private readonly serviceQueryManager: QueryManager<Capabilities, ServiceResultRow[]>;
 
   // Ranking
   //   coordinator => 8
@@ -164,7 +172,17 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   //   peon => 1
 
   static SERVICE_SQL = `SELECT
-  "server" AS "service", "server_type" AS "service_type", "tier", "host", "plaintext_port", "tls_port", "curr_size", "max_size",
+  "server" AS "service",
+  "server_type" AS "service_type",
+  "tier",
+  "host",
+  "plaintext_port",
+  "tls_port",
+  "curr_size",
+  "max_size",
+  "is_leader"
+FROM sys.servers
+ORDER BY
   (
     CASE "server_type"
     WHEN 'coordinator' THEN 8
@@ -177,9 +195,8 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
     WHEN 'peon' THEN 1
     ELSE 0
     END
-  ) AS "rank"
-FROM sys.servers
-ORDER BY "rank" DESC, "service" DESC`;
+  ) DESC,
+  "service" DESC`;
 
   static async getServices(): Promise<ServiceQueryResultRow[]> {
     const allServiceResp = await Api.instance.get('/druid/coordinator/v1/servers?simple');
@@ -204,7 +221,7 @@ ORDER BY "rank" DESC, "service" DESC`;
       servicesState: QueryState.INIT,
       serviceFilter: [],
 
-      hiddenColumns: new LocalStorageBackedArray<string>(
+      visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SERVICE_TABLE_COLUMN_SELECTION,
       ),
     };
@@ -228,7 +245,7 @@ ORDER BY "rank" DESC, "service" DESC`;
           services = services.map(s => {
             const loadQueueInfo = loadQueues[s.service];
             if (loadQueueInfo) {
-              s = Object.assign(s, loadQueueInfo);
+              s = { ...s, ...loadQueueInfo };
             }
             return s;
           });
@@ -261,7 +278,7 @@ ORDER BY "rank" DESC, "service" DESC`;
           services = services.map(s => {
             const middleManagerInfo = middleManagersLookup[s.service];
             if (middleManagerInfo) {
-              s = Object.assign(s, middleManagerInfo);
+              s = { ...s, ...middleManagerInfo };
             }
             return s;
           });
@@ -286,9 +303,24 @@ ORDER BY "rank" DESC, "service" DESC`;
     this.serviceQueryManager.terminate();
   }
 
+  private renderFilterableCell(field: string) {
+    const { serviceFilter } = this.state;
+
+    return (row: { value: any }) => (
+      <TableFilterableCell
+        field={field}
+        value={row.value}
+        filters={serviceFilter}
+        onFiltersChange={filters => this.setState({ serviceFilter: filters })}
+      >
+        {row.value}
+      </TableFilterableCell>
+    );
+  }
+
   renderServicesTable() {
     const { capabilities } = this.props;
-    const { servicesState, serviceFilter, groupServicesBy, hiddenColumns } = this.state;
+    const { servicesState, serviceFilter, groupServicesBy, visibleColumns } = this.state;
 
     const fillIndicator = (value: number) => {
       let formattedValue = (value * 100).toFixed(1);
@@ -301,10 +333,10 @@ ORDER BY "rank" DESC, "service" DESC`;
       );
     };
 
-    const services = servicesState.data;
+    const services = servicesState.data || [];
     return (
       <ReactTable
-        data={services || []}
+        data={services}
         loading={servicesState.loading}
         noDataText={
           servicesState.isEmpty() ? 'No historicals' : servicesState.getErrorMessage() || ''
@@ -315,63 +347,48 @@ ORDER BY "rank" DESC, "service" DESC`;
           this.setState({ serviceFilter: filtered });
         }}
         pivotBy={groupServicesBy ? [groupServicesBy] : []}
-        defaultPageSize={50}
+        defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+        pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination={services.length > STANDARD_TABLE_PAGE_SIZE}
         columns={[
           {
             Header: 'Service',
-            show: hiddenColumns.exists('Service'),
+            show: visibleColumns.shown('Service'),
             accessor: 'service',
             width: 300,
+            Cell: this.renderFilterableCell('service'),
             Aggregated: () => '',
           },
           {
             Header: 'Type',
-            show: hiddenColumns.exists('Type'),
+            show: visibleColumns.shown('Type'),
             accessor: 'service_type',
             width: 150,
-            Cell: ({ value }) => {
-              return (
-                <a
-                  onClick={() => {
-                    this.setState({
-                      serviceFilter: addFilter(serviceFilter, 'service_type', value),
-                    });
-                  }}
-                >
-                  {value}
-                </a>
-              );
-            },
+            Cell: this.renderFilterableCell('service_type'),
           },
           {
             Header: 'Tier',
-            show: hiddenColumns.exists('Tier'),
+            show: visibleColumns.shown('Tier'),
             id: 'tier',
+            width: 180,
             accessor: row => {
               return row.tier ? row.tier : row.worker ? row.worker.category : null;
             },
-            Cell: ({ value }) => {
-              return (
-                <a
-                  onClick={() => {
-                    this.setState({ serviceFilter: addFilter(serviceFilter, 'tier', value) });
-                  }}
-                >
-                  {value}
-                </a>
-              );
-            },
+            Cell: this.renderFilterableCell('tier'),
           },
           {
             Header: 'Host',
-            show: hiddenColumns.exists('Host'),
+            show: visibleColumns.shown('Host'),
             accessor: 'host',
+            width: 200,
+            Cell: this.renderFilterableCell('host'),
             Aggregated: () => '',
           },
           {
             Header: 'Port',
-            show: hiddenColumns.exists('Port'),
+            show: visibleColumns.shown('Port'),
             id: 'port',
+            width: 100,
             accessor: row => {
               const ports: string[] = [];
               if (row.plaintext_port !== -1) {
@@ -382,15 +399,17 @@ ORDER BY "rank" DESC, "service" DESC`;
               }
               return ports.join(', ') || 'No port';
             },
+            Cell: this.renderFilterableCell('port'),
             Aggregated: () => '',
           },
           {
-            Header: 'Curr size',
-            show: hiddenColumns.exists('Curr size'),
+            Header: 'Current size',
+            show: visibleColumns.shown('Current size'),
             id: 'curr_size',
             width: 100,
             filterable: false,
             accessor: 'curr_size',
+            className: 'padded',
             Aggregated: row => {
               if (row.row._pivotVal !== 'historical') return '';
               const originals = row.subRows.map(r => r._original);
@@ -405,11 +424,12 @@ ORDER BY "rank" DESC, "service" DESC`;
           },
           {
             Header: 'Max size',
-            show: hiddenColumns.exists('Max size'),
+            show: visibleColumns.shown('Max size'),
             id: 'max_size',
             width: 100,
             filterable: false,
             accessor: 'max_size',
+            className: 'padded',
             Aggregated: row => {
               if (row.row._pivotVal !== 'historical') return '';
               const originals = row.subRows.map(r => r._original);
@@ -424,37 +444,44 @@ ORDER BY "rank" DESC, "service" DESC`;
           },
           {
             Header: 'Usage',
-            show: hiddenColumns.exists('Usage'),
+            show: visibleColumns.shown('Usage'),
             id: 'usage',
-            width: 100,
+            width: 140,
             filterable: false,
+            className: 'padded',
             accessor: row => {
               if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
-                return row.worker ? (row.currCapacityUsed || 0) / row.worker.capacity : null;
+                return row.worker
+                  ? (Number(row.currCapacityUsed) || 0) / Number(row.worker.capacity)
+                  : null;
               } else {
-                return row.max_size ? row.curr_size / row.max_size : null;
+                return row.max_size ? Number(row.curr_size) / Number(row.max_size) : null;
               }
             },
             Aggregated: row => {
               switch (row.row._pivotVal) {
-                case 'historical':
-                  const originalHistoricals = row.subRows.map(r => r._original);
-                  const totalCurr = sum(originalHistoricals, s => s.curr_size);
-                  const totalMax = sum(originalHistoricals, s => s.max_size);
+                case 'historical': {
+                  const originalHistoricals: ServiceResultRow[] = row.subRows.map(r => r._original);
+                  const totalCurr = sum(originalHistoricals, s => Number(s.curr_size));
+                  const totalMax = sum(originalHistoricals, s => Number(s.max_size));
                   return fillIndicator(totalCurr / totalMax);
+                }
 
                 case 'indexer':
-                case 'middle_manager':
-                  const originalMiddleManagers = row.subRows.map(r => r._original);
+                case 'middle_manager': {
+                  const originalMiddleManagers: ServiceResultRow[] = row.subRows.map(
+                    r => r._original,
+                  );
                   const totalCurrCapacityUsed = sum(
                     originalMiddleManagers,
-                    s => s.currCapacityUsed || 0,
+                    s => Number(s.currCapacityUsed) || 0,
                   );
                   const totalWorkerCapacity = sum(
                     originalMiddleManagers,
                     s => deepGet(s, 'worker.capacity') || 0,
                   );
                   return `${totalCurrCapacityUsed} / ${totalWorkerCapacity} (total slots)`;
+                }
 
                 default:
                   return '';
@@ -468,14 +495,15 @@ ORDER BY "rank" DESC, "service" DESC`;
                   return fillIndicator(row.value);
 
                 case 'indexer':
-                case 'middle_manager':
+                case 'middle_manager': {
                   const currCapacityUsed = deepGet(row, 'original.currCapacityUsed') || 0;
                   const capacity = deepGet(row, 'original.worker.capacity');
                   if (typeof capacity === 'number') {
-                    return `${currCapacityUsed} / ${capacity} (slots)`;
+                    return `Slots used: ${currCapacityUsed} of ${capacity}`;
                   } else {
-                    return '- / -';
+                    return 'Slots used: -';
                   }
+                }
 
                 default:
                   return '';
@@ -484,10 +512,11 @@ ORDER BY "rank" DESC, "service" DESC`;
           },
           {
             Header: 'Detail',
-            show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Detail'),
+            show: visibleColumns.shown('Detail'),
             id: 'queue',
             width: 400,
             filterable: false,
+            className: 'padded',
             accessor: row => {
               if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
                 if (deepGet(row, 'worker.version') === '') return 'Disabled';
@@ -500,30 +529,31 @@ ORDER BY "rank" DESC, "service" DESC`;
                   details.push(`Blacklisted until: ${row.blacklistedUntil}`);
                 }
                 return details.join(' ');
+              } else if (oneOf(row.service_type, 'coordinator', 'overlord')) {
+                return row.is_leader === 1 ? 'Leader' : '';
               } else {
-                return (row.segmentsToLoad || 0) + (row.segmentsToDrop || 0);
+                return (Number(row.segmentsToLoad) || 0) + (Number(row.segmentsToDrop) || 0);
               }
             },
             Cell: row => {
               if (row.aggregated) return '';
               const { service_type } = row.original;
               switch (service_type) {
-                case 'historical':
-                  const {
-                    segmentsToLoad,
-                    segmentsToLoadSize,
-                    segmentsToDrop,
-                    segmentsToDropSize,
-                  } = row.original;
+                case 'historical': {
+                  const { segmentsToLoad, segmentsToLoadSize, segmentsToDrop, segmentsToDropSize } =
+                    row.original;
                   return formatQueues(
                     segmentsToLoad,
                     segmentsToLoadSize,
                     segmentsToDrop,
                     segmentsToDropSize,
                   );
+                }
 
                 case 'indexer':
                 case 'middle_manager':
+                case 'coordinator':
+                case 'overlord':
                   return row.value;
 
                 default:
@@ -532,11 +562,11 @@ ORDER BY "rank" DESC, "service" DESC`;
             },
             Aggregated: row => {
               if (row.row._pivotVal !== 'historical') return '';
-              const originals = row.subRows.map(r => r._original);
-              const segmentsToLoad = sum(originals, s => s.segmentsToLoad);
-              const segmentsToLoadSize = sum(originals, s => s.segmentsToLoadSize);
-              const segmentsToDrop = sum(originals, s => s.segmentsToDrop);
-              const segmentsToDropSize = sum(originals, s => s.segmentsToDropSize);
+              const originals: ServiceResultRow[] = row.subRows.map(r => r._original);
+              const segmentsToLoad = sum(originals, s => Number(s.segmentsToLoad) || 0);
+              const segmentsToLoadSize = sum(originals, s => Number(s.segmentsToLoadSize) || 0);
+              const segmentsToDrop = sum(originals, s => Number(s.segmentsToDrop) || 0);
+              const segmentsToDropSize = sum(originals, s => Number(s.segmentsToDropSize) || 0);
               return formatQueues(
                 segmentsToLoad,
                 segmentsToLoadSize,
@@ -547,17 +577,19 @@ ORDER BY "rank" DESC, "service" DESC`;
           },
           {
             Header: ACTION_COLUMN_LABEL,
-            show: capabilities.hasOverlordAccess() && hiddenColumns.exists(ACTION_COLUMN_LABEL),
+            show: capabilities.hasOverlordAccess() && visibleColumns.shown(ACTION_COLUMN_LABEL),
             id: ACTION_COLUMN_ID,
             width: ACTION_COLUMN_WIDTH,
             accessor: row => row.worker,
             filterable: false,
-            Cell: ({ value }) => {
+            Cell: ({ value, aggregated }) => {
+              if (aggregated) return '';
               if (!value) return null;
               const disabled = value.version === '';
               const workerActions = this.getWorkerActions(value.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
+            Aggregated: () => '',
           },
         ]}
       />
@@ -651,7 +683,7 @@ ORDER BY "rank" DESC, "service" DESC`;
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
-            onClick={() => goToQuery(ServicesView.SERVICE_SQL)}
+            onClick={() => goToQuery({ queryString: ServicesView.SERVICE_SQL })}
           />
         )}
       </MoreButton>
@@ -660,7 +692,7 @@ ORDER BY "rank" DESC, "service" DESC`;
 
   render(): JSX.Element {
     const { capabilities } = this.props;
-    const { groupServicesBy, hiddenColumns } = this.state;
+    const { groupServicesBy, visibleColumns } = this.state;
 
     return (
       <div className="services-view app-view">
@@ -687,7 +719,10 @@ ORDER BY "rank" DESC, "service" DESC`;
             </Button>
           </ButtonGroup>
           <RefreshButton
-            onRefresh={auto => this.serviceQueryManager.rerunLastQuery(auto)}
+            onRefresh={auto => {
+              if (auto && hasPopoverOpen()) return;
+              this.serviceQueryManager.rerunLastQuery(auto);
+            }}
             localStorageKey={LocalStorageKeys.SERVICES_REFRESH_RATE}
           />
           {this.renderBulkServicesActions()}
@@ -695,10 +730,10 @@ ORDER BY "rank" DESC, "service" DESC`;
             columns={tableColumns[capabilities.getMode()]}
             onChange={column =>
               this.setState(prevState => ({
-                hiddenColumns: prevState.hiddenColumns.toggle(column),
+                visibleColumns: prevState.visibleColumns.toggle(column),
               }))
             }
-            tableColumnsHidden={hiddenColumns.storedArray}
+            tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>
         {this.renderServicesTable()}

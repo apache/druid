@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.server.coordinator.CoordinatorStats;
+import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
@@ -71,6 +72,22 @@ public interface Rule
   default void updateUnderReplicated(
       Map<String, Object2LongMap<String>> underReplicatedPerTier,
       SegmentReplicantLookup segmentReplicantLookup,
+      DataSegment segment
+  )
+  {
+    Preconditions.checkArgument(!canLoadSegments());
+  }
+
+  /**
+   * This method should update the {@param underReplicatedPerTier} with the replication count of the
+   * {@param segment} taking into consideration the number of servers available in cluster that the segment can be
+   * replicated on. Rule that returns true for {@link Rule#canLoadSegments()} must override this method.
+   * Note that {@param underReplicatedPerTier} is a map of tier -> { dataSource -> underReplicationCount }
+   */
+  default void updateUnderReplicatedWithClusterView(
+      Map<String, Object2LongMap<String>> underReplicatedPerTier,
+      SegmentReplicantLookup segmentReplicantLookup,
+      DruidCluster cluster,
       DataSegment segment
   )
   {

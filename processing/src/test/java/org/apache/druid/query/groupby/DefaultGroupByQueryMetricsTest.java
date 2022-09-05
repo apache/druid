@@ -26,6 +26,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.CachingEmitter;
 import org.apache.druid.query.DefaultQueryMetricsTest;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -69,7 +70,7 @@ public class DefaultGroupByQueryMetricsTest
         )).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .setContext(ImmutableMap.of("bySegment", true));
+        .setContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true));
     GroupByQuery query = builder.build();
     queryMetrics.query(query);
 
@@ -87,7 +88,7 @@ public class DefaultGroupByQueryMetricsTest
     Assert.assertEquals("true", actualEvent.get("hasFilters"));
     Assert.assertEquals(expectedInterval.toDuration().toString(), actualEvent.get("duration"));
     Assert.assertEquals("", actualEvent.get(DruidMetrics.ID));
-    Assert.assertEquals(ImmutableMap.of("bySegment", true), actualEvent.get("context"));
+    Assert.assertEquals(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true), actualEvent.get("context"));
 
     // GroupBy-specific dimensions
     Assert.assertEquals("1", actualEvent.get("numDimensions"));

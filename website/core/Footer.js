@@ -60,7 +60,7 @@ class Footer extends React.Component {
             </a>
           </div>
           <div className="text-center license">
-            Copyright © 2019{' '}
+            Copyright © 2022{' '}
             <a href="https://www.apache.org/" target="_blank">
               Apache Software Foundation
             </a>

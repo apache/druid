@@ -22,13 +22,14 @@ package org.apache.druid.query.aggregation.datasketches.tuple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
-import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
-import org.apache.datasketches.tuple.ArrayOfDoublesSketchIterator;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketchIterator;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -69,9 +70,9 @@ public class ArrayOfDoublesSketchToVariancesPostAggregator extends ArrayOfDouble
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
-    return ValueType.DOUBLE_ARRAY;
+    return ColumnType.DOUBLE_ARRAY;
   }
 
   @Override

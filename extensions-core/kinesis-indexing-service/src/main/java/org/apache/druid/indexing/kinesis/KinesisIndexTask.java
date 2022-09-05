@@ -38,6 +38,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
 {
   private static final String TYPE = "index_kinesis";
 
+  private final boolean useListShards;
   private final AWSCredentialsConfig awsCredentialsConfig;
 
   @JsonCreator
@@ -48,6 +49,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
       @JsonProperty("tuningConfig") KinesisIndexTaskTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KinesisIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("useListShards") boolean useListShards,
       @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig
   )
   {
@@ -60,6 +62,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
         context,
         getFormattedGroupId(dataSchema.getDataSource(), TYPE)
     );
+    this.useListShards = useListShards;
     this.awsCredentialsConfig = awsCredentialsConfig;
   }
 
@@ -103,9 +106,9 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
         tuningConfig.getRecordBufferSize(),
         tuningConfig.getRecordBufferOfferTimeout(),
         tuningConfig.getRecordBufferFullWait(),
-        tuningConfig.getFetchSequenceNumberTimeout(),
         tuningConfig.getMaxRecordsPerPoll(),
-        false
+        false,
+        useListShards
     );
   }
 

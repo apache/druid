@@ -231,6 +231,9 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     {
       VarianceAggregatorCollector holder2 = (VarianceAggregatorCollector) selector.getObject();
       Preconditions.checkState(holder2 != null);
+      if (holder2.count == 0) {
+        return;
+      }
       long count = getCount(buf, position);
       if (count == 0) {
         buf.putLong(position, holder2.count);
@@ -238,7 +241,6 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
         buf.putDouble(position + NVARIANCE_OFFSET, holder2.nvariance);
         return;
       }
-
       double sum = getSum(buf, position);
       double nvariance = buf.getDouble(position + NVARIANCE_OFFSET);
 

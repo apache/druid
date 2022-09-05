@@ -148,5 +148,31 @@ public class DefaultQueryMetricsTest
     actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/node/bytes", actualEvent.get("metric"));
     Assert.assertEquals(10L, actualEvent.get("value"));
+
+    // Here we are testing that Queried Segment Count does not get emitted by the DefaultQueryMetrics and the last
+    // metric remains as query/node/bytes
+    queryMetrics.reportQueriedSegmentCount(25).emit(serviceEmitter);
+    actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
+    Assert.assertEquals("query/node/bytes", actualEvent.get("metric"));
+    Assert.assertEquals(10L, actualEvent.get("value"));
+  }
+
+  @Test
+  public void testVectorizedDimensionInMetrics()
+  {
+    CachingEmitter cachingEmitter = new CachingEmitter();
+    ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
+    DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>();
+    queryMetrics.vectorized(true);
+    queryMetrics.reportSegmentTime(0).emit(serviceEmitter);
+    Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
+    Assert.assertEquals(7, actualEvent.size());
+    Assert.assertTrue(actualEvent.containsKey("feed"));
+    Assert.assertTrue(actualEvent.containsKey("timestamp"));
+    Assert.assertEquals("", actualEvent.get("host"));
+    Assert.assertEquals("", actualEvent.get("service"));
+    Assert.assertEquals("query/segment/time", actualEvent.get("metric"));
+    Assert.assertEquals(0L, actualEvent.get("value"));
+    Assert.assertEquals(true, actualEvent.get("vectorized"));
   }
 }

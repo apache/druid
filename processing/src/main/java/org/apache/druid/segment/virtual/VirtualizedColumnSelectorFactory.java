@@ -24,30 +24,32 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 
-public class VirtualizedColumnSelectorFactory implements ColumnSelectorFactory
+/**
+ * {@link ColumnSelectorFactory} which can create selectors for both virtual and non-virtual columns
+ */
+public class VirtualizedColumnSelectorFactory extends VirtualizedColumnInspector implements ColumnSelectorFactory
 {
   private final ColumnSelectorFactory baseFactory;
-  private final VirtualColumns virtualColumns;
 
   public VirtualizedColumnSelectorFactory(
       ColumnSelectorFactory baseFactory,
       VirtualColumns virtualColumns
   )
   {
+    super(baseFactory, virtualColumns);
     this.baseFactory = Preconditions.checkNotNull(baseFactory, "baseFactory");
-    this.virtualColumns = Preconditions.checkNotNull(virtualColumns, "virtualColumns");
   }
 
   @Override
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
   {
     if (virtualColumns.exists(dimensionSpec.getDimension())) {
-      return virtualColumns.makeDimensionSelector(dimensionSpec, baseFactory);
+      return virtualColumns.makeDimensionSelector(dimensionSpec, this);
     } else {
       return baseFactory.makeDimensionSelector(dimensionSpec);
     }
@@ -57,7 +59,7 @@ public class VirtualizedColumnSelectorFactory implements ColumnSelectorFactory
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
   {
     if (virtualColumns.exists(columnName)) {
-      return virtualColumns.makeColumnValueSelector(columnName, baseFactory);
+      return virtualColumns.makeColumnValueSelector(columnName, this);
     } else {
       return baseFactory.makeColumnValueSelector(columnName);
     }
@@ -65,12 +67,8 @@ public class VirtualizedColumnSelectorFactory implements ColumnSelectorFactory
 
   @Nullable
   @Override
-  public ColumnCapabilities getColumnCapabilities(String columnName)
+  public RowIdSupplier getRowIdSupplier()
   {
-    if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(baseFactory, columnName);
-    } else {
-      return baseFactory.getColumnCapabilities(columnName);
-    }
+    return baseFactory.getRowIdSupplier();
   }
 }

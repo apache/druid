@@ -20,6 +20,7 @@
 package org.apache.druid.query.topn;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -37,10 +38,14 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 
+import javax.annotation.Nullable;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  */
@@ -73,6 +78,10 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     super(dataSource, querySegmentSpec, false, context, granularity);
 
+    Preconditions.checkNotNull(dimensionSpec, "dimensionSpec can't be null");
+    Preconditions.checkNotNull(topNMetricSpec, "must specify a metric");
+    Preconditions.checkArgument(threshold != 0, "Threshold cannot be equal to 0.");
+
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimensionSpec = dimensionSpec;
     this.topNMetricSpec = topNMetricSpec;
@@ -88,10 +97,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
             : postAggregatorSpecs
     );
 
-    Preconditions.checkNotNull(dimensionSpec, "dimensionSpec can't be null");
-    Preconditions.checkNotNull(topNMetricSpec, "must specify a metric");
-
-    Preconditions.checkArgument(threshold != 0, "Threshold cannot be equal to 0.");
     topNMetricSpec.verifyPreconditions(this.aggregatorSpecs, this.postAggregatorSpecs);
   }
 
@@ -115,6 +120,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
 
   @JsonProperty
   @Override
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = VirtualColumns.JsonIncludeFilter.class)
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
@@ -138,7 +144,9 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return threshold;
   }
 
+  @Nullable
   @JsonProperty("filter")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public DimFilter getDimensionsFilter()
   {
     return dimFilter;
@@ -151,9 +159,23 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   }
 
   @JsonProperty("postAggregations")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<PostAggregator> getPostAggregatorSpecs()
   {
     return postAggregatorSpecs;
+  }
+
+  @Nullable
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return Queries.computeRequiredColumns(
+        virtualColumns,
+        dimFilter,
+        Collections.singletonList(dimensionSpec),
+        aggregatorSpecs,
+        Collections.emptyList()
+    );
   }
 
   public void initTopNAlgorithmSelector(TopNAlgorithmSelector selector)

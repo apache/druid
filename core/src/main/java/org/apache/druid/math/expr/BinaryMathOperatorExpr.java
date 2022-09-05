@@ -24,11 +24,14 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
+import org.apache.druid.math.expr.vector.VectorStringProcessors;
+import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
 
 // math operators live here
 
+@SuppressWarnings("ClassName")
 final class BinPlusExpr extends BinaryEvalOpExprBase
 {
   BinPlusExpr(String op, Expr left, Expr right)
@@ -63,16 +66,24 @@ final class BinPlusExpr extends BinaryEvalOpExprBase
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return inspector.areNumeric(left, right) && inspector.canVectorize(left, right);
+    return inspector.areScalar(left, right) && inspector.canVectorize(left, right);
   }
 
   @Override
   public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
   {
+    ExpressionType type = ExpressionTypeConversion.operator(
+        left.getOutputType(inspector),
+        right.getOutputType(inspector)
+    );
+    if (Types.is(type, ExprType.STRING)) {
+      return VectorStringProcessors.concat(inspector, left, right);
+    }
     return VectorMathProcessors.plus(inspector, left, right);
   }
 }
 
+@SuppressWarnings("ClassName")
 final class BinMinusExpr extends BinaryEvalOpExprBase
 {
   BinMinusExpr(String op, Expr left, Expr right)
@@ -111,6 +122,7 @@ final class BinMinusExpr extends BinaryEvalOpExprBase
   }
 }
 
+@SuppressWarnings("ClassName")
 final class BinMulExpr extends BinaryEvalOpExprBase
 {
   BinMulExpr(String op, Expr left, Expr right)
@@ -149,6 +161,7 @@ final class BinMulExpr extends BinaryEvalOpExprBase
   }
 }
 
+@SuppressWarnings("ClassName")
 final class BinDivExpr extends BinaryEvalOpExprBase
 {
   BinDivExpr(String op, Expr left, Expr right)
@@ -187,6 +200,7 @@ final class BinDivExpr extends BinaryEvalOpExprBase
   }
 }
 
+@SuppressWarnings("ClassName")
 class BinPowExpr extends BinaryEvalOpExprBase
 {
   BinPowExpr(String op, Expr left, Expr right)
@@ -225,6 +239,7 @@ class BinPowExpr extends BinaryEvalOpExprBase
   }
 }
 
+@SuppressWarnings("ClassName")
 class BinModuloExpr extends BinaryEvalOpExprBase
 {
   BinModuloExpr(String op, Expr left, Expr right)

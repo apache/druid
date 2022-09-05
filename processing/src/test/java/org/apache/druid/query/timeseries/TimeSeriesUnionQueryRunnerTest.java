@@ -36,6 +36,7 @@ import org.apache.druid.query.UnionQueryRunner;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -44,7 +45,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @RunWith(Parameterized.class)
-public class TimeSeriesUnionQueryRunnerTest
+public class TimeSeriesUnionQueryRunnerTest extends InitializedNullHandlingTest
 {
   private final QueryRunner runner;
   private final boolean descending;

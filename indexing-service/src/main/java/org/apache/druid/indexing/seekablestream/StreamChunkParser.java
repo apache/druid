@@ -51,7 +51,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
   @Nullable
   private final InputRowParser<ByteBuffer> parser;
   @Nullable
-  private final SettableByteEntityReader byteEntityReader;
+  private final SettableByteEntityReader<RecordType> byteEntityReader;
   private final Predicate<InputRow> rowFilter;
   private final RowIngestionMeters rowIngestionMeters;
   private final ParseExceptionHandler parseExceptionHandler;
@@ -76,7 +76,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
     // parser is already decorated with transformSpec in DataSchema
     this.parser = parser;
     if (inputFormat != null) {
-      this.byteEntityReader = new SettableByteEntityReader(
+      this.byteEntityReader = new SettableByteEntityReader<>(
           inputFormat,
           inputRowSchema,
           transformSpec,
@@ -90,10 +90,14 @@ class StreamChunkParser<RecordType extends ByteEntity>
     this.parseExceptionHandler = parseExceptionHandler;
   }
 
-  List<InputRow> parse(@Nullable List<RecordType> streamChunk) throws IOException
+  List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard) throws IOException
   {
     if (streamChunk == null || streamChunk.isEmpty()) {
-      rowIngestionMeters.incrementThrownAway();
+      if (!isEndOfShard) {
+        // We do not count end of shard record as thrown away event since this is a record created by Druid
+        // Note that this only applies to Kinesis
+        rowIngestionMeters.incrementThrownAway();
+      }
       return Collections.emptyList();
     } else {
       if (byteEntityReader != null) {

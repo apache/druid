@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.autoscaling;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -30,6 +31,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
@@ -60,11 +62,14 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 {
   private static final EmittingLogger log = new EmittingLogger(PendingTaskBasedWorkerProvisioningStrategy.class);
 
+  public static final String ERROR_MESSAGE_MIN_WORKER_ZERO_HINT_UNSET = "As minNumWorkers is set to 0, workerCapacityHint must be greater than 0. workerCapacityHint value set is %d";
   private static final String SCHEME = "http";
 
+  @VisibleForTesting
   @Nullable
-  static DefaultWorkerBehaviorConfig getDefaultWorkerBehaviorConfig(
+  public static DefaultWorkerBehaviorConfig getDefaultWorkerBehaviorConfig(
       Supplier<WorkerBehaviorConfig> workerConfigRef,
+      SimpleWorkerProvisioningConfig config,
       String action,
       EmittingLogger log
   )
@@ -85,6 +90,13 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     final DefaultWorkerBehaviorConfig workerConfig = (DefaultWorkerBehaviorConfig) workerBehaviorConfig;
     if (workerConfig.getAutoScaler() == null) {
       log.error("No autoScaler available, cannot %s workers", action);
+      return null;
+    }
+    if (config instanceof PendingTaskBasedWorkerProvisioningConfig
+        && workerConfig.getAutoScaler().getMinNumWorkers() == 0
+        && ((PendingTaskBasedWorkerProvisioningConfig) config).getWorkerCapacityHint() <= 0
+    ) {
+      log.error(ERROR_MESSAGE_MIN_WORKER_ZERO_HINT_UNSET, ((PendingTaskBasedWorkerProvisioningConfig) config).getWorkerCapacityHint());
       return null;
     }
     return workerConfig;
@@ -157,7 +169,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       log.debug("Workers: %d %s", workers.size(), workers);
       boolean didProvision = false;
-      final DefaultWorkerBehaviorConfig workerConfig = getDefaultWorkerBehaviorConfig(workerConfigRef, "provision", log);
+      final DefaultWorkerBehaviorConfig workerConfig = getDefaultWorkerBehaviorConfig(workerConfigRef, config, "provision", log);
       if (workerConfig == null) {
         return false;
       }
@@ -246,14 +258,18 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       log.info("Min/max workers: %d/%d", minWorkerCount, maxWorkerCount);
       final int currValidWorkers = getCurrValidWorkers(workers);
 
-      // If there are no worker, spin up minWorkerCount, we cannot determine the exact capacity here to fulfill the need
-      // since we are not aware of the expectedWorkerCapacity.
-      int moreWorkersNeeded = currValidWorkers == 0 ? minWorkerCount : getWorkersNeededToAssignTasks(
-          remoteTaskRunnerConfig,
-          workerConfig,
-          pendingTasks,
-          workers
-      );
+      // If there are no worker and workerCapacityHint config is not set (-1) or invalid (<= 0), then spin up minWorkerCount
+      // as we cannot determine the exact capacity here to fulfill the need.
+      // However, if there are no worker but workerCapacityHint config is set (>0), then we can
+      // determine the number of workers needed using workerCapacityHint config as expected worker capacity
+      int moreWorkersNeeded = currValidWorkers == 0 && config.getWorkerCapacityHint() <= 0
+                              ? minWorkerCount
+                              : getWorkersNeededToAssignTasks(
+                                  remoteTaskRunnerConfig,
+                                  workerConfig,
+                                  pendingTasks,
+                                  workers
+                              );
       log.debug("More workers needed: %d", moreWorkersNeeded);
 
       int want = Math.max(
@@ -333,7 +349,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     {
       Collection<ImmutableWorkerInfo> zkWorkers = runner.getWorkers();
       log.debug("Workers: %d [%s]", zkWorkers.size(), zkWorkers);
-      final DefaultWorkerBehaviorConfig workerConfig = getDefaultWorkerBehaviorConfig(workerConfigRef, "terminate", log);
+      final DefaultWorkerBehaviorConfig workerConfig = getDefaultWorkerBehaviorConfig(workerConfigRef, config, "terminate", log);
       if (workerConfig == null) {
         return false;
       }
@@ -441,12 +457,19 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     return currValidWorkers;
   }
 
-  private static int getExpectedWorkerCapacity(final Collection<ImmutableWorkerInfo> workers)
+  @Override
+  public int getExpectedWorkerCapacity(final Collection<ImmutableWorkerInfo> workers)
   {
     int size = workers.size();
     if (size == 0) {
-      // No existing workers assume capacity per worker as 1
-      return 1;
+      // No existing workers
+      if (config.getWorkerCapacityHint() > 0) {
+        // Return workerCapacityHint if it is set in config
+        return config.getWorkerCapacityHint();
+      } else {
+        // Assume capacity per worker as 1
+        return 1;
+      }
     } else {
       // Assume all workers have same capacity
       return workers.iterator().next().getWorker().getCapacity();
@@ -455,9 +478,13 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 
   private static ImmutableWorkerInfo workerWithTask(ImmutableWorkerInfo immutableWorker, Task task)
   {
+    int parallelIndexTaskCapacity = task.getType().equals(ParallelIndexSupervisorTask.TYPE)
+                                    ? task.getTaskResource().getRequiredCapacity()
+                                    : 0;
     return new ImmutableWorkerInfo(
         immutableWorker.getWorker(),
         immutableWorker.getCurrCapacityUsed() + 1,
+        immutableWorker.getCurrParallelIndexCapacityUsed() + parallelIndexTaskCapacity,
         Sets.union(
             immutableWorker.getAvailabilityGroups(),
             Sets.newHashSet(

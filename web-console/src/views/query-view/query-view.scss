@@ -19,6 +19,7 @@
 @import '../../variables';
 
 $nav-width: 250px;
+$vertical-gap: 6px;
 
 .query-view {
   height: 100%;
@@ -45,14 +46,14 @@ $nav-width: 250px;
       position: absolute;
       width: 100%;
       top: 0;
-      bottom: 10px;
+      bottom: $vertical-gap;
 
       .query-input {
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
-        bottom: 30px + $thin-padding;
+        bottom: 30px + $vertical-gap;
         @include card-like;
         overflow: hidden;
       }
@@ -72,12 +73,13 @@ $nav-width: 250px;
           margin-bottom: 6px;
           font-size: $pt-font-size;
 
-          .bp3-control-indicator {
+          .#{$bp-ns}-control-indicator {
             margin-top: -1px;
           }
         }
 
-        .query-extra-info {
+        .query-extra-info,
+        .query-timer {
           position: absolute;
           right: 0;
           top: 0;
@@ -94,7 +96,7 @@ $nav-width: 250px;
     .output-pane {
       position: absolute;
       width: 100%;
-      top: 10px;
+      top: $vertical-gap;
       bottom: 0;
       @include card-like;
       overflow: hidden;

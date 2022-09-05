@@ -21,8 +21,7 @@ import React from 'react';
 
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { pluralIfNeeded, queryDruidSql } from '../../../utils';
-import { Capabilities } from '../../../utils';
+import { Capabilities, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface SupervisorCounts {
@@ -38,12 +37,14 @@ export const SupervisorsCard = React.memo(function SupervisorsCard(props: Superv
   const [supervisorCountState] = useQueryManager<Capabilities, SupervisorCounts>({
     processQuery: async capabilities => {
       if (capabilities.hasSql()) {
-        return (await queryDruidSql({
-          query: `SELECT
+        return (
+          await queryDruidSql({
+            query: `SELECT
   COUNT(*) FILTER (WHERE "suspended" = 0) AS "running",
   COUNT(*) FILTER (WHERE "suspended" = 1) AS "suspended"
 FROM sys.supervisors`,
-        }))[0];
+          })
+        )[0];
       } else if (capabilities.hasOverlordAccess()) {
         const resp = await Api.instance.get('/druid/indexer/v1/supervisor?full');
         const data = resp.data;
@@ -66,13 +67,13 @@ FROM sys.supervisors`,
   return (
     <HomeViewCard
       className="supervisors-card"
-      href={'#ingestion'}
+      href="#ingestion"
       icon={IconNames.LIST_COLUMNS}
-      title={'Supervisors'}
+      title="Supervisors"
       loading={supervisorCountState.loading}
       error={supervisorCountState.error}
     >
-      {!Boolean(running + suspended) && <p>No supervisors</p>}
+      {!(running + suspended) && <p>No supervisors</p>}
       {Boolean(running) && <p>{pluralIfNeeded(running, 'running supervisor')}</p>}
       {Boolean(suspended) && <p>{pluralIfNeeded(suspended, 'suspended supervisor')}</p>}
     </HomeViewCard>

@@ -20,6 +20,7 @@
 package org.apache.druid.query.timeseries;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
@@ -35,13 +36,17 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec.LimitJsonIncludeFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  */
@@ -113,30 +118,35 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 
   @JsonProperty
   @Override
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = VirtualColumns.JsonIncludeFilter.class)
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
   }
 
   @JsonProperty("filter")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public DimFilter getDimensionsFilter()
   {
     return dimFilter;
   }
 
   @JsonProperty("aggregations")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<AggregatorFactory> getAggregatorSpecs()
   {
     return aggregatorSpecs;
   }
 
   @JsonProperty("postAggregations")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<PostAggregator> getPostAggregatorSpecs()
   {
     return postAggregatorSpecs;
   }
 
   @JsonProperty("limit")
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = LimitJsonIncludeFilter.class)
   public int getLimit()
   {
     return limit;
@@ -155,6 +165,19 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public boolean isSkipEmptyBuckets()
   {
     return getContextBoolean(SKIP_EMPTY_BUCKETS, false);
+  }
+
+  @Nullable
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return Queries.computeRequiredColumns(
+        virtualColumns,
+        dimFilter,
+        Collections.emptyList(),
+        aggregatorSpecs,
+        Collections.emptyList()
+    );
   }
 
   @Override

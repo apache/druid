@@ -21,35 +21,37 @@ package org.apache.druid.server.metrics;
 
 import javax.annotation.Nullable;
 
+import java.util.Map;
+
 public interface TaskSlotCountStatsProvider
 {
   /**
    * Return the number of total task slots during emission period.
    */
   @Nullable
-  Long getTotalTaskSlotCount();
+  Map<String, Long> getTotalTaskSlotCount();
 
   /**
    * Return the number of idle task slots during emission period.
    */
   @Nullable
-  Long getIdleTaskSlotCount();
+  Map<String, Long> getIdleTaskSlotCount();
 
   /**
    * Return the number of used task slots during emission period.
    */
   @Nullable
-  Long getUsedTaskSlotCount();
+  Map<String, Long> getUsedTaskSlotCount();
 
   /**
    * Return the total number of task slots in lazy marked middlemanagers and indexers during emission period.
    */
   @Nullable
-  Long getLazyTaskSlotCount();
+  Map<String, Long> getLazyTaskSlotCount();
 
   /**
    * Return the total number of task slots in blacklisted middlemanagers and indexers during emission period.
    */
   @Nullable
-  Long getBlacklistedTaskSlotCount();
+  Map<String, Long> getBlacklistedTaskSlotCount();
 }

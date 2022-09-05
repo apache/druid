@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -106,11 +107,23 @@ public abstract class LookupExtractor
   public abstract boolean canIterate();
 
   /**
+   * Returns true if this lookup extractor's {@link #keySet()} method will return a valid set.
+   */
+  public abstract boolean canGetKeySet();
+
+  /**
    * Returns an Iterable that iterates over the keys and values in this lookup extractor.
    *
    * @throws UnsupportedOperationException if {@link #canIterate()} returns false.
    */
   public abstract Iterable<Map.Entry<String, String>> iterable();
+
+  /**
+   * Returns a Set of all keys in this lookup extractor. The returned Set will not change.
+   *
+   * @throws UnsupportedOperationException if {@link #canGetKeySet()} returns false.
+   */
+  public abstract Set<String> keySet();
 
   /**
    * Create a cache key for use in results caching

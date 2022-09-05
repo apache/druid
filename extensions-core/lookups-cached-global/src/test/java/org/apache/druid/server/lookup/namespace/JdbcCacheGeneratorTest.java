@@ -24,7 +24,9 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace;
+import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
+import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.apache.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
@@ -42,17 +44,23 @@ import java.util.Collections;
 public class JdbcCacheGeneratorTest
 {
   private static final MetadataStorageConnectorConfig MISSING_METADATA_STORAGE_CONNECTOR_CONFIG =
-      createMetadataStorageConnectorConfig("postgresql");
+      createMetadataStorageConnectorConfig("mydb");
 
   private static final CacheScheduler.EntryImpl<JdbcExtractionNamespace> KEY =
       EasyMock.mock(CacheScheduler.EntryImpl.class);
 
   private static final ServiceEmitter SERVICE_EMITTER = new NoopServiceEmitter();
 
+  private static final NamespaceExtractionCacheManager CACHE_MANAGER = new OnHeapNamespaceExtractionCacheManager(
+      new Lifecycle(),
+      SERVICE_EMITTER,
+      new NamespaceExtractionConfig()
+  );
+
   private static final CacheScheduler SCHEDULER = new CacheScheduler(
       SERVICE_EMITTER,
       Collections.emptyMap(),
-      new OnHeapNamespaceExtractionCacheManager(new Lifecycle(), SERVICE_EMITTER, new NamespaceExtractionConfig())
+      CACHE_MANAGER
   );
 
   private static final String LAST_VERSION = "1";
@@ -83,7 +91,7 @@ public class JdbcCacheGeneratorTest
     exception.expect(IllegalStateException.class);
     exception.expectMessage(MISSING_JDB_DRIVER_JAR_MSG);
 
-    target.generateCache(missingJarNamespace, KEY, LAST_VERSION, SCHEDULER);
+    target.generateCache(missingJarNamespace, KEY, LAST_VERSION, CACHE_MANAGER.allocateCache());
   }
 
   @Test
@@ -99,7 +107,7 @@ public class JdbcCacheGeneratorTest
     exception.expect(IllegalStateException.class);
     exception.expectMessage(MISSING_JDB_DRIVER_JAR_MSG);
 
-    target.generateCache(missingJarNamespace, KEY, LAST_VERSION, SCHEDULER);
+    target.generateCache(missingJarNamespace, KEY, LAST_VERSION, CACHE_MANAGER.allocateCache());
   }
 
   @SuppressWarnings("SameParameterValue")
@@ -127,7 +135,9 @@ public class JdbcCacheGeneratorTest
         "valueColumn",
         tsColumn,
         "filter",
-        Period.ZERO
+        Period.ZERO,
+        null,
+        new JdbcAccessSecurityConfig()
     );
   }
 }

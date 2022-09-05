@@ -23,21 +23,29 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Supplier;
 
 public class ExpressionTransform implements Transform
 {
   private final String name;
   private final String expression;
   private final ExprMacroTable macroTable;
+  private final Supplier<Expr> parsedExpression;
 
   @JsonCreator
   public ExpressionTransform(
@@ -49,6 +57,9 @@ public class ExpressionTransform implements Transform
     this.name = Preconditions.checkNotNull(name, "name");
     this.expression = Preconditions.checkNotNull(expression, "expression");
     this.macroTable = macroTable;
+    this.parsedExpression = Suppliers.memoize(
+        () -> Parser.parse(expression, Preconditions.checkNotNull(this.macroTable, "macroTable"))
+    )::get;
   }
 
   @JsonProperty
@@ -67,8 +78,13 @@ public class ExpressionTransform implements Transform
   @Override
   public RowFunction getRowFunction()
   {
-    final Expr expr = Parser.parse(expression, Preconditions.checkNotNull(this.macroTable, "macroTable"));
-    return new ExpressionRowFunction(expr);
+    return new ExpressionRowFunction(parsedExpression.get());
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return parsedExpression.get().analyzeInputs().getRequiredBindings();
   }
 
   static class ExpressionRowFunction implements RowFunction
@@ -83,7 +99,15 @@ public class ExpressionTransform implements Transform
     @Override
     public Object eval(final Row row)
     {
-      return ExpressionSelectors.coerceEvalToSelectorObject(expr.eval(name -> getValueFromRow(row, name)));
+      // this will need adjusted if we want to allow expression transforms to produce true arrays. Currently, calling
+      // this method will coerce any expression output into:
+      //    - the expression value if the value is not an array
+      //    - the single array element if the value is an array with 1 element
+      //    - a list with all of the array elements if the value is an array with more than 1 element
+      // and so is tuned towards multi-value strings
+      return ExpressionSelectors.coerceEvalToObjectOrList(
+          expr.eval(InputBindings.forFunction(name -> getValueFromRow(row, name)))
+      );
     }
   }
 
@@ -94,7 +118,11 @@ public class ExpressionTransform implements Transform
     } else {
       Object raw = row.getRaw(column);
       if (raw instanceof List) {
-        return ExpressionSelectors.coerceListToArray((List) raw);
+        NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) raw, true);
+        if (coerced == null) {
+          return null;
+        }
+        return coerced.rhs;
       }
       return raw;
     }

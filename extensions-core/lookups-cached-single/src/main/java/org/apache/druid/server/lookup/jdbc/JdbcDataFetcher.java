@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.lookup.jdbc;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -27,7 +28,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
+import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.apache.druid.server.lookup.DataFetcher;
+import org.apache.druid.utils.ConnectionUriUtils;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
@@ -71,12 +74,16 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
       @JsonProperty("table") String table,
       @JsonProperty("keyColumn") String keyColumn,
       @JsonProperty("valueColumn") String valueColumn,
-      @JsonProperty("streamingFetchSize") @Nullable Integer streamingFetchSize
+      @JsonProperty("streamingFetchSize") @Nullable Integer streamingFetchSize,
+      @JacksonInject JdbcAccessSecurityConfig securityConfig
   )
   {
     this.connectorConfig = Preconditions.checkNotNull(connectorConfig, "connectorConfig");
     this.streamingFetchSize = streamingFetchSize == null ? DEFAULT_STREAMING_FETCH_SIZE : streamingFetchSize;
-    Preconditions.checkNotNull(connectorConfig.getConnectURI(), "connectorConfig.connectURI");
+    // Check the properties in the connection URL. Note that JdbcDataFetcher doesn't use
+    // MetadataStorageConnectorConfig.getDbcpProperties(). If we want to use them,
+    // those DBCP properties should be validated using the same logic.
+    checkConnectionURL(connectorConfig.getConnectURI(), securityConfig);
     this.table = Preconditions.checkNotNull(table, "table");
     this.keyColumn = Preconditions.checkNotNull(keyColumn, "keyColumn");
     this.valueColumn = Preconditions.checkNotNull(valueColumn, "valueColumn");
@@ -105,6 +112,28 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
         connectorConfig.getPassword()
     );
     dbi.registerMapper(new KeyValueResultSetMapper(keyColumn, valueColumn));
+  }
+
+  /**
+   * Check the given URL whether it contains non-allowed properties.
+   *
+   * @see JdbcAccessSecurityConfig#getAllowedProperties()
+   * @see ConnectionUriUtils#tryParseJdbcUriParameters(String, boolean) 
+   */
+  private static void checkConnectionURL(String url, JdbcAccessSecurityConfig securityConfig)
+  {
+    Preconditions.checkNotNull(url, "connectorConfig.connectURI");
+
+    if (!securityConfig.isEnforceAllowedProperties()) {
+      // You don't want to do anything with properties.
+      return;
+    }
+
+    ConnectionUriUtils.throwIfPropertiesAreNotAllowed(
+        ConnectionUriUtils.tryParseJdbcUriParameters(url, securityConfig.isAllowUnknownJdbcUrlFormat()),
+        securityConfig.getSystemPropertyPrefixes(),
+        securityConfig.getAllowedProperties()
+    );
   }
 
   @Override
@@ -232,7 +261,7 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
       if (e.getMessage().contains("No suitable driver found")) {
         throw new ISE(
             e,
-            "JDBC driver JAR files missing from extensions/druid-lookups-cached-single directory"
+            "JDBC driver JAR files missing in the classpath"
         );
       } else {
         throw e;

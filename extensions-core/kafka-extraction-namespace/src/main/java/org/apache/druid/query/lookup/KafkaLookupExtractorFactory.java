@@ -53,7 +53,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -154,8 +153,9 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 
       final String topic = getKafkaTopic();
       LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
+      // this creates a ConcurrentMap
       cacheHandler = cacheManager.createCache();
-      final ConcurrentMap<String, String> map = cacheHandler.getCache();
+      final Map<String, String> map = cacheHandler.getCache();
       mapRef.set(map);
 
 
@@ -176,8 +176,15 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
               for (final ConsumerRecord<String, String> record : records) {
                 final String key = record.key();
                 final String message = record.value();
-                if (key == null || message == null) {
-                  LOG.error("Bad key/message from topic [%s]: [%s]", topic, record);
+                if (key == null) {
+                  LOG.error("Bad key from topic [%s]: [%s]", topic, record);
+                  continue;
+                }
+                if (message == null) {
+                  LOG.trace("Removed key[%s] val[%s]", key, message);
+                  doubleEventCount.incrementAndGet();
+                  map.remove(key);
+                  doubleEventCount.incrementAndGet();
                   continue;
                 }
                 doubleEventCount.incrementAndGet();
@@ -350,6 +357,13 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return future;
   }
 
+  /**
+   * Check that the user has not set forbidden Kafka consumer props
+   *
+   * Some consumer properties must be set in order to guarantee that
+   * the consumer will consume the entire topic from the beginning.
+   * Otherwise, lookup data may not be loaded completely.
+   */
   private void verifyKafkaProperties()
   {
     if (kafkaProperties.containsKey(ConsumerConfig.GROUP_ID_CONFIG)) {
@@ -360,8 +374,15 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     }
     if (kafkaProperties.containsKey(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)) {
       throw new IAE(
-              "Cannot set kafka property [auto.offset.reset]. Property will be forced to [smallest]. Found [%s]",
+              "Cannot set kafka property [auto.offset.reset]. Property will be forced to [earliest]. Found [%s]",
               kafkaProperties.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)
+      );
+    }
+    if (kafkaProperties.containsKey(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG) &&
+          !kafkaProperties.get(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG).equals("false")) {
+      throw new IAE(
+          "Cannot set kafka property [enable.auto.commit]. Property will be forced to [false]. Found [%s]",
+          kafkaProperties.get(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG)
       );
     }
     Preconditions.checkNotNull(
@@ -391,9 +412,10 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   {
     final Properties properties = new Properties();
     properties.putAll(kafkaProperties);
-    // Enable publish-subscribe
+    // Set the consumer to consume everything and never commit offsets
     properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
     properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, factoryId);
+    properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
     return properties;
   }
 }

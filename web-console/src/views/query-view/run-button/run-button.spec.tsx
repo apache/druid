@@ -21,7 +21,7 @@ import React from 'react';
 
 import { RunButton } from './run-button';
 
-describe('run button', () => {
+describe('RunButton', () => {
   it('matches snapshot non-loading state', () => {
     const runButton = (
       <RunButton

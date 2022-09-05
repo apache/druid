@@ -32,7 +32,7 @@ public class BytesFullResponseHandler implements HttpResponseHandler<BytesFullRe
   @Override
   public ClientResponse<BytesFullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    BytesFullResponseHolder holder = new BytesFullResponseHolder(response.getStatus(), response);
+    BytesFullResponseHolder holder = new BytesFullResponseHolder(response);
 
     holder.addChunk(getContentBytes(response.getContent()));
 

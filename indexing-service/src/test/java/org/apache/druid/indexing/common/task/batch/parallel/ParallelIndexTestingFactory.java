@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -33,7 +32,6 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -67,19 +65,18 @@ class ParallelIndexTestingFactory
   static final String GROUP_ID = "group-id";
   static final TaskResource TASK_RESOURCE = null;
   static final String SUPERVISOR_TASK_ID = "supervisor-task-id";
+  static final String SUBTASK_SPEC_ID = "subtask-spec-id";
   static final int NUM_ATTEMPTS = 1;
   static final Map<String, Object> CONTEXT = Collections.emptyMap();
-  static final IndexingServiceClient INDEXING_SERVICE_CLIENT = TestUtils.INDEXING_SERVICE_CLIENT;
-  static final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> TASK_CLIENT_FACTORY =
-      TestUtils.TASK_CLIENT_FACTORY;
+  static final ParallelIndexSupervisorTaskClientProvider TASK_CLIENT_PROVIDER = TestUtils.TASK_CLIENT_PROVIDER;
   static final AppenderatorsManager APPENDERATORS_MANAGER = TestUtils.APPENDERATORS_MANAGER;
   static final ShuffleClient SHUFFLE_CLIENT = new ShuffleClient()
   {
     @Override
-    public <T, P extends PartitionLocation<T>> File fetchSegmentFile(
+    public File fetchSegmentFile(
         File partitionDir,
         String supervisorTaskId,
-        P location
+        PartitionLocation location
     )
     {
       return null;
@@ -185,6 +182,8 @@ class ParallelIndexTestingFactory
           logParseExceptions,
           maxParseExceptions,
           25,
+          null,
+          null,
           null
       );
     }
@@ -195,9 +194,7 @@ class ParallelIndexTestingFactory
     GranularitySpec granularitySpec = new ArbitraryGranularitySpec(Granularities.DAY, granularitySpecInputIntervals);
     TimestampSpec timestampSpec = new TimestampSpec(SCHEMA_TIME, "auto", null);
     DimensionsSpec dimensionsSpec = new DimensionsSpec(
-        DimensionsSpec.getDefaultSchemas(ImmutableList.of(SCHEMA_DIMENSION)),
-        null,
-        null
+        DimensionsSpec.getDefaultSchemas(ImmutableList.of(SCHEMA_DIMENSION))
     );
 
     return new DataSchema(
@@ -219,7 +216,7 @@ class ParallelIndexTestingFactory
       DataSchema dataSchema
   )
   {
-    ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(null, inputSource, inputFormat, false);
+    ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(null, inputSource, inputFormat, false, false);
 
     return new ParallelIndexIngestionSpec(dataSchema, ioConfig, tuningConfig);
   }
@@ -253,9 +250,9 @@ class ParallelIndexTestingFactory
     }
   }
 
-  static IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> createTaskClientFactory()
+  static ParallelIndexSupervisorTaskClientProvider createTaskClientFactory()
   {
-    return (taskInfoProvider, callerId, numThreads, httpTimeout, numRetries) -> createTaskClient();
+    return (supervisorTaskId, httpTimeout, numRetries) -> createTaskClient();
   }
 
   private static ParallelIndexSupervisorTaskClient createTaskClient()

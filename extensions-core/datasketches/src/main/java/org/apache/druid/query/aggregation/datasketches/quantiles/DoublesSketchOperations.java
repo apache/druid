@@ -41,8 +41,9 @@ public class DoublesSketchOperations
       return (DoublesSketch) serializedSketch;
     }
     throw new ISE(
-        "Object is not of a type that can be deserialized to a quantiles DoublsSketch: "
-            + serializedSketch.getClass());
+        "Object is not of a type that can be deserialized to a quantiles DoublesSketch: %s",
+        serializedSketch == null ? "null" : serializedSketch.getClass()
+    );
   }
 
   public static DoublesSketch deserializeFromBase64EncodedString(final String str)

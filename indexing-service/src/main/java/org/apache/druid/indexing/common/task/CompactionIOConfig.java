@@ -22,8 +22,10 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.IOConfig;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -36,17 +38,28 @@ import java.util.Objects;
 public class CompactionIOConfig implements IOConfig
 {
   private final CompactionInputSpec inputSpec;
+  private final boolean dropExisting;
 
   @JsonCreator
-  public CompactionIOConfig(@JsonProperty("inputSpec") CompactionInputSpec inputSpec)
+  public CompactionIOConfig(
+      @JsonProperty("inputSpec") CompactionInputSpec inputSpec,
+      @JsonProperty("dropExisting") @Nullable Boolean dropExisting
+  )
   {
     this.inputSpec = inputSpec;
+    this.dropExisting = dropExisting == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : dropExisting;
   }
 
   @JsonProperty
   public CompactionInputSpec getInputSpec()
   {
     return inputSpec;
+  }
+
+  @JsonProperty
+  public boolean isDropExisting()
+  {
+    return dropExisting;
   }
 
   @Override
@@ -59,13 +72,14 @@ public class CompactionIOConfig implements IOConfig
       return false;
     }
     CompactionIOConfig that = (CompactionIOConfig) o;
-    return Objects.equals(inputSpec, that.inputSpec);
+    return dropExisting == that.dropExisting &&
+           Objects.equals(inputSpec, that.inputSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(inputSpec);
+    return Objects.hash(inputSpec, dropExisting);
   }
 
   @Override
@@ -73,6 +87,7 @@ public class CompactionIOConfig implements IOConfig
   {
     return "CompactionIOConfig{" +
            "inputSpec=" + inputSpec +
+           ", dropExisting=" + dropExisting +
            '}';
   }
 }

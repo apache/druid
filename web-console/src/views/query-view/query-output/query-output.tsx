@@ -16,23 +16,28 @@
  * limitations under the License.
  */
 
-import { Icon, Menu, MenuItem, Popover } from '@blueprintjs/core';
+import { Icon, Menu, MenuItem } from '@blueprintjs/core';
 import { IconName, IconNames } from '@blueprintjs/icons';
-import {
-  QueryResult,
-  SqlExpression,
-  SqlLiteral,
-  SqlQuery,
-  SqlRef,
-  trimString,
-} from 'druid-query-toolkit';
-import * as JSONBig from 'json-bigint-native';
-import React, { useState } from 'react';
+import { Popover2 } from '@blueprintjs/popover2';
+import classNames from 'classnames';
+import { QueryResult, SqlExpression, SqlLiteral, SqlRef, trimString } from 'druid-query-toolkit';
+import React, { useEffect, useState } from 'react';
 import ReactTable from 'react-table';
 
-import { BracedText, TableCell } from '../../../components';
+import { BracedText, Deferred, TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
-import { copyAndAlert, deepSet, filterMap, prettyPrintSql } from '../../../utils';
+import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
+import {
+  changePage,
+  columnToWidth,
+  copyAndAlert,
+  formatNumber,
+  getNumericColumnBraces,
+  Pagination,
+  prettyPrintSql,
+  QueryAction,
+  stringifyValue,
+} from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
 
 import { ColumnRenameInput } from './column-rename-input/column-rename-input';
@@ -43,58 +48,29 @@ function isComparable(x: unknown): boolean {
   return x !== null && x !== '' && !isNaN(Number(x));
 }
 
-function stringifyValue(value: unknown): string {
-  switch (typeof value) {
-    case 'object':
-      if (!value) return String(value);
-      if (typeof (value as any).toISOString === 'function') return (value as any).toISOString();
-      return JSONBig.stringify(value);
-
-    default:
-      return String(value);
-  }
-}
-
-interface Pagination {
-  page: number;
-  pageSize: number;
-}
-
-function getNumericColumnBraces(
-  queryResult: QueryResult | undefined,
-  pagination: Pagination,
-): Record<number, string[]> {
-  const numericColumnBraces: Record<number, string[]> = {};
-  if (queryResult) {
-    const index = pagination.page * pagination.pageSize;
-    const rows = queryResult.rows.slice(index, index + pagination.pageSize);
-    if (rows.length) {
-      const numColumns = queryResult.header.length;
-      for (let c = 0; c < numColumns; c++) {
-        const brace = filterMap(rows, row =>
-          typeof row[c] === 'number' ? String(row[c]) : undefined,
-        );
-        if (rows.length === brace.length) {
-          numericColumnBraces[c] = brace;
-        }
-      }
-    }
-  }
-  return numericColumnBraces;
-}
-
 export interface QueryOutputProps {
-  queryResult?: QueryResult;
-  onQueryChange: (query: SqlQuery, run?: boolean) => void;
+  queryResult: QueryResult;
+  onQueryAction(action: QueryAction): void;
+  onLoadMore: () => void;
   runeMode: boolean;
 }
 
 export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputProps) {
-  const { queryResult, onQueryChange, runeMode } = props;
-  const parsedQuery = queryResult ? queryResult.sqlQuery : undefined;
-  const [pagination, setPagination] = useState<Pagination>({ page: 0, pageSize: 20 });
+  const { queryResult, onQueryAction, onLoadMore, runeMode } = props;
+  const parsedQuery = queryResult.sqlQuery;
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 0,
+    pageSize: SMALL_TABLE_PAGE_SIZE,
+  });
   const [showValue, setShowValue] = useState<string>();
   const [renamingColumn, setRenamingColumn] = useState<number>(-1);
+
+  // Reset page to 0 if number of results changes
+  useEffect(() => {
+    setPagination(pagination => {
+      return pagination.page ? changePage(pagination, 0) : pagination;
+    });
+  }, [queryResult.rows.length]);
 
   function hasFilterOnHeader(header: string, headerIndex: number): boolean {
     if (!parsedQuery || !parsedQuery.isRealOutputColumnAtSelectIndex(headerIndex)) return false;
@@ -113,8 +89,8 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
       const orderByExpression = parsedQuery.isValidSelectIndex(headerIndex)
         ? SqlLiteral.index(headerIndex)
         : SqlRef.column(header);
-      const descOrderBy = orderByExpression.toOrderByPart('DESC');
-      const ascOrderBy = orderByExpression.toOrderByPart('ASC');
+      const descOrderBy = orderByExpression.toOrderByExpression('DESC');
+      const ascOrderBy = orderByExpression.toOrderByExpression('ASC');
       const orderBy = parsedQuery.getOrderByForSelectIndex(headerIndex);
 
       const basicActions: BasicAction[] = [];
@@ -125,7 +101,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
           icon: reverseOrderByDirection === 'ASC' ? IconNames.SORT_ASC : IconNames.SORT_DESC,
           title: `Order ${reverseOrderByDirection === 'ASC' ? 'ascending' : 'descending'}`,
           onAction: () => {
-            onQueryChange(parsedQuery.changeOrderByExpressions([reverseOrderBy]), true);
+            onQueryAction(q => q.changeOrderByExpressions([reverseOrderBy]));
           },
         });
       } else {
@@ -134,14 +110,14 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
             icon: IconNames.SORT_DESC,
             title: `Order descending`,
             onAction: () => {
-              onQueryChange(parsedQuery.changeOrderByExpressions([descOrderBy]), true);
+              onQueryAction(q => q.changeOrderByExpressions([descOrderBy]));
             },
           },
           {
             icon: IconNames.SORT_ASC,
             title: `Order ascending`,
             onAction: () => {
-              onQueryChange(parsedQuery.changeOrderByExpressions([ascOrderBy]), true);
+              onQueryAction(q => q.changeOrderByExpressions([ascOrderBy]));
             },
           },
         );
@@ -154,9 +130,8 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
             icon: IconNames.FILTER_REMOVE,
             title: `Remove from WHERE clause`,
             onAction: () => {
-              onQueryChange(
-                parsedQuery.changeWhereExpression(whereExpression.removeColumnFromAnd(header)),
-                true,
+              onQueryAction(q =>
+                q.changeWhereExpression(whereExpression.removeColumnFromAnd(header)),
               );
             },
           });
@@ -168,9 +143,8 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
             icon: IconNames.FILTER_REMOVE,
             title: `Remove from HAVING clause`,
             onAction: () => {
-              onQueryChange(
-                parsedQuery.changeHavingExpression(havingExpression.removeColumnFromAnd(header)),
-                true,
+              onQueryAction(q =>
+                q.changeHavingExpression(havingExpression.removeColumnFromAnd(header)),
               );
             },
           });
@@ -178,28 +152,29 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
       }
 
       if (!parsedQuery.hasStarInSelect()) {
-        basicActions.push({
-          icon: IconNames.EDIT,
-          title: `Rename column`,
-          onAction: () => {
-            setRenamingColumn(headerIndex);
+        basicActions.push(
+          {
+            icon: IconNames.EDIT,
+            title: 'Rename column',
+            onAction: () => {
+              setRenamingColumn(headerIndex);
+            },
           },
-        });
+          {
+            icon: IconNames.CROSS,
+            title: 'Remove column',
+            onAction: () => {
+              onQueryAction(q => q.removeOutputColumn(header));
+            },
+          },
+        );
       }
 
-      basicActions.push({
-        icon: IconNames.CROSS,
-        title: `Remove column`,
-        onAction: () => {
-          onQueryChange(parsedQuery.removeOutputColumn(header), true);
-        },
-      });
-
-      return basicActionsToMenu(basicActions);
+      return basicActionsToMenu(basicActions)!;
     } else {
       const orderByExpression = SqlRef.column(header);
-      const descOrderBy = orderByExpression.toOrderByPart('DESC');
-      const ascOrderBy = orderByExpression.toOrderByPart('ASC');
+      const descOrderBy = orderByExpression.toOrderByExpression('DESC');
+      const ascOrderBy = orderByExpression.toOrderByExpression('ASC');
       const descOrderByPretty = prettyPrintSql(descOrderBy);
       const ascOrderByPretty = prettyPrintSql(descOrderBy);
       return (
@@ -235,7 +210,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
   }
 
   function filterOnMenuItem(icon: IconName, clause: SqlExpression, having: boolean) {
-    const { onQueryChange } = props;
+    const { onQueryAction } = props;
     if (!parsedQuery) return;
 
     return (
@@ -243,9 +218,11 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         icon={icon}
         text={`${having ? 'Having' : 'Filter on'}: ${prettyPrintSql(clause)}`}
         onClick={() => {
-          onQueryChange(
-            having ? parsedQuery.addToHaving(clause) : parsedQuery.addToWhere(clause),
-            true,
+          const column = clause.getUsedColumns()[0];
+          onQueryAction(
+            having
+              ? q => q.removeFromHaving(column).addHaving(clause)
+              : q => q.removeColumnFromWhere(column).addWhere(clause),
           );
         }}
       />
@@ -287,7 +264,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         if (having && outputName) {
           ex = SqlRef.column(outputName);
         } else {
-          ex = selectValue.expression as SqlExpression;
+          ex = selectValue.getUnderlyingExpression();
         }
       } else if (parsedQuery.hasStarInSelect()) {
         ex = SqlRef.column(header);
@@ -299,12 +276,12 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
             <>
               {isComparable(value) && (
                 <>
-                  {filterOnMenuItem(IconNames.FILTER_KEEP, ex.greaterThanOrEqual(val), having)}
-                  {filterOnMenuItem(IconNames.FILTER_KEEP, ex.lessThanOrEqual(val), having)}
+                  {filterOnMenuItem(IconNames.FILTER, ex.greaterThanOrEqual(val), having)}
+                  {filterOnMenuItem(IconNames.FILTER, ex.lessThanOrEqual(val), having)}
                 </>
               )}
-              {filterOnMenuItem(IconNames.FILTER_KEEP, ex.equal(val), having)}
-              {filterOnMenuItem(IconNames.FILTER_REMOVE, ex.unequal(val), having)}
+              {filterOnMenuItem(IconNames.FILTER, ex.equal(val), having)}
+              {filterOnMenuItem(IconNames.FILTER, ex.unequal(val), having)}
             </>
           )}
           {showFullValueMenuItem}
@@ -357,67 +334,79 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
     setRenamingColumn(-1);
     if (renameTo && parsedQuery) {
       if (parsedQuery.hasStarInSelect()) return;
-      const selectExpression = parsedQuery.selectExpressions.get(renamingColumn);
+      const selectExpression = parsedQuery.getSelectExpressionForIndex(renamingColumn);
       if (!selectExpression) return;
-      onQueryChange(
-        parsedQuery.changeSelectExpressions(
-          parsedQuery.selectExpressions.change(
-            renamingColumn,
-            selectExpression.changeAliasName(renameTo),
-          ),
-        ),
-        true,
-      );
+      onQueryAction(q => q.changeSelect(renamingColumn, selectExpression.as(renameTo)));
     }
+  }
+
+  const outerLimit = queryResult.getSqlOuterLimit();
+  const hasMoreResults = queryResult.rows.length === outerLimit;
+
+  function changePagination(pagination: Pagination) {
+    if (
+      hasMoreResults &&
+      Math.floor(queryResult.rows.length / pagination.pageSize) === pagination.page // on the last page
+    ) {
+      onLoadMore();
+    }
+    setPagination(pagination);
   }
 
   const numericColumnBraces = getNumericColumnBraces(queryResult, pagination);
   return (
-    <div className="query-output">
+    <div className={classNames('query-output', { 'more-results': hasMoreResults })}>
       <ReactTable
-        data={queryResult ? (queryResult.rows as any[][]) : []}
-        noDataText={queryResult && !queryResult.rows.length ? 'Query returned no data' : ''}
+        className="-striped -highlight"
+        data={queryResult.rows as any[][]}
+        ofText={hasMoreResults ? '' : 'of'}
+        noDataText={queryResult.rows.length ? '' : 'Query returned no data'}
         page={pagination.page}
         pageSize={pagination.pageSize}
-        onPageChange={page => setPagination(deepSet(pagination, 'page', page))}
-        onPageSizeChange={(pageSize, page) => setPagination({ page, pageSize })}
+        onPageChange={page => changePagination(changePage(pagination, page))}
+        onPageSizeChange={(pageSize, page) => changePagination({ page, pageSize })}
         sortable={false}
-        columns={(queryResult ? queryResult.header : []).map((column, i) => {
+        defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+        pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination={
+          queryResult.rows.length > Math.min(SMALL_TABLE_PAGE_SIZE, pagination.pageSize)
+        }
+        columns={queryResult.header.map((column, i) => {
           const h = column.name;
+
           return {
             Header:
               i === renamingColumn && parsedQuery
                 ? () => <ColumnRenameInput initialName={h} onDone={renameColumnTo} />
                 : () => {
                     return (
-                      <Popover className={'clickable-cell'} content={getHeaderMenu(h, i)}>
-                        <div>
+                      <Popover2 content={<Deferred content={() => getHeaderMenu(h, i)} />}>
+                        <div className="clickable-cell">
                           {h}
-                          {hasFilterOnHeader(h, i) && (
-                            <Icon icon={IconNames.FILTER} iconSize={14} />
-                          )}
+                          {hasFilterOnHeader(h, i) && <Icon icon={IconNames.FILTER} size={14} />}
                         </div>
-                      </Popover>
+                      </Popover2>
                     );
                   },
             headerClassName: getHeaderClassName(h, i),
+            width: columnToWidth(column),
             accessor: String(i),
-            Cell: row => {
+            Cell(row) {
               const value = row.value;
               return (
-                <div>
-                  <Popover content={getCellMenu(h, i, value)}>
-                    {numericColumnBraces[i] ? (
-                      <BracedText
-                        text={String(value)}
-                        braces={numericColumnBraces[i]}
-                        padFractionalPart
-                      />
-                    ) : (
-                      <TableCell value={value} unlimited />
-                    )}
-                  </Popover>
-                </div>
+                <Popover2 content={<Deferred content={() => getCellMenu(h, i, value)} />}>
+                  {numericColumnBraces[i] ? (
+                    <BracedText
+                      className="table-padding"
+                      text={formatNumber(value)}
+                      braces={numericColumnBraces[i]}
+                      padFractionalPart
+                      unselectableThousandsSeparator
+                    />
+                  ) : (
+                    <TableCell value={value} unlimited />
+                  )}
+                </Popover2>
               );
             },
             className:

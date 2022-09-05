@@ -30,6 +30,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
+import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.helpers.OverlordHelperManager;
@@ -79,6 +80,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   public TaskMaster(
       final TaskLockConfig taskLockConfig,
       final TaskQueueConfig taskQueueConfig,
+      final DefaultTaskConfig defaultTaskConfig,
       final TaskLockbox taskLockbox,
       final TaskStorage taskStorage,
       final TaskActionClientFactory taskActionClientFactory,
@@ -116,6 +118,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
           taskQueue = new TaskQueue(
               taskLockConfig,
               taskQueueConfig,
+              defaultTaskConfig,
               taskStorage,
               taskRunner,
               taskActionClientFactory,
@@ -227,6 +230,19 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   public String getCurrentLeader()
   {
     return overlordLeaderSelector.getCurrentLeader();
+  }
+
+  public Optional<String> getRedirectLocation()
+  {
+    String leader = overlordLeaderSelector.getCurrentLeader();
+    // do not redirect when
+    // leader is not elected
+    // leader is the current node
+    if (leader == null || leader.isEmpty() || overlordLeaderSelector.isLeader()) {
+      return Optional.absent();
+    } else {
+      return Optional.of(leader);
+    }
   }
 
   public Optional<TaskRunner> getTaskRunner()
@@ -343,7 +359,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   @Override
   @Nullable
-  public Long getTotalTaskSlotCount()
+  public Map<String, Long> getTotalTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
@@ -355,7 +371,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   @Override
   @Nullable
-  public Long getIdleTaskSlotCount()
+  public Map<String, Long> getIdleTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
@@ -367,7 +383,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   @Override
   @Nullable
-  public Long getUsedTaskSlotCount()
+  public Map<String, Long> getUsedTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
@@ -379,7 +395,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   @Override
   @Nullable
-  public Long getLazyTaskSlotCount()
+  public Map<String, Long> getLazyTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
@@ -391,7 +407,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   @Override
   @Nullable
-  public Long getBlacklistedTaskSlotCount()
+  public Map<String, Long> getBlacklistedTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {

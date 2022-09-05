@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
 /**
  * Interface containing dictionary-related methods common to {@link DimensionSelector},
@@ -57,8 +58,9 @@ public interface DimensionDictionarySelector
   int getValueCardinality();
 
   /**
-   * The Name is the String name of the actual field.  It is assumed that storage layers convert names
-   * into id values which can then be used to get the string value.  For example
+   * Returns the value for a particular dictionary id as a Java String.
+   *
+   * For example, if a column has four rows:
    *
    * A,B
    * A
@@ -77,13 +79,53 @@ public interface DimensionDictionarySelector
    * lookupName(0) =&gt; A
    * lookupName(1) =&gt; B
    *
-   * @param id id to lookup the field name for
+   * Performance note: if you want a {@code java.lang.String}, always use this method. It will be at least as fast
+   * as calling {@link #lookupNameUtf8} and decoding the bytes. However, if you want UTF-8 bytes, then check if
+   * {@link #supportsLookupNameUtf8()} returns true, and if it does, use {@link #lookupNameUtf8} instead.
    *
-   * @return the field name for the given id
+   * @param id id to lookup the dictionary value for
+   *
+   * @return dictionary value for the given id, or null if the value is itself null
    */
   @CalledFromHotLoop
   @Nullable
   String lookupName(int id);
+
+  /**
+   * Returns the value for a particular dictionary id as UTF-8 bytes.
+   *
+   * The returned buffer is in big-endian order. It is not reused, so callers may modify the position, limit, byte
+   * order, etc of the buffer.
+   *
+   * The returned buffer may point to the original data, so callers must take care not to use it outside the valid
+   * lifetime of this selector. In particular, if the original data came from a reference-counted segment, callers must
+   * not use the returned ByteBuffer after releasing their reference to the relevant {@link ReferenceCountingSegment}.
+   *
+   * Performance note: if you want UTF-8 bytes, and {@link #supportsLookupNameUtf8()} returns true, always use this
+   * method. It will be at least as fast as calling {@link #lookupName} and encoding the bytes. However, if you want a
+   * {@code java.lang.String}, then use {@link #lookupName} instead of this method.
+   *
+   * @param id id to lookup the dictionary value for
+   *
+   * @return dictionary value for the given id, or null if the value is itself null
+   *
+   * @throws UnsupportedOperationException if {@link #supportsLookupNameUtf8()} is false
+   */
+  @Nullable
+  default ByteBuffer lookupNameUtf8(int id)
+  {
+    // If UTF-8 isn't faster, it's better to throw an exception rather than delegate to "lookupName" and do the
+    // conversion. Callers should check "supportsLookupNameUtf8" to make sure they're calling the fastest method.
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Returns whether this selector supports {@link #lookupNameUtf8}.
+   */
+  default boolean supportsLookupNameUtf8()
+  {
+    return false;
+  }
 
   /**
    * Returns true if it is possible to {@link #lookupName(int)} by ids from 0 to {@link #getValueCardinality()}

@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
-import { IResizeEntry, ResizeSensor } from '@blueprintjs/core';
-import ace, { Editor } from 'brace';
+import { ResizeEntry } from '@blueprintjs/core';
+import { ResizeSensor2 } from '@blueprintjs/popover2';
+import type { Ace } from 'ace-builds';
+import ace from 'ace-builds';
 import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
@@ -29,12 +31,23 @@ import {
   SQL_KEYWORDS,
 } from '../../../../lib/keywords';
 import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../../../lib/sql-docs';
-import { RowColumn, uniq } from '../../../utils';
-import { ColumnMetadata } from '../../../utils/column-metadata';
+import { ColumnMetadata, RowColumn, uniq } from '../../../utils';
 
 import './query-input.scss';
 
-const langTools = ace.acequire('ace/ext/language_tools');
+const langTools = ace.require('ace/ext/language_tools');
+
+const COMPLETER = {
+  insertMatch: (editor: any, data: Ace.Completion) => {
+    editor.completer.insertMatch({ value: data.name });
+  },
+};
+
+interface ItemDescription {
+  name: string;
+  syntax: string;
+  description: string;
+}
 
 export interface QueryInputProps {
   queryString: string;
@@ -56,7 +69,7 @@ export interface QueryInputState {
 }
 
 export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputState> {
-  private aceEditor: Editor | undefined;
+  private aceEditor: Ace.Editor | undefined;
 
   static replaceDefaultAutoCompleter(): void {
     if (!langTools) return;
@@ -66,38 +79,45 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
       SQL_EXPRESSION_PARTS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
       SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 0, meta: 'constant' })),
       SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 0, meta: 'dynamic' })),
-      SQL_DATA_TYPES.map(v => ({ name: v.name, value: v.name, score: 0, meta: 'type' })),
+      Object.entries(SQL_DATA_TYPES).map(([name, [runtime, description]]) => ({
+        name,
+        value: name,
+        score: 0,
+        meta: 'type',
+        syntax: `Druid runtime type: ${runtime}`,
+        description,
+      })),
     );
-
-    const keywordCompleter = {
-      getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
-        return callback(null, keywordList);
-      },
-    };
 
     langTools.setCompleters([
       langTools.snippetCompleter,
       langTools.textCompleter,
-      keywordCompleter,
+      {
+        getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
+          return callback(null, keywordList);
+        },
+        getDocTooltip: (item: any) => {
+          if (item.meta === 'type') {
+            item.docHTML = QueryInput.makeDocHtml(item);
+          }
+        },
+      },
     ]);
   }
 
   static addFunctionAutoCompleter(): void {
     if (!langTools) return;
 
-    const functionList: any[] = SQL_FUNCTIONS.map(entry => {
-      return {
-        value: entry.name,
-        score: 80,
+    const functionList: any[] = Object.entries(SQL_FUNCTIONS).flatMap(([name, versions]) => {
+      return versions.map(([args, description]) => ({
+        name: name,
+        value: versions.length > 1 ? `${name}(${args})` : name,
+        score: 1100, // Use a high score to appear over the 'local' suggestions that have a score of 1000
         meta: 'function',
-        syntax: entry.name + entry.arguments,
-        description: entry.description,
-        completer: {
-          insertMatch: (editor: any, data: any) => {
-            editor.completer.insertMatch({ value: data.caption });
-          },
-        },
-      };
+        syntax: `${name}(${args})`,
+        description,
+        completer: COMPLETER,
+      }));
     });
 
     langTools.addCompleter({
@@ -106,29 +126,17 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
       },
       getDocTooltip: (item: any) => {
         if (item.meta === 'function') {
-          item.docHTML = QueryInput.completerToHtml(item);
+          item.docHTML = QueryInput.makeDocHtml(item);
         }
       },
     });
   }
 
-  static completerToHtml(item: any) {
+  static makeDocHtml(item: ItemDescription) {
     return `
-<div class="function-doc">
-  <div class="function-doc-name">
-    <b>${escape(item.caption)}</b>
-  </div>
-  <hr />
-  <div>
-    <b>Syntax:</b>
-  </div>
-  <div>${escape(item.syntax)}</div>
-  <br />
-  <div>
-    <b>Description:</b>
-  </div>
-  <div>${escape(item.description)}</div>
-</div>`;
+<div class="doc-name">${item.name}</div>
+<div class="doc-syntax">${escape(item.syntax)}</div>
+<div class="doc-description">${item.description}</div>`;
   }
 
   static getDerivedStateFromProps(props: QueryInputProps, state: QueryInputState) {
@@ -200,12 +208,12 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     }
   }
 
-  private handleAceContainerResize = (entries: IResizeEntry[]) => {
+  private readonly handleAceContainerResize = (entries: ResizeEntry[]) => {
     if (entries.length !== 1) return;
     this.setState({ editorHeight: entries[0].contentRect.height });
   };
 
-  private handleChange = (value: string) => {
+  private readonly handleChange = (value: string) => {
     // This gets the event as a second arg
     const { onQueryStringChange } = this.props;
     onQueryStringChange(value);
@@ -230,11 +238,12 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
     return (
       <div className="query-input">
-        <ResizeSensor onResize={this.handleAceContainerResize}>
+        <ResizeSensor2 onResize={this.handleAceContainerResize}>
           <div className="ace-container">
             <AceEditor
               mode={runeMode ? 'hjson' : 'dsql'}
               theme="solarized_dark"
+              className="no-background placeholder-padding"
               name="ace-editor"
               onChange={this.handleChange}
               focus
@@ -251,17 +260,18 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
                 enableLiveAutocompletion: !runeMode,
                 showLineNumbers: true,
                 tabSize: 2,
+                newLineMode: 'unix' as any, // newLineMode is incorrectly assumed to be boolean in the typings
               }}
               style={{}}
               placeholder="SELECT * FROM ..."
-              onLoad={(editor: any) => {
+              onLoad={editor => {
                 editor.renderer.setPadding(10);
-                editor.renderer.setScrollMargin(10);
+                editor.renderer.setScrollMargin(10, 10, 0, 0);
                 this.aceEditor = editor;
               }}
             />
           </div>
-        </ResizeSensor>
+        </ResizeSensor2>
       </div>
     );
   }

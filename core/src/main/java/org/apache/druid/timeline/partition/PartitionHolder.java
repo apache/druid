@@ -65,11 +65,6 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
     this.overshadowableManager = overshadowableManager;
   }
 
-  public ImmutablePartitionHolder<T> asImmutable()
-  {
-    return new ImmutablePartitionHolder<>(OvershadowableManager.copyVisible(overshadowableManager));
-  }
-
   public boolean add(PartitionChunk<T> chunk)
   {
     return overshadowableManager.addChunk(chunk);
@@ -166,4 +161,16 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
            "overshadowableManager=" + overshadowableManager +
            '}';
   }
+
+  public boolean hasData()
+  {
+    // it has data as long as one of the payloads has data, otherwise it does not
+    for (T payload : payloads()) {
+      if (payload.hasData()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
 }

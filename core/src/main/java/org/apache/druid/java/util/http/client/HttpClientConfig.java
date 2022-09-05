@@ -81,7 +81,9 @@ public class HttpClientConfig
   }
 
   private final int numConnections;
+  private final boolean eagerInitialization;
   private final SSLContext sslContext;
+  private final HttpClientProxyConfig proxyConfig;
   private final Duration readTimeout;
   private final Duration sslHandshakeTimeout;
   private final int bossPoolSize;
@@ -89,66 +91,11 @@ public class HttpClientConfig
   private final CompressionCodec compressionCodec;
   private final Duration unusedConnectionTimeoutDuration;
 
-  @Deprecated // Use the builder instead
-  public HttpClientConfig(
-      int numConnections,
-      SSLContext sslContext
-  )
-  {
-    this(
-        numConnections,
-        sslContext,
-        Duration.ZERO,
-        null,
-        DEFAULT_BOSS_COUNT,
-        DEFAULT_WORKER_COUNT,
-        DEFAULT_COMPRESSION_CODEC,
-        DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION
-    );
-  }
-
-  @Deprecated // Use the builder instead
-  public HttpClientConfig(
-      int numConnections,
-      SSLContext sslContext,
-      Duration readTimeout
-  )
-  {
-    this(
-        numConnections,
-        sslContext,
-        readTimeout,
-        null,
-        DEFAULT_BOSS_COUNT,
-        DEFAULT_WORKER_COUNT,
-        DEFAULT_COMPRESSION_CODEC,
-        DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION
-    );
-  }
-
-  @Deprecated // Use the builder instead
-  public HttpClientConfig(
-      int numConnections,
-      SSLContext sslContext,
-      Duration readTimeout,
-      Duration sslHandshakeTimeout
-  )
-  {
-    this(
-        numConnections,
-        sslContext,
-        readTimeout,
-        sslHandshakeTimeout,
-        DEFAULT_BOSS_COUNT,
-        DEFAULT_WORKER_COUNT,
-        DEFAULT_COMPRESSION_CODEC,
-        DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION
-    );
-  }
-
   private HttpClientConfig(
       int numConnections,
+      boolean eagerInitialization,
       SSLContext sslContext,
+      HttpClientProxyConfig proxyConfig,
       Duration readTimeout,
       Duration sslHandshakeTimeout,
       int bossPoolSize,
@@ -158,7 +105,9 @@ public class HttpClientConfig
   )
   {
     this.numConnections = numConnections;
+    this.eagerInitialization = eagerInitialization;
     this.sslContext = sslContext;
+    this.proxyConfig = proxyConfig;
     this.readTimeout = readTimeout;
     this.sslHandshakeTimeout = sslHandshakeTimeout;
     this.bossPoolSize = bossPoolSize;
@@ -172,9 +121,19 @@ public class HttpClientConfig
     return numConnections;
   }
 
+  public boolean isEagerInitialization()
+  {
+    return eagerInitialization;
+  }
+
   public SSLContext getSslContext()
   {
     return sslContext;
+  }
+
+  public HttpClientProxyConfig getProxyConfig()
+  {
+    return proxyConfig;
   }
 
   public Duration getReadTimeout()
@@ -210,7 +169,9 @@ public class HttpClientConfig
   public static class Builder
   {
     private int numConnections = 1;
+    private boolean eagerInitialization = true;
     private SSLContext sslContext = null;
+    private HttpClientProxyConfig proxyConfig = null;
     private Duration readTimeout = null;
     private Duration sslHandshakeTimeout = null;
     private int bossCount = DEFAULT_BOSS_COUNT;
@@ -228,9 +189,21 @@ public class HttpClientConfig
       return this;
     }
 
+    public Builder withEagerInitialization(boolean eagerInitialization)
+    {
+      this.eagerInitialization = eagerInitialization;
+      return this;
+    }
+
     public Builder withSslContext(SSLContext sslContext)
     {
       this.sslContext = sslContext;
+      return this;
+    }
+
+    public Builder withHttpProxyConfig(HttpClientProxyConfig config)
+    {
+      this.proxyConfig = config;
       return this;
     }
 
@@ -268,7 +241,9 @@ public class HttpClientConfig
     {
       return new HttpClientConfig(
           numConnections,
+          eagerInitialization,
           sslContext,
+          proxyConfig,
           readTimeout,
           sslHandshakeTimeout,
           bossCount,

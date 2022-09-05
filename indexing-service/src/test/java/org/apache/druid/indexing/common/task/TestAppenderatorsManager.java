@@ -25,6 +25,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
@@ -43,8 +44,6 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Interval;
 
-import java.util.concurrent.ExecutorService;
-
 public class TestAppenderatorsManager implements AppenderatorsManager
 {
   private Appenderator realtimeAppenderator;
@@ -62,13 +61,14 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
       ServiceEmitter emitter,
-      ExecutorService queryExecutorService,
+      QueryProcessingPool queryProcessingPool,
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     realtimeAppenderator = Appenderators.createRealtime(
@@ -83,15 +83,76 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         conglomerate,
         segmentAnnouncer,
         emitter,
-        queryExecutorService,
+        queryProcessingPool,
         joinableFactory,
         cache,
         cacheConfig,
         cachePopulatorStats,
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        true
     );
     return realtimeAppenderator;
+  }
+
+  @Override
+  public Appenderator createOpenSegmentsOfflineAppenderatorForTask(
+      String taskId,
+      DataSchema schema,
+      AppenderatorConfig config,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
+  )
+  {
+    return Appenderators.createOpenSegmentsOffline(
+        taskId,
+        schema,
+        config,
+        metrics,
+        dataSegmentPusher,
+        objectMapper,
+        indexIO,
+        indexMerger,
+        rowIngestionMeters,
+        parseExceptionHandler,
+        true
+    );
+  }
+
+  @Override
+  public Appenderator createClosedSegmentsOfflineAppenderatorForTask(
+      String taskId,
+      DataSchema schema,
+      AppenderatorConfig config,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
+  )
+  {
+    return Appenderators.createClosedSegmentsOffline(
+        taskId,
+        schema,
+        config,
+        metrics,
+        dataSegmentPusher,
+        objectMapper,
+        indexIO,
+        indexMerger,
+        rowIngestionMeters,
+        parseExceptionHandler,
+        useMaxMemoryEstimates
+    );
   }
 
   @Override
@@ -105,7 +166,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     return Appenderators.createOffline(
@@ -118,7 +180,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexIO,
         indexMerger,
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        true
     );
   }
 

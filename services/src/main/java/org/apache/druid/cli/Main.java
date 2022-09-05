@@ -19,15 +19,15 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.Cli;
+import com.github.rvesse.airline.builder.CliBuilder;
+import com.github.rvesse.airline.help.Help;
+import com.github.rvesse.airline.parser.errors.ParseException;
 import com.google.inject.Injector;
-import io.airlift.airline.Cli;
-import io.airlift.airline.Help;
-import io.airlift.airline.ParseException;
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.cli.validate.DruidJsonValidator;
-import org.apache.druid.guice.ExtensionsConfig;
-import org.apache.druid.guice.GuiceInjectors;
-import org.apache.druid.initialization.Initialization;
+import org.apache.druid.guice.ExtensionsLoader;
+import org.apache.druid.guice.StartupInjectorBuilder;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -49,7 +49,7 @@ public class Main
   @SuppressForbidden(reason = "System#out")
   public static void main(String[] args)
   {
-    final Cli.CliBuilder<Runnable> builder = Cli.builder("druid");
+    final CliBuilder<Runnable> builder = Cli.builder("druid");
 
     builder.withDescription("Druid command-line runner.")
            .withDefaultCommand(Help.class)
@@ -93,11 +93,10 @@ public class Main
            .withDefaultCommand(Help.class)
            .withCommands(CliPeon.class, CliInternalHadoopIndexer.class);
 
-    final Injector injector = GuiceInjectors.makeStartupInjector();
-    final ExtensionsConfig config = injector.getInstance(ExtensionsConfig.class);
-    final Collection<CliCommandCreator> extensionCommands = Initialization.getFromExtensions(
-        config,
-        CliCommandCreator.class
+    final Injector injector = new StartupInjectorBuilder().forServer().build();
+    ExtensionsLoader extnLoader = ExtensionsLoader.instance(injector);
+    final Collection<CliCommandCreator> extensionCommands = extnLoader.getFromExtensions(
+         CliCommandCreator.class
     );
 
     for (CliCommandCreator creator : extensionCommands) {

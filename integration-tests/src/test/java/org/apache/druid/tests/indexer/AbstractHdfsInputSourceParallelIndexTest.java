@@ -58,7 +58,11 @@ public abstract class AbstractHdfsInputSourceParallelIndexTest extends AbstractI
     };
   }
 
-  void doTest(Pair<String, List> hdfsInputSource, InputFormatDetails inputFormatDetails) throws Exception
+  void doTest(
+      Pair<String, List> hdfsInputSource,
+      InputFormatDetails inputFormatDetails,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
+  ) throws Exception
   {
     final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     try (
@@ -115,7 +119,8 @@ public abstract class AbstractHdfsInputSourceParallelIndexTest extends AbstractI
           INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          segmentAvailabilityConfirmationPair
       );
     }
   }

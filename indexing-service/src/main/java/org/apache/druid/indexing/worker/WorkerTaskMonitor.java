@@ -127,7 +127,10 @@ public class WorkerTaskMonitor extends WorkerTaskManager
           if (completedAnnouncement != null) {
             completionStatus = completedAnnouncement.getTaskStatus();
           } else if (!runningTasks.containsKey(announcement.getTaskStatus().getId())) {
-            completionStatus = TaskStatus.failure(announcement.getTaskStatus().getId());
+            completionStatus = TaskStatus.failure(
+                announcement.getTaskStatus().getId(),
+                "Canceled as unknown task. See middleManager or indexer logs for more details."
+            );
           }
 
           if (completionStatus != null) {

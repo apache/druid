@@ -24,7 +24,7 @@ title: "Apache Ranger Security"
   
 This Apache Druid extension adds an Authorizer which implements access control for Druid, backed by [Apache Ranger](https://ranger.apache.org/). Please see [Authentication and Authorization](../../design/auth.md) for more information on the basic facilities this extension provides.
 
-Make sure to [include](../../development/extensions.md#loading-extensions) `druid-ranger-security` as an extension.
+Make sure to [include](../../development/extensions.md#loading-extensions) `druid-ranger-security` in the extensions load list.
 
 > The latest release of Apache Ranger is at the time of writing version 2.0. This version has a dependency on `log4j 1.2.17` which has a vulnerability if you configure it to use a `SocketServer` (CVE-2019-17571). Next to that, it also includes Kafka 2.0.0 which has 2 known vulnerabilities (CVE-2019-12399, CVE-2018-17196). Kafka can be used by the audit component in Ranger, but is not required. 
 
@@ -106,9 +106,9 @@ GET requires READ permission, while POST and DELETE require WRITE permission.
 
 Queries on Druid datasources require DATASOURCE READ permissions for the specified datasource.
 
-Queries on the [INFORMATION_SCHEMA tables](../../querying/sql.md#information-schema) will return information about datasources that the caller has DATASOURCE READ access to. Other datasources will be omitted.
+Queries on the [INFORMATION_SCHEMA tables](../../querying/sql-metadata-tables.md#information-schema) will return information about datasources that the caller has DATASOURCE READ access to. Other datasources will be omitted.
 
-Queries on the [system schema tables](../../querying/sql.md#system-schema) require the following permissions:
+Queries on the [system schema tables](../../querying/sql-metadata-tables.md#system-schema) require the following permissions:
 - `segments`: Segments will be filtered based on DATASOURCE READ permissions.
 - `servers`: The user requires STATE READ permissions.
 - `server_segments`: The user requires STATE READ permissions and segments will be filtered based on DATASOURCE READ permissions.

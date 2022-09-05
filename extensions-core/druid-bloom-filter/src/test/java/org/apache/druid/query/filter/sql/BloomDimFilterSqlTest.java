@@ -19,94 +19,77 @@
 
 package org.apache.druid.query.filter.sql;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Key;
+import com.google.common.collect.Iterables;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.guice.ExpressionModule;
-import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.expression.LookupExprMacro;
-import org.apache.druid.query.expressions.BloomFilterExprMacro;
+import org.apache.druid.query.expressions.BloomFilterExpressions;
 import org.apache.druid.query.filter.BloomDimFilter;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
-import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
-import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.BuiltinApproxCountDistinctSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 {
-  private static final Injector INJECTOR = Guice.createInjector(
-      binder -> {
-        binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
-        binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
-            LookupEnabledTestExprMacroTable.createTestLookupProvider(
-                ImmutableMap.of(
-                    "a", "xa",
-                    "abc", "xabc"
-                )
-            )
-        );
-      },
-      new BloomFilterExtensionModule()
-  );
+  @Override
+  public DruidOperatorTable createOperatorTable()
+  {
+    CalciteTests.getJsonMapper().registerModule(new BloomFilterSerializersModule());
+    return new DruidOperatorTable(
+        ImmutableSet.of(
+            new CountSqlAggregator(new ApproxCountDistinctSqlAggregator(new BuiltinApproxCountDistinctSqlAggregator()))
+        ),
+        ImmutableSet.of(new BloomFilterOperatorConversion())
+    );
+  }
 
-  private static ObjectMapper jsonMapper =
-      INJECTOR
-          .getInstance(Key.get(ObjectMapper.class, Json.class))
-          .registerModules(Collections.singletonList(new BloomFilterSerializersModule()));
-
-  public static ExprMacroTable createExprMacroTable()
+  @Override
+  public ExprMacroTable createMacroTable()
   {
     final List<ExprMacroTable.ExprMacro> exprMacros = new ArrayList<>();
     for (Class<? extends ExprMacroTable.ExprMacro> clazz : ExpressionModule.EXPR_MACROS) {
-      exprMacros.add(INJECTOR.getInstance(clazz));
+      exprMacros.add(CalciteTests.INJECTOR.getInstance(clazz));
     }
-    exprMacros.add(INJECTOR.getInstance(BloomFilterExprMacro.class));
-    exprMacros.add(INJECTOR.getInstance(LookupExprMacro.class));
+    exprMacros.add(CalciteTests.INJECTOR.getInstance(LookupExprMacro.class));
+    exprMacros.add(new BloomFilterExpressions.TestExprMacro());
     return new ExprMacroTable(exprMacros);
   }
 
-  @Rule
   @Override
-  public QueryLogHook getQueryLogHook()
+  public Iterable<? extends Module> getJacksonModules()
   {
-    return queryLogHook = QueryLogHook.create(jsonMapper);
+    return Iterables.concat(super.getJacksonModules(), new BloomFilterExtensionModule().getJacksonModules());
   }
 
   @Test
-  public void testBloomFilter() throws Exception
+  public void testBloomFilter() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("def");
@@ -124,7 +107,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                       new BloomDimFilter("dim1", BloomKFilterHolder.fromBloomKFilter(filter), null)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -134,7 +117,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBloomFilterExprFilter() throws Exception
+  public void testBloomFilterExprFilter() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("a-foo");
@@ -161,11 +144,11 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                               base64
                           ),
                           null,
-                          createExprMacroTable()
+                          createMacroTable()
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -175,11 +158,8 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBloomFilterVirtualColumn() throws Exception
+  public void testBloomFilterVirtualColumn() throws IOException
   {
-    // Cannot vectorize due to expression virtual columns.
-    cannotVectorize();
-
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("def-foo");
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
@@ -192,12 +172,12 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim1\",'-foo')", ValueType.STRING))
+                  .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim1\",'-foo')", ColumnType.STRING))
                   .filters(
                       new BloomDimFilter("v0", BloomKFilterHolder.fromBloomKFilter(filter), null)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -208,7 +188,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testBloomFilterVirtualColumnNumber() throws Exception
+  public void testBloomFilterVirtualColumnNumber() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addFloat(20.2f);
@@ -223,13 +203,13 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .virtualColumns(
-                      expressionVirtualColumn("v0", "(2 * CAST(\"dim1\", 'DOUBLE'))", ValueType.FLOAT)
+                      expressionVirtualColumn("v0", "(2 * CAST(\"dim1\", 'DOUBLE'))", ColumnType.FLOAT)
                   )
                   .filters(
                       new BloomDimFilter("v0", BloomKFilterHolder.fromBloomKFilter(filter), null)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -239,7 +219,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBloomFilters() throws Exception
+  public void testBloomFilters() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("def");
@@ -264,7 +244,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -275,7 +255,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 
   @Ignore("this test is really slow and is intended to use for comparisons with testBloomFilterBigParameter")
   @Test
-  public void testBloomFilterBigNoParam() throws Exception
+  public void testBloomFilterBigNoParam() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(5_000_000);
     filter.addString("def");
@@ -292,7 +272,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                       new BloomDimFilter("dim1", BloomKFilterHolder.fromBloomKFilter(filter), null)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -303,7 +283,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 
   @Ignore("this test is for comparison with testBloomFilterBigNoParam")
   @Test
-  public void testBloomFilterBigParameter() throws Exception
+  public void testBloomFilterBigParameter() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(5_000_000);
     filter.addString("def");
@@ -320,7 +300,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                       new BloomDimFilter("dim1", BloomKFilterHolder.fromBloomKFilter(filter), null)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -331,7 +311,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBloomFilterNullParameter() throws Exception
+  public void testBloomFilterNullParameter() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addBytes(null, 0, 0);
@@ -348,7 +328,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -356,32 +336,6 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         ),
         // there are no empty strings in the druid expression language since empty is coerced into a null when parsed
         ImmutableList.of(new SqlParameter(SqlType.VARCHAR, NullHandling.defaultStringValue()), new SqlParameter(SqlType.VARCHAR, base64))
-    );
-  }
-
-  @Override
-  public List<Object[]> getResults(
-      final PlannerConfig plannerConfig,
-      final Map<String, Object> queryContext,
-      final List<SqlParameter> parameters,
-      final String sql,
-      final AuthenticationResult authenticationResult
-  ) throws Exception
-  {
-    final DruidOperatorTable operatorTable = new DruidOperatorTable(
-        ImmutableSet.of(),
-        ImmutableSet.of(INJECTOR.getInstance(BloomFilterOperatorConversion.class))
-    );
-    return getResults(
-        plannerConfig,
-        queryContext,
-        parameters,
-        sql,
-        authenticationResult,
-        operatorTable,
-        createExprMacroTable(),
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
-        jsonMapper
     );
   }
 }

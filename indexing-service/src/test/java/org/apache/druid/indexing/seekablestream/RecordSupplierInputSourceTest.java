@@ -21,6 +21,7 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -31,6 +32,7 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
@@ -79,7 +81,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
         new InputRowSchema(
             new TimestampSpec("col_0", "auto", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(colNames.subList(1, colNames.size()))),
-            Collections.emptyList()
+            ColumnsFilter.all()
         ),
         inputFormat,
         temporaryFolder.newFolder()
@@ -211,6 +213,12 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     public Integer getEarliestSequenceNumber(StreamPartition<Integer> partition)
     {
       throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isOffsetAvailable(StreamPartition<Integer> partition, OrderedSequenceNumber<Integer> offset)
+    {
+      return true;
     }
 
     @Override

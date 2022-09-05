@@ -40,7 +40,7 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("LOOKUP")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
-      .returnTypeNonNull(SqlTypeName.VARCHAR)
+      .returnTypeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
       .build();
 
@@ -65,7 +65,7 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(
+    return OperatorConversions.convertDirectCallWithExtraction(
         plannerContext,
         rowSignature,
         rexNode,

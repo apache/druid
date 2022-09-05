@@ -19,10 +19,12 @@
 
 package org.apache.druid.data.input;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 
-import java.util.List;
+import javax.validation.constraints.NotNull;
+import java.util.Set;
 
 /**
  * Schema of {@link InputRow}.
@@ -31,13 +33,40 @@ public class InputRowSchema
 {
   private final TimestampSpec timestampSpec;
   private final DimensionsSpec dimensionsSpec;
-  private final List<String> metricNames;
+  private final ColumnsFilter columnsFilter;
+  /**
+   * Set of metric names for further downstream processing by {@link InputSource}.
+   * Empty set if no metric given.
+   */
+  @NotNull
+  private final Set<String> metricNames;
 
-  public InputRowSchema(TimestampSpec timestampSpec, DimensionsSpec dimensionsSpec, List<String> metricNames)
+  public InputRowSchema(
+      final TimestampSpec timestampSpec,
+      final DimensionsSpec dimensionsSpec,
+      final ColumnsFilter columnsFilter
+  )
+  {
+    this(timestampSpec, dimensionsSpec, columnsFilter, ImmutableSet.of());
+  }
+
+  public InputRowSchema(
+      final TimestampSpec timestampSpec,
+      final DimensionsSpec dimensionsSpec,
+      final ColumnsFilter columnsFilter,
+      final Set<String> metricNames
+  )
   {
     this.timestampSpec = timestampSpec;
     this.dimensionsSpec = dimensionsSpec;
-    this.metricNames = metricNames;
+    this.columnsFilter = columnsFilter;
+    this.metricNames = metricNames == null ? ImmutableSet.of() : metricNames;
+  }
+
+  @NotNull
+  public Set<String> getMetricNames()
+  {
+    return metricNames;
   }
 
   public TimestampSpec getTimestampSpec()
@@ -50,8 +79,17 @@ public class InputRowSchema
     return dimensionsSpec;
   }
 
-  public List<String> getMetricNames()
+  /**
+   * A {@link ColumnsFilter} that can filter down the list of columns that must be read after flattening.
+   *
+   * Logically, Druid applies ingestion spec components in a particular order: first flattenSpec (if any), then
+   * timestampSpec, then transformSpec, and finally dimensionsSpec and metricsSpec.
+   *
+   * If a flattenSpec is provided, this method returns a filter that should be applied after flattening. So, it will
+   * be based on what needs to pass between the flattenSpec and everything beyond it.
+   */
+  public ColumnsFilter getColumnsFilter()
   {
-    return metricNames;
+    return columnsFilter;
   }
 }

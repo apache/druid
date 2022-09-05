@@ -21,14 +21,13 @@ package org.apache.druid.query.search;
 
 import com.google.inject.Inject;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
 import org.apache.druid.segment.Segment;
-
-import java.util.concurrent.ExecutorService;
 
 /**
  */
@@ -58,11 +57,11 @@ public class SearchQueryRunnerFactory implements QueryRunnerFactory<Result<Searc
 
   @Override
   public QueryRunner<Result<SearchResultValue>> mergeRunners(
-      ExecutorService queryExecutor,
+      QueryProcessingPool queryProcessingPool,
       Iterable<QueryRunner<Result<SearchResultValue>>> queryRunners
   )
   {
-    return new ChainedExecutionQueryRunner<>(queryExecutor, queryWatcher, queryRunners);
+    return new ChainedExecutionQueryRunner<>(queryProcessingPool, queryWatcher, queryRunners);
   }
 
   @Override

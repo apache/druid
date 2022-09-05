@@ -31,7 +31,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -51,7 +51,7 @@ import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -93,6 +93,7 @@ import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -109,14 +110,14 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
@@ -145,8 +146,8 @@ import java.nio.file.Files;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -157,6 +158,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHandlingTest
 {
@@ -212,7 +214,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
       synchronized (this) {
         final InputRow row = parser.parseBatch(queue.removeFirst().orElse(null)).get(0);
         if (row != null && row.getRaw(FAIL_DIM) != null) {
-          throw new ParseException(FAIL_DIM);
+          throw new ParseException(null, FAIL_DIM);
         }
         return row;
       }
@@ -688,14 +690,25 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
-    Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        RowIngestionMeters.BUILD_SEGMENTS,
-        Collections.singletonList(
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:50:00.000Z, event={t=3000000, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1]]"
-        )
-    );
+    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
+        .getUnparseableEvents()
+        .get(RowIngestionMeters.BUILD_SEGMENTS);
 
-    Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
+    List<String> expectedMessages = ImmutableList.of(
+        "Unable to parse value[foo] for field[met1]"
+    );
+    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
+      return ((List<String>) r.get("details")).get(0);
+    }).collect(Collectors.toList());
+    Assert.assertEquals(expectedMessages, actualMessages);
+
+    List<String> expectedInputs = ImmutableList.of(
+        "{t=3000000, dim1=foo, met1=foo}"
+    );
+    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
+      return (String) r.get("input");
+    }).collect(Collectors.toList());
+    Assert.assertEquals(expectedInputs, actualInputs);
   }
 
   @Test(timeout = 60_000L)
@@ -895,16 +908,33 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
-    Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        RowIngestionMeters.BUILD_SEGMENTS,
-        Arrays.asList(
-            "Timestamp[null] is unparseable! Event: {dim1=foo, met1=2.0, __fail__=x}",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, dimLong=notnumber, dimFloat=notnumber, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,could not convert value [notnumber] to float,Unable to parse value[foo] for field[met1]]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1]]",
-            "Timestamp[null] is unparseable! Event: null"
-        )
+
+    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
+        .getUnparseableEvents()
+        .get(RowIngestionMeters.BUILD_SEGMENTS);
+
+    List<String> expectedMessages = Arrays.asList(
+        "Timestamp[null] is unparseable! Event: {dim1=foo, met1=2.0, __fail__=x}",
+        "could not convert value [notnumber] to long",
+        "Unable to parse value[foo] for field[met1]",
+        "Timestamp[null] is unparseable! Event: null"
     );
-    Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
+    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
+      return ((List<String>) r.get("details")).get(0);
+    }).collect(Collectors.toList());
+    Assert.assertEquals(expectedMessages, actualMessages);
+
+    List<String> expectedInputs = Arrays.asList(
+        "{dim1=foo, met1=2.0, __fail__=x}",
+        "{t=1521251960729, dim1=foo, dimLong=notnumber, dimFloat=notnumber, met1=foo}",
+        "{t=1521251960729, dim1=foo, met1=foo}",
+        null
+    );
+    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
+      return (String) r.get("input");
+    }).collect(Collectors.toList());
+    Assert.assertEquals(expectedInputs, actualInputs);
+
     Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
   }
 
@@ -962,7 +992,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
     Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
-    Assert.assertTrue(taskStatus.getErrorMsg().contains("Max parse exceptions exceeded, terminating task..."));
+    Assert.assertTrue(taskStatus.getErrorMsg().contains("Max parse exceptions[3] exceeded"));
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
@@ -976,16 +1006,34 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
-    Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        RowIngestionMeters.BUILD_SEGMENTS,
-        Arrays.asList(
-            "Timestamp[null] is unparseable! Event: {dim1=foo, met1=2.0, __fail__=x}",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, dimLong=notnumber, dimFloat=notnumber, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,could not convert value [notnumber] to float,Unable to parse value[foo] for field[met1]]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1]]",
-            "Timestamp[null] is unparseable! Event: null"
-        )
+
+    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
+        .getUnparseableEvents()
+        .get(RowIngestionMeters.BUILD_SEGMENTS);
+
+    List<String> expectedMessages = ImmutableList.of(
+        "Timestamp[null] is unparseable! Event: {dim1=foo, met1=2.0, __fail__=x}",
+        "could not convert value [notnumber] to long",
+        "Unable to parse value[foo] for field[met1]",
+        "Timestamp[null] is unparseable! Event: null"
     );
-    Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
+    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
+      return ((List<String>) r.get("details")).get(0);
+    }).collect(Collectors.toList());
+    Assert.assertEquals(expectedMessages, actualMessages);
+
+    List<String> expectedInputs = Arrays.asList(
+        "{dim1=foo, met1=2.0, __fail__=x}",
+        "{t=1521251960729, dim1=foo, dimLong=notnumber, dimFloat=notnumber, met1=foo}",
+        "{t=1521251960729, dim1=foo, met1=foo}",
+        null
+    );
+    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
+      return (String) r.get("input");
+    }).collect(Collectors.toList());
+    Assert.assertEquals(expectedInputs, actualInputs);
+
+
     Assert.assertEquals(IngestionState.BUILD_SEGMENTS, reportData.getIngestionState());
   }
 
@@ -1376,9 +1424,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
                             new StringDimensionSchema("dim1t"),
                             new LongDimensionSchema("dimLong"),
                             new FloatDimensionSchema("dimFloat")
-                        ),
-                        null,
-                        null
+                        )
                     )
                 )
             ),
@@ -1486,11 +1532,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
       @Override
       public SegmentPublishResult announceHistoricalSegments(
           Set<DataSegment> segments,
+          Set<DataSegment> segmentsToDrop,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata
       ) throws IOException
       {
-        SegmentPublishResult result = super.announceHistoricalSegments(segments, startMetadata, endMetadata);
+        SegmentPublishResult result = super.announceHistoricalSegments(segments, segmentsToDrop, startMetadata, endMetadata);
 
         Assert.assertFalse(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
@@ -1505,7 +1552,21 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     };
 
     taskLockbox = new TaskLockbox(taskStorage, mdc);
-    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, true, null, null, null);
+    final TaskConfig taskConfig = new TaskConfig(
+        directory.getPath(),
+        null,
+        null,
+        50000,
+        null,
+        true,
+        null,
+        null,
+        null,
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null
+    );
 
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
@@ -1573,16 +1634,16 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         () -> conglomerate,
-        Execs.directExecutor(), // queryExecutorService
+        DirectQueryProcessingPool.INSTANCE, // queryExecutorService
         NoopJoinableFactory.INSTANCE,
         () -> EasyMock.createMock(MonitorScheduler.class),
-        new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
+        new SegmentCacheManagerFactory(testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),
         testUtils.getTestIndexIO(),
         MapCache.create(1024),
         new CacheConfig(),
         new CachePopulatorStats(),
-        testUtils.getTestIndexMergerV9(),
+        testUtils.getIndexMergerV9Factory(),
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
@@ -1593,7 +1654,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         new NoopChatHandlerProvider(),
         testUtils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
-        new NoopIndexingServiceClient(),
+        new NoopOverlordClient(),
         null,
         null,
         null

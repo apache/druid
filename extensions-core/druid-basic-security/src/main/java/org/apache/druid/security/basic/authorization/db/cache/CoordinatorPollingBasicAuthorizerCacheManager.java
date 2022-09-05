@@ -136,7 +136,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
               LOG.debug("Scheduled userMap cache poll is done");
             }
             catch (Throwable t) {
-              LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();
+              LOG.makeAlert(t, "Error occurred while polling for cachedUserMaps.").emit();
             }
           }
       );
@@ -162,7 +162,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
               LOG.debug("Scheduled groupMappingMap cache poll is done");
             }
             catch (Throwable t) {
-              LOG.makeAlert(t, "Error occured while polling for cachedGroupMappingMaps.").emit();
+              LOG.makeAlert(t, "Error occurred while polling for cachedGroupMappingMaps.").emit();
             }
           }
       );
@@ -296,7 +296,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
   private void writeUserMapToDisk(String prefix, byte[] userMapBytes) throws IOException
   {
     File cacheDir = new File(commonCacheConfig.getCacheDirectory());
-    cacheDir.mkdirs();
+    FileUtils.mkdirp(cacheDir);
     File userMapFile = new File(commonCacheConfig.getCacheDirectory(), getUserRoleMapFilename(prefix));
     FileUtils.writeAtomically(
         userMapFile,
@@ -310,7 +310,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
   private void writeGroupMappingMapToDisk(String prefix, byte[] groupMappingBytes) throws IOException
   {
     File cacheDir = new File(commonCacheConfig.getCacheDirectory());
-    cacheDir.mkdirs();
+    FileUtils.mkdirp(cacheDir);
     File groupMapFile = new File(commonCacheConfig.getCacheDirectory(), getGroupMappingRoleMapFilename(prefix));
     FileUtils.writeAtomically(
         groupMapFile,

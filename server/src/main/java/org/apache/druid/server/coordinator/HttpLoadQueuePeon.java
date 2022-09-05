@@ -324,7 +324,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
 
       ScheduledExecutors.scheduleAtFixedRate(
           processingExecutor,
-          new Duration(config.getHttpLoadQueuePeonRepeatDelay()),
+          config.getHttpLoadQueuePeonRepeatDelay(),
           () -> {
             if (!stopped) {
               doSegmentManagement();
@@ -426,6 +426,12 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
   public Set<DataSegment> getSegmentsToDrop()
   {
     return Collections.unmodifiableSet(segmentsToDrop.keySet());
+  }
+
+  @Override
+  public Set<DataSegment> getTimedOutSegments()
+  {
+    return Collections.emptySet();
   }
 
   @Override

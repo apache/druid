@@ -1,0 +1,23 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ExecutionProgressBarPane matches snapshot 1`] = `
+<div
+  className="execution-progress-bar-pane"
+>
+  <Component>
+    Query complete, waiting for segments to be loaded...
+     
+    <span
+      className="cancel"
+      onClick={[Function]}
+    >
+      (stop waiting)
+    </span>
+  </Component>
+  <Blueprint4.ProgressBar
+    className="overall"
+    intent="primary"
+    key="actual"
+  />
+</div>
+`;

@@ -19,14 +19,37 @@
 -->
 
 <Configuration status="WARN">
-  <Appenders>
-    <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
-    </Console>
-  </Appenders>
-  <Loggers>
-    <Root level="info">
-      <AppenderRef ref="Console"/>
-    </Root>
-  </Loggers>
+<Properties>
+  <!-- to change log directory, set DRUID_LOG_DIR environment variable to your directory before launching Druid -->
+  <Property name="druid.log.path" value="log" />
+</Properties>
+
+<Appenders>
+  <Console name="Console" target="SYSTEM_OUT">
+    <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+  </Console>
+
+  <!-- Rolling Files-->
+  <RollingRandomAccessFile name="FileAppender"
+                           fileName="${sys:druid.log.path}/zookeeper.log"
+                           filePattern="${sys:druid.log.path}/zookeeper.%d{yyyyMMdd}.log">
+    <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+    <Policies>
+      <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+    </Policies>
+    <DefaultRolloverStrategy>
+      <Delete basePath="${sys:druid.log.path}/" maxDepth="1">
+        <IfFileName glob="*.log" />
+        <IfLastModified age="7d" />
+      </Delete>
+    </DefaultRolloverStrategy>
+  </RollingRandomAccessFile>
+
+</Appenders>
+
+<Loggers>
+  <Root level="info">
+    <AppenderRef ref="FileAppender"/>
+  </Root>
+</Loggers>
 </Configuration>

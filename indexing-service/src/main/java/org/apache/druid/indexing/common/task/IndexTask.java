@@ -58,6 +58,7 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
+import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.DefaultIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
@@ -77,6 +78,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -91,6 +93,7 @@ import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -100,6 +103,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.utils.CircularBuffer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -132,19 +136,22 @@ import java.util.function.Predicate;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
+
+
+
   public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
   private static final Logger log = new Logger(IndexTask.class);
   private static final String TYPE = "index";
 
-  private static String makeGroupId(IndexIngestionSpec ingestionSchema)
+  private static String makeGroupId(IndexIngestionSpec ingestionSchema, IngestionMode ingestionMode)
   {
-    return makeGroupId(ingestionSchema.ioConfig.appendToExisting, ingestionSchema.dataSchema.getDataSource());
+    return makeGroupId(ingestionSchema.dataSchema.getDataSource(), ingestionMode);
   }
 
-  private static String makeGroupId(boolean isAppendToExisting, String dataSource)
+  private static String makeGroupId(String dataSource, IngestionMode ingestionMode)
   {
-    if (isAppendToExisting) {
+    if (ingestionMode == IngestionMode.APPEND) {
       // Shared locking group for all tasks that append, since they are OK to run concurrently.
       return StringUtils.format("%s_append_%s", TYPE, dataSource);
     } else {
@@ -152,6 +159,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return null;
     }
   }
+
+  private final String baseSequenceName;
 
   private final IndexIngestionSpec ingestionSchema;
 
@@ -175,7 +184,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Nullable
   private String errorMsg;
 
-
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") final String id,
@@ -186,11 +194,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     this(
         id,
-        makeGroupId(ingestionSchema),
+        makeGroupId(
+            ingestionSchema,
+            computeBatchIngestionMode(ingestionSchema.getIOConfig())
+        ),
         taskResource,
         ingestionSchema.dataSchema.getDataSource(),
+        null,
         ingestionSchema,
-        context
+        context,
+        -1
     );
   }
 
@@ -199,8 +212,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       String groupId,
       TaskResource resource,
       String dataSource,
+      @Nullable String baseSequenceName,
       IndexIngestionSpec ingestionSchema,
-      Map<String, Object> context
+      Map<String, Object> context,
+      int maxAllowedLockCount
   )
   {
     super(
@@ -208,8 +223,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         groupId,
         resource,
         dataSource,
-        context
+        context,
+        maxAllowedLockCount,
+        computeBatchIngestionMode(ingestionSchema.getIOConfig())
     );
+    this.baseSequenceName = baseSequenceName == null ? getId() : baseSequenceName;
     this.ingestionSchema = ingestionSchema;
     this.ingestionState = IngestionState.NOT_STARTED;
   }
@@ -232,15 +250,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
     return determineLockGranularityAndTryLock(
         taskActionClient,
-        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals()
+        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals(),
+        ingestionSchema.getIOConfig()
     );
   }
 
   @Override
   public boolean requireLockExistingSegments()
   {
-    return isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig)
-           || !ingestionSchema.ioConfig.isAppendToExisting();
+    return isGuaranteedRollup(getIngestionMode(), ingestionSchema.tuningConfig)
+           || (getIngestionMode() != IngestionMode.APPEND);
   }
 
   @Override
@@ -258,7 +277,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Override
   public boolean isPerfectRollup()
   {
-    return isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig);
+    return isGuaranteedRollup(getIngestionMode(), ingestionSchema.tuningConfig);
   }
 
   @Nullable
@@ -282,7 +301,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    Map<String, List<String>> events = new HashMap<>();
+    return Response.ok(doGetUnparseableEvents(full)).build();
+  }
+
+  public Map<String, Object> doGetUnparseableEvents(String full)
+  {
+    Map<String, Object> events = new HashMap<>();
 
     boolean needsDeterminePartitions = false;
     boolean needsBuildSegments = false;
@@ -307,8 +331,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     if (needsDeterminePartitions) {
       events.put(
           RowIngestionMeters.DETERMINE_PARTITIONS,
-          IndexTaskUtils.getMessagesFromSavedParseExceptions(
-              determinePartitionsParseExceptionHandler.getSavedParseExceptions()
+          IndexTaskUtils.getReportListFromSavedParseExceptions(
+              determinePartitionsParseExceptionHandler.getSavedParseExceptionReports()
           )
       );
     }
@@ -316,16 +340,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     if (needsBuildSegments) {
       events.put(
           RowIngestionMeters.BUILD_SEGMENTS,
-          IndexTaskUtils.getMessagesFromSavedParseExceptions(
-              buildSegmentsParseExceptionHandler.getSavedParseExceptions()
+          IndexTaskUtils.getReportListFromSavedParseExceptions(
+              buildSegmentsParseExceptionHandler.getSavedParseExceptionReports()
           )
       );
     }
-
-    return Response.ok(events).build();
+    return events;
   }
 
-  private Map<String, Object> doGetRowStats(String full)
+  public Map<String, Object> doGetRowStats(String full)
   {
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
@@ -426,6 +449,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   public TaskStatus runTask(final TaskToolbox toolbox)
   {
     try {
+
+      // emit metric for sequential batch ingestion mode:
+      emitMetric(toolbox.getEmitter(), "ingest/count", 1);
+
       log.debug("Found chat handler of class[%s]", toolbox.getChatHandlerProvider().getClass().getName());
 
       if (toolbox.getChatHandlerProvider().get(getId()).isPresent()) {
@@ -479,7 +506,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final List<Interval> allocateIntervals = new ArrayList<>(partitionAnalysis.getAllIntervalsToIndex());
       final DataSchema dataSchema;
       if (determineIntervals) {
-        if (!determineLockGranularityAndTryLock(toolbox.getTaskActionClient(), allocateIntervals)) {
+        final boolean gotLocks = determineLockGranularityAndTryLock(
+            toolbox.getTaskActionClient(), allocateIntervals, ingestionSchema.getIOConfig()
+        );
+        if (!gotLocks) {
           throw new ISE("Failed to get locks for intervals[%s]", allocateIntervals);
         }
 
@@ -525,7 +555,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
-                errorMsg
+                errorMsg,
+                segmentAvailabilityConfirmationCompleted,
+                segmentAvailabilityWaitTimeMs
             )
         )
     );
@@ -534,16 +566,20 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
-    List<String> determinePartitionsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        determinePartitionsParseExceptionHandler.getSavedParseExceptions()
-    );
-    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        buildSegmentsParseExceptionHandler.getSavedParseExceptions()
-    );
+    CircularBuffer<ParseExceptionReport> determinePartitionsParseExceptionReports =
+        determinePartitionsParseExceptionHandler.getSavedParseExceptionReports();
+    CircularBuffer<ParseExceptionReport> buildSegmentsParseExceptionReports =
+        buildSegmentsParseExceptionHandler.getSavedParseExceptionReports();
 
-    if (determinePartitionsParseExceptionMessages != null || buildSegmentsParseExceptionMessages != null) {
-      unparseableEventsMap.put(RowIngestionMeters.DETERMINE_PARTITIONS, determinePartitionsParseExceptionMessages);
-      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
+    if (determinePartitionsParseExceptionReports != null || buildSegmentsParseExceptionReports != null) {
+      unparseableEventsMap.put(
+          RowIngestionMeters.DETERMINE_PARTITIONS,
+          IndexTaskUtils.getReportListFromSavedParseExceptions(determinePartitionsParseExceptionReports)
+      );
+      unparseableEventsMap.put(
+          RowIngestionMeters.BUILD_SEGMENTS,
+          IndexTaskUtils.getReportListFromSavedParseExceptions(buildSegmentsParseExceptionReports)
+      );
     }
 
     return unparseableEventsMap;
@@ -754,7 +790,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
 
           List<Object> groupKey = Rows.toGroupKey(
-              queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
+              queryGranularity.bucketStart(inputRow.getTimestampFromEpoch()),
               inputRow
           );
           hllCollectors.get(interval).get()
@@ -777,6 +813,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
 
     return hllCollectors;
+  }
+
+  public IngestionState getIngestionState()
+  {
+    return ingestionState;
   }
 
   /**
@@ -809,14 +850,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
     FireDepartmentMetrics buildSegmentsFireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
 
-    if (toolbox.getMonitorScheduler() != null) {
-      final TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
-          this,
-          fireDepartmentForMetrics,
-          buildSegmentsMeters
-      );
-      toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
-    }
+    final TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
+        this,
+        fireDepartmentForMetrics,
+        buildSegmentsMeters
+    );
+    toolbox.addMonitor(metricsMonitor);
 
     final PartitionsSpec partitionsSpec = partitionAnalysis.getPartitionsSpec();
     final IndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
@@ -830,7 +869,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         final SegmentAllocatorForBatch localSegmentAllocator = SegmentAllocators.forNonLinearPartitioning(
             toolbox,
             getDataSource(),
-            getId(),
+            baseSequenceName,
             dataSchema.getGranularitySpec(),
             null,
             (CompletePartitionAnalysis) partitionAnalysis
@@ -841,12 +880,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       case LINEAR:
         segmentAllocator = SegmentAllocators.forLinearPartitioning(
             toolbox,
-            getId(),
+            baseSequenceName,
             null,
             dataSchema,
             getTaskLockHelper(),
-            ingestionSchema.getIOConfig().isAppendToExisting(),
-            partitionAnalysis.getPartitionsSpec()
+            getIngestionMode(),
+            partitionAnalysis.getPartitionsSpec(),
+            null
         );
         sequenceNameFunction = segmentAllocator.getSequenceNameFunction();
         break;
@@ -854,9 +894,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         throw new UOE("[%s] secondary partition type is not supported", partitionsSpec.getType());
     }
 
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
+
+    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient()
-               .submit(SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish));
+               .submit(SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish));
 
     String effectiveId = getContextValue(CompactionTask.CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, null);
     if (effectiveId == null) {
@@ -871,13 +912,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         dataSchema,
         tuningConfig,
         buildSegmentsMeters,
-        buildSegmentsParseExceptionHandler
+        buildSegmentsParseExceptionHandler,
+        isUseMaxMemoryEstimates()
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
       driver.startJob();
 
-      InputSourceProcessor.process(
+      SegmentsAndCommitMetadata pushed = InputSourceProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,
@@ -904,13 +946,58 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           compactionStateAnnotateFunction(
               storeCompactionState,
               toolbox,
-              ingestionSchema.getTuningConfig()
+              ingestionSchema
           );
+
+      Set<DataSegment> tombStones = Collections.emptySet();
+      if (getIngestionMode() == IngestionMode.REPLACE) {
+        // check whether to generate tombstones...
+        TombstoneHelper tombstoneHelper = new TombstoneHelper(
+            pushed.getSegments(),
+            ingestionSchema.getDataSchema(),
+            toolbox.getTaskActionClient()
+        );
+
+        List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
+        // now find the versions for the tombstone intervals
+        Map<Interval, SegmentIdWithShardSpec> tombstonesAndVersions = new HashMap<>();
+        for (Interval interval : tombstoneIntervals) {
+          SegmentIdWithShardSpec segmentIdWithShardSpec = allocateNewSegmentForTombstone(
+              ingestionSchema,
+              interval.getStart(),
+              toolbox
+          );
+          tombstonesAndVersions.put(interval, segmentIdWithShardSpec);
+        }
+
+        tombStones = tombstoneHelper.computeTombstones(tombstonesAndVersions);
+
+
+        log.debugSegments(tombStones, "To publish tombstones");
+      }
 
       // Probably we can publish atomicUpdateGroup along with segments.
       final SegmentsAndCommitMetadata published =
-          awaitPublish(driver.publishAll(inputSegments, publisher, annotateFunction), pushTimeout);
+          awaitPublish(driver.publishAll(
+              inputSegments,
+              null,
+              tombStones,
+              publisher,
+              annotateFunction
+          ), pushTimeout);
       appenderator.close();
+
+      // Try to wait for segments to be loaded by the cluster if the tuning config specifies a non-zero value
+      // for awaitSegmentAvailabilityTimeoutMillis
+      if (tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis() > 0 && published != null) {
+        ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
+        ArrayList<DataSegment> segmentsToWaitFor = new ArrayList<>(published.getSegments());
+        waitForSegmentAvailability(
+            toolbox,
+            segmentsToWaitFor,
+            tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
+        );
+      }
 
       ingestionState = IngestionState.COMPLETED;
       if (published == null) {
@@ -929,6 +1016,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             buildSegmentsMeters.getThrownAway()
         );
         log.info("Published [%s] segments", published.getSegments().size());
+
+        // publish metrics:
+        emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());
+        // segments count metric is documented to include tombstones
+        emitMetric(toolbox.getEmitter(), "ingest/segments/count",
+                   published.getSegments().size() + tombStones.size()
+        );
+
         log.debugSegments(published.getSegments(), "Published segments");
 
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
@@ -949,6 +1044,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       } else {
         appenderator.close();
       }
+      toolbox.removeMonitor(metricsMonitor);
     }
   }
 
@@ -987,6 +1083,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (dataSchema.getParserMap() != null && ioConfig.getInputSource() != null) {
         throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
       }
+
+      IngestionMode ingestionMode = AbstractTask.computeBatchIngestionMode(ioConfig);
+
+      if (ingestionMode == IngestionMode.REPLACE && dataSchema.getGranularitySpec()
+                                                              .inputIntervals()
+                                                              .isEmpty()) {
+        throw new IAE("GranularitySpec's intervals cannot be empty for replace.");
+      }
+
       if (ioConfig.getInputSource() != null && ioConfig.getInputSource().needsFormat()) {
         Checks.checkOneNotNullOrEmpty(
             ImmutableList.of(
@@ -1026,19 +1131,20 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @JsonTypeName("index")
   public static class IndexIOConfig implements BatchIOConfig
   {
-    private static final boolean DEFAULT_APPEND_TO_EXISTING = false;
 
     private final FirehoseFactory firehoseFactory;
     private final InputSource inputSource;
     private final InputFormat inputFormat;
-    private final boolean appendToExisting;
+    private boolean appendToExisting;
+    private boolean dropExisting;
 
     @JsonCreator
     public IndexIOConfig(
         @Deprecated @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
         @JsonProperty("inputSource") @Nullable InputSource inputSource,
         @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
-        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
+        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting,
+        @JsonProperty("dropExisting") @Nullable Boolean dropExisting
     )
     {
       Checks.checkOneNotNullOrEmpty(
@@ -1050,14 +1156,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this.firehoseFactory = firehoseFactory;
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
-      this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_TO_EXISTING : appendToExisting;
+      this.appendToExisting = appendToExisting == null ? BatchIOConfig.DEFAULT_APPEND_EXISTING : appendToExisting;
+      this.dropExisting = dropExisting == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : dropExisting;
     }
 
     // old constructor for backward compatibility
     @Deprecated
-    public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting)
+    public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting, @Nullable Boolean dropExisting)
     {
-      this(firehoseFactory, null, null, appendToExisting);
+      this(firehoseFactory, null, null, appendToExisting, dropExisting);
     }
 
     @Nullable
@@ -1107,10 +1214,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
 
     @Override
-    @JsonProperty
     public boolean isAppendToExisting()
     {
       return appendToExisting;
+    }
+
+    @Override
+    public boolean isDropExisting()
+    {
+      return dropExisting;
     }
   }
 
@@ -1148,6 +1260,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private final boolean logParseExceptions;
     private final int maxParseExceptions;
     private final int maxSavedParseExceptions;
+    private final long awaitSegmentAvailabilityTimeoutMillis;
 
     @Nullable
     private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
@@ -1217,7 +1330,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
         @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
         @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-        @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
+        @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
+        @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
     )
     {
       this(
@@ -1244,7 +1358,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           logParseExceptions,
           maxParseExceptions,
           maxSavedParseExceptions,
-          maxColumnsToMerge
+          maxColumnsToMerge,
+          awaitSegmentAvailabilityTimeoutMillis
       );
 
       Preconditions.checkArgument(
@@ -1255,7 +1370,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
@@ -1275,7 +1390,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @Nullable Boolean logParseExceptions,
         @Nullable Integer maxParseExceptions,
         @Nullable Integer maxSavedParseExceptions,
-        @Nullable Integer maxColumnsToMerge
+        @Nullable Integer maxColumnsToMerge,
+        @Nullable Long awaitSegmentAvailabilityTimeoutMillis
     )
     {
       this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -1316,6 +1432,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this.logParseExceptions = logParseExceptions == null
                                 ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                                 : logParseExceptions;
+      if (awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis < 0) {
+        this.awaitSegmentAvailabilityTimeoutMillis = DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS;
+      } else {
+        this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
+      }
     }
 
     @Override
@@ -1338,7 +1459,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           logParseExceptions,
           maxParseExceptions,
           maxSavedParseExceptions,
-          maxColumnsToMerge
+          maxColumnsToMerge,
+          awaitSegmentAvailabilityTimeoutMillis
       );
     }
 
@@ -1361,7 +1483,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           logParseExceptions,
           maxParseExceptions,
           maxSavedParseExceptions,
-          maxColumnsToMerge
+          maxColumnsToMerge,
+          awaitSegmentAvailabilityTimeoutMillis
       );
     }
 
@@ -1432,15 +1555,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return maxPendingPersists;
     }
 
-    /**
-     * Always returns true, doesn't affect the version being built.
-     */
-    @Deprecated
-    @JsonProperty
-    public boolean isBuildV9Directly()
-    {
-      return true;
-    }
 
     @JsonProperty
     public boolean isForceGuaranteedRollup()
@@ -1553,6 +1667,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return new Period(Integer.MAX_VALUE); // intermediate persist doesn't make much sense for batch jobs
     }
 
+    @JsonProperty
+    public long getAwaitSegmentAvailabilityTimeoutMillis()
+    {
+      return awaitSegmentAvailabilityTimeoutMillis;
+    }
+
     @Override
     public boolean equals(Object o)
     {
@@ -1579,7 +1699,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              Objects.equals(indexSpec, that.indexSpec) &&
              Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
              Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
-             Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory);
+             Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
+             Objects.equals(awaitSegmentAvailabilityTimeoutMillis, that.awaitSegmentAvailabilityTimeoutMillis);
     }
 
     @Override
@@ -1602,7 +1723,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           logParseExceptions,
           maxParseExceptions,
           maxSavedParseExceptions,
-          segmentWriteOutMediumFactory
+          segmentWriteOutMediumFactory,
+          awaitSegmentAvailabilityTimeoutMillis
       );
     }
 
@@ -1626,7 +1748,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              ", maxParseExceptions=" + maxParseExceptions +
              ", maxSavedParseExceptions=" + maxSavedParseExceptions +
              ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
+             ", awaitSegmentAvailabilityTimeoutMillis=" + awaitSegmentAvailabilityTimeoutMillis +
              '}';
     }
   }
+
 }

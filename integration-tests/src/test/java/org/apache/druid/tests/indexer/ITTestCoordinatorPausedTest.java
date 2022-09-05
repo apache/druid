@@ -19,7 +19,10 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
@@ -30,6 +33,7 @@ import org.testng.annotations.Test;
 
 import java.io.Closeable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITTestCoordinatorPausedTest extends AbstractITBatchIndexTest
@@ -53,13 +57,29 @@ public class ITTestCoordinatorPausedTest extends AbstractITBatchIndexTest
         final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix())
     ) {
       coordinatorClient.postDynamicConfig(DYNAMIC_CONFIG_PAUSED);
+
+      final Function<String, String> transform = spec -> {
+        try {
+          return StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString("0")
+          );
+        }
+        catch (JsonProcessingException e) {
+          throw new RuntimeException(e);
+        }
+      };
+
       doIndexTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
+          transform,
           INDEX_QUERIES_RESOURCE,
           false,
           false,
-          false
+          false,
+          new Pair<>(false, false)
       );
       TimeUnit.MINUTES.sleep(3);
       if (coordinatorClient.areSegmentsLoaded(INDEX_DATASOURCE)) {

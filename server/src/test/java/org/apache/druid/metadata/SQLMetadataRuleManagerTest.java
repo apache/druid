@@ -23,19 +23,24 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.audit.SQLAuditManager;
 import org.apache.druid.server.audit.SQLAuditManagerConfig;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -55,8 +60,9 @@ public class SQLMetadataRuleManagerTest
   private MetadataStorageTablesConfig tablesConfig;
   private SQLMetadataRuleManager ruleManager;
   private AuditManager auditManager;
+  private SQLMetadataSegmentPublisher publisher;
   private final ObjectMapper mapper = new DefaultObjectMapper();
-
+  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   @Before
   public void setUp()
@@ -79,6 +85,12 @@ public class SQLMetadataRuleManagerTest
         tablesConfig,
         connector,
         auditManager
+    );
+    connector.createSegmentTable();
+    publisher = new SQLMetadataSegmentPublisher(
+        jsonMapper,
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        connector
     );
   }
 
@@ -199,6 +211,143 @@ public class SQLMetadataRuleManagerTest
       );
       Assert.assertEquals(auditInfo, entry.getAuditInfo());
     }
+  }
+
+  @Test
+  public void testRemoveRulesOlderThanWithNonExistenceDatasourceAndOlderThanTimestampShouldDelete()
+  {
+    List<Rule> rules = ImmutableList.of(
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
+            DruidServer.DEFAULT_TIER,
+            DruidServer.DEFAULT_NUM_REPLICANTS
+        )
+        )
+    );
+    AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
+    ruleManager.overrideRule(
+        "test_dataSource",
+        rules,
+        auditInfo
+    );
+    // Verify that rule was added
+    ruleManager.poll();
+    Map<String, List<Rule>> allRules = ruleManager.getAllRules();
+    Assert.assertEquals(1, allRules.size());
+    Assert.assertEquals(1, allRules.get("test_dataSource").size());
+
+    // Now delete rules
+    ruleManager.removeRulesForEmptyDatasourcesOlderThan(System.currentTimeMillis());
+
+    // Verify that rule was deleted
+    ruleManager.poll();
+    allRules = ruleManager.getAllRules();
+    Assert.assertEquals(0, allRules.size());
+  }
+
+  @Test
+  public void testRemoveRulesOlderThanWithNonExistenceDatasourceAndNewerThanTimestampShouldNotDelete()
+  {
+    List<Rule> rules = ImmutableList.of(
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
+            DruidServer.DEFAULT_TIER,
+            DruidServer.DEFAULT_NUM_REPLICANTS
+        )
+        )
+    );
+    AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
+    ruleManager.overrideRule(
+        "test_dataSource",
+        rules,
+        auditInfo
+    );
+    // Verify that rule was added
+    ruleManager.poll();
+    Map<String, List<Rule>> allRules = ruleManager.getAllRules();
+    Assert.assertEquals(1, allRules.size());
+    Assert.assertEquals(1, allRules.get("test_dataSource").size());
+
+    // This will not delete the rule as the rule was created just now so it will have the created timestamp later than
+    // the timestamp 2012-01-01T00:00:00Z
+    ruleManager.removeRulesForEmptyDatasourcesOlderThan(DateTimes.of("2012-01-01T00:00:00Z").getMillis());
+
+    // Verify that rule was not deleted
+    ruleManager.poll();
+    allRules = ruleManager.getAllRules();
+    Assert.assertEquals(1, allRules.size());
+    Assert.assertEquals(1, allRules.get("test_dataSource").size());
+  }
+
+  @Test
+  public void testRemoveRulesOlderThanWithActiveDatasourceShouldNotDelete() throws Exception
+  {
+    List<Rule> rules = ImmutableList.of(
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
+            DruidServer.DEFAULT_TIER,
+            DruidServer.DEFAULT_NUM_REPLICANTS
+        )
+        )
+    );
+    AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
+    ruleManager.overrideRule(
+        "test_dataSource",
+        rules,
+        auditInfo
+    );
+
+    // Verify that rule was added
+    ruleManager.poll();
+    Map<String, List<Rule>> allRules = ruleManager.getAllRules();
+    Assert.assertEquals(1, allRules.size());
+    Assert.assertEquals(1, allRules.get("test_dataSource").size());
+
+    // Add segment metadata to segment table so that the datasource is considered active
+    DataSegment dataSegment = new DataSegment(
+        "test_dataSource",
+        Intervals.of("2015-01-01/2015-02-01"),
+        "1",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "test_dataSource/xxx"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        1,
+        1234L
+    );
+    publisher.publishSegment(dataSegment);
+
+    // This will not delete the rule as the datasource has segment in the segment metadata table
+    ruleManager.removeRulesForEmptyDatasourcesOlderThan(System.currentTimeMillis());
+
+    // Verify that rule was not deleted
+    ruleManager.poll();
+    allRules = ruleManager.getAllRules();
+    Assert.assertEquals(1, allRules.size());
+    Assert.assertEquals(1, allRules.get("test_dataSource").size());
+  }
+
+  @Test
+  public void testRemoveRulesOlderThanShouldNotDeleteDefault()
+  {
+    // Create the default rule
+    ruleManager.start();
+    // Verify the default rule
+    ruleManager.poll();
+    Map<String, List<Rule>> allRules = ruleManager.getAllRules();
+    Assert.assertEquals(1, allRules.size());
+    Assert.assertEquals(1, allRules.get("_default").size());
+    // Delete everything
+    ruleManager.removeRulesForEmptyDatasourcesOlderThan(System.currentTimeMillis());
+    // Verify the default rule was not deleted
+    ruleManager.poll();
+    allRules = ruleManager.getAllRules();
+    Assert.assertEquals(1, allRules.size());
+    Assert.assertEquals(1, allRules.get("_default").size());
   }
 
   @After

@@ -132,6 +132,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getUpper()
   {
     return upper;
@@ -139,18 +140,21 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getLower()
   {
     return lower;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean isLowerStrict()
   {
     return lowerStrict;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean isUpperStrict()
   {
     return upperStrict;
@@ -168,6 +172,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
@@ -374,7 +379,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
           try {
             lowerLongBound = lowerBigDecimal.longValueExact();
             hasLowerLongBound = true;
-          } 
+          }
           catch (ArithmeticException ae) { // the BigDecimal can't be contained in a long
             hasLowerLongBound = false;
             lowerLongBound = 0L;
@@ -452,7 +457,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
     BigDecimal convertedBD;
     try {
       convertedBD = new BigDecimal(floatStr);
-    } 
+    }
     catch (NumberFormatException nfe) {
       return null;
     }
@@ -470,7 +475,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
     BigDecimal convertedBD;
     try {
       convertedBD = new BigDecimal(floatStr);
-    } 
+    }
     catch (NumberFormatException nfe) {
       return null;
     }
@@ -615,93 +620,25 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
   {
     if (hasLowerLongBound && hasUpperLongBound) {
       if (upperStrict && lowerStrict) {
-        return new DruidLongPredicate()
-        {
-          @Override
-          public boolean applyLong(long input)
-          {
-            final int lowerComparing = Long.compare(input, lowerLongBound);
-            final int upperComparing = Long.compare(upperLongBound, input);
-            return ((lowerComparing > 0)) && (upperComparing > 0);
-          }
-        };
+        return input -> input > lowerLongBound && input < upperLongBound;
       } else if (lowerStrict) {
-        return new DruidLongPredicate()
-        {
-          @Override
-          public boolean applyLong(long input)
-          {
-            final int lowerComparing = Long.compare(input, lowerLongBound);
-            final int upperComparing = Long.compare(upperLongBound, input);
-            return (lowerComparing > 0) && (upperComparing >= 0);
-          }
-        };
+        return input -> input > lowerLongBound && input <= upperLongBound;
       } else if (upperStrict) {
-        return new DruidLongPredicate()
-        {
-          @Override
-          public boolean applyLong(long input)
-          {
-            final int lowerComparing = Long.compare(input, lowerLongBound);
-            final int upperComparing = Long.compare(upperLongBound, input);
-            return (lowerComparing >= 0) && (upperComparing > 0);
-          }
-        };
+        return input -> input >= lowerLongBound && input < upperLongBound;
       } else {
-        return new DruidLongPredicate()
-        {
-          @Override
-          public boolean applyLong(long input)
-          {
-            final int lowerComparing = Long.compare(input, lowerLongBound);
-            final int upperComparing = Long.compare(upperLongBound, input);
-            return (lowerComparing >= 0) && (upperComparing >= 0);
-          }
-        };
+        return input -> input >= lowerLongBound && input <= upperLongBound;
       }
     } else if (hasUpperLongBound) {
       if (upperStrict) {
-        return new DruidLongPredicate()
-        {
-          @Override
-          public boolean applyLong(long input)
-          {
-            final int upperComparing = Long.compare(upperLongBound, input);
-            return upperComparing > 0;
-          }
-        };
+        return input -> input < upperLongBound;
       } else {
-        return new DruidLongPredicate()
-        {
-          @Override
-          public boolean applyLong(long input)
-          {
-            final int upperComparing = Long.compare(upperLongBound, input);
-            return upperComparing >= 0;
-          }
-        };
+        return input -> input <= upperLongBound;
       }
     } else if (hasLowerLongBound) {
       if (lowerStrict) {
-        return new DruidLongPredicate()
-        {
-          @Override
-          public boolean applyLong(long input)
-          {
-            final int lowerComparing = Long.compare(input, lowerLongBound);
-            return lowerComparing > 0;
-          }
-        };
+        return input -> input > lowerLongBound;
       } else {
-        return new DruidLongPredicate()
-        {
-          @Override
-          public boolean applyLong(long input)
-          {
-            final int lowerComparing = Long.compare(input, lowerLongBound);
-            return lowerComparing >= 0;
-          }
-        };
+        return input -> input >= lowerLongBound;
       }
     } else {
       return DruidLongPredicate.ALWAYS_TRUE;

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.FalseDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 
@@ -52,7 +53,10 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
   @Override
   public DimFilter process(DimFilter filter)
   {
-    if (filter instanceof AndDimFilter) {
+    if (filter instanceof FalseDimFilter) {
+      // we might sometimes come into here with just a false from optimizing impossible conditions
+      return filter;
+    } else if (filter instanceof AndDimFilter) {
       final List<DimFilter> children = getAndFilterChildren((AndDimFilter) filter);
       final DimFilter one = doSimplifyAnd(children);
       final DimFilter two = negate(doSimplifyOr(negateAll(children)));
@@ -130,13 +134,23 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
     // Group Bound filters by dimension, extractionFn, and comparator and compute a RangeSet for each one.
     final Map<BoundRefKey, List<BoundDimFilter>> bounds = new HashMap<>();
 
+    // all and/or filters have at least 1 child
+    boolean allFalse = true;
     for (final DimFilter child : newChildren) {
       if (child instanceof BoundDimFilter) {
         final BoundDimFilter bound = (BoundDimFilter) child;
         final BoundRefKey boundRefKey = BoundRefKey.from(bound);
         final List<BoundDimFilter> filterList = bounds.computeIfAbsent(boundRefKey, k -> new ArrayList<>());
         filterList.add(bound);
+        allFalse = false;
+      } else {
+        allFalse &= child instanceof FalseDimFilter;
       }
+    }
+
+    // short circuit if can never be true
+    if (allFalse) {
+      return Filtration.matchNothing();
     }
 
     // Try to simplify filters within each group.

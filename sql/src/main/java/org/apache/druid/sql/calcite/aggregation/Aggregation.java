@@ -29,7 +29,6 @@ import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -44,17 +43,14 @@ import java.util.Set;
 
 public class Aggregation
 {
-  private final List<VirtualColumn> virtualColumns;
   private final List<AggregatorFactory> aggregatorFactories;
   private final PostAggregator postAggregator;
 
   private Aggregation(
-      final List<VirtualColumn> virtualColumns,
       final List<AggregatorFactory> aggregatorFactories,
       final PostAggregator postAggregator
   )
   {
-    this.virtualColumns = Preconditions.checkNotNull(virtualColumns, "virtualColumns");
     this.aggregatorFactories = Preconditions.checkNotNull(aggregatorFactories, "aggregatorFactories");
     this.postAggregator = postAggregator;
 
@@ -88,19 +84,10 @@ public class Aggregation
     }
   }
 
-  public static Aggregation create(final List<VirtualColumn> virtualColumns, final AggregatorFactory aggregatorFactory)
-  {
-    return new Aggregation(
-        virtualColumns,
-        ImmutableList.of(aggregatorFactory),
-        null
-    );
-  }
 
   public static Aggregation create(final AggregatorFactory aggregatorFactory)
   {
     return new Aggregation(
-        ImmutableList.of(),
         ImmutableList.of(aggregatorFactory),
         null
     );
@@ -108,7 +95,7 @@ public class Aggregation
 
   public static Aggregation create(final PostAggregator postAggregator)
   {
-    return new Aggregation(Collections.emptyList(), Collections.emptyList(), postAggregator);
+    return new Aggregation(Collections.emptyList(), postAggregator);
   }
 
   public static Aggregation create(
@@ -116,21 +103,19 @@ public class Aggregation
       final PostAggregator postAggregator
   )
   {
-    return new Aggregation(ImmutableList.of(), aggregatorFactories, postAggregator);
+    return new Aggregation(aggregatorFactories, postAggregator);
   }
 
-  public static Aggregation create(
-      final List<VirtualColumn> virtualColumns,
-      final List<AggregatorFactory> aggregatorFactories,
-      final PostAggregator postAggregator
-  )
+  public List<String> getRequiredColumns()
   {
-    return new Aggregation(virtualColumns, aggregatorFactories, postAggregator);
-  }
-
-  public List<VirtualColumn> getVirtualColumns()
-  {
-    return virtualColumns;
+    Set<String> columns = new HashSet<>();
+    for (AggregatorFactory agg : aggregatorFactories) {
+      columns.addAll(agg.requiredFields());
+    }
+    if (postAggregator != null) {
+      columns.addAll(postAggregator.getDependentFields());
+    }
+    return ImmutableList.copyOf(columns);
   }
 
   public List<AggregatorFactory> getAggregatorFactories()
@@ -181,21 +166,10 @@ public class Aggregation
                                                     .optimizeFilterOnly(virtualColumnRegistry.getFullRowSignature())
                                                     .getDimFilter();
 
-    Set<VirtualColumn> aggVirtualColumnsPlusFilterColumns = new HashSet<>(virtualColumns);
-    for (String column : baseOptimizedFilter.getRequiredColumns()) {
-      if (virtualColumnRegistry.isVirtualColumnDefined(column)) {
-        aggVirtualColumnsPlusFilterColumns.add(virtualColumnRegistry.getVirtualColumn(column));
-      }
-    }
     final List<AggregatorFactory> newAggregators = new ArrayList<>();
     for (AggregatorFactory agg : aggregatorFactories) {
       if (agg instanceof FilteredAggregatorFactory) {
         final FilteredAggregatorFactory filteredAgg = (FilteredAggregatorFactory) agg;
-        for (String column : filteredAgg.getFilter().getRequiredColumns()) {
-          if (virtualColumnRegistry.isVirtualColumnDefined(column)) {
-            aggVirtualColumnsPlusFilterColumns.add(virtualColumnRegistry.getVirtualColumn(column));
-          }
-        }
         newAggregators.add(
             new FilteredAggregatorFactory(
                 filteredAgg.getAggregator(),
@@ -209,7 +183,7 @@ public class Aggregation
       }
     }
 
-    return new Aggregation(new ArrayList<>(aggVirtualColumnsPlusFilterColumns), newAggregators, postAggregator);
+    return new Aggregation(newAggregators, postAggregator);
   }
 
   @Override
@@ -222,23 +196,21 @@ public class Aggregation
       return false;
     }
     final Aggregation that = (Aggregation) o;
-    return Objects.equals(virtualColumns, that.virtualColumns) &&
-           Objects.equals(aggregatorFactories, that.aggregatorFactories) &&
+    return Objects.equals(aggregatorFactories, that.aggregatorFactories) &&
            Objects.equals(postAggregator, that.postAggregator);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(virtualColumns, aggregatorFactories, postAggregator);
+    return Objects.hash(aggregatorFactories, postAggregator);
   }
 
   @Override
   public String toString()
   {
     return "Aggregation{" +
-           "virtualColumns=" + virtualColumns +
-           ", aggregatorFactories=" + aggregatorFactories +
+           "aggregatorFactories=" + aggregatorFactories +
            ", postAggregator=" + postAggregator +
            '}';
   }

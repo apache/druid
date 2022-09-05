@@ -26,7 +26,6 @@ import com.google.inject.Provider;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = FilteredBatchServerInventoryViewProvider.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "legacy", value = FilteredSingleServerInventoryViewProvider.class),
     @JsonSubTypes.Type(name = "batch", value = FilteredBatchServerInventoryViewProvider.class),
     @JsonSubTypes.Type(name = "http", value = FilteredHttpServerInventoryViewProvider.class)
 })

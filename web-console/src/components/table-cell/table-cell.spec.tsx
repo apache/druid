@@ -21,7 +21,7 @@ import React from 'react';
 
 import { TableCell } from './table-cell';
 
-describe('table cell', () => {
+describe('TableCell', () => {
   it('matches snapshot null', () => {
     const tableCell = <TableCell value={null} />;
 
@@ -31,6 +31,20 @@ describe('table cell', () => {
 
   it('matches snapshot simple', () => {
     const tableCell = <TableCell value="Hello World" />;
+
+    const { container } = render(tableCell);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot Date', () => {
+    const tableCell = <TableCell value={new Date('2022-02-24T01:02:03Z')} />;
+
+    const { container } = render(tableCell);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot Date (invalid)', () => {
+    const tableCell = <TableCell value={new Date('blah blah')} />;
 
     const { container } = render(tableCell);
     expect(container.firstChild).toMatchSnapshot();

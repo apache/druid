@@ -23,14 +23,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.base.Suppliers;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.Releaser;
@@ -43,11 +42,13 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.AbstractPrioritizedCallable;
+import org.apache.druid.query.AbstractPrioritizedQueryRunnerCallable;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryWatcher;
@@ -64,7 +65,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -80,7 +80,7 @@ import java.util.concurrent.TimeoutException;
  * similarities and differences.
  *
  * Used by
- * {@link org.apache.druid.query.groupby.strategy.GroupByStrategyV2#mergeRunners(ListeningExecutorService, Iterable)}.
+ * {@link org.apache.druid.query.groupby.strategy.GroupByStrategyV2#mergeRunners(QueryProcessingPool, Iterable)}
  */
 public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
 {
@@ -88,8 +88,9 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   private static final String CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION = "mergeRunnersUsingChainedExecution";
 
   private final GroupByQueryConfig config;
+  private final DruidProcessingConfig processingConfig;
   private final Iterable<QueryRunner<ResultRow>> queryables;
-  private final ListeningExecutorService exec;
+  private final QueryProcessingPool queryProcessingPool;
   private final QueryWatcher queryWatcher;
   private final int concurrencyHint;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
@@ -99,7 +100,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
 
   public GroupByMergingQueryRunnerV2(
       GroupByQueryConfig config,
-      ExecutorService exec,
+      DruidProcessingConfig processingConfig,
+      QueryProcessingPool queryProcessingPool,
       QueryWatcher queryWatcher,
       Iterable<QueryRunner<ResultRow>> queryables,
       int concurrencyHint,
@@ -110,7 +112,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   )
   {
     this.config = config;
-    this.exec = MoreExecutors.listeningDecorator(exec);
+    this.processingConfig = processingConfig;
+    this.queryProcessingPool = queryProcessingPool;
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
     this.concurrencyHint = concurrencyHint;
@@ -142,7 +145,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
         .withoutThreadUnsafeState();
 
     if (QueryContexts.isBySegment(query) || forceChainedExecution) {
-      ChainedExecutionQueryRunner<ResultRow> runner = new ChainedExecutionQueryRunner<>(exec, queryWatcher, queryables);
+      ChainedExecutionQueryRunner<ResultRow> runner = new ChainedExecutionQueryRunner<>(queryProcessingPool, queryWatcher, queryables);
       return runner.run(queryPlusForRunners, responseContext);
     }
 
@@ -172,7 +175,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
             try {
               final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
                   temporaryStorageDirectory,
-                  querySpecificConfig.getMaxOnDiskStorage()
+                  querySpecificConfig.getMaxOnDiskStorage().getBytes()
               );
               final ReferenceCountingResourceHolder<LimitedTemporaryStorage> temporaryStorageHolder =
                   ReferenceCountingResourceHolder.fromCloseable(temporaryStorage);
@@ -198,12 +201,13 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
                       query,
                       null,
                       config,
+                      processingConfig,
                       Suppliers.ofInstance(mergeBufferHolder.get()),
                       combineBufferHolder,
                       concurrencyHint,
                       temporaryStorage,
                       spillMapper,
-                      exec,
+                      queryProcessingPool, // Passed as executor service
                       priority,
                       hasTimeout,
                       timeoutAt,
@@ -229,8 +233,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
                                 throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                               }
 
-                              ListenableFuture<AggregateResult> future = exec.submit(
-                                  new AbstractPrioritizedCallable<AggregateResult>(priority)
+                              ListenableFuture<AggregateResult> future = queryProcessingPool.submitRunnerTask(
+                                  new AbstractPrioritizedQueryRunnerCallable<AggregateResult, ResultRow>(priority, input)
                                   {
                                     @Override
                                     public AggregateResult call()
@@ -244,13 +248,14 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
                                       ) {
                                         // Return true if OK, false if resources were exhausted.
                                         return input.run(queryPlusForRunners, responseContext)
-                                                    .accumulate(AggregateResult.ok(), accumulator);
+                                            .accumulate(AggregateResult.ok(), accumulator);
                                       }
                                       catch (QueryInterruptedException | QueryTimeoutException e) {
                                         throw e;
                                       }
                                       catch (Exception e) {
                                         log.error(e, "Exception with one of the sequences!");
+                                        Throwables.propagateIfPossible(e);
                                         throw new RuntimeException(e);
                                       }
                                     }
@@ -385,5 +390,4 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
       throw new RuntimeException(e);
     }
   }
-
 }

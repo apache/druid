@@ -48,7 +48,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
     builder.put("d", new String[] {null});
     builder.put("e", new String[] {null, "foo", "bar"});
     builder.put("f", new String[0]);
-    bindings = Parser.withMap(builder.build());
+    bindings = InputBindings.withMap(builder.build());
   }
 
   @Test
@@ -171,6 +171,8 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 
   private void assertExpr(final String expression, final Object[] expectedResult)
@@ -196,33 +198,37 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 
   private void assertExpr(final String expression, final Double[] expectedResult)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
-    Double[] result = (Double[]) expr.eval(bindings).value();
+    Object[] result = expr.eval(bindings).asArray();
     Assert.assertEquals(expectedResult.length, result.length);
     for (int i = 0; i < result.length; i++) {
-      Assert.assertEquals(expression, expectedResult[i], result[i], 0.00001); // something is lame somewhere..
+      Assert.assertEquals(expression, expectedResult[i], (Double) result[i], 0.00001); // something is lame somewhere..
     }
 
     final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
     final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
-    Double[] resultRoundTrip = (Double[]) roundTrip.eval(bindings).value();
+    Object[] resultRoundTrip = (Object[]) roundTrip.eval(bindings).value();
     Assert.assertEquals(expectedResult.length, resultRoundTrip.length);
     for (int i = 0; i < resultRoundTrip.length; i++) {
-      Assert.assertEquals(expression, expectedResult[i], resultRoundTrip[i], 0.00001);
+      Assert.assertEquals(expression, expectedResult[i], (Double) resultRoundTrip[i], 0.00001);
     }
 
     final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
-    Double[] resultRoundTripFlatten = (Double[]) roundTripFlatten.eval(bindings).value();
+    Object[] resultRoundTripFlatten = (Object[]) roundTripFlatten.eval(bindings).value();
     Assert.assertEquals(expectedResult.length, resultRoundTripFlatten.length);
     for (int i = 0; i < resultRoundTripFlatten.length; i++) {
-      Assert.assertEquals(expression, expectedResult[i], resultRoundTripFlatten[i], 0.00001);
+      Assert.assertEquals(expression, expectedResult[i], (Double) resultRoundTripFlatten[i], 0.00001);
     }
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 }

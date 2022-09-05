@@ -28,8 +28,8 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -75,15 +75,32 @@ public class MomentSketchAggregatorFactoryTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
-                    .add("moment", ValueType.COMPLEX)
-                    .add("momentMerge", ValueType.COMPLEX)
-                    .add("moment-access", ValueType.COMPLEX)
-                    .add("moment-finalize", ValueType.COMPLEX)
-                    .add("momentMerge-access", ValueType.COMPLEX)
-                    .add("momentMerge-finalize", ValueType.COMPLEX)
+                    .add("count", ColumnType.LONG)
+                    .add("moment", MomentSketchAggregatorFactory.TYPE)
+                    .add("momentMerge", MomentSketchAggregatorFactory.TYPE)
+                    .add("moment-access", MomentSketchAggregatorFactory.TYPE)
+                    .add("moment-finalize", MomentSketchAggregatorFactory.TYPE)
+                    .add("momentMerge-access", MomentSketchAggregatorFactory.TYPE)
+                    .add("momentMerge-finalize", MomentSketchAggregatorFactory.TYPE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
+  }
+
+  @Test
+  public void testWithName()
+  {
+    MomentSketchAggregatorFactory sketchAggFactory = new MomentSketchAggregatorFactory(
+        "name", "fieldName", 128, true
+    );
+    Assert.assertEquals(sketchAggFactory, sketchAggFactory.withName("name"));
+    Assert.assertEquals("newTest", sketchAggFactory.withName("newTest").getName());
+
+
+    MomentSketchMergeAggregatorFactory sketchMergeAggregatorFactory = new MomentSketchMergeAggregatorFactory(
+        "name", 128, true
+    );
+    Assert.assertEquals(sketchMergeAggregatorFactory, sketchMergeAggregatorFactory.withName("name"));
+    Assert.assertEquals("newTest", sketchMergeAggregatorFactory.withName("newTest").getName());
   }
 }

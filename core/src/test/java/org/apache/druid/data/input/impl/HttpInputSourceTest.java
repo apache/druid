@@ -19,32 +19,31 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Collections;
 
 public class HttpInputSourceTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testSerde() throws IOException
   {
-    HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(
-        null,
-        null
-    );
+    HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(null);
     final ObjectMapper mapper = new ObjectMapper();
-    mapper.setInjectableValues(new InjectableValues.Std().addValue(
-        HttpInputSourceConfig.class,
-        httpInputSourceConfig
-    ));
+    mapper.setInjectableValues(new Std().addValue(HttpInputSourceConfig.class, httpInputSourceConfig));
     final HttpInputSource source = new HttpInputSource(
         ImmutableList.of(URI.create("http://test.com/http-test")),
         "myName",
@@ -56,64 +55,51 @@ public class HttpInputSourceTest
     Assert.assertEquals(source, fromJson);
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testDenyListDomainThrowsException()
+  @Test
+  public void testConstructorAllowsOnlyDefaultProtocols()
   {
     new HttpInputSource(
-        ImmutableList.of(URI.create("http://deny.com/http-test")),
+        ImmutableList.of(URI.create("http:///")),
         "myName",
         new DefaultPasswordProvider("myPassword"),
-        new HttpInputSourceConfig(null, Collections.singletonList("deny.com"))
+        new HttpInputSourceConfig(null)
+    );
+
+    new HttpInputSource(
+        ImmutableList.of(URI.create("https:///")),
+        "myName",
+        new DefaultPasswordProvider("myPassword"),
+        new HttpInputSourceConfig(null)
+    );
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Only [http, https] protocols are allowed");
+    new HttpInputSource(
+        ImmutableList.of(URI.create("my-protocol:///")),
+        "myName",
+        new DefaultPasswordProvider("myPassword"),
+        new HttpInputSourceConfig(null)
     );
   }
 
   @Test
-  public void testDenyListDomainNoMatch()
+  public void testConstructorAllowsOnlyCustomProtocols()
   {
+    final HttpInputSourceConfig customConfig = new HttpInputSourceConfig(ImmutableSet.of("druid"));
     new HttpInputSource(
-        ImmutableList.of(URI.create("http://allow.com/http-test")),
+        ImmutableList.of(URI.create("druid:///")),
         "myName",
         new DefaultPasswordProvider("myPassword"),
-        new HttpInputSourceConfig(null, Collections.singletonList("deny.com"))
+        customConfig
     );
-  }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testAllowListDomainThrowsException()
-  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Only [druid] protocols are allowed");
     new HttpInputSource(
-        ImmutableList.of(URI.create("http://deny.com/http-test")),
+        ImmutableList.of(URI.create("https:///")),
         "myName",
         new DefaultPasswordProvider("myPassword"),
-        new HttpInputSourceConfig(Collections.singletonList("allow.com"), null)
+        customConfig
     );
-  }
-
-  @Test
-  public void testAllowListDomainMatch()
-  {
-    new HttpInputSource(
-        ImmutableList.of(URI.create("http://allow.com/http-test")),
-        "myName",
-        new DefaultPasswordProvider("myPassword"),
-        new HttpInputSourceConfig(Collections.singletonList("allow.com"), null)
-    );
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testEmptyAllowListDomainMatch()
-  {
-    new HttpInputSource(
-        ImmutableList.of(URI.create("http://allow.com/http-test")),
-        "myName",
-        new DefaultPasswordProvider("myPassword"),
-        new HttpInputSourceConfig(Collections.emptyList(), null)
-    );
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testCannotSetBothAllowAndDenyList()
-  {
-    new HttpInputSourceConfig(Collections.singletonList("allow.com"), Collections.singletonList("deny.com"));
   }
 }

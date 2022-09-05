@@ -17,19 +17,24 @@
  */
 
 import 'core-js/stable';
+import 'regenerator-runtime/runtime';
+import './bootstrap/ace';
+
+import { QueryRunner } from 'druid-query-toolkit';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import 'regenerator-runtime/runtime';
 
-import './bootstrap/ace';
+import { bootstrapJsonParse } from './bootstrap/json-parser';
 import { bootstrapReactTable } from './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';
 import { Links, setLinkOverrides } from './links';
 import { Api, UrlBaser } from './singletons';
+import { setLocalStorageNamespace } from './utils';
 
 import './entry.scss';
 
 bootstrapReactTable();
+bootstrapJsonParse();
 
 const container = document.getElementsByClassName('app-container')[0];
 if (!container) throw new Error('container not found');
@@ -59,6 +64,9 @@ interface ConsoleConfig {
 
   // Allow for link overriding to different docs
   linkOverrides?: Links;
+
+  // Allow for namespacing the local storage in case multiple clusters share a URL due to proxying
+  localStorageNamespace?: string;
 }
 
 const consoleConfig: ConsoleConfig = (window as any).consoleConfig;
@@ -73,7 +81,7 @@ if (consoleConfig.baseURL) {
   UrlBaser.baseUrl = consoleConfig.baseURL;
 }
 if (consoleConfig.customHeaderName && consoleConfig.customHeaderValue) {
-  apiConfig.headers[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
+  apiConfig.headers![consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
 }
 if (consoleConfig.customHeaders) {
   Object.assign(apiConfig.headers, consoleConfig.customHeaders);
@@ -85,12 +93,20 @@ if (consoleConfig.linkOverrides) {
   setLinkOverrides(consoleConfig.linkOverrides);
 }
 
+if (consoleConfig.localStorageNamespace) {
+  setLocalStorageNamespace(consoleConfig.localStorageNamespace);
+}
+
+QueryRunner.defaultQueryExecutor = (payload, isSql, cancelToken) => {
+  return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
+};
+
 ReactDOM.render(
   React.createElement(ConsoleApplication, {
     exampleManifestsUrl: consoleConfig.exampleManifestsUrl,
     defaultQueryContext: consoleConfig.defaultQueryContext,
     mandatoryQueryContext: consoleConfig.mandatoryQueryContext,
-  }) as any,
+  }),
   container,
 );
 
@@ -100,7 +116,7 @@ ReactDOM.render(
 let mode: 'mouse' | 'tab' = 'mouse';
 
 function handleTab(e: KeyboardEvent) {
-  if (e.keyCode !== 9) return;
+  if (e.key !== 'Tab') return;
   if (mode === 'tab') return;
   mode = 'tab';
   document.body.classList.remove('mouse-mode');

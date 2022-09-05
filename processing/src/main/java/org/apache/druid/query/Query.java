@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.filter.DimFilter;
@@ -46,8 +47,8 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
 
 @ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "queryType")
@@ -61,7 +62,6 @@ import java.util.concurrent.ExecutorService;
     @JsonSubTypes.Type(name = Query.SELECT, value = SelectQuery.class),
     @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class),
     @JsonSubTypes.Type(name = Query.DATASOURCE_METADATA, value = DataSourceMetadataQuery.class)
-
 })
 public interface Query<T>
 {
@@ -95,7 +95,34 @@ public interface Query<T>
 
   DateTimeZone getTimezone();
 
+  /**
+   * Use {@link #getQueryContext()} instead.
+   */
+  @Deprecated
   Map<String, Object> getContext();
+
+  /**
+   * Returns QueryContext for this query. This type distinguishes between user provided, system default, and system
+   * generated query context keys so that authorization may be employed directly against the user supplied context
+   * values.
+   *
+   * This method is marked @Nullable, but is only so for backwards compatibility with Druid versions older than 0.23.
+   * Callers should check if the result of this method is null, and if so, they are dealing with a legacy query
+   * implementation, and should fall back to using {@link #getContext()} and {@link #withOverriddenContext(Map)} to
+   * manipulate the query context.
+   *
+   * Note for query context serialization and deserialization.
+   * Currently, once a query is serialized, its queryContext can be different from the original queryContext
+   * after the query is deserialized back. If the queryContext has any {@link QueryContext#defaultParams} or
+   * {@link QueryContext#systemParams} in it, those will be found in {@link QueryContext#userParams}
+   * after it is deserialized. This is because {@link BaseQuery#getContext()} uses
+   * {@link QueryContext#getMergedParams()} for serialization, and queries accept a map for deserialization.
+   */
+  @Nullable
+  default QueryContext getQueryContext()
+  {
+    return null;
+  }
 
   <ContextType> ContextType getContextValue(String key);
 
@@ -103,12 +130,30 @@ public interface Query<T>
 
   boolean getContextBoolean(String key, boolean defaultValue);
 
+  /**
+   * Returns {@link HumanReadableBytes} for a specified context key. If the context is null or the key doesn't exist
+   * a caller specified default value is returned. A default implementation is provided since Query is an extension
+   * point. Extensions can choose to rely on this default to retain compatibility with core Druid.
+   *
+   * @param key The context key value being looked up
+   * @param defaultValue The default to return if the key value doesn't exist or the context is null.
+   * @return {@link HumanReadableBytes}
+   */
+  default HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
+  {
+    if (null != getQueryContext()) {
+      return getQueryContext().getAsHumanReadableBytes(key, defaultValue);
+    } else {
+      return defaultValue;
+    }
+  }
+
   boolean isDescending();
 
   /**
    * Comparator that represents the order in which results are generated from the
    * {@link QueryRunnerFactory#createRunner(Segment)} and
-   * {@link QueryRunnerFactory#mergeRunners(ExecutorService, Iterable)} calls. This is used to combine streams of
+   * {@link QueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)} calls. This is used to combine streams of
    * results from different sources; for example, it's used by historicals to combine streams from different segments,
    * and it's used by the broker to combine streams from different historicals.
    *
@@ -138,6 +183,7 @@ public interface Query<T>
    */
   Query<T> withSubQueryId(String subQueryId);
 
+  @SuppressWarnings("unused")
   default Query<T> withDefaultSubQueryId()
   {
     return withSubQueryId(UUID.randomUUID().toString());
@@ -158,7 +204,7 @@ public interface Query<T>
   @Nullable
   default String getSqlQueryId()
   {
-    return null;
+    return getContextValue(BaseQuery.SQL_QUERY_ID);
   }
 
   /**
@@ -192,5 +238,21 @@ public interface Query<T>
   default VirtualColumns getVirtualColumns()
   {
     return VirtualColumns.EMPTY;
+  }
+
+  /**
+   * Returns the set of columns that this query will need to access out of its datasource.
+   *
+   * This method does not "look into" what the datasource itself is doing. For example, if a query is built on a
+   * {@link QueryDataSource}, this method will not return the columns used by that subquery. As another example, if a
+   * query is built on a {@link JoinDataSource}, this method will not return the columns from the underlying datasources
+   * that are used by the join condition, unless those columns are also used by this query in other ways.
+   *
+   * Returns null if the set of required columns cannot be known ahead of time.
+   */
+  @Nullable
+  default Set<String> getRequiredColumns()
+  {
+    return null;
   }
 }

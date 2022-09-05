@@ -18,49 +18,12 @@
 #
 
 # Using For IT on K8s
-FROM maven:3-jdk-8-slim as builder
+ARG BASE_IMAGE=apache/druid
+FROM $BASE_IMAGE
 
-RUN export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -qq update \
-    && apt-get -qq -y install --no-install-recommends python3 python3-yaml
-
-COPY . /src
-WORKDIR /src
-
-RUN VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluate \
-      -Dexpression=project.version -DforceStdout=true \
-    ) \
- && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
- && ln -s /opt/apache-druid-${VERSION} /opt/druid
-
-FROM amd64/busybox:1.30.0-glibc as busybox
-
-FROM gcr.io/distroless/java:8
-LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
-
-COPY --from=busybox /bin/busybox /busybox/busybox
-RUN ["/busybox/busybox", "--install", "/bin"]
-
+USER 0
 RUN mkdir -p /shared/wikiticker-it
-
 COPY examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz /shared/wikiticker-it/wikiticker-2015-09-12-sampled.json.gz
 COPY integration-tests/docker/wiki-simple-lookup.json /shared/wikiticker-it/wiki-simple-lookup.json
 
-RUN addgroup -S -g 1000 druid \
- && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid \
- && mkdir -p /opt/druid/var \
- && chown -R druid:druid /opt \
- && chmod 775 /opt/druid/var
-
-COPY --chown=druid:druid --from=builder /opt /opt
-COPY distribution/docker/druid.sh /druid.sh
-
-RUN mkdir -p /opt/druid/var \
- && chown -R druid:druid /opt \
- && chmod 775 /opt/druid/var
-
 USER druid
-VOLUME /opt/druid/var
-WORKDIR /opt/druid
-
-ENTRYPOINT ["/druid.sh"]

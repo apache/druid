@@ -19,11 +19,14 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class FilteredAggregatorFactoryTest
+public class FilteredAggregatorFactoryTest extends InitializedNullHandlingTest
 {
   @Test
   public void testSimpleNaming()
@@ -43,5 +46,17 @@ public class FilteredAggregatorFactoryTest
         TrueDimFilter.instance(),
         null
     ).getName());
+  }
+
+  @Test
+  public void testRequiredFields()
+  {
+    Assert.assertEquals(
+        ImmutableList.of("x", "y"),
+        new FilteredAggregatorFactory(
+            new LongSumAggregatorFactory("x", "x"),
+            new SelectorDimFilter("y", "wat", null)
+        ).requiredFields()
+    );
   }
 }

@@ -29,8 +29,12 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 
@@ -40,6 +44,7 @@ import javax.annotation.Nullable;
  */
 public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex(HllSketchModule.MERGE_TYPE_NAME);
 
   @JsonCreator
   public HllSketchMergeAggregatorFactory(
@@ -72,9 +77,9 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   }
 
   @Override
-  public String getComplexTypeName()
+  public ColumnType getIntermediateType()
   {
-    return HllSketchModule.MERGE_TYPE_NAME;
+    return TYPE;
   }
 
   @Override
@@ -103,9 +108,33 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   }
 
   @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+    return new HllSketchMergeVectorAggregator(
+        selectorFactory,
+        getFieldName(),
+        getLgK(),
+        TgtHllType.valueOf(getTgtHllType()),
+        getMaxIntermediateSize()
+    );
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     return Union.getMaxSerializationBytes(getLgK());
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new HllSketchMergeAggregatorFactory(newName, getFieldName(), getLgK(), getTgtHllType(), isRound());
   }
 
 }

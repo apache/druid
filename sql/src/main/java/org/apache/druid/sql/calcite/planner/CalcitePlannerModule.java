@@ -21,7 +21,10 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 
 /**
  * The module responsible for provide bindings for the Calcite Planner.
@@ -32,7 +35,8 @@ public class CalcitePlannerModule implements Module
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
-    binder.bind(PlannerFactory.class);
-    binder.bind(DruidOperatorTable.class);
+    binder.bind(PlannerFactory.class).in(LazySingleton.class);
+    binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
+    Multibinder.newSetBinder(binder, ExtensionCalciteRuleProvider.class);
   }
 }

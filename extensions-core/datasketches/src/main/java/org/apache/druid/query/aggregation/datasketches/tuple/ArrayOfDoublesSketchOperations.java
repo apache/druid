@@ -20,13 +20,13 @@
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import org.apache.datasketches.memory.Memory;
-import org.apache.datasketches.tuple.ArrayOfDoublesAnotB;
-import org.apache.datasketches.tuple.ArrayOfDoublesCombiner;
-import org.apache.datasketches.tuple.ArrayOfDoublesIntersection;
-import org.apache.datasketches.tuple.ArrayOfDoublesSetOperationBuilder;
-import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
-import org.apache.datasketches.tuple.ArrayOfDoublesSketches;
-import org.apache.datasketches.tuple.ArrayOfDoublesUnion;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesAnotB;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesCombiner;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesIntersection;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSetOperationBuilder;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketches;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesUnion;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -45,7 +45,7 @@ public class ArrayOfDoublesSketchOperations
         final ArrayOfDoublesUnion union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(nominalEntries)
             .setNumberOfValues(numberOfValues).buildUnion();
         for (final ArrayOfDoublesSketch sketch : sketches) {
-          union.update(sketch);
+          union.union(sketch);
         }
         return union.getResult();
       }
@@ -57,7 +57,7 @@ public class ArrayOfDoublesSketchOperations
         final ArrayOfDoublesIntersection intersection = new ArrayOfDoublesSetOperationBuilder()
             .setNominalEntries(nominalEntries).setNumberOfValues(numberOfValues).buildIntersection();
         for (final ArrayOfDoublesSketch sketch : sketches) {
-          intersection.update(sketch, COMBINER);
+          intersection.intersect(sketch, COMBINER);
         }
         return intersection.getResult();
       }

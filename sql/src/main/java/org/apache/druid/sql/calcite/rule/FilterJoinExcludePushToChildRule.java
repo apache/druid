@@ -37,25 +37,30 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * This class is a copy (with modification) of {@link FilterJoinRule}. Specifically, this class contains a
  * subset of code from {@link FilterJoinRule} for the codepath involving {@link FilterJoinRule#FILTER_ON_JOIN}
- * Everything has been keep as-is from {@link FilterJoinRule} except for the modification
- * of {@link #classifyFilters(List, JoinRelType, boolean, List)} method called in the
+ * Everything has been keep as-is from {@link FilterJoinRule} except for :
+ * 1. the modification of {@link #classifyFilters(List, JoinRelType, boolean, List)} method called in the
  * {@link #perform(RelOptRuleCall, Filter, Join)} method of this class.
+ * 2. removing redundant 'IS NOT NULL' filters from inner join filter condition
  * The {@link #classifyFilters(List, JoinRelType, boolean, List)} method is based of {@link RelOptUtil#classifyFilters}.
  * The difference is that the modfied method use in thsi class will not not push filters to the children.
  * Hence, filters will either stay where they are or are pushed to the join (if they originated from above the join).
  *
- * This modification is needed due to the bug described in https://github.com/apache/druid/pull/9773
- * This class and it's modification can be removed, switching back to the default Rule provided in Calcite's
- * {@link FilterJoinRule} when https://github.com/apache/druid/issues/9843 is resolved.
+ * The modification of {@link #classifyFilters(List, JoinRelType, boolean, List)} is needed due to the bug described in
+ * https://github.com/apache/druid/pull/9773. This class and it's modification can be removed, switching back to the
+ * default Rule provided in Calcite's {@link FilterJoinRule} when https://github.com/apache/druid/issues/9843 is resolved.
  */
 
 public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
@@ -180,6 +185,9 @@ public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
       filterPushed = true;
     }
 
+    // once the filters are pushed to join from top, try to remove redudant 'IS NOT NULL' filters
+    removeRedundantIsNotNullFilters(joinFilters, joinType, NullHandling.sqlCompatible());
+
     // if nothing actually got pushed and there is nothing leftover,
     // then this rule is a no-op
     if ((!filterPushed && joinType == join.getJoinType()) || joinFilters.isEmpty()) {
@@ -291,5 +299,52 @@ public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
 
     // Did anything change?
     return !filtersToRemove.isEmpty();
+  }
+
+  /**
+   * This tries to find all the 'IS NOT NULL' filters in an inner join whose checking column is also
+   * a part of an equi-condition between the two tables. It removes such 'IS NOT NULL' filters from join since
+   * the equi-condition will never return true for null input, thus making the 'IS NOT NULL' filter a no-op.
+   * @param joinFilters
+   * @param joinType
+   * @param isSqlCompatible
+   */
+  static void removeRedundantIsNotNullFilters(List<RexNode> joinFilters, JoinRelType joinType, boolean isSqlCompatible)
+  {
+    if (joinType != JoinRelType.INNER || !isSqlCompatible) {
+      return; // only works for inner joins in SQL mode
+    }
+
+    ImmutableList.Builder<RexNode> isNotNullFiltersBuilder = ImmutableList.builder();
+    ImmutableList.Builder<Pair<RexNode, RexNode>> equalityFiltersOperandBuilder = ImmutableList.builder();
+
+    joinFilters.stream().filter(joinFilter -> joinFilter instanceof RexCall).forEach(joinFilter -> {
+      if (joinFilter.isA(SqlKind.IS_NOT_NULL)) {
+        isNotNullFiltersBuilder.add(joinFilter);
+      } else if (joinFilter.isA(SqlKind.EQUALS)) {
+        List<RexNode> operands = ((RexCall) joinFilter).getOperands();
+        if (operands.size() == 2 && operands.stream().noneMatch(Objects::isNull)) {
+          equalityFiltersOperandBuilder.add(new Pair<>(operands.get(0), operands.get(1)));
+        }
+      }
+    });
+
+    List<Pair<RexNode, RexNode>> equalityFilters = equalityFiltersOperandBuilder.build();
+    ImmutableList.Builder<RexNode> removableFilters = ImmutableList.builder();
+    for (RexNode isNotNullFilter : isNotNullFiltersBuilder.build()) {
+      List<RexNode> operands = ((RexCall) isNotNullFilter).getOperands();
+      boolean canDrop = false;
+      for (Pair<RexNode, RexNode> equalityFilterOperands : equalityFilters) {
+        if ((equalityFilterOperands.lhs != null && equalityFilterOperands.lhs.equals(operands.get(0))) ||
+            (equalityFilterOperands.rhs != null && equalityFilterOperands.rhs.equals(operands.get(0)))) {
+          canDrop = true;
+          break;
+        }
+      }
+      if (canDrop) {
+        removableFilters.add(isNotNullFilter);
+      }
+    }
+    joinFilters.removeAll(removableFilters.build());
   }
 }
