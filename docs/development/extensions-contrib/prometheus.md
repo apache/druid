@@ -45,9 +45,9 @@ All the configuration parameters for the Prometheus emitter are under `druid.emi
 | `druid.emitter.prometheus.addServiceAsLabel`  | Flag to include the druid service name (e.g. `druid/broker`, `druid/coordinator`, etc.) as a prometheus label.                                                                                                                         | no        | false                                |
 | `druid.emitter.prometheus.pushGatewayAddress` | Pushgateway address. Required if using `pushgateway` strategy.                                                                                                                                                                         | no        | none                                 |
 
-### Override propertyies for Peon Tasks
+### Override properties for Peon Tasks
 
-Since peon tasks are created dynamically by MiddleManagers, it's not able to use `exporter` strategy for these tasks to let promethues read metrics from fixed addresses.
+Since peon tasks are created dynamically by MiddleManagers, it's not able to use `exporter` strategy for these tasks to let prometheus read metrics from fixed addresses.
 So, these tasks need to be configured to use `pushgateway` strategy to push metrics from Druid to prometheus gateway.
 
 If this emitter is configured to use `exporter` strategy globally, some above configurations need to be overridden in the MiddleManager's configuration file for peon tasks as shown below.
