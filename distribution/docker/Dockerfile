@@ -17,8 +17,10 @@
 # under the License.
 #
 
-ARG JDK_VERSION=8
+ARG JDK_VERSION=11
+
 FROM maven:3.8.4-jdk-11-slim as builder
+
 # Rebuild from source in this stage
 # This can be unset if the tarball was already built outside of Docker
 ARG BUILD_FROM_SOURCE="true"
@@ -29,15 +31,15 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
 COPY . /src
 WORKDIR /src
-RUN if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
-      mvn -B -ff -q dependency:go-offline \
+RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
+      mvn -B -ff -ntp dependency:go-offline \
       install \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
       -Dmaven.javadoc.skip=true \
       ; fi
 
-RUN VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
+RUN --mount=type=cache,target=/root/.m2 VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
       -Dexpression=project.version -DforceStdout=true \
     ) \
  && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
