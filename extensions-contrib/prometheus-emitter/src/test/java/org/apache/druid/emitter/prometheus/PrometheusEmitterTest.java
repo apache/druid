@@ -137,7 +137,30 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterConfigCreationWithNullAsAddress()
   {
-    Assert.assertThrows(NullPointerException.class, () -> new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace4", null, 0, null, true, true));
+    // pushGatewayAddress can be null if it's exporter mode
+    new PrometheusEmitterConfig(
+        PrometheusEmitterConfig.Strategy.exporter,
+        "namespace5",
+        null,
+        1,
+        null,
+        true,
+        true
+    );
+
+    Assert.assertThrows(
+        "For `pushgateway` strategy, pushGatewayAddress must be specified.",
+        IllegalArgumentException.class,
+        () -> new PrometheusEmitterConfig(
+            PrometheusEmitterConfig.Strategy.pushgateway,
+            "namespace5",
+            null,
+            null,
+            null,
+            true,
+            true
+        )
+    );
   }
 
   @Test
@@ -184,21 +207,6 @@ public class PrometheusEmitterTest
         "https://pushgateway",
         true,
         true
-    );
-
-    // For pushgateway stategy, pushGatewayAddress should not be null
-    Assert.assertThrows(
-        "For `pushgateway` strategy, pushGatewayAddress must be specified.",
-        IllegalArgumentException.class,
-        () -> new PrometheusEmitterConfig(
-            PrometheusEmitterConfig.Strategy.pushgateway,
-            "namespace5",
-            null,
-            null,
-            null,
-            true,
-            true
-        )
     );
   }
 }
