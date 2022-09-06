@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -1251,20 +1252,19 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
-  public void testCannotConvert() throws Exception
+  public void testScanOrderByLimitExceeded_UnsupportedSQLQueryException() throws Exception
   {
-    // SELECT + ORDER unsupported
     final QueryException exception = doPost(
-        createSimpleQueryWithId("id", "SELECT dim1 FROM druid.foo ORDER BY dim1")
+        createSimpleQueryWithId("id", "SELECT dim1 FROM druid.foo ORDER BY dim1 limit " + Long.MAX_VALUE)
     ).lhs;
 
     Assert.assertNotNull(exception);
-    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorCode(), exception.getErrorCode());
-    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
+    Assert.assertEquals("Unsupported operation", exception.getErrorCode());
+    Assert.assertEquals(UOE.class.getName(), exception.getErrorClass());
     Assert.assertTrue(
         exception.getMessage()
-                 .contains("Query not supported. " +
-                           "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.")
+                 .contains(
+                     "Limit of 9,223,372,036,854,775,807 rows not supported for priority queue strategy of non-time-ordering scan results")
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());

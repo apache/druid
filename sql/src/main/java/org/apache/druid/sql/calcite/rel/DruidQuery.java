@@ -1288,6 +1288,7 @@ public class DruidQuery
       orderByColumns = Collections.emptyList();
     }
 
+    /*
     if (!plannerContext.engineHasFeature(EngineFeature.SCAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
       if (orderByColumns.size() > 1 || !ColumnHolder.TIME_COLUMN_NAME.equals(orderByColumns.get(0).getColumnName())) {
         // Cannot handle this ordering.
@@ -1307,7 +1308,7 @@ public class DruidQuery
         );
         return null;
       }
-    }
+    }*/
 
     // Compute the list of columns to select, sorted and deduped.
     final SortedSet<String> scanColumns = new TreeSet<>(outputRowSignature.getColumnNames());

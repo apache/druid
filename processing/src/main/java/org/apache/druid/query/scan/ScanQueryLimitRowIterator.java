@@ -51,11 +51,11 @@ import java.util.List;
  */
 public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultValue>
 {
-  private Yielder<ScanResultValue> yielder;
-  private ScanQuery.ResultFormat resultFormat;
-  private long limit;
-  private long count = 0;
-  private ScanQuery query;
+  protected Yielder<ScanResultValue> yielder;
+  protected ScanQuery.ResultFormat resultFormat;
+  protected long limit;
+  protected long count = 0;
+  protected ScanQuery query;
 
   ScanQueryLimitRowIterator(
       QueryRunner<ScanResultValue> baseRunner,
