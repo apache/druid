@@ -1,0 +1,19 @@
+{
+    "queryType": "groupBy",
+    "dataSource": "test_datasource",
+    "granularity": "ALL",
+    "dimensions": [
+    ],
+    "aggregations": [
+        {
+            "type": "compressedBigDecimal",
+            "name": "revenue",
+            "fieldName": "revenue",
+            "scale": 9,
+            "size": 3
+        }
+    ],
+    "intervals": [
+        "2017-01-01T00:00:00.000Z/P1D"
+    ]
+}

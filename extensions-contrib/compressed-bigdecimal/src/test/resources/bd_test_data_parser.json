@@ -1,0 +1,20 @@
+{
+    "type": "string",
+    "parseSpec": {
+        "format": "csv",
+        "timestampSpec": {
+            "column": "timestamp",
+            "format": "yyyyMMdd"
+        },
+        "dimensionsSpec": {
+            "dimensions": [
+                "property"
+            ]
+        },
+        "columns": [
+            "timestamp",
+            "property",
+            "revenue"
+        ]
+    }
+}

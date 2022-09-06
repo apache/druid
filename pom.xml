@@ -186,6 +186,7 @@
         <module>extensions-core/druid-ranger-security</module>
         <module>extensions-core/testing-tools</module>
         <!-- Community extensions -->
+        <module>extensions-contrib/compressed-bigdecimal</module>
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
         <module>extensions-contrib/dropwizard-emitter</module>
