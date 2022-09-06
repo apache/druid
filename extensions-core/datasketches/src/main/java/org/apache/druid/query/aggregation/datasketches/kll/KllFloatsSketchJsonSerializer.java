@@ -17,17 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.query.aggregation.datasketches.kll;
 
-import org.gridkit.lab.jvm.perfdata.JStatData;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import org.apache.datasketches.kll.KllFloatsSketch;
 
-public class GcNameTest
+import java.io.IOException;
+
+public class KllFloatsSketchJsonSerializer extends JsonSerializer<KllFloatsSketch>
 {
 
-  public static void main(String[] args)
+  @Override
+  public void serialize(final KllFloatsSketch sketch, final JsonGenerator generator, final SerializerProvider provider)
+      throws IOException
   {
-    JStatData jStatData = JStatData.connect(SigarUtil.getCurrentProcessId());
-    System.out.println(jStatData.getAllCounters().get("sun.gc.collector.0.name").getValue());
-    System.out.println(jStatData.getAllCounters().get("sun.gc.collector.1.name").getValue());
+    generator.writeBinary(sketch.toByteArray());
   }
+
 }

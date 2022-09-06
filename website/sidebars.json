@@ -13,14 +13,16 @@
       "tutorials/tutorial-batch-hadoop",
       "tutorials/tutorial-query",
       "tutorials/tutorial-rollup",
-      "tutorials/tutorial-sketches-theta",
+      "tutorials/tutorial-sketches-theta",      
       "tutorials/tutorial-retention",
       "tutorials/tutorial-update-data",
       "tutorials/tutorial-compaction",
       "tutorials/tutorial-delete-data",
       "tutorials/tutorial-ingestion-spec",
       "tutorials/tutorial-transform-spec",
-      "tutorials/tutorial-kerberos-hadoop"
+      "tutorials/tutorial-kerberos-hadoop",
+      "tutorials/tutorial-msq-external-data",
+      "tutorials/tutorial-msq-convert-json"
     ],
     "Design": [
       "design/architecture",
@@ -66,6 +68,17 @@
       "ingestion/tasks",
       "ingestion/faq"
     ],
+  "SQL-based ingestion": [
+      "multi-stage-query/index",
+      "multi-stage-query/concepts",
+      "multi-stage-query/connect-external-data",
+      "multi-stage-query/convert-json-spec",
+      "multi-stage-query/examples",
+      "multi-stage-query/api",
+      "multi-stage-query/security",
+      "multi-stage-query/reference",
+      "multi-stage-query/known-issues"
+    ],
     "Querying": [
       {
         "type": "subcategory",
@@ -104,7 +117,7 @@
           "querying/query-context"
         ]
       },
-      
+
       {
         "type": "subcategory",
         "label": "Native query types",
@@ -160,7 +173,7 @@
           "operations/tls-support"
 
         ]
-      }, 
+      },
       {
         "type": "subcategory",
         "label": "Performance tuning",
@@ -171,7 +184,7 @@
           "operations/http-compression",
           "operations/clean-metadata-store"
         ]
-      },       
+      },
       {
         "type": "subcategory",
         "label": "Monitoring",
@@ -180,7 +193,7 @@
           "operations/metrics",
           "operations/alerts"
         ]
-      },       
+      },
       "operations/api-reference",
       "operations/high-availability",
       "operations/rolling-updates",

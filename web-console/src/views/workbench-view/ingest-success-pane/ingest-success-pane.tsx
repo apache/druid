@@ -21,12 +21,13 @@ import React from 'react';
 
 import { Execution, WorkbenchQuery } from '../../../druid-models';
 import { formatDuration, pluralIfNeeded } from '../../../utils';
+import { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
 
 import './ingest-success-pane.scss';
 
 export interface IngestSuccessPaneProps {
   execution: Execution;
-  onDetails(): void;
+  onDetails(id: string, initTab?: ExecutionDetailsTab): void;
   onQueryTab?(newQuery: WorkbenchQuery, tabName?: string): void;
 }
 
@@ -54,12 +55,20 @@ export const IngestSuccessPane = React.memo(function IngestSuccessPane(
   return (
     <div className="ingest-success-pane">
       <p>
-        {`${rows < 0 ? 'Data' : pluralIfNeeded(rows, 'row')} inserted into '${datasource}'.` +
-          (warnings > 0 ? ` ${pluralIfNeeded(warnings, 'warning')} generated.` : '')}
+        {`${rows < 0 ? 'Data' : pluralIfNeeded(rows, 'row')} inserted into '${datasource}'.`}
+        {warnings > 0 && (
+          <>
+            {' '}
+            <span className="action" onClick={() => onDetails(execution.id, 'warnings')}>
+              {pluralIfNeeded(warnings, 'warning')}
+            </span>{' '}
+            recorded.
+          </>
+        )}
       </p>
       <p>
         {duration ? `Insert query took ${formatDuration(duration)}. ` : `Insert query completed. `}
-        <span className="action" onClick={onDetails}>
+        <span className="action" onClick={() => onDetails(execution.id)}>
           Show details
         </span>
       </p>

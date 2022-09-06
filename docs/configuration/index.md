@@ -151,23 +151,6 @@ The following path is used for service discovery. It is **not** affected by `dru
 |--------|-----------|-------|
 |`druid.discovery.curator.path`|Services announce themselves under this ZooKeeper path.|`/druid/discovery`|
 
-### Exhibitor
-
-[Exhibitor](https://github.com/Netflix/exhibitor/wiki) is a supervisor system for ZooKeeper.
-Exhibitor can dynamically scale-up/down the cluster of ZooKeeper servers.
-Druid can update self-owned list of ZooKeeper servers through Exhibitor without restarting.
-That is, it allows Druid to keep the connections of Exhibitor-supervised ZooKeeper servers.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.exhibitor.service.hosts`|A JSON array which contains the hostnames of Exhibitor instances. Please specify this property if you want to use Exhibitor-supervised cluster.|none|
-|`druid.exhibitor.service.port`|The REST port used to connect to Exhibitor.|`8080`|
-|`druid.exhibitor.service.restUriPath`|The path of the REST call used to get the server set.|`/exhibitor/v1/cluster/list`|
-|`druid.exhibitor.service.useSsl`|Boolean flag for whether or not to use https protocol.|`false`|
-|`druid.exhibitor.service.pollingMs`|How often to poll the exhibitors for the list|`10000`|
-
-Note that `druid.zk.service.host` is used as a backup in case an Exhibitor instance can't be contacted and therefore should still be set.
-
 ### TLS
 
 #### General Configuration
@@ -786,6 +769,14 @@ All Druid components can communicate with each other over HTTP.
 |`druid.global.http.readTimeout`|The timeout for data reads.|`PT15M`|
 |`druid.global.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.global.http.readTimeout`. Set this timeout = ~90% of `druid.global.http.readTimeout`|`PT4M`|
 |`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`max(10, ((number of cores * 17) / 16 + 2) + 30)`|
+
+### Common endpoints Configuration
+
+This section contains the configuration options for endpoints that are supported by all processes.
+
+|Property| Description                                                                                                                                  | Default                                                                                     |
+|--------|----------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+|`druid.server.hiddenProperties`| If property names or substring of property names (case insensitive) is in this list, responses of the `/status/properties` endpoint do not show these properties | `["druid.s3.accessKey","druid.s3.secretKey","druid.metadata.storage.connector.password", "password", "key", "token", "pwd"]` |
 
 ## Master Server
 
