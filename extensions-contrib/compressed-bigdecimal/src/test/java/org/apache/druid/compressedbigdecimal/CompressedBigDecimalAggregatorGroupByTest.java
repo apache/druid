@@ -145,13 +145,6 @@ public class CompressedBigDecimalAggregatorGroupByTest
     Map<String, Object> event = mapBasedRow.getEvent();
     assertEquals(new DateTime("2017-01-01T00:00:00Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"))), mapBasedRow.getTimestamp());
     assertThat(event, aMapWithSize(1));
-    if (! new BigDecimal("15000000010.000000005").equals(event.get("revenue"))) {
-      assertEquals(
-          String.format("row[%s]\nmapBasedRow[%s]\nevent[%s]\n", row, mapBasedRow, event),
-          1,
-          2
-      );
-    }
     assertThat(event, hasEntry("revenue", new BigDecimal("15000000010.000000005")));
   }
 }
