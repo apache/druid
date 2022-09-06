@@ -129,7 +129,7 @@ public class CompressedBigDecimalAggregatorGroupByTest
         ).read(),
         0,
         Granularities.NONE,
-        5,
+        10,
         groupByQueryJson
     );
 
