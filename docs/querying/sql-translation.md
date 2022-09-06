@@ -77,7 +77,7 @@ WHERE channel IN (SELECT page FROM wikipedia GROUP BY page ORDER BY COUNT(*) DES
 GROUP BY channel
 ```
 
-Returns the following plan:
+The EXPLAIN PLAN statement returns the following plan:
 
 ```json
 [
