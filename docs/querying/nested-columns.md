@@ -33,7 +33,7 @@ You can use the JSON functions in INSERT and REPLACE statements in SQL-based ing
 
 ## Example nested data
 
-The examples in this topic use the data in [nested_example_data.json](https://static.imply.io/data/nested_example_data.json). The file contains a simple fascimile of an order tracking and shipping table. 
+The examples in this topic use the data in [`nested_example_data.json`](https://static.imply.io/data/nested_example_data.json). The file contains a simple facsimile of an order tracking and shipping table. 
 
 When pretty-printed, a sample row in `nested_example_data` looks like this:
 
