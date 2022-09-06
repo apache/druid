@@ -88,6 +88,9 @@ public class CompressedBigDecimalAggregatorGroupByTest
   {
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+      if ("v2ParallelCombine".equals(config.toString())) {
+        continue;
+      }
       constructors.add(new Object[] {config});
     }
     return constructors;
@@ -129,7 +132,7 @@ public class CompressedBigDecimalAggregatorGroupByTest
         ).read(),
         0,
         Granularities.NONE,
-        10,
+        5,
         groupByQueryJson
     );
 
