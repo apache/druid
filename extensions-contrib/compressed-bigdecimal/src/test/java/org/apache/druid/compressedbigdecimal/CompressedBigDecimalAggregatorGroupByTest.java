@@ -136,17 +136,19 @@ public class CompressedBigDecimalAggregatorGroupByTest
     List<ResultRow> results = seq.toList();
     assertThat(results, hasSize(1));
     ResultRow row = results.get(0);
-    System.err.println("WWWWWWWWWWWWWWWWWWWWWWWOOOOOOOOOOOOOOOOOOOOOOOOOOOWWWWWWWWWWWWWWWWWWWWWWWWWWWW");
-    System.err.println(row);
     ObjectMapper mapper = helper.getObjectMapper();
     GroupByQuery groupByQuery = mapper.readValue(groupByQueryJson, GroupByQuery.class);
     MapBasedRow mapBasedRow = row.toMapBasedRow(groupByQuery);
-    System.err.println(mapBasedRow);
     Map<String, Object> event = mapBasedRow.getEvent();
-    System.err.println(event);
-    System.err.flush();
     assertEquals(new DateTime("2017-01-01T00:00:00Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"))), mapBasedRow.getTimestamp());
     assertThat(event, aMapWithSize(1));
+    if (! new BigDecimal("15000000010.000000005").equals(event.get("revenue"))) {
+      assertEquals(
+          String.format("row[%s]\nmapBasedRow[%s]\nevent[%s]\n", row, mapBasedRow, event),
+          1,
+          2
+      );
+    }
     assertThat(event, hasEntry("revenue", new BigDecimal("15000000010.000000005")));
   }
 }
