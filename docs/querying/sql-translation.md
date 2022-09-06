@@ -63,7 +63,9 @@ appreciated.
 ## Interpreting EXPLAIN PLAN output
 
 The [EXPLAIN PLAN](sql.md#explain-plan) functionality can help you understand how a given SQL query will
-be translated to native. The native queries that will run are returned as a JSON array in the PLAN column:
+be translated to native.
+EXPLAIN PLAN statements return a `RESOURCES` column that describes the resource being queried as well as a `PLAN` column that contains a JSON array of native queries that Druid will run.
+For example, consider the following query:
 
 ```sql
 EXPLAIN PLAN FOR
