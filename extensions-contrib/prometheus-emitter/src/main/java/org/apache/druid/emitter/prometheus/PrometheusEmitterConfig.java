@@ -54,6 +54,10 @@ public class PrometheusEmitterConfig
   private final String pushGatewayAddress;
 
   @JsonProperty
+  @Nullable
+  private final Integer pushRateSec;
+
+  @JsonProperty
   private final boolean addHostAsLabel;
 
   @JsonProperty
@@ -67,7 +71,8 @@ public class PrometheusEmitterConfig
       @JsonProperty("port") @Nullable Integer port,
       @JsonProperty("pushGatewayAddress") @Nullable String pushGatewayAddress,
       @JsonProperty("addHostAsLabel") boolean addHostAsLabel,
-      @JsonProperty("addServiceAsLabel") boolean addServiceAsLabel
+      @JsonProperty("addServiceAsLabel") boolean addServiceAsLabel,
+      @JsonProperty("pushRateSec") Integer pushRateSec
   )
   {
 
@@ -78,8 +83,10 @@ public class PrometheusEmitterConfig
     this.port = port;
     if (this.strategy == Strategy.pushgateway) {
       Preconditions.checkNotNull(pushGatewayAddress, "Invalid pushGateway address");
+      Preconditions.checkNotNull(pushRateSec, "Invalid pushRateSec");
     }
     this.pushGatewayAddress = pushGatewayAddress;
+    this.pushRateSec = pushRateSec;
     this.addHostAsLabel = addHostAsLabel;
     this.addServiceAsLabel = addServiceAsLabel;
   }
@@ -102,6 +109,12 @@ public class PrometheusEmitterConfig
   public String getPushGatewayAddress()
   {
     return pushGatewayAddress;
+  }
+
+  @Nullable
+  public Integer getPushRateSec()
+  {
+    return pushRateSec;
   }
 
   public Strategy getStrategy()
