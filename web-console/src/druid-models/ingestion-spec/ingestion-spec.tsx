@@ -454,24 +454,6 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     ),
   };
 
-  const inputSourceFilter: Field<IoConfig> = {
-    name: 'inputSource.filter',
-    label: 'File filter',
-    type: 'string',
-    suggestions: FILTER_SUGGESTIONS,
-    placeholder: '*',
-    info: (
-      <p>
-        A wildcard filter for files. See{' '}
-        <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html">
-          here
-        </ExternalLink>{' '}
-        for format information. Files matching the filter criteria are considered for ingestion.
-        Files not matching the filter criteria are ignored.
-      </p>
-    ),
-  };
-
   switch (ingestionComboType) {
     case 'index_parallel:http':
       return [
