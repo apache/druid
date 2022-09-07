@@ -23,9 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.services.storage.model.StorageObject;
-import com.google.common.collect.Iterators;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
@@ -62,11 +59,10 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
       @JacksonInject GoogleInputDataConfig inputDataConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
-      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("filter") @Nullable String filter
+      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
   )
   {
-    super(GoogleStorageDruidModule.SCHEME_GS, uris, prefixes, objects, filter);
+    super(GoogleStorageDruidModule.SCHEME_GS, uris, prefixes, objects);
     this.storage = storage;
     this.inputDataConfig = inputDataConfig;
   }
@@ -115,7 +111,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
   @Override
   public SplittableInputSource<List<CloudObjectLocation>> withSplit(InputSplit<List<CloudObjectLocation>> split)
   {
-    return new GoogleCloudStorageInputSource(storage, inputDataConfig, null, null, split.get(), getFilter());
+    return new GoogleCloudStorageInputSource(storage, inputDataConfig, null, null, split.get());
   }
 
   private CloudObjectLocation byteSourceFromStorageObject(final StorageObject storageObject)
@@ -125,23 +121,12 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
 
   private Iterable<StorageObject> storageObjectIterable()
   {
-    return () -> {
-      Iterator<StorageObject> iterator = GoogleUtils.lazyFetchingStorageObjectsIterator(
-          storage,
-          getPrefixes().iterator(),
-          inputDataConfig.getMaxListingLength()
-      );
-
-      // Skip files that didn't match filter.
-      if (StringUtils.isNotBlank(getFilter())) {
-        iterator = Iterators.filter(
-            iterator,
-            object -> FilenameUtils.wildcardMatch(object.getName(), getFilter())
+    return () ->
+        GoogleUtils.lazyFetchingStorageObjectsIterator(
+            storage,
+            getPrefixes().iterator(),
+            inputDataConfig.getMaxListingLength()
         );
-      }
-
-      return iterator;
-    };
   }
 
   @Override
@@ -151,7 +136,6 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
-           ", filter=" + getFilter() +
            '}';
   }
 }
