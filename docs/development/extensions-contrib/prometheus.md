@@ -43,7 +43,7 @@ All the configuration parameters for the Prometheus emitter are under `druid.emi
 |`druid.emitter.prometheus.addHostAsLabel`|Flag to include the hostname as a prometheus label.|no|false|
 |`druid.emitter.prometheus.addServiceAsLabel`|Flag to include the druid service name (e.g. `druid/broker`, `druid/coordinator`, etc.) as a prometheus label.|no|false|
 |`druid.emitter.prometheus.pushGatewayAddress`|Pushgateway address. Required if using Pushgateway strategy|no|none|
-|`druid.emitter.prometheus.pushRateSec`|Emit metrics to pushgateway every pushRateSec seconds. Required if using Pushgateway strategy|no|none|
+|`druid.emitter.prometheus.pushRateSec`|Emit metrics to Pushgateway every pushRateSec seconds. Required if using Pushgateway strategy|no|none|
 
 ### Metric names
 
