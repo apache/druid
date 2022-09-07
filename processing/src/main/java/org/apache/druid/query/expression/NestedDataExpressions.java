@@ -226,10 +226,9 @@ public class NestedDataExpressions
             }
           }
           throw ParseJsonExprMacro.this.validationFailed(
-              "invalid input [%s] of type [%s], expected [%s]",
-              arg.asString(),
-              arg.type(),
-              ExpressionType.STRING
+              "invalid input expected %s but got %s instead",
+              ExpressionType.STRING,
+              arg.type()
           );
         }
 
