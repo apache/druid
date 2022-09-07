@@ -187,7 +187,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-null
+        null
     );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
