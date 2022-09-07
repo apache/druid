@@ -35,6 +35,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -85,7 +86,15 @@ public class StatusResourceTest
                                                            .map(StringUtils::toLowerCase)
                                                            .collect(Collectors.toSet());
 
-    Set<String> hiddenProperties = new ObjectMapper().readValue(returnedProperties.get("druid.server.hiddenProperties"), new TypeReference<Set<String>>() {});
+    Assert.assertTrue(
+        "The list of unfiltered Properties is not > the list of filtered Properties?!?",
+        injector.getInstance(Properties.class).stringPropertyNames().size() > returnedProperties.size()
+    );
+
+    Set<String> hiddenProperties = new ObjectMapper().readValue(
+        returnedProperties.get("druid.server.hiddenProperties"),
+        new TypeReference<Set<String>>() {});
+
     hiddenProperties.forEach(
         (property) -> {
           lowerCasePropertyNames.forEach(
