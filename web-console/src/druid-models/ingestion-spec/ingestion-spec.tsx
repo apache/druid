@@ -651,7 +651,6 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             </>
           ),
         },
-        inputSourceFilter,
         {
           name: 'inputSource.properties.accessKeyId.type',
           label: 'Access key ID type',
@@ -813,7 +812,6 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             </>
           ),
         },
-        inputSourceFilter,
       ];
 
     case 'index_parallel:google':
@@ -872,7 +870,6 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             </>
           ),
         },
-        inputSourceFilter,
       ];
 
     case 'index_parallel:hdfs':
