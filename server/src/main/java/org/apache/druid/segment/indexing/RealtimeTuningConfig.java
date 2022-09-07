@@ -205,7 +205,8 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         mergeThreadPriority,
         reportParseExceptions,
         handoffConditionTimeout,
-        alertTimeout,segmentWriteOutMediumFactory,
+        alertTimeout,
+        segmentWriteOutMediumFactory,
         dedupColumn
     );
   }
