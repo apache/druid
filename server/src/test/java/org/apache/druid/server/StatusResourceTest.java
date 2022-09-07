@@ -85,7 +85,11 @@ public class StatusResourceTest
                                                            .map(StringUtils::toLowerCase)
                                                            .collect(Collectors.toSet());
     Set<String> hiddenProperties = new HashSet<>();
-    Splitter.on(",").split(returnedProperties.get("druid.server.hiddenProperties")).forEach(hiddenProperties::add);
+    String hiddenPropertiesString = returnedProperties.get("druid.server.hiddenProperties")
+                                                      .replace("[", "")
+                                                      .replace("]", "")
+                                                      .replace("\"", "");
+    Splitter.on(",").split(hiddenPropertiesString).forEach(hiddenProperties::add);
     hiddenProperties.forEach(
         (property) -> {
           lowerCasePropertyNames.forEach(
