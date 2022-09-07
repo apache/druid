@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
@@ -55,7 +56,7 @@ public class PrometheusEmitterConfig
 
   @JsonProperty
   @Nullable
-  private final Integer pushRateSec;
+  private final Integer flushPeriod;
 
   @JsonProperty
   private final boolean addHostAsLabel;
@@ -72,7 +73,7 @@ public class PrometheusEmitterConfig
       @JsonProperty("pushGatewayAddress") @Nullable String pushGatewayAddress,
       @JsonProperty("addHostAsLabel") boolean addHostAsLabel,
       @JsonProperty("addServiceAsLabel") boolean addServiceAsLabel,
-      @JsonProperty("pushRateSec") Integer pushRateSec
+      @JsonProperty("flushPeriod") Integer flushPeriod
   )
   {
 
@@ -83,10 +84,14 @@ public class PrometheusEmitterConfig
     this.port = port;
     if (this.strategy == Strategy.pushgateway) {
       Preconditions.checkNotNull(pushGatewayAddress, "Invalid pushGateway address");
-      Preconditions.checkNotNull(pushRateSec, "Invalid pushRateSec");
+      if (Objects.nonNull(flushPeriod)) {
+        Preconditions.checkArgument(flushPeriod > 0, "flushPeriod must be greater than 0");
+      } else {
+        flushPeriod = 15;
+      }
     }
     this.pushGatewayAddress = pushGatewayAddress;
-    this.pushRateSec = pushRateSec;
+    this.flushPeriod = flushPeriod;
     this.addHostAsLabel = addHostAsLabel;
     this.addServiceAsLabel = addServiceAsLabel;
   }
@@ -112,9 +117,9 @@ public class PrometheusEmitterConfig
   }
 
   @Nullable
-  public Integer getPushRateSec()
+  public Integer getFlushPeriod()
   {
-    return pushRateSec;
+    return flushPeriod;
   }
 
   public Strategy getStrategy()

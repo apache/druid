@@ -98,8 +98,8 @@ public class PrometheusEmitter implements Emitter
       exec = ScheduledExecutors.fixed(1, "PrometheusPushGatewayEmitter-%s");
       exec.scheduleAtFixedRate(
           () -> flush(),
-          config.getPushRateSec(),
-          config.getPushRateSec(),
+          config.getFlushPeriod(),
+          config.getFlushPeriod(),
           TimeUnit.SECONDS
       );
     }

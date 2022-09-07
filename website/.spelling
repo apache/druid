@@ -762,7 +762,7 @@ HTTPServer
 conversionFactor
 prometheus
 Pushgateway
-pushRateSec
+flushPeriod
  - ../docs/development/extensions-contrib/tdigestsketch-quantiles.md
 postAggregator
 quantileFromTDigestSketch
