@@ -20,7 +20,6 @@
 package org.apache.druid.query.expression;
 
 import inet.ipaddr.ipv4.IPv4Address;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -59,9 +58,7 @@ public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() != 1) {
-      throw new IAE(ExprUtils.createErrMsg(name(), "must have 1 argument"));
-    }
+    validationHelperCheckArgumentCount(args, 1);
 
     Expr arg = args.get(0);
 
