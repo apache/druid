@@ -48,6 +48,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -82,7 +83,8 @@ public class PlannerContext
   private final DateTime localNow;
   private final DruidSchemaCatalog rootSchema;
   private final SqlEngine engine;
-  private final QueryContext queryContext;
+  private final Map<String, Object> queryContext;
+  private final Set<String> contextKeys;
   private final String sqlQueryId;
   private final boolean stringifyArrays;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
@@ -110,7 +112,8 @@ public class PlannerContext
       final boolean stringifyArrays,
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
-      final QueryContext queryContext
+      final Map<String, Object> queryContext,
+      final Set<String> contextKeys
   )
   {
     this.sql = sql;
@@ -121,6 +124,7 @@ public class PlannerContext
     this.rootSchema = rootSchema;
     this.engine = engine;
     this.queryContext = queryContext;
+    this.contextKeys = contextKeys;
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
 
@@ -140,7 +144,8 @@ public class PlannerContext
       final PlannerConfig plannerConfig,
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
-      final QueryContext queryContext
+      final Map<String, Object> queryContext,
+      final Set<String> contextKeys
   )
   {
     final DateTime utcNow;
@@ -179,7 +184,8 @@ public class PlannerContext
         stringifyArrays,
         rootSchema,
         engine,
-        queryContext
+        queryContext,
+        contextKeys
     );
   }
 
@@ -219,9 +225,32 @@ public class PlannerContext
     return rootSchema.getResourceType(schema, resourceName);
   }
 
-  public QueryContext getQueryContext()
+  /**
+   * Return the query context as a mutable map. Use this form when
+   * modifying the context during planning.
+   */
+  public Map<String, Object> queryContextMap()
   {
     return queryContext;
+  }
+
+  /**
+   * Return the query context as an immutable object. Use this form
+   * when querying the context as it provides type-safe accessors.
+   */
+  public QueryContext queryContext()
+  {
+    return QueryContext.of(queryContext);
+  }
+
+  /**
+   * Returns the query context keys set by the user. (Actually, set by
+   * the request made on behalf of the user, which may include options set by
+   * intermediary services outside of Druid.)
+   */
+  public Set<String> queryContextKeys()
+  {
+    return contextKeys;
   }
 
   public boolean isStringifyArrays()

@@ -55,6 +55,9 @@ import org.junit.rules.ExpectedException;
 
 import javax.servlet.http.HttpServletRequest;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class QueryLifecycleTest
 {
   private static final String DATASOURCE = "some_datasource";
@@ -197,21 +200,23 @@ public class QueryLifecycleTest
 
     replayAll();
 
+    final Map<String, Object> userContext = ImmutableMap.of("foo", "bar", "baz", "qux");
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource(DATASOURCE)
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
                                         .aggregators(new CountAggregatorFactory("chocula"))
-                                        .context(ImmutableMap.of("foo", "bar", "baz", "qux"))
+                                        .context(userContext)
                                         .build();
 
     lifecycle.initialize(query);
 
-    Assert.assertEquals(
-        ImmutableMap.of("foo", "bar", "baz", "qux"),
-        lifecycle.getQuery().getQueryContext().getUserParams()
-    );
-    Assert.assertTrue(lifecycle.getQuery().getQueryContext().getMergedParams().containsKey("queryId"));
+    final Map<String, Object> revisedContext = new HashMap<>(lifecycle.getQuery().getContext());
     Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
+    revisedContext.remove("queryId");
+    Assert.assertEquals(
+        userContext,
+        revisedContext
+    );
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
   }
@@ -257,9 +262,6 @@ public class QueryLifecycleTest
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("foo", ResourceType.QUERY_CONTEXT), Action.WRITE))
             .andReturn(Access.OK);
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("baz", ResourceType.QUERY_CONTEXT), Action.WRITE)).andReturn(Access.OK);
-    // to use legacy query context with context authorization, even system generated things like queryId need to be explicitly added
-    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("queryId", ResourceType.QUERY_CONTEXT), Action.WRITE))
-            .andReturn(Access.OK);
 
     EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
@@ -271,10 +273,11 @@ public class QueryLifecycleTest
 
     lifecycle.initialize(query);
 
-    Assert.assertNull(lifecycle.getQuery().getQueryContext());
-    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("foo"));
-    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("baz"));
-    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
+    final Map<String, Object> revisedContext = lifecycle.getQuery().getContext();
+    Assert.assertNotNull(revisedContext);
+    Assert.assertTrue(revisedContext.containsKey("foo"));
+    Assert.assertTrue(revisedContext.containsKey("baz"));
+    Assert.assertTrue(revisedContext.containsKey("queryId"));
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
   }

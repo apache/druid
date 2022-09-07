@@ -39,7 +39,6 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -60,6 +59,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -163,7 +163,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
-    final int maxSubqueryRows = QueryContexts.getMaxSubqueryRows(query, serverConfig.getMaxSubqueryRows());
+    final int maxSubqueryRows = query.context().getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
 
     final DataSource inlineDryRun = inlineIfNecessary(
         freeTradeDataSource,
@@ -431,7 +431,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .emitCPUTimeMetric(emitter)
         .postProcess(
             objectMapper.convertValue(
-                query.getQueryContext().getAsString("postProcessing"),
+                query.context().getString("postProcessing"),
                 new TypeReference<PostProcessingOperator<T>>() {}
             )
         )

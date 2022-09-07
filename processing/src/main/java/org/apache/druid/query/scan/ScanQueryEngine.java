@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.context.ResponseContext;
@@ -46,6 +45,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -78,7 +78,7 @@ public class ScanQueryEngine
     if (numScannedRows != null && numScannedRows >= query.getScanRowsLimit() && query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
       return Sequences.empty();
     }
-    final boolean hasTimeout = QueryContexts.hasTimeout(query);
+    final boolean hasTimeout = query.context().hasTimeout();
     final Long timeoutAt = responseContext.getTimeoutTime();
     final StorageAdapter adapter = segment.asStorageAdapter();
 

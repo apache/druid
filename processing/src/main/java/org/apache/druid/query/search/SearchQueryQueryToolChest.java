@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
@@ -46,6 +45,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DimensionSpec;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -329,7 +329,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         return runner.run(queryPlus, responseContext);
       }
 
-      final boolean isBySegment = QueryContexts.isBySegment(query);
+      final boolean isBySegment = query.context().isBySegment();
 
       return Sequences.map(
           runner.run(queryPlus.withQuery(query.withLimit(config.getMaxSearchLimit())), responseContext),

@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
@@ -77,6 +76,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -141,7 +141,7 @@ public class GroupByQueryEngineV2
 
     try {
       final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
-          query.getQueryContext().getAsString(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP)
+          query.context().getString(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP)
       );
 
       final DateTime fudgeTimestamp = fudgeTimestampString == null
@@ -151,7 +151,7 @@ public class GroupByQueryEngineV2
       final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
       final Interval interval = Iterables.getOnlyElement(query.getIntervals());
 
-      final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
+      final boolean doVectorize = query.context().getVectorize().shouldVectorize(
           VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
       );
 
@@ -496,7 +496,7 @@ public class GroupByQueryEngineV2
       // Time is the same for every row in the cursor
       this.timestamp = fudgeTimestamp != null ? fudgeTimestamp : cursor.getTime();
       this.allSingleValueDims = allSingleValueDims;
-      this.allowMultiValueGrouping = query.getContextBoolean(
+      this.allowMultiValueGrouping = query.context().getBoolean(
           GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
           true
       );

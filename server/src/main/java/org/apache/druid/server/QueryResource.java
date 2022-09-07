@@ -46,7 +46,6 @@ import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.BadQueryException;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
@@ -78,6 +77,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -386,14 +386,7 @@ public class QueryResource implements QueryCountStatsProvider
     String prevEtag = getPreviousEtag(req);
 
     if (prevEtag != null) {
-      if (baseQuery.getQueryContext() == null) {
-        QueryContext context = new QueryContext(baseQuery.getContext());
-        context.addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
-
-        return baseQuery.withOverriddenContext(context.getMergedParams());
-      } else {
-        baseQuery.getQueryContext().addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
-      }
+      baseQuery.getContext().put(HEADER_IF_NONE_MATCH, prevEtag);
     }
 
     return baseQuery;

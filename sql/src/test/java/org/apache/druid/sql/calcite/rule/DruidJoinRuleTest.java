@@ -39,6 +39,7 @@ import org.mockito.Mockito;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 public class DruidJoinRuleTest
 {
@@ -60,14 +61,15 @@ public class DruidJoinRuleTest
           ),
           ImmutableList.of("left", "right")
       );
-  
+
   private DruidJoinRule druidJoinRule;
 
   @Before
   public void setup()
   {
     PlannerContext plannerContext = Mockito.mock(PlannerContext.class);
-    Mockito.when(plannerContext.getQueryContext()).thenReturn(Mockito.mock(QueryContext.class));
+    Mockito.when(plannerContext.getQueryContext()).thenReturn(Mockito.mock(Map.class));
+    Mockito.when(plannerContext.queryContext()).thenReturn(QueryContext.empty());
     druidJoinRule = DruidJoinRule.instance(plannerContext);
   }
 

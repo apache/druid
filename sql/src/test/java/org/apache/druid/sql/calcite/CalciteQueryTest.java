@@ -41,7 +41,6 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.ResourceLimitExceededException;
@@ -2317,11 +2316,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     try {
       testQuery(
           PLANNER_CONFIG_NO_HLL.withOverrides(
-              new QueryContext(
-                  ImmutableMap.of(
-                      PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
-                      "false"
-                  )
+              ImmutableMap.of(
+                  PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                  "false"
               )
           ), // Enable exact count distinct
           sqlQuery,
@@ -2338,11 +2335,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     requireMergeBuffers(3);
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
-            new QueryContext(
-                ImmutableMap.of(
-                    PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
-                    "true"
-                )
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                "true"
             )
         ),
         sqlQuery,
@@ -6505,11 +6500,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     requireMergeBuffers(4);
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
-            new QueryContext(
-                ImmutableMap.of(
-                    PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
-                    "true"
-                )
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                "true"
             )
         ),
         "SELECT FLOOR(__time to day), COUNT(distinct city), COUNT(distinct user) FROM druid.visits GROUP BY 1",
@@ -8351,11 +8344,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     requireMergeBuffers(3);
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
-            new QueryContext(
-                ImmutableMap.of(
-                    PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
-                    "true"
-                )
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                "true"
             )
         ),
         "SELECT\n"

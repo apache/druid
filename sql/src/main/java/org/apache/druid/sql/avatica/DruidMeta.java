@@ -42,7 +42,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -55,6 +54,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -165,20 +165,19 @@ public class DruidMeta extends MetaImpl
     try {
       // Build connection context.
       final Map<String, Object> secret = new HashMap<>();
-      final Map<String, Object> contextMap = new HashMap<>();
+      final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
       if (info != null) {
         for (Map.Entry<String, String> entry : info.entrySet()) {
           if (SENSITIVE_CONTEXT_FIELDS.contains(entry.getKey())) {
             secret.put(entry.getKey(), entry.getValue());
           } else {
-            contextMap.put(entry.getKey(), entry.getValue());
+            context.put(entry.getKey(), entry.getValue());
           }
         }
       }
       // we don't want to stringify arrays for JDBC ever because Avatica needs to handle this
-      final QueryContext context = new QueryContext(contextMap);
-      context.addSystemParam(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
-      openDruidConnection(ch.id, secret, context);
+      context.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
+      openDruidConnection(ch.id, secret, context.build());
     }
     catch (NoSuchConnectionException e) {
       throw e;
@@ -776,7 +775,7 @@ public class DruidMeta extends MetaImpl
   private DruidConnection openDruidConnection(
       final String connectionId,
       final Map<String, Object> userSecret,
-      final QueryContext context
+      final Map<String, Object> context
   )
   {
     if (connectionCount.incrementAndGet() > config.getMaxConnections()) {

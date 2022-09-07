@@ -21,15 +21,14 @@ package org.apache.druid.sql.avatica;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.PreparedStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -46,8 +45,8 @@ public class DruidConnection
 
   private final String connectionId;
   private final int maxStatements;
-  private final ImmutableMap<String, Object> userSecret;
-  private final QueryContext context;
+  private final Map<String, Object> userSecret;
+  private final Map<String, Object> context;
   private final AtomicInteger statementCounter = new AtomicInteger();
   private final AtomicReference<Future<?>> timeoutFuture = new AtomicReference<>();
 
@@ -64,12 +63,12 @@ public class DruidConnection
       final String connectionId,
       final int maxStatements,
       final Map<String, Object> userSecret,
-      final QueryContext context
+      final Map<String, Object> context
   )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId);
     this.maxStatements = maxStatements;
-    this.userSecret = ImmutableMap.copyOf(userSecret);
+    this.userSecret = userSecret;
     this.context = context;
   }
 
@@ -97,7 +96,7 @@ public class DruidConnection
       final DruidJdbcStatement statement = new DruidJdbcStatement(
           connectionId,
           statementId,
-          context.copy(),
+          new HashMap<String, Object>(context),
           sqlStatementFactory
       );
 
@@ -127,7 +126,7 @@ public class DruidConnection
 
       @SuppressWarnings("GuardedBy")
       final PreparedStatement statement = sqlStatementFactory.preparedStatement(
-          sqlQueryPlus.withContext(context.copy())
+          sqlQueryPlus.withContext(new HashMap<String, Object>(context))
       );
       final DruidJdbcPreparedStatement jdbcStmt = new DruidJdbcPreparedStatement(
           connectionId,

@@ -27,7 +27,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
-import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -39,6 +38,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -61,7 +61,7 @@ public abstract class BaseQuery<T> implements Query<T>
   public static final String SQL_QUERY_ID = "sqlQueryId";
   private final DataSource dataSource;
   private final boolean descending;
-  private final QueryContext context;
+  private final Map<String, Object> context;
   private final QuerySegmentSpec querySegmentSpec;
   private volatile Duration duration;
   private final Granularity granularity;
@@ -89,7 +89,10 @@ public abstract class BaseQuery<T> implements Query<T>
     Preconditions.checkNotNull(granularity, "Must specify a granularity");
 
     this.dataSource = dataSource;
-    this.context = new QueryContext(context);
+    // There is no semantic difference between an empty and a null context.
+    // Ensure that a context always exists to avoid the need to check for
+    // a null context. Jackson serialization will omit empty contexts.
+    this.context = context == null ? Collections.emptyMap() : context;
     this.querySegmentSpec = querySegmentSpec;
     this.descending = descending;
     this.granularity = granularity;
@@ -172,25 +175,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @JsonInclude(Include.NON_DEFAULT)
   public Map<String, Object> getContext()
   {
-    return context.getMergedParams();
-  }
-
-  @Override
-  public QueryContext getQueryContext()
-  {
-    return context;
-  }
-
-  @Override
-  public boolean getContextBoolean(String key, boolean defaultValue)
-  {
-    return context.getAsBoolean(key, defaultValue);
-  }
-
-  @Override
-  public HumanReadableBytes getContextAsHumanReadableBytes(String key, HumanReadableBytes defaultValue)
-  {
-    return context.getAsHumanReadableBytes(key, defaultValue);
+    return context == null ? Collections.emptyMap() : context;
   }
 
   /**
@@ -228,7 +213,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public String getId()
   {
-    return context.getAsString(QUERY_ID);
+    return context().getString(QUERY_ID);
   }
 
   @Override
@@ -241,7 +226,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public String getSubQueryId()
   {
-    return context.getAsString(SUB_QUERY_ID);
+    return context().getString(SUB_QUERY_ID);
   }
 
   @Override
