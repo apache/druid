@@ -114,7 +114,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -308,7 +307,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             50000,
             null,
             new Period("P1Y"),
-            new File("/test"),
             null,
             null,
             null,
@@ -3344,7 +3342,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             50000,
             null,
             new Period("P1Y"),
-            new File("/test"),
             null,
             null,
             null,
@@ -3384,7 +3381,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         50000,
         null,
         new Period("P1Y"),
-        new File("/test"),
         null,
         null,
         null,
@@ -3681,7 +3677,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         50000,
         null,
         new Period("P1Y"),
-        new File("/test"),
         null,
         null,
         null,
@@ -3793,7 +3788,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         50000,
         null,
         new Period("P1Y"),
-        new File("/test"),
         null,
         null,
         null,

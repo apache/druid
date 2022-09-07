@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -47,11 +46,6 @@ public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
   private static final Boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = Boolean.FALSE;
   private static final long DEFAULT_HANDOFF_CONDITION_TIMEOUT = 0;
   private static final long DEFAULT_ALERT_TIMEOUT = 0;
-
-  private static File createNewBasePersistDirectory()
-  {
-    return FileUtils.createTempDir("druid-realtime-persist");
-  }
 
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
@@ -83,7 +77,7 @@ public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
-      @JsonProperty("basePersistDirectory") File basePersistDirectory,
+      File basePersistDirectory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("shardSpec") ShardSpec shardSpec,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
@@ -108,7 +102,7 @@ public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? DEFAULT_INTERMEDIATE_PERSIST_PERIOD
                                      : intermediatePersistPeriod;
-    this.basePersistDirectory = basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory;
+    this.basePersistDirectory = basePersistDirectory;
     this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
     this.shardSpec = shardSpec == null ? DEFAULT_SHARD_SPEC : shardSpec;
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
@@ -199,10 +193,9 @@ public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
   }
 
   @Override
-  @JsonProperty
   public File getBasePersistDirectory()
   {
-    return basePersistDirectory;
+    return Preconditions.checkNotNull(basePersistDirectory, "basePersistDirectory not set");
   }
 
   @Override
