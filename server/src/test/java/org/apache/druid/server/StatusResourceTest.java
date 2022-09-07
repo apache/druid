@@ -19,7 +19,8 @@
 
 package org.apache.druid.server;
 
-import com.google.common.base.Splitter;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -32,7 +33,6 @@ import org.junit.Test;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -64,18 +64,18 @@ public class StatusResourceTest
   }
 
   @Test
-  public void testHiddenProperties()
+  public void testHiddenProperties() throws Exception
   {
     testHiddenPropertiesWithPropertyFileName("status.resource.test.runtime.properties");
   }
 
   @Test
-  public void testHiddenPropertiesContain()
+  public void testHiddenPropertiesContain() throws Exception
   {
     testHiddenPropertiesWithPropertyFileName("status.resource.test.runtime.hpc.properties");
   }
 
-  private void testHiddenPropertiesWithPropertyFileName(String fileName)
+  private void testHiddenPropertiesWithPropertyFileName(String fileName) throws Exception
   {
     Injector injector = Guice.createInjector(Collections.singletonList(new PropertiesModule(Collections.singletonList(
         fileName))));
@@ -84,12 +84,8 @@ public class StatusResourceTest
                                                            .stream()
                                                            .map(StringUtils::toLowerCase)
                                                            .collect(Collectors.toSet());
-    Set<String> hiddenProperties = new HashSet<>();
-    String hiddenPropertiesString = returnedProperties.get("druid.server.hiddenProperties")
-                                                      .replace("[", "")
-                                                      .replace("]", "")
-                                                      .replace("\"", "");
-    Splitter.on(",").split(hiddenPropertiesString).forEach(hiddenProperties::add);
+
+    Set<String> hiddenProperties = new ObjectMapper().readValue(returnedProperties.get("druid.server.hiddenProperties"), new TypeReference<Set<String>>() {});
     hiddenProperties.forEach(
         (property) -> {
           lowerCasePropertyNames.forEach(
