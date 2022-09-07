@@ -23,11 +23,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
@@ -62,6 +65,7 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConvers
 import org.apache.druid.sql.calcite.expression.builtin.TimeParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
+import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.joda.time.Period;
 import org.junit.Before;
 import org.junit.Test;
@@ -588,6 +592,18 @@ public class ExpressionsTest extends ExpressionTestBase
         makeExpression("format('%s %,d',\"s\",1234,6789)"),
         "foo 1,234"
     );
+
+    testHelper.testExpressionString(
+        new StringFormatOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral("%.2f %.2f %.2f"),
+            testHelper.makeLiteral(1234d),
+            testHelper.makeLiteral(123.4),
+            testHelper.makeLiteral(123.456789)
+        ),
+        makeExpression("format('%.2f %.2f %.2f',1234.0,123.4,123.456789)"),
+        "1234.00 123.40 123.46"
+    );
   }
 
   @Test
@@ -651,7 +667,7 @@ public class ExpressionsTest extends ExpressionTestBase
             DruidExpression.functionCall("parse_long"),
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.STRING, "hexstr"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(16))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(16))
             )
         ),
         239L
@@ -679,7 +695,7 @@ public class ExpressionsTest extends ExpressionTestBase
                         DruidExpression.ofColumn(ColumnType.STRING, "hexstr")
                     )
                 ),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(16))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(16))
             )
         ),
         239L
@@ -929,7 +945,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 10.0,'long'),'double') / 10.0)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "x"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(1))
             )
         ),
         2.2
@@ -946,7 +962,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 10.0,'long'),'double') / 10.0)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "z"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(1))
             )
         ),
         -2.2
@@ -963,7 +979,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 0.1,'long'),'double') / 0.1)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "b"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(-1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1))
             )
         ),
         20.0
@@ -980,7 +996,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 0.1,'long'),'double') / 0.1)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "z"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(-1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1))
             )
         ),
         0.0
@@ -1029,7 +1045,7 @@ public class ExpressionsTest extends ExpressionTestBase
             DruidExpression.functionCall("round"),
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "b"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(-1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1))
             )
         ),
         30L
@@ -1059,7 +1075,7 @@ public class ExpressionsTest extends ExpressionTestBase
             DruidExpression.functionCall("round"),
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "x"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(1))
             )
         ),
         2.3
@@ -1769,7 +1785,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 DruidExpression.ofColumn(ColumnType.LONG, "t"),
                 // RexNode type "interval year to month" is not reported as ColumnType.STRING
                 DruidExpression.ofLiteral(null, DruidExpression.stringLiteral("P13M")),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(-1)),
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1)),
                 DruidExpression.ofStringLiteral("UTC")
             )
         ),
@@ -2601,5 +2617,13 @@ public class ExpressionsTest extends ExpressionTestBase
         makeExpression("human_readable_decimal_byte_format(45678,3)"),
         "45.678 KB"
     );
+  }
+
+  @Test
+  public void testLiteralToDruidExpressionForLong()
+  {
+    final RelDataTypeFactory typeFactory = new SqlTypeFactoryImpl(DruidTypeSystem.INSTANCE);
+
+    Expressions.literalToDruidExpression(null, )
   }
 }

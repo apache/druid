@@ -100,9 +100,9 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
             DruidExpression.ofStringLiteral(granularity.getPeriod().toString()),
             DruidExpression.ofLiteral(
                 ColumnType.LONG,
-                DruidExpression.numberLiteral(
-                    granularity.getOrigin() == null ? null : granularity.getOrigin().getMillis()
-                )
+                granularity.getOrigin() == null
+                ? DruidExpression.nullLiteral()
+                : DruidExpression.longLiteral(granularity.getOrigin().getMillis())
             ),
             DruidExpression.ofStringLiteral(granularity.getTimeZone().toString())
         )
@@ -153,7 +153,7 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
               if (operand.isA(SqlKind.LITERAL)) {
                 return DruidExpression.ofLiteral(
                     Calcites.getColumnTypeForRelDataType(operand.getType()),
-                    DruidExpression.numberLiteral(
+                    DruidExpression.longLiteral(
                         Calcites.calciteDateTimeLiteralToJoda(operand, plannerContext.getTimeZone()).getMillis()
                     )
                 );

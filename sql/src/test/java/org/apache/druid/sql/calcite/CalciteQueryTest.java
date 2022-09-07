@@ -7372,7 +7372,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         ))
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
-                                expressionPostAgg("p0", "((1 - (\"a1\" / \"a0\")) * 100)")
+                                expressionPostAgg("p0", "((1.0 - (\"a1\" / \"a0\")) * 100)")
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -13806,7 +13806,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .virtualColumns(
                                  expressionVirtualColumn("v0", "'none'", ColumnType.STRING),
                                  expressionVirtualColumn("v1", "0", ColumnType.LONG),
-                                 expressionVirtualColumn("v2", "0", ColumnType.DOUBLE)
+                                 expressionVirtualColumn("v2", "0.0", ColumnType.DOUBLE)
                              )
                              .dimension(
                                  new DefaultDimensionSpec("v0", "d0")
