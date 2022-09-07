@@ -163,7 +163,7 @@ Specify `pathParts` as an array of objects that describe each component of the p
 |field|The name of the 'field' in a 'field' `type` path part|yes, if `type` is 'field'|
 |index|The array element index if `type` is `arrayElement`|yes, if `type` is 'arrayElement'|
 
-
+See [Nested columns](./nested-columns.md) for more information on ingesting and storing nested data.
 
 ### List filtered virtual column
 This virtual column provides an alternative way to use

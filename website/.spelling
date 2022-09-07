@@ -18,6 +18,7 @@
 # global dictionary is at the start, file overrides afterwards
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
+1M
 32-bit
 500MiB
 64-bit
@@ -38,6 +39,7 @@ BCP
 Base64
 Base64-encoded
 ByteBuffer
+bottlenecked
 concat
 CIDR
 CORS
@@ -61,6 +63,7 @@ DimensionSpec
 DimensionSpecs
 Dockerfile
 DogStatsD
+DOCTYPE
 Double.NEGATIVE_INFINITY
 Double.NEGATIVE_INFINITY.
 Double.POSITIVE_INFINITY
@@ -96,6 +99,7 @@ HDFSFirehose
 HLL
 HashSet
 Homebrew
+html
 HyperLogLog
 IAM
 IANA
@@ -154,6 +158,7 @@ MariaDB
 MiddleManager
 MiddleManagers
 Montréal
+MSQ
 Murmur3
 MVCC
 NFS
@@ -302,6 +307,7 @@ https
 idempotency
 i.e.
 influxdb
+ingestions
 ingestionSpec
 injective
 inlined
@@ -331,6 +337,7 @@ lookback
 lookups
 mapreduce
 masse
+maxBytes
 maxNumericInFilters
 maxNumFiles
 maxNumSegments
@@ -350,6 +357,7 @@ namespaced
 namespaces
 natively
 netflow
+nonfinalized
 non-nullable
 noop
 numerics
@@ -469,6 +477,8 @@ unioned
 unmergeable
 unmerged
 UNNEST
+unnest
+unnests
 unparseable
 unparsed
 unsetting
@@ -491,6 +501,7 @@ vectorizeVirtualColumns
 versioning
 virtualColumns
 w.r.t.
+walkthrough
 whitelist
 whitelisted
 whitespace
@@ -528,6 +539,8 @@ NUMERIC_PRECISION_RADIX
 NUMERIC_SCALE
 ORDINAL_POSITION
 POSIX
+P1M
+P1Y
 PT1M
 PT5M
 SCHEMA_NAME
@@ -582,6 +595,7 @@ segment_id
 server_type
 shard_spec
 sqlTimeZone
+sql-msq-task
 supervisor_id
 sys
 sys.segments
@@ -593,10 +607,96 @@ useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
 wikipedia
+your-table
 enableTimeBoundaryPlanning
 TimeBoundary
 druid.query.default.context.enableTimeBoundaryPlanning
 IEC
+# MSQ general
+SegmentGenerator
+granularity_string
+QueryKit
+# MSQ report fields
+taskId
+multiStageQuery.taskId
+multiStageQuery.payload.status
+multiStageQuery.payload.status.status
+multiStageQuery.payload.status.startTime 
+multiStageQuery.payload.status.durationMs
+multiStageQuery.payload.status.errorReport
+multiStageQuery.payload.status.errorReport.taskId
+multiStageQuery.payload.status.errorReport.host
+multiStageQuery.payload.status.errorReport.stageNumber
+multiStageQuery.payload.status.errorReport.error
+multiStageQuery.payload.status.errorReport.error.errorCode
+multiStageQuery.payload.status.errorReport.error.errorMessage
+multiStageQuery.payload.status.errorReport.exceptionStackTrace
+multiStageQuery.payload.stages stages
+multiStageQuery.payload.stages[].stageNumber
+definition.id
+definition.input
+definition.broadcast
+definition.processor
+definition.signature
+stageNumber
+startTime
+multiStageQuery.payload.stages
+READING_INPUT
+POST_READING
+RESULTS_COMPLETE
+workerCount
+partitionCount
+startCount
+# MSQ errors and limits
+BroadcastTablesTooLarge  
+CannotParseExternalData 
+ColumnNameRestricted
+ColumnTypeNotSupported
+DurableStorageConfiguration  
+ColumnTypeNotSupported 
+InsertCannotAllocateSegment
+InsertCannotBeEmpty 
+InsertCannotOrderByDescending  
+InsertCannotReplaceExistingSegment 
+InsertLockPreempted  
+InsertTimeNull
+CURRENT_TIMESTAMP  
+InsertTimeOutOfBounds
+UnknownError
+TaskStartTimeout
+OutOfMemoryError
+SegmentGenerator
+maxFrameSize
+InvalidNullByte  
+QueryNotSupported   
+QueryNotSupported   
+RowTooLarge  
+TooManyBuckets  
+TooManyInputFiles 
+TooManyPartitions   
+TooManyColumns 
+TooManyWarnings 
+TooManyWorkers 
+NotEnoughMemory  
+WorkerFailed  
+WorkerRpcFailed  
+# MSQ context parameters
+maxNumTasks 
+taskAssignment 
+finalizeAggregations 
+rowsInMemory 
+segmentSortOrder 
+rowsPerSegment 
+durableShuffleStorage
+# Aggregations
+groupByEnableMultiValueUnnesting
+APPROX_COUNT_DISTINCT_DS_HLL
+APPROX_COUNT_DISTINCT_DS_THETA
+APPROX_QUANTILE_DS
+DS_QUANTILES_SKETCH
+APPROX_QUANTILE_FIXED_BUCKETS
+
+# File specific overrides
  - ../docs/comparisons/druid-vs-elasticsearch.md
 100x
  - ../docs/configuration/logging.md
@@ -1066,6 +1166,7 @@ com.example
 common.runtime.properties
 druid-aws-rds-extensions
 druid-cassandra-storage
+druid-compressed-bigdecimal
 druid-distinctcount
 druid-ec2-extensions
 druid-kafka-extraction-namespace
@@ -2070,6 +2171,15 @@ CDF
 maxStreamLength
 toString
 100TB
+- ../docs/development/extensions-contrib/compressed-big-decimal.md
+compressedBigDecimal
+limitSpec
+metricsSpec
+postAggregations
+SaleAmount
+IngestionSpec
+druid-compressed-bigdecimal
+doubleSum
  - ../docs/querying/sql-functions.md
 ANY_VALUE 
 APPROX_COUNT_DISTINCT_DS_HLL 

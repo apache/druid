@@ -186,6 +186,7 @@
         <module>extensions-core/druid-ranger-security</module>
         <module>extensions-core/testing-tools</module>
         <!-- Community extensions -->
+        <module>extensions-contrib/compressed-bigdecimal</module>
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
         <module>extensions-contrib/dropwizard-emitter</module>
@@ -269,7 +270,12 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.8.1</version>
+                <version>3.12.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-text</artifactId>
+                <version>1.9</version>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
