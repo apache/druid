@@ -252,7 +252,7 @@ Druid supports a small, simplified subset of the [JSONPath syntax](https://githu
 |`['<name>']`| Child element in bracket notation. |
 |`[<number>]`| Array index. |
 
-See [SQL JSON documentation](../querying/sql-json-functions.md#jsonpath-syntax) for examples.
+See [SQL JSON documentation](../querying/sql-json-functions.md#jsonpath-syntax) for examples and [Nested columns](../querying/nested-columns.md) for more information on ingesting and storing nested data.
 
 ## Reduction functions
 

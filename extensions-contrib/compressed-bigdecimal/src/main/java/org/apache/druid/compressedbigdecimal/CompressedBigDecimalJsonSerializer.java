@@ -17,17 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.compressedbigdecimal;
 
-import org.gridkit.lab.jvm.perfdata.JStatData;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 
-public class GcNameTest
+import java.io.IOException;
+
+/**
+ * CompressedBigDecimal json serializer.
+ */
+@SuppressWarnings("rawtypes")
+public class CompressedBigDecimalJsonSerializer extends JsonSerializer<CompressedBigDecimal>
 {
 
-  public static void main(String[] args)
+  /* (non-Javadoc)
+   * @see JsonSerializer#serialize(java.lang.Object, com.fasterxml.jackson.core.JsonGenerator,
+   * com.fasterxml.jackson.databind.SerializerProvider)
+   */
+  @Override
+  public void serialize(CompressedBigDecimal value, JsonGenerator jgen, SerializerProvider provider)
+      throws IOException
   {
-    JStatData jStatData = JStatData.connect(SigarUtil.getCurrentProcessId());
-    System.out.println(jStatData.getAllCounters().get("sun.gc.collector.0.name").getValue());
-    System.out.println(jStatData.getAllCounters().get("sun.gc.collector.1.name").getValue());
+    jgen.writeString(value.toString());
   }
 }

@@ -186,6 +186,7 @@
         <module>extensions-core/druid-ranger-security</module>
         <module>extensions-core/testing-tools</module>
         <!-- Community extensions -->
+        <module>extensions-contrib/compressed-bigdecimal</module>
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
         <module>extensions-contrib/dropwizard-emitter</module>
@@ -840,11 +841,6 @@
                 <artifactId>async-http-client</artifactId>
                 <!-- Uses Netty 4.1.x -->
                 <version>2.5.3</version>
-            </dependency>
-            <dependency>
-                <groupId>org.gridkit.lab</groupId>
-                <artifactId>jvm-attach-api</artifactId>
-                <version>1.5</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
@@ -1690,10 +1686,6 @@
             </activation>
             <properties>
                 <jdk.surefire.argLine>
-                    <!-- required for JvmMonitor on Java 11+ -->
-                    --add-exports=java.base/jdk.internal.perf=ALL-UNNAMED
-                    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
-
                     <!-- required for DataSketches Memory on Java 11+ -->
                     --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
                     --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED

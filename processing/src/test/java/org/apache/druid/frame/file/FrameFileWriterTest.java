@@ -70,16 +70,11 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
 
     fileWriter.abort();
 
-    final IOException e = Assert.assertThrows(IOException.class, () -> FrameFile.open(file));
+    final IllegalStateException e = Assert.assertThrows(IllegalStateException.class, () -> FrameFile.open(file));
 
     MatcherAssert.assertThat(
         e,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.anyOf(
-                CoreMatchers.containsString("end marker location out of range"),
-                CoreMatchers.containsString("end marker not in expected location")
-            )
-        )
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Corrupt or truncated file?"))
     );
   }
 }
