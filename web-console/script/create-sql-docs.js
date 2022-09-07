@@ -23,7 +23,7 @@ const snarkdown = require('snarkdown');
 
 const writefile = 'lib/sql-docs.js';
 
-const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 158;
+const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 162;
 const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 14;
 
 function hasHtmlTags(str) {
@@ -90,15 +90,15 @@ const readDoc = async () => {
 
   // Make sure there are enough functions found
   const numFunction = Object.keys(functionDocs).length;
-  if (numFunction < MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS) {
+  if (!(MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS <= numFunction)) {
     throw new Error(
       `Did not find enough function entries did the structure of '${readfile}' change? (found ${numFunction} but expected at least ${MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS})`,
     );
   }
 
   // Make sure there are at least 10 data types for sanity
-  const numDataTypes = dataTypeDocs.length;
-  if (numDataTypes < MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES) {
+  const numDataTypes = Object.keys(dataTypeDocs).length;
+  if (!(MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES <= numDataTypes)) {
     throw new Error(
       `Did not find enough data type entries did the structure of '${readfile}' change? (found ${numDataTypes} but expected at least ${MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES})`,
     );
