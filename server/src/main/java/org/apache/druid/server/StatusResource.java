@@ -85,6 +85,9 @@ public class StatusResource
   /**
    * filter out entries from allProperties with key containing elements in hiddenProperties (case insensitive)
    *
+   * for example, if hiddenProperties = ["pwd"] and allProperties = {"foopwd": "secret", "foo": "bar", "my.pwd": "secret"},
+   * this method will return {"foo":"bar"}
+   *
    * @return map of properties that are not filtered out.
    */
   @Nonnull
