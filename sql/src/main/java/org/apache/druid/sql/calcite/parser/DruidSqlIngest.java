@@ -27,6 +27,11 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 
 import javax.annotation.Nullable;
 
+/**
+ * Common base class to the two Druid "ingest" statements: INSERT and REPLACE.
+ * Allows Planner code to work with these two statements generically where they
+ * share common clauses.
+ */
 public abstract class DruidSqlIngest extends SqlInsert
 {
   protected final Granularity partitionedBy;

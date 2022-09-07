@@ -67,13 +67,13 @@ public abstract class IngestHandler extends QueryHandler
 
   IngestHandler(
       HandlerContext handlerContext,
-      DruidSqlIngest insertNode,
+      DruidSqlIngest ingestNode,
       SqlNode queryNode,
       SqlExplain explain
   )
   {
     super(handlerContext, queryNode, explain);
-    this.ingestionGranularity = insertNode.getPartitionedBy();
+    this.ingestionGranularity = ingestNode.getPartitionedBy();
   }
 
   protected static SqlNode convertQuery(DruidSqlIngest sqlNode) throws ValidationException
