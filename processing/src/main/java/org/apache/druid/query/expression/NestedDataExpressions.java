@@ -24,12 +24,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.NamedFunction;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
@@ -62,7 +62,10 @@ public class NestedDataExpressions
     @Override
     public Expr apply(List<Expr> args)
     {
-      Preconditions.checkArgument(args.size() % 2 == 0);
+      if (args.size() % 2 != 0) {
+        throw validationFailed("must have an even number of arguments");
+      }
+
       class StructExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
         public StructExpr(List<Expr> args)
@@ -78,7 +81,9 @@ public class NestedDataExpressions
             ExprEval field = args.get(i).eval(bindings);
             ExprEval value = args.get(i + 1).eval(bindings);
 
-            Preconditions.checkArgument(field.type().is(ExprType.STRING), "field name must be a STRING");
+            if (!field.type().is(ExprType.STRING)) {
+              throw JsonObjectExprMacro.this.validationFailed("field name must be a STRING");
+            }
             theMap.put(field.asString(), unwrap(value));
           }
 
@@ -146,7 +151,11 @@ public class NestedDataExpressions
             );
           }
           catch (JsonProcessingException e) {
-            throw new IAE(e, "Unable to stringify [%s] to JSON", input.value());
+            throw ToJsonStringExprMacro.this.processingFailed(
+                e,
+                "unable to stringify [%s] to JSON",
+                input.value()
+            );
           }
         }
 
@@ -213,15 +222,13 @@ public class NestedDataExpressions
               );
             }
             catch (JsonProcessingException e) {
-              throw new IAE("Bad string input [%s] to [%s]", arg.asString(), name());
+              throw ParseJsonExprMacro.this.processingFailed(e, "bad string input [%s]", arg.asString());
             }
           }
-          throw new IAE(
-              "Invalid input [%s] of type [%s] to [%s], expected [%s]",
-              arg.asString(),
-              arg.type(),
-              name(),
-              ExpressionType.STRING
+          throw ParseJsonExprMacro.this.validationFailed(
+              "invalid input expected %s but got %s instead",
+              ExpressionType.STRING,
+              arg.type()
           );
         }
 
@@ -328,11 +335,14 @@ public class NestedDataExpressions
     @Override
     public Expr apply(List<Expr> args)
     {
-      final List<NestedPathPart> parts = getJsonPathPartsFromLiteral(name(), args.get(1));
+      final List<NestedPathPart> parts = getJsonPathPartsFromLiteral(this, args.get(1));
       if (args.size() == 3 && args.get(2).isLiteral()) {
         final ExpressionType castTo = ExpressionType.fromString((String) args.get(2).getLiteralValue());
         if (castTo == null) {
-          throw new IAE("Invalid output type: [%s]", args.get(2).getLiteralValue());
+          throw JsonValueExprMacro.this.validationFailed(
+              "invalid output type: [%s]",
+              args.get(2).getLiteralValue()
+          );
         }
         final class JsonValueCastExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
         {
@@ -416,7 +426,7 @@ public class NestedDataExpressions
     @Override
     public Expr apply(List<Expr> args)
     {
-      final List<NestedPathPart> parts = getJsonPathPartsFromLiteral(name(), args.get(1));
+      final List<NestedPathPart> parts = getJsonPathPartsFromLiteral(this, args.get(1));
       final class JsonQueryExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
         public JsonQueryExpr(List<Expr> args)
@@ -530,7 +540,7 @@ public class NestedDataExpressions
     @Override
     public Expr apply(List<Expr> args)
     {
-      final List<NestedPathPart> parts = getJsonPathPartsFromLiteral(name(), args.get(1));
+      final List<NestedPathPart> parts = getJsonPathPartsFromLiteral(this, args.get(1));
       final class JsonKeysExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
         public JsonKeysExpr(List<Expr> args)
@@ -582,12 +592,11 @@ public class NestedDataExpressions
   }
 
 
-  static List<NestedPathPart> getJsonPathPartsFromLiteral(String fnName, Expr arg)
+  static List<NestedPathPart> getJsonPathPartsFromLiteral(NamedFunction fn, Expr arg)
   {
     if (!(arg.isLiteral() && arg.getLiteralValue() instanceof String)) {
-      throw new IAE(
-          "Function[%s] second argument [%s] must be a literal [%s] value",
-          fnName,
+      throw fn.validationFailed(
+          "second argument [%s] must be a literal [%s] value",
           arg.stringify(),
           ExpressionType.STRING
       );

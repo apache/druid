@@ -200,8 +200,8 @@ Apply functions allow for special 'lambda' expressions to be defined and applied
 | map(lambda,arr) | applies a transform specified by a single argument lambda expression to all elements of arr, returning a new array |
 | cartesian_map(lambda,arr1,arr2,...) | applies a transform specified by a multi argument lambda expression to all elements of the Cartesian product of all input arrays, returning a new array; the number of lambda arguments and array inputs must be the same |
 | filter(lambda,arr) | filters arr by a single argument lambda, returning a new array with all matching elements, or null if no elements match |
-| fold(lambda,arr) | folds a 2 argument lambda across arr. The first argument of the lambda is the array element and the second the accumulator, returning a single accumulated value. |
-| cartesian_fold(lambda,arr1,arr2,...) | folds a multi argument lambda across the Cartesian product of all input arrays. The first arguments of the lambda is the array element and the last is the accumulator, returning a single accumulated value. |
+| fold(lambda,arr,acc) | folds a 2 argument lambda across arr using acc as the initial input value. The first argument of the lambda is the array element and the second the accumulator, returning a single accumulated value. |
+| cartesian_fold(lambda,arr1,arr2,...,acc) | folds a multi argument lambda across the Cartesian product of all input arrays using acc as the initial input value. The first arguments of the lambda are the array elements of each array and the last is the accumulator, returning a single accumulated value. |
 | any(lambda,arr) | returns 1 if any element in the array matches the lambda expression, else 0 |
 | all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |
 

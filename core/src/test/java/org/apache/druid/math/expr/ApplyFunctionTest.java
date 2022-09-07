@@ -65,7 +65,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
 
     assertExpr("map((x) -> x + 1, map((x) -> x + 1, [1, 2, 3, 4, 5]))", new Long[] {3L, 4L, 5L, 6L, 7L});
     assertExpr("map((x) -> x + 1, map((x) -> x + 1, b))", new Long[] {3L, 4L, 5L, 6L, 7L});
-    assertExpr("map(() -> 1, [1, 2, 3, 4, 5])", new Long[] {1L, 1L, 1L, 1L, 1L});
+    assertExpr("map((x) -> 1, [1, 2, 3, 4, 5])", new Long[] {1L, 1L, 1L, 1L, 1L});
   }
 
   @Test
@@ -73,7 +73,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
   {
     assertExpr("cartesian_map((x, y) -> concat(x, y), ['foo', 'bar', 'baz', 'foobar'], ['bar', 'baz'])", new String[] {"foobar", "foobaz", "barbar", "barbaz", "bazbar", "bazbaz", "foobarbar", "foobarbaz"});
     assertExpr("cartesian_map((x, y, z) -> concat(concat(x, y), z), ['foo', 'bar', 'baz', 'foobar'], ['bar', 'baz'], ['omg'])", new String[] {"foobaromg", "foobazomg", "barbaromg", "barbazomg", "bazbaromg", "bazbazomg", "foobarbaromg", "foobarbazomg"});
-    assertExpr("cartesian_map(() -> 1, [1, 2], [1, 2, 3])", new Long[] {1L, 1L, 1L, 1L, 1L, 1L});
+    assertExpr("cartesian_map((x, y) -> 1, [1, 2], [1, 2, 3])", new Long[] {1L, 1L, 1L, 1L, 1L, 1L});
     assertExpr("cartesian_map((x, y) -> concat(x, y), d, d)", new String[] {null});
     assertExpr("cartesian_map((x, y) -> concat(x, y), d, f)", new String[0]);
     if (NullHandling.replaceWithDefault()) {
@@ -140,21 +140,60 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testInvalidArgCount()
+  public void testInvalidArgCountFold()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("lambda expression argument count does not match fold argument count");
+    expectedException.expect(ExpressionValidationException.class);
+    expectedException.expectMessage("Function[fold] requires 3 arguments");
+    assertExpr("fold((x, y) -> x + 1, [1, 1, 1, 1, 1])", null);
+  }
+
+  @Test
+  public void testInvalidArgCountFoldLambda()
+  {
+    expectedException.expect(ExpressionValidationException.class);
+    expectedException.expectMessage("Function[fold] lambda expression argument count of 0 does not match the 2 arguments passed to it");
     assertExpr("fold(() -> 1, [1, 1, 1, 1, 1], 0)", null);
 
-    expectedException.expectMessage("lambda expression argument count does not match cartesian_fold argument count");
+  }
+
+  @Test
+  public void testInvalidArgCountCartesianFoldLambda()
+  {
+    expectedException.expect(ExpressionValidationException.class);
+    expectedException.expectMessage("Function[cartesian_fold] lambda expression argument count of 0 does not match the 3 arguments passed to it");
     assertExpr("cartesian_fold(() -> 1, [1, 1, 1, 1, 1], [1, 1], 0)", null);
+  }
 
-    expectedException.expectMessage("lambda expression argument count does not match any argument count");
+  @Test
+  public void testInvalidArgCountAny()
+  {
+    expectedException.expect(ExpressionValidationException.class);
+    expectedException.expectMessage("Function[any] requires 2 arguments");
+    assertExpr("any((x) -> 1, [1, 2, 3, 4], y)", null);
+  }
+
+  @Test
+  public void testInvalidArgCountAnyLambda()
+  {
+    expectedException.expect(ExpressionValidationException.class);
+    expectedException.expectMessage("Function[any] lambda expression argument count of 0 does not match the 1 arguments passed to it");
     assertExpr("any(() -> 1, [1, 2, 3, 4])", null);
+  }
 
-    expectedException.expectMessage("lambda expression argument count does not match all argument count");
+  @Test
+  public void testInvalidArgCountAll()
+  {
+    expectedException.expect(ExpressionValidationException.class);
+    expectedException.expectMessage("Function[all] requires 2 arguments");
+    assertExpr("all((x) -> 0, [1, 2, 3, 4], y)", null);
+  }
+
+  @Test
+  public void testInvalidArgCountAllLambda()
+  {
+    expectedException.expect(ExpressionValidationException.class);
+    expectedException.expectMessage("Function[all] lambda expression argument count of 0 does not match the 1 arguments passed to it");
     assertExpr("all(() -> 0, [1, 2, 3, 4])", null);
-
   }
 
   private void assertExpr(final String expression, final Object expectedResult)
