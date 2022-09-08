@@ -70,15 +70,16 @@ public class PrometheusEmitterConfig
       @JsonProperty("addServiceAsLabel") boolean addServiceAsLabel
   )
   {
-
     this.strategy = strategy != null ? strategy : Strategy.exporter;
     this.namespace = namespace != null ? namespace : "druid";
     Preconditions.checkArgument(PATTERN.matcher(this.namespace).matches(), "Invalid namespace " + this.namespace);
+    if (strategy == Strategy.exporter) {
+      Preconditions.checkArgument(port != null, "For `exporter` strategy, port must be specified.");
+    } else if (strategy == Strategy.pushgateway) {
+      Preconditions.checkArgument(pushGatewayAddress != null, "For `pushgateway` strategy, pushGatewayAddress must be specified.");
+    }
     this.dimensionMapPath = dimensionMapPath;
     this.port = port;
-    if (this.strategy == Strategy.pushgateway) {
-      Preconditions.checkNotNull(pushGatewayAddress, "Invalid pushGateway address");
-    }
     this.pushGatewayAddress = pushGatewayAddress;
     this.addHostAsLabel = addHostAsLabel;
     this.addServiceAsLabel = addServiceAsLabel;
