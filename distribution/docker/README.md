@@ -27,8 +27,8 @@ DOCKER_BUILDKIT=1 docker build -t apache/druid:tag -f distribution/docker/Docker
 
 ## Run
 
-1. Edit `distribution/docker/docker-compose.yml` file to change the tag of Druid's images to the tag that's used in above command.
-2. Edit `environment` file to match your need.
+1. Edit `distribution/docker/docker-compose.yml` file to change the tag of Druid's images to the tag that's used in the 'Build' phase above.
+2. Edit `environment` file to suite if necessary.
 3. Run:
     ```bash
     docker-compose -f distribution/docker/docker-compose.yml up

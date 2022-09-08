@@ -36,7 +36,6 @@ RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; th
       install \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
-      -P-druid-benchmarks -P-druid-integration-tests -P-druid-testing-tools \
       -Dmaven.javadoc.skip=true \
       ; fi
 
