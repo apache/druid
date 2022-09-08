@@ -42,8 +42,11 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
     Assert.assertEquals("NaN", DruidExpression.doubleLiteral(Double.NaN));
     Assert.assertEquals("Infinity", DruidExpression.doubleLiteral(Double.POSITIVE_INFINITY));
     Assert.assertEquals("-Infinity", DruidExpression.doubleLiteral(Double.NEGATIVE_INFINITY));
+    //CHECKSTYLE.OFF: Regexp
+    // Min/max double are banned by regexp due to often being inappropriate; but they are appropriate here.
     Assert.assertEquals("4.9E-324", DruidExpression.doubleLiteral(Double.MIN_VALUE));
     Assert.assertEquals("1.7976931348623157E308", DruidExpression.doubleLiteral(Double.MAX_VALUE));
+    //CHECKSTYLE.ON: Regexp
     Assert.assertEquals("2.2250738585072014E-308", DruidExpression.doubleLiteral(Double.MIN_NORMAL));
   }
 
@@ -58,8 +61,11 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
         2.12345678,
         2.2e122,
         Double.NaN,
+        //CHECKSTYLE.OFF: Regexp
+        // Min/max double are banned by regexp due to often being inappropriate; but they are appropriate here.
         Double.POSITIVE_INFINITY,
         Double.NEGATIVE_INFINITY,
+        //CHECKSTYLE.ON: Regexp
         Double.MIN_VALUE,
         Double.MAX_VALUE,
         Double.MIN_NORMAL

@@ -292,7 +292,7 @@ public class Expressions
           columnType,
           number == null ? DruidExpression.nullLiteral() : DruidExpression.longLiteral(number.longValue())
       );
-    } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)){
+    } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
       // Numeric, non-INT, means we represent it as a double.
       final Number number = (Number) RexLiteral.value(rexNode);
       return DruidExpression.ofLiteral(
