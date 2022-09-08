@@ -25,17 +25,14 @@ From the root of the repo, run following command:
 DOCKER_BUILDKIT=1 docker build -t apache/druid:tag -f distribution/docker/Dockerfile .
 ```
 
-> NOTE:
-> By default, the Druid image is built and run in Java 11 environment.
-> If you want to run Druid in Java 8 environment, you need to add `--build-arg JDK_VERSION=8` to above command.
-
 ## Run
 
-Edit `environment` file to suite. Run:
-
-```bash
-docker-compose -f distribution/docker/docker-compose.yml up
-```
+1. Edit `distribution/docker/docker-compose.yml` file to change the tag of Druid's images to the tag that's used in above command.
+2. Edit `environment` file to match your need.
+3. Run:
+    ```bash
+    docker-compose -f distribution/docker/docker-compose.yml up
+    ```
 
 ## MySQL Database Connector
 

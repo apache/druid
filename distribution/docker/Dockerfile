@@ -53,6 +53,8 @@ LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox
 RUN ["/busybox/busybox", "--install", "/bin"]
+RUN wget https://github.com/robxu9/bash-static/releases/download/5.1.016-1.2.3/bash-linux-x86_64 -O /bin/bash \
+ && chmod 755 /bin/bash
 
 RUN addgroup -S -g 1000 druid \
  && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid
