@@ -180,6 +180,8 @@ public class NativeQueryMaker implements QueryMaker
       final String queryId = UUID.randomUUID().toString();
       plannerContext.addNativeQueryId(queryId);
       query = query.withId(queryId);
+    } else {
+      plannerContext.addNativeQueryId(query.getId());
     }
 
     query = query.withSqlQueryId(plannerContext.getSqlQueryId());

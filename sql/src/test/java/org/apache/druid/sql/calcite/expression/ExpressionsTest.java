@@ -34,7 +34,7 @@ import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.filter.RegexDimFilter;
@@ -1115,8 +1115,8 @@ public class ExpressionsTest extends ExpressionTestBase
 
     if (!NullHandling.sqlCompatible()) {
       expectException(
-          IAE.class,
-          "The first argument to the function[round] should be integer or double type but got the type: STRING"
+          ExpressionValidationException.class,
+          "Function[round] first argument should be a LONG or DOUBLE but got STRING instead"
       );
     }
     testHelper.testExpression(
@@ -1139,8 +1139,8 @@ public class ExpressionsTest extends ExpressionTestBase
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
     expectException(
-        IAE.class,
-        "The second argument to the function[round] should be integer type but got the type: STRING"
+        ExpressionValidationException.class,
+        "Function[round] second argument should be a LONG but got STRING instead"
     );
     testHelper.testExpressionString(
         roundFunction,
@@ -2098,7 +2098,10 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalReverseWithWrongType()
   {
-    expectException(IAE.class, "Function[reverse] needs a string argument");
+    expectException(
+        ExpressionValidationException.class,
+        "Function[reverse] needs a STRING argument but got LONG instead"
+    );
 
     testHelper.testExpression(
         new ReverseOperatorConversion().calciteOperator(),
@@ -2171,7 +2174,10 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalRightWithNegativeNumber()
   {
-    expectException(IAE.class, "Function[right] needs a postive integer as second argument");
+    expectException(
+        ExpressionValidationException.class,
+        "Function[right] needs a positive integer as the second argument"
+    );
 
     testHelper.testExpressionString(
         new RightOperatorConversion().calciteOperator(),
@@ -2187,7 +2193,10 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalRightWithWrongType()
   {
-    expectException(IAE.class, "Function[right] needs a string as first argument and an integer as second argument");
+    expectException(
+        ExpressionValidationException.class,
+        "Function[right] needs a STRING as first argument and a LONG as second argument"
+    );
 
     testHelper.testExpressionString(
         new RightOperatorConversion().calciteOperator(),
@@ -2257,7 +2266,10 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalLeftWithNegativeNumber()
   {
-    expectException(IAE.class, "Function[left] needs a postive integer as second argument");
+    expectException(
+        ExpressionValidationException.class,
+        "Function[left] needs a postive integer as second argument"
+    );
 
     testHelper.testExpressionString(
         new LeftOperatorConversion().calciteOperator(),
@@ -2273,7 +2285,10 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalLeftWithWrongType()
   {
-    expectException(IAE.class, "Function[left] needs a string as first argument and an integer as second argument");
+    expectException(
+        ExpressionValidationException.class,
+        "Function[left] needs a STRING as first argument and a LONG as second argument"
+    );
 
     testHelper.testExpressionString(
         new LeftOperatorConversion().calciteOperator(),
@@ -2323,7 +2338,10 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalRepeatWithWrongType()
   {
-    expectException(IAE.class, "Function[repeat] needs a string as first argument and an integer as second argument");
+    expectException(
+        ExpressionValidationException.class,
+        "Function[repeat] needs a STRING as first argument and a LONG as second argument"
+    );
 
     testHelper.testExpressionString(
         new RepeatOperatorConversion().calciteOperator(),
