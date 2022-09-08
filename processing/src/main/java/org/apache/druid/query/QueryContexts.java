@@ -477,7 +477,7 @@ public class QueryContexts
   }
 
   public static String getAsString(
-      final String parameter,
+      final String key,
       final Object value,
       final String defaultValue
   )
@@ -487,7 +487,7 @@ public class QueryContexts
     } else if (value instanceof String) {
       return (String) value;
     } else {
-      throw new IAE("Expected parameter [%s] to be a String, but got [%s]", parameter, value.getClass().getName());
+      throw new IAE("Expected key [%s] to be a String, but got [%s]", key, value.getClass().getName());
     }
   }
 
@@ -513,17 +513,17 @@ public class QueryContexts
    * to be {@code null}, a string or a {@code Boolean} object.
    */
   public static boolean getAsBoolean(
-      final String parameter,
+      final String key,
       final Object value,
       final boolean defaultValue
   )
   {
-    Boolean val = getAsBoolean(parameter, value);
+    Boolean val = getAsBoolean(key, value);
     return val == null ? defaultValue : val;
   }
 
   @Nullable
-  public static Integer getAsInt(String parameter, Object value)
+  public static Integer getAsInt(String key, Object value)
   {
     if (value == null) {
       return null;
@@ -534,11 +534,11 @@ public class QueryContexts
         return Numbers.parseInt(value);
       }
       catch (NumberFormatException ignored) {
-        throw new IAE("Expected parameter [%s] in integer format, but got [%s]", parameter, value);
+        throw new IAE("Expected key [%s] in integer format, but got [%s]", key, value);
       }
     }
 
-    throw new IAE("Expected parameter [%s] to be an Integer, but got [%s]", parameter, value.getClass().getName());
+    throw new IAE("Expected key [%s] to be an Integer, but got [%s]", key, value.getClass().getName());
   }
 
   /**
@@ -546,17 +546,17 @@ public class QueryContexts
    * to be {@code null}, a string or a {@code Number} object.
    */
   public static int getAsInt(
-      final String parameter,
+      final String ke,
       final Object value,
       final int defaultValue
   )
   {
-    Integer val = getAsInt(parameter, value);
+    Integer val = getAsInt(ke, value);
     return val == null ? defaultValue : val;
   }
 
   @Nullable
-  public static Long getAsLong(String parameter, Object value)
+  public static Long getAsLong(String key, Object value)
   {
     if (value == null) {
       return null;
@@ -567,10 +567,10 @@ public class QueryContexts
         return Numbers.parseLong(value);
       }
       catch (NumberFormatException ignored) {
-        throw new IAE("Expected parameter [%s] in long format, but got [%s]", parameter, value);
+        throw new IAE("Expected key [%s] in long format, but got [%s]", key, value);
       }
     }
-    throw new IAE("Expected parameter [%s] to be a Long, but got [%s]", parameter, value.getClass().getName());
+    throw new IAE("Expected key [%s] to be a Long, but got [%s]", key, value.getClass().getName());
   }
 
   /**
@@ -578,12 +578,12 @@ public class QueryContexts
    * to be {@code null}, a string or a {@code Number} object.
    */
   public static long getAsLong(
-      final String parameter,
+      final String key,
       final Object value,
       final long defaultValue
   )
   {
-    Long val = getAsLong(parameter, value);
+    Long val = getAsLong(key, value);
     return val == null ? defaultValue : val;
   }
 
@@ -602,14 +602,14 @@ public class QueryContexts
         return HumanReadableBytes.valueOf(HumanReadableBytes.parse((String) value));
       }
       catch (IAE e) {
-        throw new IAE("Expected parameter [%s] in human readable format, but got [%s]", parameter, value);
+        throw new IAE("Expected key [%s] in human readable format, but got [%s]", parameter, value);
       }
     }
 
-    throw new IAE("Expected parameter [%s] to be a human readable number, but got [%s]", parameter, value.getClass().getName());
+    throw new IAE("Expected key [%s] to be a human readable number, but got [%s]", parameter, value.getClass().getName());
   }
 
-  public static float getAsFloat(String parameter, Object value, float defaultValue)
+  public static float getAsFloat(String key, Object value, float defaultValue)
   {
     if (null == value) {
       return defaultValue;
@@ -620,10 +620,10 @@ public class QueryContexts
         return Float.parseFloat((String) value);
       }
       catch (NumberFormatException ignored) {
-        throw new IAE("Expected parameter [%s] in float format, but got [%s]", parameter, value);
+        throw new IAE("Expected key [%s] in float format, but got [%s]", key, value);
       }
     }
-    throw new IAE("Expected parameter [%s] to be a Float, but got [%s]", parameter, value.getClass().getName());
+    throw new IAE("Expected key [%s] to be a Float, but got [%s]", key, value.getClass().getName());
   }
 
   public static Map<String, Object> override(
@@ -644,7 +644,7 @@ public class QueryContexts
   {
   }
 
-  public static <E extends Enum<E>> E getAsEnum(String parameter, Object val, Class<E> clazz, E defaultValue)
+  public static <E extends Enum<E>> E getAsEnum(String key, Object val, Class<E> clazz, E defaultValue)
   {
     if (val == null) {
       return defaultValue;
@@ -658,15 +658,15 @@ public class QueryContexts
       }
     }
     catch (IllegalArgumentException e) {
-      throw new IAE("Expected parameter [%s] must be value of enum [%s], but got [%s].",
-                    parameter,
+      throw new IAE("Expected key [%s] must be value of enum [%s], but got [%s].",
+                    key,
                     clazz.getName(),
                     val.toString());
     }
 
     throw new ISE(
-        "Expected parameter [%s] must be type of [%s], actual type is [%s].",
-        parameter,
+        "Expected key [%s] must be type of [%s], actual type is [%s].",
+        key,
         clazz.getName(),
         val.getClass()
     );

@@ -125,7 +125,10 @@ public interface Query<T>
   }
 
   /**
-   * Get context value. It's recommended to use following methods instead
+   * Get context value and cast to ContextType in an unsafe way.
+   *
+   * For safe conversion, it's recommended to use following methods instead
+   *
    * {@link #getContextBoolean(String, boolean)}
    * {@link #getContextAsString(String)}
    * {@link #getContextAsInt(String)}
@@ -135,106 +138,106 @@ public interface Query<T>
    * {@link #getContextAsHumanReadableBytes(String, HumanReadableBytes)}
    */
   @Nullable
-  default Object getContextValue(String key)
+  default <ContextType> ContextType getContextValue(String key)
   {
-    if (getQueryContext() != null) {
-      return getQueryContext().get(key);
-    } else {
+    if (getQueryContext() == null) {
       return null;
+    } else {
+      return (ContextType) getQueryContext().get(key);
     }
   }
 
   @Nullable
   default String getContextAsString(String key)
   {
-    if (getQueryContext() != null) {
-      return getQueryContext().getAsString(key);
-    } else {
+    if (getQueryContext() == null) {
       return null;
+    } else {
+      return getQueryContext().getAsString(key);
     }
   }
 
   default String getContextAsString(String key, String defaultValue)
   {
-    if (getQueryContext() != null) {
-      return getQueryContext().getAsString(key, defaultValue);
-    } else {
+    if (getQueryContext() == null) {
       return defaultValue;
+    } else {
+      return getQueryContext().getAsString(key, defaultValue);
     }
   }
 
   @Nullable
   default Integer getContextAsInt(String key)
   {
-    if (getQueryContext() != null) {
-      return getQueryContext().getAsInt(key);
-    } else {
+    if (getQueryContext() == null) {
       return null;
+    } else {
+      return getQueryContext().getAsInt(key);
     }
   }
 
   default int getContextAsInt(String key, int defaultValue)
   {
-    if (getQueryContext() != null) {
-      return getQueryContext().getAsInt(key, defaultValue);
-    } else {
+    if (getQueryContext() == null) {
       return defaultValue;
+    } else {
+      return getQueryContext().getAsInt(key, defaultValue);
     }
   }
 
   @Nullable
   default Long getContextAsLong(String key)
   {
-    if (getQueryContext() != null) {
-      return getQueryContext().getAsLong(key);
-    } else {
+    if (getQueryContext() == null) {
       return null;
+    } else {
+      return getQueryContext().getAsLong(key);
     }
   }
 
   default long getContextAsLong(String key, long defaultValue)
   {
-    if (getQueryContext() != null) {
-      return getQueryContext().getAsLong(key, defaultValue);
-    } else {
+    if (getQueryContext() == null) {
       return defaultValue;
+    } else {
+      return getQueryContext().getAsLong(key, defaultValue);
     }
   }
 
   default float getContextAsFloat(String key, float defaultValue)
   {
-    if (getQueryContext() != null) {
-      return getQueryContext().getAsFloat(key, defaultValue);
-    } else {
+    if (getQueryContext() == null) {
       return defaultValue;
+    } else {
+      return getQueryContext().getAsFloat(key, defaultValue);
     }
   }
 
   default <E extends Enum<E>> E getContextAsEnum(String key, Class<E> clazz, E defaultValue)
   {
-    if (getQueryContext() != null) {
-      return getQueryContext().getAsEnum(key, clazz, defaultValue);
-    } else {
+    if (getQueryContext() == null) {
       return defaultValue;
+    } else {
+      return getQueryContext().getAsEnum(key, clazz, defaultValue);
     }
   }
 
   @Nullable
   default Boolean getContextAsBoolean(String key)
   {
-    if (getQueryContext() != null) {
-      return getQueryContext().getAsBoolean(key);
-    } else {
+    if (getQueryContext() == null) {
       return null;
+    } else {
+      return getQueryContext().getAsBoolean(key);
     }
   }
 
   default boolean getContextBoolean(String key, boolean defaultValue)
   {
-    if (getQueryContext() != null) {
-      return getQueryContext().getAsBoolean(key, defaultValue);
-    } else {
+    if (getQueryContext() == null) {
       return defaultValue;
+    } else {
+      return getQueryContext().getAsBoolean(key, defaultValue);
     }
   }
 
@@ -249,10 +252,10 @@ public interface Query<T>
    */
   default HumanReadableBytes getContextAsHumanReadableBytes(String key, HumanReadableBytes defaultValue)
   {
-    if (null != getQueryContext()) {
-      return getQueryContext().getAsHumanReadableBytes(key, defaultValue);
-    } else {
+    if (getQueryContext() == null) {
       return defaultValue;
+    } else {
+      return getQueryContext().getAsHumanReadableBytes(key, defaultValue);
     }
   }
 
