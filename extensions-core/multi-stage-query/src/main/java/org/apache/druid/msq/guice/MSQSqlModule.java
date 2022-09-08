@@ -60,6 +60,8 @@ public class MSQSqlModule implements DruidModule
     // We want this module to bring InputSourceModule along for the ride.
     binder.install(new InputSourceModule());
 
+    binder.bind(MSQTaskSqlEngine.class).in(LazySingleton.class);
+
     // Set up the EXTERN macro.
     SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
   }
