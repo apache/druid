@@ -23,14 +23,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
@@ -65,7 +62,6 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConvers
 import org.apache.druid.sql.calcite.expression.builtin.TimeParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
-import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.joda.time.Period;
 import org.junit.Before;
 import org.junit.Test;
@@ -2480,11 +2476,14 @@ public class ExpressionsTest extends ExpressionTestBase
         makeExpression("human_readable_binary_byte_format(9223372036854775807)"),
         "8.00 EiB"
     );
-
-    /*
-     * NOTE: Test for Long.MIN_VALUE is skipped since ExprListnerImpl#exitLongExpr fails to parse Long.MIN_VALUE
-     * This cases has also been verified in the tests of underlying implementation
-     */
+    testHelper.testExpressionString(
+        HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(Long.MIN_VALUE)
+        ),
+        makeExpression("human_readable_binary_byte_format(-9223372036854775808)"),
+        "-8.00 EiB"
+    );
 
     /*
      * test input with variable reference
@@ -2574,10 +2573,14 @@ public class ExpressionsTest extends ExpressionTestBase
         makeExpression("human_readable_decimal_byte_format(9223372036854775807)"),
         "9.22 EB"
     );
-
-    /*
-     * NOTE: Test for Long.MIN_VALUE is skipped since ExprListnerImpl#exitLongExpr fails to parse Long.MIN_VALUE
-     */
+    testHelper.testExpressionString(
+        HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(Long.MIN_VALUE)
+        ),
+        makeExpression("human_readable_decimal_byte_format(-9223372036854775808)"),
+        "-9.22 EB"
+    );
 
     /*
      * test input with variable reference
@@ -2635,13 +2638,5 @@ public class ExpressionsTest extends ExpressionTestBase
         makeExpression("human_readable_decimal_byte_format(45678,3)"),
         "45.678 KB"
     );
-  }
-
-  @Test
-  public void testLiteralToDruidExpressionForLong()
-  {
-    final RelDataTypeFactory typeFactory = new SqlTypeFactoryImpl(DruidTypeSystem.INSTANCE);
-
-    Expressions.literalToDruidExpression(null, )
   }
 }
