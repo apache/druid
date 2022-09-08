@@ -35,8 +35,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Iterators;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
@@ -107,7 +105,6 @@ public class S3InputSource extends CloudObjectInputSource
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("filter") @Nullable String filter,
       @JsonProperty("properties") @Nullable S3InputSourceConfig s3InputSourceConfig,
       @JsonProperty("proxyConfig") @Nullable AWSProxyConfig awsProxyConfig,
       @JsonProperty("endpointConfig") @Nullable AWSEndpointConfig awsEndpointConfig,
@@ -115,7 +112,7 @@ public class S3InputSource extends CloudObjectInputSource
       @JacksonInject AWSCredentialsProvider awsCredentialsProvider
   )
   {
-    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, filter);
+    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects);
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "S3DataSegmentPusherConfig");
     Preconditions.checkNotNull(s3Client, "s3Client");
     this.s3InputSourceConfig = s3InputSourceConfig;
@@ -185,7 +182,6 @@ public class S3InputSource extends CloudObjectInputSource
       List<URI> uris,
       List<URI> prefixes,
       List<CloudObjectLocation> objects,
-      String filter,
       S3InputSourceConfig s3InputSourceConfig,
       AWSProxyConfig awsProxyConfig,
       AWSEndpointConfig awsEndpointConfig,
@@ -198,7 +194,6 @@ public class S3InputSource extends CloudObjectInputSource
          uris,
          prefixes,
          objects,
-         filter,
          s3InputSourceConfig,
          awsProxyConfig,
          awsEndpointConfig,
@@ -215,7 +210,6 @@ public class S3InputSource extends CloudObjectInputSource
       List<URI> uris,
       List<URI> prefixes,
       List<CloudObjectLocation> objects,
-      String filter,
       S3InputSourceConfig s3InputSourceConfig,
       AWSProxyConfig awsProxyConfig,
       AWSEndpointConfig awsEndpointConfig,
@@ -230,7 +224,6 @@ public class S3InputSource extends CloudObjectInputSource
         uris,
         prefixes,
         objects,
-        filter,
         s3InputSourceConfig,
         awsProxyConfig,
         awsEndpointConfig,
@@ -335,7 +328,6 @@ public class S3InputSource extends CloudObjectInputSource
         null,
         null,
         split.get(),
-        getFilter(),
         getS3InputSourceConfig(),
         getAwsProxyConfig(),
         getAwsEndpointConfig(),
@@ -376,7 +368,6 @@ public class S3InputSource extends CloudObjectInputSource
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
-           ", filter=" + getFilter() +
            ", s3InputSourceConfig=" + getS3InputSourceConfig() +
            ", awsProxyConfig=" + getAwsProxyConfig() +
            ", awsEndpointConfig=" + getAwsEndpointConfig() +
@@ -386,23 +377,10 @@ public class S3InputSource extends CloudObjectInputSource
 
   private Iterable<S3ObjectSummary> getIterableObjectsFromPrefixes()
   {
-    return () -> {
-      Iterator<S3ObjectSummary> iterator = S3Utils.objectSummaryIterator(
-          s3ClientSupplier.get(),
-          getPrefixes(),
-          inputDataConfig.getMaxListingLength(),
-          maxRetries
-      );
-
-      // Skip files that didn't match filter.
-      if (org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
-        iterator = Iterators.filter(
-            iterator,
-            object -> FilenameUtils.wildcardMatch(object.getKey(), getFilter())
-        );
-      }
-
-      return iterator;
-    };
+    return () -> S3Utils.objectSummaryIterator(s3ClientSupplier.get(),
+                                               getPrefixes(),
+                                               inputDataConfig.getMaxListingLength(),
+                                               maxRetries
+                                               );
   }
 }
