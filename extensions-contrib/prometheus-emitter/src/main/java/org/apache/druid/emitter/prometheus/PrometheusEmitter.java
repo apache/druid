@@ -201,6 +201,7 @@ public class PrometheusEmitter implements Emitter
         server.stop();
       }
     } else {
+      exec.shutdownNow();
       flush();
     }
   }
