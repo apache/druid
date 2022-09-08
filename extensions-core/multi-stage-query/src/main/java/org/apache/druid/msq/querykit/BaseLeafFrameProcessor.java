@@ -24,13 +24,13 @@ import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.msq.input.ReadableInput;
@@ -55,7 +55,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
   private final ReadableInput baseInput;
   private final List<ReadableFrameChannel> inputChannels;
   private final ResourceHolder<WritableFrameChannel> outputChannel;
-  private final ResourceHolder<MemoryAllocator> allocator;
+  private final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder;
   private final BroadcastJoinHelper broadcastJoinHelper;
 
   private Function<SegmentReference, SegmentReference> segmentMapFn;
@@ -66,14 +66,14 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
       final Int2ObjectMap<ReadableInput> sideChannels,
       final JoinableFactoryWrapper joinableFactory,
       final ResourceHolder<WritableFrameChannel> outputChannel,
-      final ResourceHolder<MemoryAllocator> allocator,
+      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       final long memoryReservedForBroadcastJoin
   )
   {
     this.query = query;
     this.baseInput = baseInput;
     this.outputChannel = outputChannel;
-    this.allocator = allocator;
+    this.frameWriterFactoryHolder = frameWriterFactoryHolder;
 
     final Pair<List<ReadableFrameChannel>, BroadcastJoinHelper> inputChannelsAndBroadcastJoinHelper =
         makeInputChannelsAndBroadcastJoinHelper(
@@ -120,12 +120,12 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
   {
     // Don't close the output channel, because multiple workers write to the same channel.
     // The channel should be closed by the caller.
-    FrameProcessors.closeAll(inputChannels(), Collections.emptyList(), outputChannel, allocator);
+    FrameProcessors.closeAll(inputChannels(), Collections.emptyList(), outputChannel, frameWriterFactoryHolder);
   }
 
-  protected MemoryAllocator getAllocator()
+  protected FrameWriterFactory getFrameWriterFactory()
   {
-    return allocator.get();
+    return frameWriterFactoryHolder.get();
   }
 
   protected abstract ReturnOrAwait<Long> runWithSegment(SegmentWithDescriptor segment) throws IOException;

@@ -115,7 +115,7 @@ public class ExpressionTypeFactory implements TypeFactory<ExpressionType>
         strategy = complexStrategy;
         break;
       default:
-        throw new ISE("Unsupported column type[%s]", expressionType.getType());
+        throw new ISE("Unsupported expression type[%s]", expressionType.getType());
     }
     return strategy;
   }

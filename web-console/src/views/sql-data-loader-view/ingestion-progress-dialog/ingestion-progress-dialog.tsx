@@ -68,8 +68,8 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
         {insertResultState.isLoading() && (
           <>
             <p>
-              The data is now being loaded. You can say here or do something else. The task can be
-              tracked from both the Query view and the Ingestion views.
+              The data is now being loaded. You can track the task from both the Query and the
+              Ingestion views.
             </p>
             <ExecutionProgressBarPane
               execution={insertResultState.intermediate}

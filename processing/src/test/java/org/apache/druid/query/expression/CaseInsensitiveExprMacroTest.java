@@ -36,14 +36,14 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
   @Test
   public void testErrorZeroArguments()
   {
-    expectException(IllegalArgumentException.class, "Function[icontains_string] must have 2 arguments");
+    expectException(IllegalArgumentException.class, "Function[icontains_string] requires 2 arguments");
     eval("icontains_string()", InputBindings.withMap(ImmutableMap.of()));
   }
 
   @Test
   public void testErrorThreeArguments()
   {
-    expectException(IllegalArgumentException.class, "Function[icontains_string] must have 2 arguments");
+    expectException(IllegalArgumentException.class, "Function[icontains_string] requires 2 arguments");
     eval("icontains_string('a', 'b', 'c')", InputBindings.withMap(ImmutableMap.of()));
   }
 
