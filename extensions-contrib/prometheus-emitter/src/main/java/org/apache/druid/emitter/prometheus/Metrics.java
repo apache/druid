@@ -112,7 +112,7 @@ public class Metrics
         registeredMetrics.put(name, new DimensionsAndCollector(dimensions, collector, metric.conversionFactor));
       }
     }
-    this.registeredMetrics  = Collections.unmodifiableMap(registeredMetrics);
+    this.registeredMetrics = Collections.unmodifiableMap(registeredMetrics);
   }
 
   private Map<String, Metric> readConfig(String path)
