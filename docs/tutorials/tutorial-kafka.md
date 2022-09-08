@@ -46,7 +46,7 @@ cd kafka_2.13-2.7.0
 Start zookeeper first with the following command:
 
 ```bash
-.bin/zookeeper-server-start.sh config/zookeeper.properties
+./bin/zookeeper-server-start.sh config/zookeeper.properties
 ```
 
 Start a Kafka broker by running the following command in a new terminal:
