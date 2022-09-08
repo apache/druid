@@ -30,6 +30,7 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.avatica.SqlType;
+import org.apache.commons.io.output.NullOutputStream;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
@@ -57,9 +58,13 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
@@ -130,6 +135,9 @@ import java.util.stream.Collectors;
 
 public class SqlResourceTest extends CalciteTestBase
 {
+  public static final DruidNode DUMMY_DRUID_NODE = new DruidNode("dummy", "dummy", false, 1, null, true, false);
+  public static final ResponseContextConfig TEST_RESPONSE_CONTEXT_CONFIG = ResponseContextConfig.newConfig(false);
+
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final String DUMMY_SQL_QUERY_ID = "dummy";
   // Timeout to allow (rapid) debugging, while not blocking tests with errors.
@@ -166,6 +174,7 @@ public class SqlResourceTest extends CalciteTestBase
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier = new SettableSupplier<>();
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier = new SettableSupplier<>();
   private final SettableSupplier<Function<Sequence<Object[]>, Sequence<Object[]>>> sequenceMapFnSupplier = new SettableSupplier<>();
+  private final SettableSupplier<ResponseContext> responseContextSupplier = new SettableSupplier<>();
   private Consumer<DirectStatement> onExecute = NULL_ACTION;
 
   private boolean sleep;
@@ -173,19 +182,19 @@ public class SqlResourceTest extends CalciteTestBase
   @BeforeClass
   public static void setUpClass()
   {
-    resourceCloser = Closer.create();
-    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
   }
 
   @AfterClass
   public static void tearDownClass() throws IOException
   {
-    resourceCloser.close();
   }
 
   @Before
   public void setUp() throws Exception
   {
+    resourceCloser = Closer.create();
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
+
     final QueryScheduler scheduler = new QueryScheduler(
         5,
         ManualQueryPrioritizationStrategy.INSTANCE,
@@ -265,7 +274,7 @@ public class SqlResourceTest extends CalciteTestBase
         defaultQueryConfig,
         lifecycleManager
     );
-    sqlStatementFactory = new SqlStatementFactory()
+    sqlStatementFactory = new SqlStatementFactory(null)
     {
       @Override
       public HttpStatement httpStatement(
@@ -281,6 +290,7 @@ public class SqlResourceTest extends CalciteTestBase
             planLatchSupplier,
             executeLatchSupplier,
             sequenceMapFnSupplier,
+            responseContextSupplier,
             onExecute
         );
         onExecute = NULL_ACTION;
@@ -304,7 +314,9 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         sqlStatementFactory,
         lifecycleManager,
-        new ServerConfig()
+        new ServerConfig(),
+        TEST_RESPONSE_CONTEXT_CONFIG,
+        DUMMY_DRUID_NODE
     );
   }
 
@@ -320,6 +332,7 @@ public class SqlResourceTest extends CalciteTestBase
     walker = null;
     executorService.shutdownNow();
     executorService.awaitTermination(2, TimeUnit.SECONDS);
+    resourceCloser.close();
   }
 
   @Test
@@ -353,6 +366,55 @@ public class SqlResourceTest extends CalciteTestBase
             ImmutableMap.of("cnt", 6, "TheFoo", "foo")
         ),
         rows
+    );
+    checkSqlRequestLog(true);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
+  public void testCountStarWithMissingIntervalsContext() throws Exception
+  {
+    final SqlQuery sqlQuery = new SqlQuery(
+        "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
+        null,
+        false,
+        false,
+        false,
+        // We set uncoveredIntervalsLimit more for the funzies than anything.  The underlying setup of the test doesn't
+        // actually look at it or operate with it.  Instead, we set the supplier of the ResponseContext to mock what
+        // we would expect from the normal query pipeline
+        ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "id", "uncoveredIntervalsLimit", 1),
+        null
+    );
+
+    final ResponseContext mockRespContext = ResponseContext.createEmpty();
+    mockRespContext.put(ResponseContext.Keys.instance().keyOf("uncoveredIntervals"), "2030-01-01/78149827981274-01-01");
+    mockRespContext.put(ResponseContext.Keys.instance().keyOf("uncoveredIntervalsOverflowed"), "true");
+    responseContextSupplier.set(mockRespContext);
+
+    final Response response = resource.doPost(sqlQuery, makeRegularUserReq());
+
+    Map responseContext = JSON_MAPPER.readValue(
+        (String) response.getMetadata().getFirst("X-Druid-Response-Context"),
+        Map.class
+    );
+    Assert.assertEquals(
+        ImmutableMap.of(
+            "uncoveredIntervals", "2030-01-01/78149827981274-01-01",
+            "uncoveredIntervalsOverflowed", "true"
+        ),
+        responseContext
+    );
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ((StreamingOutput) response.getEntity()).write(baos);
+    Object results = JSON_MAPPER.readValue(baos.toByteArray(), Object.class);
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("cnt", 6, "TheFoo", "foo")
+        ),
+        results
     );
     checkSqlRequestLog(true);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
@@ -1414,7 +1476,9 @@ public class SqlResourceTest extends CalciteTestBase
           {
             return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
-        }
+        },
+        TEST_RESPONSE_CONTEXT_CONFIG,
+        DUMMY_DRUID_NODE
     );
 
     String errorMessage = "This will be supported in Druid 9999";
@@ -1460,7 +1524,9 @@ public class SqlResourceTest extends CalciteTestBase
           {
             return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
-        }
+        },
+        TEST_RESPONSE_CONTEXT_CONFIG,
+        DUMMY_DRUID_NODE
     );
 
     String errorMessage = "could not assert";
@@ -1653,6 +1719,23 @@ public class SqlResourceTest extends CalciteTestBase
 
     execLatch.countDown();
     response = future.get();
+    // The response that we get is the actual object created by the SqlResource.  The StreamingOutput object that
+    // the SqlResource returns at the time of writing has resources opened up (the query is already running) which
+    // need to be closed.  As such, the StreamingOutput needs to actually be called in order to cause that close
+    // to occur, so we must get the entity out and call `.write(OutputStream)` on it to invoke the code.
+    try {
+      ((StreamingOutput) response.getEntity()).write(NullOutputStream.NULL_OUTPUT_STREAM);
+    } catch (IllegalStateException e) {
+      // When we actually attempt to write to the output stream, we seem to run into multi-threading issues likely
+      // with our test setup.  Instead of figuring out how to make the thing work, given that we don't actually
+      // care about the response, we are going to just ensure that it was the expected exception and ignore it.
+      // It's possible that this test starts failing suddenly if someone changes the message of the exception, it
+      // should be safe to just update the expected message here too if that happens.
+      Assert.assertEquals(
+          "DefaultQueryMetrics must not be modified from multiple threads. If it is needed to gather dimension or metric information from multiple threads or from an async thread, this information should explicitly be passed between threads (e. g. using Futures), or this DefaultQueryMetrics's ownerThread should be reassigned explicitly",
+          e.getMessage()
+      );
+    }
     Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
   }
 
@@ -1906,6 +1989,7 @@ public class SqlResourceTest extends CalciteTestBase
     private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier;
     private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier;
     private final SettableSupplier<Function<Sequence<Object[]>, Sequence<Object[]>>> sequenceMapFnSupplier;
+    private final SettableSupplier<ResponseContext> responseContextSupplier;
     private final Consumer<DirectStatement> onExecute;
 
     private TestHttpStatement(
@@ -1916,6 +2000,7 @@ public class SqlResourceTest extends CalciteTestBase
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier,
         SettableSupplier<Function<Sequence<Object[]>, Sequence<Object[]>>> sequenceMapFnSupplier,
+        SettableSupplier<ResponseContext> responseContextSupplier,
         final Consumer<DirectStatement> onAuthorize
     )
     {
@@ -1924,6 +2009,7 @@ public class SqlResourceTest extends CalciteTestBase
       this.planLatchSupplier = planLatchSupplier;
       this.executeLatchSupplier = executeLatchSupplier;
       this.sequenceMapFnSupplier = sequenceMapFnSupplier;
+      this.responseContextSupplier = responseContextSupplier;
       this.onExecute = onAuthorize;
     }
 
@@ -1955,14 +2041,15 @@ public class SqlResourceTest extends CalciteTestBase
     @Override
     public PlannerResult createPlan(DruidPlanner planner)
     {
-      if (planLatchSupplier.get() != null) {
-        if (planLatchSupplier.get().rhs) {
+      final NonnullPair<CountDownLatch, Boolean> planLatch = planLatchSupplier.get();
+      if (planLatch != null) {
+        if (planLatch.rhs) {
           PlannerResult result = super.createPlan(planner);
-          planLatchSupplier.get().lhs.countDown();
+          planLatch.lhs.countDown();
           return result;
         } else {
           try {
-            if (!planLatchSupplier.get().lhs.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
+            if (!planLatch.lhs.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
               throw new RuntimeException("Latch timed out");
             }
           }
@@ -1989,30 +2076,37 @@ public class SqlResourceTest extends CalciteTestBase
       return new ResultSet(plannerResult)
       {
         @Override
-        public Sequence<Object[]> run()
+        public QueryResponse run()
         {
           final Function<Sequence<Object[]>, Sequence<Object[]>> sequenceMapFn =
               Optional.ofNullable(sequenceMapFnSupplier.get()).orElse(Function.identity());
 
-          if (executeLatchSupplier.get() != null) {
-            if (executeLatchSupplier.get().rhs) {
-              Sequence<Object[]> sequence = sequenceMapFn.apply(super.run());
-              executeLatchSupplier.get().lhs.countDown();
-              return sequence;
+          final NonnullPair<CountDownLatch, Boolean> executeLatch = executeLatchSupplier.get();
+          if (executeLatch != null) {
+            if (executeLatch.rhs) {
+              final QueryResponse resp = super.run();
+              Sequence<Object[]> sequence = sequenceMapFn.apply(resp.getResults());
+              executeLatch.lhs.countDown();
+              final ResponseContext respContext = resp.getResponseContext();
+              respContext.merge(responseContextSupplier.get());
+              return new QueryResponse(sequence, respContext);
             } else {
               try {
-                if (!executeLatchSupplier.get().lhs.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
+                if (!executeLatch.lhs.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
                   throw new RuntimeException("Latch timed out");
                 }
               }
               catch (InterruptedException e) {
                 throw new RuntimeException(e);
               }
-              return sequenceMapFn.apply(super.run());
             }
-          } else {
-            return sequenceMapFn.apply(super.run());
           }
+
+          final QueryResponse resp = super.run();
+          Sequence<Object[]> sequence = sequenceMapFn.apply(resp.getResults());
+          final ResponseContext respContext = resp.getResponseContext();
+          respContext.merge(responseContextSupplier.get());
+          return new QueryResponse(sequence, respContext);
         }
       };
     }

@@ -67,6 +67,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -81,6 +82,7 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.guice.SqlModule;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -221,7 +223,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             binder.bind(QueryScheduler.class)
                   .toProvider(QuerySchedulerProvider.class)
                   .in(LazySingleton.class);
-            binder.bind(SqlEngine.class).to(NativeSqlEngine.class);
+            binder.install(new SqlModule.SqlStatementFactoryModule());
             binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
             binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
           }

@@ -54,22 +54,18 @@ public class AuthenticatorMapperModule implements DruidModule
     binder.bind(AuthenticatorMapper.class)
           .toProvider(new AuthenticatorMapperProvider())
           .in(LazySingleton.class);
-
-    LifecycleModule.register(binder, AuthenticatorMapper.class);
   }
 
   private static class AuthenticatorMapperProvider implements Provider<AuthenticatorMapper>
   {
     private AuthConfig authConfig;
-    private Injector injector;
     private Properties props;
     private JsonConfigurator configurator;
 
     @Inject
-    public void inject(Injector injector, Properties props, JsonConfigurator configurator)
+    public void inject(AuthConfig authConfig, Properties props, JsonConfigurator configurator)
     {
-      this.authConfig = injector.getInstance(AuthConfig.class);
-      this.injector = injector;
+      this.authConfig = authConfig;
       this.props = props;
       this.configurator = configurator;
     }

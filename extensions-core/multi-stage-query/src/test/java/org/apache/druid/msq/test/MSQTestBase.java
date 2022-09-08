@@ -580,7 +580,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         )
     );
 
-    final List<Object[]> sequence = stmt.execute().toList();
+    final List<Object[]> sequence = stmt.execute().getResults().toList();
     return (String) Iterables.getOnlyElement(sequence)[0];
   }
 

@@ -114,4 +114,9 @@ public class DruidSqlInsert extends SqlInsert
       writer.endList(frame);
     }
   }
+
+  public static void main(String[] args)
+  {
+    System.out.println(Long.parseLong("9999999999.000000000"));
+  }
 }

@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
 import org.apache.calcite.avatica.AvaticaSeverity;
 import org.apache.calcite.avatica.MetaImpl;
 import org.apache.calcite.avatica.MissingResultsException;
@@ -38,6 +37,7 @@ import org.apache.calcite.avatica.remote.AvaticaRuntimeException;
 import org.apache.calcite.avatica.remote.Service.ErrorResponse;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.annotations.NativeQ;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
@@ -49,10 +49,8 @@ import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
-import org.apache.druid.sql.SqlStatementFactoryFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -125,15 +123,14 @@ public class DruidMeta extends MetaImpl
 
   @Inject
   public DruidMeta(
-      final NativeSqlEngine engine,
-      final SqlStatementFactoryFactory sqlStatementFactoryFactory,
+      final @NativeQ SqlStatementFactory sqlStatementFactory,
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
-      final Injector injector
+      final AuthenticatorMapper authMapper
   )
   {
     this(
-        sqlStatementFactoryFactory.factorize(engine),
+        sqlStatementFactory,
         config,
         errorHandler,
         Executors.newSingleThreadScheduledExecutor(
@@ -142,7 +139,7 @@ public class DruidMeta extends MetaImpl
                 .setDaemon(true)
                 .build()
         ),
-        injector.getInstance(AuthenticatorMapper.class).getAuthenticatorChain()
+        authMapper.getAuthenticatorChain()
     );
   }
 

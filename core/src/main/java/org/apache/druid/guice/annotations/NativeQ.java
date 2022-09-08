@@ -17,22 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.sql.http;
+package org.apache.druid.guice.annotations;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import org.apache.druid.guice.Jerseys;
-import org.apache.druid.guice.LazySingleton;
+import com.google.inject.BindingAnnotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * The Module responsible for providing bindings to the SQL http endpoint
+ * Binding annotation for org.apache.druid.server.DruidNode.
+ * Indicates that the DruidNode bound with this annotation holds the information of the machine where this process
+ * is running.
+ *
+ * @see Parent
  */
-public class SqlHttpModule implements Module
+@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@BindingAnnotation
+@PublicApi
+public @interface NativeQ
 {
-  @Override
-  public void configure(Binder binder)
-  {
-    binder.bind(SqlResource.class).in(LazySingleton.class);
-    Jerseys.addResource(binder, SqlResource.class);
-  }
 }

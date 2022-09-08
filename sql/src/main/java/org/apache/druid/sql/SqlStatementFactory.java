@@ -23,11 +23,30 @@ import org.apache.druid.sql.http.SqlQuery;
 
 import javax.servlet.http.HttpServletRequest;
 
-public interface SqlStatementFactory
+public class SqlStatementFactory
 {
-  HttpStatement httpStatement(SqlQuery sqlQuery, HttpServletRequest req);
+  private final SqlToolbox lifecycleToolbox;
 
-  DirectStatement directStatement(SqlQueryPlus sqlRequest);
+  public SqlStatementFactory(SqlToolbox lifecycleToolbox)
+  {
+    this.lifecycleToolbox = lifecycleToolbox;
+  }
 
-  PreparedStatement preparedStatement(SqlQueryPlus sqlRequest);
+  public HttpStatement httpStatement(
+      final SqlQuery sqlQuery,
+      final HttpServletRequest req
+  )
+  {
+    return new HttpStatement(lifecycleToolbox, sqlQuery, req);
+  }
+
+  public DirectStatement directStatement(final SqlQueryPlus sqlRequest)
+  {
+    return new DirectStatement(lifecycleToolbox, sqlRequest);
+  }
+
+  public PreparedStatement preparedStatement(final SqlQueryPlus sqlRequest)
+  {
+    return new PreparedStatement(lifecycleToolbox, sqlRequest);
+  }
 }

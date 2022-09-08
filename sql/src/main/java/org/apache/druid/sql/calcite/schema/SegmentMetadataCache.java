@@ -55,6 +55,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -905,9 +906,10 @@ public class SegmentMetadataCache
         false
     );
 
-    return queryLifecycleFactory
+    final QueryResponse queryResponse = queryLifecycleFactory
         .factorize()
         .runSimple(segmentMetadataQuery, escalator.createEscalatedAuthenticationResult(), Access.OK);
+    return queryResponse == null ? null : queryResponse.getResults();
   }
 
   @VisibleForTesting
