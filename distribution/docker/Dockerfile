@@ -48,7 +48,7 @@ RUN --mount=type=cache,target=/root/.m2 VERSION=$(mvn -B -q org.apache.maven.plu
 
 FROM amd64/busybox:1.30.0-glibc as busybox
 
-FROM gcr.io/distroless/java:$JDK_VERSION
+FROM gcr.io/distroless/java$JDK_VERSION-debian11
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox
