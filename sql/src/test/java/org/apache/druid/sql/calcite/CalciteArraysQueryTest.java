@@ -1697,7 +1697,9 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(new Object[]{162665.0})
+        // Different results because there are some nulls in the column. In SQL-compatible mode we ignore them;
+        // in replace-with-default mode we treat them as zeroes.
+        ImmutableList.of(new Object[]{NullHandling.sqlCompatible() ? 260259.80000000002 : 162665.0})
     );
   }
 
