@@ -20,6 +20,7 @@ import { ResizeEntry } from '@blueprintjs/core';
 import { ResizeSensor2 } from '@blueprintjs/popover2';
 import type { Ace } from 'ace-builds';
 import ace from 'ace-builds';
+import { SqlRef, SqlTableRef } from 'druid-query-toolkit';
 import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
@@ -150,7 +151,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     ) {
       const completions = ([] as any[]).concat(
         uniq(columnMetadata.map(d => d.TABLE_SCHEMA)).map(v => ({
-          value: v,
+          value: SqlTableRef.create(v).toString(),
           score: 10,
           meta: 'schema',
         })),
@@ -159,7 +160,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
             .filter(d => (currentSchema ? d.TABLE_SCHEMA === currentSchema : true))
             .map(d => d.TABLE_NAME),
         ).map(v => ({
-          value: v,
+          value: SqlTableRef.create(v).toString(),
           score: 49,
           meta: 'datasource',
         })),
@@ -172,7 +173,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
             )
             .map(d => d.COLUMN_NAME),
         ).map(v => ({
-          value: v,
+          value: SqlRef.column(v).toString(),
           score: 50,
           meta: 'column',
         })),
