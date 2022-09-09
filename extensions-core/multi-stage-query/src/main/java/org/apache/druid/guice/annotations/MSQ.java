@@ -27,16 +27,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Binding annotation for org.apache.druid.server.DruidNode.
- * Indicates that the DruidNode bound with this annotation holds the information of the machine where this process
- * is running.
+ * Binding annotation for implements of interfaces that are MSQ (MultiStageQuery) focused.  This is generally
+ * contrasted with the NativeQ annotation.
  *
  * @see Parent
  */
 @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @BindingAnnotation
-@PublicApi
 public @interface MSQ
 {
 }

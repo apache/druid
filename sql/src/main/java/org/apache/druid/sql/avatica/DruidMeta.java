@@ -37,7 +37,7 @@ import org.apache.calcite.avatica.remote.AvaticaRuntimeException;
 import org.apache.calcite.avatica.remote.Service.ErrorResponse;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.annotations.NativeQ;
+import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
@@ -123,7 +123,7 @@ public class DruidMeta extends MetaImpl
 
   @Inject
   public DruidMeta(
-      final @NativeQ SqlStatementFactory sqlStatementFactory,
+      final @NativeQuery SqlStatementFactory sqlStatementFactory,
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
       final AuthenticatorMapper authMapper

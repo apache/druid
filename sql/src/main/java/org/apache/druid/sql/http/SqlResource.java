@@ -26,7 +26,7 @@ import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.exception.SanitizableException;
-import org.apache.druid.guice.annotations.NativeQ;
+import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -96,7 +96,7 @@ public class SqlResource
   SqlResource(
       final ObjectMapper jsonMapper,
       final AuthorizerMapper authorizerMapper,
-      final @NativeQ SqlStatementFactory sqlStatementFactory,
+      final @NativeQuery SqlStatementFactory sqlStatementFactory,
       final SqlLifecycleManager sqlLifecycleManager,
       final ServerConfig serverConfig,
       ResponseContextConfig responseContextConfig,

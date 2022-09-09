@@ -101,10 +101,8 @@ import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -115,7 +113,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -142,7 +139,8 @@ public class SqlResourceTest extends CalciteTestBase
   private static final String DUMMY_SQL_QUERY_ID = "dummy";
   // Timeout to allow (rapid) debugging, while not blocking tests with errors.
   private static final int WAIT_TIMEOUT_SECS = 60;
-  private static final Consumer<DirectStatement> NULL_ACTION = s -> {};
+  private static final Consumer<DirectStatement> NULL_ACTION = s -> {
+  };
 
   private static final List<String> EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS =
       Arrays.asList("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1", "EXPR$8");
@@ -178,16 +176,6 @@ public class SqlResourceTest extends CalciteTestBase
   private Consumer<DirectStatement> onExecute = NULL_ACTION;
 
   private boolean sleep;
-
-  @BeforeClass
-  public static void setUpClass()
-  {
-  }
-
-  @AfterClass
-  public static void tearDownClass() throws IOException
-  {
-  }
 
   @Before
   public void setUp() throws Exception
@@ -656,7 +644,9 @@ public class SqlResourceTest extends CalciteTestBase
         ),
         doPost(
             new SqlQuery(query, ResultFormat.ARRAY, false, false, false, null, null),
-            new TypeReference<List<List<Object>>>() {}
+            new TypeReference<List<List<Object>>>()
+            {
+            }
         ).rhs
     );
   }
@@ -767,7 +757,9 @@ public class SqlResourceTest extends CalciteTestBase
         ),
         doPost(
             new SqlQuery(query, ResultFormat.ARRAY, true, true, true, null, null),
-            new TypeReference<List<List<Object>>>() {}
+            new TypeReference<List<List<Object>>>()
+            {
+            }
         ).rhs
     );
   }
@@ -791,7 +783,9 @@ public class SqlResourceTest extends CalciteTestBase
         ),
         doPost(
             new SqlQuery(query, ResultFormat.ARRAY, true, true, true, null, null),
-            new TypeReference<List<List<Object>>>() {}
+            new TypeReference<List<List<Object>>>()
+            {
+            }
         ).rhs
     );
   }
@@ -958,7 +952,9 @@ public class SqlResourceTest extends CalciteTestBase
         ).stream().map(transformer).collect(Collectors.toList()),
         doPost(
             new SqlQuery(query, ResultFormat.OBJECT, false, false, false, null, null),
-            new TypeReference<List<Map<String, Object>>>() {}
+            new TypeReference<List<Map<String, Object>>>()
+            {
+            }
         ).rhs
     );
   }
@@ -1164,10 +1160,10 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(4, lines.size());
     Assert.assertEquals(expectedHeader, JSON_MAPPER.readValue(lines.get(0), Object.class));
     Assert.assertEquals(
-            ImmutableMap
-                .<String, Object>builder()
-                .put("EXPR$0", Arrays.asList(1, 2))
-                .build(),
+        ImmutableMap
+            .<String, Object>builder()
+            .put("EXPR$0", Arrays.asList(1, 2))
+            .build(),
         JSON_MAPPER.readValue(lines.get(1), Object.class)
     );
 
@@ -1400,8 +1396,8 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "id"),
             null
-            )
-        ).lhs;
+        )
+    ).lhs;
 
     Assert.assertNotNull(exception);
     Assert.assertEquals(QueryUnsupportedException.ERROR_CODE, exception.getErrorCode());
@@ -1424,8 +1420,9 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             ImmutableMap.of("sqlQueryId", queryId),
             null
-            ),
-        req);
+        ),
+        req
+    );
     Assert.assertNotEquals(200, response.getStatus());
     final MultivaluedMap<String, Object> headers = response.getMetadata();
     Assert.assertTrue(headers.containsKey(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER));
@@ -1447,8 +1444,9 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             ImmutableMap.of(),
             null
-            ),
-        req);
+        ),
+        req
+    );
     Assert.assertNotEquals(200, response.getStatus());
     final MultivaluedMap<String, Object> headers = response.getMetadata();
     Assert.assertTrue(headers.containsKey(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER));
@@ -1464,7 +1462,8 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         sqlStatementFactory,
         lifecycleManager,
-        new ServerConfig() {
+        new ServerConfig()
+        {
           @Override
           public boolean isShowDetailedJettyErrors()
           {
@@ -1492,8 +1491,8 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             ImmutableMap.of("sqlQueryId", "id"),
             null
-          )
-        ).lhs;
+        )
+    ).lhs;
 
     Assert.assertNotNull(exception);
     Assert.assertNull(exception.getMessage());
@@ -1543,8 +1542,8 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             ImmutableMap.of("sqlQueryId", "id"),
             null
-            )
-        ).lhs;
+        )
+    ).lhs;
 
     Assert.assertNotNull(exception);
     Assert.assertNull(exception.getMessage());
@@ -1725,7 +1724,8 @@ public class SqlResourceTest extends CalciteTestBase
     // to occur, so we must get the entity out and call `.write(OutputStream)` on it to invoke the code.
     try {
       ((StreamingOutput) response.getEntity()).write(NullOutputStream.NULL_OUTPUT_STREAM);
-    } catch (IllegalStateException e) {
+    }
+    catch (IllegalStateException e) {
       // When we actually attempt to write to the output stream, we seem to run into multi-threading issues likely
       // with our test setup.  Instead of figuring out how to make the thing work, given that we don't actually
       // care about the response, we are going to just ensure that it was the expected exception and ignore it.
@@ -2016,7 +2016,8 @@ public class SqlResourceTest extends CalciteTestBase
     @Override
     protected void authorize(
         DruidPlanner planner,
-        Function<Set<ResourceAction>, Access> authorizer)
+        Function<Set<ResourceAction>, Access> authorizer
+    )
     {
       if (validateAndAuthorizeLatchSupplier.get() != null) {
         if (validateAndAuthorizeLatchSupplier.get().rhs) {

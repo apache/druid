@@ -28,7 +28,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
-import org.apache.druid.guice.annotations.NativeQ;
+import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.QueryScheduler;
@@ -171,7 +171,7 @@ public class SqlModule implements Module
     }
 
     @Provides
-    @NativeQ
+    @NativeQuery
     @LazySingleton
     public SqlStatementFactory makeNativeSqlStatementFactory(
         final NativeSqlEngine sqlEngine,

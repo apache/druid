@@ -40,7 +40,7 @@ import java.util.function.Supplier;
 /**
  * A buffer pool that throws away buffers when they are "returned" to the pool. Useful for tests that need to make
  * many pools and use them one at a time.
- *
+ * <p>
  * This pool implements {@link BlockingPool}, but never blocks. It returns immediately if resources are available;
  * otherwise it returns an empty list immediately. This is also useful for tests, because it allows "timeouts" to
  * happen immediately and therefore speeds up tests.
@@ -62,7 +62,8 @@ public class TestBufferPool implements NonBlockingPool<ByteBuffer>, BlockingPool
   public static TestBufferPool onHeap(final int bufferSize, final int maxCount)
   {
     return new TestBufferPool(
-        () -> new ReferenceCountingResourceHolder<>(ByteBuffer.allocate(bufferSize), () -> {}),
+        () -> new ReferenceCountingResourceHolder<>(ByteBuffer.allocate(bufferSize), () -> {
+        }),
         maxCount
     );
   }
@@ -136,7 +137,8 @@ public class TestBufferPool implements NonBlockingPool<ByteBuffer>, BlockingPool
     return takenFromMap.size();
   }
 
-  public Collection<RuntimeException> getOutstandingExceptionsCreated() {
+  public Collection<RuntimeException> getOutstandingExceptionsCreated()
+  {
     return takenFromMap.values();
   }
 }

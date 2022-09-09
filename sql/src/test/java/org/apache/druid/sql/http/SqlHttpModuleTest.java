@@ -29,7 +29,7 @@ import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.JSR311Resource;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.guice.annotations.NativeQ;
+import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
@@ -70,7 +70,7 @@ public class SqlHttpModuleTest
           binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(SqlResourceTest.DUMMY_DRUID_NODE);
           binder.bind(ResponseContextConfig.class).toInstance(SqlResourceTest.TEST_RESPONSE_CONTEXT_CONFIG);
           binder.bind(SqlStatementFactory.class)
-                .annotatedWith(NativeQ.class)
+                .annotatedWith(NativeQuery.class)
                 .toInstance(EasyMock.mock(SqlStatementFactory.class));
         },
         target

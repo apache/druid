@@ -23,12 +23,10 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.google.inject.Provider;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -87,7 +85,10 @@ public class AuthenticatorMapperModule implements DruidModule
       }
 
       for (String authenticatorName : authenticators) {
-        final String authenticatorPropertyBase = StringUtils.format(AUTHENTICATOR_PROPERTIES_FORMAT_STRING, authenticatorName);
+        final String authenticatorPropertyBase = StringUtils.format(
+            AUTHENTICATOR_PROPERTIES_FORMAT_STRING,
+            authenticatorName
+        );
         final JsonConfigProvider<Authenticator> authenticatorProvider = JsonConfigProvider.of(
             authenticatorPropertyBase,
             Authenticator.class
