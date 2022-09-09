@@ -28,9 +28,9 @@
 #
 # Additional env vars:
 # - DRUID_LOG4J -- set the entire log4j.xml verbatim
-# - DRUID_LOG_LEVEL -- override the default log level in default log4j
+# - DRUID_LOG_LEVEL -- override the default log level in default log4j. This presently works only if the existing log level is INFO
 # - DRUID_SERVICE_LOG4J -- set the entire service specific log4j.xml verbatim
-# - DRUID_SERVICE_LOG_LEVEL -- override the default log level in the service specific log4j
+# - DRUID_SERVICE_LOG_LEVEL -- override the default log level in the service specific log4j. This presently works only if the existing log level is INFO
 # - DRUID_XMX -- set Java Xmx
 # - DRUID_XMS -- set Java Xms
 # - DRUID_MAXNEWSIZE -- set Java max new size
