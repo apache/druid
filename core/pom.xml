@@ -68,6 +68,10 @@
       <artifactId>commons-compress</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-text</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.skife.config</groupId>
       <artifactId>config-magic</artifactId>
     </dependency>
@@ -366,6 +370,11 @@
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <version>${postgresql.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.stefanbirkner</groupId>
+      <artifactId>system-rules</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

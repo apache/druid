@@ -43,6 +43,7 @@ import javax.ws.rs.core.MediaType;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -84,6 +85,9 @@ public class StatusResource
   /**
    * filter out entries from allProperties with key containing elements in hiddenProperties (case insensitive)
    *
+   * for example, if hiddenProperties = ["pwd"] and allProperties = {"foopwd": "secret", "foo": "bar", "my.pwd": "secret"},
+   * this method will return {"foo":"bar"}
+   *
    * @return map of properties that are not filtered out.
    */
   @Nonnull
@@ -92,15 +96,15 @@ public class StatusResource
       Map<String, String> allProperties
   )
   {
-    return Maps.filterEntries(
-        allProperties,
-        (entry) -> hiddenProperties
-            .stream()
-            .anyMatch(
-                hiddenPropertyElement ->
-                    !StringUtils.toLowerCase(entry.getKey()).contains(StringUtils.toLowerCase(hiddenPropertyElement))
-            )
+    Map<String, String> propertyCopy = new HashMap<>(allProperties);
+    allProperties.keySet().forEach(
+        (key) -> {
+          if (hiddenProperties.stream().anyMatch((hiddenProperty) -> StringUtils.toLowerCase(key).contains(StringUtils.toLowerCase(hiddenProperty)))) {
+            propertyCopy.remove(key);
+          }
+        }
     );
+    return propertyCopy;
   }
 
   @GET

@@ -22,7 +22,9 @@ package org.apache.druid.segment;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -169,6 +171,12 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
 
     if (actualInterval == null) {
       return Sequences.empty();
+    }
+    // Incase time interval is ETERNITY with non-ALL granularity, don't risk creating time grains.
+    // For all non-ALL granularities, the time grains will be very high in number and that can either OOM the heap
+    // or create an very very long query.
+    if (actualInterval.contains(Intervals.ETERNITY) && !gran.equals(Granularities.ALL)) {
+      throw new IAE("Cannot support ETERNITY interval with %s time granluarity", gran);
     }
 
     final RowWalker<RowType> rowWalker = new RowWalker<>(

@@ -41,7 +41,7 @@ public class PrometheusEmitterTest
   public void testEmitterWithServiceLabel()
   {
     CollectorRegistry.defaultRegistry.clear();
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
@@ -62,7 +62,7 @@ public class PrometheusEmitterTest
   public void testEmitterWithServiceAndHostLabel()
   {
     CollectorRegistry.defaultRegistry.clear();
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, true, true, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, true, true, 60);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
@@ -104,7 +104,7 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterStart()
   {
-    PrometheusEmitterConfig exportEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "namespace1", null, 0, null, true, true, null);
+    PrometheusEmitterConfig exportEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "namespace1", null, 0, null, true, true, 60);
     PrometheusEmitter exportEmitter = new PrometheusEmitter(exportEmitterConfig);
     exportEmitter.start();
     Assert.assertNotNull(exportEmitter.getServer());
@@ -137,7 +137,32 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterConfigCreationWithNullAsAddress()
   {
-    Assert.assertThrows(NullPointerException.class, () -> new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace4", null, 0, null, true, true, null));
+    // pushGatewayAddress can be null if it's exporter mode
+    new PrometheusEmitterConfig(
+        PrometheusEmitterConfig.Strategy.exporter,
+        "namespace5",
+        null,
+        1,
+        null,
+        true,
+        true,
+        60
+    );
+
+    Assert.assertThrows(
+        "For `pushgateway` strategy, pushGatewayAddress must be specified.",
+        IllegalArgumentException.class,
+        () -> new PrometheusEmitterConfig(
+            PrometheusEmitterConfig.Strategy.pushgateway,
+            "namespace5",
+            null,
+            null,
+            null,
+            true,
+            true,
+            50
+        )
+    );
   }
 
   @Test
@@ -156,5 +181,36 @@ public class PrometheusEmitterTest
     PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
     pushEmitter.start();
     Assert.assertNotNull(pushEmitter.getPushGateway());
+  }
+
+  @Test
+  public void testEmitterConfig()
+  {
+    Assert.assertThrows(
+        "For `exporter` strategy, port must be specified.",
+        IllegalArgumentException.class,
+        () -> new PrometheusEmitterConfig(
+            PrometheusEmitterConfig.Strategy.exporter,
+            "namespace5",
+            null,
+            null,
+            "https://pushgateway",
+            true,
+            true,
+            60
+        )
+    );
+
+    // For pushgateway strategy, port can be null
+    new PrometheusEmitterConfig(
+        PrometheusEmitterConfig.Strategy.pushgateway,
+        "namespace5",
+        null,
+        null,
+        "https://pushgateway",
+        true,
+        true,
+        60
+    );
   }
 }
