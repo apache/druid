@@ -36,29 +36,29 @@ import java.util.Map;
 
 public class MSQTestWorkerClient implements WorkerClient
 {
-  private final Map<String, Worker> inMemoryWorkers;
+  private final Map<Integer, Worker> inMemoryWorkers;
 
-  public MSQTestWorkerClient(Map<String, Worker> inMemoryWorkers)
+  public MSQTestWorkerClient(Map<Integer, Worker> inMemoryWorkers)
   {
     this.inMemoryWorkers = inMemoryWorkers;
   }
 
   @Override
-  public ListenableFuture<Void> postWorkOrder(String workerTaskId, WorkOrder workOrder)
+  public ListenableFuture<Void> postWorkOrder(int workerNumber, WorkOrder workOrder)
   {
-    inMemoryWorkers.get(workerTaskId).postWorkOrder(workOrder);
+    inMemoryWorkers.get(workerNumber).postWorkOrder(workOrder);
     return Futures.immediateFuture(null);
   }
 
   @Override
   public ListenableFuture<Void> postResultPartitionBoundaries(
-      String workerTaskId,
+      int workerNumber,
       StageId stageId,
       ClusterByPartitions partitionBoundaries
   )
   {
     try {
-      inMemoryWorkers.get(workerTaskId).postResultPartitionBoundaries(
+      inMemoryWorkers.get(workerNumber).postResultPartitionBoundaries(
           partitionBoundaries,
           stageId.getQueryId(),
           stageId.getStageNumber()
@@ -71,35 +71,35 @@ public class MSQTestWorkerClient implements WorkerClient
   }
 
   @Override
-  public ListenableFuture<Void> postCleanupStage(String workerTaskId, StageId stageId)
+  public ListenableFuture<Void> postCleanupStage(int workerNumber, StageId stageId)
   {
-    inMemoryWorkers.get(workerTaskId).postCleanupStage(stageId);
+    inMemoryWorkers.get(workerNumber).postCleanupStage(stageId);
     return Futures.immediateFuture(null);
   }
 
   @Override
-  public ListenableFuture<Void> postFinish(String taskId)
+  public ListenableFuture<Void> postFinish(int workerNumber)
   {
-    inMemoryWorkers.get(taskId).postFinish();
+    inMemoryWorkers.get(workerNumber).postFinish();
     return Futures.immediateFuture(null);
   }
 
   @Override
-  public ListenableFuture<CounterSnapshotsTree> getCounters(String taskId)
+  public ListenableFuture<CounterSnapshotsTree> getCounters(int workerNumber)
   {
-    return Futures.immediateFuture(inMemoryWorkers.get(taskId).getCounters());
+    return Futures.immediateFuture(inMemoryWorkers.get(workerNumber).getCounters());
   }
 
   @Override
   public ListenableFuture<Boolean> fetchChannelData(
-      final String workerTaskId,
+      final int workerNumber,
       final StageId stageId,
       final int partitionNumber,
       final long offset,
       final ReadableByteChunksFrameChannel channel
   )
   {
-    try (InputStream inputStream = inMemoryWorkers.get(workerTaskId).readChannel(
+    try (InputStream inputStream = inMemoryWorkers.get(workerNumber).readChannel(
         stageId.getQueryId(),
         stageId.getStageNumber(),
         partitionNumber,

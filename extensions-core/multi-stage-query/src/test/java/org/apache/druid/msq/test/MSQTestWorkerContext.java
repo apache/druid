@@ -50,18 +50,19 @@ import org.apache.druid.server.security.AuthTestUtils;
 
 import java.io.File;
 import java.util.Map;
+import java.util.function.IntFunction;
 
 public class MSQTestWorkerContext implements WorkerContext
 {
   private final Controller controller;
   private final ObjectMapper mapper;
   private final Injector injector;
-  private final Map<String, Worker> inMemoryWorkers;
+  private final Map<Integer, Worker> inMemoryWorkers;
   private final File file = FileUtils.createTempDir();
   private final WorkerMemoryParameters workerMemoryParameters;
 
   public MSQTestWorkerContext(
-      Map<String, Worker> inMemoryWorkers,
+      Map<Integer, Worker> inMemoryWorkers,
       Controller controller,
       ObjectMapper mapper,
       Injector injector,
@@ -100,7 +101,7 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
-  public WorkerClient makeWorkerClient()
+  public WorkerClient makeWorkerClient(IntFunction<String> taskIdFetcher)
   {
     return new MSQTestWorkerClient(inMemoryWorkers);
   }

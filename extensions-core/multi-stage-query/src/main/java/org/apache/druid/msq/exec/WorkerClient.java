@@ -36,14 +36,14 @@ public interface WorkerClient extends AutoCloseable
   /**
    * Worker's client method to add a {@link WorkOrder} to the worker to work on
    */
-  ListenableFuture<Void> postWorkOrder(String workerId, WorkOrder workOrder);
+  ListenableFuture<Void> postWorkOrder(int workerNumber, WorkOrder workOrder);
 
   /**
    * Worker's client method to inform it of the partition boundaries for the given stage. This is usually invoked by the
    * controller after collating the result statistics from all the workers processing the query
    */
   ListenableFuture<Void> postResultPartitionBoundaries(
-      String workerTaskId,
+      int workerNumber,
       StageId stageId,
       ClusterByPartitions partitionBoundaries
   );
@@ -51,18 +51,18 @@ public interface WorkerClient extends AutoCloseable
   /**
    * Worker's client method to inform that the work has been done, and it can initiate cleanup and shutdown
    */
-  ListenableFuture<Void> postFinish(String workerId);
+  ListenableFuture<Void> postFinish(int workerNumber);
 
   /**
    * Fetches all the counters gathered by that worker
    */
-  ListenableFuture<CounterSnapshotsTree> getCounters(String workerId);
+  ListenableFuture<CounterSnapshotsTree> getCounters(int workerNumber);
 
   /**
    * Worker's client method that informs it that the results and resources for the given stage are no longer required
    * and that they can be cleaned up
    */
-  ListenableFuture<Void> postCleanupStage(String workerTaskId, StageId stageId);
+  ListenableFuture<Void> postCleanupStage(int workerNumber, StageId stageId);
 
   /**
    * Fetch some data from a worker and add it to the provided channel. The exact amount of data is determined
@@ -72,7 +72,7 @@ public interface WorkerClient extends AutoCloseable
    * kind of unrecoverable exception).
    */
   ListenableFuture<Boolean> fetchChannelData(
-      String workerTaskId,
+      int workerNumber,
       StageId stageId,
       int partitionNumber,
       long offset,

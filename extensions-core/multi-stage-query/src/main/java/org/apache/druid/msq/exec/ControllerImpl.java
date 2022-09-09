@@ -380,7 +380,7 @@ public class ControllerImpl implements Controller
       final String selfHost = MSQTasks.getHostFromSelfNode(selfDruidNode);
       final MSQErrorReport controllerError =
           exceptionEncountered != null
-          ? MSQErrorReport.fromException(id(), selfHost, null, exceptionEncountered)
+          ? MSQErrorReport.fromException(id(), null, selfHost, null, exceptionEncountered)
           : null;
       final MSQErrorReport workerError = workerErrorRef.get();
 
@@ -514,7 +514,9 @@ public class ControllerImpl implements Controller
     this.selfDruidNode = context.selfNode();
     context.registerController(this, closer);
 
-    this.netClient = new ExceptionWrappingWorkerClient(context.taskClientFor(this));
+    this.netClient = new ExceptionWrappingWorkerClient(
+        context.taskClientFor(this, workerNumber -> this.workerTaskLauncher.getTaskList().get(workerNumber))
+    );
     closer.register(netClient::close);
 
     final boolean isDurableStorageEnabled =
@@ -644,6 +646,7 @@ public class ControllerImpl implements Controller
       Long limit = warningsExceeded.get().rhs;
       workerError(MSQErrorReport.fromFault(
           id(),
+          null,
           selfDruidNode.getHost(),
           null,
           new TooManyWarningsFault(limit.intValue(), errorCode)
@@ -1007,7 +1010,7 @@ public class ControllerImpl implements Controller
     final Int2ObjectMap<WorkOrder> workOrders = queryKernel.createWorkOrders(stageNumber, extraInfos);
 
     contactWorkersForStage(
-        (netClient, taskId, workerNumber) -> netClient.postWorkOrder(taskId, workOrders.get(workerNumber)),
+        (netClient, taskId, workerNumber) -> netClient.postWorkOrder(workerNumber, workOrders.get(workerNumber)),
         workOrders.keySet()
     );
   }
@@ -1022,7 +1025,7 @@ public class ControllerImpl implements Controller
     contactWorkersForStage(
         (netClient, taskId, workerNumber) ->
             netClient.postResultPartitionBoundaries(
-                taskId,
+                workerNumber,
                 new StageId(queryDef.getQueryId(), stageNumber),
                 resultPartitionBoundaries
             ),
@@ -1132,8 +1135,8 @@ public class ControllerImpl implements Controller
 
     final List<ListenableFuture<CounterSnapshotsTree>> futures = new ArrayList<>();
 
-    for (String taskId : taskList) {
-      futures.add(netClient.getCounters(taskId));
+    for (int i = 0; i < workerTaskLauncher.getTaskList().size(); ++i) {
+      futures.add(netClient.getCounters(i));
     }
 
     final List<CounterSnapshotsTree> snapshotsTrees =
@@ -1152,8 +1155,8 @@ public class ControllerImpl implements Controller
 
     final List<ListenableFuture<Void>> futures = new ArrayList<>();
 
-    for (String taskId : taskList) {
-      futures.add(netClient.postFinish(taskId));
+    for (int i = 0; i < workerTaskLauncher.getTaskList().size(); ++i) {
+      futures.add(netClient.postFinish(i));
     }
 
     FutureUtils.getUnchecked(MSQFutureUtils.allAsList(futures, true), true);
@@ -1194,7 +1197,6 @@ public class ControllerImpl implements Controller
       if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().getContext())) {
         inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
             id(),
-            () -> taskIds,
             MSQTasks.makeStorageConnector(context.injector()),
             closer
         );
@@ -2134,7 +2136,7 @@ public class ControllerImpl implements Controller
       for (final StageId stageId : queryKernel.getEffectivelyFinishedStageIds()) {
         log.info("Query [%s] issuing cleanup order for stage %d.", queryDef.getQueryId(), stageId.getStageNumber());
         contactWorkersForStage(
-            (netClient, taskId, workerNumber) -> netClient.postCleanupStage(taskId, stageId),
+            (netClient, taskId, workerNumber) -> netClient.postCleanupStage(workerNumber, stageId),
             queryKernel.getWorkerInputsForStage(stageId).workers()
         );
         queryKernel.finishStage(stageId, true);

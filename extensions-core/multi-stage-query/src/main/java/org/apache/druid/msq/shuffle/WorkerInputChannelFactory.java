@@ -53,7 +53,7 @@ public class WorkerInputChannelFactory implements InputChannelFactory
     final String taskId = taskList.get().get(workerNumber);
     final ReadableByteChunksFrameChannel channel =
         ReadableByteChunksFrameChannel.create(makeChannelId(taskId, stageId, partitionNumber));
-    fetch(taskId, stageId, partitionNumber, 0, channel);
+    fetch(workerNumber, stageId, partitionNumber, 0, channel);
     return channel;
   }
 
@@ -61,7 +61,7 @@ public class WorkerInputChannelFactory implements InputChannelFactory
    * Start a fetch chain for a particular channel starting at a particular offset.
    */
   private void fetch(
-      final String taskId,
+      final int workerNumber,
       final StageId stageId,
       final int partitionNumber,
       final long offset,
@@ -69,7 +69,7 @@ public class WorkerInputChannelFactory implements InputChannelFactory
   )
   {
     final ListenableFuture<Boolean> fetchFuture =
-        workerClient.fetchChannelData(taskId, stageId, partitionNumber, offset, channel);
+        workerClient.fetchChannelData(workerNumber, stageId, partitionNumber, offset, channel);
 
     Futures.addCallback(
         fetchFuture,
@@ -81,7 +81,7 @@ public class WorkerInputChannelFactory implements InputChannelFactory
             if (lastFetch) {
               channel.doneWriting();
             } else {
-              fetch(taskId, stageId, partitionNumber, channel.getBytesAdded(), channel);
+              fetch(workerNumber, stageId, partitionNumber, channel.getBytesAdded(), channel);
             }
           }
 

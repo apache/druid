@@ -55,14 +55,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
 public class MSQTestControllerContext implements ControllerContext
 {
   private static final Logger log = new Logger(MSQTestControllerContext.class);
   private final TaskActionClient taskActionClient;
-  private final Map<String, Worker> inMemoryWorkers = new HashMap<>();
-  private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
+  private final Map<Integer, Worker> inMemoryWorkers = new HashMap<>();
+  private final Map<Integer, String> workerNumberToTaskId = new HashMap<>();
+  private final ConcurrentMap<Integer, TaskStatus> statusMap = new ConcurrentHashMap<>();
   private final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.singleThreaded(
       "MultiStageQuery-test-controller-client"));
   private final CoordinatorClient coordinatorClient;
@@ -241,9 +243,12 @@ public class MSQTestControllerContext implements ControllerContext
   }
 
   @Override
-  public WorkerClient taskClientFor(Controller controller)
+  public WorkerClient taskClientFor(
+      Controller controller,
+      IntFunction<String> taskIdFetcher
+  )
   {
-    return new MSQTestWorkerClient(inMemoryWorkers);
+    return new MSQTestWorkerClient(inMemoryWorkers, workerNumber -> workerNumberToTaskId.get(workerNumber));
   }
 
   @Override

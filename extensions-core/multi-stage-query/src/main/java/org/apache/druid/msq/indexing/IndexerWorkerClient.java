@@ -59,6 +59,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
 public class IndexerWorkerClient implements WorkerClient
@@ -66,19 +67,25 @@ public class IndexerWorkerClient implements WorkerClient
   private final ServiceClientFactory clientFactory;
   private final OverlordClient overlordClient;
   private final ObjectMapper jsonMapper;
+  final IntFunction<String> taskIdFetcher;
 
   @GuardedBy("clientMap")
   private final Map<String, Pair<ServiceClient, Closeable>> clientMap = new HashMap<>();
 
+  @GuardedBy("clientMap")
+  private final Map<Integer, String> workerNumberToTaskId = new HashMap<>();
+
   public IndexerWorkerClient(
       final ServiceClientFactory clientFactory,
       final OverlordClient overlordClient,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final IntFunction<String> taskIdFetcher
   )
   {
     this.clientFactory = clientFactory;
     this.overlordClient = overlordClient;
     this.jsonMapper = jsonMapper;
+    this.taskIdFetcher = taskIdFetcher;
   }
 
 
@@ -94,9 +101,9 @@ public class IndexerWorkerClient implements WorkerClient
   }
 
   @Override
-  public ListenableFuture<Void> postWorkOrder(String workerTaskId, WorkOrder workOrder)
+  public ListenableFuture<Void> postWorkOrder(int workerNumber, WorkOrder workOrder)
   {
-    return getClient(workerTaskId).asyncRequest(
+    return updateAndGetClient(workerNumber).asyncRequest(
         new RequestBuilder(HttpMethod.POST, "/workOrder")
             .jsonContent(jsonMapper, workOrder),
         IgnoreHttpResponseHandler.INSTANCE
@@ -105,7 +112,7 @@ public class IndexerWorkerClient implements WorkerClient
 
   @Override
   public ListenableFuture<Void> postResultPartitionBoundaries(
-      String workerTaskId,
+      int workerNumber,
       StageId stageId,
       ClusterByPartitions partitionBoundaries
   )
@@ -116,7 +123,7 @@ public class IndexerWorkerClient implements WorkerClient
         stageId.getStageNumber()
     );
 
-    return getClient(workerTaskId).asyncRequest(
+    return updateAndGetClient(workerNumber).asyncRequest(
         new RequestBuilder(HttpMethod.POST, path)
             .jsonContent(jsonMapper, partitionBoundaries),
         IgnoreHttpResponseHandler.INSTANCE
@@ -128,7 +135,7 @@ public class IndexerWorkerClient implements WorkerClient
    */
   @Override
   public ListenableFuture<Void> postCleanupStage(
-      final String workerTaskId,
+      final int workerNumber,
       final StageId stageId
   )
   {
@@ -138,26 +145,26 @@ public class IndexerWorkerClient implements WorkerClient
         stageId.getStageNumber()
     );
 
-    return getClient(workerTaskId).asyncRequest(
+    return updateAndGetClient(workerNumber).asyncRequest(
         new RequestBuilder(HttpMethod.POST, path),
         IgnoreHttpResponseHandler.INSTANCE
     );
   }
 
   @Override
-  public ListenableFuture<Void> postFinish(String workerTaskId)
+  public ListenableFuture<Void> postFinish(int workerNumber)
   {
-    return getClient(workerTaskId).asyncRequest(
+    return updateAndGetClient(workerNumber).asyncRequest(
         new RequestBuilder(HttpMethod.POST, "/finish"),
         IgnoreHttpResponseHandler.INSTANCE
     );
   }
 
   @Override
-  public ListenableFuture<CounterSnapshotsTree> getCounters(String workerTaskId)
+  public ListenableFuture<CounterSnapshotsTree> getCounters(int workerNumber)
   {
     return FutureUtils.transform(
-        getClient(workerTaskId).asyncRequest(
+        updateAndGetClient(workerNumber).asyncRequest(
             new RequestBuilder(HttpMethod.GET, "/counters"),
             new BytesFullResponseHandler()
         ),
@@ -169,14 +176,14 @@ public class IndexerWorkerClient implements WorkerClient
 
   @Override
   public ListenableFuture<Boolean> fetchChannelData(
-      String workerTaskId,
+      int workerNumber,
       StageId stageId,
       int partitionNumber,
       long offset,
       ReadableByteChunksFrameChannel channel
   )
   {
-    final ServiceClient client = getClient(workerTaskId);
+    final ServiceClient client = updateAndGetClient(workerNumber);
     final String path = getStagePartitionPath(stageId, partitionNumber);
 
     final SettableFuture<Boolean> retVal = SettableFuture.create();
@@ -236,9 +243,25 @@ public class IndexerWorkerClient implements WorkerClient
     }
   }
 
-  private ServiceClient getClient(final String workerTaskId)
+  private ServiceClient updateAndGetClient(final int workerNumber)
   {
     synchronized (clientMap) {
+      String workerTaskId = taskIdFetcher.apply(workerNumber);
+
+      // Close and remove the old client if the worker task id has been updated
+      if (workerNumberToTaskId.containsKey(workerNumber) && !workerNumberToTaskId.get(workerNumber)
+                                                                                 .equals(workerTaskId)) {
+        String oldWorkerTaskId = workerNumberToTaskId.get(workerNumber);
+        Pair<ServiceClient, Closeable> oldClientAndCloseable = clientMap.get(oldWorkerTaskId);
+        try {
+          oldClientAndCloseable.rhs.close();
+        }
+        catch (IOException ignored) {
+
+        }
+        clientMap.remove(oldWorkerTaskId);
+      }
+      workerNumberToTaskId.put(workerNumber, workerTaskId);
       return clientMap.computeIfAbsent(
           workerTaskId,
           id -> {

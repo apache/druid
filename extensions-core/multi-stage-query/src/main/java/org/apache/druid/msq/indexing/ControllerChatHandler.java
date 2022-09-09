@@ -106,12 +106,11 @@ public class ControllerChatHandler implements ChatHandler
    * See {@link ControllerClient#postWorkerWarning} for the client-side code that calls this API.
    */
   @POST
-  @Path("/workerWarning/{taskId}")
+  @Path("/workerWarning")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   public Response httpPostWorkerWarning(
       final List<MSQErrorReport> errorReport,
-      @PathParam("taskId") final String taskId,
       @Context final HttpServletRequest req
   )
   {

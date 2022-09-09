@@ -50,49 +50,49 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
   }
 
   @Override
-  public ListenableFuture<Void> postWorkOrder(String workerTaskId, WorkOrder workOrder)
+  public ListenableFuture<Void> postWorkOrder(int workerNumber, WorkOrder workOrder)
   {
-    return wrap(workerTaskId, client, c -> c.postWorkOrder(workerTaskId, workOrder));
+    return wrap(workerNumber, client, c -> c.postWorkOrder(workerNumber, workOrder));
   }
 
   @Override
   public ListenableFuture<Void> postResultPartitionBoundaries(
-      final String workerTaskId,
+      final int workerNumber,
       final StageId stageId,
       final ClusterByPartitions partitionBoundaries
   )
   {
-    return wrap(workerTaskId, client, c -> c.postResultPartitionBoundaries(workerTaskId, stageId, partitionBoundaries));
+    return wrap(workerNumber, client, c -> c.postResultPartitionBoundaries(workerNumber, stageId, partitionBoundaries));
   }
 
   @Override
-  public ListenableFuture<Void> postCleanupStage(String workerTaskId, StageId stageId)
+  public ListenableFuture<Void> postCleanupStage(int workerNumber, StageId stageId)
   {
-    return wrap(workerTaskId, client, c -> c.postCleanupStage(workerTaskId, stageId));
+    return wrap(workerNumber, client, c -> c.postCleanupStage(workerNumber, stageId));
   }
 
   @Override
-  public ListenableFuture<Void> postFinish(String workerTaskId)
+  public ListenableFuture<Void> postFinish(int workerNumber)
   {
-    return wrap(workerTaskId, client, c -> c.postFinish(workerTaskId));
+    return wrap(workerNumber, client, c -> c.postFinish(workerNumber));
   }
 
   @Override
-  public ListenableFuture<CounterSnapshotsTree> getCounters(String workerTaskId)
+  public ListenableFuture<CounterSnapshotsTree> getCounters(int workerNumber)
   {
-    return wrap(workerTaskId, client, c -> c.getCounters(workerTaskId));
+    return wrap(workerNumber, client, c -> c.getCounters(workerNumber));
   }
 
   @Override
   public ListenableFuture<Boolean> fetchChannelData(
-      String workerTaskId,
+      int workerNumber,
       StageId stageId,
       int partitionNumber,
       long offset,
       ReadableByteChunksFrameChannel channel
   )
   {
-    return wrap(workerTaskId, client, c -> c.fetchChannelData(workerTaskId, stageId, partitionNumber, offset, channel));
+    return wrap(workerNumber, client, c -> c.fetchChannelData(workerNumber, stageId, partitionNumber, offset, channel));
   }
 
   @Override
@@ -102,7 +102,7 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
   }
 
   private static <T> ListenableFuture<T> wrap(
-      final String workerTaskId,
+      final int workerNumber,
       final WorkerClient client,
       final ClientFn<T> clientFn
   )
@@ -114,7 +114,7 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
       clientFuture = clientFn.apply(client);
     }
     catch (Exception e) {
-      throw new MSQException(e, new WorkerRpcFailedFault(workerTaskId));
+      throw new MSQException(e, new WorkerRpcFailedFault(String.valueOf(workerNumber)));
     }
 
     Futures.addCallback(
@@ -130,7 +130,7 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
           @Override
           public void onFailure(Throwable t)
           {
-            retVal.setException(new MSQException(t, new WorkerRpcFailedFault(workerTaskId)));
+            retVal.setException(new MSQException(t, new WorkerRpcFailedFault(String.valueOf(workerNumber))));
           }
         }
     );

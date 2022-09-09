@@ -21,7 +21,6 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -203,7 +202,13 @@ public class WorkerImpl implements Worker
       }
       catch (Throwable e) {
         maybeErrorReport = Optional.of(
-            MSQErrorReport.fromException(id(), MSQTasks.getHostFromSelfNode(selfDruidNode), null, e)
+            MSQErrorReport.fromException(
+                id(),
+                task().getWorkerNumber(),
+                MSQTasks.getHostFromSelfNode(selfDruidNode),
+                null,
+                e
+            )
         );
       }
 
@@ -234,7 +239,17 @@ public class WorkerImpl implements Worker
     this.controllerClient = context.makeControllerClient(task.getControllerTaskId());
     closer.register(controllerClient::close);
     context.registerWorker(this, closer); // Uses controllerClient, so must be called after that is initialized
-    this.workerClient = new ExceptionWrappingWorkerClient(context.makeWorkerClient());
+    this.workerClient = new ExceptionWrappingWorkerClient(context.makeWorkerClient(
+        workerNumber -> {
+          try {
+            return controllerClient.getTaskList().get(workerNumber);
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+
+        }
+    ));
     closer.register(workerClient::close);
 
     final KernelHolder kernelHolder = new KernelHolder();
@@ -263,6 +278,7 @@ public class WorkerImpl implements Worker
     final MSQWarningReportPublisher msqWarningReportPublisher = new MSQWarningReportLimiterPublisher(
         new MSQWarningReportSimplePublisher(
             id(),
+            task().getWorkerNumber(),
             controllerClient,
             id(),
             MSQTasks.getHostFromSelfNode(selfDruidNode)
@@ -364,6 +380,7 @@ public class WorkerImpl implements Worker
           return Optional.of(
               MSQErrorReport.fromException(
                   id(),
+                  task().getWorkerNumber(),
                   MSQTasks.getHostFromSelfNode(selfDruidNode),
                   stageDefinition.getId().getStageNumber(),
                   kernel.getException()
@@ -537,21 +554,18 @@ public class WorkerImpl implements Worker
 
   private InputChannelFactory makeBaseInputChannelFactory(final Closer closer)
   {
-    final Supplier<List<String>> workerTaskList = Suppliers.memoize(
-        () -> {
-          try {
-            return controllerClient.getTaskList();
-          }
-          catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        }
-    )::get;
+    final Supplier<List<String>> workerTaskList = () -> {
+      try {
+        return controllerClient.getTaskList();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    };
 
     if (durableStageStorageEnabled) {
       return DurableStorageInputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
-          workerTaskList,
           MSQTasks.makeStorageConnector(context.injector()),
           closer
       );
@@ -569,7 +583,7 @@ public class WorkerImpl implements Worker
     if (durableStageStorageEnabled) {
       return DurableStorageOutputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
-          id(),
+          task().getWorkerNumber(),
           stageNumber,
           frameSize,
           MSQTasks.makeStorageConnector(context.injector())
@@ -679,7 +693,7 @@ public class WorkerImpl implements Worker
       if (durableStageStorageEnabled) {
         final String fileName = DurableStorageOutputChannelFactory.getPartitionFileName(
             task.getControllerTaskId(),
-            task.getId(),
+            task.getWorkerNumber(),
             stageId.getStageNumber(),
             partition
         );

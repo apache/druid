@@ -28,6 +28,7 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
+import java.util.function.IntFunction;
 
 /**
  * Context used by multi-stage query workers.
@@ -55,8 +56,9 @@ public interface WorkerContext
   /**
    * Creates and fetches a {@link WorkerClient}. It is independent of the workerId because the workerId is passed
    * in to every method of the client.
+   * @param taskIdFetcher
    */
-  WorkerClient makeWorkerClient();
+  WorkerClient makeWorkerClient(IntFunction<String> taskIdFetcher);
 
   /**
    * Fetch a directory for temporary outputs

@@ -32,6 +32,7 @@ public class MSQWarningReportSimplePublisher implements MSQWarningReportPublishe
 {
 
   final String workerId;
+  final int workerNumber;
   final ControllerClient controllerClient;
   final String taskId;
   @Nullable
@@ -39,12 +40,14 @@ public class MSQWarningReportSimplePublisher implements MSQWarningReportPublishe
 
   public MSQWarningReportSimplePublisher(
       final String workerId,
+      final int workerNumber,
       final ControllerClient controllerClient,
       final String taskId,
       @Nullable final String host
   )
   {
     this.workerId = workerId;
+    this.workerNumber = workerNumber;
     this.controllerClient = controllerClient;
     this.taskId = taskId;
     this.host = host;
@@ -54,10 +57,10 @@ public class MSQWarningReportSimplePublisher implements MSQWarningReportPublishe
   @Override
   public void publishException(int stageNumber, Throwable e)
   {
-    final MSQErrorReport warningReport = MSQErrorReport.fromException(taskId, host, stageNumber, e);
+    final MSQErrorReport warningReport = MSQErrorReport.fromException(taskId, workerNumber, host, stageNumber, e);
 
     try {
-      controllerClient.postWorkerWarning(workerId, ImmutableList.of(warningReport));
+      controllerClient.postWorkerWarning(ImmutableList.of(warningReport));
     }
     catch (IOException e2) {
       throw new RuntimeException(e2);

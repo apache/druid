@@ -33,10 +33,8 @@ import org.apache.druid.storage.StorageConnector;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Supplier;
 
 /**
  * Provides input channels connected to durable storage.
@@ -46,17 +44,14 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
   private final StorageConnector storageConnector;
   private final ExecutorService remoteInputStreamPool;
   private final String controllerTaskId;
-  private final Supplier<List<String>> taskList;
 
   public DurableStorageInputChannelFactory(
       final String controllerTaskId,
-      final Supplier<List<String>> taskList,
       final StorageConnector storageConnector,
       final ExecutorService remoteInputStreamPool
   )
   {
     this.controllerTaskId = Preconditions.checkNotNull(controllerTaskId, "controllerTaskId");
-    this.taskList = Preconditions.checkNotNull(taskList, "taskList");
     this.storageConnector = Preconditions.checkNotNull(storageConnector, "storageConnector");
     this.remoteInputStreamPool = Preconditions.checkNotNull(remoteInputStreamPool, "remoteInputStreamPool");
   }
@@ -67,7 +62,6 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
    */
   public static DurableStorageInputChannelFactory createStandardImplementation(
       final String controllerTaskId,
-      final Supplier<List<String>> taskList,
       final StorageConnector storageConnector,
       final Closer closer
   )
@@ -75,26 +69,25 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
     final ExecutorService remoteInputStreamPool =
         Executors.newCachedThreadPool(Execs.makeThreadFactory(controllerTaskId + "-remote-fetcher-%d"));
     closer.register(remoteInputStreamPool::shutdownNow);
-    return new DurableStorageInputChannelFactory(controllerTaskId, taskList, storageConnector, remoteInputStreamPool);
+    return new DurableStorageInputChannelFactory(controllerTaskId, storageConnector, remoteInputStreamPool);
   }
 
   @Override
   public ReadableFrameChannel openChannel(StageId stageId, int workerNumber, int partitionNumber) throws IOException
   {
-    final String workerTaskId = taskList.get().get(workerNumber);
 
     try {
       final String remotePartitionPath = DurableStorageOutputChannelFactory.getPartitionFileName(
           controllerTaskId,
-          workerTaskId,
+          workerNumber,
           stageId.getStageNumber(),
           partitionNumber
       );
       RetryUtils.retry(() -> {
         if (!storageConnector.pathExists(remotePartitionPath)) {
           throw new ISE(
-              "Could not find remote output of worker task[%s] stage[%d] partition[%d]",
-              workerTaskId,
+              "Could not find remote output of worker task[%d] stage[%d] partition[%d]",
+              workerNumber,
               stageId.getStageNumber(),
               partitionNumber
           );
@@ -112,8 +105,8 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
     catch (Exception e) {
       throw new IOE(
           e,
-          "Could not find remote output of worker task[%s] stage[%d] partition[%d]",
-          workerTaskId,
+          "Could not find remote output of worker task[%d] stage[%d] partition[%d]",
+          workerNumber,
           stageId.getStageNumber(),
           partitionNumber
       );

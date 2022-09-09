@@ -154,6 +154,7 @@ public class MSQTasks
       // Something went wrong, but we have no idea what.
       return MSQErrorReport.fromFault(
           controllerTaskId,
+          null,
           controllerHost,
           null,
           UnknownFault.forMessage(GENERIC_QUERY_FAILED_MESSAGE)

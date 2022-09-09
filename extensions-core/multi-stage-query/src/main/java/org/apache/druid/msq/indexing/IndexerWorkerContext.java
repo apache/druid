@@ -59,6 +59,7 @@ import org.apache.druid.server.DruidNode;
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.IntFunction;
 
 public class IndexerWorkerContext implements WorkerContext
 {
@@ -218,10 +219,10 @@ public class IndexerWorkerContext implements WorkerContext
   }
 
   @Override
-  public WorkerClient makeWorkerClient()
+  public WorkerClient makeWorkerClient(IntFunction<String> taskIdFetcher)
   {
     // Ignore workerId parameter. The workerId is passed into each method of WorkerClient individually.
-    return new IndexerWorkerClient(clientFactory, makeOverlordClient(), jsonMapper());
+    return new IndexerWorkerClient(clientFactory, makeOverlordClient(), jsonMapper(), taskIdFetcher);
   }
 
   @Override

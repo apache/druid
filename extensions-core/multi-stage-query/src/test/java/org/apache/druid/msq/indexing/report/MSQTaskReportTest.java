@@ -138,7 +138,7 @@ public class MSQTaskReportTest
   @Test
   public void testSerdeErrorReport() throws Exception
   {
-    final MSQErrorReport errorReport = MSQErrorReport.fromFault(TASK_ID, HOST, 0, new TooManyColumnsFault(10, 5));
+    final MSQErrorReport errorReport = MSQErrorReport.fromFault(TASK_ID, 0, HOST, 0, new TooManyColumnsFault(10, 5));
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
@@ -202,7 +202,9 @@ public class MSQTaskReportTest
 
     final Map<String, TaskReport> reportMap = mapper.readValue(
         reportFile,
-        new TypeReference<Map<String, TaskReport>>() {}
+        new TypeReference<Map<String, TaskReport>>()
+        {
+        }
     );
 
     final MSQTaskReport report2 = (MSQTaskReport) reportMap.get(MSQTaskReport.REPORT_KEY);

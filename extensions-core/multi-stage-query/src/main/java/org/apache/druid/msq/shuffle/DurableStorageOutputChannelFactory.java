@@ -37,21 +37,21 @@ import java.nio.channels.Channels;
 public class DurableStorageOutputChannelFactory implements OutputChannelFactory
 {
   private final String controllerTaskId;
-  private final String workerTaskId;
+  private final int workerNumber;
   private final int stageNumber;
   private final int frameSize;
   private final StorageConnector storageConnector;
 
   public DurableStorageOutputChannelFactory(
       final String controllerTaskId,
-      final String workerTaskId,
+      final int workerNumber,
       final int stageNumber,
       final int frameSize,
       final StorageConnector storageConnector
   )
   {
     this.controllerTaskId = Preconditions.checkNotNull(controllerTaskId, "controllerTaskId");
-    this.workerTaskId = Preconditions.checkNotNull(workerTaskId, "workerTaskId");
+    this.workerNumber = workerNumber;
     this.stageNumber = stageNumber;
     this.frameSize = frameSize;
     this.storageConnector = Preconditions.checkNotNull(storageConnector, "storageConnector");
@@ -63,7 +63,7 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
    */
   public static DurableStorageOutputChannelFactory createStandardImplementation(
       final String controllerTaskId,
-      final String workerTaskId,
+      final int workerNumber,
       final int stageNumber,
       final int frameSize,
       final StorageConnector storageConnector
@@ -71,7 +71,7 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
   {
     return new DurableStorageOutputChannelFactory(
         controllerTaskId,
-        workerTaskId,
+        workerNumber,
         stageNumber,
         frameSize,
         storageConnector
@@ -81,7 +81,7 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
   @Override
   public OutputChannel openChannel(int partitionNumber) throws IOException
   {
-    final String fileName = getPartitionFileName(controllerTaskId, workerTaskId, stageNumber, partitionNumber);
+    final String fileName = getPartitionFileName(controllerTaskId, workerNumber, stageNumber, partitionNumber);
     final WritableFrameFileChannel writableChannel =
         new WritableFrameFileChannel(
             FrameFileWriter.open(
@@ -101,7 +101,7 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
   @Override
   public OutputChannel openNilChannel(int partitionNumber)
   {
-    final String fileName = getPartitionFileName(controllerTaskId, workerTaskId, stageNumber, partitionNumber);
+    final String fileName = getPartitionFileName(controllerTaskId, workerNumber, stageNumber, partitionNumber);
     // As tasks dependent on output of this partition will forever block if no file is present in RemoteStorage. Hence, writing a dummy frame.
     try {
 
@@ -112,7 +112,7 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
       throw new ISE(
           e,
           "Unable to create empty remote output of workerTask[%s] stage[%d] partition[%d]",
-          workerTaskId,
+          workerNumber,
           stageNumber,
           partitionNumber
       );
@@ -126,15 +126,15 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
 
   public static String getPartitionFileName(
       final String controllerTaskId,
-      final String workerTaskId,
+      final int workerNo,
       final int stageNumber,
       final int partitionNumber
   )
   {
     return StringUtils.format(
-        "%s/worker_%s/stage_%d/part_%d",
+        "%s/worker_%d/stage_%d/part_%d",
         getControllerDirectory(controllerTaskId),
-        IdUtils.validateId("worker task ID", workerTaskId),
+        workerNo,
         stageNumber,
         partitionNumber
     );
