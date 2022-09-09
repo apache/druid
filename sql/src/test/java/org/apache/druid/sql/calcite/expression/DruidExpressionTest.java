@@ -61,13 +61,13 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
         2.12345678,
         2.2e122,
         Double.NaN,
-        //CHECKSTYLE.OFF: Regexp
-        // Min/max double are banned by regexp due to often being inappropriate; but they are appropriate here.
         Double.POSITIVE_INFINITY,
         Double.NEGATIVE_INFINITY,
-        //CHECKSTYLE.ON: Regexp
+        //CHECKSTYLE.OFF: Regexp
+        // Min/max double are banned by regexp due to often being inappropriate; but they are appropriate here.
         Double.MIN_VALUE,
         Double.MAX_VALUE,
+        //CHECKSTYLE.ON: Regexp
         Double.MIN_NORMAL
     };
 
