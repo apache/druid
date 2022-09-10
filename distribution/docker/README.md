@@ -25,6 +25,9 @@ From the root of the repo, run following command:
 DOCKER_BUILDKIT=1 docker build -t apache/druid:tag -f distribution/docker/Dockerfile .
 ```
 
+> NOTE:
+> Building image on Apple M1 or M2 is not supported.
+
 ## Run
 
 1. Edit `distribution/docker/docker-compose.yml` file to change the tag of Druid's images to the tag that's used in the 'Build' phase above.
