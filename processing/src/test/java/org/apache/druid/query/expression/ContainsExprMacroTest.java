@@ -36,14 +36,14 @@ public class ContainsExprMacroTest extends MacroTestBase
   @Test
   public void testErrorZeroArguments()
   {
-    expectException(IllegalArgumentException.class, "Function[contains_string] must have 2 arguments");
+    expectException(IllegalArgumentException.class, "Function[contains_string] requires 2 arguments");
     eval("contains_string()", InputBindings.withMap(ImmutableMap.of()));
   }
 
   @Test
   public void testErrorThreeArguments()
   {
-    expectException(IllegalArgumentException.class, "Function[contains_string] must have 2 arguments");
+    expectException(IllegalArgumentException.class, "Function[contains_string] requires 2 arguments");
     eval("contains_string('a', 'b', 'c')", InputBindings.withMap(ImmutableMap.of()));
   }
 

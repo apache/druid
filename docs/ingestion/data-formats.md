@@ -155,8 +155,6 @@ Be sure to change the `delimiter` to the appropriate delimiter for your data. Li
 
 Configure the Kafka `inputFormat` to load complete kafka records including header, key, and value. 
 
-> That Kafka `inputFormat` is currently designated as experimental.
-
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | Set value to `kafka`. | yes |
@@ -584,7 +582,9 @@ For example:
 
 ### FlattenSpec
 
-The `flattenSpec` object bridges the gap between potentially nested input data, such as JSON or Avro, and Druid's flat data model. It is an object within the `inputFormat` object.
+The `flattenSpec` object bridges the gap between potentially nested input data, such as Avro or ORC, and Druid's flat data model. It is an object within the `inputFormat` object.
+
+> If you have nested JSON data, you can ingest and store JSON in an Apache Druid column as a `COMPLEX<json>` data type. See [Nested columns](../querying/nested-columns.md) for more information.
 
 Configure your `flattenSpec` as follows:
 

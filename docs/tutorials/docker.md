@@ -116,7 +116,7 @@ It takes a few seconds for all the Druid processes to fully start up. If you ope
 
 ## Using the cluster
 
-From here you can follow along with the [Quickstart](./index.md#step-4-load-data). For production use, refine your `docker-compose.yml` file to add any additional external service dependencies as necessary.
+From here you can follow along with the [Quickstart](./index.md#load-data). For production use, refine your `docker-compose.yml` file to add any additional external service dependencies as necessary.
 
 You can explore the Druid containers using Docker to start a shell:
 

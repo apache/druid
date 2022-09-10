@@ -330,7 +330,7 @@ public abstract class ExprEval<T>
 
   public static ExprEval ofArray(ExpressionType outputType, Object[] value)
   {
-    Preconditions.checkArgument(outputType.isArray());
+    Preconditions.checkArgument(outputType.isArray(), "Output type %s is not an array", outputType);
     return new ArrayExprEval(outputType, value);
   }
 
@@ -1021,7 +1021,7 @@ public abstract class ExprEval<T>
     {
       super(value);
       this.arrayType = arrayType;
-      Preconditions.checkArgument(arrayType.isArray());
+      Preconditions.checkArgument(arrayType.isArray(), "Output type %s is not an array", arrayType);
       ExpressionType.checkNestedArrayAllowed(arrayType);
     }
 

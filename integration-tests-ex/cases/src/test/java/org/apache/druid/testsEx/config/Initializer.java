@@ -260,7 +260,6 @@ public class Initializer
       // previously set in Maven.
       propertyEnvVarBinding("druid.test.config.dockerIp", "DOCKER_IP");
       propertyEnvVarBinding("druid.zk.service.host", "DOCKER_IP");
-      propertyEnvVarBinding("druid.test.config.hadoopDir", "HADOOP_DIR");
       property("druid.client.https.trustStorePath", "client_tls/truststore.jks");
       property("druid.client.https.trustStorePassword", "druid123");
       property("druid.client.https.keyStorePath", "client_tls/client.jks");

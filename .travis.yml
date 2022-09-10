@@ -46,7 +46,7 @@ addons:
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
 # output.  To compensate, use travis_wait to extend the timeout.
-install: ./check_test_suite.py && travis_terminate 0  || echo 'Running Maven install...' && MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-tools,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+install: ./check_test_suite.py && travis_terminate 0  || echo 'Running Maven install...' && MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
 # There are 3 stages of tests
 # 1. Tests - phase 1
@@ -89,7 +89,6 @@ jobs:
       script: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
 
     - name: "license checks"
-      install: skip
       before_script: &setup_generate_license
         - sudo apt-get update && sudo apt-get install python3 python3-pip python3-setuptools -y
         - ./check_test_suite.py && travis_terminate 0 || echo 'Continuing setup'
@@ -388,7 +387,7 @@ jobs:
       install: web-console/script/druid build
       before_script:
         - ./check_test_suite.py && travis_terminate 0 || echo 'Starting nvm install...'
-        - nvm install 14.19.3
+        - nvm install 16.17.0
         - web-console/script/druid start
       script: (cd web-console && npm run test-e2e)
       after_script: web-console/script/druid stop
@@ -457,9 +456,9 @@ jobs:
           docker exec -it druid-$v sh -c 'dmesg | tail -3' ;
           done
 
-    #- <<: *integration_batch_index
-    #  name: "(Compile=openjdk8, Run=openjdk8) batch index integration test with Indexer"
-    #  env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+    - <<: *integration_batch_index
+      name: "(Compile=openjdk8, Run=openjdk8) batch index integration test with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
 
     - &integration_input_format
       name: "(Compile=openjdk8, Run=openjdk8) input format integration test"
@@ -683,15 +682,16 @@ jobs:
       jdk: openjdk8
       services: *integration_test_services
       env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
-      # Uses the install defined above. Then, builds the test tools and docker image,
+      # Uses the installation defined above. Then, builds the test tools and docker image,
       # and runs one IT. If tests fail, echos log lines of any of
       # the Druid services that did not exit normally.
       script: ./it.sh travis HighAvailability
-       
-    - <<: *integration_tests_ex
-      name: "(Compile=openjdk8, Run=openjdk8) batch index integration test with Indexer (new)"
-      env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
-      script: ./it.sh travis BatchIndex
+
+    # Disabling BatchIndex test as it is failing with due to timeout, fixing it will be taken in a separate PR.
+    #- <<: *integration_tests_ex
+    #  name: "(Compile=openjdk8, Run=openjdk8) batch index integration test with Indexer (new)"
+    #  env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+    #  script: ./it.sh travis BatchIndex
 
     # END - Integration tests for Compile with Java 8 and Run with Java 8
 

@@ -61,6 +61,35 @@ The `jvm.config` files contain JVM flags such as heap sizing properties for each
 
 Common properties shared by all services are placed in `_common/common.runtime.properties`.
 
+## Configuration Interpolation
+
+Configuration values can be interpolated from System Properties, Environment Variables, or local files. Below is an example of how this can be used:
+
+```
+druid.metadata.storage.type=${env:METADATA_STORAGE_TYPE}
+druid.processing.tmpDir=${sys:java.io.tmpdir}
+druid.segmentCache.locations=${file:UTF-8:/config/segment-cache-def.json}
+```
+
+Interpolation is also recursive so you can do:
+
+```
+druid.segmentCache.locations=${file:UTF-8:${env:SEGMENT_DEF_LOCATION}}
+```
+
+If the property is not set an exception will be thrown on startup, but a default can be provided if desired. Setting a default value will not work with file interpolation as an exception will be thrown if the file does not exist.
+
+```
+druid.metadata.storage.type=${env:METADATA_STORAGE_TYPE:-mysql}
+druid.processing.tmpDir=${sys:java.io.tmpdir:-/tmp}
+```
+
+If you need to set a variable that is wrapped by `${...}` but do not want it to be interpolated you can escape it by adding another `$`. For example:
+
+```
+config.name=$${value}
+```
+
 ## Common Configurations
 
 The properties under this section are common configurations that should be shared across all Druid services in a cluster.
@@ -150,23 +179,6 @@ The following path is used for service discovery. It is **not** affected by `dru
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.discovery.curator.path`|Services announce themselves under this ZooKeeper path.|`/druid/discovery`|
-
-### Exhibitor
-
-[Exhibitor](https://github.com/Netflix/exhibitor/wiki) is a supervisor system for ZooKeeper.
-Exhibitor can dynamically scale-up/down the cluster of ZooKeeper servers.
-Druid can update self-owned list of ZooKeeper servers through Exhibitor without restarting.
-That is, it allows Druid to keep the connections of Exhibitor-supervised ZooKeeper servers.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.exhibitor.service.hosts`|A JSON array which contains the hostnames of Exhibitor instances. Please specify this property if you want to use Exhibitor-supervised cluster.|none|
-|`druid.exhibitor.service.port`|The REST port used to connect to Exhibitor.|`8080`|
-|`druid.exhibitor.service.restUriPath`|The path of the REST call used to get the server set.|`/exhibitor/v1/cluster/list`|
-|`druid.exhibitor.service.useSsl`|Boolean flag for whether or not to use https protocol.|`false`|
-|`druid.exhibitor.service.pollingMs`|How often to poll the exhibitors for the list|`10000`|
-
-Note that `druid.zk.service.host` is used as a backup in case an Exhibitor instance can't be contacted and therefore should still be set.
 
 ### TLS
 
@@ -786,6 +798,14 @@ All Druid components can communicate with each other over HTTP.
 |`druid.global.http.readTimeout`|The timeout for data reads.|`PT15M`|
 |`druid.global.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.global.http.readTimeout`. Set this timeout = ~90% of `druid.global.http.readTimeout`|`PT4M`|
 |`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`max(10, ((number of cores * 17) / 16 + 2) + 30)`|
+
+### Common endpoints Configuration
+
+This section contains the configuration options for endpoints that are supported by all processes.
+
+|Property| Description                                                                                                                                  | Default                                                                                     |
+|--------|----------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+|`druid.server.hiddenProperties`| If property names or substring of property names (case insensitive) is in this list, responses of the `/status/properties` endpoint do not show these properties | `["druid.s3.accessKey","druid.s3.secretKey","druid.metadata.storage.connector.password", "password", "key", "token", "pwd"]` |
 
 ## Master Server
 

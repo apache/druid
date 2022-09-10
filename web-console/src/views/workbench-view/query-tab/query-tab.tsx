@@ -403,7 +403,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
             ) : execution.isSuccessfulInsert() ? (
               <IngestSuccessPane
                 execution={execution}
-                onDetails={() => onDetails(statsTaskId!)}
+                onDetails={onDetails}
                 onQueryTab={onQueryTab}
               />
             ) : execution.error ? (

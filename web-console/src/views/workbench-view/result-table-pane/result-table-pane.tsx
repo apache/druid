@@ -244,7 +244,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
       }
 
       // JSON hint
-      if (column.nativeType === 'COMPLEX<json>') {
+      if (selectExpression && column.nativeType === 'COMPLEX<json>') {
         const paths = getJsonPaths(
           filterMap(queryResult.rows, row => {
             const v = row[headerIndex];
@@ -319,7 +319,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
         }
       }
 
-      if (!parsedQuery.hasStarInSelect()) {
+      if (noStar) {
         menuItems.push(
           <MenuItem
             key="edit_column"
@@ -487,16 +487,18 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
         }
       }
 
-      menuItems.push(
-        <MenuItem
-          key="remove_column"
-          icon={IconNames.CROSS}
-          text="Remove column"
-          onClick={() => {
-            onQueryAction(q => q.removeOutputColumn(header));
-          }}
-        />,
-      );
+      if (noStar) {
+        menuItems.push(
+          <MenuItem
+            key="remove_column"
+            icon={IconNames.CROSS}
+            text="Remove column"
+            onClick={() => {
+              onQueryAction(q => q.removeOutputColumn(header));
+            }}
+          />,
+        );
+      }
     } else {
       menuItems.push(
         <MenuItem

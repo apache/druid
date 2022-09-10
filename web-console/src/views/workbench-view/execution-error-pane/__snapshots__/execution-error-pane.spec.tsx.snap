@@ -8,33 +8,27 @@ exports[`ExecutionErrorPane matches snapshot 1`] = `
   <p
     className="error-message-text"
   >
-    UnknownError: 
-    java.lang.RuntimeException: java.lang.RuntimeException: Error occured while trying to read uri: https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz_
-     
-    <a
-      onClick={[Function]}
-    >
-      (Stack trace)
-    </a>
+    TooManyWarnings: 
+    Too many warnings of type CannotParseExternalData generated (max = 10)
   </p>
-  <p>
+  <div>
     Failed task ID: 
     <Memo(ClickToCopy)
-      text="query-0cf1a40a-aaef-4d17-bda4-5afa7edf07e7-worker0"
+      text="query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb"
     />
-     
-    On host: 
+     (on host: 
     <Memo(ClickToCopy)
-      text="localhost:8101"
+      text="localhost"
     />
-     
-    Debug:
-     
+    )
+  </div>
+  <div>
+    Debug: 
     <a
       onClick={[Function]}
     >
-      download query detail archive
+      get query detail archive
     </a>
-  </p>
+  </div>
 </Blueprint4.Callout>
 `;
