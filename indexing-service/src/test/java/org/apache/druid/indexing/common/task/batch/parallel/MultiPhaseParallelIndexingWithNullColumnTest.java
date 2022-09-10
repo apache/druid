@@ -40,6 +40,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -70,6 +71,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -163,6 +166,51 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
         Assert.assertEquals(dimensionSchemas.get(i).getName(), segment.getDimensions().get(i));
       }
     }
+  }
+
+  @Test
+  public void testIngestNullTime() throws JsonProcessingException, ExecutionException, InterruptedException, TimeoutException
+  {
+    final List<DimensionSchema> dimensionSchemas = DimensionsSpec.getDefaultSchemas(
+        Arrays.asList("ts", "unknownDim")
+    );
+    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(
+        null,
+        null,
+        null,
+        new ParallelIndexIngestionSpec(
+            new DataSchema(
+                DATASOURCE,
+                new TimestampSpec("unknown_ts", "auto", null),
+                DIMENSIONS_SPEC.withDimensions(dimensionSchemas),
+                DEFAULT_METRICS_SPEC,
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    INTERVAL_TO_INDEX
+                ),
+                null
+            ),
+            new ParallelIndexIOConfig(
+                null,
+                getInputSource(),
+                JSON_FORMAT,
+                false,
+                null
+            ),
+            newTuningConfig(
+                partitionsSpec,
+                2,
+                true
+            )
+        ),
+        null
+    );
+    TaskStatus status = getIndexingServiceClient().runAndWait(task);
+    Assert.assertEquals(status.toString(), TaskState.FAILED, status.getStatusCode());
+    Assert.assertNotNull(status.getErrorMsg());
+    Assert.assertTrue(status.getErrorMsg(),
+        status.getErrorMsg().contains("No valid input rows. It can be due to bad timestamp format, bad row filter"));
   }
 
   @Test

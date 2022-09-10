@@ -101,6 +101,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -134,6 +135,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private static final Logger LOG = new Logger(ParallelIndexSupervisorTask.class);
 
   private static final String TASK_PHASE_FAILURE_MSG = "Failed in phase[%s]. See task logs for details.";
+
+  private static final String NO_VALID_ROWS_FAILURE_MSG = "No valid input rows. "
+      + "It can be due to bad timestamp format, bad row filter or each row having a column with multiple values.";
 
   // Sometimes Druid estimates one shard for hash partitioning despite conditions
   // indicating that there ought to be more than one. We have not been able to
@@ -715,11 +719,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
 
       if (cardinalityRunner.getReports().isEmpty()) {
-        String msg = "No valid rows for hash partitioning."
-                     + " All rows may have invalid timestamps or have been filtered out."
-                     + "Please make sure to use the correct format in timestampSpec.";
-        LOG.warn(msg);
-        return TaskStatus.failure(getId(), msg);
+        LOG.warn(NO_VALID_ROWS_FAILURE_MSG);
+        return TaskStatus.failure(getId(), NO_VALID_ROWS_FAILURE_MSG);
       }
 
       if (partitionsSpec.getNumShards() == null) {
@@ -744,11 +745,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
 
       if (intervalToNumShards.isEmpty()) {
-        String msg = "No valid rows for hash partitioning."
-            + " All rows may have invalid timestamps or have been filtered out."
-            + "Please make sure to use the correct format in timestampSpec.";
-        LOG.warn(msg);
-        return TaskStatus.failure(getId(), msg);
+        LOG.warn(NO_VALID_ROWS_FAILURE_MSG);
+        return TaskStatus.failure(getId(), NO_VALID_ROWS_FAILURE_MSG);
       }
 
       ingestionSchemaToUse = rewriteIngestionSpecWithIntervalsIfMissing(
@@ -842,11 +840,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec()
       );
       if (intervalToPartitions.isEmpty()) {
-        String msg = "No valid rows for range partitioning."
-                     + " All rows may have invalid timestamps or multiple dimension values or do not pass the filter."
-                     + " Please make sure to use the correct format in timestampSpec.";
-        LOG.warn(msg);
-        return TaskStatus.failure(getId(), msg);
+        LOG.warn(NO_VALID_ROWS_FAILURE_MSG);
+        return TaskStatus.failure(getId(), NO_VALID_ROWS_FAILURE_MSG);
       }
     }
     catch (Exception e) {
