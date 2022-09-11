@@ -142,6 +142,11 @@ public class SqlModule implements Module
    * We create a new class for this module so that it can be shared by tests.  The structuring of the SqlModule
    * at time of writing was not conducive to reuse in test code, so, instead of fixing that we just take the easy
    * way out of adding the test-reusable code to this module and reuse that.
+   *
+   * Generally speaking, the injection pattern done by this module is a bit circuitous.  The `SqlToolbox` acts as
+   * if it can be injected with all of its dependencies, but also expects to be mutated with a new SqlEngine.  We
+   * should likely look at adjusting the object dependencies to actually depend on the SqlToolbox and create
+   * different Toolboxes for the different way that queries are done.  But, for now, I'm not changing the interfaces.
    */
   public static class SqlStatementFactoryModule implements Module
   {
