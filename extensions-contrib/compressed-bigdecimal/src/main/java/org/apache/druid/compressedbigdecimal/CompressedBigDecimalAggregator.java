@@ -28,8 +28,8 @@ import org.apache.druid.segment.ColumnValueSelector;
 public class CompressedBigDecimalAggregator implements Aggregator
 {
 
-  private final ColumnValueSelector<CompressedBigDecimal<?>> selector;
-  private final CompressedBigDecimal<?> sum;
+  private final ColumnValueSelector<CompressedBigDecimal> selector;
+  private final CompressedBigDecimal sum;
 
   /**
    * Constructor.
@@ -41,7 +41,7 @@ public class CompressedBigDecimalAggregator implements Aggregator
   public CompressedBigDecimalAggregator(
       int size,
       int scale,
-      ColumnValueSelector<CompressedBigDecimal<?>> selector
+      ColumnValueSelector<CompressedBigDecimal> selector
   )
   {
     this.selector = selector;
@@ -54,10 +54,10 @@ public class CompressedBigDecimalAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    CompressedBigDecimal<?> selectedObject = selector.getObject();
+    CompressedBigDecimal selectedObject = Utils.objToCompressedBigDecimal(selector.getObject());
     if (selectedObject != null) {
       if (selectedObject.getScale() != sum.getScale()) {
-        selectedObject = Utils.scaleUp(selectedObject);
+        selectedObject = Utils.scaleUp(selectedObject, sum.getScale());
       }
       sum.accumulate(selectedObject);
     }
