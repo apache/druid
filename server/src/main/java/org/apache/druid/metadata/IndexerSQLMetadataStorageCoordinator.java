@@ -848,6 +848,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         versionOfExistingChunk = null;
       }
 
+      // The number of core partitions must always be chosen from the set of used segments in the VersionedIntervalTimeline.
+      // When the core partitions have been dropped, using pending segments may lead to an incorrect state
+      // where the chunk is believed to have core partitions and queries results are incorrect.
+      int numCorePartitions = maxId == null ? 0 : maxId.getShardSpec().getNumCorePartitions();
+
       // next, we need to enrich the maxId computed before with the information of the pending segments
       // it is possible that a pending segment has a higher id in which case we need that, it will work,
       // and it will avoid clashes when inserting the new pending segment later in the caller of this method
@@ -936,7 +941,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             partialShardSpec.complete(
                 jsonMapper,
                 maxId.getShardSpec().getPartitionNum() + 1,
-                maxId.getShardSpec().getNumCorePartitions()
+                numCorePartitions
             )
         );
       }
