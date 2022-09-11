@@ -79,7 +79,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   @Override
   public QueryRunner<ScanResultValue> createRunner(Segment segment)
   {
-    return new ScanQueryRunner(engine, segment);
+    return new OrderByLimitQueryRunner(engine, segment);
   }
 
   @Override
@@ -439,7 +439,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     return toolChest;
   }
 
-  private static class ScanQueryRunner implements QueryRunner<ScanResultValue>
+  static class ScanQueryRunner implements QueryRunner<ScanResultValue>
   {
     private final ScanQueryEngine engine;
     private final Segment segment;
