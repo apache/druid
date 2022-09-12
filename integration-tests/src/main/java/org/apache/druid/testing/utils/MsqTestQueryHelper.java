@@ -40,8 +40,8 @@ import org.apache.druid.msq.sql.SqlTaskStatus;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.msq.MsqOverlordResourceTestClient;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
+import org.apache.druid.testing.clients.msq.MsqOverlordResourceTestClient;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.util.ArrayList;
