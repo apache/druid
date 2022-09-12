@@ -124,6 +124,14 @@ public class SupervisorStateManager
    */
   public void maybeSetState(State proposedState)
   {
+    // Only set healthySteadyState when current state is STOPPING
+    if (BasicState.STOPPING.equals(this.supervisorState)) {
+      if (healthySteadyState.equals(proposedState)) {
+        supervisorState = healthySteadyState;
+      }
+      return;
+    }
+
     // if we're over our unhealthiness threshold, set the state to the appropriate unhealthy state
     if (consecutiveFailedRuns >= supervisorStateManagerConfig.getUnhealthinessThreshold()) {
       hasHitUnhealthinessThreshold = true;
