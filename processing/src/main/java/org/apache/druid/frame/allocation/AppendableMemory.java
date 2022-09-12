@@ -19,20 +19,15 @@
 
 package org.apache.druid.frame.allocation;
 
-import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 
 import java.io.Closeable;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -237,28 +232,6 @@ public class AppendableMemory implements Closeable
     }
 
     return sz;
-  }
-
-  /**
-   * Write current memory to a channel.
-   */
-  public void writeTo(final WritableByteChannel channel) throws IOException
-  {
-    for (int i = 0; i < blockHolders.size(); i++) {
-      final ResourceHolder<WritableMemory> memoryHolder = blockHolders.get(i);
-      final WritableMemory memory = memoryHolder.get();
-      final int limit = limits.getInt(i);
-
-      if (memory.hasByteBuffer()) {
-        final ByteBuffer byteBuffer = memory.getByteBuffer().duplicate();
-        byteBuffer.limit(Ints.checkedCast(memory.getRegionOffset(limit)));
-        byteBuffer.position(Ints.checkedCast(memory.getRegionOffset(0)));
-        Channels.writeFully(channel, byteBuffer);
-      } else {
-        // No implementation currently for Memory without backing ByteBuffer. (It's never needed.)
-        throw new UnsupportedOperationException("Cannot write Memory without backing ByteBuffer");
-      }
-    }
   }
 
   /**

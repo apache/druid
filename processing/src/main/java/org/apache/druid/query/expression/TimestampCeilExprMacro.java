@@ -20,7 +20,6 @@
 package org.apache.druid.query.expression;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.Expr;
@@ -47,9 +46,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() < 2 || args.size() > 4) {
-      throw new IAE("Function[%s] must have 2 to 4 arguments", name());
-    }
+    validationHelperCheckArgumentRange(args, 2, 4);
 
     if (args.stream().skip(1).allMatch(Expr::isLiteral)) {
       return new TimestampCeilExpr(args);

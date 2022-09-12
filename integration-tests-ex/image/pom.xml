@@ -91,8 +91,8 @@ Reference: https://dzone.com/articles/build-docker-image-from-maven
                     <type>pom</type>
                 </dependency>
                 <dependency>
-                    <groupId>org.apache.druid</groupId>
-                    <artifactId>it-tools</artifactId>
+                    <groupId>org.apache.druid.integration-tests</groupId>
+                    <artifactId>druid-it-tools</artifactId>
                     <version>${project.parent.version}</version>
                 </dependency>
                 <dependency>
@@ -155,8 +155,8 @@ Reference: https://dzone.com/articles/build-docker-image-from-maven
                                             <outputDirectory>${project.build.directory}/docker</outputDirectory>
                                         </artifactItem>
                                         <artifactItem>
-                                            <groupId>org.apache.druid</groupId>
-                                            <artifactId>it-tools</artifactId>
+                                            <groupId>org.apache.druid.integration-tests</groupId>
+                                            <artifactId>druid-it-tools</artifactId>
                                             <version>${project.version}</version>
                                             <type>jar</type>
                                             <overWrite>true</overWrite>
@@ -224,6 +224,13 @@ Reference: https://dzone.com/articles/build-docker-image-from-maven
                             </execution>
 
                         </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.owasp</groupId>
+                        <artifactId>dependency-check-maven</artifactId>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
                     </plugin>
                 </plugins>
             </build>

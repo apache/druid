@@ -36,7 +36,7 @@ import java.util.function.Supplier;
  * Reader for a virtual contiguous address range backed by compressed blocks of data.
  *
  * Format:
- * | version (byte) | compression (byte) | num blocks (int) | block size (int) | end offsets | compressed data |
+ * | version (byte) | compression (byte) | block size (int) | num blocks (int) | end offsets | compressed data |
  *
  * This mechanism supports two modes of use, the first where callers may ask for a range of data from the underlying
  * blocks, provided by {@link #getRange(long, int)}. The {@link ByteBuffer} provided by this method may or may not
@@ -48,6 +48,8 @@ import java.util.function.Supplier;
  * {@link #seekBlock(int)} to change which block is currently loaded.
  *
  * {@link #getRange(long, int)} uses these same mechanisms internally to supply data.
+ *
+ * @see CompressedBlockSerializer for writer
  */
 public final class CompressedBlockReader implements Closeable
 {

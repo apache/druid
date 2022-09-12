@@ -60,6 +60,38 @@ public class FileUtilsTest
   }
 
   @Test
+  public void testMapFileTooLarge() throws IOException
+  {
+    File dataFile = temporaryFolder.newFile("data");
+    try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
+      raf.write(42);
+      raf.setLength(1 << 20); // 1 MiB
+    }
+    final IllegalArgumentException e = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> FileUtils.map(dataFile, 0, (long) Integer.MAX_VALUE + 1)
+    );
+    MatcherAssert.assertThat(e.getMessage(), CoreMatchers.containsString("Cannot map region larger than"));
+  }
+
+  @Test
+  public void testMapRandomAccessFileTooLarge() throws IOException
+  {
+    File dataFile = temporaryFolder.newFile("data");
+    try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
+      raf.write(42);
+      raf.setLength(1 << 20); // 1 MiB
+    }
+    try (RandomAccessFile raf = new RandomAccessFile(dataFile, "r")) {
+      final IllegalArgumentException e = Assert.assertThrows(
+          IllegalArgumentException.class,
+          () -> FileUtils.map(raf, 0, (long) Integer.MAX_VALUE + 1)
+      );
+      MatcherAssert.assertThat(e.getMessage(), CoreMatchers.containsString("Cannot map region larger than"));
+    }
+  }
+
+  @Test
   public void testWriteAtomically() throws IOException
   {
     final File tmpDir = temporaryFolder.newFolder();

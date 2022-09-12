@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -822,6 +823,22 @@ public class RowBasedStorageAdapterTest
     );
 
     Assert.assertEquals(1, numCloses.get());
+  }
+
+  @Test
+  public void test_makeCursors_eternityIntervalWithMonthGranularity()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
+    Assert.assertThrows(IAE.class, () -> {
+      adapter.makeCursors(
+          null,
+          Intervals.ETERNITY,
+          VirtualColumns.EMPTY,
+          Granularities.MONTH,
+          false,
+          null
+      );
+    });
   }
 
   private static List<List<Object>> walkCursors(

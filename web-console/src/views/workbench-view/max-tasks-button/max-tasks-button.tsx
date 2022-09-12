@@ -103,6 +103,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
             </>
           }
           minValue={2}
+          integer
           initValue={maxNumTasks}
           onSubmit={p => {
             changeQueryContext(changeMaxNumTasks(queryContext, p));

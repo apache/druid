@@ -98,6 +98,7 @@ public class QueryResource implements QueryCountStatsProvider
    */
   public static final String HEADER_RESPONSE_CONTEXT = "X-Druid-Response-Context";
   public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
+  public static final String QUERY_ID_RESPONSE_HEADER = "X-Druid-Query-Id";
   public static final String HEADER_ETAG = "ETag";
 
   protected final QueryLifecycleFactory queryLifecycleFactory;
@@ -252,7 +253,7 @@ public class QueryResource implements QueryCountStatsProvider
                 },
                 ioReaderWriter.getResponseWriter().getResponseType()
             )
-            .header("X-Druid-Query-Id", queryId);
+            .header(QUERY_ID_RESPONSE_HEADER, queryId);
 
         transferEntityTag(responseContext, responseBuilder);
 
