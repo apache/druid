@@ -21,6 +21,7 @@ package org.apache.druid.frame.key;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
@@ -43,6 +44,10 @@ public class KeyTestUtils
   private KeyTestUtils()
   {
     // No instantiation.
+  }
+
+  static {
+    NullHandling.initializeForTests();
   }
 
   /**
