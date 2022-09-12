@@ -32,7 +32,7 @@ import {
   EMPTY_ARRAY,
   EMPTY_OBJECT,
   filterMap,
-  isStringOrNumberArray,
+  isSimpleArray,
   oneOf,
   parseCsvLine,
   typeIs,
@@ -2331,7 +2331,7 @@ export function guessIsArrayFromHeaderAndRows(
   headerAndRows: SampleHeaderAndRows,
   column: string,
 ): boolean {
-  return headerAndRows.rows.some(r => isStringOrNumberArray(r.input?.[column]));
+  return headerAndRows.rows.some(r => isSimpleArray(r.input?.[column]));
 }
 
 export function guessColumnTypeFromInput(
@@ -2344,7 +2344,7 @@ export function guessColumnTypeFromInput(
   if (!definedValues.length) return 'string';
 
   // If we see any arrays in the input this is a multi-value dimension that must be a string
-  if (definedValues.some(v => isStringOrNumberArray(v))) return 'string';
+  if (definedValues.some(v => isSimpleArray(v))) return 'string';
 
   // If we see any JSON objects in the input assume COMPLEX<json>
   if (definedValues.some(v => v && typeof v === 'object')) return 'COMPLEX<json>';

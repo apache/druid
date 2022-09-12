@@ -725,6 +725,9 @@ describe('spec utils', () => {
     it('works for multi-value', () => {
       expect(guessColumnTypeFromInput(['a', ['b'], 'c'], false)).toEqual('string');
       expect(guessColumnTypeFromInput([1, [2], 3], false)).toEqual('string');
+      expect(guessColumnTypeFromInput([true, [true, 7, false], false, 'x'], false)).toEqual(
+        'string',
+      );
     });
 
     it('works for complex arrays', () => {

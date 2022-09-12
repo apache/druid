@@ -40,12 +40,12 @@ export function nonEmptyArray(a: any): a is unknown[] {
   return Array.isArray(a) && Boolean(a.length);
 }
 
-export function isStringOrNumberArray(a: any): a is (string | number)[] {
+export function isSimpleArray(a: any): a is (string | number | boolean)[] {
   return (
     Array.isArray(a) &&
     a.every(x => {
       const t = typeof x;
-      return t === 'string' || t === 'number';
+      return t === 'string' || t === 'number' || t === 'boolean';
     })
   );
 }
