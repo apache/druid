@@ -433,8 +433,8 @@ For example, if you configure the following `range` partitioning during ingestio
 ```json
 "partitionsSpec": {
   "type": "range",
-  "partitionDimensions": ["coutryName", "cityName"],
-  "targetRowsPerSegment": 5000
+  "partitionDimensions": ["countryName", "cityName"],
+  "targetRowsPerSegment": 5000000
 }
 ```
 

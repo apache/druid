@@ -324,7 +324,7 @@ class ArrayExpr extends ConstantExpr<Object[]>
   public ArrayExpr(ExpressionType outputType, @Nullable Object[] value)
   {
     super(outputType, value);
-    Preconditions.checkArgument(outputType.isArray());
+    Preconditions.checkArgument(outputType.isArray(), "Output type %s is not an array", outputType);
     ExpressionType.checkNestedArrayAllowed(outputType);
   }
 

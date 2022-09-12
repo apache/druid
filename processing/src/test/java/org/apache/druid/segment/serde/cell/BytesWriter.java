@@ -17,17 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.segment.serde.cell;
 
-import org.gridkit.lab.jvm.perfdata.JStatData;
+import java.io.Closeable;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 
-public class GcNameTest
+/**
+ * This interface is used so that both CellWriter[.Builder] and BlockCompressedPayloadWriter[.Builder] may use the
+ * same test code.
+ */
+public interface BytesWriter extends Closeable
 {
+  void write(byte[] cellBytes) throws IOException;
 
-  public static void main(String[] args)
-  {
-    JStatData jStatData = JStatData.connect(SigarUtil.getCurrentProcessId());
-    System.out.println(jStatData.getAllCounters().get("sun.gc.collector.0.name").getValue());
-    System.out.println(jStatData.getAllCounters().get("sun.gc.collector.1.name").getValue());
-  }
+  void write(ByteBuffer cellByteBuffer) throws IOException;
+
+  @Override
+  void close() throws IOException;
+
+  void transferTo(WritableByteChannel channel) throws IOException;
+
+  long getSerializedSize();
 }

@@ -46,4 +46,11 @@ public interface GenericQueryMetricsFactory
    * call {@link QueryMetrics#query(Query)} with the given query on the created QueryMetrics object before returning.
    */
   QueryMetrics<Query<?>> makeMetrics(Query<?> query);
+
+  /**
+   * Creates a {@link QueryMetrics} which doesn't have predefined QueryMetrics subclass. This method is used
+   * by the router to build a {@link QueryMetrics} for SQL queries. It is needed since at router, there is no native
+   * query linked to a SQL query.
+   */
+  QueryMetrics<Query<?>> makeMetrics();
 }
