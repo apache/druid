@@ -129,13 +129,13 @@ public interface Query<T>
    *
    * For safe conversion, it's recommended to use following methods instead
    *
-   * {@link #getContextBoolean(String, boolean)}
-   * {@link #getContextAsString(String)}
-   * {@link #getContextAsInt(String)}
-   * {@link #getContextAsLong(String)}
-   * {@link #getContextAsFloat(String, float)}
-   * {@link #getContextAsEnum(String, Class, Enum)}
-   * {@link #getContextAsHumanReadableBytes(String, HumanReadableBytes)}
+   * {@link QueryContext#getAsBoolean(String)}
+   * {@link QueryContext#getAsString(String)}
+   * {@link QueryContext#getAsInt(String)}
+   * {@link QueryContext#getAsLong(String)}
+   * {@link QueryContext#getAsFloat(String, float)}
+   * {@link QueryContext#getAsEnum(String, Class, Enum)}
+   * {@link QueryContext#getAsHumanReadableBytes(String, HumanReadableBytes)}
    */
   @Nullable
   default <ContextType> ContextType getContextValue(String key)
@@ -144,91 +144,6 @@ public interface Query<T>
       return null;
     } else {
       return (ContextType) getQueryContext().get(key);
-    }
-  }
-
-  @Nullable
-  default String getContextAsString(String key)
-  {
-    if (getQueryContext() == null) {
-      return null;
-    } else {
-      return getQueryContext().getAsString(key);
-    }
-  }
-
-  default String getContextAsString(String key, String defaultValue)
-  {
-    if (getQueryContext() == null) {
-      return defaultValue;
-    } else {
-      return getQueryContext().getAsString(key, defaultValue);
-    }
-  }
-
-  @Nullable
-  default Integer getContextAsInt(String key)
-  {
-    if (getQueryContext() == null) {
-      return null;
-    } else {
-      return getQueryContext().getAsInt(key);
-    }
-  }
-
-  default int getContextAsInt(String key, int defaultValue)
-  {
-    if (getQueryContext() == null) {
-      return defaultValue;
-    } else {
-      return getQueryContext().getAsInt(key, defaultValue);
-    }
-  }
-
-  @Nullable
-  default Long getContextAsLong(String key)
-  {
-    if (getQueryContext() == null) {
-      return null;
-    } else {
-      return getQueryContext().getAsLong(key);
-    }
-  }
-
-  default long getContextAsLong(String key, long defaultValue)
-  {
-    if (getQueryContext() == null) {
-      return defaultValue;
-    } else {
-      return getQueryContext().getAsLong(key, defaultValue);
-    }
-  }
-
-  default float getContextAsFloat(String key, float defaultValue)
-  {
-    if (getQueryContext() == null) {
-      return defaultValue;
-    } else {
-      return getQueryContext().getAsFloat(key, defaultValue);
-    }
-  }
-
-  default <E extends Enum<E>> E getContextAsEnum(String key, Class<E> clazz, E defaultValue)
-  {
-    if (getQueryContext() == null) {
-      return defaultValue;
-    } else {
-      return getQueryContext().getAsEnum(key, clazz, defaultValue);
-    }
-  }
-
-  @Nullable
-  default Boolean getContextAsBoolean(String key)
-  {
-    if (getQueryContext() == null) {
-      return null;
-    } else {
-      return getQueryContext().getAsBoolean(key);
     }
   }
 
@@ -315,7 +230,7 @@ public interface Query<T>
   @Nullable
   default String getSqlQueryId()
   {
-    return getContextAsString(BaseQuery.SQL_QUERY_ID);
+    return getQueryContext().getAsString(BaseQuery.SQL_QUERY_ID);
   }
 
   /**

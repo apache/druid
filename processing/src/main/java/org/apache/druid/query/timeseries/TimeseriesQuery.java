@@ -159,7 +159,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 
   public String getTimestampResultField()
   {
-    return getContextAsString(CTX_TIMESTAMP_RESULT_FIELD);
+    return getQueryContext().getAsString(CTX_TIMESTAMP_RESULT_FIELD);
   }
 
   public boolean isSkipEmptyBuckets()

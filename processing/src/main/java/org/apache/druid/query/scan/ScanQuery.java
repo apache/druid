@@ -264,7 +264,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   private Integer validateAndGetMaxRowsQueuedForOrdering()
   {
     final Integer maxRowsQueuedForOrdering =
-        getContextAsInt(ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING);
+        getQueryContext().getAsInt(ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING);
     Preconditions.checkArgument(
         maxRowsQueuedForOrdering == null || maxRowsQueuedForOrdering > 0,
         "maxRowsQueuedForOrdering must be greater than 0"
@@ -275,7 +275,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   private Integer validateAndGetMaxSegmentPartitionsOrderedInMemory()
   {
     final Integer maxSegmentPartitionsOrderedInMemory =
-        getContextAsInt(ScanQueryConfig.CTX_KEY_MAX_SEGMENT_PARTITIONS_FOR_ORDERING);
+        getQueryContext().getAsInt(ScanQueryConfig.CTX_KEY_MAX_SEGMENT_PARTITIONS_FOR_ORDERING);
     Preconditions.checkArgument(
         maxSegmentPartitionsOrderedInMemory == null || maxSegmentPartitionsOrderedInMemory > 0,
         "maxRowsQueuedForOrdering must be greater than 0"

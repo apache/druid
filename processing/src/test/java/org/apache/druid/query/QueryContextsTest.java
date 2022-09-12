@@ -314,12 +314,12 @@ public class QueryContextsTest
 
     Assert.assertEquals(
         QueryContexts.Vectorize.FORCE,
-        query.getContextAsEnum("e1", QueryContexts.Vectorize.class, QueryContexts.Vectorize.FALSE)
+        query.getQueryContext().getAsEnum("e1", QueryContexts.Vectorize.class, QueryContexts.Vectorize.FALSE)
     );
 
     Assert.assertThrows(
         IAE.class,
-        () -> query.getContextAsEnum("e2", QueryContexts.Vectorize.class, QueryContexts.Vectorize.FALSE)
+        () -> query.getQueryContext().getAsEnum("e2", QueryContexts.Vectorize.class, QueryContexts.Vectorize.FALSE)
     );
   }
 }

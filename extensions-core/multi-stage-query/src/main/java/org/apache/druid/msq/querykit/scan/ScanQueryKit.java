@@ -57,7 +57,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
   {
     RowSignature scanSignature;
     try {
-      final String s = scanQuery.getContextAsString(DruidQuery.CTX_SCAN_SIGNATURE);
+      final String s = scanQuery.getQueryContext().getAsString(DruidQuery.CTX_SCAN_SIGNATURE);
       scanSignature = jsonMapper.readValue(s, RowSignature.class);
     }
     catch (JsonProcessingException e) {

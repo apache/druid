@@ -232,9 +232,9 @@ public class DefaultLimitSpec implements LimitSpec
     }
 
     if (!sortingNeeded) {
-      String timestampField = query.getContextAsString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
+      String timestampField = query.getQueryContext().getAsString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
       if (timestampField != null && !timestampField.isEmpty()) {
-        int timestampResultFieldIndex = query.getContextAsInt(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
+        int timestampResultFieldIndex = query.getQueryContext().getAsInt(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
         sortingNeeded = query.getContextSortByDimsFirst()
                         ? timestampResultFieldIndex != query.getDimensions().size() - 1
                         : timestampResultFieldIndex != 0;

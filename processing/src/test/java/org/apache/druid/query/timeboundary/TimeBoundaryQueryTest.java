@@ -78,10 +78,10 @@ public class TimeBoundaryQueryTest
         ), TimeBoundaryQuery.class
     );
 
-    Assert.assertEquals(new Integer(1), serdeQuery.getContextAsInt(QueryContexts.PRIORITY_KEY));
-    Assert.assertEquals(true, serdeQuery.getContextAsBoolean(QueryContexts.USE_CACHE_KEY));
-    Assert.assertEquals(true, serdeQuery.getContextAsBoolean(QueryContexts.POPULATE_CACHE_KEY));
-    Assert.assertEquals(true, serdeQuery.getContextAsBoolean(QueryContexts.FINALIZE_KEY));
+    Assert.assertEquals(new Integer(1), serdeQuery.getQueryContext().getAsInt(QueryContexts.PRIORITY_KEY));
+    Assert.assertEquals(true, serdeQuery.getQueryContext().getAsBoolean(QueryContexts.USE_CACHE_KEY));
+    Assert.assertEquals(true, serdeQuery.getQueryContext().getAsBoolean(QueryContexts.POPULATE_CACHE_KEY));
+    Assert.assertEquals(true, serdeQuery.getQueryContext().getAsBoolean(QueryContexts.FINALIZE_KEY));
   }
 
   @Test
@@ -116,9 +116,9 @@ public class TimeBoundaryQueryTest
     );
 
 
-    Assert.assertEquals("1", serdeQuery.getContextAsString(QueryContexts.PRIORITY_KEY));
-    Assert.assertEquals("true", serdeQuery.getContextAsString(QueryContexts.USE_CACHE_KEY));
-    Assert.assertEquals("true", serdeQuery.getContextAsString(QueryContexts.POPULATE_CACHE_KEY));
-    Assert.assertEquals("true", serdeQuery.getContextAsString(QueryContexts.FINALIZE_KEY));
+    Assert.assertEquals("1", serdeQuery.getQueryContext().getAsString(QueryContexts.PRIORITY_KEY));
+    Assert.assertEquals("true", serdeQuery.getQueryContext().getAsString(QueryContexts.USE_CACHE_KEY));
+    Assert.assertEquals("true", serdeQuery.getQueryContext().getAsString(QueryContexts.POPULATE_CACHE_KEY));
+    Assert.assertEquals("true", serdeQuery.getQueryContext().getAsString(QueryContexts.FINALIZE_KEY));
   }
 }

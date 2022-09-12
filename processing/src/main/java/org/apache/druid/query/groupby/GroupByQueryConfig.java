@@ -335,25 +335,25 @@ public class GroupByQueryConfig
   public GroupByQueryConfig withOverrides(final GroupByQuery query)
   {
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();
-    newConfig.defaultStrategy = query.getContextAsString(CTX_KEY_STRATEGY, getDefaultStrategy());
-    newConfig.singleThreaded = query.getContextBoolean(CTX_KEY_IS_SINGLE_THREADED, isSingleThreaded());
+    newConfig.defaultStrategy = query.getQueryContext().getAsString(CTX_KEY_STRATEGY, getDefaultStrategy());
+    newConfig.singleThreaded = query.getQueryContext().getAsBoolean(CTX_KEY_IS_SINGLE_THREADED, isSingleThreaded());
     newConfig.maxIntermediateRows = Math.min(
-        query.getContextAsInt(CTX_KEY_MAX_INTERMEDIATE_ROWS, getMaxIntermediateRows()),
+        query.getQueryContext().getAsInt(CTX_KEY_MAX_INTERMEDIATE_ROWS, getMaxIntermediateRows()),
         getMaxIntermediateRows()
     );
     newConfig.maxResults = Math.min(
-        query.getContextAsInt(CTX_KEY_MAX_RESULTS, getMaxResults()),
+        query.getQueryContext().getAsInt(CTX_KEY_MAX_RESULTS, getMaxResults()),
         getMaxResults()
     );
     newConfig.bufferGrouperMaxSize = Math.min(
-        query.getContextAsInt(CTX_KEY_BUFFER_GROUPER_MAX_SIZE, getBufferGrouperMaxSize()),
+        query.getQueryContext().getAsInt(CTX_KEY_BUFFER_GROUPER_MAX_SIZE, getBufferGrouperMaxSize()),
         getBufferGrouperMaxSize()
     );
-    newConfig.bufferGrouperMaxLoadFactor = query.getContextAsFloat(
+    newConfig.bufferGrouperMaxLoadFactor = query.getQueryContext().getAsFloat(
         CTX_KEY_BUFFER_GROUPER_MAX_LOAD_FACTOR,
         getBufferGrouperMaxLoadFactor()
     );
-    newConfig.bufferGrouperInitialBuckets = query.getContextAsInt(
+    newConfig.bufferGrouperInitialBuckets = query.getQueryContext().getAsInt(
         CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS,
         getBufferGrouperInitialBuckets()
     );
@@ -378,11 +378,11 @@ public class GroupByQueryConfig
         CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY,
         isForcePushDownNestedQuery()
     );
-    newConfig.intermediateCombineDegree = query.getContextAsInt(
+    newConfig.intermediateCombineDegree = query.getQueryContext().getAsInt(
         CTX_KEY_INTERMEDIATE_COMBINE_DEGREE,
         getIntermediateCombineDegree()
     );
-    newConfig.numParallelCombineThreads = query.getContextAsInt(
+    newConfig.numParallelCombineThreads = query.getQueryContext().getAsInt(
         CTX_KEY_NUM_PARALLEL_COMBINE_THREADS,
         getNumParallelCombineThreads()
     );

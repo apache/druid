@@ -223,7 +223,7 @@ public class QueryContexts
 
   public static <T> Vectorize getVectorize(Query<T> query, Vectorize defaultValue)
   {
-    return query.getContextAsEnum(VECTORIZE_KEY, Vectorize.class, defaultValue);
+    return query.getQueryContext().getAsEnum(VECTORIZE_KEY, Vectorize.class, defaultValue);
   }
 
   public static <T> Vectorize getVectorizeVirtualColumns(Query<T> query)
@@ -233,7 +233,7 @@ public class QueryContexts
 
   public static <T> Vectorize getVectorizeVirtualColumns(Query<T> query, Vectorize defaultValue)
   {
-    return query.getContextAsEnum(VECTORIZE_VIRTUAL_COLUMNS_KEY, Vectorize.class, defaultValue);
+    return query.getQueryContext().getAsEnum(VECTORIZE_VIRTUAL_COLUMNS_KEY, Vectorize.class, defaultValue);
   }
 
   public static <T> int getVectorSize(Query<T> query)
@@ -243,12 +243,12 @@ public class QueryContexts
 
   public static <T> int getVectorSize(Query<T> query, int defaultSize)
   {
-    return query.getContextAsInt(VECTOR_SIZE_KEY, defaultSize);
+    return query.getQueryContext().getAsInt(VECTOR_SIZE_KEY, defaultSize);
   }
 
   public static <T> int getMaxSubqueryRows(Query<T> query, int defaultSize)
   {
-    return query.getContextAsInt(MAX_SUBQUERY_ROWS_KEY, defaultSize);
+    return query.getQueryContext().getAsInt(MAX_SUBQUERY_ROWS_KEY, defaultSize);
   }
 
   public static <T> int getUncoveredIntervalsLimit(Query<T> query)
@@ -258,7 +258,7 @@ public class QueryContexts
 
   public static <T> int getUncoveredIntervalsLimit(Query<T> query, int defaultValue)
   {
-    return query.getContextAsInt(UNCOVERED_INTERVALS_LIMIT_KEY, defaultValue);
+    return query.getQueryContext().getAsInt(UNCOVERED_INTERVALS_LIMIT_KEY, defaultValue);
   }
 
   public static <T> int getPriority(Query<T> query)
@@ -268,12 +268,12 @@ public class QueryContexts
 
   public static <T> int getPriority(Query<T> query, int defaultValue)
   {
-    return query.getContextAsInt(PRIORITY_KEY, defaultValue);
+    return query.getQueryContext().getAsInt(PRIORITY_KEY, defaultValue);
   }
 
   public static <T> String getLane(Query<T> query)
   {
-    return query.getContextAsString(LANE_KEY);
+    return query.getQueryContext().getAsString(LANE_KEY);
   }
 
   public static <T> boolean getEnableParallelMerges(Query<T> query)
@@ -283,17 +283,17 @@ public class QueryContexts
 
   public static <T> int getParallelMergeInitialYieldRows(Query<T> query, int defaultValue)
   {
-    return query.getContextAsInt(BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY, defaultValue);
+    return query.getQueryContext().getAsInt(BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY, defaultValue);
   }
 
   public static <T> int getParallelMergeSmallBatchRows(Query<T> query, int defaultValue)
   {
-    return query.getContextAsInt(BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY, defaultValue);
+    return query.getQueryContext().getAsInt(BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY, defaultValue);
   }
 
   public static <T> int getParallelMergeParallelism(Query<T> query, int defaultValue)
   {
-    return query.getContextAsInt(BROKER_PARALLELISM, defaultValue);
+    return query.getQueryContext().getAsInt(BROKER_PARALLELISM, defaultValue);
   }
 
   public static <T> boolean getEnableJoinFilterRewriteValueColumnFilters(Query<T> query)
@@ -314,7 +314,7 @@ public class QueryContexts
 
   public static <T> long getJoinFilterRewriteMaxSize(Query<T> query)
   {
-    return query.getContextAsLong(JOIN_FILTER_REWRITE_MAX_SIZE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE);
+    return query.getQueryContext().getAsLong(JOIN_FILTER_REWRITE_MAX_SIZE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE);
   }
 
   public static <T> boolean getEnableJoinFilterPushDown(Query<T> query)
@@ -364,7 +364,7 @@ public class QueryContexts
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {
-    Long curr = query.getContextAsLong(MAX_SCATTER_GATHER_BYTES_KEY);
+    Long curr = query.getQueryContext().getAsLong(MAX_SCATTER_GATHER_BYTES_KEY);
     if (curr == null) {
       return query.withOverriddenContext(ImmutableMap.of(MAX_SCATTER_GATHER_BYTES_KEY, maxScatterGatherBytesLimit));
     } else {
@@ -398,12 +398,12 @@ public class QueryContexts
 
   public static <T> long getMaxQueuedBytes(Query<T> query, long defaultValue)
   {
-    return query.getContextAsLong(MAX_QUEUED_BYTES_KEY, defaultValue);
+    return query.getQueryContext().getAsLong(MAX_QUEUED_BYTES_KEY, defaultValue);
   }
 
   public static <T> long getMaxScatterGatherBytes(Query<T> query)
   {
-    return query.getContextAsLong(MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
+    return query.getQueryContext().getAsLong(MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
   }
 
   public static <T> boolean hasTimeout(Query<T> query)
@@ -419,7 +419,7 @@ public class QueryContexts
   public static <T> long getTimeout(Query<T> query, long defaultTimeout)
   {
     try {
-      final long timeout = query.getContextAsLong(TIMEOUT_KEY, defaultTimeout);
+      final long timeout = query.getQueryContext().getAsLong(TIMEOUT_KEY, defaultTimeout);
       Preconditions.checkState(timeout >= 0, "Timeout must be a non negative value, but was [%s]", timeout);
       return timeout;
     }
@@ -440,14 +440,14 @@ public class QueryContexts
 
   static <T> long getDefaultTimeout(Query<T> query)
   {
-    final long defaultTimeout = query.getContextAsLong(DEFAULT_TIMEOUT_KEY, DEFAULT_TIMEOUT_MILLIS);
+    final long defaultTimeout = query.getQueryContext().getAsLong(DEFAULT_TIMEOUT_KEY, DEFAULT_TIMEOUT_MILLIS);
     Preconditions.checkState(defaultTimeout >= 0, "Timeout must be a non negative value, but was [%s]", defaultTimeout);
     return defaultTimeout;
   }
 
   public static <T> int getNumRetriesOnMissingSegments(Query<T> query, int defaultValue)
   {
-    return query.getContextAsInt(NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, defaultValue);
+    return query.getQueryContext().getAsInt(NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, defaultValue);
   }
 
   public static <T> boolean allowReturnPartialResults(Query<T> query, boolean defaultValue)

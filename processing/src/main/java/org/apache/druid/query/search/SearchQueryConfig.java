@@ -55,7 +55,7 @@ public class SearchQueryConfig
   {
     final SearchQueryConfig newConfig = new SearchQueryConfig();
     newConfig.maxSearchLimit = query.getLimit();
-    newConfig.searchStrategy = query.getContextAsString(CTX_KEY_STRATEGY, searchStrategy);
+    newConfig.searchStrategy = query.getQueryContext().getAsString(CTX_KEY_STRATEGY, searchStrategy);
     return newConfig;
   }
 }
