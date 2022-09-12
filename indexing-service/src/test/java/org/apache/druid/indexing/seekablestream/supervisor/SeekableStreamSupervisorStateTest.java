@@ -622,6 +622,52 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
+  public void testStoppingGracefully() throws Exception
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    taskRunner.unregisterListener("testSupervisorId");
+    indexTaskClient.close();
+    recordSupplier.close();
+
+    replayAll();
+
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    supervisor.start();
+
+    Assert.assertTrue(supervisor.stateManager.isHealthy());
+    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+
+    supervisor.runInternal();
+
+    Assert.assertTrue(supervisor.stateManager.isHealthy());
+    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+
+    supervisor.stop(true);
+
+    Assert.assertTrue(supervisor.stateManager.isHealthy());
+    Assert.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState().getBasicState());
+
+    // Subsequent run after graceful shutdown has begun
+    supervisor.runInternal();
+    Assert.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState().getBasicState());
+
+    verifyAll();
+  }
+
 
   @Test
   public void testEmitBothLag() throws Exception
