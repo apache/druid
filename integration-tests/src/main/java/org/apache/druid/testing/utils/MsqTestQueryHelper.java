@@ -53,7 +53,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 /**
- * Helper class to aid out ITs for MSQ
+ * Helper class to aid out ITs for MSQ.
+ * This takes all the clients required to make the necessary calls to the client APIs for MSQ and performs the boiler
+ * plate functions for the tests
  */
 public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResults>
 {

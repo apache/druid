@@ -19,12 +19,17 @@
 
 package org.apache.druid.testing.utils;
 
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 public class QueryResultVerifier
 {
+  private static final Logger LOG = new Logger(QueryResultVerifier.class);
+
   public static boolean compareResults(
       Iterable<Map<String, Object>> actual,
       Iterable<Map<String, Object>> expected,
@@ -41,17 +46,29 @@ public class QueryResultVerifier
       if (fieldsToTest != null && !fieldsToTest.isEmpty()) {
         for (String field : fieldsToTest) {
           if (!actualRes.get(field).equals(expRes.get(field))) {
+            LOG.info(StringUtils.format(
+                "Field [%s] mismatch. Expected: [%s], Actual: [%s]",
+                field,
+                expRes,
+                actualRes
+            ));
             return false;
           }
         }
       } else {
         if (!actualRes.equals(expRes)) {
+          LOG.info(StringUtils.format(
+              "Row mismatch. Expected: [%s], Actual: [%s]",
+              expRes,
+              actualRes
+          ));
           return false;
         }
       }
     }
 
     if (actualIter.hasNext() || expectedIter.hasNext()) {
+      LOG.info("Results size mismatch");
       return false;
     }
     return true;
