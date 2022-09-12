@@ -124,11 +124,9 @@ public class SupervisorStateManager
    */
   public void maybeSetState(State proposedState)
   {
-    // Only set healthySteadyState when current state is STOPPING
+    // Once set to STOPPING, no other state changes are permitted.
+    // Steady states can be achieved after remove with create
     if (BasicState.STOPPING.equals(this.supervisorState)) {
-      if (healthySteadyState.equals(proposedState)) {
-        supervisorState = healthySteadyState;
-      }
       return;
     }
 

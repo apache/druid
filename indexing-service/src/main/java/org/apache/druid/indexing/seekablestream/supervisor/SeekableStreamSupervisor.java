@@ -1454,19 +1454,24 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       checkCurrentTaskState();
 
-      // if supervisor is not suspended, ensure required tasks are running
-      // if suspended, ensure tasks have been requested to gracefully stop
-      if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
-        // if we're already terminating, don't do anything here, the terminate already handles shutdown
-        log.info("[%s] supervisor is already stopping.", dataSource);
-      } else if (!spec.isSuspended()) {
-        log.info("[%s] supervisor is running.", dataSource);
+      // If supervisor is already stopping, don't contend for stateChangeLock since the block can be skipped
+      if (!stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
+        synchronized (stateChangeLock) {
+          // if supervisor is not suspended, ensure required tasks are running
+          // if suspended, ensure tasks have been requested to gracefully stop
+          if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
+            // if we're already terminating, don't do anything here, the terminate already handles shutdown
+            log.info("[%s] supervisor is already stopping.", dataSource);
+          } else if (!spec.isSuspended()) {
+            log.info("[%s] supervisor is running.", dataSource);
 
-        stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CREATING_TASKS);
-        createNewTasks();
-      } else {
-        log.info("[%s] supervisor is suspended.", dataSource);
-        gracefulShutdownInternal();
+            stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CREATING_TASKS);
+            createNewTasks();
+          } else {
+            log.info("[%s] supervisor is suspended.", dataSource);
+            gracefulShutdownInternal();
+          }
+        }
       }
 
       if (log.isDebugEnabled()) {
@@ -3355,8 +3360,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             "Number of tasks [%d] does not match configured numReplicas [%d] in task group [%d], creating more tasks",
             taskGroup.tasks.size(), ioConfig.getReplicas(), groupId
         );
-        int createdTaskCount = createTasksForGroup(groupId, ioConfig.getReplicas() - taskGroup.tasks.size());
-        createdTask = (createdTaskCount > 0);
+        createTasksForGroup(groupId, ioConfig.getReplicas() - taskGroup.tasks.size());
+        createdTask = true;
       }
     }
 
@@ -3520,7 +3525,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private int createTasksForGroup(int groupId, int replicas)
+  private void createTasksForGroup(int groupId, int replicas)
       throws JsonProcessingException
   {
     TaskGroup group = activelyReadingTaskGroups.get(groupId);
@@ -3557,18 +3562,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         rowIngestionMetersFactory
     );
 
-    int createdTasks = 0;
     for (SeekableStreamIndexTask indexTask : taskList) {
       Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
       if (taskQueue.isPresent()) {
         try {
-          synchronized (stateChangeLock) {
-            if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
-              break;
-            }
-            taskQueue.get().add(indexTask);
-            createdTasks++;
-          }
+          taskQueue.get().add(indexTask);
         }
         catch (EntryExistsException e) {
           stateManager.recordThrowableEvent(e);
@@ -3578,7 +3576,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         log.error("Failed to get task queue because I'm not the leader!");
       }
     }
-    return createdTasks;
   }
 
   /**
