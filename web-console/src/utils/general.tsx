@@ -40,6 +40,16 @@ export function nonEmptyArray(a: any): a is unknown[] {
   return Array.isArray(a) && Boolean(a.length);
 }
 
+export function isStringOrNumberArray(a: any): a is (string | number)[] {
+  return (
+    Array.isArray(a) &&
+    a.every(x => {
+      const t = typeof x;
+      return t === 'string' || t === 'number';
+    })
+  );
+}
+
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, ms);

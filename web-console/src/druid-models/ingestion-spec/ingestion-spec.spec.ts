@@ -727,6 +727,12 @@ describe('spec utils', () => {
       expect(guessColumnTypeFromInput([1, [2], 3], false)).toEqual('string');
     });
 
+    it('works for complex arrays', () => {
+      expect(guessColumnTypeFromInput([{ type: 'Dogs' }, { type: 'JavaScript' }], false)).toEqual(
+        'COMPLEX<json>',
+      );
+    });
+
     it('works for strange json', () => {
       expect(guessColumnTypeFromInput([1, { hello: 'world' }, 3], false)).toEqual('COMPLEX<json>');
     });
