@@ -17,22 +17,34 @@
  * under the License.
  */
 
-package org.apache.druid.sql.http;
+package org.apache.druid.server;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import org.apache.druid.guice.Jerseys;
-import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.context.ResponseContext;
 
-/**
- * The Module responsible for providing bindings to the SQL http endpoint
- */
-public class SqlHttpModule implements Module
+public class QueryResponse
 {
-  @Override
-  public void configure(Binder binder)
+  public static QueryResponse withEmptyContext(Sequence results)
   {
-    binder.bind(SqlResource.class).in(LazySingleton.class);
-    Jerseys.addResource(binder, SqlResource.class);
+    return new QueryResponse(results, ResponseContext.createEmpty());
+  }
+
+  private final Sequence results;
+  private final ResponseContext responseContext;
+
+  public QueryResponse(final Sequence results, final ResponseContext responseContext)
+  {
+    this.results = results;
+    this.responseContext = responseContext;
+  }
+
+  public Sequence getResults()
+  {
+    return results;
+  }
+
+  public ResponseContext getResponseContext()
+  {
+    return responseContext;
   }
 }
