@@ -94,25 +94,12 @@ public class CreateDataSegments
       nextStart = granularity.increment(nextStart);
     }
 
-    /*intervalsByGranularity.granularityIntervalsIterator().forEachRemaining(
-        subInterval -> {
-          for (int i = 0; i < numPartitionsPerInterval; ++i) {
-            segments.add(
-                new NumberedDataSegment(
-                    datasource,
-                    subInterval,
-                    new NumberedShardSpec(i, numPartitionsPerInterval),
-                    uniqueIdInInterval.incrementAndGet(),
-                    sizeMb
-                )
-            );
-          }
-        }
-    );*/
-
     return segments;
   }
 
+  /**
+   * Simple implementation of DataSegment with a unique integer id to make debugging easier.
+   */
   private static class NumberedDataSegment extends DataSegment
   {
     private final int uniqueId;

@@ -85,7 +85,7 @@ public class TestServerInventoryView implements ServerInventoryView
   public void addServer(DruidServer server)
   {
     servers.put(server.getName(), server);
-    segmentChangeHandlers.put(server.getName(), new ChangeHandler(server));
+    segmentChangeHandlers.put(server.getName(), new SegmentChangeHandler(server));
   }
 
   public void removeServer(DruidServer server)
@@ -141,11 +141,11 @@ public class TestServerInventoryView implements ServerInventoryView
     segmentCallbacks.put(callback, exec);
   }
 
-  private class ChangeHandler implements DataSegmentChangeHandler
+  private class SegmentChangeHandler implements DataSegmentChangeHandler
   {
     private final DruidServer server;
 
-    private ChangeHandler(DruidServer server)
+    private SegmentChangeHandler(DruidServer server)
     {
       this.server = server;
     }

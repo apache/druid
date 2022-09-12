@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.metrics;
 
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -28,6 +29,8 @@ import java.util.List;
 
 public class StubServiceEmitter extends ServiceEmitter
 {
+  private static final Logger log = new Logger(StubServiceEmitter.class);
+
   private final List<Event> events = new ArrayList<>();
 
   public StubServiceEmitter(String service, String host)
@@ -40,7 +43,7 @@ public class StubServiceEmitter extends ServiceEmitter
   {
     if (event instanceof AlertEvent) {
       final AlertEvent alertEvent = (AlertEvent) event;
-      System.out.printf(
+      log.warn(
           "[%s] [%s] [%s]: %s%n",
           alertEvent.getSeverity(),
           alertEvent.getService(),
