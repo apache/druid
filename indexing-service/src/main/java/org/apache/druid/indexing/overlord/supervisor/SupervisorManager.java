@@ -33,6 +33,7 @@ import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,10 +47,17 @@ public class SupervisorManager
   private static final EmittingLogger log = new EmittingLogger(SupervisorManager.class);
 
   private final MetadataSupervisorManager metadataSupervisorManager;
+  private final Object metadataSupervisorManagerLock = new Object();
+
   private final ConcurrentHashMap<String, Pair<Supervisor, SupervisorSpec>> supervisors = new ConcurrentHashMap<>();
+  private final Object supervisorSetLock = new Object();
+
   // SupervisorTaskAutoScaler could be null
   private final ConcurrentHashMap<String, SupervisorTaskAutoScaler> autoscalers = new ConcurrentHashMap<>();
-  private final Object lock = new Object();
+  private final Object autoscalerSetLock = new Object();
+
+  private final Object globalLock = new Object();
+  private final Map<String, Object> supervisorStateLockMap = new HashMap<>();
 
   private volatile boolean started = false;
 
@@ -88,7 +96,12 @@ public class SupervisorManager
     Preconditions.checkNotNull(spec.getId(), "spec.getId()");
     Preconditions.checkNotNull(spec.getDataSources(), "spec.getDatasources()");
 
-    synchronized (lock) {
+    synchronized (globalLock) {
+      supervisorStateLockMap.computeIfAbsent(spec.getId(), k -> new Object());
+    }
+    Object supervisorStateLock = supervisorStateLockMap.get(spec.getId());
+
+    synchronized (supervisorStateLock) {
       Preconditions.checkState(started, "SupervisorManager not started");
       possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
       return createAndStartSupervisorInternal(spec, true);
@@ -100,9 +113,21 @@ public class SupervisorManager
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(id, "id");
 
-    synchronized (lock) {
-      Preconditions.checkState(started, "SupervisorManager not started");
-      return possiblyStopAndRemoveSupervisorInternal(id, true);
+    synchronized (globalLock) {
+      supervisorStateLockMap.computeIfAbsent(id, k -> new Object());
+    }
+    Object supervisorStateLock = supervisorStateLockMap.get(id);
+
+    try {
+      synchronized (supervisorStateLock) {
+        Preconditions.checkState(started, "SupervisorManager not started");
+        return possiblyStopAndRemoveSupervisorInternal(id, true);
+      }
+    }
+    finally {
+      synchronized (globalLock) {
+        supervisorStateLockMap.remove(id);
+      }
     }
   }
 
@@ -111,7 +136,12 @@ public class SupervisorManager
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(id, "id");
 
-    synchronized (lock) {
+    synchronized (globalLock) {
+      supervisorStateLockMap.computeIfAbsent(id, k -> new Object());
+    }
+    Object supervisorStateLock = supervisorStateLockMap.get(id);
+
+    synchronized (supervisorStateLock) {
       Preconditions.checkState(started, "SupervisorManager not started");
       return possiblySuspendOrResumeSupervisorInternal(id, suspend);
     }
@@ -123,7 +153,7 @@ public class SupervisorManager
     Preconditions.checkState(!started, "SupervisorManager already started");
     log.info("Loading stored supervisors from database");
 
-    synchronized (lock) {
+    synchronized (globalLock) {
       Map<String, SupervisorSpec> supervisors = metadataSupervisorManager.getLatest();
       for (Map.Entry<String, SupervisorSpec> supervisor : supervisors.entrySet()) {
         final SupervisorSpec spec = supervisor.getValue();
@@ -146,7 +176,7 @@ public class SupervisorManager
   {
     Preconditions.checkState(started, "SupervisorManager not started");
 
-    synchronized (lock) {
+    synchronized (globalLock) {
       for (String id : supervisors.keySet()) {
         try {
           supervisors.get(id).lhs.stop(false);
@@ -247,7 +277,7 @@ public class SupervisorManager
   /**
    * Stops a supervisor with a given id and then removes it from the list.
    * <p/>
-   * Caller should have acquired [lock] before invoking this method to avoid contention with other threads that may be
+   * Caller should have acquired [globalLock] before invoking this method to avoid contention with other threads that may be
    * starting, stopping, suspending and resuming supervisors.
    *
    * @return true if a supervisor was stopped, false if there was no supervisor with this id
@@ -259,19 +289,26 @@ public class SupervisorManager
       return false;
     }
 
-    if (writeTombstone) {
-      metadataSupervisorManager.insert(
-          id,
-          new NoopSupervisorSpec(null, pair.rhs.getDataSources())
-      ); // where NoopSupervisorSpec is a tombstone
+    synchronized (metadataSupervisorManagerLock) {
+      if (writeTombstone) {
+        metadataSupervisorManager.insert(
+            id,
+            new NoopSupervisorSpec(null, pair.rhs.getDataSources())
+        ); // where NoopSupervisorSpec is a tombstone
+      }
     }
-    pair.lhs.stop(true);
-    supervisors.remove(id);
 
-    SupervisorTaskAutoScaler autoscler = autoscalers.get(id);
-    if (autoscler != null) {
-      autoscler.stop();
-      autoscalers.remove(id);
+    pair.lhs.stop(true);
+    synchronized (supervisorSetLock) {
+      supervisors.remove(id);
+    }
+
+    SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
+    if (autoscaler != null) {
+      autoscaler.stop();
+      synchronized (autoscalerSetLock) {
+        autoscalers.remove(id);
+      }
     }
 
     return true;
@@ -280,7 +317,7 @@ public class SupervisorManager
   /**
    * Suspend or resume a supervisor with a given id.
    * <p/>
-   * Caller should have acquired [lock] before invoking this method to avoid contention with other threads that may be
+   * Caller should have acquired [globalLock] before invoking this method to avoid contention with other threads that may be
    * starting, stopping, suspending and resuming supervisors.
    *
    * @return true if a supervisor was suspended or resumed, false if there was no supervisor with this id
@@ -301,7 +338,7 @@ public class SupervisorManager
   /**
    * Creates a supervisor from the provided spec and starts it if there is not already a supervisor with that id.
    * <p/>
-   * Caller should have acquired [lock] before invoking this method to avoid contention with other threads that may be
+   * Caller should have acquired [globalLock] before invoking this method to avoid contention with other threads that may be
    * starting, stopping, suspending and resuming supervisors.
    *
    * @return true if a new supervisor was created, false if there was already an existing supervisor with this id
@@ -314,7 +351,9 @@ public class SupervisorManager
     }
 
     if (persistSpec) {
-      metadataSupervisorManager.insert(id, spec);
+      synchronized (metadataSupervisorManagerLock) {
+        metadataSupervisorManager.insert(id, spec);
+      }
     }
 
     Supervisor supervisor;
@@ -326,18 +365,24 @@ public class SupervisorManager
       supervisor.start();
       if (autoscaler != null) {
         autoscaler.start();
-        autoscalers.put(id, autoscaler);
+        synchronized (autoscalerSetLock) {
+          autoscalers.put(id, autoscaler);
+        }
       }
     }
     catch (Exception e) {
       // Supervisor creation or start failed write tombstone only when trying to start a new supervisor
       if (persistSpec) {
-        metadataSupervisorManager.insert(id, new NoopSupervisorSpec(null, spec.getDataSources()));
+        synchronized (metadataSupervisorManager) {
+          metadataSupervisorManager.insert(id, new NoopSupervisorSpec(null, spec.getDataSources()));
+        }
       }
       throw new RuntimeException(e);
     }
 
-    supervisors.put(id, Pair.of(supervisor, spec));
+    synchronized (supervisorSetLock) {
+      supervisors.put(id, Pair.of(supervisor, spec));
+    }
     return true;
   }
 }
