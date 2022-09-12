@@ -71,8 +71,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -169,7 +167,7 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
   }
 
   @Test
-  public void testIngestNullTime() throws JsonProcessingException, ExecutionException, InterruptedException, TimeoutException
+  public void testIngestNullTime() throws JsonProcessingException
   {
     final List<DimensionSchema> dimensionSchemas = DimensionsSpec.getDefaultSchemas(
         Arrays.asList("ts", "unknownDim")
