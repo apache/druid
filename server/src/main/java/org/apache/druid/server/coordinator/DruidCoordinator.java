@@ -483,7 +483,7 @@ public class DruidCoordinator
         );
       }
 
-      final String toLoadQueueSegPath =
+      final String toLoadQueueSegPath = curator == null ? null :
           ZKPaths.makePath(zkPaths.getLoadQueuePath(), toServer.getName(), segmentId.toString());
 
       final LoadPeonCallback loadPeonCallback = () -> {
@@ -972,6 +972,14 @@ public class DruidCoordinator
     public List<? extends CoordinatorDuty> getDuties()
     {
       return duties;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "DutiesRunnable{" +
+             "dutiesRunnableAlias='" + dutiesRunnableAlias + '\'' +
+             '}';
     }
   }
 

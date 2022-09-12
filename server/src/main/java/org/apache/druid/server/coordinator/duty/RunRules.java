@@ -71,6 +71,7 @@ public class RunRules implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    final long start = System.currentTimeMillis();
     replicatorThrottler.updateParams(
         coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
         coordinator.getDynamicConfigs().getReplicantLifetime(),
