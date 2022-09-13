@@ -241,6 +241,16 @@ public class CloudObjectInputSourceTest
   }
 
   @Test
+  public void testStringUtilsStrippingWithoutProtocol()
+  {
+    String path = "mydb/path/date=2022-08-01/001.parquet";
+    String expected = "mydb/path/date=2022-08-01/001.parquet";
+    String removed = StringUtils.removeStart(path, "s3://");
+
+    Assert.assertEquals(expected, removed);
+  }
+
+  @Test
   public void testFilterWithoutProtocolAndBucket()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
