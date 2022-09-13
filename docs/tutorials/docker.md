@@ -22,9 +22,10 @@ title: "Docker"
   ~ under the License.
   -->
 
-In this quickstart, we will download the Apache Druid image from [Docker Hub](https://hub.docker.com/r/apache/druid) and set it up on a single machine using [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/). The cluster will be ready to load data after completing this initial setup.
+This quickstart guides you through the steps to download the Apache Druid image from [Docker Hub](https://hub.docker.com/r/apache/druid) and deploy it on a single machine using [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/).
+After you finish the initial setup, the cluster will be ready to load data.
 
-Before beginning the quickstart, it is helpful to read the [general Druid overview](../design/index.md) and the [ingestion overview](../ingestion/index.md), as the tutorials will refer to concepts discussed on those pages. Additionally, familiarity with [Docker](https://www.docker.com/get-started) is recommended.
+Before beginning the quickstart, it is helpful to read the [general Druid overview](../design/index.md) and the [ingestion overview](../ingestion/index.md), because the tutorials refer to concepts discussed on those pages. It also helps to be familiar with [Docker](https://www.docker.com/get-started) is recommended.
 
 This tutorial assumes you will download the required files from GitHub. The files are also available in a Druid installation and in the Druid sources.
 
@@ -34,9 +35,12 @@ This tutorial assumes you will download the required files from GitHub. The file
 
 ### Docker memory requirements
 
-The default `docker-compose.yml` launches eight containers: Zookeeper, PostgreSQL, and six Druid containers. Each Druid service is configured to use up to 7 GB of memory (6 GB direct memory and 1 GB heap). However, the Quickstart will not use all the available memory.
+The default `docker-compose.yml` launches eight containers: Zookeeper, PostgreSQL, and six Druid containers based upon the [micro quickstart configuration](../operations/single-server.html#micro-quickstart-4-cpu-16gib-ram).
+Each Druid service is configured to use up to 7 GB of memory (6 GB direct memory and 1 GB heap). However, the Quickstart will not use all the available memory.
 
-Docker needs at least 6 GiB of memory available for the Druid cluster. For Docker Desktop on Mac OS, adjust the memory settings in the [Docker Desktop preferences](https://docs.docker.com/desktop/mac/). If you experience a crash with a 137 error code you likely don't have enough memory allocated to Docker.
+For this setup, Docker needs at least 6 GiB of memory available for the Druid cluster. For Docker Desktop on Mac OS, adjust the memory settings in the [Docker Desktop preferences](https://docs.docker.com/desktop/mac/). If you experience a crash with a 137 error code you likely don't have enough memory allocated to Docker.
+
+You can modify the value of `DRUID_SINGLE_NODE_CONF` in the Docker [`environment`](#environment-file) to use different single-server mode. For example to use the nano quickstart: `DRUID_SINGLE_NODE_CONF=nano-quickstart`.
 
 
 ## Getting started
