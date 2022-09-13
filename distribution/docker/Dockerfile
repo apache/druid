@@ -52,8 +52,25 @@ LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox
 RUN ["/busybox/busybox", "--install", "/bin"]
-RUN wget https://github.com/robxu9/bash-static/releases/download/5.1.016-1.2.3/bash-linux-x86_64 -O /bin/bash \
- && chmod 755 /bin/bash
+
+# Predefine builtin arg, see: https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
+ARG TARGETARCH
+
+#
+# Download bash-static binary to execute scripts that require bash.
+# Although bash-static supports multiple platforms, but there's no need for us to support all those platform, amd64 and arm64 are enough.
+#
+ARG BASH_URL_BASE="https://github.com/robxu9/bash-static/releases/download/5.1.016-1.2.3"
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+      export BASH_URL=$(echo ${BASH_URL_BASE}/bash-linux-aarch64) ; \
+    elif [ "$TARGETARCH" = "amd64" ]; then \
+      export BASH_URL=$(echo ${BASH_URL_BASE}/bash-linux-x86_64) ; \
+    else \
+      echo "Unknown archtecture($TARGETARCH)" && exit ; \
+    fi; \
+    echo "Downloading bash-static from ${BASH_URL}" \
+    && wget ${BASH_URL} -O /bin/bash \
+    && chmod 755 /bin/bash
 
 RUN addgroup -S -g 1000 druid \
  && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid
