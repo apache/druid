@@ -53,6 +53,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
@@ -919,6 +920,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final List<Meta.Frame> frames = new ArrayList<>();
     final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testMaxRowsPerFrame");
+    final JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(CalciteTests.createDefaultJoinableFactory());
     DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
@@ -932,7 +934,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 AuthTestUtils.TEST_AUTHORIZER_MAPPER,
                 CalciteTests.getJsonMapper(),
                 CalciteTests.DRUID_SCHEMA_NAME,
-                new CalciteRulesManager(ImmutableSet.of())
+                new CalciteRulesManager(ImmutableSet.of()),
+                joinableFactoryWrapper
             )
         ),
         smallFrameConfig,
@@ -1013,6 +1016,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final List<Meta.Frame> frames = new ArrayList<>();
     final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testMaxRowsPerFrame");
+    final JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(CalciteTests.createDefaultJoinableFactory());
     DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
@@ -1026,7 +1030,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 AuthTestUtils.TEST_AUTHORIZER_MAPPER,
                 CalciteTests.getJsonMapper(),
                 CalciteTests.DRUID_SCHEMA_NAME,
-                new CalciteRulesManager(ImmutableSet.of())
+                new CalciteRulesManager(ImmutableSet.of()),
+                joinableFactoryWrapper
             )
         ),
         smallFrameConfig,

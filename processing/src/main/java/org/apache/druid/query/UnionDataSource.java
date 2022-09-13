@@ -26,9 +26,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.SegmentReference;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class UnionDataSource implements DataSource
@@ -103,6 +105,14 @@ public class UnionDataSource implements DataSource
   public boolean isConcrete()
   {
     return dataSources.stream().allMatch(DataSource::isConcrete);
+  }
+
+  @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
+      Query query
+  )
+  {
+    return Function.identity();
   }
 
   @Override

@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
@@ -77,6 +78,7 @@ public class PlannerContext
   private final String sql;
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
+  private final JoinableFactoryWrapper jfw;
   private final ObjectMapper jsonMapper;
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
@@ -110,7 +112,8 @@ public class PlannerContext
       final boolean stringifyArrays,
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
-      final QueryContext queryContext
+      final QueryContext queryContext,
+      JoinableFactoryWrapper jfw
   )
   {
     this.sql = sql;
@@ -123,6 +126,7 @@ public class PlannerContext
     this.queryContext = queryContext;
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
+    this.jfw = jfw;
 
     String sqlQueryId = (String) this.queryContext.get(CTX_SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
@@ -140,8 +144,9 @@ public class PlannerContext
       final PlannerConfig plannerConfig,
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
-      final QueryContext queryContext
-  )
+      final QueryContext queryContext,
+      final JoinableFactoryWrapper jfw
+      )
   {
     final DateTime utcNow;
     final DateTimeZone timeZone;
@@ -179,7 +184,8 @@ public class PlannerContext
         stringifyArrays,
         rootSchema,
         engine,
-        queryContext
+        queryContext,
+        jfw
     );
   }
 

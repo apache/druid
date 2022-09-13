@@ -1072,6 +1072,11 @@ public class CalciteTests
     return new ExprMacroTable(exprMacros);
   }
 
+  public static JoinableFactoryWrapper createJoinableFactoryWrapper()
+  {
+    return new JoinableFactoryWrapper(CalciteTests.createDefaultJoinableFactory());
+  }
+
   public static DruidOperatorTable createOperatorTable()
   {
     try {

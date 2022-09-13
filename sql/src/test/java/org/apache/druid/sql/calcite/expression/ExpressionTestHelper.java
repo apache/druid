@@ -43,6 +43,7 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
@@ -74,6 +75,7 @@ import java.util.stream.Collectors;
 
 class ExpressionTestHelper
 {
+  private static final JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(CalciteTests.createDefaultJoinableFactory());
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
       "SELECT 1", // The actual query isn't important for this test
       CalciteTests.createOperatorTable(),
@@ -88,7 +90,8 @@ class ExpressionTestHelper
           )
       ),
       null /* Don't need engine */,
-      new QueryContext()
+      new QueryContext(),
+      joinableFactoryWrapper
   );
 
   private final RowSignature rowSignature;

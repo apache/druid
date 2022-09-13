@@ -60,6 +60,7 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryScheduler;
@@ -222,6 +223,7 @@ public class SqlResourceTest extends CalciteTestBase
     );
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+
     req = request(true);
 
     testRequestLogger = new TestRequestLogger();
@@ -234,7 +236,8 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        CalciteTests.createJoinableFactoryWrapper()
     );
 
     lifecycleManager = new SqlLifecycleManager()

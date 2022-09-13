@@ -24,11 +24,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 
 @JsonTypeName("table")
 public class TableDataSource implements DataSource
@@ -91,6 +93,14 @@ public class TableDataSource implements DataSource
   public boolean isConcrete()
   {
     return true;
+  }
+
+  @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
+      Query query
+  )
+  {
+    return Function.identity();
   }
 
   @Override

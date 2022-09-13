@@ -30,16 +30,25 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.join.Joinable;
+import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 
 import javax.annotation.Nullable;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -54,7 +63,7 @@ import java.util.stream.Collectors;
  * the prefix, will be shadowed. It is up to the caller to ensure that no important columns are shadowed by the
  * chosen prefix.
  *
- * When analyzed by {@link org.apache.druid.query.planning.DataSourceAnalysis}, the right-hand side of this datasource
+ * When analyzed by {@link DataSourceAnalysis}, the right-hand side of this datasource
  * will become a {@link org.apache.druid.query.planning.PreJoinableClause} object.
  */
 public class JoinDataSource implements DataSource
@@ -277,5 +286,39 @@ public class JoinDataSource implements DataSource
            ", joinType=" + joinType +
            ", leftFilter=" + leftFilter +
            '}';
+  }
+
+  @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
+      Query query
+  )
+  {
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
+    // segmentMapFn maps each base Segment into a joined Segment if necessary.
+    JoinableFactory jf = new JoinableFactory()
+    {
+      @Override
+      public boolean isDirectlyJoinable(DataSource dataSource)
+      {
+        return false;
+      }
+
+      @Override
+      public Optional<Joinable> build(
+          DataSource dataSource, JoinConditionAnalysis condition
+      )
+      {
+        return Optional.empty();
+      }
+    };
+    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(jf);
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
+        analysis.getPreJoinableClauses(),
+        cpuTimeAccumulator,
+        analysis.getBaseQuery().orElse(query)
+    );
+    return segmentMapFn;
   }
 }

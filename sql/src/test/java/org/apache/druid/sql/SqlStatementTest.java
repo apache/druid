@@ -35,6 +35,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -145,6 +146,7 @@ public class SqlStatementTest
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
 
     testRequestLogger = new TestRequestLogger();
+    final JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(CalciteTests.createDefaultJoinableFactory());
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
@@ -154,7 +156,8 @@ public class SqlStatementTest
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        joinableFactoryWrapper
     );
 
     this.sqlStatementFactory = new SqlStatementFactory(

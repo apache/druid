@@ -40,6 +40,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
@@ -71,6 +72,7 @@ public class PlannerFactory
   private final AuthorizerMapper authorizerMapper;
   private final String druidSchemaName;
   private final CalciteRulesManager calciteRuleManager;
+  private final JoinableFactoryWrapper jfw;
 
   @Inject
   public PlannerFactory(
@@ -81,7 +83,8 @@ public class PlannerFactory
       final AuthorizerMapper authorizerMapper,
       final @Json ObjectMapper jsonMapper,
       final @DruidSchemaName String druidSchemaName,
-      final CalciteRulesManager calciteRuleManager
+      final CalciteRulesManager calciteRuleManager,
+      final JoinableFactoryWrapper jfw
   )
   {
     this.rootSchema = rootSchema;
@@ -92,6 +95,7 @@ public class PlannerFactory
     this.jsonMapper = jsonMapper;
     this.druidSchemaName = druidSchemaName;
     this.calciteRuleManager = calciteRuleManager;
+    this.jfw = jfw;
   }
 
   /**
@@ -107,7 +111,8 @@ public class PlannerFactory
         plannerConfig,
         rootSchema,
         engine,
-        queryContext
+        queryContext,
+        jfw
     );
 
     return new DruidPlanner(buildFrameworkConfig(context), context, engine);

@@ -21,9 +21,11 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.segment.SegmentReference;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Represents a source... of data... for a query. Analogous to the "FROM" clause in SQL.
@@ -87,4 +89,12 @@ public interface DataSource
    * @see org.apache.druid.query.planning.DataSourceAnalysis#isConcreteTableBased() which uses this
    */
   boolean isConcrete();
+
+  /**
+   * Returns a segment function on to how to segment should be modified.
+   *
+   * @param query the input query
+   * @return the segment function
+   */
+  Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query);
 }

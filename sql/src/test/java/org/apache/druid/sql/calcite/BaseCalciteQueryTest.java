@@ -77,6 +77,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthConfig;
@@ -1078,6 +1079,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         authorizerMapper
     );
 
+    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(CalciteTests.createDefaultJoinableFactory());
+
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
         operatorTable,
@@ -1086,7 +1089,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         authorizerMapper,
         objectMapper,
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        joinableFactoryWrapper
     );
     final SqlStatementFactory sqlStatementFactory = CalciteTests.createSqlStatementFactory(
         engine,
