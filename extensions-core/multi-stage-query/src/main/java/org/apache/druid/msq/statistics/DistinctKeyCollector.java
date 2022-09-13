@@ -121,13 +121,13 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
       if (isNewMin && !retainedKeys.isEmpty() && !isKeySelected(retainedKeys.firstKey())) {
         // Old min should be kicked out.
         totalWeightUnadjusted -= retainedKeys.removeLong(retainedKeys.firstKey());
-        retainedBytes -= retainedKeys.firstKey().array().length;
+        retainedBytes -= retainedKeys.firstKey().getNumberOfBytes();
       }
 
       if (retainedKeys.putIfAbsent(key, weight) == MISSING_KEY_WEIGHT) {
         // We did add this key. (Previous value was zero, meaning absent.)
         totalWeightUnadjusted += weight;
-        retainedBytes += key.array().length;
+        retainedBytes += key.getNumberOfBytes();
       }
 
       while (retainedBytes >= maxBytes) {
@@ -305,7 +305,7 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
 
       if (!isKeySelected(key)) {
         totalWeightUnadjusted -= entry.getLongValue();
-        retainedBytes -= entry.getKey().array().length;
+        retainedBytes -= entry.getKey().getNumberOfBytes();
         iterator.remove();
       }
     }

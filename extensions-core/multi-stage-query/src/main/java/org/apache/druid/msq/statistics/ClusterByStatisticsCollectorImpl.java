@@ -230,7 +230,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
       throw new IAE("Target weight must be positive");
     }
 
-    assertRetainedKeyCountsAreTrackedCorrectly();
+    assertRetainedByteCountsAreTrackedCorrectly();
 
     if (buckets.isEmpty()) {
       return ClusterByPartitions.oneUniversalPartition();
@@ -313,7 +313,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   @Override
   public ClusterByStatisticsSnapshot snapshot()
   {
-    assertRetainedKeyCountsAreTrackedCorrectly();
+    assertRetainedByteCountsAreTrackedCorrectly();
 
     final List<ClusterByStatisticsSnapshot.Bucket> bucketSnapshots = new ArrayList<>();
 
@@ -384,7 +384,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
     // Downsample least-dense buckets first. (They're less likely to need high resolution.)
     sortedHolders.sort(
         Comparator.comparing((BucketHolder holder) ->
-                                 (double) holder.keyCollector.estimatedTotalWeight() / holder.retainedBytes)
+                                 (double) holder.keyCollector.estimatedTotalWeight() / holder.keyCollector.estimatedRetainedKeys())
     );
 
     int i = 0;
@@ -404,7 +404,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
     totalRetainedBytes = newTotalRetainedBytes;
   }
 
-  private void assertRetainedKeyCountsAreTrackedCorrectly()
+  private void assertRetainedByteCountsAreTrackedCorrectly()
   {
     // Check cached value of retainedKeys in each holder.
     assert buckets.values()
@@ -429,9 +429,9 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
 
     public double updateRetainedBytes()
     {
-      final double newRetainedKeys = keyCollector.estimatedRetainedBytes();
-      final double difference = newRetainedKeys - retainedBytes;
-      retainedBytes = newRetainedKeys;
+      final double newRetainedBytes = keyCollector.estimatedRetainedBytes();
+      final double difference = newRetainedBytes - retainedBytes;
+      retainedBytes = newRetainedBytes;
       return difference;
     }
   }

@@ -59,12 +59,13 @@ public class QuantilesSketchKeyCollectorSnapshot implements KeyCollectorSnapshot
       return false;
     }
     QuantilesSketchKeyCollectorSnapshot that = (QuantilesSketchKeyCollectorSnapshot) o;
-    return Objects.equals(encodedSketch, that.encodedSketch);
+    return Objects.equals(encodedSketch, that.encodedSketch)
+           && Double.compare(that.averageKeyLength, averageKeyLength) == 0;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(encodedSketch);
+    return Objects.hash(encodedSketch, averageKeyLength);
   }
 }

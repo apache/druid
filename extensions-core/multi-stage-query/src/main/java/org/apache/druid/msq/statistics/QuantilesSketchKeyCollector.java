@@ -37,6 +37,10 @@ import java.util.NoSuchElementException;
 
 /**
  * A key collector that is used when not aggregating. It uses a quantiles sketch to track keys.
+ *
+ * The collector maintains the averageKeyLength for all keys added through {@link #add(RowKey, long)} or
+ * {@link #addAll(QuantilesSketchKeyCollector)}. The average is calculated as a running average and accounts for
+ * weight of the key added. The averageKeyLength is assumed to be unaffected by {@link #downSample()}.
  */
 public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketchKeyCollector>
 {
@@ -58,13 +62,14 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
   @Override
   public void add(RowKey key, long weight)
   {
-    double total = averageKeyLength * sketch.getN();
-    total += key.array().length * weight;
+    double estimatedTotalSketchSizeInBytes = averageKeyLength * sketch.getN();
+    // The key is added "weight" times to the sketch, we can update the total weight directly.
+    estimatedTotalSketchSizeInBytes += key.getNumberOfBytes() * weight;
     for (int i = 0; i < weight; i++) {
       // Add the same key multiple times to make it "heavier".
       sketch.update(key);
     }
-    averageKeyLength = (total / sketch.getN());
+    averageKeyLength = (estimatedTotalSketchSizeInBytes / sketch.getN());
   }
 
   @Override

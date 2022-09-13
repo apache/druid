@@ -110,7 +110,7 @@ public class QuantilesSketchKeyCollectorTest
     final List<Pair<RowKey, Integer>> keyWeights = KeyCollectorTestUtils.uniformRandomKeys(numKeys);
     final RowKey finalMinKey =
         ClusterByStatisticsCollectorImplTest.computeSortedKeyWeightsFromWeightedKeys(keyWeights, comparator).firstKey();
-    int expectedRetainedBytes = 22 * finalMinKey.array().length;
+    int expectedRetainedBytes = 22 * finalMinKey.getNumberOfBytes();
 
     KeyCollectorTestUtils.doTest(
         QuantilesSketchKeyCollectorFactory.create(clusterBy),
