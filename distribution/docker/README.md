@@ -25,8 +25,17 @@ From the root of the repo, run following command:
 DOCKER_BUILDKIT=1 docker build -t apache/druid:tag -f distribution/docker/Dockerfile .
 ```
 
-> NOTE:
-> Building image on Apple M1 or M2 is not supported.
+### Building images on Apple M1/M2
+To build images on Apple M1/M2, you need to follow the instructions in this section.
+
+1. build Druid distribution from the root of the repo
+   ```bash
+   mvn clean package -DskipTests -Pdist
+   ```
+2. build target image
+   ```
+   DOCKER_BUILDKIT=1 docker build -t apache/druid:tag -f distribution/docker/Dockerfile --build-arg BUILD_FROM_SOURCE=false .
+   ```
 
 ## Run
 
