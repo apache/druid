@@ -133,7 +133,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     // Strip out the protocol
     String filterWithoutProtocol = StringUtils.removeStart(filter, prefix);
 
-    String[] filterWithoutProtocolChunkArray  = filterWithoutProtocol.split("/");
+    String[] filterWithoutProtocolChunkArray = filterWithoutProtocol.split("/");
 
     // If there's only 1 element, just return it because we don't know if that's a file name or bucket name.
     if (filterWithoutProtocolChunkArray.length == 1) {
