@@ -31,8 +31,11 @@ import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.storage.StorageConnector;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -77,12 +80,23 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
   {
 
     try {
-      final String remotePartitionPath = DurableStorageOutputChannelFactory.getPartitionFileName(
+      final String remotePartitionPath = findSuccessfulPartitionOutput(
           controllerTaskId,
           workerNumber,
           stageId.getStageNumber(),
           partitionNumber
       );
+      if (remotePartitionPath == null) {
+        throw new ISE(
+            "Cannot find a successful write of a worker in the location [%s]",
+            DurableStorageOutputChannelFactory.getPartitionOutputsFolderName(
+                controllerTaskId,
+                workerNumber,
+                stageId.getStageNumber(),
+                partitionNumber
+            )
+        );
+      }
       RetryUtils.retry(() -> {
         if (!storageConnector.pathExists(remotePartitionPath)) {
           throw new ISE(
@@ -111,5 +125,27 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
           partitionNumber
       );
     }
+  }
+
+  @Nullable
+  public String findSuccessfulPartitionOutput(
+      final String controllerTaskId,
+      final int workerNo,
+      final int stageNumber,
+      final int partitionNumber
+  ) throws IOException
+  {
+    List<String> fileNames = storageConnector.lsFiles(
+        DurableStorageOutputChannelFactory.getPartitionOutputsFolderName(
+            controllerTaskId,
+            workerNo,
+            stageNumber,
+            partitionNumber
+        )
+    );
+    Optional<String> maybeFileName = fileNames.stream()
+                                              .filter(fileName -> fileName.endsWith(DurableStorageOutputChannelFactory.SUCCESSFUL_SUFFIX))
+                                              .findAny();
+    return maybeFileName.orElse(null);
   }
 }

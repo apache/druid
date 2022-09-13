@@ -29,6 +29,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Implementation that uses local filesystem. All paths are appended with the base path, in such a way that its not visible
@@ -109,6 +113,25 @@ public class LocalFileStorageConnector implements StorageConnector
   public void deleteRecursively(String dirName) throws IOException
   {
     FileUtils.deleteDirectory(fileWithBasePath(dirName));
+  }
+
+  @Override
+  public void moveFile(String oldPath, String newPath) throws IOException
+  {
+    Path sourceFilePath = fileWithBasePath(oldPath).toPath();
+    Path destinationFilePath = fileWithBasePath(newPath).toPath();
+    Files.move(sourceFilePath, destinationFilePath, StandardCopyOption.ATOMIC_MOVE);
+  }
+
+  @Override
+  public List<String> lsFiles(String path) throws IOException
+  {
+    File sourceDirectoryPath = fileWithBasePath(path);
+    return Files.list(sourceDirectoryPath.toPath())
+                .map(Path::toFile)
+                .filter(File::isFile)
+                .map(File::getName)
+                .collect(Collectors.toList());
   }
 
   public File getBasePath()

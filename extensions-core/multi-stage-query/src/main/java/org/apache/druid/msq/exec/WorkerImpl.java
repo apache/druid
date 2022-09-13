@@ -585,6 +585,7 @@ public class WorkerImpl implements Worker
           task.getControllerTaskId(),
           task().getWorkerNumber(),
           stageNumber,
+          task().getId(),
           frameSize,
           MSQTasks.makeStorageConnector(context.injector())
       );
@@ -691,18 +692,18 @@ public class WorkerImpl implements Worker
       // Therefore, the logic for cleaning the stage output in case of a worker/machine crash has to be external.
       // We currently take care of this in the controller.
       if (durableStageStorageEnabled) {
-        final String fileName = DurableStorageOutputChannelFactory.getPartitionFileName(
+        final String folderName = DurableStorageOutputChannelFactory.getPartitionOutputsFolderName(
             task.getControllerTaskId(),
             task.getWorkerNumber(),
             stageId.getStageNumber(),
             partition
         );
         try {
-          MSQTasks.makeStorageConnector(context.injector()).deleteFile(fileName);
+          MSQTasks.makeStorageConnector(context.injector()).deleteRecursively(folderName);
         }
         catch (Exception e) {
           // If an error is thrown while cleaning up a file, log it and try to continue with the cleanup
-          log.warn(e, "Error while cleaning up temporary files at path " + fileName);
+          log.warn(e, "Error while cleaning up folder at path " + folderName);
         }
       }
     }
@@ -870,7 +871,37 @@ public class WorkerImpl implements Worker
             for (OutputChannel channel : outputChannels.getAllChannels()) {
               stageOutputs.computeIfAbsent(stageDef.getId(), ignored1 -> new ConcurrentHashMap<>())
                           .computeIfAbsent(channel.getPartitionNumber(), ignored2 -> channel.getReadableChannel());
+
+              if (durableStageStorageEnabled) {
+                // Mark the stuff as __success there
+                DurableStorageOutputChannelFactory durableStorageOutputChannelFactory =
+                    DurableStorageOutputChannelFactory.createStandardImplementation(
+                        task.getControllerTaskId(),
+                        task().getWorkerNumber(),
+                        stageDef.getStageNumber(),
+                        task().getId(),
+                        frameContext.memoryParameters().getStandardFrameSize(),
+                        MSQTasks.makeStorageConnector(context.injector())
+                    );
+                try {
+                  durableStorageOutputChannelFactory.markAsSuccess(channel.getPartitionNumber());
+                }
+                catch (IOException e) {
+                  throw new ISE(
+                      e,
+                      "Unable to suffix the file with %s",
+                      DurableStorageOutputChannelFactory.SUCCESSFUL_SUFFIX
+                  );
+                }
+                try {
+                  durableStorageOutputChannelFactory.markAsSuccess(channel.getPartitionNumber());
+                }
+                catch (IOException e) {
+                  throw new ISE(e, "Unable to append the output file with %s", DurableStorageOutputChannelFactory.SUCCESSFUL_SUFFIX);
+                }
+              }
             }
+
             kernelManipulationQueue.add(holder -> holder.getStageKernelMap()
                                                         .get(stageDef.getId())
                                                         .setResultsComplete(resultObject));
