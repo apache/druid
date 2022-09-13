@@ -233,8 +233,8 @@ public class TimeBoundaryQueryQueryToolChest
     if (query.isMinTime() || query.isMaxTime()) {
       RowSignature.Builder builder = RowSignature.builder();
       String outputName = query.isMinTime() ?
-                          query.getContextValue(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, TimeBoundaryQuery.MIN_TIME) :
-                          query.getContextValue(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, TimeBoundaryQuery.MAX_TIME);
+                          query.getQueryContext().getAsString(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, TimeBoundaryQuery.MIN_TIME) :
+                          query.getQueryContext().getAsString(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, TimeBoundaryQuery.MAX_TIME);
       return builder.add(outputName, ColumnType.LONG).build();
     }
     return super.resultArraySignature(query);
