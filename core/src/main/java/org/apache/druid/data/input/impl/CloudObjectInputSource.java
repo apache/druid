@@ -112,6 +112,10 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     return filter;
   }
 
+  /**
+   * Strips out blob store's protocol and bucket from {@link #getFilter}.
+   * This is to reduce user errors when crafting a filter.
+   */
   protected String filterWithoutProtocolAndBucket()
   {
     // If filter is null, just return it.
