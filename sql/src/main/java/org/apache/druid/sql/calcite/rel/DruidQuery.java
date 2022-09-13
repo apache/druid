@@ -80,6 +80,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -738,7 +739,8 @@ public class DruidQuery
   static Pair<DataSource, Filtration> getFiltration(
       DataSource dataSource,
       DimFilter filter,
-      VirtualColumnRegistry virtualColumnRegistry
+      VirtualColumnRegistry virtualColumnRegistry,
+      JoinableFactoryWrapper jfw
   )
   {
     if (!(dataSource instanceof JoinDataSource)) {
@@ -758,13 +760,16 @@ public class DruidQuery
     // Adds the intervals from the join left filter to query filtration
     Filtration queryFiltration = Filtration.create(filter, leftFiltration.getIntervals())
                                            .optimize(virtualColumnRegistry.getFullRowSignature());
+
+
     JoinDataSource newDataSource = JoinDataSource.create(
         joinDataSource.getLeft(),
         joinDataSource.getRight(),
         joinDataSource.getRightPrefix(),
         joinDataSource.getConditionAnalysis(),
         joinDataSource.getJoinType(),
-        leftFiltration.getDimFilter()
+        leftFiltration.getDimFilter(),
+        jfw
     );
     return Pair.of(newDataSource, queryFiltration);
   }
@@ -889,7 +894,8 @@ public class DruidQuery
       final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
           dataSource,
           filter,
-          virtualColumnRegistry
+          virtualColumnRegistry,
+          plannerContext.getJoinableFactoryWrapper()
       );
       final DataSource newDataSource = dataSourceFiltrationPair.lhs;
       final Filtration filtration = dataSourceFiltrationPair.rhs;
@@ -999,7 +1005,8 @@ public class DruidQuery
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
-        virtualColumnRegistry
+        virtualColumnRegistry,
+        plannerContext.getJoinableFactoryWrapper()
     );
     final DataSource newDataSource = dataSourceFiltrationPair.lhs;
     final Filtration filtration = dataSourceFiltrationPair.rhs;
@@ -1093,7 +1100,8 @@ public class DruidQuery
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
-        virtualColumnRegistry
+        virtualColumnRegistry,
+        plannerContext.getJoinableFactoryWrapper()
     );
     final DataSource newDataSource = dataSourceFiltrationPair.lhs;
     final Filtration filtration = dataSourceFiltrationPair.rhs;
@@ -1138,7 +1146,8 @@ public class DruidQuery
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
-        virtualColumnRegistry
+        virtualColumnRegistry,
+        plannerContext.getJoinableFactoryWrapper()
     );
     final DataSource newDataSource = dataSourceFiltrationPair.lhs;
     final Filtration filtration = dataSourceFiltrationPair.rhs;
@@ -1252,7 +1261,8 @@ public class DruidQuery
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
-        virtualColumnRegistry
+        virtualColumnRegistry,
+        plannerContext.getJoinableFactoryWrapper()
     );
     final DataSource newDataSource = dataSourceFiltrationPair.lhs;
     final Filtration filtration = dataSourceFiltrationPair.rhs;

@@ -195,14 +195,14 @@ public class ServerManager implements QuerySegmentWalker
     } else {
       return new ReportTimelineMissingSegmentQueryRunner<>(Lists.newArrayList(specs));
     }
-
+    Function<SegmentReference, SegmentReference> segmentMapFn = analysis.getDataSource().createSegmentMapFunction(query);
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+    /*final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
         analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
         cpuTimeAccumulator,
         analysis.getBaseQuery().orElse(query)
-    );
+    );*/
     // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
     final Optional<byte[]> cacheKeyPrefix = analysis.isJoin()
                                             ? joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis)

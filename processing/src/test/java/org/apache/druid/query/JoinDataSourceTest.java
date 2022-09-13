@@ -51,7 +51,8 @@ public class JoinDataSourceTest
       "x == \"j.x\"",
       JoinType.LEFT,
       null,
-      ExprMacroTable.nil()
+      ExprMacroTable.nil(),
+      null
   );
 
   private final JoinDataSource joinTableToTable = JoinDataSource.create(
@@ -61,7 +62,8 @@ public class JoinDataSourceTest
       "x == \"j.x\"",
       JoinType.LEFT,
       null,
-      ExprMacroTable.nil()
+      ExprMacroTable.nil(),
+      null
   );
 
   @Test
@@ -163,7 +165,8 @@ public class JoinDataSourceTest
         "x == \"j.x\"",
         JoinType.LEFT,
         TrueDimFilter.instance(),
-        ExprMacroTable.nil()
+        ExprMacroTable.nil(),
+        null
     );
 
     final JoinDataSource deserialized = (JoinDataSource) jsonMapper.readValue(
@@ -186,7 +189,8 @@ public class JoinDataSourceTest
         "x == \"j.x\"",
         JoinType.LEFT,
         TrueDimFilter.instance(),
-        ExprMacroTable.nil()
+        ExprMacroTable.nil(),
+        null
     );
   }
 
@@ -200,7 +204,8 @@ public class JoinDataSourceTest
         "x == \"j.x\"",
         JoinType.LEFT,
         TrueDimFilter.instance(),
-        ExprMacroTable.nil()
+        ExprMacroTable.nil(),
+        null
     );
     Assert.assertEquals(TrueDimFilter.instance(), dataSource.getLeftFilter());
   }
@@ -215,7 +220,8 @@ public class JoinDataSourceTest
         "x == \"j.x\"",
         JoinType.LEFT,
         null,
-        ExprMacroTable.nil()
+        ExprMacroTable.nil(),
+        null
     );
     Assert.assertEquals(dataSource.getVirtualColumnCandidates(), ImmutableSet.of("x"));
   }

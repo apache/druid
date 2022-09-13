@@ -207,7 +207,8 @@ public class Queries
             clause.getPrefix(),
             clause.getCondition(),
             clause.getJoinType(),
-            joinBaseFilter
+            joinBaseFilter,
+            null
         );
         joinBaseFilter = null;
       }

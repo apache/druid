@@ -44,6 +44,7 @@ public class ExprMacroTable
 {
   private static final ExprMacroTable NIL = new ExprMacroTable(Collections.emptyList());
 
+
   private final Map<String, ExprMacro> macroMap;
 
   public ExprMacroTable(final List<ExprMacro> macros)

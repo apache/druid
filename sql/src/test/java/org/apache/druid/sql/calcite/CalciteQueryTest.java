@@ -3901,7 +3901,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           "(\"dim1\" == \"j0.ROW_VALUE\")",
                           JoinType.INNER,
                           null,
-                          ExprMacroTable.nil()
+                          ExprMacroTable.nil(),
+                          CalciteTests.createJoinableFactoryWrapper()
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -12970,7 +12971,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                    "(\"__time\" == \"j0.__time\")",
                                    JoinType.INNER,
                                    null,
-                                   ExprMacroTable.nil()
+                                   ExprMacroTable.nil(),
+                                   CalciteTests.createJoinableFactoryWrapper()
                                ))
                                .intervals(querySegmentSpec(Filtration.eternity()))
                                .granularity(Granularities.ALL)

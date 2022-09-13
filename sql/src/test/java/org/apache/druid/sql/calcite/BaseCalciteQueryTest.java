@@ -440,7 +440,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         condition,
         joinType,
         filter,
-        CalciteTests.createExprMacroTable()
+        CalciteTests.createExprMacroTable(),
+        CalciteTests.createJoinableFactoryWrapper()
     );
   }
 

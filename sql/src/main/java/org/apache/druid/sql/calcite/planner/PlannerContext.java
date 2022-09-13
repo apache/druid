@@ -219,6 +219,11 @@ public class PlannerContext
     return localNow.getZone();
   }
 
+  public JoinableFactoryWrapper getJoinableFactoryWrapper()
+  {
+    return jfw;
+  }
+
   @Nullable
   public String getSchemaResourceType(String schema, String resourceName)
   {

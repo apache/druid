@@ -76,6 +76,8 @@ public class JoinDataSource implements DataSource
   // An optional filter on the left side if left is direct table access
   @Nullable
   private final DimFilter leftFilter;
+  @Nullable
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
 
   private JoinDataSource(
       DataSource left,
@@ -83,7 +85,8 @@ public class JoinDataSource implements DataSource
       String rightPrefix,
       JoinConditionAnalysis conditionAnalysis,
       JoinType joinType,
-      @Nullable DimFilter leftFilter
+      @Nullable DimFilter leftFilter,
+      @Nullable JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
     this.left = Preconditions.checkNotNull(left, "left");
@@ -97,6 +100,7 @@ public class JoinDataSource implements DataSource
         "left filter is only supported if left data source is direct table access"
     );
     this.leftFilter = leftFilter;
+    this.joinableFactoryWrapper = joinableFactoryWrapper;
   }
 
   /**
@@ -110,7 +114,8 @@ public class JoinDataSource implements DataSource
       @JsonProperty("condition") String condition,
       @JsonProperty("joinType") JoinType joinType,
       @Nullable @JsonProperty("leftFilter") DimFilter leftFilter,
-      @JacksonInject ExprMacroTable macroTable
+      @JacksonInject ExprMacroTable macroTable,
+      @Nullable @JacksonInject JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
     return new JoinDataSource(
@@ -123,7 +128,8 @@ public class JoinDataSource implements DataSource
             macroTable
         ),
         joinType,
-        leftFilter
+        leftFilter,
+        joinableFactoryWrapper
     );
   }
 
@@ -136,11 +142,14 @@ public class JoinDataSource implements DataSource
       final String rightPrefix,
       final JoinConditionAnalysis conditionAnalysis,
       final JoinType joinType,
-      final DimFilter leftFilter
+      final DimFilter leftFilter,
+      final JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
-    return new JoinDataSource(left, right, rightPrefix, conditionAnalysis, joinType, leftFilter);
+    return new JoinDataSource(left, right, rightPrefix, conditionAnalysis, joinType, leftFilter, joinableFactoryWrapper);
   }
+
+
 
   @Override
   public Set<String> getTableNames()
@@ -213,7 +222,8 @@ public class JoinDataSource implements DataSource
         rightPrefix,
         conditionAnalysis,
         joinType,
-        leftFilter
+        leftFilter,
+        joinableFactoryWrapper
     );
   }
 
@@ -295,24 +305,7 @@ public class JoinDataSource implements DataSource
   {
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
-    // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    JoinableFactory jf = new JoinableFactory()
-    {
-      @Override
-      public boolean isDirectlyJoinable(DataSource dataSource)
-      {
-        return false;
-      }
 
-      @Override
-      public Optional<Joinable> build(
-          DataSource dataSource, JoinConditionAnalysis condition
-      )
-      {
-        return Optional.empty();
-      }
-    };
-    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(jf);
     final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
         analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
