@@ -128,6 +128,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
+ *
  * this class is the parent class of both the Kafka and Kinesis supervisor. All the main run loop
  * logic are similar enough so they're grouped together into this class.
  * <p>
@@ -1455,30 +1456,29 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       checkCurrentTaskState();
 
       // If supervisor is already stopping, don't contend for stateChangeLock since the block can be skipped
-      if (!stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
-        synchronized (stateChangeLock) {
-          // if supervisor is not suspended, ensure required tasks are running
-          // if suspended, ensure tasks have been requested to gracefully stop
-          if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
-            // if we're already terminating, don't do anything here, the terminate already handles shutdown
-            log.info("[%s] supervisor is already stopping.", dataSource);
-          } else if (!spec.isSuspended()) {
-            log.info("[%s] supervisor is running.", dataSource);
+      if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
+        generateReport();
+        return;
+      }
 
-            stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CREATING_TASKS);
-            createNewTasks();
-          } else {
-            log.info("[%s] supervisor is suspended.", dataSource);
-            gracefulShutdownInternal();
-          }
+      synchronized (stateChangeLock) {
+        // if supervisor is not suspended, ensure required tasks are running
+        // if suspended, ensure tasks have been requested to gracefully stop
+        if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
+          // if we're already terminating, don't do anything here, the terminate already handles shutdown
+          log.info("[%s] supervisor is already stopping.", dataSource);
+        } else if (!spec.isSuspended()) {
+          log.info("[%s] supervisor is running.", dataSource);
+
+          stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CREATING_TASKS);
+          createNewTasks();
+        } else {
+          log.info("[%s] supervisor is suspended.", dataSource);
+          gracefulShutdownInternal();
         }
       }
 
-      if (log.isDebugEnabled()) {
-        log.debug(generateReport(true).toString());
-      } else {
-        log.info(generateReport(false).toString());
-      }
+      generateReport();
     }
     catch (Exception e) {
       stateManager.recordThrowableEvent(e);
@@ -1486,6 +1486,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     finally {
       stateManager.markRunFinished();
+    }
+  }
+
+  private void generateReport()
+  {
+    if (log.isDebugEnabled()) {
+      log.debug(generateReport(true).toString());
+    } else {
+      log.info(generateReport(false).toString());
     }
   }
 
