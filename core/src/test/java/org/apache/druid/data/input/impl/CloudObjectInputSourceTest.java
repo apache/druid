@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -227,5 +228,39 @@ public class CloudObjectInputSourceTest
 
     // This proved that FilenameUtils did the wrong thing. It should have been false.
     Assert.assertTrue(FilenameUtils.wildcardMatch("db/date=2022-08-01/_junk/0/001.parquet", "db/date=2022-08-01/*.parquet"));
+  }
+
+  @Test
+  public void testStringUtilsStrippingProtocolAndBucket()
+  {
+    String path = "s3://mybucket/mydb/path/date=2022-08-01/001.parquet";
+    String expected = "mydb/path/date=2022-08-01/001.parquet";
+    String removed = StringUtils.removeStart(path, "s3://mybucket/");
+
+    Assert.assertEquals(expected, removed);
+  }
+
+  @Test
+  public void testFilterWithoutProtocolAndBucket()
+  {
+    CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
+        .useConstructor(SCHEME, null, null, OBJECTS_BEFORE_FILTER, "s3://bar/foo/*.parquet")
+        .defaultAnswer(Mockito.CALLS_REAL_METHODS)
+    );
+
+    String expected = "foo/*.parquet";
+    Assert.assertEquals(expected, inputSource.filterWithoutProtocolAndBucket());
+  }
+
+  @Test
+  public void testFilterWithoutProtocolAndBucket2()
+  {
+    CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
+        .useConstructor(SCHEME, null, null, OBJECTS_BEFORE_FILTER, "s3://**.parquet")
+        .defaultAnswer(Mockito.CALLS_REAL_METHODS)
+    );
+
+    String expected = "**.parquet";
+    Assert.assertEquals(expected, inputSource.filterWithoutProtocolAndBucket());
   }
 }

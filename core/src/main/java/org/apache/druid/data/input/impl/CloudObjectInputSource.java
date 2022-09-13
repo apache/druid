@@ -37,9 +37,11 @@ import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public abstract class CloudObjectInputSource extends AbstractInputSource
@@ -110,6 +112,33 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     return filter;
   }
 
+  protected String filterWithoutProtocolAndBucket()
+  {
+    // If filter is null, just return it.
+    if (filter == null) {
+      return filter;
+    }
+
+    String prefix = scheme + "://";
+
+    // Don't do anything if we don't detect a protocol, simply returns the filter.
+    if (!filter.startsWith(prefix)) {
+      return filter;
+    }
+
+    // Strip out the protocol
+    String filterWithoutProtocol = StringUtils.removeStart(filter, prefix);
+
+    String[] filterWithoutProtocolChunkArray  = filterWithoutProtocol.split("/");
+
+    // If there's only 1 element, just return it because we don't know if that's a file name or bucket name.
+    if (filterWithoutProtocolChunkArray.length == 1) {
+      return filterWithoutProtocolChunkArray[0];
+    }
+
+    return Arrays.asList(filterWithoutProtocolChunkArray).stream().skip(1).collect(Collectors.joining("/"));
+  }
+
   /**
    * Create the correct {@link InputEntity} for this input source given a split on a {@link CloudObjectLocation}. This
    * is called internally by {@link #formattableReader} and operates on the output of {@link #createSplits}.
@@ -137,7 +166,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       Stream<CloudObjectLocation> objectStream = objects.stream();
 
       if (StringUtils.isNotBlank(filter)) {
-        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filter);
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filterWithoutProtocolAndBucket());
         objectStream = objectStream.filter(object -> m.matches(Paths.get(object.getPath())));
       }
 
@@ -148,7 +177,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       Stream<URI> uriStream = uris.stream();
 
       if (StringUtils.isNotBlank(filter)) {
-        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filter);
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filterWithoutProtocolAndBucket());
         uriStream = uriStream.filter(uri -> m.matches(Paths.get(uri.toString())));
       }
 
