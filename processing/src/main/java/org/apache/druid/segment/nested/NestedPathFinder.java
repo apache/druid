@@ -43,7 +43,7 @@ public class NestedPathFinder
           bob.append("$");
         }
         final String id = partFinder.getPartIdentifier();
-        if (id.contains(".") || id.contains("'") || id.contains("\"") || id.contains("[") || id.contains("]")) {
+        if (id.contains(".") || id.contains("'") || id.contains("\"") || id.contains("[") || id.contains("]") || id.isEmpty()) {
           bob.append("['").append(id).append("']");
         } else {
           bob.append(".");
@@ -88,13 +88,13 @@ public class NestedPathFinder
       final char current = path.charAt(i);
       if (current == '.' && arrayMark < 0 && quoteMark < 0) {
         if (dotMark >= 0) {
-          parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
+          parts.add(new NestedPathField(getPathSubstringNoEmptyJsonPath(path, partMark, i)));
         }
         dotMark = i;
         partMark = i + 1;
       } else if (current == '[' && arrayMark < 0 && quoteMark < 0) {
         if (dotMark == (i - 1) && dotMark != 0) {
-          badFormatJsonPath(path, "invalid position " + i + " for '[', must not follow '.' or must be contained with '");
+          badFormatJsonPath(path, "invalid position " + i + " for '[', must not follow '.' or must be contained within '");
         }
         if (dotMark >= 0 && i > 1) {
           parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
@@ -123,7 +123,7 @@ public class NestedPathFinder
         quoteMark = i;
         partMark = i + 1;
       } else if (current == '\'' && quoteMark >= 0 && path.charAt(i - 1) != '\\') {
-        if (path.charAt(i + 1) != ']') {
+        if (path.length() > i + 1 && path.charAt(i + 1) != ']') {
           if (arrayMark >= 0) {
             continue;
           }
@@ -203,7 +203,7 @@ public class NestedPathFinder
       final char current = path.charAt(i);
       if (current == '.' && arrayMark < 0 && quoteMark < 0) {
         if (dotMark >= 0) {
-          parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
+          parts.add(new NestedPathField(getPathSubstringNoEmpty(path, partMark, i)));
         }
         dotMark = i;
         partMark = i + 1;
@@ -211,7 +211,7 @@ public class NestedPathFinder
         // eat optional marker
         if (partMark != i) {
           if (dotMark >= 0) {
-            parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
+            parts.add(new NestedPathField(getPathSubstringNoEmpty(path, partMark, i)));
             dotMark = -1;
           } else {
             badFormat(path, "invalid position " + i + " for '?'");
@@ -284,11 +284,24 @@ public class NestedPathFinder
     return parts;
   }
 
-  private static String getPathSubstring(String path, int start, int end)
+  private static String getPathSubstringNoEmpty(String path, int start, int end)
   {
     if (end - start < 1) {
       badFormat(path, "path parts separated by '.' must not be empty");
     }
+    return getPathSubstring(path, start, end);
+  }
+
+  private static String getPathSubstringNoEmptyJsonPath(String path, int start, int end)
+  {
+    if (end - start < 1) {
+      badFormatJsonPath(path, "path parts separated by '.' must not be empty");
+    }
+    return getPathSubstring(path, start, end);
+  }
+
+  private static String getPathSubstring(String path, int start, int end)
+  {
     return path.substring(start, end);
   }
 
