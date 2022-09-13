@@ -140,7 +140,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       return filterWithoutProtocolChunkArray[0];
     }
 
-    return Arrays.asList(filterWithoutProtocolChunkArray).stream().skip(1).collect(Collectors.joining("/"));
+    return Arrays.stream(filterWithoutProtocolChunkArray).skip(1).collect(Collectors.joining("/"));
   }
 
   /**
