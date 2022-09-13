@@ -128,7 +128,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- *
  * this class is the parent class of both the Kafka and Kinesis supervisor. All the main run loop
  * logic are similar enough so they're grouped together into this class.
  * <p>
@@ -1457,7 +1456,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       // If supervisor is already stopping, don't contend for stateChangeLock since the block can be skipped
       if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
-        generateReport();
+        generateAndLogReport();
         return;
       }
 
@@ -1478,7 +1477,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
       }
 
-      generateReport();
+      generateAndLogReport();
     }
     catch (Exception e) {
       stateManager.recordThrowableEvent(e);
@@ -1489,7 +1488,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private void generateReport()
+  private void generateAndLogReport()
   {
     if (log.isDebugEnabled()) {
       log.debug(generateReport(true).toString());

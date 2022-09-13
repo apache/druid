@@ -126,7 +126,6 @@ public class SupervisorStateManager
    */
   public synchronized void maybeSetState(State proposedState)
   {
-    // Steady states can be achieved after remove with create
     if (BasicState.STOPPING.equals(this.supervisorState)) {
       return;
     }
