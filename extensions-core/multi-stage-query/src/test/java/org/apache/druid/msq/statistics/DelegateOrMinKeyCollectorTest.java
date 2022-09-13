@@ -44,7 +44,8 @@ public class DelegateOrMinKeyCollectorTest
   private final Comparator<RowKey> comparator = clusterBy.keyComparator();
 
   @BeforeClass
-  public static void setup() {
+  public static void setup()
+  {
     NullHandling.initializeForTests();
   }
 

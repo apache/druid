@@ -46,7 +46,8 @@ public class DistinctKeyCollectorTest
   private final int numKeys = 500_000;
 
   @BeforeClass
-  public static void setup() {
+  public static void setup()
+  {
     NullHandling.initializeForTests();
   }
 
