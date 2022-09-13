@@ -50,11 +50,9 @@ public class SupervisorManager
   private final Object metadataSupervisorManagerLock = new Object();
 
   private final ConcurrentHashMap<String, Pair<Supervisor, SupervisorSpec>> supervisors = new ConcurrentHashMap<>();
-  private final Object supervisorSetLock = new Object();
 
   // SupervisorTaskAutoScaler could be null
   private final ConcurrentHashMap<String, SupervisorTaskAutoScaler> autoscalers = new ConcurrentHashMap<>();
-  private final Object autoscalerSetLock = new Object();
 
   private final Object globalLock = new Object();
   private final Map<String, Object> supervisorStateLockMap = new HashMap<>();
@@ -96,12 +94,16 @@ public class SupervisorManager
     Preconditions.checkNotNull(spec.getId(), "spec.getId()");
     Preconditions.checkNotNull(spec.getDataSources(), "spec.getDatasources()");
 
+    Object supervisorStateLock;
     synchronized (globalLock) {
       supervisorStateLockMap.computeIfAbsent(spec.getId(), k -> new Object());
+      supervisorStateLock = supervisorStateLockMap.get(spec.getId());
     }
-    Object supervisorStateLock = supervisorStateLockMap.get(spec.getId());
 
     synchronized (supervisorStateLock) {
+      if (supervisorStateLock == null) {
+        return false;
+      }
       Preconditions.checkState(started, "SupervisorManager not started");
       possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
       return createAndStartSupervisorInternal(spec, true);
@@ -113,13 +115,16 @@ public class SupervisorManager
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(id, "id");
 
+    Object supervisorStateLock;
     synchronized (globalLock) {
-      supervisorStateLockMap.computeIfAbsent(id, k -> new Object());
+      supervisorStateLock = supervisorStateLockMap.get(id);
     }
-    Object supervisorStateLock = supervisorStateLockMap.get(id);
 
     try {
       synchronized (supervisorStateLock) {
+        if (supervisorStateLock == null) {
+          return false;
+        }
         Preconditions.checkState(started, "SupervisorManager not started");
         return possiblyStopAndRemoveSupervisorInternal(id, true);
       }
@@ -136,12 +141,15 @@ public class SupervisorManager
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(id, "id");
 
+    Object supervisorStateLock;
     synchronized (globalLock) {
-      supervisorStateLockMap.computeIfAbsent(id, k -> new Object());
+      supervisorStateLock = supervisorStateLockMap.get(id);
     }
-    Object supervisorStateLock = supervisorStateLockMap.get(id);
 
     synchronized (supervisorStateLock) {
+      if (supervisorStateLock == null) {
+        return false;
+      }
       Preconditions.checkState(started, "SupervisorManager not started");
       return possiblySuspendOrResumeSupervisorInternal(id, suspend);
     }
@@ -160,6 +168,7 @@ public class SupervisorManager
         if (!(spec instanceof NoopSupervisorSpec)) {
           try {
             createAndStartSupervisorInternal(spec, false);
+            supervisorStateLockMap.computeIfAbsent(spec.getId(), k -> new Object());
           }
           catch (Exception ex) {
             log.error(ex, "Failed to start supervisor: [%s]", spec.getId());
@@ -175,23 +184,26 @@ public class SupervisorManager
   public void stop()
   {
     Preconditions.checkState(started, "SupervisorManager not started");
+    started = false;
 
     synchronized (globalLock) {
-      for (String id : supervisors.keySet()) {
-        try {
-          supervisors.get(id).lhs.stop(false);
-          SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
-          if (autoscaler != null) {
-            autoscaler.stop();
+      for (String id : supervisorStateLockMap.keySet()) {
+        synchronized (supervisorStateLockMap.get(id)) {
+          try {
+            supervisors.get(id).lhs.stop(false);
+            SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
+            if (autoscaler != null) {
+              autoscaler.stop();
+            }
+          }
+          catch (Exception e) {
+            log.warn(e, "Caught exception while stopping supervisor [%s]", id);
           }
         }
-        catch (Exception e) {
-          log.warn(e, "Caught exception while stopping supervisor [%s]", id);
-        }
       }
+      supervisorStateLockMap.clear();
       supervisors.clear();
       autoscalers.clear();
-      started = false;
     }
 
     log.info("SupervisorManager stopped.");
@@ -299,16 +311,12 @@ public class SupervisorManager
     }
 
     pair.lhs.stop(true);
-    synchronized (supervisorSetLock) {
-      supervisors.remove(id);
-    }
+    supervisors.remove(id);
 
     SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
     if (autoscaler != null) {
       autoscaler.stop();
-      synchronized (autoscalerSetLock) {
-        autoscalers.remove(id);
-      }
+      autoscalers.remove(id);
     }
 
     return true;
@@ -365,9 +373,7 @@ public class SupervisorManager
       supervisor.start();
       if (autoscaler != null) {
         autoscaler.start();
-        synchronized (autoscalerSetLock) {
-          autoscalers.put(id, autoscaler);
-        }
+        autoscalers.put(id, autoscaler);
       }
     }
     catch (Exception e) {
@@ -380,9 +386,7 @@ public class SupervisorManager
       throw new RuntimeException(e);
     }
 
-    synchronized (supervisorSetLock) {
-      supervisors.put(id, Pair.of(supervisor, spec));
-    }
+    supervisors.put(id, Pair.of(supervisor, spec));
     return true;
   }
 }
