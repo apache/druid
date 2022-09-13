@@ -104,9 +104,14 @@ public class DruidExpression
     return escaped.toString();
   }
 
-  public static String numberLiteral(final Number n)
+  public static String longLiteral(final long n)
   {
-    return n == null ? nullLiteral() : n.toString();
+    return String.valueOf(n);
+  }
+
+  public static String doubleLiteral(final double n)
+  {
+    return String.valueOf(n);
   }
 
   public static String stringLiteral(final String s)
