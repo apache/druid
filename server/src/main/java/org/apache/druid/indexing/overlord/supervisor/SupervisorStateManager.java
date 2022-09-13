@@ -121,9 +121,8 @@ public class SupervisorStateManager
   /**
    * Certain states are only valid if the supervisor hasn't had a successful iteration. This method checks if there's
    * been at least one successful iteration, and if applicable, sets supervisor state to an appropriate new state.
-   * A STOPPING supervisor must not transition to any other state.
-   * (It is used to prevent a deadlock due to lock contention in SeekableStreamSupervisor#runInternal)
-   * This method is synchronized since multiple threads may be calling it and the above condition needs to be enforced.
+   * A STOPPING supervisor cannot transition to any other state as this state is final.
+   * This method must be thread-safe as multiple threads trying to update may lead to an invalid state.
    */
   public synchronized void maybeSetState(State proposedState)
   {
