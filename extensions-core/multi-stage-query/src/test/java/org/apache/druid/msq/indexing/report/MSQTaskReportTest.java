@@ -43,7 +43,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -173,7 +172,6 @@ public class MSQTaskReportTest
   }
 
   @Test
-  @Ignore("requires https://github.com/apache/druid/pull/12938")
   public void testWriteTaskReport() throws Exception
   {
     final MSQTaskReport report = new MSQTaskReport(
