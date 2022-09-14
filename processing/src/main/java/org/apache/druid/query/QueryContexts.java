@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
@@ -156,7 +157,7 @@ public class QueryContexts
 
   public static <T> boolean isBySegment(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, BY_SEGMENT_KEY, defaultValue);
+    return query.getContextBoolean(BY_SEGMENT_KEY, defaultValue);
   }
 
   public static <T> boolean isPopulateCache(Query<T> query)
@@ -166,7 +167,7 @@ public class QueryContexts
 
   public static <T> boolean isPopulateCache(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, POPULATE_CACHE_KEY, defaultValue);
+    return query.getContextBoolean(POPULATE_CACHE_KEY, defaultValue);
   }
 
   public static <T> boolean isUseCache(Query<T> query)
@@ -176,7 +177,7 @@ public class QueryContexts
 
   public static <T> boolean isUseCache(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, USE_CACHE_KEY, defaultValue);
+    return query.getContextBoolean(USE_CACHE_KEY, defaultValue);
   }
 
   public static <T> boolean isPopulateResultLevelCache(Query<T> query)
@@ -186,7 +187,7 @@ public class QueryContexts
 
   public static <T> boolean isPopulateResultLevelCache(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, POPULATE_RESULT_LEVEL_CACHE_KEY, defaultValue);
+    return query.getContextBoolean(POPULATE_RESULT_LEVEL_CACHE_KEY, defaultValue);
   }
 
   public static <T> boolean isUseResultLevelCache(Query<T> query)
@@ -196,22 +197,23 @@ public class QueryContexts
 
   public static <T> boolean isUseResultLevelCache(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, USE_RESULT_LEVEL_CACHE_KEY, defaultValue);
+    return query.getContextBoolean(USE_RESULT_LEVEL_CACHE_KEY, defaultValue);
   }
+
   public static <T> boolean isFinalize(Query<T> query, boolean defaultValue)
 
   {
-    return parseBoolean(query, FINALIZE_KEY, defaultValue);
+    return query.getContextBoolean(FINALIZE_KEY, defaultValue);
   }
 
   public static <T> boolean isSerializeDateTimeAsLong(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, SERIALIZE_DATE_TIME_AS_LONG_KEY, defaultValue);
+    return query.getContextBoolean(SERIALIZE_DATE_TIME_AS_LONG_KEY, defaultValue);
   }
 
   public static <T> boolean isSerializeDateTimeAsLongInner(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY, defaultValue);
+    return query.getContextBoolean(SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY, defaultValue);
   }
 
   public static <T> Vectorize getVectorize(Query<T> query)
@@ -221,7 +223,7 @@ public class QueryContexts
 
   public static <T> Vectorize getVectorize(Query<T> query, Vectorize defaultValue)
   {
-    return parseEnum(query, VECTORIZE_KEY, Vectorize.class, defaultValue);
+    return query.getQueryContext().getAsEnum(VECTORIZE_KEY, Vectorize.class, defaultValue);
   }
 
   public static <T> Vectorize getVectorizeVirtualColumns(Query<T> query)
@@ -231,7 +233,7 @@ public class QueryContexts
 
   public static <T> Vectorize getVectorizeVirtualColumns(Query<T> query, Vectorize defaultValue)
   {
-    return parseEnum(query, VECTORIZE_VIRTUAL_COLUMNS_KEY, Vectorize.class, defaultValue);
+    return query.getQueryContext().getAsEnum(VECTORIZE_VIRTUAL_COLUMNS_KEY, Vectorize.class, defaultValue);
   }
 
   public static <T> int getVectorSize(Query<T> query)
@@ -241,12 +243,12 @@ public class QueryContexts
 
   public static <T> int getVectorSize(Query<T> query, int defaultSize)
   {
-    return parseInt(query, VECTOR_SIZE_KEY, defaultSize);
+    return query.getQueryContext().getAsInt(VECTOR_SIZE_KEY, defaultSize);
   }
 
   public static <T> int getMaxSubqueryRows(Query<T> query, int defaultSize)
   {
-    return parseInt(query, MAX_SUBQUERY_ROWS_KEY, defaultSize);
+    return query.getQueryContext().getAsInt(MAX_SUBQUERY_ROWS_KEY, defaultSize);
   }
 
   public static <T> int getUncoveredIntervalsLimit(Query<T> query)
@@ -256,7 +258,7 @@ public class QueryContexts
 
   public static <T> int getUncoveredIntervalsLimit(Query<T> query, int defaultValue)
   {
-    return parseInt(query, UNCOVERED_INTERVALS_LIMIT_KEY, defaultValue);
+    return query.getQueryContext().getAsInt(UNCOVERED_INTERVALS_LIMIT_KEY, defaultValue);
   }
 
   public static <T> int getPriority(Query<T> query)
@@ -266,38 +268,37 @@ public class QueryContexts
 
   public static <T> int getPriority(Query<T> query, int defaultValue)
   {
-    return parseInt(query, PRIORITY_KEY, defaultValue);
+    return query.getQueryContext().getAsInt(PRIORITY_KEY, defaultValue);
   }
 
   public static <T> String getLane(Query<T> query)
   {
-    return (String) query.getContextValue(LANE_KEY);
+    return query.getQueryContext().getAsString(LANE_KEY);
   }
 
   public static <T> boolean getEnableParallelMerges(Query<T> query)
   {
-    return parseBoolean(query, BROKER_PARALLEL_MERGE_KEY, DEFAULT_ENABLE_PARALLEL_MERGE);
+    return query.getContextBoolean(BROKER_PARALLEL_MERGE_KEY, DEFAULT_ENABLE_PARALLEL_MERGE);
   }
 
   public static <T> int getParallelMergeInitialYieldRows(Query<T> query, int defaultValue)
   {
-    return parseInt(query, BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY, defaultValue);
+    return query.getQueryContext().getAsInt(BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY, defaultValue);
   }
 
   public static <T> int getParallelMergeSmallBatchRows(Query<T> query, int defaultValue)
   {
-    return parseInt(query, BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY, defaultValue);
+    return query.getQueryContext().getAsInt(BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY, defaultValue);
   }
 
   public static <T> int getParallelMergeParallelism(Query<T> query, int defaultValue)
   {
-    return parseInt(query, BROKER_PARALLELISM, defaultValue);
+    return query.getQueryContext().getAsInt(BROKER_PARALLELISM, defaultValue);
   }
 
   public static <T> boolean getEnableJoinFilterRewriteValueColumnFilters(Query<T> query)
   {
-    return parseBoolean(
-        query,
+    return query.getContextBoolean(
         JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY,
         DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS
     );
@@ -305,8 +306,7 @@ public class QueryContexts
 
   public static <T> boolean getEnableRewriteJoinToFilter(Query<T> query)
   {
-    return parseBoolean(
-        query,
+    return query.getContextBoolean(
         REWRITE_JOIN_TO_FILTER_ENABLE_KEY,
         DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER
     );
@@ -314,32 +314,32 @@ public class QueryContexts
 
   public static <T> long getJoinFilterRewriteMaxSize(Query<T> query)
   {
-    return parseLong(query, JOIN_FILTER_REWRITE_MAX_SIZE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE);
+    return query.getQueryContext().getAsLong(JOIN_FILTER_REWRITE_MAX_SIZE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE);
   }
 
   public static <T> boolean getEnableJoinFilterPushDown(Query<T> query)
   {
-    return parseBoolean(query, JOIN_FILTER_PUSH_DOWN_KEY, DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN);
+    return query.getContextBoolean(JOIN_FILTER_PUSH_DOWN_KEY, DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN);
   }
 
   public static <T> boolean getEnableJoinFilterRewrite(Query<T> query)
   {
-    return parseBoolean(query, JOIN_FILTER_REWRITE_ENABLE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE);
+    return query.getContextBoolean(JOIN_FILTER_REWRITE_ENABLE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE);
   }
 
-  public static <T> boolean getEnableJoinLeftScanDirect(Map<String, Object> context)
+  public static boolean getEnableJoinLeftScanDirect(Map<String, Object> context)
   {
     return parseBoolean(context, SQL_JOIN_LEFT_SCAN_DIRECT, DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT);
   }
 
   public static <T> boolean isSecondaryPartitionPruningEnabled(Query<T> query)
   {
-    return parseBoolean(query, SECONDARY_PARTITION_PRUNING_KEY, DEFAULT_SECONDARY_PARTITION_PRUNING);
+    return query.getContextBoolean(SECONDARY_PARTITION_PRUNING_KEY, DEFAULT_SECONDARY_PARTITION_PRUNING);
   }
 
   public static <T> boolean isDebug(Query<T> query)
   {
-    return parseBoolean(query, ENABLE_DEBUG, DEFAULT_ENABLE_DEBUG);
+    return query.getContextBoolean(ENABLE_DEBUG, DEFAULT_ENABLE_DEBUG);
   }
 
   public static boolean isDebug(Map<String, Object> queryContext)
@@ -364,11 +364,10 @@ public class QueryContexts
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {
-    Object obj = query.getContextValue(MAX_SCATTER_GATHER_BYTES_KEY);
-    if (obj == null) {
+    Long curr = query.getQueryContext().getAsLong(MAX_SCATTER_GATHER_BYTES_KEY);
+    if (curr == null) {
       return query.withOverriddenContext(ImmutableMap.of(MAX_SCATTER_GATHER_BYTES_KEY, maxScatterGatherBytesLimit));
     } else {
-      long curr = ((Number) obj).longValue();
       if (curr > maxScatterGatherBytesLimit) {
         throw new IAE(
             "configured [%s = %s] is more than enforced limit of [%s].",
@@ -399,12 +398,12 @@ public class QueryContexts
 
   public static <T> long getMaxQueuedBytes(Query<T> query, long defaultValue)
   {
-    return parseLong(query, MAX_QUEUED_BYTES_KEY, defaultValue);
+    return query.getQueryContext().getAsLong(MAX_QUEUED_BYTES_KEY, defaultValue);
   }
 
   public static <T> long getMaxScatterGatherBytes(Query<T> query)
   {
-    return parseLong(query, MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
+    return query.getQueryContext().getAsLong(MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
   }
 
   public static <T> boolean hasTimeout(Query<T> query)
@@ -420,11 +419,11 @@ public class QueryContexts
   public static <T> long getTimeout(Query<T> query, long defaultTimeout)
   {
     try {
-      final long timeout = parseLong(query, TIMEOUT_KEY, defaultTimeout);
+      final long timeout = query.getQueryContext().getAsLong(TIMEOUT_KEY, defaultTimeout);
       Preconditions.checkState(timeout >= 0, "Timeout must be a non negative value, but was [%s]", timeout);
       return timeout;
     }
-    catch (NumberFormatException e) {
+    catch (IAE e) {
       throw new BadQueryContextException(e);
     }
   }
@@ -441,14 +440,14 @@ public class QueryContexts
 
   static <T> long getDefaultTimeout(Query<T> query)
   {
-    final long defaultTimeout = parseLong(query, DEFAULT_TIMEOUT_KEY, DEFAULT_TIMEOUT_MILLIS);
+    final long defaultTimeout = query.getQueryContext().getAsLong(DEFAULT_TIMEOUT_KEY, DEFAULT_TIMEOUT_MILLIS);
     Preconditions.checkState(defaultTimeout >= 0, "Timeout must be a non negative value, but was [%s]", defaultTimeout);
     return defaultTimeout;
   }
 
   public static <T> int getNumRetriesOnMissingSegments(Query<T> query, int defaultValue)
   {
-    return query.getContextValue(NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, defaultValue);
+    return query.getQueryContext().getAsInt(NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, defaultValue);
   }
 
   public static <T> boolean allowReturnPartialResults(Query<T> query, boolean defaultValue)
@@ -461,30 +460,15 @@ public class QueryContexts
     return queryContext == null ? null : (String) queryContext.get(BROKER_SERVICE_NAME);
   }
 
-  static <T> long parseLong(Query<T> query, String key, long defaultValue)
-  {
-    return getAsLong(key, query.getContextValue(key), defaultValue);
-  }
-
   @SuppressWarnings("unused")
   static <T> long parseLong(Map<String, Object> context, String key, long defaultValue)
   {
     return getAsLong(key, context.get(key), defaultValue);
   }
 
-  static <T> int parseInt(Query<T> query, String key, int defaultValue)
-  {
-    return getAsInt(key, query.getContextValue(key), defaultValue);
-  }
-
   static int parseInt(Map<String, Object> context, String key, int defaultValue)
   {
     return getAsInt(key, context.get(key), defaultValue);
-  }
-
-  static <T> boolean parseBoolean(Query<T> query, String key, boolean defaultValue)
-  {
-    return getAsBoolean(key, query.getContextValue(key), defaultValue);
   }
 
   static boolean parseBoolean(Map<String, Object> context, String key, boolean defaultValue)
@@ -493,7 +477,7 @@ public class QueryContexts
   }
 
   public static String getAsString(
-      final String parameter,
+      final String key,
       final Object value,
       final String defaultValue
   )
@@ -503,7 +487,24 @@ public class QueryContexts
     } else if (value instanceof String) {
       return (String) value;
     } else {
-      throw new IAE("Expected parameter [%s] to be String", parameter);
+      throw new IAE("Expected key [%s] to be a String, but got [%s]", key, value.getClass().getName());
+    }
+  }
+
+  @Nullable
+  public static Boolean getAsBoolean(
+      final String parameter,
+      final Object value
+  )
+  {
+    if (value == null) {
+      return null;
+    } else if (value instanceof String) {
+      return Boolean.parseBoolean((String) value);
+    } else if (value instanceof Boolean) {
+      return (Boolean) value;
+    } else {
+      throw new IAE("Expected parameter [%s] to be a Boolean, but got [%s]", parameter, value.getClass().getName());
     }
   }
 
@@ -512,20 +513,32 @@ public class QueryContexts
    * to be {@code null}, a string or a {@code Boolean} object.
    */
   public static boolean getAsBoolean(
-      final String parameter,
+      final String key,
       final Object value,
       final boolean defaultValue
   )
   {
+    Boolean val = getAsBoolean(key, value);
+    return val == null ? defaultValue : val;
+  }
+
+  @Nullable
+  public static Integer getAsInt(String key, Object value)
+  {
     if (value == null) {
-      return defaultValue;
+      return null;
+    } else if (value instanceof Number) {
+      return ((Number) value).intValue();
     } else if (value instanceof String) {
-      return Boolean.parseBoolean((String) value);
-    } else if (value instanceof Boolean) {
-      return (Boolean) value;
-    } else {
-      throw new IAE("Expected parameter [%s] to be a boolean", parameter);
+      try {
+        return Numbers.parseInt(value);
+      }
+      catch (NumberFormatException ignored) {
+        throw new IAE("Expected key [%s] in integer format, but got [%s]", key, value);
+      }
     }
+
+    throw new IAE("Expected key [%s] to be an Integer, but got [%s]", key, value.getClass().getName());
   }
 
   /**
@@ -533,20 +546,31 @@ public class QueryContexts
    * to be {@code null}, a string or a {@code Number} object.
    */
   public static int getAsInt(
-      final String parameter,
+      final String ke,
       final Object value,
       final int defaultValue
   )
   {
+    Integer val = getAsInt(ke, value);
+    return val == null ? defaultValue : val;
+  }
+
+  @Nullable
+  public static Long getAsLong(String key, Object value)
+  {
     if (value == null) {
-      return defaultValue;
-    } else if (value instanceof String) {
-      return Numbers.parseInt(value);
+      return null;
     } else if (value instanceof Number) {
-      return ((Number) value).intValue();
-    } else {
-      throw new IAE("Expected parameter [%s] to be an integer", parameter);
+      return ((Number) value).longValue();
+    } else if (value instanceof String) {
+      try {
+        return Numbers.parseLong(value);
+      }
+      catch (NumberFormatException ignored) {
+        throw new IAE("Expected key [%s] in long format, but got [%s]", key, value);
+      }
     }
+    throw new IAE("Expected key [%s] to be a Long, but got [%s]", key, value.getClass().getName());
   }
 
   /**
@@ -554,19 +578,13 @@ public class QueryContexts
    * to be {@code null}, a string or a {@code Number} object.
    */
   public static long getAsLong(
-      final String parameter,
+      final String key,
       final Object value,
-      final long defaultValue)
+      final long defaultValue
+  )
   {
-    if (value == null) {
-      return defaultValue;
-    } else if (value instanceof String) {
-      return Numbers.parseLong(value);
-    } else if (value instanceof Number) {
-      return ((Number) value).longValue();
-    } else {
-      throw new IAE("Expected parameter [%s] to be a long", parameter);
-    }
+    Long val = getAsLong(key, value);
+    return val == null ? defaultValue : val;
   }
 
   public static HumanReadableBytes getAsHumanReadableBytes(
@@ -580,10 +598,32 @@ public class QueryContexts
     } else if (value instanceof Number) {
       return HumanReadableBytes.valueOf(Numbers.parseLong(value));
     } else if (value instanceof String) {
-      return new HumanReadableBytes((String) value);
-    } else {
-      throw new IAE("Expected parameter [%s] to be in human readable format", parameter);
+      try {
+        return HumanReadableBytes.valueOf(HumanReadableBytes.parse((String) value));
+      }
+      catch (IAE e) {
+        throw new IAE("Expected key [%s] in human readable format, but got [%s]", parameter, value);
+      }
     }
+
+    throw new IAE("Expected key [%s] to be a human readable number, but got [%s]", parameter, value.getClass().getName());
+  }
+
+  public static float getAsFloat(String key, Object value, float defaultValue)
+  {
+    if (null == value) {
+      return defaultValue;
+    } else if (value instanceof Number) {
+      return ((Number) value).floatValue();
+    } else if (value instanceof String) {
+      try {
+        return Float.parseFloat((String) value);
+      }
+      catch (NumberFormatException ignored) {
+        throw new IAE("Expected key [%s] in float format, but got [%s]", key, value);
+      }
+    }
+    throw new IAE("Expected key [%s] to be a Float, but got [%s]", key, value.getClass().getName());
   }
 
   public static Map<String, Object> override(
@@ -604,18 +644,31 @@ public class QueryContexts
   {
   }
 
-  static <T, E extends Enum<E>> E parseEnum(Query<T> query, String key, Class<E> clazz, E defaultValue)
+  public static <E extends Enum<E>> E getAsEnum(String key, Object val, Class<E> clazz, E defaultValue)
   {
-    Object val = query.getContextValue(key);
     if (val == null) {
       return defaultValue;
     }
-    if (val instanceof String) {
-      return Enum.valueOf(clazz, StringUtils.toUpperCase((String) val));
-    } else if (val instanceof Boolean) {
-      return Enum.valueOf(clazz, StringUtils.toUpperCase(String.valueOf(val)));
-    } else {
-      throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
+
+    try {
+      if (val instanceof String) {
+        return Enum.valueOf(clazz, StringUtils.toUpperCase((String) val));
+      } else if (val instanceof Boolean) {
+        return Enum.valueOf(clazz, StringUtils.toUpperCase(String.valueOf(val)));
+      }
     }
+    catch (IllegalArgumentException e) {
+      throw new IAE("Expected key [%s] must be value of enum [%s], but got [%s].",
+                    key,
+                    clazz.getName(),
+                    val.toString());
+    }
+
+    throw new ISE(
+        "Expected key [%s] must be type of [%s], actual type is [%s].",
+        key,
+        clazz.getName(),
+        val.getClass()
+    );
   }
 }

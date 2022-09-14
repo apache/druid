@@ -21,6 +21,7 @@ import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
+import { isSimpleArray } from '../../utils';
 import { ActionIcon } from '../action-icon/action-icon';
 
 import './table-cell.scss';
@@ -97,7 +98,7 @@ export const TableCell = React.memo(function TableCell(props: TableCellProps) {
           {isNaN(dateValue) ? 'Unusable date' : value.toISOString()}
         </div>
       );
-    } else if (Array.isArray(value)) {
+    } else if (isSimpleArray(value)) {
       return renderTruncated(`[${value.join(', ')}]`);
     } else if (typeof value === 'object') {
       return renderTruncated(JSONBig.stringify(value));
