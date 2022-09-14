@@ -37,7 +37,7 @@ import java.util.concurrent.Executor;
 
 public class TestServerInventoryView implements ServerInventoryView
 {
-  private static final Logger LOG = new Logger(TestServerInventoryView.class);
+  private static final Logger log = new Logger(TestServerInventoryView.class);
 
   private final ConcurrentHashMap<String, DruidServer> servers = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, DataSegmentChangeHandler> segmentChangeHandlers = new ConcurrentHashMap<>();
@@ -156,7 +156,7 @@ public class TestServerInventoryView implements ServerInventoryView
         @Nullable DataSegmentChangeCallback callback
     )
     {
-      LOG.info("Adding segment [%s] to server [%s]", segment.getId(), server.getName());
+      log.debug("Adding segment [%s] to server [%s]", segment.getId(), server.getName());
 
       if (server.getMaxSize() - server.getCurrSize() >= segment.getSize()) {
         server.addDataSegment(segment);
@@ -181,7 +181,7 @@ public class TestServerInventoryView implements ServerInventoryView
         @Nullable DataSegmentChangeCallback callback
     )
     {
-      LOG.info("Removing segment [%s] from server [%s]", segment.getId(), server.getName());
+      log.debug("Removing segment [%s] from server [%s]", segment.getId(), server.getName());
       server.removeDataSegment(segment.getId());
       segmentCallbacks.forEach(
           (segmentCallback, executor) -> executor.execute(

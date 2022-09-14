@@ -23,8 +23,10 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordinator.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CreateDataSegments;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.List;
@@ -34,44 +36,54 @@ import java.util.List;
  */
 public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
 {
+  // TODO: randomness and flakiness can creep in if the maxSegmentsToMove < totalLoadedSegments
+  @Override
+  public void setUp()
+  {
+
+  }
+
   @Test
-  public void testBalancingWithInventoryViewUpdates()
+  public void testBalancingWithUpdatedInventory()
   {
     testBalancingWhenInventoryIsSynced(true);
+  }
 
-    // Fix https://github.com/apache/druid/issues/12881 to enable this test case
-    // testBalancingWhenInventoryIsSynced(false);
+  @Test
+  @Ignore("Fix #12881 to enable this test. "
+          + "Current impl requires updated inventory for correct callback behaviour.")
+  public void testBalancingWithStaleInventory()
+  {
+    testBalancingWhenInventoryIsSynced(false);
   }
 
   private void testBalancingWhenInventoryIsSynced(boolean syncInventory)
   {
-    final String datasource = "wikitest";
-
-    // Setup servers and segments
-    final List<DruidServer> historicals = createHistoricalTier(Tier.T1, 2, 10_000);
+    // historicals = 2(T1), segments = 10(1 day)
+    final DruidServer historicalT11 = createHistorical(1, Tier.T1, 10_000);
+    final DruidServer historicalT12 = createHistorical(2, Tier.T1, 10_000);
     final List<DataSegment> segments =
-        CreateDataSegments.ofDatasource(datasource)
+        CreateDataSegments.ofDatasource(DS.WIKI)
                           .forIntervals(1, Granularities.DAY)
                           .startingAt("2022-01-01")
                           .andPartitionsPerInterval(10)
                           .eachOfSizeMb(500);
 
-    // Put all the segments on historicalA
-    final DruidServer historicalA = historicals.get(0);
-    final DruidServer historicalB = historicals.get(1);
-    segments.forEach(historicalA::addDataSegment);
 
-    // Build and run the simulation
+    // strategy = cost, replicas = 1(T1)
     final CoordinatorSimulation sim =
-        CoordinatorSimulationImpl.builder()
-                                 .balancer(new CostBalancerStrategyFactory())
-                                 .segments(segments)
-                                 .servers(historicals)
-                                 .rulesForDatasource(datasource, Rules.T1_X1)
-                                 .build();
+        CoordinatorSimulation.builder()
+                             .segments(segments)
+                             .servers(historicalT11, historicalT12)
+                             .rules(DS.WIKI, Load.on(Tier.T1, 1).forever())
+                             .balancer(new CostBalancerStrategyFactory())
+                             .build();
+
+    // Put all the segments on histT11
+    segments.forEach(historicalT11::addDataSegment);
 
     startSimulation(sim);
-    runCycle();
+    runCoordinatorCycle();
 
     // Verify that segments have been chosen for balancing
     verifyLatestMetricValue("segment/moved/count", 5L);
@@ -82,23 +94,37 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     }
 
     // Verify that segments have now been balanced out
-    final DruidServer historicalViewA = getInventoryView(historicalA.getName());
-    final DruidServer historicalViewB = getInventoryView(historicalB.getName());
-    Assert.assertEquals(5, historicalViewA.getTotalSegments());
-    Assert.assertEquals(5, historicalViewB.getTotalSegments());
-    verifyDatasourceIsFullyLoaded(datasource);
+    final DruidServer historicalViewT11 = getInventoryView(historicalT11.getName());
+    final DruidServer historicalViewT12 = getInventoryView(historicalT12.getName());
+    Assert.assertEquals(5, historicalViewT11.getTotalSegments());
+    Assert.assertEquals(5, historicalViewT12.getTotalSegments());
+    verifyDatasourceIsFullyLoaded(DS.WIKI);
+  }
+
+  @Test
+  public void testBalancingSkipsUnusedSegments()
+  {
+    // have a bunch of segments
+    // mark them all as unused
+    // verify that nothing is chosen for balancing
   }
 
   @Test
   public void testBalancingSkipsOvershadowedSegments()
   {
-
+    // have a bunch of segments
+    // overshadow all but one
+    // verify that none of the overshadowed ones are chosen for balancing
   }
 
   @Test
   public void testBalancingOfFullyReplicatedSegment()
   {
-
+    // a couple of segments
+    // all of them are fully loaded
+    // something will be chosen for balancing
+    // verify that the segments on the move don't count towards over-replication
+    // this will require 2 coordinator runs
   }
 
 }

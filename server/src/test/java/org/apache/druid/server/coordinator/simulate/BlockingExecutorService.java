@@ -28,13 +28,9 @@ import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Delayed;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * An executor that keeps submitted tasks in a queue until they are explicitly
@@ -45,18 +41,16 @@ import java.util.concurrent.TimeoutException;
  *   <li>{@link #finishAllPendingTasks()}</li>
  * </ul>
  */
-public class BlockingExecutorService implements ScheduledExecutorService
+public class BlockingExecutorService implements ExecutorService
 {
   private static final Logger log = new Logger(BlockingExecutorService.class);
 
   private final String nameFormat;
-  private final boolean ignoreScheduledTasks;
   private final Queue<Task<?>> taskQueue = new ConcurrentLinkedQueue<>();
 
-  public BlockingExecutorService(String nameFormat, boolean ignoreScheduledTasks)
+  public BlockingExecutorService(String nameFormat)
   {
     this.nameFormat = nameFormat;
-    this.ignoreScheduledTasks = ignoreScheduledTasks;
   }
 
   public boolean hasPendingTasks()
@@ -148,30 +142,6 @@ public class BlockingExecutorService implements ScheduledExecutorService
     submit(command);
   }
 
-  @Override
-  public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit)
-  {
-    if (ignoreScheduledTasks) {
-      log.debug("[%s] Ignoring scheduled task", nameFormat);
-      return new WrappingScheduledFuture<>(CompletableFuture.completedFuture(null));
-    }
-
-    // Ignore the delay and just queue the task
-    return new WrappingScheduledFuture<>(submit(command));
-  }
-
-  @Override
-  public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit)
-  {
-    if (ignoreScheduledTasks) {
-      log.debug("[%s] Ignoring scheduled task", nameFormat);
-      return new WrappingScheduledFuture<>(CompletableFuture.completedFuture(null));
-    }
-
-    // Ignore the delay and just queue the task
-    return new WrappingScheduledFuture<>(submit(callable));
-  }
-
   private <T> Future<T> addTaskToQueue(Callable<T> callable)
   {
     Task<T> task = new Task<>(callable);
@@ -239,28 +209,6 @@ public class BlockingExecutorService implements ScheduledExecutorService
     throw new UnsupportedOperationException();
   }
 
-  @Override
-  public ScheduledFuture<?> scheduleAtFixedRate(
-      Runnable command,
-      long initialDelay,
-      long period,
-      TimeUnit unit
-  )
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public ScheduledFuture<?> scheduleWithFixedDelay(
-      Runnable command,
-      long initialDelay,
-      long delay,
-      TimeUnit unit
-  )
-  {
-    throw new UnsupportedOperationException();
-  }
-
   /**
    * Task that can be invoked to complete the corresponding future.
    */
@@ -283,61 +231,6 @@ public class BlockingExecutorService implements ScheduledExecutorService
       catch (Exception e) {
         throw new ISE("Error while executing task", e);
       }
-    }
-  }
-
-  /**
-   * Wraps a Future into a ScheduledFuture.
-   */
-  private static class WrappingScheduledFuture<V> implements ScheduledFuture<V>
-  {
-    private final Future<V> future;
-
-    private WrappingScheduledFuture(Future<V> future)
-    {
-      this.future = future;
-    }
-
-    @Override
-    public long getDelay(TimeUnit unit)
-    {
-      return 0;
-    }
-
-    @Override
-    public int compareTo(Delayed o)
-    {
-      return 0;
-    }
-
-    @Override
-    public boolean cancel(boolean mayInterruptIfRunning)
-    {
-      return future.cancel(mayInterruptIfRunning);
-    }
-
-    @Override
-    public boolean isCancelled()
-    {
-      return future.isCancelled();
-    }
-
-    @Override
-    public boolean isDone()
-    {
-      return future.isDone();
-    }
-
-    @Override
-    public V get() throws InterruptedException, ExecutionException
-    {
-      return future.get();
-    }
-
-    @Override
-    public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException
-    {
-      return future.get(timeout, unit);
     }
   }
 

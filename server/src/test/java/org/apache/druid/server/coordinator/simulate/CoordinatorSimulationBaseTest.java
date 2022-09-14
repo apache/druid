@@ -20,18 +20,25 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Base test for coordinator simulations.
@@ -39,37 +46,29 @@ import java.util.Map;
  * Each test must call {@link #startSimulation(CoordinatorSimulation)} to start
  * the simulation. {@link CoordinatorSimulation#stop()} should not be called as
  * the simulation is stopped when cleaning up after the test in {@link #tearDown()}.
+ * <p>
+ * Tests that verify balancing behaviour should set
+ * {@link CoordinatorDynamicConfig#useBatchedSegmentSampler()} to true.
+ * Otherwise, the segment sampling is random and can produce repeated values
+ * leading to flakiness in the tests. The simulation sets this field to true by
+ * default.
  */
-public class CoordinatorSimulationBaseTest
+public abstract class CoordinatorSimulationBaseTest
     implements CoordinatorSimulation.CoordinatorState, CoordinatorSimulation.ClusterState
 {
   static final double DOUBLE_DELTA = 10e-9;
 
-  static class Rules
-  {
-    static final List<Rule> T1_X1 = Collections.singletonList(
-        new ForeverLoadRule(Collections.singletonMap(Tier.T1, 1))
-    );
-  }
-
-  static class Tier
-  {
-    static final String T1 = "_default_tier";
-  }
-
   private CoordinatorSimulation sim;
 
   @Before
-  public void setUp()
-  {
-    sim = null;
-  }
+  public abstract void setUp();
 
   @After
   public void tearDown()
   {
     if (sim != null) {
       sim.stop();
+      sim = null;
     }
   }
 
@@ -80,9 +79,9 @@ public class CoordinatorSimulationBaseTest
   }
 
   @Override
-  public void runCycle()
+  public void runCoordinatorCycle()
   {
-    sim.coordinator().runCycle();
+    sim.coordinator().runCoordinatorCycle();
   }
 
   @Override
@@ -144,6 +143,32 @@ public class CoordinatorSimulationBaseTest
   }
 
   // Utility methods
+  static List<DataSegment> createWikiSegmentsForIntervals(
+      int numIntervals,
+      Granularity granularity,
+      int partitionsPerInterval
+  )
+  {
+    return CreateDataSegments.ofDatasource(DS.WIKI)
+                             .forIntervals(1, Granularities.DAY)
+                             .startingAt("2022-01-01")
+                             .andPartitionsPerInterval(10)
+                             .eachOfSizeMb(500);
+  }
+
+  static CoordinatorDynamicConfig createDynamicConfig(
+      int maxSegmentsToMove,
+      int maxSegmentsInNodeLoadingQueue,
+      int replicationThrottleLimit
+  )
+  {
+    return CoordinatorDynamicConfig.builder()
+                                   .withMaxSegmentsToMove(maxSegmentsToMove)
+                                   .withReplicationThrottleLimit(replicationThrottleLimit)
+                                   .withMaxSegmentsInNodeLoadingQueue(maxSegmentsInNodeLoadingQueue)
+                                   .withUseBatchedSegmentSampler(true)
+                                   .build();
+  }
 
   /**
    * Creates a tier of historicals.
@@ -166,4 +191,52 @@ public class CoordinatorSimulationBaseTest
     return new DruidServer(name, name, name, serverSizeMb, ServerType.HISTORICAL, tier, 1);
   }
 
+  // Utility and constant holder classes
+
+  static class DS
+  {
+    static final String WIKI = "wiki";
+  }
+
+  static class Tier
+  {
+    static final String T1 = "tier_t1";
+    static final String T2 = "tier_t2";
+  }
+
+  /**
+   * Builder for retention rules.
+   *
+   * @see Load
+   */
+  interface RuleBuilder
+  {
+
+  }
+
+  /**
+   * Builder for a load rule.
+   */
+  static class Load implements RuleBuilder
+  {
+    private final Map<String, Integer> tieredReplicants = new HashMap<>();
+
+    static Load on(String tier, int numReplicas)
+    {
+      Load load = new Load();
+      load.tieredReplicants.put(tier, numReplicas);
+      return load;
+    }
+
+    Load andOn(String tier, int numReplicas)
+    {
+      tieredReplicants.put(tier, numReplicas);
+      return this;
+    }
+
+    Rule forever()
+    {
+      return new ForeverLoadRule(tieredReplicants);
+    }
+  }
 }

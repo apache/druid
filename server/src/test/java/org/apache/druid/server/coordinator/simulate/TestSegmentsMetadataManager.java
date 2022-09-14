@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.metadata.UnknownSegmentIdsException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -88,7 +87,6 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
 
   @Override
   public int markAsUsedNonOvershadowedSegments(String dataSource, Set<String> segmentIds)
-      throws UnknownSegmentIdsException
   {
     return 0;
   }
@@ -96,7 +94,6 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public boolean markSegmentAsUsed(String segmentId)
   {
-    // TODO
     return false;
   }
 
@@ -115,8 +112,13 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public int markSegmentsAsUnused(Set<SegmentId> segmentIds)
   {
-    segmentIds.forEach(usedSegments::remove);
-    return 0;
+    int numModifiedSegments = 0;
+    for (SegmentId segmentId : segmentIds) {
+      if (usedSegments.remove(segmentId) != null) {
+        ++numModifiedSegments;
+      }
+    }
+    return numModifiedSegments;
   }
 
   @Override

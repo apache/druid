@@ -43,6 +43,11 @@ public interface CoordinatorSimulation
 
   ClusterState cluster();
 
+  static CoordinatorSimulationBuilder builder()
+  {
+    return new CoordinatorSimulationBuilder();
+  }
+
   /**
    * Represents the state of the coordinator during a simulation.
    */
@@ -51,7 +56,7 @@ public interface CoordinatorSimulation
     /**
      * Runs a single coordinator cycle.
      */
-    void runCycle();
+    void runCoordinatorCycle();
 
     /**
      * Synchronizes the inventory view maintained by the coordinator with the
