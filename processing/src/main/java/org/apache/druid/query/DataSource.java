@@ -25,6 +25,7 @@ import org.apache.druid.segment.SegmentReference;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 /**
@@ -94,7 +95,8 @@ public interface DataSource
    * Returns a segment function on to how to segment should be modified.
    *
    * @param query the input query
+   * @param cpuTimeAcc the cpu time accumulator
    * @return the segment function
    */
-  Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query);
+  Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc);
 }

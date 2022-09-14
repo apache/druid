@@ -390,7 +390,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         objectMapper,
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        CalciteTests.createJoinableFactoryWrapper()
     );
 
     sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);

@@ -30,6 +30,7 @@ import org.apache.druid.segment.SegmentReference;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 @JsonTypeName("query")
@@ -92,7 +93,7 @@ public class QueryDataSource implements DataSource
 
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query
+      Query query, AtomicLong cpuTime
   )
   {
     return Function.identity();

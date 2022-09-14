@@ -26,22 +26,39 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.join.HashJoinSegment;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.Joinable;
+import org.apache.druid.segment.join.JoinableClause;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
+import org.apache.druid.segment.join.filter.JoinableClauses;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -64,7 +81,7 @@ import java.util.stream.Collectors;
  * chosen prefix.
  *
  * When analyzed by {@link DataSourceAnalysis}, the right-hand side of this datasource
- * will become a {@link org.apache.druid.query.planning.PreJoinableClause} object.
+ * will become a {@link PreJoinableClause} object.
  */
 public class JoinDataSource implements DataSource
 {
@@ -298,15 +315,96 @@ public class JoinDataSource implements DataSource
            '}';
   }
 
+
+  /**
+   * Creates a Function that maps base segments to {@link HashJoinSegment} if needed (i.e. if the number of join
+   * clauses is > 0). If mapping is not needed, this method will return {@link Function#identity()}.
+   *
+   * @param baseFilter         Filter to apply before the join takes place
+   * @param clauses            Pre-joinable clauses
+   * @param cpuTimeAccumulator An accumulator that we will add CPU nanos to; this is part of the function to encourage
+   *                           callers to remember to track metrics on CPU time required for creation of Joinables
+   * @param query              The query that will be run on the mapped segments. Usually this should be
+   *                           {@code analysis.getBaseQuery().orElse(query)}, where "analysis" is a
+   *                           {@link DataSourceAnalysis} and "query" is the original
+   *                           query from the end user.
+   */
+  public Function<SegmentReference, SegmentReference> createSegmentMapFn(
+      @Nullable final Filter baseFilter,
+      final List<PreJoinableClause> clauses,
+      final AtomicLong cpuTimeAccumulator,
+      final Query<?> query
+  )
+  {
+    // compute column correlations here and RHS correlated values
+    return JvmUtils.safeAccumulateThreadCpuTime(
+        cpuTimeAccumulator,
+        () -> {
+          if (clauses.isEmpty()) {
+            return Function.identity();
+          } else {
+            final JoinableClauses joinableClauses = JoinableClauses.createClauses(clauses,
+                                                                                  joinableFactoryWrapper.getJoinableFactory());
+            final JoinFilterRewriteConfig filterRewriteConfig = JoinFilterRewriteConfig.forQuery(query);
+
+            // Pick off any join clauses that can be converted into filters.
+            final Set<String> requiredColumns = query.getRequiredColumns();
+            final Filter baseFilterToUse;
+            final List<JoinableClause> clausesToUse;
+
+            if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
+              final Pair<List<Filter>, List<JoinableClause>> conversionResult = JoinableFactoryWrapper.convertJoinsToFilters(
+                  joinableClauses.getJoinableClauses(),
+                  requiredColumns,
+                  Ints.checkedCast(Math.min(filterRewriteConfig.getFilterRewriteMaxSize(), Integer.MAX_VALUE))
+              );
+
+              baseFilterToUse =
+                  Filters.maybeAnd(
+                      Lists.newArrayList(
+                          Iterables.concat(
+                              Collections.singleton(baseFilter),
+                              conversionResult.lhs
+                          )
+                      )
+                  ).orElse(null);
+              clausesToUse = conversionResult.rhs;
+            } else {
+              baseFilterToUse = baseFilter;
+              clausesToUse = joinableClauses.getJoinableClauses();
+            }
+
+            // Analyze remaining join clauses to see if filters on them can be pushed down.
+            final JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+                new JoinFilterPreAnalysisKey(
+                    filterRewriteConfig,
+                    clausesToUse,
+                    query.getVirtualColumns(),
+                    Filters.maybeAnd(Arrays.asList(baseFilterToUse, Filters.toFilter(query.getFilter())))
+                           .orElse(null)
+                )
+            );
+
+            return baseSegment ->
+                new HashJoinSegment(
+                    baseSegment,
+                    baseFilterToUse,
+                    GuavaUtils.firstNonNull(clausesToUse, ImmutableList.of()),
+                    joinFilterPreAnalysis
+                );
+          }
+        }
+    );
+  }
+
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query
+      Query query, AtomicLong cpuTimeAccumulator
   )
   {
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-    final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = createSegmentMapFn(
         analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
         cpuTimeAccumulator,

@@ -29,6 +29,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 /**
@@ -100,7 +102,7 @@ public class LookupDataSource implements DataSource
 
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query
+      Query query, AtomicLong cpuTime
   )
   {
     return Function.identity();

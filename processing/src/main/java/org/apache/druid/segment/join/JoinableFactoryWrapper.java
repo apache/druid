@@ -83,86 +83,6 @@ public class JoinableFactoryWrapper
   }
 
   /**
-   * Creates a Function that maps base segments to {@link HashJoinSegment} if needed (i.e. if the number of join
-   * clauses is > 0). If mapping is not needed, this method will return {@link Function#identity()}.
-   *
-   * @param baseFilter         Filter to apply before the join takes place
-   * @param clauses            Pre-joinable clauses
-   * @param cpuTimeAccumulator An accumulator that we will add CPU nanos to; this is part of the function to encourage
-   *                           callers to remember to track metrics on CPU time required for creation of Joinables
-   * @param query              The query that will be run on the mapped segments. Usually this should be
-   *                           {@code analysis.getBaseQuery().orElse(query)}, where "analysis" is a
-   *                           {@link DataSourceAnalysis} and "query" is the original
-   *                           query from the end user.
-   */
-  public Function<SegmentReference, SegmentReference> createSegmentMapFn(
-      @Nullable final Filter baseFilter,
-      final List<PreJoinableClause> clauses,
-      final AtomicLong cpuTimeAccumulator,
-      final Query<?> query
-  )
-  {
-    // compute column correlations here and RHS correlated values
-    return JvmUtils.safeAccumulateThreadCpuTime(
-        cpuTimeAccumulator,
-        () -> {
-          if (clauses.isEmpty()) {
-            return Function.identity();
-          } else {
-            final JoinableClauses joinableClauses = JoinableClauses.createClauses(clauses, joinableFactory);
-            final JoinFilterRewriteConfig filterRewriteConfig = JoinFilterRewriteConfig.forQuery(query);
-
-            // Pick off any join clauses that can be converted into filters.
-            final Set<String> requiredColumns = query.getRequiredColumns();
-            final Filter baseFilterToUse;
-            final List<JoinableClause> clausesToUse;
-
-            if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
-              final Pair<List<Filter>, List<JoinableClause>> conversionResult = convertJoinsToFilters(
-                  joinableClauses.getJoinableClauses(),
-                  requiredColumns,
-                  Ints.checkedCast(Math.min(filterRewriteConfig.getFilterRewriteMaxSize(), Integer.MAX_VALUE))
-              );
-
-              baseFilterToUse =
-                  Filters.maybeAnd(
-                      Lists.newArrayList(
-                          Iterables.concat(
-                              Collections.singleton(baseFilter),
-                              conversionResult.lhs
-                          )
-                      )
-                  ).orElse(null);
-              clausesToUse = conversionResult.rhs;
-            } else {
-              baseFilterToUse = baseFilter;
-              clausesToUse = joinableClauses.getJoinableClauses();
-            }
-
-            // Analyze remaining join clauses to see if filters on them can be pushed down.
-            final JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-                new JoinFilterPreAnalysisKey(
-                    filterRewriteConfig,
-                    clausesToUse,
-                    query.getVirtualColumns(),
-                    Filters.maybeAnd(Arrays.asList(baseFilterToUse, Filters.toFilter(query.getFilter())))
-                           .orElse(null)
-                )
-            );
-
-            return baseSegment ->
-                new HashJoinSegment(
-                    baseSegment,
-                    baseFilterToUse,
-                    GuavaUtils.firstNonNull(clausesToUse, ImmutableList.of()),
-                    joinFilterPreAnalysis
-                );
-          }
-        }
-    );
-  }
-
-  /**
    * Compute a cache key prefix for a join data source. This includes the data sources that participate in the RHS of a
    * join as well as any query specific constructs associated with join data source such as base table filter. This key prefix
    * can be used in segment level cache or result level cache. The function can return following wrapped in an
@@ -214,7 +134,7 @@ public class JoinableFactoryWrapper
    * See {@link #convertJoinToFilter} for details on the logic.
    */
   @VisibleForTesting
-  static Pair<List<Filter>, List<JoinableClause>> convertJoinsToFilters(
+  public static Pair<List<Filter>, List<JoinableClause>> convertJoinsToFilters(
       final List<JoinableClause> clauses,
       final Set<String> requiredColumns,
       final int maxNumFilterValues

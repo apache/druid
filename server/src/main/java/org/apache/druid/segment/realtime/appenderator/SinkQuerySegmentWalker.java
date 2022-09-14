@@ -59,7 +59,6 @@ import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
@@ -170,12 +169,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
-        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
-        analysis.getPreJoinableClauses(),
-        cpuTimeAccumulator,
-        analysis.getBaseQuery().orElse(query)
-    );
+    Function<SegmentReference, SegmentReference> segmentMapFn = analysis.getDataSource()
+                                                                        .createSegmentMapFunction(
+                                                                            query,
+                                                                            cpuTimeAccumulator
+                                                                        );
+
 
     // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
     final Optional<byte[]> cacheKeyPrefix = analysis.isJoin()

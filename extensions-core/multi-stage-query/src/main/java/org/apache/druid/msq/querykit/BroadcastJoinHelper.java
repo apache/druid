@@ -143,12 +143,7 @@ public class BroadcastJoinHelper
     final DataSource dataSourceWithInlinedChannelData = inlineChannelData(query.getDataSource());
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(dataSourceWithInlinedChannelData);
 
-    return joinableFactory.createSegmentMapFn(
-        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
-        analysis.getPreJoinableClauses(),
-        new AtomicLong(),
-        analysis.getBaseQuery().orElse(query)
-    );
+    return analysis.getDataSource().createSegmentMapFunction(query, new AtomicLong());
   }
 
   @VisibleForTesting
