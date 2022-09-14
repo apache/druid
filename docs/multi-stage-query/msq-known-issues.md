@@ -33,12 +33,12 @@ sidebar_label: Known issues
   execution. If your servers have multiple local file systems, this causes queries to exhaust
   available disk space earlier than expected. 
 
-- When `msqMaxNumTasks` is higher than the total
+- When `maxNumTasks` is higher than the total
   capacity of the cluster, more tasks may be launched than can run at once. This leads to a
   [TaskStartTimeout](./msq-reference.md#context-parameters) error code, as there is never enough capacity to run the query.
-  To avoid this, set `msqMaxNumTasks` to a number of tasks that can run simultaneously on your cluster.
+  To avoid this, set `maxNumTasks` to a number of tasks that can run simultaneously on your cluster.
 
-- When `msqTaskAssignment` is set to `auto`, the system generates one task per input file for certain splittable
+- When `taskAssignment` is set to `auto`, the system generates one task per input file for certain splittable
   input sources where file sizes are not known ahead of time. This includes the `http` input source, where the system
   generates one task per URI.
 
@@ -47,7 +47,7 @@ sidebar_label: Known issues
 - INSERT queries can consume excessive memory when using complex types due to inaccurate footprint
   estimation. This can appear as an OutOfMemoryError during the SegmentGenerator stage when using
   sketches. If you run into this issue, try manually lowering the value of the
-  [`msqRowsInMemory`](./msq-reference.md#context-parameters) parameter.
+  [`rowsInMemory`](./msq-reference.md#context-parameters) parameter.
 
 - EXTERN loads an entire row group into memory at once when reading from Parquet files. Row groups
   can be up to 1 GB in size, which can lead to excessive heap usage when reading many files in
