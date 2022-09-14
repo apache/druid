@@ -625,7 +625,7 @@ public class MSQSelectTest extends MSQTestBase
                     .setDataSource(
                         new ExternalDataSource(
                             new LocalInputSource(null, null, ImmutableList.of(toRead.getAbsoluteFile())),
-                            new JsonInputFormat(null, null, null),
+                            new JsonInputFormat(null, null, null, null, null),
                             RowSignature.builder()
                                         .add("timestamp", ColumnType.STRING)
                                         .add("page", ColumnType.STRING)

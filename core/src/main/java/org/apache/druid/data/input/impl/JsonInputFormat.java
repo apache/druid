@@ -55,21 +55,42 @@ public class JsonInputFormat extends NestedInputFormat
    */
   private final boolean lineSplittable;
 
+  /**
+   * If true, overrides the behavior controlled by lineSplittable and the parsing will assume that the input
+   * is newline delimited. This is to allow streaming ingestion to use the newline delimited parser when the
+   * input is known to follow that format, since this allows for more flexible handling of parse errors (i.e.,
+   * an invalid JSON event on one line will not prevent other events on different lines from being ingested).
+   */
+  private final boolean assumeNewlineDelimited;
+
+  /**
+   * If true, use the JsonNodeReader when parsing non-newline delimited JSON. This parser splits the input string
+   * into JsonNode objects, parsing each JsonNode into a separate InputRow, instead of parsing the input string
+   * into several InputRow at the same time. This allows for more flexible handling of parse errors, where timestamp
+   * parsing errors do not prevent other events in the same string from being ingested, and allows valid events prior to
+   * encountering invalid JSON syntax to be ingested as well.
+   */
+  private final boolean useJsonNodeReader;
+
   @JsonCreator
   public JsonInputFormat(
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
       @JsonProperty("featureSpec") @Nullable Map<String, Boolean> featureSpec,
-      @JsonProperty("keepNullColumns") @Nullable Boolean keepNullColumns
+      @JsonProperty("keepNullColumns") @Nullable Boolean keepNullColumns,
+      @JsonProperty("assumeNewlineDelimited") @Nullable Boolean assumeNewlineDelimited,
+      @JsonProperty("useJsonNodeReader") @Nullable Boolean useJsonNodeReader
   )
   {
-    this(flattenSpec, featureSpec, keepNullColumns, true);
+    this(flattenSpec, featureSpec, keepNullColumns, true, assumeNewlineDelimited, useJsonNodeReader);
   }
 
   public JsonInputFormat(
       @Nullable JSONPathSpec flattenSpec,
       Map<String, Boolean> featureSpec,
       Boolean keepNullColumns,
-      boolean lineSplittable
+      boolean lineSplittable,
+      Boolean assumeNewlineDelimited,
+      Boolean useJsonNodeReader
   )
   {
     super(flattenSpec);
@@ -85,6 +106,8 @@ public class JsonInputFormat extends NestedInputFormat
       objectMapper.configure(feature, entry.getValue());
     }
     this.lineSplittable = lineSplittable;
+    this.assumeNewlineDelimited = assumeNewlineDelimited != null && assumeNewlineDelimited;
+    this.useJsonNodeReader = useJsonNodeReader != null && useJsonNodeReader;
   }
 
   @JsonProperty
@@ -109,9 +132,13 @@ public class JsonInputFormat extends NestedInputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return this.lineSplittable ?
-           new JsonLineReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns) :
-           new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
+    if (this.lineSplittable || this.assumeNewlineDelimited) {
+      return new JsonLineReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
+    } else if (this.useJsonNodeReader) {
+      return new JsonNodeReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
+    } else {
+      return new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
+    }
   }
 
   /**
@@ -124,7 +151,10 @@ public class JsonInputFormat extends NestedInputFormat
     return new JsonInputFormat(this.getFlattenSpec(),
                                this.getFeatureSpec(),
                                this.keepNullColumns,
-                               lineSplittable);
+                               lineSplittable,
+                               assumeNewlineDelimited,
+                               useJsonNodeReader
+    );
   }
 
   @Override
@@ -140,12 +170,25 @@ public class JsonInputFormat extends NestedInputFormat
       return false;
     }
     JsonInputFormat that = (JsonInputFormat) o;
-    return this.lineSplittable == that.lineSplittable && Objects.equals(featureSpec, that.featureSpec) && Objects.equals(keepNullColumns, that.keepNullColumns);
+    return keepNullColumns == that.keepNullColumns
+           && lineSplittable == that.lineSplittable
+           && assumeNewlineDelimited == that.assumeNewlineDelimited
+           && useJsonNodeReader == that.useJsonNodeReader
+           && Objects.equals(featureSpec, that.featureSpec)
+           && Objects.equals(objectMapper, that.objectMapper);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), featureSpec, keepNullColumns, lineSplittable);
+    return Objects.hash(
+        super.hashCode(),
+        featureSpec,
+        objectMapper,
+        keepNullColumns,
+        lineSplittable,
+        assumeNewlineDelimited,
+        useJsonNodeReader
+    );
   }
 }
