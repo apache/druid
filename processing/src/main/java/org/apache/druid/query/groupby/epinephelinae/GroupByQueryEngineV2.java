@@ -141,7 +141,7 @@ public class GroupByQueryEngineV2
 
     try {
       final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
-          query.getContextValue(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP, null)
+          query.getQueryContext().getAsString(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP)
       );
 
       final DateTime fudgeTimestamp = fudgeTimestampString == null

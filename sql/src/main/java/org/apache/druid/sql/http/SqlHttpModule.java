@@ -22,6 +22,7 @@ package org.apache.druid.sql.http;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import org.apache.druid.guice.Jerseys;
+import org.apache.druid.guice.LazySingleton;
 
 /**
  * The Module responsible for providing bindings to the SQL http endpoint
@@ -31,6 +32,7 @@ public class SqlHttpModule implements Module
   @Override
   public void configure(Binder binder)
   {
+    binder.bind(SqlResource.class).in(LazySingleton.class);
     Jerseys.addResource(binder, SqlResource.class);
   }
 }

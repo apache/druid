@@ -147,8 +147,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
                     }
                   }
               ),
-              makeLazyResourceHolder(allocatorQueueRef, ignored -> {
-              }),
+              makeLazyResourceHolder(allocatorQueueRef, ignored -> {}),
               stageDefinition.getSignature(),
               stageDefinition.getClusterBy(),
               frameContext

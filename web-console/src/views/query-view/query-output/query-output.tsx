@@ -152,22 +152,23 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
       }
 
       if (!parsedQuery.hasStarInSelect()) {
-        basicActions.push({
-          icon: IconNames.EDIT,
-          title: `Rename column`,
-          onAction: () => {
-            setRenamingColumn(headerIndex);
+        basicActions.push(
+          {
+            icon: IconNames.EDIT,
+            title: 'Rename column',
+            onAction: () => {
+              setRenamingColumn(headerIndex);
+            },
           },
-        });
+          {
+            icon: IconNames.CROSS,
+            title: 'Remove column',
+            onAction: () => {
+              onQueryAction(q => q.removeOutputColumn(header));
+            },
+          },
+        );
       }
-
-      basicActions.push({
-        icon: IconNames.CROSS,
-        title: `Remove column`,
-        onAction: () => {
-          onQueryAction(q => q.removeOutputColumn(header));
-        },
-      });
 
       return basicActionsToMenu(basicActions)!;
     } else {

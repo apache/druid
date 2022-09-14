@@ -114,7 +114,7 @@ import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
-import org.apache.druid.sql.SqlStatementFactoryFactory;
+import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -804,15 +804,18 @@ public class CalciteTests
       final AuthConfig authConfig
   )
   {
-    return new SqlStatementFactoryFactory(
-        plannerFactory,
-        new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
-        new NoopRequestLogger(),
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        authConfig,
-        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())),
-        new SqlLifecycleManager()
-    ).factorize(engine);
+    return new SqlStatementFactory(
+        new SqlToolbox(
+            engine,
+            plannerFactory,
+            new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
+            new NoopRequestLogger(),
+            QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+            authConfig,
+            new DefaultQueryConfig(ImmutableMap.of()),
+            new SqlLifecycleManager()
+        )
+    );
   }
 
   public static ObjectMapper getJsonMapper()

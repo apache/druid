@@ -68,12 +68,12 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -462,7 +462,7 @@ public class DruidPlanner implements Closeable
       }
 
       // Start the query.
-      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
+      final Supplier<QueryResponse> resultsSupplier = () -> {
         // sanity check
         final Set<ResourceAction> readResourceActions =
             plannerContext.getResourceActions()
@@ -536,38 +536,40 @@ public class DruidPlanner implements Closeable
               planner.getTypeFactory(),
               plannerContext.getParameters()
       );
-      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
+      final Supplier<QueryResponse> resultsSupplier = () -> {
         final Enumerable<?> enumerable = theRel.bind(dataContext);
         final Enumerator<?> enumerator = enumerable.enumerator();
-        return Sequences.withBaggage(new BaseSequence<>(
-            new BaseSequence.IteratorMaker<Object[], EnumeratorIterator<Object[]>>()
-            {
-              @Override
-              public EnumeratorIterator<Object[]> make()
-              {
-                return new EnumeratorIterator<>(new Iterator<Object[]>()
+        return QueryResponse.withEmptyContext(Sequences.withBaggage(
+            new BaseSequence<>(
+                new BaseSequence.IteratorMaker<Object[], EnumeratorIterator<Object[]>>()
                 {
                   @Override
-                  public boolean hasNext()
+                  public EnumeratorIterator<Object[]> make()
                   {
-                    return enumerator.moveNext();
+                    return new EnumeratorIterator<>(new Iterator<Object[]>()
+                    {
+                      @Override
+                      public boolean hasNext()
+                      {
+                        return enumerator.moveNext();
+                      }
+
+                      @Override
+                      public Object[] next()
+                      {
+                        return (Object[]) enumerator.current();
+                      }
+                    });
                   }
 
                   @Override
-                  public Object[] next()
+                  public void cleanup(EnumeratorIterator<Object[]> iterFromMake)
                   {
-                    return (Object[]) enumerator.current();
+
                   }
-                });
-              }
-
-              @Override
-              public void cleanup(EnumeratorIterator<Object[]> iterFromMake)
-              {
-
-              }
-            }
-        ), enumerator::close);
+                }
+            ), enumerator::close)
+        );
       };
       return new PlannerResult(resultsSupplier, root.validatedRowType);
     }
@@ -606,8 +608,9 @@ public class DruidPlanner implements Closeable
       log.error(jpe, "Encountered exception while serializing Resources for explain output");
       resourcesString = null;
     }
-    final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
-        Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString})));
+    final Supplier<QueryResponse> resultsSupplier = Suppliers.ofInstance(
+        QueryResponse.withEmptyContext(Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString})))
+    );
     return new PlannerResult(resultsSupplier, getExplainStructType(rel.getCluster().getTypeFactory()));
   }
 
@@ -836,13 +839,13 @@ public class DruidPlanner implements Closeable
       errorMessage = exception.getMessage();
     }
     if (null == errorMessage) {
-      errorMessage = "Please check Broker logs for more details.";
+      errorMessage = "Please check Broker logs for additional details.";
     } else {
-      // Re-phrase since planning errors are more like hints
+      // Planning errors are more like hints: it isn't guaranteed that the planning error is actually what went wrong.
       errorMessage = "Possible error: " + errorMessage;
     }
     // Finally, add the query itself to error message that user will get.
-    return StringUtils.format("Cannot build plan for query. %s", errorMessage);
+    return StringUtils.format("Query not supported. %s SQL was: %s", errorMessage, plannerContext.getSql());
   }
 
   private static Set<RelOptTable> getBindableTables(final RelNode relNode)

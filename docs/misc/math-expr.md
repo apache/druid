@@ -63,7 +63,7 @@ The following built-in functions are available.
 
 |name|description|
 |----|-----------|
-|cast|cast(expr,'LONG' or 'DOUBLE' or 'STRING' or 'LONG_ARRAY', or 'DOUBLE_ARRAY' or 'STRING_ARRAY') returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
+|cast|cast(expr,'LONG' or 'DOUBLE' or 'STRING' or 'ARRAY<LONG>', or 'ARRAY<DOUBLE>' or 'ARRAY<STRING>') returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
 |nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
@@ -200,8 +200,8 @@ Apply functions allow for special 'lambda' expressions to be defined and applied
 | map(lambda,arr) | applies a transform specified by a single argument lambda expression to all elements of arr, returning a new array |
 | cartesian_map(lambda,arr1,arr2,...) | applies a transform specified by a multi argument lambda expression to all elements of the Cartesian product of all input arrays, returning a new array; the number of lambda arguments and array inputs must be the same |
 | filter(lambda,arr) | filters arr by a single argument lambda, returning a new array with all matching elements, or null if no elements match |
-| fold(lambda,arr) | folds a 2 argument lambda across arr. The first argument of the lambda is the array element and the second the accumulator, returning a single accumulated value. |
-| cartesian_fold(lambda,arr1,arr2,...) | folds a multi argument lambda across the Cartesian product of all input arrays. The first arguments of the lambda is the array element and the last is the accumulator, returning a single accumulated value. |
+| fold(lambda,arr,acc) | folds a 2 argument lambda across arr using acc as the initial input value. The first argument of the lambda is the array element and the second the accumulator, returning a single accumulated value. |
+| cartesian_fold(lambda,arr1,arr2,...,acc) | folds a multi argument lambda across the Cartesian product of all input arrays using acc as the initial input value. The first arguments of the lambda are the array elements of each array and the last is the accumulator, returning a single accumulated value. |
 | any(lambda,arr) | returns 1 if any element in the array matches the lambda expression, else 0 |
 | all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |
 
@@ -232,7 +232,7 @@ JSON functions provide facilities to extract, transform, and create `COMPLEX<jso
 
 | function | description |
 |---|---|
-| json_value(expr, path) | Extract a Druid literal (`STRING`, `LONG`, `DOUBLE`) value from `expr` using JSONPath syntax of `path` |
+| json_value(expr, path[, type]) | Extract a Druid literal (`STRING`, `LONG`, `DOUBLE`) value from `expr` using JSONPath syntax of `path`. The optional `type` argument can be set to `'LONG'`,`'DOUBLE'` or `'STRING'` to cast values to that type. |
 | json_query(expr, path) | Extract a `COMPLEX<json>` value from `expr` using JSONPath syntax of `path` |
 | json_object(expr1, expr2[, expr3, expr4 ...]) | Construct a `COMPLEX<json>` with alternating 'key' and 'value' arguments|
 | parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>`. If the input is not a `STRING` or it is invalid JSON, this function will result in an error.|
@@ -252,7 +252,7 @@ Druid supports a small, simplified subset of the [JSONPath syntax](https://githu
 |`['<name>']`| Child element in bracket notation. |
 |`[<number>]`| Array index. |
 
-See [SQL JSON documentation](../querying/sql-json-functions.md#jsonpath-syntax) for examples.
+See [SQL JSON documentation](../querying/sql-json-functions.md#jsonpath-syntax) for examples and [Nested columns](../querying/nested-columns.md) for more information on ingesting and storing nested data.
 
 ## Reduction functions
 
