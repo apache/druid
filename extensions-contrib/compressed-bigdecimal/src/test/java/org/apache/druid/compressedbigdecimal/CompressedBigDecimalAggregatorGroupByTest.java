@@ -29,8 +29,12 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.hamcrest.collection.IsCollectionWithSize;
+import org.hamcrest.collection.IsMapContaining;
+import org.hamcrest.collection.IsMapWithSize;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -48,11 +52,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
-import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
-import static org.hamcrest.collection.IsMapContaining.hasEntry;
-import static org.hamcrest.collection.IsMapWithSize.aMapWithSize;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 
 /**
  * Unit tests for AccumulatingDecimalAggregator.
@@ -88,10 +87,7 @@ public class CompressedBigDecimalAggregatorGroupByTest
   {
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      if ("v2ParallelCombine".equals(config.toString())) {
-        continue;
-      }
-      constructors.add(new Object[] {config});
+      constructors.add(new Object[]{config});
     }
     return constructors;
   }
@@ -122,8 +118,9 @@ public class CompressedBigDecimalAggregatorGroupByTest
 
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         this.getClass().getResourceAsStream("/" + "bd_test_data.csv"),
-        Resources.asCharSource(this.getClass().getResource(
-            "/" + "bd_test_data_parser.json"),
+        Resources.asCharSource(
+            this.getClass().getResource(
+                "/" + "bd_test_data_parser.json"),
             StandardCharsets.UTF_8
         ).read(),
         Resources.asCharSource(
@@ -137,14 +134,30 @@ public class CompressedBigDecimalAggregatorGroupByTest
     );
 
     List<ResultRow> results = seq.toList();
-    assertThat(results, hasSize(1));
+    Assert.assertThat(results, IsCollectionWithSize.hasSize(1));
     ResultRow row = results.get(0);
     ObjectMapper mapper = helper.getObjectMapper();
     GroupByQuery groupByQuery = mapper.readValue(groupByQueryJson, GroupByQuery.class);
     MapBasedRow mapBasedRow = row.toMapBasedRow(groupByQuery);
     Map<String, Object> event = mapBasedRow.getEvent();
-    assertEquals(new DateTime("2017-01-01T00:00:00Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"))), mapBasedRow.getTimestamp());
-    assertThat(event, aMapWithSize(1));
-    assertThat(event, hasEntry("revenue", new BigDecimal("15000000010.000000005")));
+    Assert.assertEquals(
+        new DateTime("2017-01-01T00:00:00Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"))),
+        mapBasedRow.getTimestamp()
+    );
+    Assert.assertThat(event, IsMapWithSize.aMapWithSize(3));
+    Assert.assertThat(
+        event,
+        IsMapContaining.hasEntry("cbdRevenueFromString", new BigDecimal("15000000010.000000005"))
+    );
+    // long conversion of 5000000000.000000005 results in null/0 value
+    Assert.assertThat(
+        event,
+        IsMapContaining.hasEntry("cbdRevenueFromLong", new BigDecimal("10000000010.000000000"))
+    );
+    // double input changes 5000000000.000000005 to 5000000000.5 to fit in double mantissa space
+    Assert.assertThat(
+        event,
+        IsMapContaining.hasEntry("cbdRevenueFromDouble", new BigDecimal("15000000010.500000000"))
+    );
   }
 }

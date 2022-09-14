@@ -19,6 +19,7 @@
 
 package org.apache.druid.compressedbigdecimal;
 
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.data.IndexedInts;
 
 import java.math.BigDecimal;
@@ -37,15 +38,13 @@ public class Utils
    * than this value (the result), then the higher order bits are dropped, similar to
    * what happens when adding a long to an int and storing the result in an int.
    *
-   * @param <S> Type of CompressedBigDecimal into which to accumulate
    * @param lhs The object into which to accumulate
    * @param rhs The object to accumulate
    * @return a reference to <b>this</b>
    */
-  public static <S extends CompressedBigDecimal<S>>
-      CompressedBigDecimal<S> accumulate(CompressedBigDecimal<S> lhs, BigDecimal rhs)
+  public static CompressedBigDecimal accumulate(CompressedBigDecimal lhs, BigDecimal rhs)
   {
-    CompressedBigDecimal<ArrayCompressedBigDecimal> abd =
+    CompressedBigDecimal abd =
         new ArrayCompressedBigDecimal(rhs.setScale(lhs.getScale()));
     return lhs.accumulate(abd);
   }
@@ -58,36 +57,33 @@ public class Utils
    * than this value (the result), then the higher order bits are dropped, similar to
    * what happens when adding a long to an int and storing the result in an int.
    *
-   * @param <S>      Type of CompressedBigDecimal into which to accumulate
    * @param lhs      The object into which to accumulate
    * @param rhs      The object to accumulate
    * @param rhsScale The scale to apply to the long being accumulated
    * @return a reference to <b>this</b>
    */
-  public static <S extends CompressedBigDecimal<S>>
-      CompressedBigDecimal<S> accumulate(CompressedBigDecimal<S> lhs, long rhs, int rhsScale)
+  public static CompressedBigDecimal accumulate(CompressedBigDecimal lhs, long rhs, int rhsScale)
   {
-    CompressedBigDecimal<ArrayCompressedBigDecimal> abd = new ArrayCompressedBigDecimal(rhs, rhsScale);
+    CompressedBigDecimal abd = new ArrayCompressedBigDecimal(rhs, rhsScale);
     return lhs.accumulate(abd);
   }
 
   /**
    * Accumulate using IndexedInts read from Druid's segment file.
    *
-   * @param <S>      Type of CompressedBigDecimal into which to accumulate
    * @param lhs      The object into which to accumulate
    * @param rhs      IndexedInts representing array of magnitude values
    * @param rhsScale the scale
    * @return a reference to <b>this</b>
    */
-  public static <S extends CompressedBigDecimal<S>>
-      CompressedBigDecimal<S> accumulate(CompressedBigDecimal<S> lhs, IndexedInts rhs, int rhsScale)
+  public static CompressedBigDecimal accumulate(CompressedBigDecimal lhs, IndexedInts rhs, int rhsScale)
   {
     if (rhs.size() > lhs.getArraySize()) {
       throw new IllegalArgumentException("Right hand side too big to fit in the result value");
     }
     CompressedBigDecimal.internalAdd(lhs.getArraySize(), lhs, CompressedBigDecimal::getArrayEntry,
-        CompressedBigDecimal::setArrayEntry, rhs.size(), rhs, IndexedInts::get);
+                                     CompressedBigDecimal::setArrayEntry, rhs.size(), rhs, IndexedInts::get
+    );
     return lhs;
   }
 
@@ -100,29 +96,70 @@ public class Utils
    * @param lhsScale The scale of the left
    * @param rhs      the right side to accumlate
    */
-  public static void accumulate(ByteBuffer buf, int pos, int lhsSize, int lhsScale, CompressedBigDecimal<?> rhs)
+  public static void accumulate(ByteBuffer buf, int pos, int lhsSize, int lhsScale, CompressedBigDecimal rhs)
   {
     if (rhs.getArraySize() > lhsSize) {
       throw new IllegalArgumentException("Right hand side too big to fit in the result value");
     }
     BufferAccessor accessor = BufferAccessor.prepare(pos);
-    CompressedBigDecimal.internalAdd(lhsSize, buf, accessor, accessor,
-        rhs.getArraySize(), rhs, CompressedBigDecimal::getArrayEntry);
+    if (rhs.getScale() != lhsScale) {
+      rhs = Utils.scaleUp(rhs);
+    }
+    CompressedBigDecimal.internalAdd(
+        lhsSize,
+        buf,
+        accessor,
+        accessor,
+        rhs.getArraySize(),
+        rhs,
+        CompressedBigDecimal::getArrayEntry
+    );
   }
 
   /**
    * Returns a {@code CompressedBigDecimal} whose scale is moderated as per the default scale.
    *
-   * @param <S> Type of CompressedBigDecimal to scale
    * @param val The value to scale up
    * @return Scaled up compressedBigDecimal
    */
-  public static <S extends CompressedBigDecimal<S>>
-      CompressedBigDecimal<ArrayCompressedBigDecimal> scaleUp(CompressedBigDecimal<S> val)
+  public static CompressedBigDecimal scaleUp(CompressedBigDecimal val)
   {
     return new ArrayCompressedBigDecimal(
         val.toBigDecimal().setScale(CompressedBigDecimalAggregatorFactory.DEFAULT_SCALE, BigDecimal.ROUND_UP)
     );
+  }
+
+  public static CompressedBigDecimal scaleUp(CompressedBigDecimal val, int scale)
+  {
+    return new ArrayCompressedBigDecimal(
+        val.toBigDecimal().setScale(scale, BigDecimal.ROUND_UP)
+    );
+  }
+
+  public static CompressedBigDecimal objToCompressedBigDecimal(Object obj)
+  {
+    CompressedBigDecimal result;
+    if (obj == null) {
+      result = null;
+    } else if (obj instanceof BigDecimal) {
+      result = new ArrayCompressedBigDecimal((BigDecimal) obj);
+    } else if (obj instanceof Long) {
+      result = new ArrayCompressedBigDecimal(new BigDecimal((Long) obj));
+    } else if (obj instanceof Integer) {
+      result = new ArrayCompressedBigDecimal(new BigDecimal((Integer) obj));
+    } else if (obj instanceof Double) {
+      result = new ArrayCompressedBigDecimal(BigDecimal.valueOf((Double) obj));
+    } else if (obj instanceof Float) {
+      result = new ArrayCompressedBigDecimal(BigDecimal.valueOf((Float) obj));
+    } else if (obj instanceof String) {
+      result = new ArrayCompressedBigDecimal(new BigDecimal((String) obj));
+    } else if (obj instanceof CompressedBigDecimal) {
+      result = (CompressedBigDecimal) obj;
+    } else {
+      throw new ISE("Unknown extraction value type: [%s]", obj.getClass().getSimpleName());
+    }
+
+    return result;
   }
 
   /**
@@ -131,14 +168,7 @@ public class Utils
    */
   private static class BufferAccessor implements ToIntBiFunction<ByteBuffer, Integer>, ObjBiIntConsumer<ByteBuffer>
   {
-    private static ThreadLocal<BufferAccessor> cache = new ThreadLocal<BufferAccessor>()
-    {
-      @Override
-      protected BufferAccessor initialValue()
-      {
-        return new BufferAccessor();
-      }
-    };
+    private static final ThreadLocal<BufferAccessor> CACHE = ThreadLocal.withInitial(BufferAccessor::new);
 
     private int position = 0;
 
@@ -150,7 +180,7 @@ public class Utils
      */
     public static BufferAccessor prepare(int position)
     {
-      BufferAccessor accessor = cache.get();
+      BufferAccessor accessor = CACHE.get();
       accessor.position = position;
       return accessor;
     }
