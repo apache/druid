@@ -25,10 +25,10 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.msq.indexing.IndexerWorkerClient;
 import org.apache.druid.server.DruidNode;
 
 import java.util.Map;
-import java.util.function.IntFunction;
 
 /**
  * Context used by multi-stage query controllers.
@@ -74,7 +74,7 @@ public interface ControllerContext
   /**
    * Client for communicating with workers.
    */
-  WorkerClient taskClientFor(Controller controller, IntFunction<String> taskIdFetcher);
+  WorkerClient taskClientFor(Controller controller, IndexerWorkerClient.TaskIdResolver taskIdResolver);
 
   /**
    * Writes controller task report.

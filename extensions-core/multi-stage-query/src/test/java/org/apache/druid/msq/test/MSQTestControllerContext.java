@@ -43,6 +43,7 @@ import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.msq.exec.WorkerManagerClient;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
+import org.apache.druid.msq.indexing.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -55,7 +56,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
 public class MSQTestControllerContext implements ControllerContext
@@ -259,7 +259,7 @@ public class MSQTestControllerContext implements ControllerContext
   @Override
   public WorkerClient taskClientFor(
       Controller controller,
-      IntFunction<String> taskIdFetcher
+      IndexerWorkerClient.TaskIdResolver taskIdResolver
   )
   {
     return new MSQTestWorkerClient(inMemoryWorkers);

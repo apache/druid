@@ -59,7 +59,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
 public class IndexerWorkerClient implements WorkerClient
@@ -67,7 +66,7 @@ public class IndexerWorkerClient implements WorkerClient
   private final ServiceClientFactory clientFactory;
   private final OverlordClient overlordClient;
   private final ObjectMapper jsonMapper;
-  final IntFunction<String> taskIdFetcher;
+  private final TaskIdResolver taskIdResolver;
 
   @GuardedBy("clientMap")
   private final Map<String, Pair<ServiceClient, Closeable>> clientMap = new HashMap<>();
@@ -79,13 +78,13 @@ public class IndexerWorkerClient implements WorkerClient
       final ServiceClientFactory clientFactory,
       final OverlordClient overlordClient,
       final ObjectMapper jsonMapper,
-      final IntFunction<String> taskIdFetcher
+      final TaskIdResolver taskIdResolver
   )
   {
     this.clientFactory = clientFactory;
     this.overlordClient = overlordClient;
     this.jsonMapper = jsonMapper;
-    this.taskIdFetcher = taskIdFetcher;
+    this.taskIdResolver = taskIdResolver;
   }
 
 
@@ -246,7 +245,7 @@ public class IndexerWorkerClient implements WorkerClient
   private ServiceClient updateAndGetClient(final int workerNumber)
   {
     synchronized (clientMap) {
-      String workerTaskId = taskIdFetcher.apply(workerNumber);
+      String workerTaskId = taskIdResolver.resolve(workerNumber);
 
       // Close and remove the old client if the worker task id has been updated
       if (workerNumberToTaskId.containsKey(workerNumber) && !workerNumberToTaskId.get(workerNumber)
@@ -290,5 +289,16 @@ public class IndexerWorkerClient implements WorkerClient
     catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+
+  /**
+   * Functional interface that resolves the worker number to the task id
+   */
+  public interface TaskIdResolver
+  {
+
+    String resolve(int workerNumber);
+
   }
 }

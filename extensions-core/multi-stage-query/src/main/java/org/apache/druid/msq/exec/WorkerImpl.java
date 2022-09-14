@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -239,17 +240,17 @@ public class WorkerImpl implements Worker
     this.controllerClient = context.makeControllerClient(task.getControllerTaskId());
     closer.register(controllerClient::close);
     context.registerWorker(this, closer); // Uses controllerClient, so must be called after that is initialized
-    this.workerClient = new ExceptionWrappingWorkerClient(context.makeWorkerClient(
-        workerNumber -> {
-          try {
-            return controllerClient.getTaskList().get(workerNumber);
-          }
-          catch (IOException e) {
-            throw new RuntimeException(e);
-          }
 
-        }
-    ));
+    // Worker client is only used during non fault tolerant mode of MSQE therefore it is cool to memoize the task
+    // list that the controller sends it
+    final List<String> taskList;
+    try {
+      taskList = controllerClient.getTaskList();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    this.workerClient = new ExceptionWrappingWorkerClient(context.makeWorkerClient(taskList::get));
     closer.register(workerClient::close);
 
     final KernelHolder kernelHolder = new KernelHolder();
@@ -554,14 +555,16 @@ public class WorkerImpl implements Worker
 
   private InputChannelFactory makeBaseInputChannelFactory(final Closer closer)
   {
-    final Supplier<List<String>> workerTaskList = () -> {
-      try {
-        return controllerClient.getTaskList();
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    };
+    final Supplier<List<String>> workerTaskList = Suppliers.memoize(
+        () -> {
+          try {
+            return controllerClient.getTaskList();
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        }
+    )::get;
 
     if (durableStageStorageEnabled) {
       return DurableStorageInputChannelFactory.createStandardImplementation(

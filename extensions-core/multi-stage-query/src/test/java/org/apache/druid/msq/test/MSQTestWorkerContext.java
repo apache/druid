@@ -34,6 +34,7 @@ import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.IndexerFrameContext;
+import org.apache.druid.msq.indexing.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.IndexerWorkerContext;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.QueryDefinition;
@@ -50,7 +51,6 @@ import org.apache.druid.server.security.AuthTestUtils;
 
 import java.io.File;
 import java.util.Map;
-import java.util.function.IntFunction;
 
 public class MSQTestWorkerContext implements WorkerContext
 {
@@ -101,7 +101,7 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
-  public WorkerClient makeWorkerClient(IntFunction<String> taskIdFetcher)
+  public WorkerClient makeWorkerClient(IndexerWorkerClient.TaskIdResolver taskIdResolver)
   {
     return new MSQTestWorkerClient(inMemoryWorkers);
   }

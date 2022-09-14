@@ -38,7 +38,6 @@ import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.server.DruidNode;
 
 import java.util.Map;
-import java.util.function.IntFunction;
 
 /**
  * Implementation for {@link ControllerContext} required to run multi-stage queries as indexing tasks.
@@ -96,10 +95,10 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public WorkerClient taskClientFor(Controller controller, IntFunction<String> taskIdFetcher)
+  public WorkerClient taskClientFor(Controller controller, IndexerWorkerClient.TaskIdResolver taskIdResolver)
   {
     // Ignore controller parameter.
-    return new IndexerWorkerClient(clientFactory, overlordClient, jsonMapper(), taskIdFetcher);
+    return new IndexerWorkerClient(clientFactory, overlordClient, jsonMapper(), taskIdResolver);
   }
 
   @Override
