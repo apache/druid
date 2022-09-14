@@ -32,6 +32,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
+import org.apache.druid.segment.data.FixedIndexedDoubles;
+import org.apache.druid.segment.data.FixedIndexedLongs;
 import org.apache.druid.segment.data.GenericIndexed;
 
 import java.io.IOException;
@@ -45,8 +47,8 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
   private final GenericIndexed<String> fields;
   private final NestedLiteralTypeInfo fieldInfo;
   private final GenericIndexed<String> dictionary;
-  private final FixedIndexed<Long> longDictionary;
-  private final FixedIndexed<Double> doubleDictionary;
+  private final FixedIndexedLongs longDictionary;
+  private final FixedIndexedDoubles doubleDictionary;
   private final ColumnConfig columnConfig;
   private final SmooshedFileMapper fileMapper;
 
@@ -79,21 +81,17 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
             mapper,
             NestedDataColumnSerializer.LONG_DICTIONARY_FILE_NAME
         );
-        longDictionary = FixedIndexed.read(
+        longDictionary = FixedIndexedLongs.read(
             longDictionaryBuffer,
-            ColumnType.LONG.getStrategy(),
-            metadata.getByteOrder(),
-            Long.BYTES
+            metadata.getByteOrder()
         );
         final ByteBuffer doubleDictionaryBuffer = loadInternalFile(
             mapper,
             NestedDataColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME
         );
-        doubleDictionary = FixedIndexed.read(
+        doubleDictionary = FixedIndexedDoubles.read(
             doubleDictionaryBuffer,
-            ColumnType.DOUBLE.getStrategy(),
-            metadata.getByteOrder(),
-            Double.BYTES
+            metadata.getByteOrder()
         );
         final ByteBuffer rawBuffer = loadInternalFile(mapper, NestedDataColumnSerializer.RAW_FILE_NAME).asReadOnlyBuffer();
         compressedRawColumnSupplier = CompressedVariableSizedBlobColumnSupplier.fromByteBuffer(

@@ -44,7 +44,9 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ColumnarDoubles;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarLongs;
-import org.apache.druid.segment.data.FixedIndexed;
+import org.apache.druid.segment.data.FixedIndexedDoubles;
+import org.apache.druid.segment.data.FixedIndexedInts;
+import org.apache.druid.segment.data.FixedIndexedLongs;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -76,9 +78,9 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
   private final ColumnarDoubles doublesColumn;
   private final ColumnarInts column;
   private final GenericIndexed<String> globalDictionary;
-  private final FixedIndexed<Long> globalLongDictionary;
-  private final FixedIndexed<Double> globalDoubleDictionary;
-  private final FixedIndexed<Integer> dictionary;
+  private final FixedIndexedLongs globalLongDictionary;
+  private final FixedIndexedDoubles globalDoubleDictionary;
+  private final FixedIndexedInts dictionary;
   private final ImmutableBitmap nullBitmap;
 
   private final int adjustLongId;
@@ -90,9 +92,9 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
       ColumnarDoubles doublesColumn,
       ColumnarInts column,
       GenericIndexed<String> globalDictionary,
-      FixedIndexed<Long> globalLongDictionary,
-      FixedIndexed<Double> globalDoubleDictionary,
-      FixedIndexed<Integer> dictionary,
+      FixedIndexedLongs globalLongDictionary,
+      FixedIndexedDoubles globalDoubleDictionary,
+      FixedIndexedInts dictionary,
       ImmutableBitmap nullBitmap
   )
   {
@@ -138,14 +140,15 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
   @Override
   public String lookupName(int id)
   {
-    final int globalId = dictionary.get(id);
+    final int globalId = dictionary.getInt(id);
     if (globalId < globalDictionary.size()) {
       return globalDictionary.get(globalId);
     } else if (globalId < adjustLongId + globalLongDictionary.size()) {
-      return String.valueOf(globalLongDictionary.get(globalId - adjustLongId));
-    } else {
-      return String.valueOf(globalDoubleDictionary.get(globalId - adjustDoubleId));
+      return String.valueOf(globalLongDictionary.getLong(globalId - adjustLongId));
+    } else if (globalId < adjustDoubleId + globalDoubleDictionary.size()){
+      return String.valueOf(globalDoubleDictionary.getDouble(globalId - adjustDoubleId));
     }
+    return null;
   }
 
   @Override
@@ -169,9 +172,11 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
     if (singleType != null) {
       switch (singleType.getType()) {
         case LONG:
-          return globalLongDictionary.indexOf(GuavaUtils.tryParseLong(val));
+          Long longValue = GuavaUtils.tryParseLong(val);
+          return longValue == null ? -1 : globalLongDictionary.indexOf(longValue.longValue());
         case DOUBLE:
-          return globalDoubleDictionary.indexOf(Doubles.tryParse(val));
+          final Double doubleValue = Doubles.tryParse(val);
+          return doubleValue == null ? -1 : globalDoubleDictionary.indexOf(doubleValue);
         default:
           return globalDictionary.indexOf(val);
       }
@@ -215,7 +220,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
       public float getFloat()
       {
         final int localId = getRowValue();
-        final int globalId = dictionary.get(localId);
+        final int globalId = dictionary.getInt(localId);
         if (globalId == 0) {
           // zero
           assert NullHandling.replaceWithDefault();
@@ -225,9 +230,9 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
           Float f = Floats.tryParse(globalDictionary.get(globalId));
           return f == null ? 0f : f;
         } else if (globalId < adjustDoubleId) {
-          return globalLongDictionary.get(globalId - adjustLongId).floatValue();
+          return (float) globalLongDictionary.getLong(globalId - adjustLongId);
         } else {
-          return globalDoubleDictionary.get(globalId - adjustDoubleId).floatValue();
+          return (float) globalDoubleDictionary.getDouble(globalId - adjustDoubleId);
         }
       }
 
@@ -235,7 +240,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
       public double getDouble()
       {
         final int localId = getRowValue();
-        final int globalId = dictionary.get(localId);
+        final int globalId = dictionary.getInt(localId);
         if (globalId == 0) {
           // zero
           assert NullHandling.replaceWithDefault();
@@ -245,9 +250,9 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
           Double d = Doubles.tryParse(globalDictionary.get(globalId));
           return d == null ? 0.0 : d;
         } else if (globalId < adjustDoubleId) {
-          return globalLongDictionary.get(globalId - adjustLongId).doubleValue();
+          return (double) globalLongDictionary.getLong(globalId - adjustLongId);
         } else {
-          return globalDoubleDictionary.get(globalId - adjustDoubleId);
+          return globalDoubleDictionary.getDouble(globalId - adjustDoubleId);
         }
       }
 
@@ -255,7 +260,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
       public long getLong()
       {
         final int localId = getRowValue();
-        final int globalId = dictionary.get(localId);
+        final int globalId = dictionary.getInt(localId);
         if (globalId == 0) {
           // zero
           assert NullHandling.replaceWithDefault();
@@ -265,16 +270,16 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
           Long l = GuavaUtils.tryParseLong(globalDictionary.get(globalId));
           return l == null ? 0L : l;
         } else if (globalId < adjustDoubleId) {
-          return globalLongDictionary.get(globalId - adjustLongId);
+          return globalLongDictionary.getLong(globalId - adjustLongId);
         } else {
-          return globalDoubleDictionary.get(globalId - adjustDoubleId).longValue();
+          return (long) globalDoubleDictionary.getDouble(globalId - adjustDoubleId);
         }
       }
 
       @Override
       public boolean isNull()
       {
-        return dictionary.get(getRowValue()) == 0;
+        return dictionary.getInt(getRowValue()) == 0;
       }
 
       @Override

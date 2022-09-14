@@ -183,12 +183,13 @@ public class FixedIndexedWriter<T> implements Serializer
       {
         iteratorBuffer.clear();
         try {
-          if (totalCount - pos < PAGE_SIZE) {
-            int size = (totalCount - pos) * width;
+          final int adjustedPos = pos - startPos;
+          if (totalCount - adjustedPos < PAGE_SIZE) {
+            int size = (totalCount - adjustedPos) * width;
             iteratorBuffer.limit(size);
-            valuesOut.readFully((long) pos * width, iteratorBuffer);
+            valuesOut.readFully((long) adjustedPos * width, iteratorBuffer);
           } else {
-            valuesOut.readFully((long) pos * width, iteratorBuffer);
+            valuesOut.readFully((long) adjustedPos * width, iteratorBuffer);
           }
           iteratorBuffer.flip();
         }

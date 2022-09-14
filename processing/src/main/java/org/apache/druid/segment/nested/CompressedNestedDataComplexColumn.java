@@ -49,7 +49,9 @@ import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumn;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
-import org.apache.druid.segment.data.FixedIndexed;
+import org.apache.druid.segment.data.FixedIndexedDoubles;
+import org.apache.druid.segment.data.FixedIndexedInts;
+import org.apache.druid.segment.data.FixedIndexedLongs;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -86,8 +88,8 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
   private final NestedLiteralTypeInfo fieldInfo;
 
   private final GenericIndexed<String> stringDictionary;
-  private final FixedIndexed<Long> longDictionary;
-  private final FixedIndexed<Double> doubleDictionary;
+  private final FixedIndexedLongs longDictionary;
+  private final FixedIndexedDoubles doubleDictionary;
   private final SmooshedFileMapper fileMapper;
 
   private final ConcurrentHashMap<String, ColumnHolder> columns = new ConcurrentHashMap<>();
@@ -102,8 +104,8 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
       GenericIndexed<String> fields,
       NestedLiteralTypeInfo fieldInfo,
       GenericIndexed<String> stringDictionary,
-      FixedIndexed<Long> longDictionary,
-      FixedIndexed<Double> doubleDictionary,
+      FixedIndexedLongs longDictionary,
+      FixedIndexedDoubles doubleDictionary,
       SmooshedFileMapper fileMapper
   )
   {
@@ -134,12 +136,12 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
     return stringDictionary;
   }
 
-  public FixedIndexed<Long> getLongDictionary()
+  public FixedIndexedLongs getLongDictionary()
   {
     return longDictionary;
   }
 
-  public FixedIndexed<Double> getDoubleDictionary()
+  public FixedIndexedDoubles getDoubleDictionary()
   {
     return doubleDictionary;
   }
@@ -404,11 +406,9 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
           )
       );
 
-      final FixedIndexed<Integer> localDictionary = FixedIndexed.read(
+      final FixedIndexedInts localDictionary = FixedIndexedInts.read(
           dataBuffer,
-          NestedDataColumnSerializer.INT_TYPE_STRATEGY,
-          metadata.getByteOrder(),
-          Integer.BYTES
+          metadata.getByteOrder()
       );
       ByteBuffer bb = dataBuffer.asReadOnlyBuffer().order(metadata.getByteOrder());
       int longsLength = bb.getInt();
@@ -444,7 +444,7 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
               longDictionary,
               doubleDictionary,
               localDictionary,
-              localDictionary.get(0) == 0
+              localDictionary.getInt(0) == 0
               ? rBitmaps.get(0)
               : metadata.getBitmapSerdeFactory().getBitmapFactory().makeEmptyImmutableBitmap()
           ));
