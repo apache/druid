@@ -33,6 +33,7 @@ import org.junit.Assert;
 import org.junit.Before;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +57,7 @@ public abstract class CoordinatorSimulationBaseTest
   static final double DOUBLE_DELTA = 10e-9;
 
   private CoordinatorSimulation sim;
+  private final Map<String, List<Event>> latestMetricEvents = new HashMap<>();
 
   @Before
   public abstract void setUp();
@@ -78,7 +80,18 @@ public abstract class CoordinatorSimulationBaseTest
   @Override
   public void runCoordinatorCycle()
   {
+    latestMetricEvents.clear();
     sim.coordinator().runCoordinatorCycle();
+
+    // Extract the metric values of this run
+    for (Event event : sim.coordinator().getMetricEvents()) {
+      Map<String, Object> eventMap = event.toMap();
+      String metricName = (String) eventMap.get("metric");
+      if (metricName != null) {
+        latestMetricEvents.computeIfAbsent(metricName, m -> new ArrayList<>())
+                          .add(event);
+      }
+    }
   }
 
   @Override
@@ -123,27 +136,33 @@ public abstract class CoordinatorSimulationBaseTest
     Assert.assertEquals(100.0, getLoadPercentage(datasource), DOUBLE_DELTA);
   }
 
-  void verifyNoMetricEvent(String metricName)
+  void verifyNoEvent(String metricName)
   {
     Assert.assertTrue(getMetricValues(metricName, null).isEmpty());
   }
 
-  void verifyLatestMetricValue(String metricName, Number expectedValue)
+  /**
+   * Verifies the value of the specified metric emitted in the previous run.
+   */
+  void verifyValue(String metricName, Number expectedValue)
   {
-    verifyLatestMetricValue(metricName, null, expectedValue);
+    verifyValue(metricName, null, expectedValue);
   }
 
-  void verifyLatestMetricValue(String metricName, Map<String, String> dimensionFilters, Number expectedValue)
+  /**
+   * Verifies the value of the event corresponding to the specified metric and
+   * dimensionFilters emitted in the previous run.
+   */
+  void verifyValue(String metricName, Map<String, String> dimensionFilters, Number expectedValue)
   {
-    Assert.assertEquals(expectedValue, getLatestMetricValue(metricName, dimensionFilters));
+    Assert.assertEquals(expectedValue, getValue(metricName, dimensionFilters));
   }
 
-  Number getLatestMetricValue(String metricName)
-  {
-    return getLatestMetricValue(metricName, null);
-  }
-
-  Number getLatestMetricValue(String metricName, Map<String, String> dimensionFilters)
+  /**
+   * Gets the value of the event corresponding to the specified metric and
+   * dimensionFilters emitted in the previous run.
+   */
+  Number getValue(String metricName, Map<String, String> dimensionFilters)
   {
     List<Number> values = getMetricValues(metricName, dimensionFilters);
     Assert.assertEquals(
@@ -156,26 +175,22 @@ public abstract class CoordinatorSimulationBaseTest
 
   private List<Number> getMetricValues(String metricName, Map<String, String> dimensionFilters)
   {
-    dimensionFilters = dimensionFilters == null ? new HashMap<>() : dimensionFilters;
-    final List<Number> metricValues = new ArrayList<>();
-
-    for (Event event : sim.coordinator().getMetricEvents()) {
+    final List<Number> values = new ArrayList<>();
+    final List<Event> events = latestMetricEvents.getOrDefault(metricName, Collections.emptyList());
+    final Map<String, String> filters = dimensionFilters == null
+                                        ? Collections.emptyMap() : dimensionFilters;
+    for (Event event : events) {
       final Map<String, Object> eventMap = event.toMap();
-
-      boolean match = metricName.equals(eventMap.get("metric"));
-      for (String dimension : dimensionFilters.keySet()) {
-        if (!match) {
-          break;
-        }
-        match = dimensionFilters.get(dimension).equals(eventMap.get(dimension));
-      }
-
+      boolean match = filters.keySet().stream()
+                             .map(d -> filters.get(d).equals(eventMap.get(d)))
+                             .reduce((a, b) -> a && b)
+                             .orElse(true);
       if (match) {
-        metricValues.add((Number) eventMap.get("value"));
+        values.add((Number) eventMap.get("value"));
       }
     }
 
-    return metricValues;
+    return values;
   }
 
   // Utility methods

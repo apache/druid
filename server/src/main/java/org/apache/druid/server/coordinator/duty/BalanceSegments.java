@@ -251,15 +251,14 @@ public class BalanceSegments implements CoordinatorDuty
             if (moveSegment(segmentToMoveHolder, destinationHolder.getServer(), params)) {
               moved++;
             } else {
-              log.info("Segment [%s] cannot be moved. Maybe no space left or already being served or already in queue.", segmentToMove.getId());
               unmoved++;
             }
           } else {
-            log.info("Segment [%s] is 'optimally' placed.", segmentToMove.getId());
+            log.debug("Segment [%s] is 'optimally' placed.", segmentToMove.getId());
             unmoved++;
           }
         } else {
-          log.info("No valid movement destinations for segment [%s].", segmentToMove.getId());
+          log.debug("No valid movement destinations for segment [%s].", segmentToMove.getId());
           unmoved++;
         }
       }
@@ -292,7 +291,7 @@ public class BalanceSegments implements CoordinatorDuty
     if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
         (toServer.getSegment(segmentId) == null) &&
         new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
-      log.info("Moving [%s] from [%s] to [%s]", segmentId, fromServer.getName(), toServer.getName());
+      log.debug("Moving [%s] from [%s] to [%s]", segmentId, fromServer.getName(), toServer.getName());
 
       LoadPeonCallback callback = null;
       try {

@@ -40,8 +40,14 @@ public interface CoordinatorSimulation
    */
   void stop();
 
+  /**
+   * State of the coordinator during the simulation.
+   */
   CoordinatorState coordinator();
 
+  /**
+   * State of the cluster during the simulation.
+   */
   ClusterState cluster();
 
   static CoordinatorSimulationBuilder builder()
@@ -49,9 +55,6 @@ public interface CoordinatorSimulation
     return new CoordinatorSimulationBuilder();
   }
 
-  /**
-   * Represents the state of the coordinator during a simulation.
-   */
   interface CoordinatorState
   {
     /**
@@ -87,9 +90,6 @@ public interface CoordinatorSimulation
     double getLoadPercentage(String datasource);
   }
 
-  /**
-   * Represents the state of the cluster during a simulation.
-   */
   interface ClusterState
   {
     /**
@@ -98,6 +98,5 @@ public interface CoordinatorSimulation
      * callbacks on the coordinator.
      */
     void loadQueuedSegments();
-
   }
 }

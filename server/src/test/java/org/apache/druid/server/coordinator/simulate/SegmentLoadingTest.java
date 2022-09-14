@@ -81,7 +81,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     // Verify that all the required replicas for T2 have been assigned
-    verifyLatestMetricValue(
+    verifyValue(
         Metric.ASSIGNED_COUNT,
         filter(DruidMetrics.TIER, Tier.T2),
         10L
@@ -117,7 +117,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     // Verify that that replicationThrottleLimit is honored
-    verifyLatestMetricValue(Metric.ASSIGNED_COUNT, 2L);
+    verifyValue(Metric.ASSIGNED_COUNT, 2L);
 
     loadQueuedSegments();
 
@@ -151,7 +151,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     // Verify that number of replicas assigned is equal to replicationThrottleLimit
-    verifyLatestMetricValue(Metric.ASSIGNED_COUNT, 2L);
+    verifyValue(Metric.ASSIGNED_COUNT, 2L);
 
     Assert.assertEquals(10, historicalT11.getTotalSegments());
     Assert.assertEquals(2, historicalT12.getTotalSegments());
@@ -195,7 +195,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     // Verify that the number of segments assigned is within the historical capacity
-    verifyLatestMetricValue(Metric.ASSIGNED_COUNT, 2L);
+    verifyValue(Metric.ASSIGNED_COUNT, 2L);
     if (!loadImmediately) {
       loadQueuedSegments();
     }
@@ -239,21 +239,20 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     startSimulation(sim);
     runCoordinatorCycle();
 
-    verifyNoMetricEvent(Metric.DROPPED_COUNT);
-    int totalAssignedInRun1 =
-        getLatestMetricValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2))
-            .intValue()
-        + getLatestMetricValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T3))
-            .intValue();
+    verifyNoEvent(Metric.DROPPED_COUNT);
+    int totalAssignedInRun1
+        = getValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2)).intValue()
+          + getValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T3)).intValue();
     Assert.assertTrue(totalAssignedInRun1 > 0 && totalAssignedInRun1 < 40);
 
     // Run 2: Segments still queued, nothing is dropped from T1
     runCoordinatorCycle();
     loadQueuedSegments();
 
-    verifyNoMetricEvent(Metric.DROPPED_COUNT);
-    int totalLoadedAfterRun2 = historicalT21.getTotalSegments() + historicalT22.getTotalSegments()
-                               + historicalT31.getTotalSegments() + historicalT32.getTotalSegments();
+    verifyNoEvent(Metric.DROPPED_COUNT);
+    int totalLoadedAfterRun2
+        = historicalT21.getTotalSegments() + historicalT22.getTotalSegments()
+          + historicalT31.getTotalSegments() + historicalT32.getTotalSegments();
     Assert.assertEquals(totalAssignedInRun1, totalLoadedAfterRun2);
 
     // Run 3: Some segments have been loaded
@@ -261,21 +260,20 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
     loadQueuedSegments();
 
-    int totalDroppedInRun3 =
-        getLatestMetricValue(Metric.DROPPED_COUNT, filter(DruidMetrics.TIER, Tier.T1))
-            .intValue();
+    int totalDroppedInRun3
+        = getValue(Metric.DROPPED_COUNT, filter(DruidMetrics.TIER, Tier.T1)).intValue();
     Assert.assertTrue(totalDroppedInRun3 > 0 && totalDroppedInRun3 < 10);
-    int totalLoadedAfterRun3 = historicalT21.getTotalSegments() + historicalT22.getTotalSegments()
-                               + historicalT31.getTotalSegments() + historicalT32.getTotalSegments();
+    int totalLoadedAfterRun3
+        = historicalT21.getTotalSegments() + historicalT22.getTotalSegments()
+          + historicalT31.getTotalSegments() + historicalT32.getTotalSegments();
     Assert.assertEquals(40, totalLoadedAfterRun3);
 
     // Run 4: All segments are fully replicated on T2 and T3
     runCoordinatorCycle();
     loadQueuedSegments();
 
-    int totalDroppedInRun4 =
-        getLatestMetricValue(Metric.DROPPED_COUNT, filter(DruidMetrics.TIER, Tier.T1))
-            .intValue();
+    int totalDroppedInRun4
+        = getValue(Metric.DROPPED_COUNT, filter(DruidMetrics.TIER, Tier.T1)).intValue();
 
     Assert.assertEquals(10, totalDroppedInRun3 + totalDroppedInRun4);
     Assert.assertEquals(0, historicalT11.getTotalSegments());
@@ -306,8 +304,8 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     // Verify that there are segments in the load queue
-    verifyLatestMetricValue(Metric.ASSIGNED_COUNT, 10L);
-    verifyLatestMetricValue(
+    verifyValue(Metric.ASSIGNED_COUNT, 10L);
+    verifyValue(
         Metric.LOAD_QUEUE_COUNT,
         filter(DruidMetrics.SERVER, historicalT12.getName()),
         10
@@ -319,7 +317,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     // Verify that the segments have been cleared from the load queue
-    verifyLatestMetricValue(
+    verifyValue(
         Metric.LOAD_QUEUE_COUNT,
         filter(DruidMetrics.SERVER, historicalT12.getName()),
         0

@@ -32,7 +32,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Creates {@link DataSegment}s for a given datasource.
+ * Test utility to create {@link DataSegment}s for a given datasource.
  */
 public class CreateDataSegments
 {

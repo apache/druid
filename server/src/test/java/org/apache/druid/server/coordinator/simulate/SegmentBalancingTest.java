@@ -88,7 +88,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     // Verify that segments have been chosen for balancing
-    verifyLatestMetricValue(Metric.MOVED_COUNT, 5L);
+    verifyValue(Metric.MOVED_COUNT, 5L);
 
     loadQueuedSegments();
 
@@ -120,8 +120,8 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     // Verify that there are segments in the load queue for balancing
-    verifyLatestMetricValue(Metric.MOVED_COUNT, 5L);
-    verifyLatestMetricValue(
+    verifyValue(Metric.MOVED_COUNT, 5L);
+    verifyValue(
         Metric.LOAD_QUEUE_COUNT,
         filter(DruidMetrics.SERVER, historicalT12.getName()),
         5
@@ -130,8 +130,8 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     // Verify that the segments in the load queue are not considered as over-replicated
-    verifyLatestMetricValue("segment/dropped/count", 0L);
-    verifyLatestMetricValue(
+    verifyValue("segment/dropped/count", 0L);
+    verifyValue(
         Metric.LOAD_QUEUE_COUNT,
         filter(DruidMetrics.SERVER, historicalT12.getName()),
         5
