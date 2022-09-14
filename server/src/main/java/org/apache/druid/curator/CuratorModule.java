@@ -30,6 +30,7 @@ import org.apache.curator.framework.api.ACLProvider;
 import org.apache.curator.framework.imps.DefaultACLProvider;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.shaded.com.google.common.base.Strings;
+import org.apache.druid.concurrent.Threads;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.StringUtils;
@@ -40,6 +41,7 @@ import org.apache.zookeeper.data.ACL;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class CuratorModule implements Module
 {
@@ -97,6 +99,21 @@ public class CuratorModule implements Module
 
     framework.getUnhandledErrorListenable().addListener((message, e) -> {
       log.error(e, "Unhandled error in Curator, stopping server.");
+      final Thread halter = new Thread(
+          () -> {
+            try {
+              Threads.sleepFor(10, TimeUnit.SECONDS);
+            }
+            catch (InterruptedException ex) {
+
+            }
+            log.info("Normal shutdown didn't work, halting things NOW!!!!");
+            Runtime.getRuntime().halt(1);
+          },
+          "halter-thread"
+      );
+      halter.setDaemon(true);
+      halter.start();
       shutdown(lifecycle);
     });
 
