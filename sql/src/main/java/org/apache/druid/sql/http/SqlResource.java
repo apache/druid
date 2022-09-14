@@ -21,15 +21,14 @@ package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.exception.SanitizableException;
-import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.NativeQuery;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -38,6 +37,10 @@ import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.QueryResource;
+import org.apache.druid.server.QueryResponse;
+import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -52,8 +55,6 @@ import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.SqlRowTransformer;
 import org.apache.druid.sql.SqlStatementFactory;
-import org.apache.druid.sql.SqlStatementFactoryFactory;
-import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -63,13 +64,14 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -87,33 +89,18 @@ public class SqlResource
   private final SqlStatementFactory sqlStatementFactory;
   private final SqlLifecycleManager sqlLifecycleManager;
   private final ServerConfig serverConfig;
+  private final ResponseContextConfig responseContextConfig;
+  private final DruidNode selfNode;
 
   @Inject
-  public SqlResource(
-      @Json ObjectMapper jsonMapper,
-      AuthorizerMapper authorizerMapper,
-      NativeSqlEngine engine,
-      SqlStatementFactoryFactory sqlStatementFactoryFactory,
-      SqlLifecycleManager sqlLifecycleManager,
-      ServerConfig serverConfig
-  )
-  {
-    this(
-        jsonMapper,
-        authorizerMapper,
-        sqlStatementFactoryFactory.factorize(engine),
-        sqlLifecycleManager,
-        serverConfig
-    );
-  }
-
-  @VisibleForTesting
   SqlResource(
       final ObjectMapper jsonMapper,
       final AuthorizerMapper authorizerMapper,
-      final SqlStatementFactory sqlStatementFactory,
+      final @NativeQuery SqlStatementFactory sqlStatementFactory,
       final SqlLifecycleManager sqlLifecycleManager,
-      final ServerConfig serverConfig
+      final ServerConfig serverConfig,
+      ResponseContextConfig responseContextConfig,
+      @Self DruidNode selfNode
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
@@ -121,6 +108,9 @@ public class SqlResource
     this.sqlStatementFactory = Preconditions.checkNotNull(sqlStatementFactory, "sqlStatementFactory");
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
     this.serverConfig = Preconditions.checkNotNull(serverConfig, "serverConfig");
+    this.responseContextConfig = responseContextConfig;
+    this.selfNode = selfNode;
+
   }
 
   @POST
@@ -138,17 +128,20 @@ public class SqlResource
     try {
       Thread.currentThread().setName(StringUtils.format("sql[%s]", sqlQueryId));
       ResultSet resultSet = stmt.plan();
-      final Sequence<Object[]> sequence = resultSet.run();
+      final QueryResponse response = resultSet.run();
       final SqlRowTransformer rowTransformer = resultSet.createRowTransformer();
-      final Yielder<Object[]> yielder0 = Yielders.each(sequence);
+      final Yielder<Object[]> finalYielder = Yielders.each(response.getResults());
 
-      try {
-        final Response.ResponseBuilder responseBuilder = Response
-            .ok(
-                (StreamingOutput) outputStream -> {
+      final Response.ResponseBuilder responseBuilder = Response
+          .ok(
+              new StreamingOutput()
+              {
+                @Override
+                public void write(OutputStream output) throws IOException, WebApplicationException
+                {
                   Exception e = null;
-                  CountingOutputStream os = new CountingOutputStream(outputStream);
-                  Yielder<Object[]> yielder = yielder0;
+                  CountingOutputStream os = new CountingOutputStream(output);
+                  Yielder<Object[]> yielder = finalYielder;
 
                   try (final ResultFormat.Writer writer = sqlQuery.getResultFormat()
                                                                   .createFormatter(os, jsonMapper)) {
@@ -185,20 +178,24 @@ public class SqlResource
                     endLifecycle(stmt, e, os.getCount());
                   }
                 }
-            )
-            .header(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId);
+              }
+          )
+          .header(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId);
 
-        if (sqlQuery.includeHeader()) {
-          responseBuilder.header(SQL_HEADER_RESPONSE_HEADER, SQL_HEADER_VALUE);
-        }
+      if (sqlQuery.includeHeader()) {
+        responseBuilder.header(SQL_HEADER_RESPONSE_HEADER, SQL_HEADER_VALUE);
+      }
 
-        return responseBuilder.build();
-      }
-      catch (Throwable e) {
-        // make sure to close yielder if anything happened before starting to serialize the response.
-        yielder0.close();
-        throw new RuntimeException(e);
-      }
+      QueryResource.attachResponseContextToHttpResponse(
+          sqlQueryId,
+          response.getResponseContext(),
+          responseBuilder,
+          jsonMapper,
+          responseContextConfig,
+          selfNode
+      );
+
+      return responseBuilder.build();
     }
     catch (QueryCapacityExceededException cap) {
       endLifecycle(stmt, cap, -1);

@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
@@ -62,13 +61,8 @@ import java.util.stream.Collectors;
  * Do NOT remove "unused" members in this class. They are used by generated Antlr
  */
 @SuppressWarnings("unused")
-public interface Function
+public interface Function extends NamedFunction
 {
-  /**
-   * Name of the function.
-   */
-  String name();
-
   /**
    * Evaluate the function, given a list of arguments and a set of bindings to provide values for {@link IdentifierExpr}.
    */
@@ -109,9 +103,12 @@ public interface Function
   }
 
   /**
-   * Validate function arguments
+   * Validate function arguments. This method is called whenever a {@link FunctionExpr} is created, and should validate
+   * everything that is feasible up front. Note that input type information is typically unavailable at the time
+   * {@link Expr} are parsed, and so this method is incapable of performing complete validation.
    */
   void validateArguments(List<Expr> args);
+
 
   /**
    * Compute the output type of this function for a given set of argument expression inputs.
@@ -143,7 +140,7 @@ public interface Function
    */
   default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
   {
-    throw new UOE("%s is not vectorized", name());
+    throw new UOE("Function[%s] is not vectorized", name());
   }
 
   /**
@@ -154,9 +151,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
+      validationHelperCheckArgumentCount(args, 1);
     }
 
     @Override
@@ -177,9 +172,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 arguments", name());
-      }
+      validationHelperCheckArgumentCount(args, 2);
     }
 
     @Override
@@ -221,7 +214,10 @@ public interface Function
     protected ExprEval eval(double param)
     {
       if (param < Long.MIN_VALUE || param > Long.MAX_VALUE) {
-        throw new IAE("Possible data truncation, param [%f] is out of long value range", param);
+        throw validationFailed(
+            "Possible data truncation, param [%f] is out of LONG value range",
+            param
+        );
       }
       return eval((long) param);
     }
@@ -363,10 +359,7 @@ public interface Function
     protected final ExprEval eval(ExprEval x, ExprEval y)
     {
       if (!x.type().is(ExprType.STRING) || !y.type().is(ExprType.LONG)) {
-        throw new IAE(
-            "Function[%s] needs a string as first argument and an integer as second argument",
-            name()
-        );
+        throw validationFailed("needs a STRING as first argument and a LONG as second argument");
       }
       return eval(x.asString(), y.asInt());
     }
@@ -382,9 +375,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 argument", name());
-      }
+      validationHelperCheckArgumentCount(args, 2);
     }
 
     @Override
@@ -437,9 +428,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 arguments", name());
-      }
+      validationHelperCheckArgumentCount(args, 2);
     }
 
     @Override
@@ -656,7 +645,7 @@ public interface Function
         case STRING:
           return true;
         default:
-          throw new IAE("Function[%s] does not accept %s types", name(), exprType);
+          throw validationFailed("does not accept %s types", exprType);
       }
     }
   }
@@ -674,9 +663,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 1 && args.size() != 2) {
-        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
-      }
+      validationHelperCheckAnyOfArgumentCount(args, 1, 2);
     }
 
     @Nullable
@@ -751,9 +738,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() > 0) {
-        throw new IAE("Function[%s] needs 0 argument", name());
-      }
+      validationHelperCheckArgumentCount(args, 0);
     }
 
     @Nullable
@@ -1469,9 +1454,8 @@ public interface Function
       }
 
       if (!value1.type().anyOf(ExprType.LONG, ExprType.DOUBLE)) {
-        throw new IAE(
-            "The first argument to the function[%s] should be integer or double type but got the type: %s",
-            name(),
+        throw validationFailed(
+            "first argument should be a LONG or DOUBLE but got %s instead",
             value1.type()
         );
       }
@@ -1481,9 +1465,8 @@ public interface Function
       } else {
         ExprEval value2 = args.get(1).eval(bindings);
         if (!value2.type().is(ExprType.LONG)) {
-          throw new IAE(
-              "The second argument to the function[%s] should be integer type but got the type: %s",
-              name(),
+          throw validationFailed(
+              "second argument should be a LONG but got %s instead",
               value2.type()
           );
         }
@@ -1494,9 +1477,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 1 && args.size() != 2) {
-        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
-      }
+      validationHelperCheckAnyOfArgumentCount(args, 1, 2);
     }
 
     @Nullable
@@ -1971,7 +1952,7 @@ public interface Function
         castTo = ExpressionType.fromString(StringUtils.toUpperCase(y.asString()));
       }
       catch (IllegalArgumentException e) {
-        throw new IAE("invalid type '%s'", y.asString());
+        throw validationFailed("invalid type %s", y.asString());
       }
       return x.castTo(castTo);
     }
@@ -2099,9 +2080,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 3) {
-        throw new IAE("Function[%s] needs 3 arguments", name());
-      }
+      validationHelperCheckArgumentCount(args, 3);
     }
 
     @Nullable
@@ -2142,9 +2121,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() < 2) {
-        throw new IAE("Function[%s] must have at least 2 arguments", name());
-      }
+      validationHelperCheckMinArgumentCount(args, 2);
     }
 
     @Nullable
@@ -2191,9 +2168,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() < 3) {
-        throw new IAE("Function[%s] must have at least 3 arguments", name());
-      }
+      validationHelperCheckMinArgumentCount(args, 3);
     }
 
     @Nullable
@@ -2228,9 +2203,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 arguments", name());
-      }
+      validationHelperCheckArgumentCount(args, 2);
     }
 
     @Nullable
@@ -2271,9 +2244,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
+      validationHelperCheckArgumentCount(args, 1);
     }
 
     @Nullable
@@ -2314,9 +2285,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
+      validationHelperCheckArgumentCount(args, 1);
     }
 
     @Nullable
@@ -2423,9 +2392,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
+      validationHelperCheckArgumentCount(args, 1);
     }
 
     @Nullable
@@ -2464,9 +2431,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() < 1) {
-        throw new IAE("Function[%s] needs 1 or more arguments", name());
-      }
+      validationHelperCheckMinArgumentCount(args, 1);
     }
 
     @Nullable
@@ -2509,9 +2474,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() < 2 || args.size() > 3) {
-        throw new IAE("Function[%s] needs 2 or 3 arguments", name());
-      }
+      validationHelperCheckAnyOfArgumentCount(args, 2, 3);
     }
 
     @Nullable
@@ -2559,9 +2522,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 3) {
-        throw new IAE("Function[%s] needs 3 arguments", name());
-      }
+      validationHelperCheckArgumentCount(args, 3);
     }
 
     @Nullable
@@ -2591,10 +2552,7 @@ public interface Function
     protected ExprEval eval(@Nullable String x, int y)
     {
       if (y < 0) {
-        throw new IAE(
-            "Function[%s] needs a postive integer as second argument",
-            name()
-        );
+        throw validationFailed("needs a positive integer as the second argument");
       }
       if (x == null) {
         return ExprEval.of(null);
@@ -2623,10 +2581,7 @@ public interface Function
     protected ExprEval eval(@Nullable String x, int y)
     {
       if (y < 0) {
-        throw new IAE(
-            "Function[%s] needs a postive integer as second argument",
-            name()
-        );
+        throw validationFailed("needs a postive integer as second argument");
       }
       if (x == null) {
         return ExprEval.of(null);
@@ -2658,9 +2613,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 3) {
-        throw new IAE("Function[%s] needs 3 arguments", name());
-      }
+      validationHelperCheckArgumentCount(args, 3);
     }
 
     @Nullable
@@ -2692,9 +2645,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
+      validationHelperCheckArgumentCount(args, 1);
     }
 
     @Nullable
@@ -2726,9 +2677,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
+      validationHelperCheckArgumentCount(args, 1);
     }
 
     @Nullable
@@ -2758,10 +2707,7 @@ public interface Function
     protected ExprEval eval(ExprEval param)
     {
       if (!param.type().is(ExprType.STRING)) {
-        throw new IAE(
-            "Function[%s] needs a string argument",
-            name()
-        );
+        throw validationFailed("needs a STRING argument but got %s instead", param.type());
       }
       final String arg = param.asString();
       return ExprEval.of(arg == null ? NullHandling.defaultStringValue() : new StringBuilder(arg).reverse().toString());
@@ -2819,9 +2765,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 3) {
-        throw new IAE("Function[%s] needs 3 arguments", name());
-      }
+      validationHelperCheckArgumentCount(args, 3);
     }
 
     @Nullable
@@ -2858,9 +2802,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 3) {
-        throw new IAE("Function[%s] needs 3 arguments", name());
-      }
+      validationHelperCheckArgumentCount(args, 3);
     }
 
     @Nullable
@@ -2884,14 +2826,20 @@ public interface Function
     {
       ExprEval value = args.get(0).eval(bindings);
       if (!value.type().is(ExprType.STRING)) {
-        throw new IAE("first argument should be string type but got %s type", value.type());
+        throw validationFailed(
+            "first argument should be a STRING but got %s instead",
+            value.type()
+        );
       }
 
       DateTimes.UtcFormatter formatter = DateTimes.ISO_DATE_OPTIONAL_TIME;
       if (args.size() > 1) {
         ExprEval format = args.get(1).eval(bindings);
         if (!format.type().is(ExprType.STRING)) {
-          throw new IAE("second argument should be string type but got %s type", format.type());
+          throw validationFailed(
+              "second argument should be STRING but got %s instead",
+              format.type()
+          );
         }
         formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format.asString()));
       }
@@ -2900,7 +2848,7 @@ public interface Function
         date = formatter.parse(value.asString());
       }
       catch (IllegalArgumentException e) {
-        throw new IAE(e, "invalid value %s", value.asString());
+        throw validationFailed(e, "invalid value %s", value.asString());
       }
       return toValue(date);
     }
@@ -2908,9 +2856,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 1 && args.size() != 2) {
-        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
-      }
+      validationHelperCheckAnyOfArgumentCount(args, 1, 2);
     }
 
     @Nullable
@@ -2967,9 +2913,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 3) {
-        throw new IAE("Function[%s] needs 3 arguments", name());
-      }
+      validationHelperCheckArgumentCount(args, 3);
     }
 
     @Nullable
@@ -2997,14 +2941,12 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs exactly 1 argument of type String", name());
-      }
+      validationHelperCheckArgumentCount(args, 1);
       IdentifierExpr expr = args.get(0).getIdentifierExprIfIdentifierExpr();
 
       if (expr == null) {
-        throw new IAE(
-            "Arg %s should be an identifier expression ie refer to columns directaly. Use array() instead",
+        throw validationFailed(
+            "argument %s should be an identifier expression. Use array() instead",
             args.get(0).toString()
         );
       }
@@ -3088,9 +3030,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.isEmpty()) {
-        throw new IAE("Function[%s] needs at least 1 argument", name());
-      }
+      validationHelperCheckMinArgumentCount(args, 1);
     }
 
     @Nullable
@@ -3152,9 +3092,6 @@ public interface Function
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
       return ImmutableSet.of(args.get(0));
     }
 
@@ -3167,9 +3104,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
+      validationHelperCheckArgumentCount(args, 1);
     }
 
     @Nullable
@@ -3197,9 +3132,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 argument", name());
-      }
+      validationHelperCheckArgumentCount(args, 2);
     }
 
     @Nullable
@@ -3353,7 +3286,10 @@ public interface Function
           }
           return index < 0 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null) : ExprEval.ofLong(index);
         default:
-          throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
+          throw validationFailed(
+              "second argument must be a a scalar type but got %s instead",
+              scalarExpr.type()
+          );
       }
     }
   }
@@ -3392,7 +3328,10 @@ public interface Function
                  ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null)
                  : ExprEval.ofLong(index + 1);
         default:
-          throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
+          throw validationFailed(
+              "second argument must be a a scalar type but got %s instead",
+              scalarExpr.type()
+          );
       }
     }
   }
@@ -3576,9 +3515,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 2 && args.size() != 3) {
-        throw new IAE("Function[%s] needs 2 or 3 arguments", name());
-      }
+      validationHelperCheckAnyOfArgumentCount(args, 2, 3);
     }
 
     @Nullable
@@ -3658,7 +3595,10 @@ public interface Function
        * For a DOUBLE, it will be cast to LONG before format
        */
       if (valueParam.value() != null && !valueParam.type().anyOf(ExprType.LONG, ExprType.DOUBLE)) {
-        throw new IAE("Function[%s] needs a number as its first argument", name());
+        throw validationFailed(
+            "needs a number as its first argument but got %s instead",
+            valueParam.type()
+        );
       }
 
       /**
@@ -3668,11 +3608,17 @@ public interface Function
       if (args.size() > 1) {
         ExprEval precisionParam = args.get(1).eval(bindings);
         if (!precisionParam.type().is(ExprType.LONG)) {
-          throw new IAE("Function[%s] needs an integer as its second argument", name());
+          throw validationFailed(
+              "needs a LONG as its second argument but got %s instead",
+              precisionParam.type()
+          );
         }
         precision = precisionParam.asLong();
         if (precision < 0 || precision > 3) {
-          throw new IAE("Given precision[%d] of Function[%s] must be in the range of [0,3]", precision, name());
+          throw validationFailed(
+              "given precision[%d] must be in the range of [0,3]",
+              precision
+          );
         }
       }
 
@@ -3682,9 +3628,7 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() < 1 || args.size() > 2) {
-        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
-      }
+      validationHelperCheckAnyOfArgumentCount(args, 1, 2);
     }
 
     @Nullable
@@ -3753,9 +3697,9 @@ public interface Function
     {
       ExprEval arg0 = args.get(0).eval(bindings);
       if (!arg0.type().is(ExprType.STRING)) {
-        throw new IAE(
-            "Function[%s] first argument must be constant 'STRING' expression containing a valid complex type name",
-            name()
+        throw validationFailed(
+            "first argument must be constant STRING expression containing a valid complex type name but got %s instead",
+            arg0.type()
         );
       }
       ExpressionType type = ExpressionTypeFactory.getInstance().ofComplex((String) args.get(0).getLiteralValue());
@@ -3763,18 +3707,17 @@ public interface Function
       try {
         strategy = type.getStrategy();
       }
-      catch (IAE illegal) {
-        throw new IAE(
-            "Function[%s] first argument must be a valid complex type name, unknown complex type [%s]",
-            name(),
+      catch (IllegalArgumentException illegal) {
+        throw validationFailed(
+            "first argument must be a valid COMPLEX type name, got unknown COMPLEX type [%s]",
             type.asTypeString()
         );
       }
       ExprEval base64String = args.get(1).eval(bindings);
       if (!base64String.type().is(ExprType.STRING)) {
-        throw new IAE(
-            "Function[%s] second argument must be a base64 encoded 'STRING' value",
-            name()
+        throw validationFailed(
+            "second argument must be a base64 encoded STRING value but got %s instead",
+            base64String.type()
         );
       }
       if (base64String.value() == null) {
@@ -3788,13 +3731,10 @@ public interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 arguments", name());
-      }
+      validationHelperCheckArgumentCount(args, 2);
       if (!args.get(0).isLiteral() || args.get(0).isNullLiteral()) {
-        throw new IAE(
-            "Function[%s] first argument must be constant 'STRING' expression containing a valid complex type name",
-            name()
+        throw validationFailed(
+            "first argument must be constant STRING expression containing a valid COMPLEX type name"
         );
       }
     }
@@ -3808,9 +3748,8 @@ public interface Function
     {
       ExpressionType arg0Type = args.get(0).getOutputType(inspector);
       if (arg0Type == null || !arg0Type.is(ExprType.STRING)) {
-        throw new IAE(
-            "Function[%s] first argument must be constant 'STRING' expression containing a valid complex type name",
-            name()
+        throw validationFailed(
+            "first argument must be constant STRING expression containing a valid COMPLEX type name"
         );
       }
       return ExpressionTypeFactory.getInstance().ofComplex((String) args.get(0).getLiteralValue());

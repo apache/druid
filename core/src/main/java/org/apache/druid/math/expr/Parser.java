@@ -182,6 +182,14 @@ public class Parser
         }
       }
       return childExpr;
+    }).visit(childExpr -> {
+      // Now that unary minus has been applied to any BigIntegerExpr where it is needed, transform all remaining
+      // BigIntegerExpr into LongExpr.
+      if (childExpr instanceof BigIntegerExpr) {
+        return childExpr.eval(InputBindings.nilBindings()).toExpr();
+      } else {
+        return childExpr;
+      }
     });
   }
 

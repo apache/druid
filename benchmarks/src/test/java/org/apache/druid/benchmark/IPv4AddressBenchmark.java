@@ -26,7 +26,6 @@ import inet.ipaddr.IPAddressString;
 import inet.ipaddr.ipv4.IPv4Address;
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.expression.IPv4AddressExprUtils;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -293,7 +292,7 @@ public class IPv4AddressBenchmark
       subnetUtils = new SubnetUtils(subnet);
     }
     catch (IllegalArgumentException e) {
-      throw new IAE(e, ExprUtils.createErrMsg("getSubnetInfo()", " arg has an invalid format: " + subnet));
+      throw new IAE(e, "getSubnetInfo() arg has an invalid format: " + subnet);
     }
     subnetUtils.setInclusiveHostCount(true);  // make network and broadcast addresses match
     return subnetUtils.getInfo();

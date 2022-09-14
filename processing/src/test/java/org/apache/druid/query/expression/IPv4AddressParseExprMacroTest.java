@@ -43,7 +43,7 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
   @Test
   public void testTooFewArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 1 argument");
+    expectException(IllegalArgumentException.class, "requires 1 argument");
 
     apply(Collections.emptyList());
   }
@@ -51,7 +51,7 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
   @Test
   public void testTooManyArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 1 argument");
+    expectException(IllegalArgumentException.class, "requires 1 argument");
 
     apply(Arrays.asList(VALID, VALID));
   }
