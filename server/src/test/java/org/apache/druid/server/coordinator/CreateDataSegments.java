@@ -40,7 +40,7 @@ public class CreateDataSegments
 
   private DateTime startTime;
   private Granularity granularity;
-  private int numPartitionsPerInterval;
+  private int numPartitions;
   private int numIntervals;
 
   public static CreateDataSegments ofDatasource(String datasource)
@@ -60,15 +60,15 @@ public class CreateDataSegments
     return this;
   }
 
-  public CreateDataSegments andPartitionsPerInterval(int numPartitionsPerInterval)
-  {
-    this.numPartitionsPerInterval = numPartitionsPerInterval;
-    return this;
-  }
-
   public CreateDataSegments startingAt(String startOfFirstInterval)
   {
     this.startTime = DateTimes.of(startOfFirstInterval);
+    return this;
+  }
+
+  public CreateDataSegments withNumPartitions(int numPartitions)
+  {
+    this.numPartitions = numPartitions;
     return this;
   }
 
@@ -80,12 +80,12 @@ public class CreateDataSegments
     DateTime nextStart = startTime;
     for (int numInterval = 0; numInterval < numIntervals; ++numInterval) {
       Interval nextInterval = new Interval(nextStart, granularity.increment(nextStart));
-      for (int numPartition = 0; numPartition < numPartitionsPerInterval; ++numPartition) {
+      for (int numPartition = 0; numPartition < numPartitions; ++numPartition) {
         segments.add(
             new NumberedDataSegment(
                 datasource,
                 nextInterval,
-                new NumberedShardSpec(numPartition, numPartitionsPerInterval),
+                new NumberedShardSpec(numPartition, numPartitions),
                 ++uniqueIdInInterval,
                 sizeMb
             )
@@ -94,7 +94,7 @@ public class CreateDataSegments
       nextStart = granularity.increment(nextStart);
     }
 
-    return segments;
+    return Collections.unmodifiableList(segments);
   }
 
   /**

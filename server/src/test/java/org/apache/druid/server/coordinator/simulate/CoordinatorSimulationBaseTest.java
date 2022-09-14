@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -34,11 +33,9 @@ import org.junit.Assert;
 import org.junit.Before;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Base test for coordinator simulations.
@@ -103,6 +100,12 @@ public abstract class CoordinatorSimulationBaseTest
   }
 
   @Override
+  public void setDynamicConfig(CoordinatorDynamicConfig dynamicConfig)
+  {
+    sim.coordinator().setDynamicConfig(dynamicConfig);
+  }
+
+  @Override
   public void loadQueuedSegments()
   {
     sim.cluster().loadQueuedSegments();
@@ -120,22 +123,55 @@ public abstract class CoordinatorSimulationBaseTest
     Assert.assertEquals(100.0, getLoadPercentage(datasource), DOUBLE_DELTA);
   }
 
-  void verifyLatestMetricValue(String metricName, Number expectedValue)
+  void verifyNoMetricEvent(String metricName)
   {
-    final List<Number> observedValues = getMetricValues(metricName);
-    Number latestValue = observedValues.get(observedValues.size() - 1);
-    Assert.assertEquals(expectedValue, latestValue);
+    Assert.assertTrue(getMetricValues(metricName, null).isEmpty());
   }
 
-  private List<Number> getMetricValues(String metricName)
+  void verifyLatestMetricValue(String metricName, Number expectedValue)
   {
+    verifyLatestMetricValue(metricName, null, expectedValue);
+  }
+
+  void verifyLatestMetricValue(String metricName, Map<String, String> dimensionFilters, Number expectedValue)
+  {
+    Assert.assertEquals(expectedValue, getLatestMetricValue(metricName, dimensionFilters));
+  }
+
+  Number getLatestMetricValue(String metricName)
+  {
+    return getLatestMetricValue(metricName, null);
+  }
+
+  Number getLatestMetricValue(String metricName, Map<String, String> dimensionFilters)
+  {
+    List<Number> values = getMetricValues(metricName, dimensionFilters);
+    Assert.assertEquals(
+        "Metric must have been emitted exactly once for the given dimensions.",
+        1,
+        values.size()
+    );
+    return values.get(0);
+  }
+
+  private List<Number> getMetricValues(String metricName, Map<String, String> dimensionFilters)
+  {
+    dimensionFilters = dimensionFilters == null ? new HashMap<>() : dimensionFilters;
     final List<Number> metricValues = new ArrayList<>();
 
     for (Event event : sim.coordinator().getMetricEvents()) {
-      final Map<String, Object> map = event.toMap();
-      final String eventMetricName = (String) map.get("metric");
-      if (eventMetricName != null && eventMetricName.equals(metricName)) {
-        metricValues.add((Number) map.get("value"));
+      final Map<String, Object> eventMap = event.toMap();
+
+      boolean match = metricName.equals(eventMap.get("metric"));
+      for (String dimension : dimensionFilters.keySet()) {
+        if (!match) {
+          break;
+        }
+        match = dimensionFilters.get(dimension).equals(eventMap.get(dimension));
+      }
+
+      if (match) {
+        metricValues.add((Number) eventMap.get("value"));
       }
     }
 
@@ -143,19 +179,6 @@ public abstract class CoordinatorSimulationBaseTest
   }
 
   // Utility methods
-  static List<DataSegment> createWikiSegmentsForIntervals(
-      int numIntervals,
-      Granularity granularity,
-      int partitionsPerInterval
-  )
-  {
-    return CreateDataSegments.ofDatasource(DS.WIKI)
-                             .forIntervals(1, Granularities.DAY)
-                             .startingAt("2022-01-01")
-                             .andPartitionsPerInterval(10)
-                             .eachOfSizeMb(500);
-  }
-
   static CoordinatorDynamicConfig createDynamicConfig(
       int maxSegmentsToMove,
       int maxSegmentsInNodeLoadingQueue,
@@ -171,19 +194,25 @@ public abstract class CoordinatorSimulationBaseTest
   }
 
   /**
-   * Creates a tier of historicals.
+   * Creates a map containing dimension key-values to filter out metric events.
    */
-  static List<DruidServer> createHistoricalTier(String tier, int numServers, long serverSizeMb)
+  static Map<String, String> filter(String... dimensionValues)
   {
-    List<DruidServer> servers = new ArrayList<>();
-    for (int i = 0; i < numServers; ++i) {
-      servers.add(createHistorical(i, tier, serverSizeMb));
+    if (dimensionValues.length < 2 || dimensionValues.length % 2 == 1) {
+      throw new IllegalArgumentException("Dimension key-values must be specified in pairs.");
     }
-    return servers;
+
+    final Map<String, String> filters = new HashMap<>();
+    for (int i = 0; i < dimensionValues.length; ) {
+      filters.put(dimensionValues[i], dimensionValues[i + 1]);
+      i += 2;
+    }
+    return filters;
   }
 
   /**
-   * Creates a historical.
+   * Creates a historical. The {@code uniqueIdInTier} must be correctly specified
+   * as it is used to identify the historical throughout the simulation.
    */
   static DruidServer createHistorical(int uniqueIdInTier, String tier, long serverSizeMb)
   {
@@ -202,22 +231,35 @@ public abstract class CoordinatorSimulationBaseTest
   {
     static final String T1 = "tier_t1";
     static final String T2 = "tier_t2";
+    static final String T3 = "tier_t3";
   }
 
-  /**
-   * Builder for retention rules.
-   *
-   * @see Load
-   */
-  interface RuleBuilder
+  static class Metric
   {
+    static final String ASSIGNED_COUNT = "segment/assigned/count";
+    static final String MOVED_COUNT = "segment/moved/count";
+    static final String DROPPED_COUNT = "segment/dropped/count";
+    static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
+  }
 
+  static class Segments
+  {
+    /**
+     * Segments of datasource {@link DS#WIKI}, size 500 MB each,
+     * spanning 1 day containing 10 partitions.
+     */
+    static final List<DataSegment> WIKI_10X1D =
+        CreateDataSegments.ofDatasource(DS.WIKI)
+                          .forIntervals(1, Granularities.DAY)
+                          .startingAt("2022-01-01")
+                          .withNumPartitions(10)
+                          .eachOfSizeMb(500);
   }
 
   /**
    * Builder for a load rule.
    */
-  static class Load implements RuleBuilder
+  static class Load
   {
     private final Map<String, Integer> tieredReplicants = new HashMap<>();
 

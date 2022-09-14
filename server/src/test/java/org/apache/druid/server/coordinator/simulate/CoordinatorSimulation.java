@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
 import java.util.List;
 
@@ -63,6 +64,11 @@ public interface CoordinatorSimulation
      * actual state of the cluster.
      */
     void syncInventoryView();
+
+    /**
+     * Sets the CoordinatorDynamicConfig.
+     */
+    void setDynamicConfig(CoordinatorDynamicConfig dynamicConfig);
 
     /**
      * Gets the inventory view of the specified server as maintained by the

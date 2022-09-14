@@ -40,6 +40,7 @@ import org.apache.druid.server.coordinator.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.CachingCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
@@ -84,8 +85,14 @@ public class CoordinatorSimulationBuilder
   private List<DruidServer> servers;
   private List<DataSegment> segments;
   private final Map<String, List<Rule>> datasourceRules = new HashMap<>();
-  private boolean immediateLoading;
+  private boolean loadImmediately = false;
+  private boolean autoSyncInventory = true;
 
+  /**
+   * Specifies the balancer strategy to be used.
+   * <p>
+   * Default: "cost" ({@link CostBalancerStrategyFactory})
+   */
   public CoordinatorSimulationBuilder balancer(BalancerStrategyFactory strategyFactory)
   {
     this.balancerStrategyFactory = strategyFactory;
@@ -116,18 +123,32 @@ public class CoordinatorSimulationBuilder
   }
 
   /**
-   * Causes segments to be loaded as soon as they are queued.
+   * Specifies whether segments should be loaded as soon as they are queued.
+   * <p>
+   * Default: false
    */
-  public CoordinatorSimulationBuilder immediateSegmentLoading()
+  public CoordinatorSimulationBuilder loadSegmentsImmediately(boolean loadImmediately)
   {
-    this.immediateLoading = true;
+    this.loadImmediately = loadImmediately;
+    return this;
+  }
+
+  /**
+   * Specifies whether the inventory view maintained by the coordinator
+   * should be auto-synced as soon as any change is made to the cluster.
+   * <p>
+   * Default: true
+   */
+  public CoordinatorSimulationBuilder autoSyncInventory(boolean autoSync)
+  {
+    this.autoSyncInventory = autoSync;
     return this;
   }
 
   /**
    * Specifies the CoordinatorDynamicConfig to be used in the simulation.
    * <p>
-   * If not specified, the default values are used.
+   * Default values: Specified in {@link CoordinatorDynamicConfig.Builder}.
    */
   public CoordinatorSimulationBuilder dynamicConfig(CoordinatorDynamicConfig dynamicConfig)
   {
@@ -141,16 +162,6 @@ public class CoordinatorSimulationBuilder
         servers != null && !servers.isEmpty(),
         "Cannot run simulation for an empty cluster"
     );
-
-    // Prepare the config
-    final DruidCoordinatorConfig coordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withCoordinatorStartDelay(new Duration(1L))
-        .withCoordinatorPeriod(new Duration(DEFAULT_COORDINATOR_PERIOD))
-        .withCoordinatorKillPeriod(new Duration(DEFAULT_COORDINATOR_PERIOD))
-        .withLoadQueuePeonRepeatDelay(new Duration("PT0S"))
-        .withLoadQueuePeonType("http")
-        .withCoordinatorKillIgnoreDurationToRetain(false)
-        .build();
 
     // Prepare the environment
     final TestServerInventoryView serverInventoryView = new TestServerInventoryView();
@@ -168,13 +179,12 @@ public class CoordinatorSimulationBuilder
     );
 
     final Environment env = new Environment(
-        new TestDruidLeaderSelector(),
         serverInventoryView,
         segmentManager,
         ruleManager,
-        coordinatorConfig,
         dynamicConfig,
-        immediateLoading
+        loadImmediately,
+        autoSyncInventory
     );
 
     // Build the coordinator
@@ -183,7 +193,7 @@ public class CoordinatorSimulationBuilder
         null,
         env.jacksonConfigManager,
         env.segmentManager,
-        env.historicalInventoryView,
+        env.coordinatorInventoryView,
         env.ruleManager,
         () -> null,
         env.serviceEmitter,
@@ -196,7 +206,7 @@ public class CoordinatorSimulationBuilder
         null,
         new CoordinatorCustomDutyGroups(Collections.emptySet()),
         balancerStrategyFactory != null ? balancerStrategyFactory
-                                        : buildCachingCostBalancerStrategy(env),
+                                        : new CostBalancerStrategyFactory(),
         env.lookupCoordinatorManager,
         env.leaderSelector,
         OBJECT_MAPPER,
@@ -278,14 +288,26 @@ public class CoordinatorSimulationBuilder
     {
       verifySimulationRunning();
       env.serviceEmitter.flush();
-      env.executorFactory.coordinatorRunner.finishNextPendingTasks(1);
+
+      // Invoke historical duties and metadata duties
+      env.executorFactory.coordinatorRunner.finishNextPendingTasks(2);
     }
 
     @Override
     public void syncInventoryView()
     {
       verifySimulationRunning();
+      Preconditions.checkState(
+          !env.autoSyncInventory,
+          "Cannot invoke syncInventoryView as simulation is running in auto-sync mode."
+      );
       env.coordinatorInventoryView.sync(env.historicalInventoryView);
+    }
+
+    @Override
+    public void setDynamicConfig(CoordinatorDynamicConfig dynamicConfig)
+    {
+      env.setDynamicConfig(dynamicConfig);
     }
 
     @Override
@@ -299,7 +321,7 @@ public class CoordinatorSimulationBuilder
     {
       verifySimulationRunning();
       Preconditions.checkState(
-          !env.immediateLoading,
+          !env.loadImmediately,
           "Cannot invoke loadQueuedSegments as simulation is running in immediate loading mode."
       );
 
@@ -312,6 +334,9 @@ public class CoordinatorSimulationBuilder
         // Load all the queued segments, handle their responses and execute callbacks
         int loadedSegments = env.executorFactory.historicalLoader.finishAllPendingTasks();
         loadQueueExecutor.finishNextPendingTasks(loadedSegments);
+
+        // TODO: sync should happen here?? or should it not??
+
         env.executorFactory.loadCallbackExecutor.finishAllPendingTasks();
       }
     }
@@ -346,7 +371,7 @@ public class CoordinatorSimulationBuilder
     // Executors
     private final ExecutorFactory executorFactory;
 
-    private final TestDruidLeaderSelector leaderSelector;
+    private final TestDruidLeaderSelector leaderSelector = new TestDruidLeaderSelector();
     private final TestSegmentsMetadataManager segmentManager;
     private final TestMetadataRuleManager ruleManager;
     private final TestServerInventoryView historicalInventoryView;
@@ -356,35 +381,46 @@ public class CoordinatorSimulationBuilder
         = new StubServiceEmitter("coordinator", "coordinator");
     private final TestServerInventoryView coordinatorInventoryView;
 
+    private final AtomicReference<CoordinatorDynamicConfig> dynamicConfig = new AtomicReference<>();
     private final JacksonConfigManager jacksonConfigManager;
     private final LookupCoordinatorManager lookupCoordinatorManager;
     private final DruidCoordinatorConfig coordinatorConfig;
-    private final boolean immediateLoading;
+    private final boolean loadImmediately;
+    private final boolean autoSyncInventory;
 
     private final List<Object> mocks = new ArrayList<>();
 
     private Environment(
-        TestDruidLeaderSelector leaderSelector,
-        TestServerInventoryView historicalInventoryView,
+        TestServerInventoryView clusterInventory,
         TestSegmentsMetadataManager segmentManager,
         TestMetadataRuleManager ruleManager,
-        DruidCoordinatorConfig coordinatorConfig,
         CoordinatorDynamicConfig dynamicConfig,
-        boolean immediateLoading
+        boolean loadImmediately,
+        boolean autoSyncInventory
     )
     {
-      this.leaderSelector = leaderSelector;
-      this.historicalInventoryView = historicalInventoryView;
+      this.historicalInventoryView = clusterInventory;
       this.segmentManager = segmentManager;
       this.ruleManager = ruleManager;
-      this.coordinatorConfig = coordinatorConfig;
-      this.immediateLoading = immediateLoading;
+      this.loadImmediately = loadImmediately;
+      this.autoSyncInventory = autoSyncInventory;
 
-      this.executorFactory = new ExecutorFactory(immediateLoading);
-      this.coordinatorInventoryView = new TestServerInventoryView();
+      this.coordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+          .withCoordinatorStartDelay(new Duration(1L))
+          .withCoordinatorPeriod(new Duration(DEFAULT_COORDINATOR_PERIOD))
+          .withCoordinatorKillPeriod(new Duration(DEFAULT_COORDINATOR_PERIOD))
+          .withLoadQueuePeonRepeatDelay(new Duration("PT0S"))
+          .withLoadQueuePeonType("http")
+          .withCoordinatorKillIgnoreDurationToRetain(false)
+          .build();
+
+      this.executorFactory = new ExecutorFactory(loadImmediately);
+      this.coordinatorInventoryView = autoSyncInventory
+                                      ? clusterInventory
+                                      : new TestServerInventoryView();
       HttpClient httpClient = new TestSegmentLoadingHttpClient(
           OBJECT_MAPPER,
-          historicalInventoryView::getChangeHandlerForHost,
+          clusterInventory::getChangeHandlerForHost,
           executorFactory.create(1, ExecutorFactory.HISTORICAL_LOADER)
       );
 
@@ -398,7 +434,9 @@ public class CoordinatorSimulationBuilder
           null
       );
 
-      this.jacksonConfigManager = mockConfigManager(dynamicConfig);
+      this.jacksonConfigManager = mockConfigManager();
+      setDynamicConfig(dynamicConfig);
+
       this.lookupCoordinatorManager = EasyMock.createNiceMock(LookupCoordinatorManager.class);
       mocks.add(jacksonConfigManager);
       mocks.add(lookupCoordinatorManager);
@@ -408,7 +446,6 @@ public class CoordinatorSimulationBuilder
     {
       EmittingLogger.registerEmitter(serviceEmitter);
       historicalInventoryView.setUp();
-      coordinatorInventoryView.sync(historicalInventoryView);
       coordinatorInventoryView.setUp();
       lifecycle.start();
       executorFactory.setUp();
@@ -419,10 +456,16 @@ public class CoordinatorSimulationBuilder
     private void tearDown()
     {
       EasyMock.verify(mocks.toArray());
+      executorFactory.tearDown();
       lifecycle.stop();
     }
 
-    private JacksonConfigManager mockConfigManager(CoordinatorDynamicConfig dynamicConfig)
+    private void setDynamicConfig(CoordinatorDynamicConfig dynamicConfig)
+    {
+      this.dynamicConfig.set(dynamicConfig);
+    }
+
+    private JacksonConfigManager mockConfigManager()
     {
       final JacksonConfigManager jacksonConfigManager
           = EasyMock.createMock(JacksonConfigManager.class);
@@ -432,7 +475,7 @@ public class CoordinatorSimulationBuilder
               EasyMock.eq(CoordinatorDynamicConfig.class),
               EasyMock.anyObject()
           )
-      ).andReturn(new AtomicReference<>(dynamicConfig)).anyTimes();
+      ).andReturn(dynamicConfig).anyTimes();
 
       EasyMock.expect(
           jacksonConfigManager.watch(
@@ -495,6 +538,11 @@ public class CoordinatorSimulationBuilder
       historicalLoader = findExecutor(HISTORICAL_LOADER);
       loadQueueExecutor = findExecutor(LOAD_QUEUE_EXECUTOR);
       loadCallbackExecutor = findExecutor(LOAD_CALLBACK_EXECUTOR);
+    }
+
+    private void tearDown()
+    {
+      blockingExecutors.values().forEach(BlockingExecutorService::shutdown);
     }
   }
 

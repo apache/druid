@@ -153,7 +153,7 @@ public class BlockingExecutorService implements ExecutorService
   @Override
   public void shutdown()
   {
-
+    taskQueue.clear();
   }
 
   @Override
