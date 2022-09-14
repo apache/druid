@@ -109,7 +109,8 @@ public class RowKey
     return Arrays.toString(key);
   }
 
-  public int getNumberOfBytes() {
+  public int getNumberOfBytes()
+  {
     return array().length;
   }
 }
