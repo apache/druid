@@ -57,7 +57,7 @@ LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 COPY --from=busybox /bin/busybox /busybox/busybox
 RUN ["/busybox/busybox", "--install", "/bin"]
 
-# Predefine builtin arg, see: https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
+# Predefined builtin arg, see: https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
 ARG TARGETARCH
 
 #
@@ -66,11 +66,11 @@ ARG TARGETARCH
 #
 ARG BASH_URL_BASE="https://github.com/robxu9/bash-static/releases/download/5.1.016-1.2.3"
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
-      export BASH_URL=$(echo ${BASH_URL_BASE}/bash-linux-aarch64) ; \
+      BASH_URL="${BASH_URL_BASE}/bash-linux-aarch64" ; \
     elif [ "$TARGETARCH" = "amd64" ]; then \
-      export BASH_URL=$(echo ${BASH_URL_BASE}/bash-linux-x86_64) ; \
+      BASH_URL="${BASH_URL_BASE}/bash-linux-x86_64" ; \
     else \
-      echo "Unknown archtecture ($TARGETARCH)" && exit 1; \
+      echo "Unsupported archtecture ($TARGETARCH)" && exit 1; \
     fi; \
     echo "Downloading bash-static from ${BASH_URL}" \
     && wget ${BASH_URL} -O /bin/bash \
