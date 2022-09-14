@@ -70,7 +70,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     elif [ "$TARGETARCH" = "amd64" ]; then \
       export BASH_URL=$(echo ${BASH_URL_BASE}/bash-linux-x86_64) ; \
     else \
-      echo "Unknown archtecture($TARGETARCH)" && exit ; \
+      echo "Unknown archtecture ($TARGETARCH)" && exit 1; \
     fi; \
     echo "Downloading bash-static from ${BASH_URL}" \
     && wget ${BASH_URL} -O /bin/bash \
