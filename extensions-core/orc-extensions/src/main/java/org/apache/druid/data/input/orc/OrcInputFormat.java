@@ -21,6 +21,7 @@ package org.apache.druid.data.input.orc;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
@@ -49,7 +50,7 @@ public class OrcInputFormat extends NestedInputFormat
   )
   {
     super(flattenSpec);
-    this.binaryAsString = binaryAsString == null ? false : binaryAsString;
+    this.binaryAsString = binaryAsString != null && binaryAsString;
     this.conf = conf;
   }
 
@@ -77,6 +78,13 @@ public class OrcInputFormat extends NestedInputFormat
   public boolean isSplittable()
   {
     return false;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean getBinaryAsString()
+  {
+    return binaryAsString;
   }
 
   @Override

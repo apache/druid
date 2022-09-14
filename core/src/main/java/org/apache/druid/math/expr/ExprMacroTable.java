@@ -86,10 +86,8 @@ public class ExprMacroTable
     return exprMacro.apply(args);
   }
 
-  public interface ExprMacro
+  public interface ExprMacro extends NamedFunction
   {
-    String name();
-
     Expr apply(List<Expr> args);
   }
 

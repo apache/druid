@@ -78,6 +78,8 @@ Logging configuration:
 
 * `DRUID_LOG4J` -- set the entire [`log4j.xml` configuration file](https://logging.apache.org/log4j/2.x/manual/configuration.html#XML)  verbatim. ([Example](https://github.com/apache/druid/blob/{{DRUIDVERSION}}/distribution/docker/environment#L52))
 * `DRUID_LOG_LEVEL` -- override the default [Log4j log level](https://en.wikipedia.org/wiki/Log4j#Log4j_log_levels)
+* `DRUID_SERVICE_LOG4J` -- set the entire [`log4j.xml` configuration file](https://logging.apache.org/log4j/2.x/manual/configuration.html#XML)  verbatim specific to a service.
+* `DRUID_SERVICE_LOG_LEVEL` -- override the default [Log4j log level](https://en.wikipedia.org/wiki/Log4j#Log4j_log_levels) in the service specific log4j.
 
 Advanced memory configuration:
 
@@ -116,7 +118,7 @@ It takes a few seconds for all the Druid processes to fully start up. If you ope
 
 ## Using the cluster
 
-From here you can follow along with the [Quickstart](./index.md#step-4-load-data). For production use, refine your `docker-compose.yml` file to add any additional external service dependencies as necessary.
+From here you can follow along with the [Quickstart](./index.md#load-data). For production use, refine your `docker-compose.yml` file to add any additional external service dependencies as necessary.
 
 You can explore the Druid containers using Docker to start a shell:
 

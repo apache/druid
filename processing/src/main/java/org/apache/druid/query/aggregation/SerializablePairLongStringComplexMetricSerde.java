@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -29,7 +28,7 @@ import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
+import org.apache.druid.segment.serde.cell.NativeClearedByteBufferProvider;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
@@ -39,20 +38,28 @@ import java.util.Comparator;
 /**
  * The SerializablePairLongStringSerde serializes a Long-String pair (SerializablePairLongString).
  * The serialization structure is: Long:Integer:String
+ * The Long is delta-encoded for the column in order to potentially reduce the size to an integer so it may be stored
+ * as: Integer:Integer:String
+ * <p>
+ * Future work: dictionary encoding of the String may be performed
  * <p>
  * The class is used on first/last String aggregators to store the time and the first/last string.
- * Long:Integer:String -> Timestamp:StringSize:StringData
+ * [Integer|Long]:Integer:String -> delta:StringSize:StringData --(delta decoded)--> TimeStamp:StringSize:StringData
+ * (see {@link SerializablePairLongStringDeltaEncodedStagedSerde )}
  */
-public class SerializablePairLongStringSerde extends ComplexMetricSerde
+public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricSerde
 {
-
-  private static final String TYPE_NAME = "serializablePairLongString";
+  public static final int EXPECTED_VERSION = 3;
+  public static final String TYPE_NAME = "serializablePairLongString";
   // Null SerializablePairLongString values are put first
   private static final Comparator<SerializablePairLongString> COMPARATOR = Comparator.nullsFirst(
       // assumes that the LHS of the pair will never be null
       Comparator.<SerializablePairLongString>comparingLong(SerializablePair::getLhs)
                 .thenComparing(SerializablePair::getRhs, Comparator.nullsFirst(Comparator.naturalOrder()))
   );
+
+  private static final SerializablePairLongStringSimpleStagedSerde SERDE =
+      new SerializablePairLongStringSimpleStagedSerde();
 
   @Override
   public String getTypeName()
@@ -61,9 +68,9 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
   }
 
   @Override
-  public ComplexMetricExtractor getExtractor()
+  public ComplexMetricExtractor<?> getExtractor()
   {
-    return new ComplexMetricExtractor()
+    return new ComplexMetricExtractor<Object>()
     {
       @Override
       public Class<SerializablePairLongString> extractedClass()
@@ -82,12 +89,21 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
   @Override
   public void deserializeColumn(ByteBuffer buffer, ColumnBuilder columnBuilder)
   {
-    final GenericIndexed column = GenericIndexed.read(buffer, getObjectStrategy(), columnBuilder.getFileMapper());
-    columnBuilder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
+    byte version = buffer.get(buffer.position());
+
+    if (version == 0 || version == 1 || version == 2) {
+      GenericIndexed<?> column = GenericIndexed.read(buffer, getObjectStrategy(), columnBuilder.getFileMapper());
+      columnBuilder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
+    } else {
+      SerializablePairLongStringComplexColumn.Builder builder =
+          new SerializablePairLongStringComplexColumn.Builder(buffer)
+              .setByteBufferProvider(NativeClearedByteBufferProvider.INSTANCE);
+      columnBuilder.setComplexColumnSupplier(builder::build);
+    }
   }
 
   @Override
-  public ObjectStrategy getObjectStrategy()
+  public ObjectStrategy<?> getObjectStrategy()
   {
     return new ObjectStrategy<SerializablePairLongString>()
     {
@@ -106,48 +122,28 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
       @Override
       public SerializablePairLongString fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+        ByteBuffer readOnlyByteBuffer = buffer.asReadOnlyBuffer().order(buffer.order());
 
-        long lhs = readOnlyBuffer.getLong();
-        int stringSize = readOnlyBuffer.getInt();
+        readOnlyByteBuffer.limit(buffer.position() + numBytes);
 
-        String lastString = null;
-        if (stringSize > 0) {
-          byte[] stringBytes = new byte[stringSize];
-          readOnlyBuffer.get(stringBytes, 0, stringSize);
-          lastString = StringUtils.fromUtf8(stringBytes);
-        }
-
-        return new SerializablePairLongString(lhs, lastString);
+        return SERDE.deserialize(readOnlyByteBuffer);
       }
 
+      @SuppressWarnings("NullableProblems")
       @Override
       public byte[] toBytes(SerializablePairLongString val)
       {
-        String rhsString = val.rhs;
-        ByteBuffer bbuf;
-
-        if (rhsString != null) {
-          byte[] rhsBytes = StringUtils.toUtf8(rhsString);
-          bbuf = ByteBuffer.allocate(Long.BYTES + Integer.BYTES + rhsBytes.length);
-          bbuf.putLong(val.lhs);
-          bbuf.putInt(Long.BYTES, rhsBytes.length);
-          bbuf.position(Long.BYTES + Integer.BYTES);
-          bbuf.put(rhsBytes);
-        } else {
-          bbuf = ByteBuffer.allocate(Long.BYTES + Integer.BYTES);
-          bbuf.putLong(val.lhs);
-          bbuf.putInt(Long.BYTES, 0);
-        }
-
-        return bbuf.array();
+        return SERDE.serialize(val);
       }
     };
   }
 
   @Override
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public GenericColumnSerializer<?> getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
-    return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
+    return new SerializablePairLongStringColumnSerializer(
+        segmentWriteOutMedium,
+        NativeClearedByteBufferProvider.INSTANCE
+    );
   }
 }

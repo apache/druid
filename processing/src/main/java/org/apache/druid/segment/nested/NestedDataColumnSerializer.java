@@ -63,6 +63,7 @@ import org.apache.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -196,7 +197,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       } else {
         writer = new VariantLiteralFieldColumnWriter();
       }
-      writer.open();
+      writer.open(field.getKey());
       fieldWriters.put(field.getKey(), writer);
     }
   }
@@ -376,6 +377,12 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     {
       return (T) value;
     }
+
+    void writeValue(@Nullable T value) throws IOException
+    {
+      // do nothing, if a value column is present this method should be overridden to write the value to the serializer
+    }
+
     abstract int lookupGlobalId(T value);
 
     abstract void writeColumnTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
@@ -398,17 +405,12 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       encodedValueSerializer.open();
     }
 
-    void serializeRow(int globalId, int localId) throws IOException
-    {
-      encodedValueSerializer.addValue(localId);
-    }
-
     long getSerializedColumnSize() throws IOException
     {
       return Integer.BYTES + Integer.BYTES + encodedValueSerializer.getSerializedSize();
     }
 
-    public void open() throws IOException
+    public void open(String field) throws IOException
     {
       intermediateValueWriter = new FixedIndexedIntWriter(segmentWriteOutMedium, false);
       intermediateValueWriter.open();
@@ -435,6 +437,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       final int globalId = lookupGlobalId(value);
       final int localId = localDictionary.add(globalId);
       intermediateValueWriter.write(localId);
+      writeValue(value);
     }
 
     public void writeTo(String field, FileSmoosher smoosher) throws IOException
@@ -472,10 +475,8 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       int rowCount = 0;
       while (rows.hasNext()) {
         final int unsortedLocalId = rows.nextInt();
-        final int globalId = unsortedToGlobal[unsortedLocalId];
         final int sortedLocalId = unsortedToSorted[unsortedLocalId];
-
-        serializeRow(globalId, sortedLocalId);
+        encodedValueSerializer.addValue(sortedLocalId);
         bitmaps[sortedLocalId].add(rowCount++);
       }
 
@@ -551,12 +552,12 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     }
 
     @Override
-    void openColumnSerializer(String field, SegmentWriteOutMedium medium, int maxId) throws IOException
+    public void open(String field) throws IOException
     {
-      super.openColumnSerializer(field, medium, maxId);
+      super.open(field);
       longsSerializer = CompressionFactory.getLongSerializer(
           field,
-          medium,
+          segmentWriteOutMedium,
           StringUtils.format("%s.long_column", name),
           ByteOrder.nativeOrder(),
           indexSpec.getLongEncoding(),
@@ -566,14 +567,12 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     }
 
     @Override
-    void serializeRow(int globalId, int localId) throws IOException
+    void writeValue(@Nullable Long value) throws IOException
     {
-      super.serializeRow(globalId, localId);
-      Long l = globalDictionaryIdLookup.lookupLong(globalId);
-      if (l == null) {
+      if (value == null) {
         longsSerializer.add(0L);
       } else {
-        longsSerializer.add(l);
+        longsSerializer.add(value);
       }
     }
 
@@ -603,12 +602,12 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     }
 
     @Override
-    void openColumnSerializer(String field, SegmentWriteOutMedium medium, int maxId) throws IOException
+    public void open(String field) throws IOException
     {
-      super.openColumnSerializer(field, medium, maxId);
+      super.open(field);
       doublesSerializer = CompressionFactory.getDoubleSerializer(
           field,
-          medium,
+          segmentWriteOutMedium,
           StringUtils.format("%s.double_column", name),
           ByteOrder.nativeOrder(),
           indexSpec.getDimensionCompression()
@@ -617,14 +616,12 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     }
 
     @Override
-    void serializeRow(int globalId, int localId) throws IOException
+    void writeValue(@Nullable Double value) throws IOException
     {
-      super.serializeRow(globalId, localId);
-      Double d = globalDictionaryIdLookup.lookupDouble(globalId);
-      if (d == null) {
+      if (value == null) {
         doublesSerializer.add(0.0);
       } else {
-        doublesSerializer.add(d);
+        doublesSerializer.add(value);
       }
     }
 
