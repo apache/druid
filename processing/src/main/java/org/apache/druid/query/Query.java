@@ -124,27 +124,53 @@ public interface Query<T>
     return null;
   }
 
-  <ContextType> ContextType getContextValue(String key);
+  /**
+   * Get context value and cast to ContextType in an unsafe way.
+   *
+   * For safe conversion, it's recommended to use following methods instead
+   *
+   * {@link QueryContext#getAsBoolean(String)}
+   * {@link QueryContext#getAsString(String)}
+   * {@link QueryContext#getAsInt(String)}
+   * {@link QueryContext#getAsLong(String)}
+   * {@link QueryContext#getAsFloat(String, float)}
+   * {@link QueryContext#getAsEnum(String, Class, Enum)}
+   * {@link QueryContext#getAsHumanReadableBytes(String, HumanReadableBytes)}
+   */
+  @Nullable
+  default <ContextType> ContextType getContextValue(String key)
+  {
+    if (getQueryContext() == null) {
+      return null;
+    } else {
+      return (ContextType) getQueryContext().get(key);
+    }
+  }
 
-  <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
-
-  boolean getContextBoolean(String key, boolean defaultValue);
+  default boolean getContextBoolean(String key, boolean defaultValue)
+  {
+    if (getQueryContext() == null) {
+      return defaultValue;
+    } else {
+      return getQueryContext().getAsBoolean(key, defaultValue);
+    }
+  }
 
   /**
    * Returns {@link HumanReadableBytes} for a specified context key. If the context is null or the key doesn't exist
    * a caller specified default value is returned. A default implementation is provided since Query is an extension
    * point. Extensions can choose to rely on this default to retain compatibility with core Druid.
    *
-   * @param key The context key value being looked up
+   * @param key          The context key value being looked up
    * @param defaultValue The default to return if the key value doesn't exist or the context is null.
    * @return {@link HumanReadableBytes}
    */
-  default HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
+  default HumanReadableBytes getContextAsHumanReadableBytes(String key, HumanReadableBytes defaultValue)
   {
-    if (null != getQueryContext()) {
-      return getQueryContext().getAsHumanReadableBytes(key, defaultValue);
-    } else {
+    if (getQueryContext() == null) {
       return defaultValue;
+    } else {
+      return getQueryContext().getAsHumanReadableBytes(key, defaultValue);
     }
   }
 
@@ -204,7 +230,7 @@ public interface Query<T>
   @Nullable
   default String getSqlQueryId()
   {
-    return getContextValue(BaseQuery.SQL_QUERY_ID);
+    return getQueryContext().getAsString(BaseQuery.SQL_QUERY_ID);
   }
 
   /**

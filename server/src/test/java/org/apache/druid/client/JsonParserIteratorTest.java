@@ -307,7 +307,8 @@ public class JsonParserIteratorTest
     {
       Query<?> query = Mockito.mock(Query.class);
       Mockito.when(query.getId()).thenReturn(queryId);
-      Mockito.when(query.getContextValue(ArgumentMatchers.eq(DirectDruidClient.QUERY_FAIL_TIME), ArgumentMatchers.eq(-1L)))
+      Mockito.when(query.getQueryContext().getAsLong(ArgumentMatchers.eq(DirectDruidClient.QUERY_FAIL_TIME),
+                                                     ArgumentMatchers.eq(-1L)))
              .thenReturn(timeoutAt);
       return query;
     }
