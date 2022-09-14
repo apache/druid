@@ -34,7 +34,7 @@ To convert the ingestion spec to a query task, do the following:
 1. In the **Query** view of the Druid console, navigate to the menu bar that includes **Run**.
 2. Click the ellipsis icon and select **Convert ingestion spec to SQL**.
   ![Convert ingestion spec to SQL](../assets/multi-stage-query/tutorial-msq-convert.png "Convert ingestion spec to SQL")
-3. In the **Ingestion spec to covert** window, insert your ingestion spec. You can use your own spec or the sample ingestion spec provided in the tutorial. The sample spec uses data hosted at `https://static.imply.io/data/wikipedia.json.gz` and loads it into a table named `wikipedia`:
+3. In the **Ingestion spec to covert** window, insert your ingestion spec. You can use your own spec or the sample ingestion spec provided in the tutorial. The sample spec uses data hosted at `https://druid.apache.org/data/wikipedia.json.gz` and loads it into a table named `wikipedia`:
 
    <details><summary>Show the spec</summary>
    
@@ -47,7 +47,7 @@ To convert the ingestion spec to a query task, do the following:
          "inputSource": {
            "type": "http",
            "uris": [
-             "https://static.imply.io/data/wikipedia.json.gz"
+             "https://druid.apache.org/data/wikipedia.json.gz"
            ]
          },
          "inputFormat": {
@@ -129,7 +129,7 @@ To convert the ingestion spec to a query task, do the following:
    REPLACE INTO wikipedia OVERWRITE ALL
    WITH source AS (SELECT * FROM TABLE(
      EXTERN(
-       '{"type":"http","uris":["https://static.imply.io/data/wikipedia.json.gz"]}',
+       '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
        '{"type":"json"}',
        '[{"name":"timestamp","type":"string"},{"name":"isRobot","type":"string"},{"name":"channel","type":"string"},{"name":"flags","type":"string"},{"name":"isUnpatrolled","type":"string"},{"name":"page","type":"string"},{"name":"diffUrl","type":"string"},{"name":"added","type":"long"},{"name":"comment","type":"string"},{"name":"commentLength","type":"long"},{"name":"isNew","type":"string"},{"name":"isMinor","type":"string"},{"name":"delta","type":"long"},{"name":"isAnonymous","type":"string"},{"name":"user","type":"string"},{"name":"deltaBucket","type":"long"},{"name":"deleted","type":"long"},{"name":"namespace","type":"string"},{"name":"cityName","type":"string"},{"name":"countryName","type":"string"},{"name":"regionIsoCode","type":"string"},{"name":"metroCode","type":"string"},{"name":"countryIsoCode","type":"string"},{"name":"regionName","type":"string"}]'
      )

@@ -81,7 +81,7 @@ SELECT
   *
 FROM TABLE(
   EXTERN(
-    '{"type": "http", "uris": ["https://static.imply.io/data/wikipedia.json.gz"]}',
+    '{"type": "http", "uris": ["https://druid.apache.org/data/wikipedia.json.gz"]}',
     '{"type": "json"}',
     '[{"name": "timestamp", "type": "string"}, {"name": "page", "type": "string"}, {"name": "user", "type": "string"}]'
   )
@@ -107,7 +107,7 @@ SELECT
   "user"
 FROM TABLE(
   EXTERN(
-    '{"type": "http", "uris": ["https://static.imply.io/data/wikipedia.json.gz"]}',
+    '{"type": "http", "uris": ["https://druid.apache.org/data/wikipedia.json.gz"]}',
     '{"type": "json"}',
     '[{"name": "timestamp", "type": "string"}, {"name": "page", "type": "string"}, {"name": "user", "type": "string"}]'
   )
@@ -145,7 +145,7 @@ SELECT
   "user"
 FROM TABLE(
   EXTERN(
-    '{"type": "http", "uris": ["https://static.imply.io/data/wikipedia.json.gz"]}',
+    '{"type": "http", "uris": ["https://druid.apache.org/data/wikipedia.json.gz"]}',
     '{"type": "json"}',
     '[{"name": "timestamp", "type": "string"}, {"name": "page", "type": "string"}, {"name": "user", "type": "string"}]'
   )
@@ -166,7 +166,7 @@ SELECT
   "user"
 FROM TABLE(
   EXTERN(
-    '{"type": "http", "uris": ["https://static.imply.io/data/wikipedia.json.gz"]}',
+    '{"type": "http", "uris": ["https://druid.apache.org/data/wikipedia.json.gz"]}',
     '{"type": "json"}',
     '[{"name": "timestamp", "type": "string"}, {"name": "page", "type": "string"}, {"name": "user", "type": "string"}]'
   )
