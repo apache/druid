@@ -96,7 +96,9 @@ To generate a query from external data, do the following:
        PARTITIONED BY DAY
      ```
 
-1. Optionally, select **Preview** to review the data before you ingest it. A preview runs the query without the INSERT INTO clause and with an added LIMIT to the main query and to all helper queries. You can see the general shape of the data before you commit to inserting it. The LIMITs make the query run faster but can cause incomplete results.
+1. Optionally, select **Preview** to review the data before you ingest it. A preview runs the query without the REPLACE INTO clause and with an added LIMIT. 
+   You can see the general shape of the data before you commit to inserting it.
+   The LIMITs make the query run faster but can cause incomplete results.
 2. Click **Run** to launch your query. The query returns information including its duration and the number of rows inserted into the table.
 
 ## Query the data
