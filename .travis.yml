@@ -53,7 +53,8 @@ install: ./check_test_suite.py && travis_terminate 0  || echo 'Running Maven ins
 # 2. Tests - phase 2
 # 3. cron
 #
-# The cron type only runs jobs that are marked with stage cron.
+# The cron type only runs jobs that are marked with stage cron. The ron stage also runs alongside
+# phase 1 and phase 2 for commit builds on release branches.
 # The test type is split into 2 stages. This is done so that more PRs can run their validation
 # in parallel. The first phase is meant to include sanity test jobs. The jobs in this phase are
 # meant to be fast. The second phase is meant to run all other tests.
@@ -65,7 +66,7 @@ stages:
   - name: Tests - phase 2
     if: type != cron
   - name: cron
-    if: type = cron
+    if: type = cron OR (type != pull_request AND branch != master)
 
 jobs:
   include:

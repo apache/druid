@@ -113,9 +113,11 @@ For docs, please make sure to add any relevant redirects in `website/redirects.j
 
 ### Release branch hygiene
 
-The only additions to the release branch after branching should be bug fixes, which should be back-ported from the master branch, via a second PR, not with a direct PR to the release branch. Bug fix release branches may be initially populated via cherry-picking, but it is recommended to leave at least 1 commit to do as a backport PR in order to run through CI. (Note that CI is sometimes flaky for older branches).
+The only additions to the release branch after branching should be bug fixes, which should be back-ported from the master branch, via a second PR or a cherry-pick, not with a direct PR to the release branch.  
 
-Once all issues and PRs that are still tagged with the release milestone have been merged, closed, or removed from the milestone, the next step is to put together a release candidate.
+Release manager must also ensure that CI is passing successfully on the release branch. Since CI on branch can contain additional tests such as ITs for different JVM flavours. (Note that CI is sometimes flaky for older branches).
+
+Once all issues and PRs that are still tagged with the release milestone have been merged, closed, or removed from the milestone and CI on branch is green, the next step is to put together a release candidate.
 
 ## Initial setup to create a release candidate
 
