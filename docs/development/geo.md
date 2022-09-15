@@ -82,7 +82,7 @@ The following example shows an ingestion spec with a spatial dimension named `co
 }
 ```
 
-The `spatialDimensions` array has the following elements:
+Each spatial dimension object in the `spatialDimensions` array is defined by the following fields:
 
 |Property|Description|Required|
 |--------|-----------|--------|
