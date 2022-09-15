@@ -32,7 +32,7 @@ public class CompressedBigDecimalBufferAggregator implements BufferAggregator
 
   //Cache will hold the aggregated value.
   //We are using ByteBuffer to hold the key to the aggregated value.
-  private final ColumnValueSelector<CompressedBigDecimal<?>> selector;
+  private final ColumnValueSelector<CompressedBigDecimal> selector;
   private final int size;
   private final int scale;
 
@@ -46,7 +46,7 @@ public class CompressedBigDecimalBufferAggregator implements BufferAggregator
   public CompressedBigDecimalBufferAggregator(
       int size,
       int scale,
-      ColumnValueSelector<CompressedBigDecimal<?>> selector
+      ColumnValueSelector<CompressedBigDecimal> selector
   )
   {
     this.selector = selector;
@@ -71,7 +71,7 @@ public class CompressedBigDecimalBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    CompressedBigDecimal<?> addend = selector.getObject();
+    CompressedBigDecimal addend = Utils.objToCompressedBigDecimal(selector.getObject());
     if (addend != null) {
       Utils.accumulate(buf, position, size, scale, addend);
     }
@@ -83,7 +83,16 @@ public class CompressedBigDecimalBufferAggregator implements BufferAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return new ByteBufferCompressedBigDecimal(buf, position, size, scale);
+    ByteBufferCompressedBigDecimal byteBufferCompressedBigDecimal = new ByteBufferCompressedBigDecimal(
+        buf,
+        position,
+        size,
+        scale
+    );
+
+    CompressedBigDecimal heapCompressedBigDecimal = byteBufferCompressedBigDecimal.toHeap();
+
+    return heapCompressedBigDecimal;
   }
 
   /* (non-Javadoc)
