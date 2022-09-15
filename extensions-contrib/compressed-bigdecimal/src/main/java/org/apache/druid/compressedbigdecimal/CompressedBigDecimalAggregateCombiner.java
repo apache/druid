@@ -28,18 +28,18 @@ import javax.annotation.Nullable;
 /**
  * AggregateCombiner for CompressedBigDecimals.
  */
-public class CompressedBigDecimalAggregateCombiner implements AggregateCombiner<CompressedBigDecimal<?>>
+public class CompressedBigDecimalAggregateCombiner implements AggregateCombiner<CompressedBigDecimal>
 {
-  private CompressedBigDecimal<?> sum;
+  private CompressedBigDecimal sum;
 
   @Override
   public void reset(@SuppressWarnings("rawtypes") ColumnValueSelector columnValueSelector)
   {
     @SuppressWarnings("unchecked")
-    ColumnValueSelector<CompressedBigDecimal<?>> selector =
-        (ColumnValueSelector<CompressedBigDecimal<?>>) columnValueSelector;
+    ColumnValueSelector<CompressedBigDecimal> selector =
+        (ColumnValueSelector<CompressedBigDecimal>) columnValueSelector;
 
-    CompressedBigDecimal<?> cbd = selector.getObject();
+    CompressedBigDecimal cbd = selector.getObject();
     if (sum == null) {
       sum = new ArrayCompressedBigDecimal(cbd);
     } else {
@@ -52,10 +52,10 @@ public class CompressedBigDecimalAggregateCombiner implements AggregateCombiner<
   public void fold(@SuppressWarnings("rawtypes") ColumnValueSelector columnValueSelector)
   {
     @SuppressWarnings("unchecked")
-    ColumnValueSelector<CompressedBigDecimal<?>> selector =
-        (ColumnValueSelector<CompressedBigDecimal<?>>) columnValueSelector;
+    ColumnValueSelector<CompressedBigDecimal> selector =
+        (ColumnValueSelector<CompressedBigDecimal>) columnValueSelector;
 
-    CompressedBigDecimal<?> cbd = selector.getObject();
+    CompressedBigDecimal cbd = selector.getObject();
 
     if (sum == null) {
       sum = new ArrayCompressedBigDecimal(cbd);
@@ -86,15 +86,14 @@ public class CompressedBigDecimalAggregateCombiner implements AggregateCombiner<
 
   @Nullable
   @Override
-  public CompressedBigDecimal<?> getObject()
+  public CompressedBigDecimal getObject()
   {
     return sum;
   }
 
-  @SuppressWarnings("unchecked")
   @Override
-  public Class<CompressedBigDecimal<?>> classOfObject()
+  public Class<CompressedBigDecimal> classOfObject()
   {
-    return (Class<CompressedBigDecimal<?>>) (Class<?>) CompressedBigDecimal.class;
+    return CompressedBigDecimal.class;
   }
 }

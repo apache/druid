@@ -200,7 +200,7 @@ public class QueryResource implements QueryCountStatsProvider
         throw new ForbiddenException(authResult.toString());
       }
 
-      final QueryLifecycle.QueryResponse queryResponse = queryLifecycle.execute();
+      final QueryResponse queryResponse = queryLifecycle.execute();
       final Sequence<?> results = queryResponse.getResults();
       final ResponseContext responseContext = queryResponse.getResponseContext();
       final String prevEtag = getPreviousEtag(req);
@@ -255,41 +255,11 @@ public class QueryResource implements QueryCountStatsProvider
             )
             .header(QUERY_ID_RESPONSE_HEADER, queryId);
 
-        transferEntityTag(responseContext, responseBuilder);
-
-        DirectDruidClient.removeMagicResponseContextFields(responseContext);
-
-        // Limit the response-context header, see https://github.com/apache/druid/issues/2331
-        // Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
-        // and encodes the string using ASCII, so 1 char is = 1 byte
-        final ResponseContext.SerializationResult serializationResult = responseContext.serializeWith(
-            jsonMapper,
-            responseContextConfig.getMaxResponseContextHeaderSize()
+        attachResponseContextToHttpResponse(queryId, responseContext, responseBuilder, jsonMapper,
+                                            responseContextConfig, selfNode
         );
 
-        if (serializationResult.isTruncated()) {
-          final String logToPrint = StringUtils.format(
-              "Response Context truncated for id [%s]. Full context is [%s].",
-              queryId,
-              serializationResult.getFullResult()
-          );
-          if (responseContextConfig.shouldFailOnTruncatedResponseContext()) {
-            log.error(logToPrint);
-            throw new QueryInterruptedException(
-                new TruncatedResponseContextException(
-                    "Serialized response context exceeds the max size[%s]",
-                    responseContextConfig.getMaxResponseContextHeaderSize()
-                ),
-                selfNode.getHostAndPortToUse()
-            );
-          } else {
-            log.warn(logToPrint);
-          }
-        }
-
-        return responseBuilder
-            .header(HEADER_RESPONSE_CONTEXT, serializationResult.getResult())
-            .build();
+        return responseBuilder.build();
       }
       catch (QueryException e) {
         // make sure to close yielder if anything happened before starting to serialize the response.
@@ -356,6 +326,48 @@ public class QueryResource implements QueryCountStatsProvider
     finally {
       Thread.currentThread().setName(currThreadName);
     }
+  }
+
+  public static void attachResponseContextToHttpResponse(
+      String queryId,
+      ResponseContext responseContext,
+      Response.ResponseBuilder responseBuilder,
+      ObjectMapper jsonMapper, ResponseContextConfig responseContextConfig, DruidNode selfNode
+  ) throws JsonProcessingException
+  {
+    transferEntityTag(responseContext, responseBuilder);
+
+    DirectDruidClient.removeMagicResponseContextFields(responseContext);
+
+    // Limit the response-context header, see https://github.com/apache/druid/issues/2331
+    // Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
+    // and encodes the string using ASCII, so 1 char is = 1 byte
+    final ResponseContext.SerializationResult serializationResult = responseContext.serializeWith(
+        jsonMapper,
+        responseContextConfig.getMaxResponseContextHeaderSize()
+    );
+
+    if (serializationResult.isTruncated()) {
+      final String logToPrint = StringUtils.format(
+          "Response Context truncated for id [%s]. Full context is [%s].",
+          queryId,
+          serializationResult.getFullResult()
+      );
+      if (responseContextConfig.shouldFailOnTruncatedResponseContext()) {
+        log.error(logToPrint);
+        throw new QueryInterruptedException(
+            new TruncatedResponseContextException(
+                "Serialized response context exceeds the max size[%s]",
+                responseContextConfig.getMaxResponseContextHeaderSize()
+            ),
+            selfNode.getHostAndPortToUse()
+        );
+      } else {
+        log.warn(logToPrint);
+      }
+    }
+
+    responseBuilder.header(HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
   }
 
   private Query<?> readQuery(

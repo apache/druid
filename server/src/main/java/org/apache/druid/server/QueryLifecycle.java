@@ -141,7 +141,7 @@ public class QueryLifecycle
    * @return results
    */
   @SuppressWarnings("unchecked")
-  public <T> Sequence<T> runSimple(
+  public <T> QueryResponse runSimple(
       final Query<T> query,
       final AuthenticationResult authenticationResult,
       final Access authorizationResult
@@ -151,13 +151,14 @@ public class QueryLifecycle
 
     final Sequence<T> results;
 
+    final QueryResponse queryResponse;
     try {
       preAuthorized(authenticationResult, authorizationResult);
       if (!authorizationResult.isAllowed()) {
         throw new ISE("Unauthorized");
       }
 
-      final QueryResponse queryResponse = execute();
+      queryResponse = execute();
       results = queryResponse.getResults();
     }
     catch (Throwable e) {
@@ -165,16 +166,25 @@ public class QueryLifecycle
       throw e;
     }
 
-    return Sequences.wrap(
-        results,
-        new SequenceWrapper()
-        {
-          @Override
-          public void after(final boolean isDone, final Throwable thrown)
-          {
-            emitLogsAndMetrics(thrown, null, -1);
-          }
-        }
+    /*
+     * It seems extremely weird that the below code is wrapping the Sequence in order to emitLogsAndMetrics.
+     * The Sequence was returned by the call to execute, it would be worthwile to figure out why this wrapping
+     * cannot be moved into execute().  We leave this as an exercise for the future, however as this oddity
+     * was discovered while just trying to expose HTTP response headers
+     */
+    return new QueryResponse(
+        Sequences.wrap(
+            results,
+            new SequenceWrapper()
+            {
+              @Override
+              public void after(final boolean isDone, final Throwable thrown)
+              {
+                emitLogsAndMetrics(thrown, null, -1);
+              }
+            }
+        ),
+        queryResponse.getResponseContext()
     );
   }
 
@@ -439,25 +449,4 @@ public class QueryLifecycle
     DONE
   }
 
-  public static class QueryResponse
-  {
-    private final Sequence results;
-    private final ResponseContext responseContext;
-
-    private QueryResponse(final Sequence results, final ResponseContext responseContext)
-    {
-      this.results = results;
-      this.responseContext = responseContext;
-    }
-
-    public Sequence getResults()
-    {
-      return results;
-    }
-
-    public ResponseContext getResponseContext()
-    {
-      return responseContext;
-    }
-  }
 }

@@ -26,8 +26,7 @@ import java.math.BigInteger;
 /**
  * A compressed big decimal that holds its data with an embedded array.
  */
-@SuppressWarnings("serial")
-public class ArrayCompressedBigDecimal extends CompressedBigDecimal<ArrayCompressedBigDecimal>
+public class ArrayCompressedBigDecimal extends CompressedBigDecimal
 {
 
   private static final int BYTE_MASK = 0xff;
@@ -85,7 +84,7 @@ public class ArrayCompressedBigDecimal extends CompressedBigDecimal<ArrayCompres
    *
    * @param initVal the initial value
    */
-  public ArrayCompressedBigDecimal(CompressedBigDecimal<?> initVal)
+  public ArrayCompressedBigDecimal(CompressedBigDecimal initVal)
   {
     super(initVal.getScale());
     this.array = new int[initVal.getArraySize()];
@@ -132,6 +131,12 @@ public class ArrayCompressedBigDecimal extends CompressedBigDecimal<ArrayCompres
   {
     int[] arr = new int[size];
     return new ArrayCompressedBigDecimal(arr, scale);
+  }
+
+  @Override
+  public CompressedBigDecimal toHeap()
+  {
+    return this;
   }
 
   /* (non-Javadoc)
