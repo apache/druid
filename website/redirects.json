@@ -198,3 +198,4 @@
 {"source": "development/extensions-contrib/google.html", "target": "../extensions-core/google.html"}
 {"source": "development/integrating-druid-with-other-technologies.html", "target": "../ingestion/index.html"}
 {"source": "operations/recommendations.html", "target": "basic-cluster-tuning.html"}
+{"source": "operations/management-uis.html", "target": "operations/druid-console.html"}

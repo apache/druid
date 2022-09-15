@@ -203,7 +203,6 @@
         "type": "subcategory",
         "label": "Misc",
         "ids": [
-          "operations/management-uis",
           "operations/dump-segment",
           "operations/reset-cluster",
           "operations/insert-segment-to-db",
