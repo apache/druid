@@ -59,32 +59,32 @@ POST /druid/v2/sql/task
 {
   "query": "INSERT INTO wikipedia\nSELECT\n  TIME_PARSE(\"timestamp\") AS __time,\n  *\nFROM TABLE(\n  EXTERN(\n    '{\"type\": \"http\", \"uris\": [\"https://druid.apache.org/data/wikipedia.json.gz\"]}',\n    '{\"type\": \"json\"}',\n    '[{\"name\": \"added\", \"type\": \"long\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"name\": \"cityName\", \"type\": \"string\"}, {\"name\": \"comment\", \"type\": \"string\"}, {\"name\": \"commentLength\", \"type\": \"long\"}, {\"name\": \"countryIsoCode\", \"type\": \"string\"}, {\"name\": \"countryName\", \"type\": \"string\"}, {\"name\": \"deleted\", \"type\": \"long\"}, {\"name\": \"delta\", \"type\": \"long\"}, {\"name\": \"deltaBucket\", \"type\": \"string\"}, {\"name\": \"diffUrl\", \"type\": \"string\"}, {\"name\": \"flags\", \"type\": \"string\"}, {\"name\": \"isAnonymous\", \"type\": \"string\"}, {\"name\": \"isMinor\", \"type\": \"string\"}, {\"name\": \"isNew\", \"type\": \"string\"}, {\"name\": \"isRobot\", \"type\": \"string\"}, {\"name\": \"isUnpatrolled\", \"type\": \"string\"}, {\"name\": \"metroCode\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"regionIsoCode\", \"type\": \"string\"}, {\"name\": \"regionName\", \"type\": \"string\"}, {\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n  )\n)\nPARTITIONED BY DAY",
   "context": {
-      "maxNumTasks": 3
+    "maxNumTasks": 3
   }
 }
 ```
 
 <!--curl-->
 
-Make sure you replace `username`, `password`, `your-instance`, and `port` with the values for your deployment.
-
 ```bash
+# Make sure you replace `username`, `password`, `your-instance`, and `port` with the values for your deployment.
 curl --location --request POST 'https://<username>:<password>@<your-instance>:<port>/druid/v2/sql/task/' \
---header 'Content-Type: application/json' \
---data-raw '{
+  --header 'Content-Type: application/json' \
+  --data-raw '{
     "query": "INSERT INTO wikipedia\nSELECT\n  TIME_PARSE(\"timestamp\") AS __time,\n  *\nFROM TABLE(\n  EXTERN(\n    '\''{\"type\": \"http\", \"uris\": [\"https://druid.apache.org/data/wikipedia.json.gz\"]}'\'',\n    '\''{\"type\": \"json\"}'\'',\n    '\''[{\"name\": \"added\", \"type\": \"long\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"name\": \"cityName\", \"type\": \"string\"}, {\"name\": \"comment\", \"type\": \"string\"}, {\"name\": \"commentLength\", \"type\": \"long\"}, {\"name\": \"countryIsoCode\", \"type\": \"string\"}, {\"name\": \"countryName\", \"type\": \"string\"}, {\"name\": \"deleted\", \"type\": \"long\"}, {\"name\": \"delta\", \"type\": \"long\"}, {\"name\": \"deltaBucket\", \"type\": \"string\"}, {\"name\": \"diffUrl\", \"type\": \"string\"}, {\"name\": \"flags\", \"type\": \"string\"}, {\"name\": \"isAnonymous\", \"type\": \"string\"}, {\"name\": \"isMinor\", \"type\": \"string\"}, {\"name\": \"isNew\", \"type\": \"string\"}, {\"name\": \"isRobot\", \"type\": \"string\"}, {\"name\": \"isUnpatrolled\", \"type\": \"string\"}, {\"name\": \"metroCode\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"regionIsoCode\", \"type\": \"string\"}, {\"name\": \"regionName\", \"type\": \"string\"}, {\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\''\n  )\n)\nPARTITIONED BY DAY",
     "context": {
         "maxNumTasks": 3
     }
+  }'
 ```
 
 <!--Python-->
-Make sure you replace `username`, `password`, `your-instance`, and `port` with the values for your deployment.
 
 ```python
 import json
 import requests
 
+# Make sure you replace `username`, `password`, `your-instance`, and `port` with the values for your deployment.
 url = "https://<username>:<password>@<your-instance>:<port>/druid/v2/sql/task/"
 
 payload = json.dumps({
@@ -123,178 +123,6 @@ print(response.text)
 | state | Initial state for the query, which is "RUNNING".|
 
 
-## Get the payload for a query task
-
-You can retrieve basic information about a query task, such as the SQL query and context parameters that were submitted. 
-
-### Request
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--HTTP-->
-
-```
-GET /druid/indexer/v1/task/<taskId>
-```
-
-<!--curl-->
-
-Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
-
-```bash
-curl --location --request GET 'https://<username>:<password>@<your-instance>:<port>/druid/indexer/v1/task/<taskId>'
-```
-
-<!--Python-->
-Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
-
-```python
-import requests
-
-url = "<username>:<password>@<your-instance>:<port>/druid/indexer/v1/task/<taskId>"
-
-payload={}
-headers = {}
-
-response = requests.request("GET", url, headers=headers, data=payload)
-
-print(response.text)
-
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-### Response
-
-<details><summary>Show the response</summary>
-
-```
-{
-  "task": "query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e",
-  "payload": {
-    "type": "query_controller",
-    "id": "query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e",
-    "spec": {
-      "query": {
-        "queryType": "scan",
-        "dataSource": {
-          "type": "external",
-          "inputSource": {
-            "type": "http",
-            "uris": [
-              "https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"
-            ],
-            "httpAuthenticationUsername": null,
-            "httpAuthenticationPassword": null
-          },
-          "inputFormat": {
-            "type": "json",
-            "flattenSpec": null,
-            "featureSpec": {},
-            "keepNullColumns": false
-          },
-          "signature": [
-            {
-              "name": "timestamp",
-              "type": "STRING"
-            },
-            {
-              "name": "agent_category",
-              "type": "STRING"
-            },
-            {
-              "name": "agent_type",
-              "type": "STRING"
-            }
-          ]
-        },
-        "intervals": {
-          "type": "intervals",
-          "intervals": [
-            "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-          ]
-        },
-        "resultFormat": "compactedList",
-        "columns": [
-          "agent_category",
-          "agent_type",
-          "timestamp"
-        ],
-        "legacy": false,
-        "context": {
-          "finalize": false,
-          "finalizeAggregations": false,
-          "groupByEnableMultiValueUnnesting": false,
-          "scanSignature": "[{\"name\":\"agent_category\",\"type\":\"STRING\"},{\"name\":\"agent_type\",\"type\":\"STRING\"},{\"name\":\"timestamp\",\"type\":\"STRING\"}]",
-          "sqlInsertSegmentGranularity": "{\"type\":\"all\"}",
-          "sqlQueryId": "3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e",
-          "sqlReplaceTimeChunks": "all"
-        },
-        "granularity": {
-          "type": "all"
-        }
-      },
-      "columnMappings": [
-        {
-          "queryColumn": "timestamp",
-          "outputColumn": "timestamp"
-        },
-        {
-          "queryColumn": "agent_category",
-          "outputColumn": "agent_category"
-        },
-        {
-          "queryColumn": "agent_type",
-          "outputColumn": "agent_type"
-        }
-      ],
-      "destination": {
-        "type": "dataSource",
-        "dataSource": "kttm_simple",
-        "segmentGranularity": {
-          "type": "all"
-        },
-        "replaceTimeChunks": [
-          "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-        ]
-      },
-      "assignmentStrategy": "max",
-      "tuningConfig": {
-        "maxNumWorkers": 1,
-        "maxRowsInMemory": 100000,
-        "rowsPerSegment": 3000000
-      }
-    },
-    "sqlQuery": "REPLACE INTO \"kttm_simple\" OVERWRITE ALL\nSELECT *\nFROM TABLE(\n  EXTERN(\n    '{\"type\":\"http\",\"uris\":[\"https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz\"]}',\n    '{\"type\":\"json\"}',\n    '[{\"name\":\"timestamp\",\"type\":\"string\"},{\"name\":\"agent_category\",\"type\":\"string\"},{\"name\":\"agent_type\",\"type\":\"string\"}]'\n  )\n)\nPARTITIONED BY ALL TIME",
-    "sqlQueryContext": {
-      "finalizeAggregations": false,
-      "groupByEnableMultiValueUnnesting": false,
-      "maxParseExceptions": 0,
-      "sqlInsertSegmentGranularity": "{\"type\":\"all\"}",
-      "sqlQueryId": "3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e",
-      "sqlReplaceTimeChunks": "all"
-    },
-    "sqlTypeNames": [
-      "VARCHAR",
-      "VARCHAR",
-      "VARCHAR"
-    ],
-    "context": {
-      "forceTimeChunkLock": true,
-      "useLineageBasedSegmentAllocation": true
-    },
-    "groupId": "query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e",
-    "dataSource": "kttm_simple",
-    "resource": {
-      "availabilityGroup": "query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e",
-      "requiredCapacity": 1
-    }
-  }
-}
-```
-
-</details>
-
 ## Get the status for a query task
 
 You can retrieve status of a query to see if it is still running, completed successfully, failed, or got canceled. 
@@ -310,18 +138,18 @@ GET /druid/indexer/v1/task/<taskId>
 ```
 
 <!--curl-->
-Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 
 ```bash
+# Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 curl --location --request GET 'https://<username>:<password>@<hostname>:<port>/druid/indexer/v1/task/<taskId>/status'
 ```
 
 <!--Python-->
-Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 
 ```python
 import requests
 
+# Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 url = "https://<username>:<password>@<hostname>:<port>/druid/indexer/v1/task/<taskId>/status"
 
 payload={}
@@ -379,23 +207,22 @@ For an explanation of the fields in a report, see [Report response fields](#repo
 <!--HTTP-->
 
 ```
-GET /druid/indexer/v1/task/<taskId>/report
+GET /druid/indexer/v1/task/<taskId>/reports
 ```
 
 <!--curl-->
-Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 
 ```bash
-curl --location --request GET 'https://<username>:<password>@<hostname>:<port>/druid/indexer/v1/task/<taskId>/report'
+# Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
+curl --location --request GET 'https://<username>:<password>@<hostname>:<port>/druid/indexer/v1/task/<taskId>/reports'
 ```
 
 <!--Python-->
 
-Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
-
 ```python
 import requests
 
+# Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 url = "https://<username>:<password>@<hostname>:<port>/druid/indexer/v1/task/<taskId>/reports"
 
 payload={}
@@ -710,7 +537,7 @@ The response shows an example report for a query.
 
 ### Report response fields
 
-The following table describes the response fields when you retrieve a report for a MSQ task engine using the `/druid/indexer/v1/task/<taskId>/report` endpoint:
+The following table describes the response fields when you retrieve a report for a MSQ task engine using the `/druid/indexer/v1/task/<taskId>/reports` endpoint:
 
 |Field|Description|
 |-----|-----------|
@@ -756,19 +583,17 @@ POST /druid/indexer/v1/task/<taskId>/shutdown
 
 <!--curl-->
 
-Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
-
 ```bash
+# Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 curl --location --request POST 'https://<username>:<password>@<your-instance>:<port>/druid/indexer/v1/task/<taskId>/shutdown'
 ```
 
 <!--Python-->
 
-Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
-
 ```
 import requests
 
+# Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 url = "https://<username>:<password>@<your-instance>:<port>/druid/indexer/v1/task/<taskId>/shutdown"
 
 payload={}
