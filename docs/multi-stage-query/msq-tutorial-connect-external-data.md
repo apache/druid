@@ -88,12 +88,12 @@ To generate a query from external data, do the following:
    For example, to specify day-based segment granularity, change the partitioning to `PARTITIONED BY DAY`:
       
      ```sql
-      ...
+      INSERT INTO ...
       SELECT
         TIME_PARSE("timestamp") AS __time,
       ...
       ...
-       PARTITIONED BY DAY
+      PARTITIONED BY DAY
      ```
 
 1. Optionally, select **Preview** to review the data before you ingest it. A preview runs the query without the REPLACE INTO clause and with an added LIMIT. 

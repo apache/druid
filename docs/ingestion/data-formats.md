@@ -75,7 +75,9 @@ parsing data is less efficient than writing a native Java parser or using an ext
 ## Input format
 
 You can use the `inputFormat` field to specify the data format for your input data.
-> `inputFormat` doesn't support all data formats or ingestion methods supported by Druid yet.
+
+> `inputFormat` doesn't support all data formats or ingestion methods supported by Druid.
+
 Especially if you want to use the Hadoop ingestion, you still need to use the [Parser](#parser).
 If your data is formatted in some format not listed in this section, please consider using the Parser instead.
 
