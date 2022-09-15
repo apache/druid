@@ -34,7 +34,7 @@ For information on other filters supported by Druid, see [Query filters](../quer
 
 Spatial indexing refers to ingesting data of a spatial data type, such as geometry or geography, into Druid.
 
-Spatial dimensions are sting columns that contain coordinates separated by a comma.
+Spatial dimensions are string columns that contain coordinates separated by a comma.
 In the ingestion spec, you configure spatial dimensions in the `dimensionsSpec` object of the `dataSchema` component.
 For information on how to use the ingestion spec to configure ingestion, see [Ingestion spec reference](../ingestion/ingestion-spec.md).
 For general information on loading data in Druid, see [Ingestion](../ingestion/index.md).
