@@ -24,9 +24,12 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
+import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -163,6 +166,46 @@ public class QuantilesSketchKeyCollectorTest
           verifyCollector(collector, clusterBy, comparator, sortedKeyWeights);
         }
     );
+  }
+
+  @Test
+  public void testAverageKeyLength()
+  {
+    final QuantilesSketchKeyCollector collector = QuantilesSketchKeyCollectorFactory.create(clusterBy).newKeyCollector();
+
+    final QuantilesSketchKeyCollector other = QuantilesSketchKeyCollectorFactory.create(clusterBy).newKeyCollector();
+
+    RowSignature smallKeySignature = KeyTestUtils.createKeySignature(
+        new ClusterBy(ImmutableList.of(new SortColumn("x", false)), 0).getColumns(),
+        RowSignature.builder().add("x", ColumnType.LONG).build()
+    );
+    RowKey smallKey = KeyTestUtils.createKey(smallKeySignature, 1L);
+
+    RowSignature largeKeySignature = KeyTestUtils.createKeySignature(
+        new ClusterBy(
+            ImmutableList.of(
+                new SortColumn("x", false),
+                new SortColumn("y", false),
+                new SortColumn("z", false)
+            ),
+            0).getColumns(),
+        RowSignature.builder()
+                    .add("x", ColumnType.LONG)
+                    .add("y", ColumnType.LONG)
+                    .add("z", ColumnType.LONG)
+                    .build()
+    );
+    RowKey largeKey = KeyTestUtils.createKey(largeKeySignature, 1L, 2L, 3L);
+
+
+    collector.add(smallKey, 3);
+    Assert.assertEquals(smallKey.getNumberOfBytes(), collector.getAverageKeyLength(), 0);
+
+    other.add(largeKey, 5);
+    Assert.assertEquals(largeKey.getNumberOfBytes(), other.getAverageKeyLength(), 0);
+
+    collector.addAll(other);
+    Assert.assertEquals((smallKey.getNumberOfBytes() * 3 + largeKey.getNumberOfBytes() * 5) / 8.0, collector.getAverageKeyLength(), 0);
   }
 
   @Test

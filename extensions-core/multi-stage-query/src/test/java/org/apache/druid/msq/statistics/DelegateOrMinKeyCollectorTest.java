@@ -97,33 +97,6 @@ public class DelegateOrMinKeyCollectorTest
   }
 
   @Test
-  public void testAddAll()
-  {
-    final DelegateOrMinKeyCollector<QuantilesSketchKeyCollector> collector =
-        new DelegateOrMinKeyCollectorFactory<>(
-            comparator,
-            QuantilesSketchKeyCollectorFactory.create(clusterBy)
-        ).newKeyCollector();
-
-    final DelegateOrMinKeyCollector<QuantilesSketchKeyCollector> other =
-        new DelegateOrMinKeyCollectorFactory<>(
-            comparator,
-            QuantilesSketchKeyCollectorFactory.create(clusterBy)
-        ).newKeyCollector();
-
-    RowKey key = createKey(1L);
-    other.add(key, 1);
-
-    collector.addAll(other);
-
-    Assert.assertTrue(collector.getDelegate().isPresent());
-    Assert.assertFalse(collector.isEmpty());
-    Assert.assertEquals(key, collector.minKey());
-    Assert.assertEquals(key.getNumberOfBytes(), collector.estimatedRetainedBytes(), 0);
-    Assert.assertEquals(1, collector.estimatedTotalWeight());
-  }
-
-  @Test
   public void testDownSampleSingleKey()
   {
     final DelegateOrMinKeyCollector<QuantilesSketchKeyCollector> collector =
