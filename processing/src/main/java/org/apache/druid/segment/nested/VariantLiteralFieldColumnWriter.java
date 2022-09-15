@@ -32,13 +32,14 @@ import java.nio.channels.WritableByteChannel;
 public final class VariantLiteralFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<Object>
 {
   public VariantLiteralFieldColumnWriter(
-      String name,
+      String columnName,
+      String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       IndexSpec indexSpec,
       GlobalDictionaryIdLookup globalDictionaryIdLookup
   )
   {
-    super(name, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
+    super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
   }
 
   @Override

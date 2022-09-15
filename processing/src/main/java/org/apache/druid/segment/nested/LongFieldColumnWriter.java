@@ -42,13 +42,14 @@ public final class LongFieldColumnWriter extends GlobalDictionaryEncodedFieldCol
   private ColumnarLongsSerializer longsSerializer;
 
   protected LongFieldColumnWriter(
-      String name,
+      String columnName,
+      String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       IndexSpec indexSpec,
       GlobalDictionaryIdLookup globalDictionaryIdLookup
   )
   {
-    super(name, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
+    super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
   }
 
   @Override
@@ -58,13 +59,13 @@ public final class LongFieldColumnWriter extends GlobalDictionaryEncodedFieldCol
   }
 
   @Override
-  public void open(String field) throws IOException
+  public void open() throws IOException
   {
-    super.open(field);
+    super.open();
     longsSerializer = CompressionFactory.getLongSerializer(
-        field,
+        fieldName,
         segmentWriteOutMedium,
-        StringUtils.format("%s.long_column", name),
+        StringUtils.format("%s.long_column", fieldName),
         ByteOrder.nativeOrder(),
         indexSpec.getLongEncoding(),
         indexSpec.getDimensionCompression()

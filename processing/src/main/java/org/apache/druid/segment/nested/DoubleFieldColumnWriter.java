@@ -42,13 +42,14 @@ public final class DoubleFieldColumnWriter extends GlobalDictionaryEncodedFieldC
   private ColumnarDoublesSerializer doublesSerializer;
 
   protected DoubleFieldColumnWriter(
-      String name,
+      String columnName,
+      String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       IndexSpec indexSpec,
       GlobalDictionaryIdLookup globalDictionaryIdLookup
   )
   {
-    super(name, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
+    super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
   }
 
   @Override
@@ -58,13 +59,13 @@ public final class DoubleFieldColumnWriter extends GlobalDictionaryEncodedFieldC
   }
 
   @Override
-  public void open(String field) throws IOException
+  public void open() throws IOException
   {
-    super.open(name);
+    super.open();
     doublesSerializer = CompressionFactory.getDoubleSerializer(
-        name,
+        fieldName,
         segmentWriteOutMedium,
-        StringUtils.format("%s.double_column", name),
+        StringUtils.format("%s.double_column", fieldName),
         ByteOrder.nativeOrder(),
         indexSpec.getDimensionCompression()
     );

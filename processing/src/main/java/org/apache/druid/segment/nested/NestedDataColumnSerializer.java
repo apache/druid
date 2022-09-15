@@ -176,24 +176,48 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     this.fields = fields;
     this.fieldWriters = Maps.newHashMapWithExpectedSize(fields.size());
     for (Map.Entry<String, NestedLiteralTypeInfo.MutableTypeSet> field : fields.entrySet()) {
-      final String name = field.getKey();
-      fieldsWriter.write(name);
+      final String fieldName = field.getKey();
+      fieldsWriter.write(fieldName);
       fieldsInfoWriter.write(field.getValue());
       final GlobalDictionaryEncodedFieldColumnWriter<?> writer;
       final ColumnType type = field.getValue().getSingleType();
       if (type != null) {
         if (Types.is(type, ValueType.STRING)) {
-          writer = new StringFieldColumnWriter(name, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
+          writer = new StringFieldColumnWriter(
+              name,
+              fieldName,
+              segmentWriteOutMedium,
+              indexSpec,
+              globalDictionaryIdLookup
+          );
         } else if (Types.is(type, ValueType.LONG)) {
-          writer = new LongFieldColumnWriter(name, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
+          writer = new LongFieldColumnWriter(
+              name,
+              fieldName,
+              segmentWriteOutMedium,
+              indexSpec,
+              globalDictionaryIdLookup
+          );
         } else {
-          writer = new DoubleFieldColumnWriter(name, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
+          writer = new DoubleFieldColumnWriter(
+              name,
+              fieldName,
+              segmentWriteOutMedium,
+              indexSpec,
+              globalDictionaryIdLookup
+          );
         }
       } else {
-        writer = new VariantLiteralFieldColumnWriter(name, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
+        writer = new VariantLiteralFieldColumnWriter(
+            name,
+            fieldName,
+            segmentWriteOutMedium,
+            indexSpec,
+            globalDictionaryIdLookup
+        );
       }
-      writer.open(name);
-      fieldWriters.put(name, writer);
+      writer.open();
+      fieldWriters.put(fieldName, writer);
     }
   }
 
@@ -325,7 +349,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     for (Map.Entry<String, NestedLiteralTypeInfo.MutableTypeSet> field : fields.entrySet()) {
       // remove writer so that it can be collected when we are done with it
       GlobalDictionaryEncodedFieldColumnWriter<?> writer = fieldWriters.remove(field.getKey());
-      writer.writeTo(field.getKey(), smoosher);
+      writer.writeTo(smoosher);
     }
     log.info("Column [%s] serialized successfully with [%d] nested columns.", name, fields.size());
   }
