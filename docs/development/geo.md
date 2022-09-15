@@ -86,7 +86,7 @@ Each spatial dimension object in the `spatialDimensions` array is defined by the
 
 |Property|Description|Required|
 |--------|-----------|--------|
-|`dimName`|The name of a spatial dimension. You can construct a spatial dimenion from other dimensions or it may already exist as part of an event. If a spatial dimension already exists, it must be an array of coordinate values.|yes|
+|`dimName`|The name of a spatial dimension. You can construct a spatial dimension from other dimensions or it may already exist as part of an event. If a spatial dimension already exists, it must be an array of coordinate values.|yes|
 |`dims`|The list of dimension names that comprise the spatial dimension.|no|
 
 ## Spatial filters
