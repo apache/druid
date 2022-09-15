@@ -47,7 +47,7 @@ Other common reasons that hand-off fails are as follows:
 
 1) Druid is unable to write to the metadata storage. Make sure your configurations are correct.
 
-2) Historical processes are out of capacity and cannot download any more segments. You'll see exceptions in the Coordinator logs if this occurs and the Coordinator console will show the Historicals are near capacity.
+2) Historical processes are out of capacity and cannot download any more segments. You'll see exceptions in the Coordinator logs if this occurs and the web console will show the Historicals are near capacity.
 
 3) Segments are corrupt and cannot be downloaded. You'll see exceptions in your Historical processes if this occurs.
 
@@ -73,7 +73,7 @@ Note that this workflow only guarantees that the segments are available at the t
 
 ## I don't see my Druid segments on my Historical processes
 
-You can check the Coordinator console located at `<COORDINATOR_IP>:<PORT>`. Make sure that your segments have actually loaded on [Historical processes](../design/historical.md). If your segments are not present, check the Coordinator logs for messages about capacity of replication errors. One reason that segments are not downloaded is because Historical processes have maxSizes that are too small, making them incapable of downloading more data. You can change that with (for example):
+You can check the [web console](../operations/druid-console.md) to make sure that your segments have actually loaded on [Historical processes](../design/historical.md). If your segments are not present, check the Coordinator logs for messages about capacity of replication errors. One reason that segments are not downloaded is because Historical processes have maxSizes that are too small, making them incapable of downloading more data. You can change that with (for example):
 
 ```
 -Ddruid.segmentCache.locations=[{"path":"/tmp/druid/storageLocation","maxSize":"500000000000"}]
