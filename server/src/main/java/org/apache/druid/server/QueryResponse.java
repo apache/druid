@@ -24,23 +24,24 @@ import org.apache.druid.query.context.ResponseContext;
 
 public class QueryResponse
 {
-  public static QueryResponse withEmptyContext(Sequence results)
+  public static QueryResponse withEmptyContext(Sequence<?> results)
   {
     return new QueryResponse(results, ResponseContext.createEmpty());
   }
 
-  private final Sequence results;
+  private final Sequence<?> results;
   private final ResponseContext responseContext;
 
-  public QueryResponse(final Sequence results, final ResponseContext responseContext)
+  public QueryResponse(final Sequence<?> results, final ResponseContext responseContext)
   {
     this.results = results;
     this.responseContext = responseContext;
   }
 
-  public Sequence getResults()
+  @SuppressWarnings("unchecked")
+  public <T> Sequence<T> getResults()
   {
-    return results;
+    return (Sequence<T>) results;
   }
 
   public ResponseContext getResponseContext()

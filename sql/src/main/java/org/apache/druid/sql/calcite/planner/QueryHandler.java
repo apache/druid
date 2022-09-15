@@ -56,12 +56,12 @@ import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -301,38 +301,40 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
               planner.getTypeFactory(),
               plannerContext.getParameters()
       );
-      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
+      final Supplier<QueryResponse> resultsSupplier = () -> {
         final Enumerable<?> enumerable = theRel.bind(dataContext);
         final Enumerator<?> enumerator = enumerable.enumerator();
-        return Sequences.withBaggage(new BaseSequence<>(
-            new BaseSequence.IteratorMaker<Object[], QueryHandler.EnumeratorIterator<Object[]>>()
-            {
-              @Override
-              public QueryHandler.EnumeratorIterator<Object[]> make()
+        return QueryResponse.withEmptyContext(
+            Sequences.withBaggage(new BaseSequence<>(
+              new BaseSequence.IteratorMaker<Object[], QueryHandler.EnumeratorIterator<Object[]>>()
               {
-                return new QueryHandler.EnumeratorIterator<>(new Iterator<Object[]>()
+                @Override
+                public QueryHandler.EnumeratorIterator<Object[]> make()
                 {
-                  @Override
-                  public boolean hasNext()
+                  return new QueryHandler.EnumeratorIterator<>(new Iterator<Object[]>()
                   {
-                    return enumerator.moveNext();
-                  }
+                    @Override
+                    public boolean hasNext()
+                    {
+                      return enumerator.moveNext();
+                    }
 
-                  @Override
-                  public Object[] next()
-                  {
-                    return (Object[]) enumerator.current();
-                  }
-                });
+                    @Override
+                    public Object[] next()
+                    {
+                      return (Object[]) enumerator.current();
+                    }
+                  });
+                }
+
+                @Override
+                public void cleanup(QueryHandler.EnumeratorIterator<Object[]> iterFromMake)
+                {
+
+                }
               }
-
-              @Override
-              public void cleanup(QueryHandler.EnumeratorIterator<Object[]> iterFromMake)
-              {
-
-              }
-            }
-        ), enumerator::close);
+          ), enumerator::close)
+      );
       };
       return new PlannerResult(resultsSupplier, rootQueryRel.validatedRowType);
     }
@@ -371,8 +373,11 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       log.error(jpe, "Encountered exception while serializing resources for explain output");
       resourcesString = null;
     }
-    final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
-        Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString})));
+    final Supplier<QueryResponse> resultsSupplier = Suppliers.ofInstance(
+        QueryResponse.withEmptyContext(
+            Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString}))
+        )
+    );
     return new PlannerResult(resultsSupplier, getExplainStructType(rel.getCluster().getTypeFactory()));
   }
 
@@ -415,13 +420,13 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
    * Given a {@link DruidRel}, this method recursively flattens the Rels if they are of the type {@link DruidUnionRel}
    * It is implicitly assumed that the {@link DruidUnionRel} can never be the child of a non {@link DruidUnionRel}
    * node
-   * For eg, a DruidRel structure of kind:
+   * E.g. a DruidRel structure of kind:<pre><code>
    * DruidUnionRel
    *  DruidUnionRel
    *    DruidRel (A)
    *    DruidRel (B)
    *  DruidRel(C)
-   * will return [DruidRel(A), DruidRel(B), DruidRel(C)]
+   * </code</pre>will return {@code [DruidRel(A), DruidRel(B), DruidRel(C)]}.
    *
    * @param outermostDruidRel The outermost rel which is to be flattened
    * @return a list of DruidRel's which do not have a DruidUnionRel nested in between them
@@ -494,7 +499,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       final RelDataType rowType = prepareResult.getReturnedRowType();
 
       // Start the query.
-      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
+      final Supplier<QueryResponse> resultsSupplier = () -> {
         // sanity check
         final Set<ResourceAction> readResourceActions =
             plannerContext.getResourceActions()
