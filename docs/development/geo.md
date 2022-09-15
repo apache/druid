@@ -91,7 +91,7 @@ Each spatial dimension object in the `spatialDimensions` array is defined by the
 
 ## Spatial filters
 
-A filter is a JSON object indicating which rows of data should be included in the computation for a query.
+A [filter](../querying/filters.md) is a JSON object indicating which rows of data should be included in the computation for a query.
 You can filter on spatial structures, such as rectangles and polygons, using the spatial filter.
 
 The spatial filter has the following structure:
