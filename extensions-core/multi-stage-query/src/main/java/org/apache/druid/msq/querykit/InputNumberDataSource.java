@@ -87,7 +87,8 @@ public class InputNumberDataSource implements DataSource
 
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query, AtomicLong cpuTime
+      Query query,
+      AtomicLong cpuTime
   )
   {
     return Function.identity();

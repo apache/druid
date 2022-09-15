@@ -28,7 +28,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -36,9 +35,6 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
-import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.TestQuery;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.FalseDimFilter;
 import org.apache.druid.query.filter.Filter;
@@ -46,10 +42,6 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.FalseFilter;
@@ -57,7 +49,6 @@ import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.join.table.RowBasedIndexedTable;
-import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -65,16 +56,12 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class JoinableFactoryWrapperTest extends NullHandlingTest
@@ -85,12 +72,12 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
 
   private static final Map<String, String> TEST_LOOKUP =
       ImmutableMap.<String, String>builder()
-          .put("MX", "Mexico")
-          .put("NO", "Norway")
-          .put("SV", "El Salvador")
-          .put("US", "United States")
-          .put("", "Empty key")
-          .build();
+                  .put("MX", "Mexico")
+                  .put("NO", "Norway")
+                  .put("SV", "El Salvador")
+                  .put("US", "United States")
+                  .put("", "Empty key")
+                  .build();
 
   private static final Set<String> TEST_LOOKUP_KEYS =
       NullHandling.sqlCompatible()
@@ -452,10 +439,12 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
     Assert.assertEquals(
         Pair.of(
             ImmutableList.of(new InDimFilter(
-                "x",
-                INDEXED_TABLE_DS.getRowsAsList().stream().map(row -> row[0].toString()).collect(Collectors.toSet()))
+                                 "x",
+                                 INDEXED_TABLE_DS.getRowsAsList().stream().map(row -> row[0].toString()).collect(Collectors.toSet())
+                             )
             ),
-            ImmutableList.of(joinableClause) // the joinable clause remains intact since we've duplicates in country column
+            ImmutableList.of(joinableClause)
+            // the joinable clause remains intact since we've duplicates in country column
         ),
         conversion
     );

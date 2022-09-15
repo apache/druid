@@ -146,7 +146,7 @@ public class PlannerContext
       final SqlEngine engine,
       final QueryContext queryContext,
       final JoinableFactoryWrapper jfw
-      )
+  )
   {
     final DateTime utcNow;
     final DateTimeZone timeZone;

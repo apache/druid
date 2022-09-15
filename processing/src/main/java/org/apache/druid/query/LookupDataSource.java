@@ -29,16 +29,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 /**
  * Represents a lookup.
- *
+ * <p>
  * Currently, this datasource is not actually queryable, and attempts to do so will lead to errors. It is here as a
  * placeholder for a future time in which it will become queryable.
- *
+ * <p>
  * The "lookupName" referred to here should be provided by a
  * {@link org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider}.
  */
@@ -102,7 +101,8 @@ public class LookupDataSource implements DataSource
 
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query, AtomicLong cpuTime
+      Query query,
+      AtomicLong cpuTime
   )
   {
     return Function.identity();

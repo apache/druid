@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import org.apache.calcite.rel.core.Calc;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;

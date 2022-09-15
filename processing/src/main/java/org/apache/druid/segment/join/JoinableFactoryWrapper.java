@@ -22,42 +22,25 @@ package org.apache.druid.segment.join;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultiset;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
-import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
-import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
-import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
-import org.apache.druid.segment.join.filter.JoinableClauses;
-import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
-import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -77,60 +60,9 @@ public class JoinableFactoryWrapper
     this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
   }
 
-  public JoinableFactory getJoinableFactory()
-  {
-    return joinableFactory;
-  }
-
-  /**
-   * Compute a cache key prefix for a join data source. This includes the data sources that participate in the RHS of a
-   * join as well as any query specific constructs associated with join data source such as base table filter. This key prefix
-   * can be used in segment level cache or result level cache. The function can return following wrapped in an
-   * Optional
-   * - Non-empty byte array - If there is join datasource involved and caching is possible. The result includes
-   * join condition expression, join type and cache key returned by joinable factory for each {@link PreJoinableClause}
-   * - NULL - There is a join but caching is not possible. It may happen if one of the participating datasource
-   * in the JOIN is not cacheable.
-   *
-   * @param dataSourceAnalysis for the join datasource
-   *
-   * @return the optional cache key to be used as part of query cache key
-   *
-   * @throws {@link IAE} if this operation is called on a non-join data source
-   */
-  public Optional<byte[]> computeJoinDataSourceCacheKey(
-      final DataSourceAnalysis dataSourceAnalysis
-  )
-  {
-    final List<PreJoinableClause> clauses = dataSourceAnalysis.getPreJoinableClauses();
-    if (clauses.isEmpty()) {
-      throw new IAE("No join clauses to build the cache key for data source [%s]", dataSourceAnalysis.getDataSource());
-    }
-
-    final CacheKeyBuilder keyBuilder;
-    keyBuilder = new CacheKeyBuilder(JOIN_OPERATION);
-    if (dataSourceAnalysis.getJoinBaseTableFilter().isPresent()) {
-      keyBuilder.appendCacheable(dataSourceAnalysis.getJoinBaseTableFilter().get());
-    }
-    for (PreJoinableClause clause : clauses) {
-      Optional<byte[]> bytes = joinableFactory.computeJoinCacheKey(clause.getDataSource(), clause.getCondition());
-      if (!bytes.isPresent()) {
-        // Encountered a data source which didn't support cache yet
-        log.debug("skipping caching for join since [%s] does not support caching", clause.getDataSource());
-        return Optional.empty();
-      }
-      keyBuilder.appendByteArray(bytes.get());
-      keyBuilder.appendString(clause.getCondition().getOriginalExpression());
-      keyBuilder.appendString(clause.getPrefix());
-      keyBuilder.appendString(clause.getJoinType().name());
-    }
-    return Optional.of(keyBuilder.build());
-  }
-
-
   /**
    * Converts any join clauses to filters that can be converted, and returns the rest as-is.
-   *
+   * <p>
    * See {@link #convertJoinToFilter} for details on the logic.
    */
   @VisibleForTesting
@@ -191,16 +123,16 @@ public class JoinableFactoryWrapper
 
   /**
    * Converts a join clause into an "in" filter if possible.
-   *
+   * <p>
    * The requirements are:
-   *
+   * <p>
    * - it must be an INNER equi-join
    * - the right-hand columns referenced by the condition must not have any duplicate values. If there are duplicates
-   *   values in the column, then the join is tried to be converted to a filter while maintaining the join clause on top
-   *   as well for correct results.
+   * values in the column, then the join is tried to be converted to a filter while maintaining the join clause on top
+   * as well for correct results.
    * - no columns from the right-hand side can appear in "requiredColumns". If the columns from right side are required
-   *   (ie they are directly or indirectly projected in the join output), then the join is tried to be converted to a
-   *   filter while maintaining the join clause on top as well for correct results.
+   * (ie they are directly or indirectly projected in the join output), then the join is tried to be converted to a
+   * filter while maintaining the join clause on top as well for correct results.
    *
    * @return {@link JoinClauseToFilterConversion} object which contains the converted filter for the clause and a boolean
    * to represent whether the converted filter encapsulates the whole clause or not. More semantics of the object are
@@ -260,12 +192,60 @@ public class JoinableFactoryWrapper
     return new JoinClauseToFilterConversion(null, false);
   }
 
+  public JoinableFactory getJoinableFactory()
+  {
+    return joinableFactory;
+  }
+
+  /**
+   * Compute a cache key prefix for a join data source. This includes the data sources that participate in the RHS of a
+   * join as well as any query specific constructs associated with join data source such as base table filter. This key prefix
+   * can be used in segment level cache or result level cache. The function can return following wrapped in an
+   * Optional
+   * - Non-empty byte array - If there is join datasource involved and caching is possible. The result includes
+   * join condition expression, join type and cache key returned by joinable factory for each {@link PreJoinableClause}
+   * - NULL - There is a join but caching is not possible. It may happen if one of the participating datasource
+   * in the JOIN is not cacheable.
+   *
+   * @param dataSourceAnalysis for the join datasource
+   * @return the optional cache key to be used as part of query cache key
+   * @throws {@link IAE} if this operation is called on a non-join data source
+   */
+  public Optional<byte[]> computeJoinDataSourceCacheKey(
+      final DataSourceAnalysis dataSourceAnalysis
+  )
+  {
+    final List<PreJoinableClause> clauses = dataSourceAnalysis.getPreJoinableClauses();
+    if (clauses.isEmpty()) {
+      throw new IAE("No join clauses to build the cache key for data source [%s]", dataSourceAnalysis.getDataSource());
+    }
+
+    final CacheKeyBuilder keyBuilder;
+    keyBuilder = new CacheKeyBuilder(JOIN_OPERATION);
+    if (dataSourceAnalysis.getJoinBaseTableFilter().isPresent()) {
+      keyBuilder.appendCacheable(dataSourceAnalysis.getJoinBaseTableFilter().get());
+    }
+    for (PreJoinableClause clause : clauses) {
+      Optional<byte[]> bytes = joinableFactory.computeJoinCacheKey(clause.getDataSource(), clause.getCondition());
+      if (!bytes.isPresent()) {
+        // Encountered a data source which didn't support cache yet
+        log.debug("skipping caching for join since [%s] does not support caching", clause.getDataSource());
+        return Optional.empty();
+      }
+      keyBuilder.appendByteArray(bytes.get());
+      keyBuilder.appendString(clause.getCondition().getOriginalExpression());
+      keyBuilder.appendString(clause.getPrefix());
+      keyBuilder.appendString(clause.getJoinType().name());
+    }
+    return Optional.of(keyBuilder.build());
+  }
+
   /**
    * Encapsulates the conversion which happened for a joinable clause.
    * convertedFilter represents the filter which got generated from the conversion.
    * joinClauseFullyConverted represents whether convertedFilter fully encapsulated the joinable clause or not.
    * Encapsulation of the clause means that the filter can replace the whole joinable clause.
-   *
+   * <p>
    * If convertedFilter is null and joinClauseFullyConverted is true, it means that all parts of the joinable clause can
    * be broken into filters. Further, all the clause conditions are on columns where the right side is only null values.
    * In that case, we replace joinable with a FalseFilter.

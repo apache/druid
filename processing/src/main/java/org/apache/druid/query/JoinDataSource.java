@@ -44,9 +44,7 @@ import org.apache.druid.segment.join.HashJoinSegment;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableClause;
-import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
@@ -56,13 +54,11 @@ import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -70,16 +66,16 @@ import java.util.stream.Collectors;
 
 /**
  * Represents a join of two datasources.
- *
+ * <p>
  * Logically, this datasource contains the result of:
- *
+ * <p>
  * (1) prefixing all right-side columns with "rightPrefix"
  * (2) then, joining the left and (prefixed) right sides using the provided type and condition
- *
+ * <p>
  * Any columns from the left-hand side that start with "rightPrefix", and are at least one character longer than
  * the prefix, will be shadowed. It is up to the caller to ensure that no important columns are shadowed by the
  * chosen prefix.
- *
+ * <p>
  * When analyzed by {@link DataSourceAnalysis}, the right-hand side of this datasource
  * will become a {@link PreJoinableClause} object.
  */
@@ -163,9 +159,16 @@ public class JoinDataSource implements DataSource
       final JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
-    return new JoinDataSource(left, right, rightPrefix, conditionAnalysis, joinType, leftFilter, joinableFactoryWrapper);
+    return new JoinDataSource(
+        left,
+        right,
+        rightPrefix,
+        conditionAnalysis,
+        joinType,
+        leftFilter,
+        joinableFactoryWrapper
+    );
   }
-
 
 
   @Override
@@ -266,6 +269,7 @@ public class JoinDataSource implements DataSource
    * Computes a set of column names for left table expressions in join condition which may already have been defined as
    * a virtual column in the virtual column registry. It helps to remove any extraenous virtual columns created and only
    * use the relevant ones.
+   *
    * @return a set of column names which might be virtual columns on left table in join condition
    */
   public Set<String> getVirtualColumnCandidates()
@@ -343,8 +347,10 @@ public class JoinDataSource implements DataSource
           if (clauses.isEmpty()) {
             return Function.identity();
           } else {
-            final JoinableClauses joinableClauses = JoinableClauses.createClauses(clauses,
-                                                                                  joinableFactoryWrapper.getJoinableFactory());
+            final JoinableClauses joinableClauses = JoinableClauses.createClauses(
+                clauses,
+                joinableFactoryWrapper.getJoinableFactory()
+            );
             final JoinFilterRewriteConfig filterRewriteConfig = JoinFilterRewriteConfig.forQuery(query);
 
             // Pick off any join clauses that can be converted into filters.
@@ -399,7 +405,8 @@ public class JoinDataSource implements DataSource
 
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query, AtomicLong cpuTimeAccumulator
+      Query query,
+      AtomicLong cpuTimeAccumulator
   )
   {
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());

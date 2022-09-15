@@ -44,7 +44,7 @@ import java.util.stream.IntStream;
 
 /**
  * Represents an inline datasource, where the rows are embedded within the DataSource object itself.
- *
+ * <p>
  * The rows are backed by an Iterable, which can be lazy or not. Lazy datasources will only be iterated if someone calls
  * {@link #getRows()} and iterates the result, or until someone calls {@link #getRowsAsList()}.
  */
@@ -103,6 +103,55 @@ public class InlineDataSource implements DataSource
   )
   {
     return new InlineDataSource(rows, signature);
+  }
+
+  /**
+   * A very zealous equality checker for "rows" that respects deep equality of arrays, but nevertheless refrains
+   * from materializing things needlessly. Useful for unit tests that want to compare equality of different
+   * InlineDataSource instances.
+   */
+  private static boolean rowsEqual(final Iterable<Object[]> rowsA, final Iterable<Object[]> rowsB)
+  {
+    if (rowsA instanceof List && rowsB instanceof List) {
+      final List<Object[]> listA = (List<Object[]>) rowsA;
+      final List<Object[]> listB = (List<Object[]>) rowsB;
+
+      if (listA.size() != listB.size()) {
+        return false;
+      }
+
+      for (int i = 0; i < listA.size(); i++) {
+        final Object[] rowA = listA.get(i);
+        final Object[] rowB = listB.get(i);
+
+        if (!Arrays.equals(rowA, rowB)) {
+          return false;
+        }
+      }
+
+      return true;
+    } else {
+      return Objects.equals(rowsA, rowsB);
+    }
+  }
+
+  /**
+   * A very zealous hash code computer for "rows" that is compatible with {@link #rowsEqual}.
+   */
+  private static int rowsHashCode(final Iterable<Object[]> rows)
+  {
+    if (rows instanceof List) {
+      final List<Object[]> list = (List<Object[]>) rows;
+
+      int code = 1;
+      for (final Object[] row : list) {
+        code = 31 * code + Arrays.hashCode(row);
+      }
+
+      return code;
+    } else {
+      return Objects.hash(rows);
+    }
   }
 
   @Override
@@ -187,7 +236,8 @@ public class InlineDataSource implements DataSource
 
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query, AtomicLong cpuTimeAcc
+      Query query,
+      AtomicLong cpuTimeAcc
   )
   {
     return Function.identity();
@@ -242,54 +292,5 @@ public class InlineDataSource implements DataSource
     return "InlineDataSource{" +
            "signature=" + signature +
            '}';
-  }
-
-  /**
-   * A very zealous equality checker for "rows" that respects deep equality of arrays, but nevertheless refrains
-   * from materializing things needlessly. Useful for unit tests that want to compare equality of different
-   * InlineDataSource instances.
-   */
-  private static boolean rowsEqual(final Iterable<Object[]> rowsA, final Iterable<Object[]> rowsB)
-  {
-    if (rowsA instanceof List && rowsB instanceof List) {
-      final List<Object[]> listA = (List<Object[]>) rowsA;
-      final List<Object[]> listB = (List<Object[]>) rowsB;
-
-      if (listA.size() != listB.size()) {
-        return false;
-      }
-
-      for (int i = 0; i < listA.size(); i++) {
-        final Object[] rowA = listA.get(i);
-        final Object[] rowB = listB.get(i);
-
-        if (!Arrays.equals(rowA, rowB)) {
-          return false;
-        }
-      }
-
-      return true;
-    } else {
-      return Objects.equals(rowsA, rowsB);
-    }
-  }
-
-  /**
-   * A very zealous hash code computer for "rows" that is compatible with {@link #rowsEqual}.
-   */
-  private static int rowsHashCode(final Iterable<Object[]> rows)
-  {
-    if (rows instanceof List) {
-      final List<Object[]> list = (List<Object[]>) rows;
-
-      int code = 1;
-      for (final Object[] row : list) {
-        code = 31 * code + Arrays.hashCode(row);
-      }
-
-      return code;
-    } else {
-      return Objects.hash(rows);
-    }
   }
 }

@@ -37,7 +37,6 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 
 import java.util.ArrayList;
