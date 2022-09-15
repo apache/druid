@@ -9,6 +9,7 @@
     ],
     "Tutorials": [
       "tutorials/tutorial-batch",
+      "tutorials/tutorial-msq-external-data",
       "tutorials/tutorial-kafka",
       "tutorials/tutorial-batch-hadoop",
       "tutorials/tutorial-query",
@@ -21,7 +22,6 @@
       "tutorials/tutorial-ingestion-spec",
       "tutorials/tutorial-transform-spec",
       "tutorials/tutorial-kerberos-hadoop",
-      "tutorials/tutorial-msq-external-data",
       "tutorials/tutorial-msq-convert-json"
     ],
     "Design": [
