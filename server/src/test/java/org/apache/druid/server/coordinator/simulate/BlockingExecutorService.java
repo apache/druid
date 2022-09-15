@@ -175,7 +175,7 @@ public class BlockingExecutorService implements ExecutorService
   }
 
   @Override
-  public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException
+  public boolean awaitTermination(long timeout, TimeUnit unit)
   {
     return false;
   }

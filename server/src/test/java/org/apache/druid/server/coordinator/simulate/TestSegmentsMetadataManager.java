@@ -40,19 +40,19 @@ import java.util.concurrent.ConcurrentMap;
 
 public class TestSegmentsMetadataManager implements SegmentsMetadataManager
 {
-  private final ConcurrentMap<SegmentId, DataSegment> segments = new ConcurrentHashMap<>();
-  private final ConcurrentMap<SegmentId, DataSegment> usedSegments = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, DataSegment> segments = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, DataSegment> usedSegments = new ConcurrentHashMap<>();
 
   public void addSegment(DataSegment segment)
   {
-    segments.put(segment.getId(), segment);
-    usedSegments.put(segment.getId(), segment);
+    segments.put(segment.getId().toString(), segment);
+    usedSegments.put(segment.getId().toString(), segment);
   }
 
   public void removeSegment(DataSegment segment)
   {
-    segments.remove(segment.getId());
-    usedSegments.remove(segment.getId());
+    segments.remove(segment.getId().toString());
+    usedSegments.remove(segment.getId().toString());
   }
 
   @Override
@@ -94,7 +94,12 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public boolean markSegmentAsUsed(String segmentId)
   {
-    return false;
+    if (!segments.containsKey(segmentId)) {
+      return false;
+    }
+
+    usedSegments.put(segmentId, segments.get(segmentId));
+    return true;
   }
 
   @Override
@@ -114,7 +119,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   {
     int numModifiedSegments = 0;
     for (SegmentId segmentId : segmentIds) {
-      if (usedSegments.remove(segmentId) != null) {
+      if (usedSegments.remove(segmentId.toString()) != null) {
         ++numModifiedSegments;
       }
     }
@@ -124,8 +129,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public boolean markSegmentAsUnused(SegmentId segmentId)
   {
-    usedSegments.remove(segmentId);
-    return true;
+    return usedSegments.remove(segmentId.toString()) != null;
   }
 
   @Nullable
