@@ -139,5 +139,5 @@ The `polygon` bound has the following elements:
 
 |Property|Description|Required|
 |--------|-----------|--------|
-|`abscissa`|Horizontal coordinate for the corners of the polygon|yes|
-|`ordinate`|Vertical coordinate for the corners of the polygon|yes|
+|`abscissa`|Horizontal coordinates for the corners of the polygon|yes|
+|`ordinate`|Vertical coordinates for the corners of the polygon|yes|
