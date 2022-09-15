@@ -1097,7 +1097,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.runner.type`|Choices "local" or "remote". Indicates whether tasks should be run locally or in a distributed environment. Experimental task runner "httpRemote" is also available which is same as "remote" but uses HTTP to interact with Middle Managers instead of ZooKeeper.|local|
+|`druid.indexer.runner.type`|Indicates whether tasks should be run locally using "local" or in a distributed environment using "remote". The recommended option is "httpRemote", which is similar to "remote" but uses HTTP to interact with Middle Managers instead of ZooKeeper.|httpRemote|
 |`druid.indexer.storage.type`|Choices are "local" or "metadata". Indicates whether incoming tasks should be stored locally (in heap) or in metadata storage. "local" is mainly for internal testing while "metadata" is recommended in production because storing incoming tasks in metadata storage allows for tasks to be resumed if the Overlord should fail.|local|
 |`druid.indexer.storage.recentlyFinishedThreshold`|Duration of time to store task results. Default is 24 hours. If you have hundreds of tasks running in a day, consider increasing this threshold.|PT24H|
 |`druid.indexer.tasklock.forceTimeChunkLock`|_**Setting this to false is still experimental**_<br/> If set, all tasks are enforced to use time chunk lock. If not set, each task automatically chooses a lock type to use. This configuration can be overwritten by setting `forceTimeChunkLock` in the [task context](../ingestion/tasks.md#context). See [Task Locking & Priority](../ingestion/tasks.md#context) for more details about locking in tasks.|true|

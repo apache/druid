@@ -300,7 +300,7 @@ public class CliOverlord extends ServerRunnable
                 binder,
                 "druid.indexer.runner.type",
                 Key.get(TaskRunnerFactory.class),
-                Key.get(ForkingTaskRunnerFactory.class)
+                Key.get(HttpRemoteTaskRunnerFactory.class)
             );
             final MapBinder<String, TaskRunnerFactory> biddy = PolyBind.optionBinder(
                 binder,
