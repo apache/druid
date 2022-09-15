@@ -27,7 +27,7 @@ title: "Spatial filters"
 
 Apache Druid supports filtering spatially indexed columns based on an origin and a bound.
 
-This topic explains how to apply spatial filters.
+This topic explains how to ingest and query spatial filters.
 For information on other filters supported by Druid, see [Query filters](../querying/filters.md).
 
 ## Spatial indexing
