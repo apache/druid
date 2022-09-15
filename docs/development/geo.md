@@ -40,7 +40,7 @@ For information on how to use the ingestion spec to configure ingestion, see [In
 For general information on loading data in Druid, see [Ingestion](../ingestion/index.md).
 
 You can provide spatial dimensions in any of the [data formats](../ingestion/data-formats.md) supported by Druid.
-The following example shows spatial dimensions in JSON format:
+The following example shows an ingestion spec with a spatial dimension named `coordinates`, which is constructed from the input fields `lat` and `long`:
 
 ```json
 {
