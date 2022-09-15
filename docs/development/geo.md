@@ -121,8 +121,8 @@ The `rectangular` bound has the following elements:
 
 |Property|Description|Required|
 |--------|-----------|--------|
-|`minCoords`|The list of minimum dimension coordinates in the form [latitude, longitude]|yes|
-|`maxCoords`|The list of maximum dimension coordinates in the form [latitude, longitude]|yes|
+|`minCoords`|The list of minimum dimension coordinates in the form [x, y]|yes|
+|`maxCoords`|The list of maximum dimension coordinates in the form [x, y]|yes|
 
 #### Radius
 
