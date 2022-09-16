@@ -55,7 +55,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedMap;
 
 public class NestedDataColumnSerializer implements GenericColumnSerializer<StructuredData>
@@ -83,7 +82,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       if (writer != null) {
         try {
           ExprEval<?> eval = ExprEval.bestEffortOf(fieldValue);
-          writer.addValue(eval.value());
+          writer.addValue(rowCount, eval.value());
           // serializer doesn't use size estimate
           return 0;
         }
@@ -266,17 +265,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     }
     rawWriter.addValue(NestedDataComplexTypeSerde.INSTANCE.toBytes(data));
     if (data != null) {
-      StructuredDataProcessor.ProcessResults processed = fieldProcessor.processFields(data.getValue());
-      Set<String> set = processed.getLiteralFields();
-      for (String field : fields.keySet()) {
-        if (!set.contains(field)) {
-          fieldWriters.get(field).addValue(null);
-        }
-      }
-    } else {
-      for (String field : fields.keySet()) {
-        fieldWriters.get(field).addValue(null);
-      }
+      fieldProcessor.processFields(data.getValue());
     }
     rowCount++;
   }
@@ -349,7 +338,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     for (Map.Entry<String, NestedLiteralTypeInfo.MutableTypeSet> field : fields.entrySet()) {
       // remove writer so that it can be collected when we are done with it
       GlobalDictionaryEncodedFieldColumnWriter<?> writer = fieldWriters.remove(field.getKey());
-      writer.writeTo(smoosher);
+      writer.writeTo(rowCount, smoosher);
     }
     log.info("Column [%s] serialized successfully with [%d] nested columns.", name, fields.size());
   }
