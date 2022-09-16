@@ -876,7 +876,9 @@ public class WorkerImpl implements Worker
                           .computeIfAbsent(channel.getPartitionNumber(), ignored2 -> channel.getReadableChannel());
 
               if (durableStageStorageEnabled) {
-                // Mark the stuff as __success there
+                // Once the outputs channels have been resolved and are ready for reading, the worker appends the filename
+                // with a special marker flag that allows the readers to recognize the complete file from partially
+                // written ones
                 DurableStorageOutputChannelFactory durableStorageOutputChannelFactory =
                     DurableStorageOutputChannelFactory.createStandardImplementation(
                         task.getControllerTaskId(),
@@ -895,12 +897,6 @@ public class WorkerImpl implements Worker
                       "Unable to suffix the file with %s",
                       DurableStorageOutputChannelFactory.SUCCESSFUL_SUFFIX
                   );
-                }
-                try {
-                  durableStorageOutputChannelFactory.markAsSuccess(channel.getPartitionNumber());
-                }
-                catch (IOException e) {
-                  throw new ISE(e, "Unable to append the output file with %s", DurableStorageOutputChannelFactory.SUCCESSFUL_SUFFIX);
                 }
               }
             }
