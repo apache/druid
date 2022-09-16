@@ -301,7 +301,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
               planner.getTypeFactory(),
               plannerContext.getParameters()
       );
-      final Supplier<QueryResponse> resultsSupplier = () -> {
+      final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> {
         final Enumerable<?> enumerable = theRel.bind(dataContext);
         final Enumerator<?> enumerator = enumerable.enumerator();
         return QueryResponse.withEmptyContext(
@@ -373,7 +373,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       log.error(jpe, "Encountered exception while serializing resources for explain output");
       resourcesString = null;
     }
-    final Supplier<QueryResponse> resultsSupplier = Suppliers.ofInstance(
+    final Supplier<QueryResponse<Object[]>> resultsSupplier = Suppliers.ofInstance(
         QueryResponse.withEmptyContext(
             Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString}))
         )
@@ -499,7 +499,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       final RelDataType rowType = prepareResult.getReturnedRowType();
 
       // Start the query.
-      final Supplier<QueryResponse> resultsSupplier = () -> {
+      final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> {
         // sanity check
         final Set<ResourceAction> readResourceActions =
             plannerContext.getResourceActions()

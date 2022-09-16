@@ -22,26 +22,25 @@ package org.apache.druid.server;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.context.ResponseContext;
 
-public class QueryResponse
+public class QueryResponse<T>
 {
-  public static QueryResponse withEmptyContext(Sequence<?> results)
+  public static <T> QueryResponse<T> withEmptyContext(Sequence<T> results)
   {
-    return new QueryResponse(results, ResponseContext.createEmpty());
+    return new QueryResponse<T>(results, ResponseContext.createEmpty());
   }
 
-  private final Sequence<?> results;
+  private final Sequence<T> results;
   private final ResponseContext responseContext;
 
-  public QueryResponse(final Sequence<?> results, final ResponseContext responseContext)
+  public QueryResponse(final Sequence<T> results, final ResponseContext responseContext)
   {
     this.results = results;
     this.responseContext = responseContext;
   }
 
-  @SuppressWarnings("unchecked")
-  public <T> Sequence<T> getResults()
+  public Sequence<T> getResults()
   {
-    return (Sequence<T>) results;
+    return results;
   }
 
   public ResponseContext getResponseContext()

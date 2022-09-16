@@ -32,12 +32,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class PlannerResult
 {
-  private final Supplier<QueryResponse> resultsSupplier;
+  private final Supplier<QueryResponse<Object[]>> resultsSupplier;
   private final RelDataType rowType;
   private final AtomicBoolean didRun = new AtomicBoolean();
 
   public PlannerResult(
-      final Supplier<QueryResponse> resultsSupplier,
+      final Supplier<QueryResponse<Object[]>> resultsSupplier,
       final RelDataType rowType
   )
   {
@@ -53,7 +53,7 @@ public class PlannerResult
   /**
    * Run the query
    */
-  public QueryResponse run()
+  public QueryResponse<Object[]> run()
   {
     if (!didRun.compareAndSet(false, true)) {
       // Safety check.
