@@ -441,7 +441,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       }
 
       prev = cur;
-      final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, cur));
+      final TaskLock lock = client.submit(
+          new TimeChunkLockTryAcquireAction(
+              getTaskLockHelper() != null ? getTaskLockHelper().getLockTypeToUse() : TaskLockType.EXCLUSIVE,
+              cur
+          )
+      );
       if (lock == null) {
         return false;
       }
