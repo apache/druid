@@ -327,8 +327,9 @@ public class OpenCensusProtobufReaderTest
   }
 
   @Test
-  public void testInvalidProtobuf() throws IOException {
-    byte[] invalidProtobuf = new byte[] { 0x00, 0x01 };
+  public void testInvalidProtobuf() throws IOException
+  {
+    byte[] invalidProtobuf = new byte[] {0x00, 0x01};
     ConsumerRecord consumerRecord = new ConsumerRecord(TOPIC, PARTITION, OFFSET, TS, TSTYPE,
         -1L, -1, -1, null, invalidProtobuf, HEADERS);
     KafkaRecordEntity kafkaRecordEntity = new KafkaRecordEntity(consumerRecord);

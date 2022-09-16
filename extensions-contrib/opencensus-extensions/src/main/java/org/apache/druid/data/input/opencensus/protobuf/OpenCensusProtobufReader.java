@@ -86,11 +86,13 @@ public class OpenCensusProtobufReader implements InputEntityReader
     Supplier<Iterator<InputRow>> supplier = Suppliers.memoize(() -> readAsList().iterator());
     return CloseableIterators.withEmptyBaggage(new Iterator<InputRow>() {
       @Override
-      public boolean hasNext() {
+      public boolean hasNext()
+      {
         return supplier.get().hasNext();
       }
       @Override
-      public InputRow next() {
+      public InputRow next()
+      {
         return supplier.get().next();
       }
     });
