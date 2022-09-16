@@ -107,7 +107,7 @@ public class ITMultiStageQuery
 
     // Submit the task and wait for the datasource to get loaded
     String taskId = msqHelper.submitMsqTask(queryLocal);
-    msqHelper.pollTaskIdForCompletion(taskId, 0);
+    msqHelper.pollTaskIdForCompletion(taskId);
     dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
 
     msqHelper.testQueriesFromFile(QUERY_FILE, datasource);

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -33,10 +32,12 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.AbstractQueryResourceTestClient;
 import org.joda.time.Interval;
+import org.junit.Assert;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQueryWithResults>
@@ -146,23 +147,28 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
     for (QueryResultType queryWithResult : queries) {
       LOG.info("Running Query %s", queryWithResult.getQuery());
       List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
-      if (!QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults(),
-                                              queryWithResult.getFieldsToTest()
-      )) {
+      Optional<String> resultsComparison = QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults(),
+                                                                                             queryWithResult.getFieldsToTest());
+      if (resultsComparison.isPresent()) {
         LOG.error(
             "Failed while executing query %s \n expectedResults: %s \n actualResults : %s",
             queryWithResult.getQuery(),
             jsonMapper.writeValueAsString(queryWithResult.getExpectedResults()),
             jsonMapper.writeValueAsString(result)
         );
-        failed = true;
+        Assert.fail(StringUtils.format(
+            "Results mismatch while executing the query %s.\n"
+            + "Expected results: %s\n"
+            + "Actual results: %s\n"
+            + "Mismatch error: %s\n",
+            queryWithResult.getQuery(),
+            jsonMapper.writeValueAsString(queryWithResult.getExpectedResults()),
+            jsonMapper.writeValueAsString(result),
+            resultsComparison.get()
+        ));
       } else {
         LOG.info("Results Verified for Query %s", queryWithResult.getQuery());
       }
-    }
-
-    if (failed) {
-      throw new ISE("one or more queries failed");
     }
   }
 

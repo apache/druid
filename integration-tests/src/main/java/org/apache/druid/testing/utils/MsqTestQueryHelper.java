@@ -49,13 +49,14 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 /**
  * Helper class to aid out ITs for MSQ.
- * This takes all the clients required to make the necessary calls to the client APIs for MSQ and performs the boiler
- * plate functions for the tests
+ * This takes all the clients required to make the necessary calls to the client APIs for MSQ and performs the boilerplate
+ * functions for the tests
  */
 public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResults>
 {
@@ -134,10 +135,10 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
   }
 
   /**
-   * Polls the overlord API every 1 second and waits for a submitted MSQ task to be completed. Alternatively, one can
-   * specify the maximum time to poll. The method returns the last fetched {@link TaskState} of the task
+   * The method retries till the task with taskId gets completed i.e. {@link TaskState#isComplete()}} returns true and
+   * returns the last fetched state {@link TaskState} of the task
    */
-  public TaskState pollTaskIdForCompletion(String taskId, long maxTimeoutSeconds) throws Exception
+  public TaskState pollTaskIdForCompletion(String taskId) throws Exception
   {
     return RetryUtils.retry(
         () -> {
@@ -195,13 +196,23 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
       yielder = yielder.next(null);
     }
 
-    boolean resultsComparison = QueryResultVerifier.compareResults(
+    Optional<String> resultsComparison = QueryResultVerifier.compareResults(
         actualResults,
         expectedQueryWithResults.getExpectedResults(),
         Collections.emptyList()
     );
-    if (!resultsComparison) {
-      throw new IAE("Expected query result is different from the actual result");
+    if (resultsComparison.isPresent()) {
+      throw new IAE(
+          "Expected query result is different from the actual result.\n"
+          + "Query: %s\n"
+          + "Actual Result: %s\n"
+          + "Expected Result: %s\n"
+          + "Mismatch Error: %s\n",
+          expectedQueryWithResults.getQuery(),
+          actualResults,
+          expectedQueryWithResults.getExpectedResults(),
+          resultsComparison.get()
+      );
     }
   }
 
@@ -223,7 +234,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
       String queryString = queryWithResults.getQuery();
       String queryWithDatasource = StringUtils.replace(queryString, "%%DATASOURCE%%", fullDatasourcePath);
       String taskId = submitMsqTask(queryWithDatasource);
-      pollTaskIdForCompletion(taskId, 0);
+      pollTaskIdForCompletion(taskId);
       compareResults(taskId, queryWithResults);
     }
   }

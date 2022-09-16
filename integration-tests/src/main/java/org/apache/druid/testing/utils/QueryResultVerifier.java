@@ -25,12 +25,13 @@ import org.apache.druid.java.util.common.logger.Logger;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class QueryResultVerifier
 {
   private static final Logger LOG = new Logger(QueryResultVerifier.class);
 
-  public static boolean compareResults(
+  public static Optional<String> compareResults(
       Iterable<Map<String, Object>> actual,
       Iterable<Map<String, Object>> expected,
       List<String> fieldsToTest
@@ -46,31 +47,35 @@ public class QueryResultVerifier
       if (fieldsToTest != null && !fieldsToTest.isEmpty()) {
         for (String field : fieldsToTest) {
           if (!actualRes.get(field).equals(expRes.get(field))) {
-            LOG.info(StringUtils.format(
+            String mismatchMessage = StringUtils.format(
                 "Field [%s] mismatch. Expected: [%s], Actual: [%s]",
                 field,
                 expRes,
                 actualRes
-            ));
-            return false;
+            );
+            return Optional.of(mismatchMessage);
           }
         }
       } else {
         if (!actualRes.equals(expRes)) {
-          LOG.info(StringUtils.format(
+          String mismatchMessage = StringUtils.format(
               "Row mismatch. Expected: [%s], Actual: [%s]",
               expRes,
               actualRes
-          ));
-          return false;
+          );
+          return Optional.of(mismatchMessage);
         }
       }
     }
 
     if (actualIter.hasNext() || expectedIter.hasNext()) {
-      LOG.info("Results size mismatch");
-      return false;
+      String mismatchMessage =
+          StringUtils.format(
+              "Results size mismatch. The actual result contain %s rows than the expected result.",
+              actualIter.hasNext() ? "more" : "less"
+          );
+      return Optional.of(mismatchMessage);
     }
-    return true;
+    return Optional.empty();
   }
 }
