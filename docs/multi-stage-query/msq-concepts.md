@@ -115,7 +115,7 @@ memory available (`-XX:MaxDirectMemorySize`) to at least
 `(druid.processing.numThreads + 1) * druid.processing.buffer.sizeBytes`. Increasing the
 amount of direct memory available beyond the minimum does not speed up processing.
 
-It may be necessary to override one or more memory-related parameters if you run into one of the [known issues around memory usage](./msq-known-issues.md#memory-usage).
+It may be necessary to override one or more memory-related parameters if you run into one of the [known issues](./msq-known-issues.md) around memory usage.
 
 ## Limits
 

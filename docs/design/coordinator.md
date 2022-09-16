@@ -145,10 +145,6 @@ For more information, see [Avoid conflicts with ingestion](../ingestion/automati
 > and their total size exceeds [`inputSegmentSizeBytes`](../configuration/index.md#automatic-compaction-dynamic-configuration).
 > If it finds such segments, it simply skips them.
 
-### The Coordinator console
-
-The Druid Coordinator exposes a web GUI for displaying cluster information and rule configuration. For more details, see [Coordinator console](../operations/management-uis.md#coordinator-consoles).
-
 ### FAQ
 
 1. **Do clients ever contact the Coordinator process?**

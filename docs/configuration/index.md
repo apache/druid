@@ -881,9 +881,10 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 
 #### Dynamic Configuration
 
-The Coordinator has dynamic configuration to change certain behavior on the fly. The Coordinator uses a JSON spec object from the Druid [metadata storage](../dependencies/metadata-storage.md) config table. This object is detailed below:
+The Coordinator has dynamic configuration to change certain behavior on the fly.
 
-It is recommended that you use the Coordinator Console to configure these parameters. However, if you need to do it via HTTP, the JSON object can be submitted to the Coordinator via a POST request at:
+It is recommended that you use the [web console](../operations/druid-console.md) to configure these parameters.
+However, if you need to do it via HTTP, the JSON object can be submitted to the Coordinator via a POST request at:
 
 ```
 http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config
