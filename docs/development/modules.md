@@ -148,7 +148,7 @@ The easiest way of testing the segment killing is marking a segment as not used 
 
 To mark a segment as not used, you need to connect to your metadata storage and update the `used` column to `false` on the segment table rows.
 
-To start a segment killing task, you need to access the web console then select `issue kill task` for the appropiare datasource.
+To start a segment killing task, you need to access the web console then select `issue kill task` for the appropriate datasource.
 
 After the killing task ends, `index.zip` (`partitionNum_index.zip` for HDFS data storage) file should be deleted from the data storage.
 
