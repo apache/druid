@@ -216,6 +216,7 @@ aggregators
 ambari
 analytics
 arrayElement
+assumeNewlineDelimited
 assumeRoleArn
 assumeRoleExternalId
 async
@@ -484,6 +485,7 @@ unsetting
 untrusted
 useFilterCNF
 useJqSyntax
+useJsonNodeReader
 useSSL
 uptime
 uris

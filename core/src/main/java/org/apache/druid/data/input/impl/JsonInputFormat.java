@@ -123,6 +123,18 @@ public class JsonInputFormat extends NestedInputFormat
     return keepNullColumns;
   }
 
+  @JsonProperty
+  public boolean isAssumeNewlineDelimited()
+  {
+    return assumeNewlineDelimited;
+  }
+
+  @JsonProperty
+  public boolean isUseJsonNodeReader()
+  {
+    return useJsonNodeReader;
+  }
+
   @Override
   public boolean isSplittable()
   {
@@ -174,8 +186,7 @@ public class JsonInputFormat extends NestedInputFormat
            && lineSplittable == that.lineSplittable
            && assumeNewlineDelimited == that.assumeNewlineDelimited
            && useJsonNodeReader == that.useJsonNodeReader
-           && Objects.equals(featureSpec, that.featureSpec)
-           && Objects.equals(objectMapper, that.objectMapper);
+           && Objects.equals(featureSpec, that.featureSpec);
   }
 
   @Override
@@ -184,7 +195,6 @@ public class JsonInputFormat extends NestedInputFormat
     return Objects.hash(
         super.hashCode(),
         featureSpec,
-        objectMapper,
         keepNullColumns,
         lineSplittable,
         assumeNewlineDelimited,

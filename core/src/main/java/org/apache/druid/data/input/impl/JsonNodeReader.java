@@ -132,7 +132,7 @@ public class JsonNodeReader extends IntermediateRowParsingReader<JsonNode>
   }
 
   @Override
-  protected List<InputRow> parseInputRows(JsonNode intermediateRow) throws IOException, ParseException
+  protected List<InputRow> parseInputRows(JsonNode intermediateRow) throws ParseException
   {
     if (intermediateRow instanceof ParseExceptionMarkerJsonNode) {
       throw ((ParseExceptionMarkerJsonNode) intermediateRow).getParseException();
