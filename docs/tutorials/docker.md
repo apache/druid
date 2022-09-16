@@ -40,7 +40,7 @@ Each Druid service is configured to use up to 7 GB of memory (6 GB direct memory
 
 For this setup, Docker needs at least 6 GiB of memory available for the Druid cluster. For Docker Desktop on Mac OS, adjust the memory settings in the [Docker Desktop preferences](https://docs.docker.com/desktop/mac/). If you experience a crash with a 137 error code you likely don't have enough memory allocated to Docker.
 
-You can modify the value of `DRUID_SINGLE_NODE_CONF` in the Docker [`environment`](#environment-file) to use different single-server mode. For example to use the Nano-Quickstart: `DRUID_SINGLE_NODE_CONF=nano-quickstart`.
+You can modify the value of `DRUID_SINGLE_NODE_CONF` in the Docker [`environment`](#environment-file) to use different single-server mode. For example to use the nano quickstart: `DRUID_SINGLE_NODE_CONF=nano-quickstart`.
 
 
 ## Getting started
