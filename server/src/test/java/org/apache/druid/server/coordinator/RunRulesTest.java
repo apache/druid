@@ -84,7 +84,7 @@ public class RunRulesTest
                                      .forIntervals(24, Granularities.HOUR)
                                      .startingAt("2012-01-01")
                                      .withNumPartitions(1)
-                                     .eachOfSizeMb(1);
+                                     .eachOfSizeInMb(1);
 
     ruleRunner = new RunRules(new ReplicationThrottler(24, 1, false), coordinator);
   }

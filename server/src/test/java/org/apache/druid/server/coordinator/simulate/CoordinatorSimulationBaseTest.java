@@ -71,6 +71,9 @@ public abstract class CoordinatorSimulationBaseTest
     }
   }
 
+  /**
+   * This must be called to start the simulation and set the correct state.
+   */
   void startSimulation(CoordinatorSimulation simulation)
   {
     this.sim = simulation;
@@ -268,7 +271,7 @@ public abstract class CoordinatorSimulationBaseTest
                           .forIntervals(1, Granularities.DAY)
                           .startingAt("2022-01-01")
                           .withNumPartitions(10)
-                          .eachOfSizeMb(500);
+                          .eachOfSizeInMb(500);
   }
 
   /**

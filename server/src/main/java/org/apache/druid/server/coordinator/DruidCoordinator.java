@@ -483,7 +483,7 @@ public class DruidCoordinator
         );
       }
 
-      final String toLoadQueueSegPath = curator == null ? null :
+      final String toLoadQueueSegPath =
           ZKPaths.makePath(zkPaths.getLoadQueuePath(), toServer.getName(), segmentId.toString());
 
       final LoadPeonCallback loadPeonCallback = () -> {

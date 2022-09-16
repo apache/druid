@@ -47,6 +47,7 @@ import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -93,30 +94,30 @@ public class CoordinatorSimulationBuilder
    * <p>
    * Default: "cost" ({@link CostBalancerStrategyFactory})
    */
-  public CoordinatorSimulationBuilder balancer(BalancerStrategyFactory strategyFactory)
+  public CoordinatorSimulationBuilder withBalancer(BalancerStrategyFactory strategyFactory)
   {
     this.balancerStrategyFactory = strategyFactory;
     return this;
   }
 
-  public CoordinatorSimulationBuilder servers(List<DruidServer> servers)
+  public CoordinatorSimulationBuilder withServers(List<DruidServer> servers)
   {
     this.servers = servers;
     return this;
   }
 
-  public CoordinatorSimulationBuilder servers(DruidServer... servers)
+  public CoordinatorSimulationBuilder withServers(DruidServer... servers)
   {
-    return servers(Arrays.asList(servers));
+    return withServers(Arrays.asList(servers));
   }
 
-  public CoordinatorSimulationBuilder segments(List<DataSegment> segments)
+  public CoordinatorSimulationBuilder withSegments(List<DataSegment> segments)
   {
     this.segments = segments;
     return this;
   }
 
-  public CoordinatorSimulationBuilder rules(String datasource, Rule... rules)
+  public CoordinatorSimulationBuilder withRules(String datasource, Rule... rules)
   {
     this.datasourceRules.put(datasource, Arrays.asList(rules));
     return this;
@@ -127,7 +128,7 @@ public class CoordinatorSimulationBuilder
    * <p>
    * Default: false
    */
-  public CoordinatorSimulationBuilder loadSegmentsImmediately(boolean loadImmediately)
+  public CoordinatorSimulationBuilder withImmediateSegmentLoading(boolean loadImmediately)
   {
     this.loadImmediately = loadImmediately;
     return this;
@@ -139,7 +140,7 @@ public class CoordinatorSimulationBuilder
    * <p>
    * Default: true
    */
-  public CoordinatorSimulationBuilder autoSyncInventory(boolean autoSync)
+  public CoordinatorSimulationBuilder withAutoInventorySync(boolean autoSync)
   {
     this.autoSyncInventory = autoSync;
     return this;
@@ -150,7 +151,7 @@ public class CoordinatorSimulationBuilder
    * <p>
    * Default values: Specified in {@link CoordinatorDynamicConfig.Builder}.
    */
-  public CoordinatorSimulationBuilder dynamicConfig(CoordinatorDynamicConfig dynamicConfig)
+  public CoordinatorSimulationBuilder withDynamicConfig(CoordinatorDynamicConfig dynamicConfig)
   {
     this.dynamicConfig = dynamicConfig;
     return this;
@@ -190,7 +191,7 @@ public class CoordinatorSimulationBuilder
     // Build the coordinator
     final DruidCoordinator coordinator = new DruidCoordinator(
         env.coordinatorConfig,
-        null,
+        new ZkPathsConfig(),
         env.jacksonConfigManager,
         env.segmentManager,
         env.coordinatorInventoryView,
@@ -334,9 +335,6 @@ public class CoordinatorSimulationBuilder
         // Load all the queued segments, handle their responses and execute callbacks
         int loadedSegments = env.executorFactory.historicalLoader.finishAllPendingTasks();
         loadQueueExecutor.finishNextPendingTasks(loadedSegments);
-
-        // TODO: sync should happen here?? or should it not??
-
         env.executorFactory.loadCallbackExecutor.finishAllPendingTasks();
       }
     }

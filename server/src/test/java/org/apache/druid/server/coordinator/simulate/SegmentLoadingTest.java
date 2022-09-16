@@ -24,7 +24,6 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.List;
@@ -54,47 +53,6 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   }
 
   @Test
-  @Ignore("Fix #12881 to enable this test. "
-          + "Current behaviour is to throttle globally and not per tier.")
-  public void testFirstReplicaOnAnyTierIsNotThrottled()
-  {
-    // Disable balancing, infinite load queue size, replicateThrottleLimit = 2
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 2);
-
-    // historicals = 1(in T1) + 1(in T2)
-    // replicas = 1(on T1) + 1(on T2)
-    final CoordinatorSimulation sim =
-        CoordinatorSimulation.builder()
-                             .segments(segments)
-                             .servers(historicalT11, historicalT21)
-                             .dynamicConfig(dynamicConfig)
-                             .rules(
-                                 datasource,
-                                 Load.on(Tier.T1, 1).andOn(Tier.T2, 1).forever()
-                             )
-                             .build();
-
-    // Put the first replica of all the segments on T1
-    segments.forEach(historicalT11::addDataSegment);
-
-    startSimulation(sim);
-    runCoordinatorCycle();
-
-    // Verify that all the required replicas for T2 have been assigned
-    verifyValue(
-        Metric.ASSIGNED_COUNT,
-        filter(DruidMetrics.TIER, Tier.T2),
-        10L
-    );
-
-    loadQueuedSegments();
-
-    verifyDatasourceIsFullyLoaded(datasource);
-    Assert.assertEquals(10, historicalT11.getTotalSegments());
-    Assert.assertEquals(10, historicalT21.getTotalSegments());
-  }
-
-  @Test
   public void testSecondReplicaOnAnyTierIsThrottled()
   {
     // Disable balancing, infinite load queue size, replicateThrottleLimit = 2
@@ -104,10 +62,10 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     // replicas = 2(on T1)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .segments(segments)
-                             .servers(historicalT11, historicalT12)
-                             .rules(datasource, Load.on(Tier.T1, 2).forever())
-                             .dynamicConfig(dynamicConfig)
+                             .withSegments(segments)
+                             .withServers(historicalT11, historicalT12)
+                             .withRules(datasource, Load.on(Tier.T1, 2).forever())
+                             .withDynamicConfig(dynamicConfig)
                              .build();
 
     // Put the first replica of all the segments on histT11
@@ -120,59 +78,12 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     verifyValue(Metric.ASSIGNED_COUNT, 2L);
 
     loadQueuedSegments();
-
     Assert.assertEquals(10, historicalT11.getTotalSegments());
     Assert.assertEquals(2, historicalT12.getTotalSegments());
-  }
-
-  @Test
-  @Ignore("Fix #12881 to enable this test. "
-          + "Current impl allows throttle limit to be violated if loading is fast.")
-  public void testImmediateLoadingDoesNotViolateThrottleLimit()
-  {
-    // Disable balancing, infinite load queue size, replicationThrottleLimit = 2
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 2);
-
-    // historicals = 2(in T1), segments = 10*1day
-    // replicas = 2(on T1), immediate segment loading
-    final CoordinatorSimulation sim =
-        CoordinatorSimulation.builder()
-                             .segments(segments)
-                             .servers(historicalT11, historicalT12)
-                             .rules(datasource, Load.on(Tier.T1, 2).forever())
-                             .loadSegmentsImmediately(true)
-                             .dynamicConfig(dynamicConfig)
-                             .build();
-
-    // Put the first replica of all the segments on histT11
-    segments.forEach(historicalT11::addDataSegment);
-
-    startSimulation(sim);
-    runCoordinatorCycle();
-
-    // Verify that number of replicas assigned is equal to replicationThrottleLimit
-    verifyValue(Metric.ASSIGNED_COUNT, 2L);
-
-    Assert.assertEquals(10, historicalT11.getTotalSegments());
-    Assert.assertEquals(2, historicalT12.getTotalSegments());
-    verifyDatasourceIsFullyLoaded(datasource);
   }
 
   @Test
   public void testLoadingDoesNotOverassignHistorical()
-  {
-    testHistoricalIsNotOverAssigned(false);
-  }
-
-  @Test
-  @Ignore("Fix #12881 to enable this test. "
-          + "Current impl may overassign a historical if loading is fast.")
-  public void testImmediateLoadingDoesNotOverassignHistorical()
-  {
-    testHistoricalIsNotOverAssigned(true);
-  }
-
-  private void testHistoricalIsNotOverAssigned(boolean loadImmediately)
   {
     // historicals = 1(in T1), size 1 GB
     final DruidServer historicalT11 = createHistorical(1, Tier.T1, 1000);
@@ -184,11 +95,11 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     // strategy = cost, replicas = 1(T1)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .segments(segments)
-                             .servers(historicalT11)
-                             .dynamicConfig(dynamicConfig)
-                             .rules(datasource, Load.on(Tier.T1, 1).forever())
-                             .loadSegmentsImmediately(loadImmediately)
+                             .withSegments(segments)
+                             .withServers(historicalT11)
+                             .withDynamicConfig(dynamicConfig)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .withImmediateSegmentLoading(false)
                              .build();
 
     startSimulation(sim);
@@ -196,9 +107,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     // Verify that the number of segments assigned is within the historical capacity
     verifyValue(Metric.ASSIGNED_COUNT, 2L);
-    if (!loadImmediately) {
-      loadQueuedSegments();
-    }
+    loadQueuedSegments();
     Assert.assertEquals(2, historicalT11.getTotalSegments());
   }
 
@@ -220,10 +129,10 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     final DruidServer historicalT32 = createHistorical(2, Tier.T3, 10_000);
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .segments(segments)
-                             .dynamicConfig(dynamicConfig)
-                             .rules(datasource, Load.on(Tier.T2, 2).andOn(Tier.T3, 2).forever())
-                             .servers(
+                             .withSegments(segments)
+                             .withDynamicConfig(dynamicConfig)
+                             .withRules(datasource, Load.on(Tier.T2, 2).andOn(Tier.T3, 2).forever())
+                             .withServers(
                                  historicalT11,
                                  historicalT21,
                                  historicalT22,
@@ -278,50 +187,6 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     Assert.assertEquals(10, totalDroppedInRun3 + totalDroppedInRun4);
     Assert.assertEquals(0, historicalT11.getTotalSegments());
     verifyDatasourceIsFullyLoaded(datasource);
-  }
-
-  @Test
-  @Ignore("Fix #12881 to enable this test. "
-          + "Current impl does not cancel load even if segment is fully replicated.")
-  public void testLoadOfFullyReplicatedSegmentGetsCancelled()
-  {
-    // disable balancing, unlimited load queue, replicationThrottleLimit = 10
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 10);
-
-    // historicals = 2(in T1), replicas = 2(on T1)
-    final CoordinatorSimulation sim =
-        CoordinatorSimulation.builder()
-                             .segments(segments)
-                             .servers(historicalT11, historicalT12)
-                             .dynamicConfig(dynamicConfig)
-                             .rules(datasource, Load.on(Tier.T1, 2).forever())
-                             .build();
-
-    // Put the first replica of all the segments on histT11
-    segments.forEach(historicalT11::addDataSegment);
-
-    startSimulation(sim);
-    runCoordinatorCycle();
-
-    // Verify that there are segments in the load queue
-    verifyValue(Metric.ASSIGNED_COUNT, 10L);
-    verifyValue(
-        Metric.LOAD_QUEUE_COUNT,
-        filter(DruidMetrics.SERVER, historicalT12.getName()),
-        10
-    );
-
-    // Put the second replica of all the segments on histT12
-    segments.forEach(historicalT12::addDataSegment);
-
-    runCoordinatorCycle();
-
-    // Verify that the segments have been cleared from the load queue
-    verifyValue(
-        Metric.LOAD_QUEUE_COUNT,
-        filter(DruidMetrics.SERVER, historicalT12.getName()),
-        0
-    );
   }
 
 }

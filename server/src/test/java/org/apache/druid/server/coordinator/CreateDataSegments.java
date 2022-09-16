@@ -72,7 +72,7 @@ public class CreateDataSegments
     return this;
   }
 
-  public List<DataSegment> eachOfSizeMb(long sizeMb)
+  public List<DataSegment> eachOfSizeInMb(long sizeMb)
   {
     final List<DataSegment> segments = new ArrayList<>();
 

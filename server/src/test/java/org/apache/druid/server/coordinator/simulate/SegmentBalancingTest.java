@@ -24,7 +24,6 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.List;
@@ -51,40 +50,23 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   @Test
   public void testBalancingWithSyncedInventory()
   {
-    testBalancingWithInventorySynced(true);
-  }
-
-  @Test
-  @Ignore("Fix #12881 to enable this test. "
-          + "Current impl requires updated inventory for correct callback behaviour.")
-  public void testBalancingWithUnsyncedInventory()
-  {
-    testBalancingWithInventorySynced(false);
-  }
-
-  private void testBalancingWithInventorySynced(boolean autoSyncInventory)
-  {
     // maxSegmentsToMove = 10, unlimited load queue, replicationThrottleLimit = 10
     CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(10, 0, 10);
 
     // historicals = 2(T1), replicas = 1(T1)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .segments(segments)
-                             .servers(historicalT11, historicalT12)
-                             .rules(datasource, Load.on(Tier.T1, 1).forever())
-                             .dynamicConfig(dynamicConfig)
-                             .autoSyncInventory(autoSyncInventory)
+                             .withSegments(segments)
+                             .withServers(historicalT11, historicalT12)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .withDynamicConfig(dynamicConfig)
+                             .withAutoInventorySync(true)
                              .build();
 
     // Put all the segments on histT11
     segments.forEach(historicalT11::addDataSegment);
 
     startSimulation(sim);
-    if (!autoSyncInventory) {
-      syncInventoryView();
-    }
-
     runCoordinatorCycle();
 
     // Verify that segments have been chosen for balancing
@@ -107,10 +89,10 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     // historicals = 2(in T1), replicas = 1(T1)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .segments(segments)
-                             .servers(historicalT11, historicalT12)
-                             .dynamicConfig(dynamicConfig)
-                             .rules(datasource, Load.on(Tier.T1, 1).forever())
+                             .withSegments(segments)
+                             .withServers(historicalT11, historicalT12)
+                             .withDynamicConfig(dynamicConfig)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
                              .build();
 
     // Put all the segments on histT11
