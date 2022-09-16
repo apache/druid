@@ -43,7 +43,7 @@ import java.util.Map;
  */
 public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
 {
-  static final int INITIAL_MAX_BYTES = 5_120_000;
+  static final int INITIAL_MAX_BYTES = 134_217_728;
   static final int SMALLEST_MAX_BYTES = 5000;
   private static final int MISSING_KEY_WEIGHT = 0;
 

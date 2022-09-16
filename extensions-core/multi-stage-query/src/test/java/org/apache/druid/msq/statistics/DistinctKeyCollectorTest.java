@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -45,9 +44,7 @@ public class DistinctKeyCollectorTest
   private final Comparator<RowKey> comparator = clusterBy.keyComparator();
   private final int numKeys = 500_000;
 
-  @BeforeClass
-  public static void setup()
-  {
+  static {
     NullHandling.initializeForTests();
   }
 

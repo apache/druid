@@ -38,7 +38,7 @@ import java.util.Comparator;
 public class QuantilesSketchKeyCollectorFactory
     implements KeyCollectorFactory<QuantilesSketchKeyCollector, QuantilesSketchKeyCollectorSnapshot>
 {
-  // smallest value with normalized rank error < 0.01%; retain up to ~430k elements
+  // Maximum value of K possible.
   @VisibleForTesting
   static final int SKETCH_INITIAL_K = 1 << 15;
 
