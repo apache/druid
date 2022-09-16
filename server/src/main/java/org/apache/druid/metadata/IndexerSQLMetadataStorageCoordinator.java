@@ -927,12 +927,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             overallMaxId
         );
         return null;
-      } else if (overallMaxId.getShardSpec().getNumCorePartitions()
-                 == SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS) {
+      } else if (committedMaxId != null
+                 && committedMaxId.getShardSpec().getNumCorePartitions()
+                    == SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS) {
         log.warn(
             "Cannot allocate new segment because of unknown core partition size of segment[%s], shardSpec[%s]",
-            overallMaxId,
-            overallMaxId.getShardSpec()
+            committedMaxId,
+            committedMaxId.getShardSpec()
         );
         return null;
       } else {
