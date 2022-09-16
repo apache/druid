@@ -1490,7 +1490,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (canFlatten && !flattenFields.length && parserQueryState.data) {
       suggestedFlattenFields = computeFlattenPathsForData(
         filterMap(parserQueryState.data.rows, r => r.input),
-        'path',
         'ignore-arrays',
       );
     }
