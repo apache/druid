@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -87,12 +88,13 @@ public class JsonInputFormat extends NestedInputFormat
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public Map<String, Boolean> getFeatureSpec()
   {
     return featureSpec;
   }
 
-  @JsonProperty
+  @JsonProperty // No @JsonInclude, since default is variable, so we can't assume false is default
   public boolean isKeepNullColumns()
   {
     return keepNullColumns;

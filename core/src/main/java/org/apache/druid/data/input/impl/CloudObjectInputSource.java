@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Ints;
 import org.apache.commons.io.FilenameUtils;
@@ -83,12 +84,14 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<URI> getUris()
   {
     return uris;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<URI> getPrefixes()
   {
     return prefixes;
@@ -96,6 +99,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<CloudObjectLocation> getObjects()
   {
     return objects;
@@ -103,6 +107,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getFilter()
   {
     return filter;

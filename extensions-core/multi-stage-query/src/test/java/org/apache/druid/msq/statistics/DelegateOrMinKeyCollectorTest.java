@@ -31,7 +31,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Comparator;
@@ -43,9 +42,7 @@ public class DelegateOrMinKeyCollectorTest
   private final RowSignature signature = RowSignature.builder().add("x", ColumnType.LONG).build();
   private final Comparator<RowKey> comparator = clusterBy.keyComparator();
 
-  @BeforeClass
-  public static void setup()
-  {
+  static {
     NullHandling.initializeForTests();
   }
 
