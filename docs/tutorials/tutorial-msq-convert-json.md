@@ -1,7 +1,7 @@
 ---
 id: tutorial-msq-convert-json
-title: "Convert JSON ingestion spec to SQL"
-sidebar_label: "Convert JSON ingestion spec"
+title: "Convert ingestion spec to SQL"
+sidebar_label: "Convert ingestion spec to SQL"
 ---
 
 <!--

@@ -13,6 +13,12 @@
     "lint": "npm run link-lint",
     "spellcheck": "mdspell --en-us --ignore-numbers --report '../docs/**/*.md'"
   },
+  "engines": {
+    "node": ">=12"
+  },
+  "volta": {
+    "node": "12.22.12"
+  },
   "devDependencies": {
     "docusaurus": "^1.14.4",
     "markdown-spellcheck": "^1.3.1",

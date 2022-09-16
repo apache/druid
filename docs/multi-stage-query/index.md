@@ -81,7 +81,7 @@ SELECT
   *
 FROM TABLE(
   EXTERN(
-    '{"type": "http", "uris": ["https://static.imply.io/data/wikipedia.json.gz"]}',
+    '{"type": "http", "uris": ["https://druid.apache.org/data/wikipedia.json.gz"]}',
     '{"type": "json"}',
     '[{"name": "timestamp", "type": "string"}, {"name": "page", "type": "string"}, {"name": "user", "type": "string"}]'
   )
@@ -107,7 +107,7 @@ SELECT
   "user"
 FROM TABLE(
   EXTERN(
-    '{"type": "http", "uris": ["https://static.imply.io/data/wikipedia.json.gz"]}',
+    '{"type": "http", "uris": ["https://druid.apache.org/data/wikipedia.json.gz"]}',
     '{"type": "json"}',
     '[{"name": "timestamp", "type": "string"}, {"name": "page", "type": "string"}, {"name": "user", "type": "string"}]'
   )
@@ -145,7 +145,7 @@ SELECT
   "user"
 FROM TABLE(
   EXTERN(
-    '{"type": "http", "uris": ["https://static.imply.io/data/wikipedia.json.gz"]}',
+    '{"type": "http", "uris": ["https://druid.apache.org/data/wikipedia.json.gz"]}',
     '{"type": "json"}',
     '[{"name": "timestamp", "type": "string"}, {"name": "page", "type": "string"}, {"name": "user", "type": "string"}]'
   )
@@ -166,7 +166,7 @@ SELECT
   "user"
 FROM TABLE(
   EXTERN(
-    '{"type": "http", "uris": ["https://static.imply.io/data/wikipedia.json.gz"]}',
+    '{"type": "http", "uris": ["https://druid.apache.org/data/wikipedia.json.gz"]}',
     '{"type": "json"}',
     '[{"name": "timestamp", "type": "string"}, {"name": "page", "type": "string"}, {"name": "user", "type": "string"}]'
   )
@@ -197,7 +197,7 @@ For more information, see [Primary timestamp](../ingestion/data-model.md#primary
 
 ### PARTITIONED BY
 
-INSERT and REPLACE queries require the PARTITIONED BY clause, which determines how time-based partitioning is done. In Druid, data is split into segments, one or more per time chunk defined by the PARTITIONED BY granularity. A good general rule is to adjust the granularity so that each segment contains about five million rows. Choose a granularity based on your ingestion rate. For example, if you ingest a million rows per day, PARTITION BY DAY is good. If you ingest a million rows an hour, choose PARTITION BY HOUR instead.
+INSERT and REPLACE queries require the PARTITIONED BY clause, which determines how time-based partitioning is done. In Druid, data is split into segments, one or more per time chunk defined by the PARTITIONED BY granularity. A good general rule is to adjust the granularity so that each segment contains about five million rows. Choose a granularity based on your ingestion rate. For example, if you ingest a million rows per day, PARTITIONED BY DAY is good. If you ingest a million rows an hour, choose PARTITION BY HOUR instead.
 
 Using the clause provides the following benefits:
 
@@ -235,7 +235,7 @@ You can use the following ISO 8601 periods for `TIME_FLOOR`:
 
 ### CLUSTERED BY
 
-Data is first divided by the PARTITION BY clause. Data can be further split by the CLUSTERED BY clause. For example, suppose you ingest 100 M rows per hour and use `PARTITIONED BY HOUR` as your time partition. You then divide up the data further by adding `CLUSTERED BY hostName`. The result is segments of about 5 million rows, with like `hostNames` grouped within the same segment.
+Data is first divided by the PARTITIONED BY clause. Data can be further split by the CLUSTERED BY clause. For example, suppose you ingest 100 M rows per hour and use `PARTITIONED BY HOUR` as your time partition. You then divide up the data further by adding `CLUSTERED BY hostName`. The result is segments of about 5 million rows, with like `hostName`s grouped within the same segment.
 
 Using CLUSTERED BY has the following benefits:
 

@@ -1,7 +1,7 @@
 ---
 id: tutorial-msq-external-data
-title: "Connect external data"
-sidebar_label: "Connect external data"
+title: "Loading files with SQL"
+sidebar_label: "Loading files with SQL"
 ---
 
 <!--
