@@ -41,7 +41,7 @@ describe('flatten-spec', () => {
         value: 4,
       },
       {
-        context: { 'host': 'imp', 'do\npic': 'fun' },
+        context: { 'host': 'imp', "do\npi'c": 'fun' },
         tags: ['x', 'y'],
         messages: [
           { metric: 'request/time', value: 4 },
@@ -58,7 +58,7 @@ describe('flatten-spec', () => {
         '$.context.host',
         '$.context.topic',
         "$.context['1pic']",
-        "$.context['do\npic']",
+        "$.context['do\npi\\'c']",
       ]);
     });
   });
