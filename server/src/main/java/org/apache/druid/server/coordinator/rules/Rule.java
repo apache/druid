@@ -107,4 +107,11 @@ public interface Rule
    * See https://github.com/apache/druid/issues/7228
    */
   CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment);
+
+  default void dropAllExpireSegments(
+      final DruidCoordinatorRuntimeParams params,
+      final DataSegment segment
+  )
+  {
+  }
 }

@@ -30,6 +30,7 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
+import org.apache.druid.server.coordinator.rules.ForeverDropRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -128,8 +129,9 @@ public class RunRules implements CoordinatorDuty
       }
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
-      for (Rule rule : rules) {
-        if (rule.appliesTo(segment, now)) {
+      int ruleSize = rules.size();
+      for (int i = 0; i< ruleSize; i++) {
+        if (rules.get(i).appliesTo(segment, now)) {
           if (
               stats.getGlobalStat(
                   "totalNonPrimaryReplicantsLoaded") >= paramsWithReplicationManager.getCoordinatorDynamicConfig()
@@ -142,9 +144,17 @@ public class RunRules implements CoordinatorDuty
             );
             paramsWithReplicationManager.getReplicationManager().setLoadPrimaryReplicantsOnly(true);
           }
-          stats.accumulate(rule.run(coordinator, paramsWithReplicationManager, segment));
+          stats.accumulate(rules.get(i).run(coordinator, paramsWithReplicationManager, segment));
           foundMatchingRule = true;
           break;
+        }else{
+          if(ruleSize == i+1 && rules.get(i+1) instanceof ForeverDropRule){
+            //The last one is dropRule, which modifies the used field
+            continue;
+          }else {
+            //Only delete the replicants of tier, not modify the used field
+            rules.get(i).dropAllExpireSegments(paramsWithReplicationManager,segment);
+          }
         }
       }
 
