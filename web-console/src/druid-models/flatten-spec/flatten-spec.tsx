@@ -64,7 +64,7 @@ export const FLATTEN_FIELD_FIELDS: Field<FlattenField>[] = [
 export type ArrayHandling = 'ignore-arrays' | 'include-arrays';
 
 function escapePathKey(pathKey: string): string {
-  return /^[a-z]\w*$/i.test(pathKey) ? `.${pathKey}` : `['${pathKey.replace(/'/, "\\'")}']`;
+  return /^[a-z]\w*$/i.test(pathKey) ? `.${pathKey}` : `['${pathKey.replace(/'/g, "\\'")}']`;
 }
 
 export function computeFlattenPathsForData(
