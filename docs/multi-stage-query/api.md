@@ -42,15 +42,15 @@ You submit queries to the MSQ task engine using the `POST /druid/v2/sql/task/` e
 
 #### Request
 
-Currently, the MSQ task engine ignores the provided values of `resultFormat`, `header`,
-`typesHeader`, and `sqlTypesHeader`. SQL SELECT queries write out their results into the task report (in the `multiStageQuery.payload.results.results` key) formatted as if `resultFormat` is an `array`.
+The SQL task endpoint accepts [SQL requests in the JSON-over-HTTP form](../querying/sql-api.md#request-body) using the
+`query`, `context`, and `parameters` fields, but ignoring the `resultFormat`, `header`, `typesHeader`, and
+`sqlTypesHeader` fields.
 
-For task queries similar to the [example queries](./examples.md), you need to escape characters such as quotation marks (") if you use something like `curl`. 
-You don't need to escape characters if you use a method that can parse JSON seamlessly, such as Python.
-The Python example in this topic escapes quotation marks although it's not required.
+This endpoint accepts [INSERT](reference.md#insert) and [REPLACE](reference.md#replace) statements.
 
-The following example is the same query that you submit when you complete [Convert a JSON ingestion
-spec](../tutorials/tutorial-msq-convert-spec.md) where you insert data into a table named `wikipedia`. 
+As an experimental feature, this endpoint also accepts SELECT queries. SELECT query results are collected from workers
+by the controller, and written into the [task report](#get-the-report-for-a-query-task) as an array of arrays. The
+behavior and result format of plain SELECT queries (without INSERT or REPLACE) is subject to change.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -199,9 +199,12 @@ A report provides detailed information about a query task, including things like
 
 Keep the following in mind when using the task API to view reports:
 
-- For SELECT queries, the report includes the results. At this time, if you want to view results for SELECT queries, you need to retrieve them as a generic map from the report and extract the results.
-- The task report stores query details for controller tasks.
-- If you encounter `500 Server Error` or `404 Not Found` errors, the task may be in the process of starting up or shutting down.
+- The task report for an entire job is associated with the `query_controller` task. The `query_worker` tasks do not have
+  their own reports; their information is incorporated into the controller report.
+- The task report API may report `404 Not Found` temporarily while the task is in the process of starting up.
+- As an experimental feature, the SQL task engine supports running SELECT queries. SELECT query results are written into
+the `multiStageQuery.payload.results.results` task report key as an array of arrays. The behavior and result format of plain
+SELECT queries (without INSERT or REPLACE) is subject to change.
 
 For an explanation of the fields in a report, see [Report response fields](#report-response-fields).
 
@@ -230,11 +233,8 @@ import requests
 # Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 url = "https://<username>:<password>@<hostname>:<port>/druid/indexer/v1/task/<taskId>/reports"
 
-payload={}
 headers = {}
-
-response = requests.request("GET", url, headers=headers, data=payload)
-
+response = requests.request("GET", url, headers=headers)
 print(response.text)
 ```
 
