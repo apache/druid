@@ -1,6 +1,7 @@
 ---
-id: connect-external-data
-title: Tutorial - Load files with SQL-based ingestion
+id: tutorial-msq-extern
+title: "Tutorial: Load files with SQL-based ingestion"
+sidebar_label: "Load files using SQL 🆕"
 description: How to generate a query that references externally hosted data
 ---
 
@@ -23,7 +24,9 @@ description: How to generate a query that references externally hosted data
   ~ under the License.
   -->
 
-> SQL-based ingestion using the multi-stage query task engine is our recommended solution starting in Druid 24.0. Alternative ingestion solutions, such as native batch and Hadoop-based ingestion systems, will still be supported. We recommend you read all [known issues](./msq-known-issues.md) and test the feature in a development environment before rolling it out in production. Using the multi-stage query task engine with `SELECT` statements that do not write to a datasource is experimental.
+> This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
+> extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
+> ingestion method is right for you.
 
 This tutorial demonstrates how to generate a query that references externally hosted data using the **Connect external data** wizard.
 
@@ -33,7 +36,7 @@ Although you can manually create a query in the UI, you can use Druid to generat
 
 To generate a query from external data, do the following:
 
-1. In the **Query** view of the Druid console, click **Connect external data**.
+1. In the **Query** view of the web console, click **Connect external data**.
 2. On the **Select input type** screen, choose **HTTP(s)** and enter the following value in the **URIs** field: `https://druid.apache.org/data/wikipedia.json.gz`. Leave the HTTP auth username and password blank.
 3. Click **Connect data**.
 4. On the **Parse** screen, you can perform additional actions before you load the data into Druid:
@@ -86,7 +89,7 @@ To generate a query from external data, do the following:
 6. Review and modify the query to meet your needs. For example, you can rename the table or change segment granularity. To partition by something other than ALL, include `TIME_PARSE("timestamp") AS __time` in your SELECT statement.
 
    For example, to specify day-based segment granularity, change the partitioning to `PARTITIONED BY DAY`:
-      
+
      ```sql
       INSERT INTO ...
       SELECT
@@ -96,7 +99,7 @@ To generate a query from external data, do the following:
       PARTITIONED BY DAY
      ```
 
-1. Optionally, select **Preview** to review the data before you ingest it. A preview runs the query without the REPLACE INTO clause and with an added LIMIT. 
+1. Optionally, select **Preview** to review the data before you ingest it. A preview runs the query without the REPLACE INTO clause and with an added LIMIT.
    You can see the general shape of the data before you commit to inserting it.
    The LIMITs make the query run faster but can cause incomplete results.
 2. Click **Run** to launch your query. The query returns information including its duration and the number of rows inserted into the table.
@@ -140,5 +143,5 @@ ORDER BY COUNT(*) DESC
 
 See the following topics to learn more:
 
-* [MSQ task engine query syntax](./index.md#msq-task-engine-query-syntax) for information about the different query components.
-* [Reference](./msq-reference.md) for reference on context parameters, functions, and error codes.
+* [SQL-based ingestion overview](../multi-stage-query/index.md) to further explore SQL-based ingestion.
+* [SQL-based ingestion reference](../multi-stage-query/reference.md) for reference on context parameters, functions, and error codes.

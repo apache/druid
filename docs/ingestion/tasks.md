@@ -45,11 +45,11 @@ the Overlord APIs.
 
 A report containing information about the number of rows ingested, and any parse exceptions that occurred is available for both completed tasks and running tasks.
 
-The reporting feature is supported by the [simple native batch task](../ingestion/native-batch-simple-task.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks.
+The reporting feature is supported by [native batch tasks](../ingestion/native-batch.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks.
 
 ### Completion report
 
-After a task completes, a completion report can be retrieved at:
+After a task completes, if it supports reports, its report can be retrieved at:
 
 ```
 http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/<task-id>/reports
@@ -102,12 +102,6 @@ When a task is running, a live report containing ingestion state, unparseable ev
 
 ```
 http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/<task-id>/reports
-```
-
-and 
-
-```
-http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/<task-id>/liveReports
 ```
 
 An example output is shown below:
@@ -184,7 +178,7 @@ The `errorMsg` field shows a message describing the error that caused a task to 
 
 ### Row stats
 
-The non-parallel [simple native batch task](./native-batch-simple-task.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks support retrieval of row stats while the task is running.
+The [native batch task](./native-batch.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks support retrieval of row stats while the task is running.
 
 The live report can be accessed with a GET to the following URL on a Peon running a task:
 
@@ -356,7 +350,7 @@ You can override the task priority by setting your priority in the task context 
 
 The task context is used for various individual task configuration.
 Specify task context configurations in the `context` field of the ingestion spec.
-When configuring [automatic compaction](../ingestion/automatic-compaction.md), set the task context configurations in `taskContext` rather than in `context`.
+When configuring [automatic compaction](../data-management/automatic-compaction.md), set the task context configurations in `taskContext` rather than in `context`.
 The settings get passed into the `context` field of the compaction tasks issued to MiddleManagers.
 
 The following parameters apply to all task types.
@@ -398,17 +392,9 @@ You can configure retention periods for logs in milliseconds by setting `druid.i
 
 ## All task types
 
-### `index`
-
-See [Native batch ingestion (simple task)](./native-batch-simple-task.md).
-
 ### `index_parallel`
 
 See [Native batch ingestion (parallel task)](native-batch.md).
-
-### `index_sub`
-
-Submitted automatically, on your behalf, by an [`index_parallel`](#index_parallel) task.
 
 ### `index_hadoop`
 
@@ -424,16 +410,12 @@ Submitted automatically, on your behalf, by a
 Submitted automatically, on your behalf, by a
 [Kinesis-based ingestion supervisor](../development/extensions-core/kinesis-ingestion.md).
 
-### `index_realtime`
-
-Submitted automatically, on your behalf, by [Tranquility](tranquility.md). 
-
 ### `compact`
 
 Compaction tasks merge all segments of the given interval. See the documentation on
-[compaction](compaction.md) for details.
+[compaction](../data-management/compaction.md) for details.
 
 ### `kill`
 
 Kill tasks delete all metadata about certain segments and removes them from deep storage.
-See the documentation on [deleting data](../ingestion/data-management.md#delete) for details.
+See the documentation on [deleting data](../data-management/delete.md) for details.

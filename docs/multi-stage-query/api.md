@@ -1,6 +1,6 @@
 ---
 id: api
-title: SQL-based ingestion APIs
+title: SQL-based ingestion and multi-stage query task API
 sidebar_label: API
 ---
 
@@ -23,9 +23,13 @@ sidebar_label: API
   ~ under the License.
   -->
 
-> SQL-based ingestion using the multi-stage query task engine is our recommended solution starting in Druid 24.0. Alternative ingestion solutions, such as native batch and Hadoop-based ingestion systems, will still be supported. We recommend you read all [known issues](./msq-known-issues.md) and test the feature in a development environment before rolling it out in production. Using the multi-stage query task engine with `SELECT` statements that do not write to a datasource is experimental.
+> This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
+> extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
+> ingestion method is right for you.
 
-The **Query** view in the Druid console provides the most stable experience for the multi-stage query task engine (MSQ task engine) and multi-stage query architecture. Use the UI if you do not need a programmatic interface.
+The **Query** view in the web console provides a friendly experience for the multi-stage query task engine (MSQ task
+engine) and multi-stage query architecture. We recommend using the web console if you do not need a programmatic
+interface.
 
 When using the API for the MSQ task engine, the action you want to take determines the endpoint you use:
 
@@ -36,16 +40,17 @@ When using the API for the MSQ task engine, the action you want to take determin
 
 You submit queries to the MSQ task engine using the `POST /druid/v2/sql/task/` endpoint.
 
-### Request
+#### Request
 
 Currently, the MSQ task engine ignores the provided values of `resultFormat`, `header`,
 `typesHeader`, and `sqlTypesHeader`. SQL SELECT queries write out their results into the task report (in the `multiStageQuery.payload.results.results` key) formatted as if `resultFormat` is an `array`.
 
-For task queries similar to the [example queries](./msq-example-queries.md), you need to escape characters such as quotation marks (") if you use something like `curl`. 
+For task queries similar to the [example queries](./examples.md), you need to escape characters such as quotation marks (") if you use something like `curl`. 
 You don't need to escape characters if you use a method that can parse JSON seamlessly, such as Python.
 The Python example in this topic escapes quotation marks although it's not required.
 
-The following example is the same query that you submit when you complete [Convert a JSON ingestion spec](./msq-tutorial-convert-ingest-spec.md) where you insert data into a table named `wikipedia`. 
+The following example is the same query that you submit when you complete [Convert a JSON ingestion
+spec](../tutorials/tutorial-msq-convert-spec.md) where you insert data into a table named `wikipedia`. 
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -106,7 +111,7 @@ print(response.text)
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 
-### Response
+#### Response
 
 ```json
 {
@@ -127,7 +132,7 @@ print(response.text)
 
 You can retrieve status of a query to see if it is still running, completed successfully, failed, or got canceled. 
 
-### Request
+#### Request
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -162,7 +167,7 @@ print(response.text)
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### Response
+#### Response
 
 ```
 {
@@ -200,7 +205,7 @@ Keep the following in mind when using the task API to view reports:
 
 For an explanation of the fields in a report, see [Report response fields](#report-response-fields).
 
-### Request
+#### Request
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -236,7 +241,7 @@ print(response.text)
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### Response
+#### Response
 
 The response shows an example report for a query.
 
@@ -535,7 +540,9 @@ The response shows an example report for a query.
 }
 ```
 
-### Report response fields
+</details>
+
+<a name="report-response-fields"></a>
 
 The following table describes the response fields when you retrieve a report for a MSQ task engine using the `/druid/indexer/v1/task/<taskId>/reports` endpoint:
 
@@ -550,8 +557,8 @@ The following table describes the response fields when you retrieve a report for
 |multiStageQuery.payload.status.errorReport.taskId|The task that reported the error, if known. May be a controller task or a worker task.|
 |multiStageQuery.payload.status.errorReport.host|The hostname and port of the task that reported the error, if known.|
 |multiStageQuery.payload.status.errorReport.stageNumber|The stage number that reported the error, if it happened during execution of a specific stage.|
-|multiStageQuery.payload.status.errorReport.error|Error object. Contains `errorCode` at a minimum, and may contain other fields as described in the [error code table](./msq-concepts.md#error-codes). Always present if there is an error.|
-|multiStageQuery.payload.status.errorReport.error.errorCode|One of the error codes from the [error code table](./msq-concepts.md#error-codes). Always present if there is an error.|
+|multiStageQuery.payload.status.errorReport.error|Error object. Contains `errorCode` at a minimum, and may contain other fields as described in the [error code table](./reference.md#error-codes). Always present if there is an error.|
+|multiStageQuery.payload.status.errorReport.error.errorCode|One of the error codes from the [error code table](./reference.md#error-codes). Always present if there is an error.|
 |multiStageQuery.payload.status.errorReport.error.errorMessage|User-friendly error message. Not always present, even if there is an error.|
 |multiStageQuery.payload.status.errorReport.exceptionStackTrace|Java stack trace in string form, if the error was due to a server-side exception.|
 |multiStageQuery.payload.stages|Array of query stages.|
@@ -571,7 +578,7 @@ The following table describes the response fields when you retrieve a report for
 
 ## Cancel a query task
 
-### Request
+#### Request
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -606,7 +613,7 @@ print(response.text)
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### Response
+#### Response
 
 ```
 {
