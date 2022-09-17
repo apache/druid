@@ -23,9 +23,11 @@ sidebar_label: Examples
   ~ under the License.
   -->
 
-> SQL-based ingestion using the multi-stage query task engine is our recommended solution starting in Druid 24.0. Alternative ingestion solutions, such as native batch and Hadoop-based ingestion systems, will still be supported. We recommend you read all [known issues](./msq-known-issues.md) and test the feature in a development environment before rolling it out in production. Using the multi-stage query task engine with `SELECT` statements that do not write to a datasource is experimental.
+> This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
+> extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
+> ingestion method is right for you.
 
-These example queries show you some of the things you can do when modifying queries for your use case. Copy the example queries into the **Query** view of the Druid console and run them to see what they do.
+These example queries show you some of the things you can do when modifying queries for your use case. Copy the example queries into the **Query** view of the web console and run them to see what they do.
 
 ## INSERT with no rollup
 
@@ -75,7 +77,7 @@ CLUSTERED BY channel
 
 ## INSERT with rollup
 
-This example inserts data into a table named `kttm_data` and performs data rollup. This example implements the recommendations described in [multi-value dimensions](./index.md#multi-value-dimensions).
+This example inserts data into a table named `kttm_data` and performs data rollup. This example implements the recommendations described in [Rollup](./concepts.md#rollup).
 
 <details><summary>Show the query</summary>
 
@@ -472,8 +474,3 @@ LIMIT 1000
 ```
 
 </details>
-
-## Next steps
-
-* [Read Multi-stage queries](./msq-example-queries.md) to learn more about how multi-stage queries work.
-* [Explore the Query view](../operations/druid-console.md) to learn about the UI tools to help you get started.

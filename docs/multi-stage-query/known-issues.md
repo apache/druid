@@ -23,41 +23,46 @@ sidebar_label: Known issues
   ~ under the License.
   -->
 
-> SQL-based ingestion using the multi-stage query task engine is our recommended solution starting in Druid 24.0. 
-> Alternative ingestion solutions, such as native batch and Hadoop-based ingestion systems, will still be supported. 
-> We recommend you read all [known issues](./msq-known-issues.md) and test the feature in a development environment 
-> before rolling it out in production. Using the multi-stage query task engine with `SELECT` statements that do not 
-> write to a datasource is experimental.
+> This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
+> extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
+> ingestion method is right for you.
 
 ## Multi-stage query task runtime
 
 - Fault tolerance is not implemented. If any task fails, the entire query fails.
 
-- SELECT from a Druid datasource does not include unpublished real-time data.
-
-- GROUPING SETS is not implemented. Queries that use GROUPING SETS fail.
-
 - Worker task stage outputs are stored in the working directory given by `druid.indexer.task.baseDir`. Stages that
 generate a large amount of output data may exhaust all available disk space. In this case, the query fails with
-an [UnknownError](./msq-reference.md#error-codes) with a message including "No space left on device".
+an [UnknownError](./reference.md#error-codes) with a message including "No space left on device".
+
+## SELECT
+
+- SELECT from a Druid datasource does not include unpublished real-time data.
+
+- GROUPING SETS and UNION ALL are not implemented. Queries using these features return a
+  [QueryNotSupported](reference.md#error-codes) error.
 
 - The numeric varieties of the EARLIEST and LATEST aggregators do not work properly. Attempting to use the numeric
   varieties of these aggregators lead to an error like
   `java.lang.ClassCastException: class java.lang.Double cannot be cast to class org.apache.druid.collections.SerializablePair`.
   The string varieties, however, do work properly.
 
-##  INSERT and REPLACE
+## INSERT and REPLACE
 
-- INSERT with column lists, like `INSERT INTO tbl (a, b, c) SELECT ...`, is not implemented.
+- INSERT and REPLACE with column lists, like `INSERT INTO tbl (a, b, c) SELECT ...`, is not implemented.
 
-- `INSERT ... SELECT` inserts columns from the SELECT statement based on column name. This differs from SQL standard
-behavior, where columns are inserted based on position.
+- `INSERT ... SELECT` and `REPLACE ... SELECT` insert columns from the SELECT statement based on column name. This
+differs from SQL standard behavior, where columns are inserted based on position.
+
+- INSERT and REPLACE do not support all options available in [ingestion specs](../ingestion/ingestion-spec.md),
+including the `createBitmapIndex` and `multiValueHandling` [dimension](../ingestion/ingestion-spec.md#dimension-objects)
+properties, and the `indexSpec` [`tuningConfig`](../ingestion/ingestion-spec.md#tuningconfig) property.
 
 ## EXTERN
 
 - The [schemaless dimensions](../ingestion/ingestion-spec.md#inclusions-and-exclusions)
   feature is not available. All columns and their types must be specified explicitly using the `signature` parameter
-  of the [EXTERN function](msq-reference.md#extern).
+  of the [EXTERN function](reference.md#extern).
 
 - EXTERN with input sources that match large numbers of files may exhaust available memory on the controller task.
 

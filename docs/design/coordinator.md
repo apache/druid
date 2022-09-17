@@ -83,7 +83,7 @@ To ensure an even distribution of segments across Historical processes in the cl
 
 ### Automatic compaction
 
-The Druid Coordinator manages the [automatic compaction system](../ingestion/automatic-compaction.md).
+The Druid Coordinator manages the [automatic compaction system](../data-management/automatic-compaction.md).
 Each run, the Coordinator compacts segments by merging small segments or splitting a large one. This is useful when the size of your segments is not optimized which may degrade query performance.
 See [Segment size optimization](../operations/segment-optimization.md) for details.
 
@@ -139,7 +139,7 @@ The search start point can be changed by setting `skipOffsetFromLatest`.
 If this is set, this policy will ignore the segments falling into the time chunk of (the end time of the most recent segment - `skipOffsetFromLatest`).
 This is to avoid conflicts between compaction tasks and realtime tasks.
 Note that realtime tasks have a higher priority than compaction tasks by default. Realtime tasks will revoke the locks of compaction tasks if their intervals overlap, resulting in the termination of the compaction task.
-For more information, see [Avoid conflicts with ingestion](../ingestion/automatic-compaction.md#avoid-conflicts-with-ingestion).
+For more information, see [Avoid conflicts with ingestion](../data-management/automatic-compaction.md#avoid-conflicts-with-ingestion).
 
 > This policy currently cannot handle the situation when there are a lot of small segments which have the same interval,
 > and their total size exceeds [`inputSegmentSizeBytes`](../configuration/index.md#automatic-compaction-dynamic-configuration).

@@ -1,6 +1,6 @@
 ---
 id: docker
-title: "Docker"
+title: "Tutorial: Run with Docker"
 ---
 
 <!--
@@ -108,9 +108,9 @@ Note that Druid uses port 8888 for the console. This port is also used by Jupyte
 
 Run `docker-compose up` to launch the cluster with a shell attached, or `docker-compose up -d` to run the cluster in the background.
 
-Once the cluster has started, you can navigate to the [Druid console](../operations/druid-console.md) at [http://localhost:8888](http://localhost:8888). The [Druid router process](../design/router.md) serves the UI.
+Once the cluster has started, you can navigate to the [web console](../operations/web-console.md) at [http://localhost:8888](http://localhost:8888). The [Druid router process](../design/router.md) serves the UI.
 
-![Druid console](../assets/tutorial-quickstart-01.png "Druid console")
+![web console](../assets/tutorial-quickstart-01.png "web console")
 
 It takes a few seconds for all the Druid processes to fully start up. If you open the console immediately after starting the services, you may see some errors that you can safely ignore.
 

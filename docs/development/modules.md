@@ -144,7 +144,7 @@ T00:00:00.000Z/2015-04-14T02:41:09.484Z/0/index.zip] to [/opt/druid/zk_druid/dde
 
 * DataSegmentKiller
 
-The easiest way of testing the segment killing is marking a segment as not used and then starting a killing task in the [web console](../operations/druid-console.md).
+The easiest way of testing the segment killing is marking a segment as not used and then starting a killing task in the [web console](../operations/web-console.md).
 
 To mark a segment as not used, you need to connect to your metadata storage and update the `used` column to `false` on the segment table rows.
 
