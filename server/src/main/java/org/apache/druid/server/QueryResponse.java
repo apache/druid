@@ -24,11 +24,6 @@ import org.apache.druid.query.context.ResponseContext;
 
 public class QueryResponse<T>
 {
-  public static <T> QueryResponse<T> withEmptyContext(Sequence<T> results)
-  {
-    return new QueryResponse<T>(results, ResponseContext.createEmpty());
-  }
-
   private final Sequence<T> results;
   private final ResponseContext responseContext;
 
@@ -36,6 +31,11 @@ public class QueryResponse<T>
   {
     this.results = results;
     this.responseContext = responseContext;
+  }
+
+  public static <T> QueryResponse<T> withEmptyContext(Sequence<T> results)
+  {
+    return new QueryResponse<T>(results, ResponseContext.createEmpty());
   }
 
   public Sequence<T> getResults()

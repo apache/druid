@@ -94,7 +94,7 @@ public class NativeQueryMaker implements QueryMaker
   }
 
   @Override
-  public QueryResponse runQuery(final DruidQuery druidQuery)
+  public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
     final Query<?> query = druidQuery.getQuery();
 
@@ -173,7 +173,8 @@ public class NativeQueryMaker implements QueryMaker
                              .orElseGet(query::getIntervals);
   }
 
-  private <T> QueryResponse execute(Query<T> query, final List<String> newFields, final List<SqlTypeName> newTypes)
+  @SuppressWarnings("unchecked")
+  private <T> QueryResponse<Object[]> execute(Query<?> query, final List<String> newFields, final List<SqlTypeName> newTypes)
   {
     Hook.QUERY_PLAN.run(query);
 
@@ -195,14 +196,19 @@ public class NativeQueryMaker implements QueryMaker
     // otherwise it won't yet be initialized. (A bummer, since ideally, we'd verify the toolChest exists and can do
     // array-based results before starting the query; but in practice we don't expect this to happen since we keep
     // tight control over which query types we generate in the SQL layer. They all support array-based results.)
-    final QueryResponse results = queryLifecycle.runSimple(query, authenticationResult, authorizationResult);
+    final QueryResponse<T> results = queryLifecycle.runSimple((Query<T>) query, authenticationResult, authorizationResult);
 
-
-    return mapResultSequence(results, queryLifecycle.getToolChest(), query, newFields, newTypes);
+    return mapResultSequence(
+        results,
+        (QueryToolChest<T, Query<T>>) queryLifecycle.getToolChest(),
+        (Query<T>) query,
+        newFields,
+        newTypes
+    );
   }
 
-  private <T> QueryResponse mapResultSequence(
-      final QueryResponse results,
+  private <T> QueryResponse<Object[]> mapResultSequence(
+      final QueryResponse<T> results,
       final QueryToolChest<T, Query<T>> toolChest,
       final Query<T> query,
       final List<String> newFields,

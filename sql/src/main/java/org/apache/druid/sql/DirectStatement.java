@@ -176,7 +176,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
    *
    * @return sequence which delivers query results
    */
-  public QueryResponse execute()
+  public QueryResponse<Object[]> execute()
   {
     return plan().run();
   }
