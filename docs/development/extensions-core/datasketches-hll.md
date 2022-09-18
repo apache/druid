@@ -59,10 +59,8 @@ druid.extensions.loadList=["druid-datasketches"]
  }
 ```
 
-The `HLLSketchBuild` aggregator builds a data sketch from the input column specified. If used during ingestion, this
-will result in Druid storing pre-generated HLL Sketch objects in the datasource, rather than the original value itself.
-If used at query time on an existing dimension, the resulting column can be used as an intermediate dimension by the
-post-aggregators below.
+The `HLLSketchBuild` aggregator builds an HLL sketch object from the specified input column. When used during ingestion, Druid stores pre-generated HLL sketch objects in the datasource instead of the raw data from the input column.
+When applied at query time on an existing dimension, you can use the resulting column as an intermediate dimension by the [post-aggregators](#post-aggregators).
 
 > It is very common to use `HLLSketchBuild` in combination with [rollup](../../ingestion/rollup.md) to create a [metric](../../ingestion/ingestion-spec.html#metricsspec) on high-cardinality columns.  In this example, a metric called `userid_hll` is included in the `metricsSpec`.  This will perform a HLL sketch on the `userid` field at ingestion time, allowing for highly-performant approximate `COUNT DISTINCT` query operations and improving roll-up ratios when `userid` is then left out of the `dimensionsSpec`.
 >
@@ -94,10 +92,7 @@ post-aggregators below.
  }
 ```
 
-The `HLLSketchMerge` aggregator can be used to ingest pre-generated sketches from an input dataset. For example, an
-earlier batch processing job can be used to generate the sketches before the data is sent to Druid. To support this
-behavior, the sketches in the input dataset must be serialized to base64-encoded bytes. Then, in the native ingestion
-`MetricsSpec` the `HLLSketchMerge` must be specified for the input column as shown above.
+You can use the `HLLSketchMerge` aggregator to ingest pre-generated sketches from an input dataset. For example, you can set up a batch processing job to generate the sketches before sending the data to Druid. You must serialize the sketches in the input dataset to Base64-encoded bytes. Then, specify `HLLSketchMerge` for the input column in the native ingestion `metricsSpec`.
 
 ### Post Aggregators
 
