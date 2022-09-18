@@ -59,7 +59,7 @@ druid.extensions.loadList=["druid-datasketches"]
  }
 ```
 
-The `HLLSketchBuild` aggregator builds a datasketch from the input column specified. If used during ingestion, this
+The `HLLSketchBuild` aggregator builds a data sketch from the input column specified. If used during ingestion, this
 will result in Druid storing pre-generated HLL Sketch objects in the datasource, rather than the original value itself.
 If used at query time on an existing dimension, the resulting column can be used as an intermediate dimension by the
 post-aggregators below.
@@ -96,7 +96,7 @@ post-aggregators below.
 
 The `HLLSketchMerge` aggregator can be used to ingest pre-generated sketches from an input dataset. For example, an
 earlier batch processing job can be used to generate the sketches before the data is sent to Druid. To support this
-behaviour, the sketches in the input dataset must be serialised to base64-encoded bytes. Then, in the native ingestion
+behavior, the sketches in the input dataset must be serialized to base64-encoded bytes. Then, in the native ingestion
 `MetricsSpec` the `HLLSketchMerge` must be specified for the input column as shown above.
 
 ### Post Aggregators
