@@ -275,10 +275,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       // and LIMIT/OFFSET prevent shuffle statistics from being generated. This is because they always send everything
       // to a single partition, so there are no shuffle statistics.
       throw new ValidationException(
-          StringUtils.format(
-              "INSERT and REPLACE queries cannot have a LIMIT unless %s is \"all\".",
-              DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY
-          )
+          "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\"."
       );
     }
     if (sort != null && sort.offset != null) {

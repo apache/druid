@@ -531,7 +531,7 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(SqlPlanningException.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have a LIMIT unless sqlInsertSegmentGranularity is \"all\""))
+                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
                      ))
                      .verifyPlanningErrors();
   }
