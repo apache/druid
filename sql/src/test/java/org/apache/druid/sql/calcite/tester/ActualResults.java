@@ -668,7 +668,7 @@ public class ActualResults
   private void writeRuns(TestCaseWriter writer) throws IOException
   {
     // Write the runs in order by the expected runs.
-    boolean written[] = new boolean[runs.size()];
+    boolean[] written = new boolean[runs.size()];
     for (QueryRun expectedRun : testCase.runs()) {
       boolean first = true;
       for (int i = 0; i < runs.size(); i++) {

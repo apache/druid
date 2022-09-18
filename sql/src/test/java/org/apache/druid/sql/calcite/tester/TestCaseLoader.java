@@ -43,6 +43,7 @@ import java.util.List;
  */
 public class TestCaseLoader
 {
+  @SuppressWarnings("unused")
   public static TestSetSpec loadResource(String resource)
   {
     try (InputStream is = TestCaseLoader.class.getResourceAsStream(resource)) {
@@ -56,6 +57,7 @@ public class TestCaseLoader
     }
   }
 
+  @SuppressWarnings("unused")
   public static TestSetSpec loadFile(File file)
   {
     try {
@@ -182,6 +184,7 @@ public class TestCaseLoader
       return false;
     }
     while (loadSection(testCase)) {
+      // Empty body
     }
     builder.add(testCase);
     comment = null;
