@@ -313,10 +313,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
     );
 
     LoadPeonCallback loadCallback = loadCallbackCapture.getValue();
-    loadCallback.execute();
+    loadCallback.execute(true);
 
     LoadPeonCallback dropCallback = dropCallbackCapture.getValue();
-    dropCallback.execute();
+    dropCallback.execute(true);
 
     EasyMock.verify(druidServer, druidServer2, loadQueuePeon, serverInventoryView, metadataRuleManager);
     EasyMock.verify(coordinatorRuntimeParams);

@@ -12,7 +12,7 @@ the underlying parts. In that regard, these simulations resemble integration tes
 The primary test target is the `DruidCoordinator` itself. The behaviour of the following entities can also be verified
 using simulations:
 
-- `LoadQueuePeon`, `LoadQueueTaskMaster`
+- `HttpLoadQueuePeon`, `LoadQueueTaskMaster`
 - All coordinator duties, e.g. `BalanceSegments`, `RunRules`
 - All retention rules
 
@@ -55,6 +55,7 @@ of the coordinator in these situations.
 - It should not be used to verify the absolute values of execution latencies, e.g. the time taken to compute the
   balancing cost of a segment. But the relative values can still be a good indicator while doing comparisons between,
   say two balancing strategies.
+- It does not support simulation of the zk-based `CuratorLoadQueuePeon`.
 
 ## Usage
 

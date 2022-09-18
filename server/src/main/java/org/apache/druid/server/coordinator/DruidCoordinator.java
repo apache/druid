@@ -440,7 +440,7 @@ public class DruidCoordinator
     if (segment == null) {
       log.makeAlert(new IAE("Can not move null DataSegment"), "Exception moving null segment").emit();
       if (callback != null) {
-        callback.execute();
+        callback.execute(false);
       }
       throw new ISE("Cannot move null DataSegment");
     }
@@ -486,10 +486,10 @@ public class DruidCoordinator
       final String toLoadQueueSegPath =
           ZKPaths.makePath(zkPaths.getLoadQueuePath(), toServer.getName(), segmentId.toString());
 
-      final LoadPeonCallback loadPeonCallback = () -> {
+      final LoadPeonCallback loadPeonCallback = success -> {
         dropPeon.unmarkSegmentToDrop(segmentToLoad);
         if (callback != null) {
-          callback.execute();
+          callback.execute(success);
         }
       };
 
@@ -499,14 +499,24 @@ public class DruidCoordinator
       try {
         loadPeon.loadSegment(
             segmentToLoad,
-            () -> {
+            success -> {
               try {
-                if (serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment) &&
-                    (curator == null || curator.checkExists().forPath(toLoadQueueSegPath) == null) &&
-                    !dropPeon.getSegmentsToDrop().contains(segment)) {
+                // Drop segment only if:
+                // (1) segment load was successful on toServer
+                // AND (2) segment not already queued for drop on fromServer
+                // AND (3a) loading is http-based
+                //     OR (3b) inventory shows segment loaded on toServer
+
+                // Do not check the inventory with http loading as the HTTP
+                // response is enough to determine load success or failure
+                if (success
+                    && !dropPeon.getSegmentsToDrop().contains(segment)
+                    && (taskMaster.isHttpLoading()
+                     || serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment))) {
+                  // TODO: is the checkExists still needed?
                   dropPeon.dropSegment(segment, loadPeonCallback);
                 } else {
-                  loadPeonCallback.execute();
+                  loadPeonCallback.execute(success);
                 }
               }
               catch (Exception e) {
@@ -523,7 +533,7 @@ public class DruidCoordinator
     catch (Exception e) {
       log.makeAlert(e, "Exception moving segment %s", segmentId).emit();
       if (callback != null) {
-        callback.execute();
+        callback.execute(false);
       }
     }
   }

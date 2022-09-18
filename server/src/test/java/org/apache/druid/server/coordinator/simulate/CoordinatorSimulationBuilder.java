@@ -22,6 +22,8 @@ package org.apache.druid.server.coordinator.simulate;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.imps.CuratorFrameworkImpl;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.ZkEnablementConfig;
@@ -196,7 +198,7 @@ public class CoordinatorSimulationBuilder
         env.segmentManager,
         env.coordinatorInventoryView,
         env.ruleManager,
-        () -> null,
+        () -> EasyMock.niceMock(CuratorFramework.class),
         env.serviceEmitter,
         env.executorFactory,
         null,
