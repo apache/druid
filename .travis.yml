@@ -394,7 +394,7 @@ jobs:
 
     - name: "docs"
       stage: Tests - phase 1
-      install: ./check_test_suite.py && travis_terminate 0 || (cd website && npm install)
+      install: ./check_test_suite.py && travis_terminate 0 || (cd website && nvm install 12.22.12 && npm install)
       script: |-
         (cd website && npm run lint && npm run spellcheck) || { echo "
 

@@ -20,9 +20,10 @@ import { Callout } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { ClickToCopy } from '../../../components';
+import { ClickToCopy, ExternalLink } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
 import { Execution } from '../../../druid-models';
+import { getLink } from '../../../links';
 import { downloadQueryDetailArchive } from '../../../utils';
 
 import './execution-error-pane.scss';
@@ -43,7 +44,12 @@ export const ExecutionErrorPane = React.memo(function ExecutionErrorPane(
   return (
     <Callout className="execution-error-pane" icon={IconNames.ERROR}>
       <p className="error-message-text">
-        {error.errorCode && <>{`${error.errorCode}: `}</>}
+        {error.errorCode && (
+          <>
+            <ExternalLink href={getLink('DOCS_MSQ_ERROR')}>{error.errorCode}</ExternalLink>
+            {': '}
+          </>
+        )}
         {error.errorMessage || (exceptionStackTrace || '').split('\n')[0]}
         {exceptionStackTrace && (
           <>

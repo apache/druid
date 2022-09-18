@@ -82,7 +82,7 @@ function jsonValue(ex: SqlExpression, path: string): SqlExpression {
 }
 
 function getJsonPaths(jsons: Record<string, any>[]): string[] {
-  return ['$.'].concat(computeFlattenExprsForData(jsons, 'path', 'include-arrays', true));
+  return ['$.'].concat(computeFlattenExprsForData(jsons, 'include-arrays', true));
 }
 
 function isComparable(x: unknown): boolean {
