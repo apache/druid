@@ -145,7 +145,7 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
     );
     Optional<String> maybeFileName = fileNames.stream()
                                               .filter(fileName -> fileName.endsWith(DurableStorageOutputChannelFactory.SUCCESSFUL_FILE_SUFFIX))
-                                              .findAny();
+                                              .min(String::compareTo);
     if (!maybeFileName.isPresent()) {
       return null;
     }
