@@ -144,7 +144,7 @@ import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
 import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
-import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
+import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
@@ -1297,7 +1297,7 @@ public class ControllerImpl implements Controller
   private void cleanUpDurableStorageIfNeeded()
   {
     if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().getContext())) {
-      final String controllerDirName = DurableStorageOutputChannelFactory.getControllerDirectory(task.getId());
+      final String controllerDirName = DurableStorageUtils.getControllerDirectory(task.getId());
       try {
         // Delete all temporary files as a failsafe
         MSQTasks.makeStorageConnector(context.injector()).deleteRecursively(controllerDirName);

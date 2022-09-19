@@ -99,6 +99,7 @@ import org.apache.druid.msq.kernel.worker.WorkerStagePhase;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
+import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
@@ -695,7 +696,7 @@ public class WorkerImpl implements Worker
       // Therefore, the logic for cleaning the stage output in case of a worker/machine crash has to be external.
       // We currently take care of this in the controller.
       if (durableStageStorageEnabled) {
-        final String folderName = DurableStorageOutputChannelFactory.getTaskIdOutputsFolderName2(
+        final String folderName = DurableStorageUtils.getTaskIdOutputsFolderName(
             task.getControllerTaskId(),
             stageId.getStageNumber(),
             task.getWorkerNumber(),
@@ -896,7 +897,7 @@ public class WorkerImpl implements Worker
                 throw new ISE(
                     e,
                     "Unable to suffix the file with %s",
-                    DurableStorageOutputChannelFactory.SUCCESS_MARKER_FILENAME
+                    DurableStorageUtils.SUCCESS_MARKER_FILENAME
                 );
               }
             }

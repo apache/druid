@@ -126,6 +126,12 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
     }
   }
 
+  /**
+   * Given an input worker number, stage number and the partition number, this method figures out the exact location
+   * where the outputs would be present in the durable storage and returns the complete path or throws an exception
+   * if no such file exists in the durable storage
+   * More information at {@link DurableStorageOutputChannelFactory#createSuccessFile(String)}
+   */
   public String findSuccessfulPartitionOutput(
       final String controllerTaskId,
       final int workerNo,
@@ -133,7 +139,7 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
       final int partitionNumber
   ) throws IOException
   {
-    String successfulFilePath = DurableStorageOutputChannelFactory.getSuccessFilePath(
+    String successfulFilePath = DurableStorageUtils.getSuccessFilePath(
         controllerTaskId,
         stageNumber,
         workerNo
@@ -159,7 +165,7 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
       throw new ISE("Unable to read the task id from the file: [%s]", successfulFilePath);
     }
 
-    return DurableStorageOutputChannelFactory.getPartitionOutputsFileNameForPartition2(
+    return DurableStorageUtils.getPartitionOutputsFileNameForPartition(
         controllerTaskId,
         stageNumber,
         workerNo,

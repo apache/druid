@@ -20,7 +20,6 @@
 package org.apache.druid.msq.shuffle;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameFileChannel;
@@ -28,7 +27,6 @@ import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.StorageConnector;
 
@@ -40,8 +38,6 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
 {
 
   private static final Logger LOG = new Logger(DurableStorageOutputChannelFactory.class);
-
-  public static final String SUCCESS_MARKER_FILENAME = "__success";
 
   private final String controllerTaskId;
   private final int workerNumber;
@@ -93,7 +89,7 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
   @Override
   public OutputChannel openChannel(int partitionNumber) throws IOException
   {
-    final String fileName = getPartitionOutputsFileNameForPartition2(
+    final String fileName = DurableStorageUtils.getPartitionOutputsFileNameForPartition(
         controllerTaskId,
         stageNumber,
         workerNumber,
@@ -119,7 +115,7 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
   @Override
   public OutputChannel openNilChannel(int partitionNumber)
   {
-    final String fileName = getPartitionOutputsFileNameForPartition2(
+    final String fileName = DurableStorageUtils.getPartitionOutputsFileNameForPartition(
         controllerTaskId,
         stageNumber,
         workerNumber,
@@ -144,13 +140,14 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
   }
 
   /**
-   * Creates another file with __success appended at the end which signifies that the output has been written succesfully
-   * to the original file. Rename operation is not very quick in cloud storage like S3 due to which this alternative
+   * Creates a file with name __success and adds the worker's id which has successfully written its outputs. While reading
+   * this file can be used to find out the worker which has written its outputs completely.
+   * Rename operation is not very quick in cloud storage like S3 due to which this alternative
    * route has been taken
    */
   public void createSuccessFile(String taskId) throws IOException
   {
-    String fileName = getSuccessFilePath(controllerTaskId, stageNumber, workerNumber);
+    String fileName = DurableStorageUtils.getSuccessFilePath(controllerTaskId, stageNumber, workerNumber);
     if (storageConnector.pathExists(fileName)) {
       LOG.warn("Path [%s] already exists. Won't attempt to rewrite on top of it.", fileName);
       return;
@@ -158,68 +155,5 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
     PrintStream stream = new PrintStream(storageConnector.write(fileName));
     stream.print(taskId); // Add some dummy content in the file
     stream.close();
-  }
-
-  public static String getControllerDirectory(final String controllerTaskId)
-  {
-    return StringUtils.format("controller_%s", IdUtils.validateId("controller task ID", controllerTaskId));
-  }
-
-  public static String getSuccessFilePath(
-      final String controllerTaskId,
-      final int stageNumber,
-      final int workerNumber
-  )
-  {
-    String folderName = getWorkerOutputFolderName2(
-        controllerTaskId,
-        stageNumber,
-        workerNumber
-    );
-    String fileName = StringUtils.format("%s/%s", folderName, SUCCESS_MARKER_FILENAME);
-    return fileName;
-  }
-
-  public static String getWorkerOutputFolderName2(
-      final String controllerTaskId,
-      final int stageNumber,
-      final int workerNumber
-  )
-  {
-    return StringUtils.format(
-        "%s/stage_%d/worker_%d",
-        getControllerDirectory(controllerTaskId),
-        stageNumber,
-        workerNumber
-    );
-  }
-
-  public static String getTaskIdOutputsFolderName2(
-      final String controllerTaskId,
-      final int stageNumber,
-      final int workerNumber,
-      final String taskId
-  )
-  {
-    return StringUtils.format(
-        "%s/taskId_%s",
-        getWorkerOutputFolderName2(controllerTaskId, stageNumber, workerNumber),
-        taskId
-    );
-  }
-
-  public static String getPartitionOutputsFileNameForPartition2(
-      final String controllerTaskId,
-      final int stageNumber,
-      final int workerNumber,
-      final String taskId,
-      final int partitionNumber
-  )
-  {
-    return StringUtils.format(
-        "%s/part_%d",
-        getTaskIdOutputsFolderName2(controllerTaskId, stageNumber, workerNumber, taskId),
-        partitionNumber
-    );
   }
 }
