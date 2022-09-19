@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;

@@ -33,6 +33,9 @@ import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.Either;
@@ -48,9 +51,6 @@ import org.apache.druid.java.util.http.client.response.ObjectOrErrorResponseHand
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -204,7 +204,7 @@ public abstract class IndexTaskClient implements AutoCloseable
 
   protected boolean isSuccess(StringFullResponseHolder responseHolder)
   {
-    return responseHolder.getStatus().getCode() / 100 == 2;
+    return responseHolder.getStatus().code() / 100 == 2;
   }
 
   @VisibleForTesting
@@ -359,6 +359,7 @@ public abstract class IndexTaskClient implements AutoCloseable
 
         if (response.isValue()) {
           return response.valueOrThrow();
+
         } else {
           final StringBuilder exceptionMessage = new StringBuilder();
           final HttpResponseStatus httpResponseStatus = response.error().getStatus();
@@ -375,7 +376,7 @@ public abstract class IndexTaskClient implements AutoCloseable
             exceptionMessage.append("; first 1KB of body: ").append(choppedMessage);
           }
 
-          if (httpResponseStatus.getCode() == 400) {
+          if (httpResponseStatus.code() == 400) {
             // don't bother retrying if it's a bad request
             throw new IAE(exceptionMessage.toString());
           } else {
@@ -466,7 +467,7 @@ public abstract class IndexTaskClient implements AutoCloseable
         new ObjectOrErrorResponseHandler<>(responseHandler);
 
     try {
-      log.debug("HTTP %s: %s", request.getMethod().getName(), request.getUrl().toString());
+      log.debug("HTTP %s: %s", request.getMethod().name(), request.getUrl().toString());
       return httpClient.go(request, wrappedHandler, httpTimeout).get();
     }
     catch (Exception e) {

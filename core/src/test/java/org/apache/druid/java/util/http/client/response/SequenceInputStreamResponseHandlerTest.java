@@ -19,12 +19,15 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.buffer.BigEndianHeapChannelBuffer;
-import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledHeapByteBuf;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -83,25 +86,23 @@ public class SequenceInputStreamResponseHandlerTest
 
     SequenceInputStreamResponseHandler responseHandler = new SequenceInputStreamResponseHandler();
     final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    response.setChunked(true);
+
     ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response, null);
     final int failAt = RANDOM.nextInt(allBytes.length);
     long chunkNum = 0;
     while (it.hasNext()) {
-      final DefaultHttpChunk chunk = new DefaultHttpChunk(
-          new BigEndianHeapChannelBuffer(it.next())
-          {
-            @Override
-            public void getBytes(int index, byte[] dst, int dstIndex, int length)
-            {
-              if (dstIndex + length >= failAt) {
-                throw new TesterException();
-              }
-              super.getBytes(index, dst, dstIndex, length);
-            }
+      final byte[] bytes = it.next();
+      ByteBuf data = new UnpooledHeapByteBuf(ByteBufAllocator.DEFAULT, bytes, bytes.length) {
+        @Override
+        public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length)
+        {
+          if (dstIndex + length >= failAt) {
+            throw new TesterException();
           }
-      );
-      clientResponse = responseHandler.handleChunk(clientResponse, chunk, ++chunkNum);
+          return super.getBytes(index, dst, dstIndex, length);
+        }
+      };
+      clientResponse = responseHandler.handleChunk(clientResponse, new DefaultHttpContent(data), ++chunkNum);
     }
     clientResponse = responseHandler.done(clientResponse);
 
@@ -119,21 +120,20 @@ public class SequenceInputStreamResponseHandlerTest
   {
     SequenceInputStreamResponseHandler responseHandler = new SequenceInputStreamResponseHandler();
     final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    response.setChunked(false);
-    response.setContent(
-        new BigEndianHeapChannelBuffer(allBytes)
+
+    ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response, null);
+    clientResponse = responseHandler.handleChunk(clientResponse, new DefaultHttpContent(
+        new UnpooledHeapByteBuf(ByteBufAllocator.DEFAULT, allBytes, allBytes.length)
         {
           @Override
-          public void getBytes(int index, byte[] dst, int dstIndex, int length)
+          public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length)
           {
             if (dstIndex + length >= allBytes.length) {
               throw new TesterException();
             }
-            super.getBytes(index, dst, dstIndex, length);
+            return super.getBytes(index, dst, dstIndex, length);
           }
-        }
-    );
-    ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response, null);
+        }), 0);
     clientResponse = responseHandler.done(clientResponse);
 
     final InputStream stream = clientResponse.getObj();
@@ -148,11 +148,11 @@ public class SequenceInputStreamResponseHandlerTest
 
     SequenceInputStreamResponseHandler responseHandler = new SequenceInputStreamResponseHandler();
     final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    response.setChunked(true);
+
     ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response, null);
     long chunkNum = 0;
     while (it.hasNext()) {
-      final DefaultHttpChunk chunk = new DefaultHttpChunk(new BigEndianHeapChannelBuffer(it.next()));
+      final DefaultHttpContent chunk = new DefaultHttpContent(Unpooled.wrappedBuffer(it.next()));
       clientResponse = responseHandler.handleChunk(clientResponse, chunk, ++chunkNum);
     }
     clientResponse = responseHandler.done(clientResponse);
@@ -179,11 +179,10 @@ public class SequenceInputStreamResponseHandlerTest
 
     SequenceInputStreamResponseHandler responseHandler = new SequenceInputStreamResponseHandler();
     final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    response.setChunked(true);
     ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response, null);
     long chunkNum = 0;
     while (it.hasNext()) {
-      final DefaultHttpChunk chunk = new DefaultHttpChunk(new BigEndianHeapChannelBuffer(it.next()));
+      final DefaultHttpContent chunk = new DefaultHttpContent(Unpooled.wrappedBuffer(it.next()));
       clientResponse = responseHandler.handleChunk(clientResponse, chunk, ++chunkNum);
     }
     clientResponse = responseHandler.done(clientResponse);
@@ -207,9 +206,10 @@ public class SequenceInputStreamResponseHandlerTest
   {
     SequenceInputStreamResponseHandler responseHandler = new SequenceInputStreamResponseHandler();
     final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    response.setChunked(false);
-    response.setContent(new BigEndianHeapChannelBuffer(allBytes));
+
     ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response, null);
+    clientResponse = responseHandler.handleChunk(clientResponse,
+                                                 new DefaultHttpContent(Unpooled.wrappedBuffer(allBytes)), 0);
     clientResponse = responseHandler.done(clientResponse);
 
     final InputStream stream = clientResponse.getObj();

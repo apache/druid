@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 
 /**
  * This is a clone of {@link InputStreamResponseHandler} except that it retains HTTP status/response object in the
@@ -33,18 +33,17 @@ public class InputStreamFullResponseHandler implements HttpResponseHandler<Input
   public ClientResponse<InputStreamFullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
     InputStreamFullResponseHolder holder = new InputStreamFullResponseHolder(response);
-    holder.addChunk(getContentBytes(response.getContent()));
     return ClientResponse.finished(holder);
   }
 
   @Override
   public ClientResponse<InputStreamFullResponseHolder> handleChunk(
       ClientResponse<InputStreamFullResponseHolder> clientResponse,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   )
   {
-    clientResponse.getObj().addChunk(getContentBytes(chunk.getContent()));
+    clientResponse.getObj().addChunk(getContentBytes(chunk.content()));
     return clientResponse;
   }
 
@@ -65,7 +64,7 @@ public class InputStreamFullResponseHandler implements HttpResponseHandler<Input
     clientResponse.getObj().exceptionCaught(e);
   }
 
-  private byte[] getContentBytes(ChannelBuffer content)
+  private byte[] getContentBytes(ByteBuf content)
   {
     byte[] contentBytes = new byte[content.readableBytes()];
     content.readBytes(contentBytes);

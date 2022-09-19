@@ -33,6 +33,7 @@ import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.linq4j.DefaultEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
@@ -83,7 +84,6 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
@@ -1064,12 +1064,12 @@ public class SystemSchema extends AbstractSchema
           new InputStreamFullResponseHandler()
       );
 
-      if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
+      if (responseHolder.getStatus().code() != HttpServletResponse.SC_OK) {
         throw new RE(
             "Failed to talk to leader node at [%s]. Error code[%d], description[%s].",
             query,
-            responseHolder.getStatus().getCode(),
-            responseHolder.getStatus().getReasonPhrase()
+            responseHolder.getStatus().code(),
+            responseHolder.getStatus().reasonPhrase()
         );
       }
     }

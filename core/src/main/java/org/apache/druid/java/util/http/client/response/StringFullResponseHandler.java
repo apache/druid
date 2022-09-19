@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 
 import java.nio.charset.Charset;
 
@@ -41,13 +41,13 @@ public class StringFullResponseHandler
   @Override
   public ClientResponse<StringFullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    return ClientResponse.unfinished(new StringFullResponseHolder(response, charset));
+    return ClientResponse.unfinished(new StringFullResponseHolder(response));
   }
 
   @Override
   public ClientResponse<StringFullResponseHolder> handleChunk(
       ClientResponse<StringFullResponseHolder> response,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   )
   {
@@ -57,7 +57,7 @@ public class StringFullResponseHandler
       return ClientResponse.finished(null);
     }
 
-    holder.addChunk(chunk.getContent().toString(charset));
+    holder.addChunk(chunk.content().toString(charset));
     return response;
   }
 

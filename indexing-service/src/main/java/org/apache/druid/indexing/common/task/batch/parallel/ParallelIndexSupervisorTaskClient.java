@@ -21,13 +21,13 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -66,7 +66,7 @@ public class ParallelIndexSupervisorTaskClient extends IndexTaskClient
       throw new ISE(
           "task[%s] failed to allocate a new segment identifier with the HTTP code[%d] and content[%s]",
           supervisorTaskId,
-          response.getStatus().getCode(),
+          response.getStatus().code(),
           response.getContent()
       );
     } else {
@@ -101,7 +101,7 @@ public class ParallelIndexSupervisorTaskClient extends IndexTaskClient
       throw new ISE(
           "task[%s] failed to allocate a new segment identifier with the HTTP code[%d] and content[%s]",
           supervisorTaskId,
-          response.getStatus().getCode(),
+          response.getStatus().code(),
           response.getContent()
       );
     } else {
@@ -129,7 +129,7 @@ public class ParallelIndexSupervisorTaskClient extends IndexTaskClient
         throw new ISE(
             "Failed to send taskReports to task[%s] with the HTTP code [%d]",
             supervisorTaskId,
-            response.getStatus().getCode()
+            response.getStatus().code()
         );
       }
     }

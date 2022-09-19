@@ -132,6 +132,10 @@ public class AppendableByteArrayInputStream extends InputStream
     while (numToScan > numScanned) {
       if (currIndex >= curr.length) {
         synchronized (singleByteReaderDoer) {
+          if (throwable != null) {
+            throw new IOException(throwable);
+          }
+
           if (bytes.isEmpty()) {
             if (done) {
               break;
