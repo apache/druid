@@ -25,6 +25,7 @@ import org.apache.druid.frame.channel.ReadableInputStreamFrameChannel;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.indexing.InputChannelFactory;
@@ -135,22 +136,26 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
       final int partitionNumber
   ) throws IOException
   {
-    List<String> fileNames = storageConnector.lsFiles(
-        DurableStorageOutputChannelFactory.getPartitionOutputsFolderName(
-            controllerTaskId,
-            workerNo,
-            stageNumber,
-            partitionNumber
-        )
+    // ls will return only the file name for the folder
+    String outputFolderName = DurableStorageOutputChannelFactory.getPartitionOutputsFolderName(
+        controllerTaskId,
+        workerNo,
+        stageNumber,
+        partitionNumber
     );
+    List<String> fileNames = storageConnector.lsFiles(outputFolderName);
     Optional<String> maybeFileName = fileNames.stream()
                                               .filter(fileName -> fileName.endsWith(DurableStorageOutputChannelFactory.SUCCESSFUL_FILE_SUFFIX))
                                               .min(String::compareTo);
     if (!maybeFileName.isPresent()) {
       return null;
     }
-    String fileName = maybeFileName.get();
+    String markerFileName = maybeFileName.get();
     // Following will remove the trailing marker and get the file with the actual contents
-    return fileName.substring(0, fileName.lastIndexOf(DurableStorageOutputChannelFactory.SUCCESSFUL_FILE_SUFFIX));
+    String fileName = markerFileName.substring(
+        0,
+        markerFileName.lastIndexOf(DurableStorageOutputChannelFactory.SUCCESSFUL_FILE_SUFFIX)
+    );
+    return StringUtils.format("%s/%s", outputFolderName, fileName);
   }
 }
