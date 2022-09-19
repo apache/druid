@@ -30,7 +30,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -113,14 +112,6 @@ public class LocalFileStorageConnector implements StorageConnector
   public void deleteRecursively(String dirName) throws IOException
   {
     FileUtils.deleteDirectory(fileWithBasePath(dirName));
-  }
-
-  @Override
-  public void moveFile(String oldPath, String newPath) throws IOException
-  {
-    Path sourceFilePath = fileWithBasePath(oldPath).toPath();
-    Path destinationFilePath = fileWithBasePath(newPath).toPath();
-    Files.move(sourceFilePath, destinationFilePath, StandardCopyOption.ATOMIC_MOVE);
   }
 
   @Override

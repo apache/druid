@@ -32,12 +32,14 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.channels.Channels;
 
 public class DurableStorageOutputChannelFactory implements OutputChannelFactory
 {
 
-  public static final String SUCCESSFUL_SUFFIX = "__success";
+  public static final String SUCCESSFUL_FILE_SUFFIX = "__success";
+  public static final String SUCCESSFUL_FILE_CONTENTS = "success";
 
   private final String controllerTaskId;
   private final int workerNumber;
@@ -139,10 +141,24 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
     }
   }
 
-  public void markAsSuccess(int partitionNumber) throws IOException
+  /**
+   * Creates another file with __success appended at the end which signifies that the output has been written succesfully
+   * to the original file. Rename operation is not very quick in cloud storage like S3 due to which this alternative
+   * route has been taken
+   */
+  public void createSuccessFile(int partitionNumber) throws IOException
   {
-    String oldPath = getPartitionOutputFileNameForTask(controllerTaskId, workerNumber, stageNumber, partitionNumber, taskId);
-    storageConnector.moveFile(oldPath, StringUtils.format("%s%s", oldPath, SUCCESSFUL_SUFFIX));
+    String oldPath = getPartitionOutputFileNameForTask(
+        controllerTaskId,
+        workerNumber,
+        stageNumber,
+        partitionNumber,
+        taskId
+    );
+    String newPath = StringUtils.format("%s%s", oldPath, SUCCESSFUL_FILE_SUFFIX);
+    PrintStream stream = new PrintStream(storageConnector.write(newPath));
+    stream.print(SUCCESSFUL_FILE_CONTENTS); // Add some dummy content in the file
+    stream.close();
   }
 
   public static String getControllerDirectory(final String controllerTaskId)

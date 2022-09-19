@@ -19,8 +19,6 @@
 
 package org.apache.druid.storage.s3.output;
 
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.CopyObjectResult;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
@@ -127,23 +125,6 @@ public class S3StorageConnector implements StorageConnector
         break;
       }
     }
-  }
-
-  /**
-   * This method first copies the S3 object to the desired location and then deletes the object at the
-   * original location
-   */
-  @Override
-  public void moveFile(String oldPath, String newPath)
-  {
-    CopyObjectRequest copyObjectRequest = new CopyObjectRequest(
-        config.getBucket(),
-        objectPath(oldPath),
-        config.getBucket(),
-        objectPath(newPath)
-    );
-    CopyObjectResult copyObjectResult = s3Client.copyObject(copyObjectRequest);
-    deleteFile(oldPath);
   }
 
   @Override

@@ -107,14 +107,6 @@ public interface StorageConnector
   void deleteRecursively(String path) throws IOException;
 
   /**
-   * Moves a file present at the provided path.
-   * If the old path is a directory, this method throws an exception
-   * @param oldPath old path
-   * @param newPath new path after renaming
-   */
-  void moveFile(String oldPath, String newPath) throws IOException;
-
-  /**
    * Lists all the files at the provided path. This should only return the files
    * and not the directories
    */

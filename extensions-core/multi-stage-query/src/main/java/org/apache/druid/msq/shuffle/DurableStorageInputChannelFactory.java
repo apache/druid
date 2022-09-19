@@ -144,8 +144,13 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
         )
     );
     Optional<String> maybeFileName = fileNames.stream()
-                                              .filter(fileName -> fileName.endsWith(DurableStorageOutputChannelFactory.SUCCESSFUL_SUFFIX))
+                                              .filter(fileName -> fileName.endsWith(DurableStorageOutputChannelFactory.SUCCESSFUL_FILE_SUFFIX))
                                               .findAny();
-    return maybeFileName.orElse(null);
+    if (!maybeFileName.isPresent()) {
+      return null;
+    }
+    String fileName = maybeFileName.get();
+    // Following will remove the trailing marker and get the file with the actual contents
+    return fileName.substring(0, fileName.lastIndexOf(DurableStorageOutputChannelFactory.SUCCESSFUL_FILE_SUFFIX));
   }
 }

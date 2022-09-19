@@ -889,13 +889,13 @@ public class WorkerImpl implements Worker
                         MSQTasks.makeStorageConnector(context.injector())
                     );
                 try {
-                  durableStorageOutputChannelFactory.markAsSuccess(channel.getPartitionNumber());
+                  durableStorageOutputChannelFactory.createSuccessFile(channel.getPartitionNumber());
                 }
                 catch (IOException e) {
                   throw new ISE(
                       e,
                       "Unable to suffix the file with %s",
-                      DurableStorageOutputChannelFactory.SUCCESSFUL_SUFFIX
+                      DurableStorageOutputChannelFactory.SUCCESSFUL_FILE_SUFFIX
                   );
                 }
               }
