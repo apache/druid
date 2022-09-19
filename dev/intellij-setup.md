@@ -67,7 +67,7 @@ Before running or debugging the apps, you should do a `mvn clean install -Pdist 
 
 `-Pdist` is required because it puts all core extensions under `distribution\target\extensions` directory, where `runConfigurations` below could load extensions from.
 
-You may also add `-Ddruid.console.skip=true` to the command if you're focusing on backend servers instead of frontend project. This option saves great building time.
+You may also add `-Dweb.console.skip=true` to the command if you're focusing on backend servers instead of frontend project. This option saves great building time.
 
 ## Debug a running Druid cluster using Intellij
 Intellij IDEA debugger can attach to a local or remote Java process (Druid process). 

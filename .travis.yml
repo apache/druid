@@ -34,7 +34,7 @@ env:
     - DOCKER_IP=127.0.0.1  # for integration tests
     - MVN="mvn -B"
     - > # Various options to make execution of maven goals faster (e.g., mvn install)
-      MAVEN_SKIP="-P skip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true"
+      MAVEN_SKIP="-P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true"
     - MAVEN_SKIP_TESTS="-P skip-tests"
 
 addons:
@@ -43,7 +43,7 @@ addons:
       - maven
       - python3
 
-# Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
+# Add various options to make 'mvn install' fast and skip javascript compile (-Dweb.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
 # output.  To compensate, use travis_wait to extend the timeout.
 install: ./check_test_suite.py && travis_terminate 0  || echo 'Running Maven install...' && MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
@@ -179,7 +179,7 @@ jobs:
       before_script: *setup_generate_license
       script: >
         MAVEN_OPTS='-Xmx3000m' ${MVN} clean install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end
-        -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Ddruid.console.skip=false -T1C
+        -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
 
     - <<: *package
       name: "(openjdk11) packaging check"
@@ -419,7 +419,7 @@ jobs:
       jdk: openjdk11
       env:
         - MAVEN_PROJECTS='core,indexing-hadoop,indexing-service,processing'
-      script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Ddruid.console.skip=true -DargLine=-Xmx3000m
+      script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Dweb.console.skip=true -DargLine=-Xmx3000m
 
     - name: "Build and test on ARM64 CPU architecture (2)"
       stage: Tests - phase 2
@@ -430,7 +430,7 @@ jobs:
       jdk: openjdk11
       env:
         - MAVEN_PROJECTS='core,sql,server,services'
-      script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Ddruid.console.skip=true -DargLine=-Xmx3000m
+      script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Dweb.console.skip=true -DargLine=-Xmx3000m
 
 
     # Integration tests Java Compile version is set by the machine environment jdk (set by the jdk key)
