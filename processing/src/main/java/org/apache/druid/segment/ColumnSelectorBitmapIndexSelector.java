@@ -171,7 +171,10 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(dimension);
       ColumnCapabilities virtualCapabilities = null;
       if (virtualColumn != null) {
-        virtualCapabilities = virtualColumn.capabilities(index, dimension);
+        virtualCapabilities = virtualColumn.capabilities(
+            QueryableIndexStorageAdapter.getColumnInspectorForIndex(index),
+            dimension
+        );
       }
       return virtualCapabilities != null ? virtualCapabilities.hasMultipleValues() : ColumnCapabilities.Capable.FALSE;
     }
@@ -231,7 +234,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       if (idx == null) {
         return null;
       }
-      return idx.getBitmapForValue(value);
+      return idx.getBitmap(idx.getIndex(value));
     }
 
     final ColumnHolder columnHolder = index.getColumnHolder(dimension);
@@ -250,7 +253,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     }
 
     final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
-    return bitmapIndex.getBitmapForValue(value);
+    return bitmapIndex.getBitmap(bitmapIndex.getIndex(value));
   }
 
   @Override
@@ -271,12 +274,5 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   private boolean isVirtualColumn(final String columnName)
   {
     return virtualColumns.getVirtualColumn(columnName) != null;
-  }
-
-  @Nullable
-  @Override
-  public ColumnCapabilities getColumnCapabilities(String column)
-  {
-    return virtualColumns.getColumnCapabilities(index, column);
   }
 }

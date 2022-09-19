@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.23.0-SNAPSHOT</version>
+        <version>0.23.0</version>
     </parent>
 
     <dependencies>
@@ -216,12 +216,6 @@
         <dependency>
             <groupId>pl.pragmatists</groupId>
             <artifactId>JUnitParams</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <version>1.4.182</version>
             <scope>test</scope>
         </dependency>
         <dependency>

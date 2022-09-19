@@ -47,7 +47,6 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -230,14 +229,8 @@ public class ExpressionFilter implements Filter
       // Single-column expression. We can use bitmap indexes if this column has an index and the expression can
       // map over the values of the index.
       final String column = Iterables.getOnlyElement(details.getRequiredBindings());
-      // we use a default 'all false' capabilities here because if the column has a bitmap index, but the capabilities
-      // are null, it means that the column is missing and should take the single valued path, while truly unknown
-      // things will not have a bitmap index available
-      final ColumnCapabilities capabilities = selector.getColumnCapabilitiesWithDefault(
-          column,
-          ColumnCapabilitiesImpl.createDefault()
-      );
-      return selector.getBitmapIndex(column) != null && ExpressionSelectors.canMapOverDictionary(details, capabilities);
+      return selector.getBitmapIndex(column) != null
+             && ExpressionSelectors.canMapOverDictionary(details, selector.hasMultipleValues(column));
     } else {
       // Multi-column expression.
       return false;

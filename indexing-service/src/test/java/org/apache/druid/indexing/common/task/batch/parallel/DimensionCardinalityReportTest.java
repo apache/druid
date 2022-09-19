@@ -179,4 +179,118 @@ public class DimensionCardinalityReportTest
         intervalToNumShards
     );
   }
+
+
+  @Test
+  public void testLargeSupervisorDetermineNumShardsFromCardinalityReport()
+  {
+    List<DimensionCardinalityReport> reports = new ArrayList<>();
+
+    HllSketch collector1 = DimensionCardinalityReport.createHllSketchForReport();
+    collector1.update(IndexTask.HASH_FUNCTION.hashLong(1L).asBytes());
+    collector1.update(IndexTask.HASH_FUNCTION.hashLong(200L).asBytes());
+    DimensionCardinalityReport report1 = new DimensionCardinalityReport(
+        "taskA",
+        ImmutableMap.of(
+            Intervals.of("1970-01-01T00:00:00.000Z/1970-01-02T00:00:00.000Z"),
+            collector1.toCompactByteArray()
+        )
+    );
+    reports.add(report1);
+
+    HllSketch collector2 = DimensionCardinalityReport.createHllSketchForReport();
+    collector2.update(IndexTask.HASH_FUNCTION.hashLong(1000L).asBytes());
+    collector2.update(IndexTask.HASH_FUNCTION.hashLong(30000L).asBytes());
+    DimensionCardinalityReport report2 = new DimensionCardinalityReport(
+        "taskB",
+        ImmutableMap.of(
+            Intervals.of("1970-01-01T00:00:00.000Z/1970-01-02T00:00:00.000Z"),
+            collector2.toCompactByteArray()
+        )
+    );
+    reports.add(report2);
+
+    // Separate interval with only 1 value
+    HllSketch collector3 = DimensionCardinalityReport.createHllSketchForReport();
+    collector3.update(IndexTask.HASH_FUNCTION.hashLong(99000L).asBytes());
+    DimensionCardinalityReport report3 = new DimensionCardinalityReport(
+        "taskC",
+        ImmutableMap.of(
+            Intervals.of("1970-01-02T00:00:00.000Z/1970-01-03T00:00:00.000Z"),
+            collector3.toCompactByteArray()
+        )
+    );
+    reports.add(report3);
+
+    // first interval in test has cardinality 4
+    Map<Interval, Integer> intervalToNumShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
+        reports,
+        1
+    );
+    Assert.assertEquals(
+        ImmutableMap.of(
+            Intervals.of("1970-01-01/P1D"),
+            4,
+            Intervals.of("1970-01-02/P1D"),
+            1
+        ),
+        intervalToNumShards
+    );
+
+    intervalToNumShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
+        reports,
+        2
+    );
+    Assert.assertEquals(
+        ImmutableMap.of(
+            Intervals.of("1970-01-01/P1D"),
+            2,
+            Intervals.of("1970-01-02/P1D"),
+            1
+        ),
+        intervalToNumShards
+    );
+
+    intervalToNumShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
+        reports,
+        3
+    );
+    Assert.assertEquals(
+        ImmutableMap.of(
+            Intervals.of("1970-01-01/P1D"),
+            1,
+            Intervals.of("1970-01-02/P1D"),
+            1
+        ),
+        intervalToNumShards
+    );
+
+    intervalToNumShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
+        reports,
+        4
+    );
+    Assert.assertEquals(
+        ImmutableMap.of(
+            Intervals.of("1970-01-01/P1D"),
+            1,
+            Intervals.of("1970-01-02/P1D"),
+            1
+        ),
+        intervalToNumShards
+    );
+
+    intervalToNumShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
+        reports,
+        5
+    );
+    Assert.assertEquals(
+        ImmutableMap.of(
+            Intervals.of("1970-01-01/P1D"),
+            1,
+            Intervals.of("1970-01-02/P1D"),
+            1
+        ),
+        intervalToNumShards
+    );
+  }
 }

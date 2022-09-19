@@ -43,36 +43,36 @@ exports[`SegmentTimeline matches snapshot 1`] = `
     class="side-control"
   >
     <div
-      class="bp3-form-group"
+      class="bp4-form-group"
     >
       <div
-        class="bp3-form-content"
+        class="bp4-form-content"
       >
         <div>
           <label
-            class="bp3-control bp3-radio"
+            class="bp4-control bp4-radio"
           >
             <input
               checked=""
-              name="Blueprint3.RadioGroup-0"
+              name="Blueprint4.RadioGroup-0"
               type="radio"
               value="sizeData"
             />
             <span
-              class="bp3-control-indicator"
+              class="bp4-control-indicator"
             />
             Total size
           </label>
           <label
-            class="bp3-control bp3-radio"
+            class="bp4-control bp4-radio"
           >
             <input
-              name="Blueprint3.RadioGroup-0"
+              name="Blueprint4.RadioGroup-0"
               type="radio"
               value="countData"
             />
             <span
-              class="bp3-control-indicator"
+              class="bp4-control-indicator"
             />
             Segment count
           </label>
@@ -80,22 +80,22 @@ exports[`SegmentTimeline matches snapshot 1`] = `
       </div>
     </div>
     <div
-      class="bp3-form-group"
+      class="bp4-form-group"
     >
       <label
-        class="bp3-label"
+        class="bp4-label"
       >
         Datasource
          
         <span
-          class="bp3-text-muted"
+          class="bp4-text-muted"
         />
       </label>
       <div
-        class="bp3-form-content"
+        class="bp4-form-content"
       >
         <div
-          class="bp3-html-select bp3-fill"
+          class="bp4-html-select bp4-fill"
         >
           <select>
             <option
@@ -105,7 +105,7 @@ exports[`SegmentTimeline matches snapshot 1`] = `
             </option>
           </select>
           <span
-            class="bp3-icon bp3-icon-double-caret-vertical"
+            class="bp4-icon bp4-icon-double-caret-vertical"
             icon="double-caret-vertical"
           >
             <svg
@@ -115,7 +115,7 @@ exports[`SegmentTimeline matches snapshot 1`] = `
               width="16"
             >
               <desc>
-                double-caret-vertical
+                Open dropdown
               </desc>
               <path
                 d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
@@ -127,45 +127,47 @@ exports[`SegmentTimeline matches snapshot 1`] = `
       </div>
     </div>
     <div
-      class="bp3-form-group"
+      class="bp4-form-group"
     >
       <label
-        class="bp3-label"
+        class="bp4-label"
       >
         Interval
          
         <span
-          class="bp3-text-muted"
+          class="bp4-text-muted"
         />
       </label>
       <div
-        class="bp3-form-content"
+        class="bp4-form-content"
       >
         <span
-          class="bp3-popover-wrapper date-range-selector"
+          class="bp4-popover-wrapper date-range-selector"
         >
           <span
-            class="bp3-popover-target"
+            aria-haspopup="true"
+            class="bp4-popover-target"
           >
             <div
-              class="bp3-input-group"
+              class="bp4-input-group"
             >
               <input
-                class="bp3-input"
+                class="bp4-input"
                 readonly=""
                 style="padding-right: 0px;"
                 type="text"
                 value="2021-03-09 ➔ 2021-06-09"
               />
               <span
-                class="bp3-input-action"
+                class="bp4-input-action"
               >
                 <button
-                  class="bp3-button bp3-minimal"
+                  class="bp4-button bp4-minimal"
                   type="button"
                 >
                   <span
-                    class="bp3-icon bp3-icon-calendar"
+                    aria-hidden="true"
+                    class="bp4-icon bp4-icon-calendar"
                     icon="calendar"
                   >
                     <svg
@@ -174,9 +176,6 @@ exports[`SegmentTimeline matches snapshot 1`] = `
                       viewBox="0 0 16 16"
                       width="16"
                     >
-                      <desc>
-                        calendar
-                      </desc>
                       <path
                         d="M11 3c.6 0 1-.5 1-1V1c0-.6-.4-1-1-1s-1 .4-1 1v1c0 .5.4 1 1 1zm3-2h-1v1c0 1.1-.9 2-2 2s-2-.9-2-2V1H6v1c0 1.1-.9 2-2 2s-2-.9-2-2V1H1c-.6 0-1 .5-1 1v12c0 .6.4 1 1 1h13c.6 0 1-.4 1-1V2c0-.6-.5-1-1-1zM5 13H2v-3h3v3zm0-4H2V6h3v3zm4 4H6v-3h3v3zm0-4H6V6h3v3zm4 4h-3v-3h3v3zm0-4h-3V6h3v3zM4 3c.6 0 1-.5 1-1V1c0-.6-.4-1-1-1S3 .4 3 1v1c0 .5.4 1 1 1z"
                         fill-rule="evenodd"

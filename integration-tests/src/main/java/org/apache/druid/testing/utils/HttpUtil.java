@@ -36,7 +36,7 @@ import java.net.URL;
 
 public class HttpUtil
 {
-  private static final Logger LOG = new Logger(AbstractQueryResourceTestClient.class);
+  private static final Logger LOG = new Logger(HttpUtil.class);
   private static final StatusResponseHandler RESPONSE_HANDLER = StatusResponseHandler.getInstance();
 
   static final int NUM_RETRIES = 30;

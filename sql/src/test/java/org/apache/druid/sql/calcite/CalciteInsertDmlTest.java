@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -41,6 +42,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
@@ -554,7 +556,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                 ImmutableList.of()
             )
     );
-    Assert.assertEquals("INSERT statements must specify PARTITIONED BY clause explictly", e.getMessage());
+    Assert.assertEquals("INSERT statements must specify PARTITIONED BY clause explicitly", e.getMessage());
     didTest = true;
   }
 
@@ -729,6 +731,20 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
         .verify();
   }
 
+  @Test
+  public void testInsertWithInvalidSelectStatement()
+  {
+    testInsertQuery()
+        .sql("INSERT INTO t SELECT channel, added as count FROM foo PARTITIONED BY ALL") // count is a keyword
+        .expectValidationError(
+            CoreMatchers.allOf(
+                CoreMatchers.instanceOf(SqlPlanningException.class),
+                ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Encountered \"as count\""))
+            )
+        )
+        .verify();
+  }
+
   private String externSql(final ExternalDataSource externalDataSource)
   {
     try {
@@ -894,6 +910,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
 
       final SqlLifecycleFactory sqlLifecycleFactory = getSqlLifecycleFactory(
           plannerConfig,
+          new AuthConfig(),
           createOperatorTable(),
           createMacroTable(),
           CalciteTests.TEST_AUTHORIZER_MAPPER,
@@ -901,7 +918,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
       );
 
       final SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-      sqlLifecycle.initialize(sql, queryContext);
+      sqlLifecycle.initialize(sql, new QueryContext(queryContext));
 
       final Throwable e = Assert.assertThrows(
           Throwable.class,

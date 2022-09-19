@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.23.0-SNAPSHOT</version>
+    <version>0.23.0</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -66,7 +66,7 @@
         <connection>scm:git:ssh://git@github.com/apache/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/apache/druid.git</developerConnection>
         <url>https://github.com/apache/druid.git</url>
-        <tag>0.19.0-SNAPSHOT</tag>
+        <tag>druid-0.23.0-rc2</tag>
     </scm>
 
     <properties>
@@ -84,7 +84,7 @@
         <!-- sql/src/main/codegen/config.fmpp is based on a file from calcite-core, and needs to be
           updated when upgrading Calcite. Refer to the top-level comments in that file for details. -->
         <calcite.version>1.21.0</calcite.version>
-        <datasketches.version>3.1.0</datasketches.version>
+        <datasketches.version>3.2.0</datasketches.version>
         <datasketches.memory.version>2.0.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
@@ -102,7 +102,7 @@
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
         <netty4.version>4.1.68.Final</netty4.version>
-        <postgresql.version>42.2.14</postgresql.version>
+        <postgresql.version>42.3.3</postgresql.version>
         <protobuf.version>3.11.0</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <slf4j.version>1.7.36</slf4j.version>
@@ -113,7 +113,7 @@
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.7</jacoco.version>
         <hibernate-validator.version>5.2.5.Final</hibernate-validator.version>
-        <httpclient.version>4.5.10</httpclient.version>
+        <httpclient.version>4.5.13</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.5.9</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
@@ -213,7 +213,7 @@
         <!-- Only used by core, but moved to root for parallel build dependency resolution -->
         <repository>
           <id>sigar</id>
-          <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/</url>
+          <url>https://repository.mulesoft.org/nexus/content/repositories/public</url>
         </repository>
     </repositories>
 
@@ -1476,10 +1476,7 @@
               <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <!--- stay on M4 until M6 is released with a fix for
-                    https://issues.apache.org/jira/browse/SUREFIRE-1815
-                    causing issues in RetryUtilsTest -->
-                    <version>3.0.0-M4</version>
+                    <version>3.0.0-M6</version>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set default options -->

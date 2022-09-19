@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
@@ -27,21 +26,10 @@ import java.util.List;
 
 /**
  */
-public interface ColumnSelector extends ColumnInspector
+public interface ColumnSelector
 {
   List<String> getColumnNames();
 
   @Nullable
   ColumnHolder getColumnHolder(String columnName);
-
-  @Nullable
-  @Override
-  default ColumnCapabilities getColumnCapabilities(String column)
-  {
-    final ColumnHolder columnHolder = getColumnHolder(column);
-    if (columnHolder == null) {
-      return null;
-    }
-    return columnHolder.getCapabilities();
-  }
 }

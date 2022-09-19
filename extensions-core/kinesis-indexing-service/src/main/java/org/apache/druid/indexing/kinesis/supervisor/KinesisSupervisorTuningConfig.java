@@ -41,11 +41,13 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   private final Duration shutdownTimeout;
   private final Duration repartitionTransitionDuration;
   private final Duration offsetFetchPeriod;
+  private final boolean useListShards;
   private final boolean skipIgnorableShards;
 
   public static KinesisSupervisorTuningConfig defaultConfig()
   {
     return new KinesisSupervisorTuningConfig(
+        null,
         null,
         null,
         null,
@@ -117,6 +119,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration,
       @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod,
+      @JsonProperty("useListShards") Boolean useListShards,
       @JsonProperty("skipIgnorableShards") Boolean skipIgnorableShards
   )
   {
@@ -165,6 +168,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         offsetFetchPeriod,
         DEFAULT_OFFSET_FETCH_PERIOD
     );
+    this.useListShards = (useListShards != null ? useListShards : false);
     this.skipIgnorableShards = (skipIgnorableShards != null ? skipIgnorableShards : false);
   }
 
@@ -217,6 +221,12 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   }
 
   @JsonProperty
+  public boolean isUseListShards()
+  {
+    return useListShards;
+  }
+
+  @JsonProperty
   public boolean isSkipIgnorableShards()
   {
     return skipIgnorableShards;
@@ -256,6 +266,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", maxRecordsPerPoll=" + getMaxRecordsPerPoll() +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", repartitionTransitionDuration=" + getRepartitionTransitionDuration() +
+           ", useListShards=" + isUseListShards() +
            ", skipIgnorableShards=" + isSkipIgnorableShards() +
            '}';
   }

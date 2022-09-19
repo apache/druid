@@ -28,7 +28,7 @@ sidebar_label: "SQL metadata tables"
 
 
 Druid Brokers infer table and column metadata for each datasource from segments loaded in the cluster, and use this to
-plan SQL queries. This metadata is cached on Broker startup and also updated periodically in the background through
+plan [SQL queries](./sql.md). This metadata is cached on Broker startup and also updated periodically in the background through
 [SegmentMetadata queries](segmentmetadataquery.md). Background metadata refreshing is triggered by
 segments entering and exiting the cluster, and can also be throttled through configuration.
 

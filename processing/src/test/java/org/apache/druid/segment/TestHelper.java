@@ -416,9 +416,9 @@ public class TestHelper
             ExprEval.coerceListToArray((List) actualValue, true).rhs
         );
       } else if (expectedValue instanceof ComparableList && actualValue instanceof List) {
-        Assert.assertEquals(
-            ((ComparableList) expectedValue).getDelegate(),
-            (List) actualValue
+        Assert.assertArrayEquals(
+            ((ComparableList) expectedValue).getDelegate().toArray(new Object[0]),
+            ExprEval.coerceListToArray((List) actualValue, true).rhs
         );
       } else {
         Assert.assertEquals(

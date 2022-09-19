@@ -31,6 +31,7 @@ import org.apache.druid.timeline.DataSegment;
 import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
 
 public class SegmentLocalCacheLoader implements SegmentLoader
 {
@@ -78,5 +79,9 @@ public class SegmentLocalCacheLoader implements SegmentLoader
     cacheManager.cleanup(segment);
   }
 
-
+  @Override
+  public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+  {
+    cacheManager.loadSegmentIntoPageCache(segment, exec);
+  }
 }

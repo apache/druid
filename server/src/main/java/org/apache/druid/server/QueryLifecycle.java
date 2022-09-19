@@ -19,8 +19,8 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.java.util.common.DateTimes;
@@ -36,6 +36,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
@@ -45,16 +46,25 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -82,13 +92,16 @@ public class QueryLifecycle
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
   private final DefaultQueryConfig defaultQueryConfig;
+  private final AuthConfig authConfig;
   private final long startMs;
   private final long startNs;
 
   private State state = State.NEW;
   private AuthenticationResult authenticationResult;
   private QueryToolChest toolChest;
-  private Query baseQuery;
+
+  @MonotonicNonNull
+  private Query<?> baseQuery;
 
   public QueryLifecycle(
       final QueryToolChestWarehouse warehouse,
@@ -98,6 +111,7 @@ public class QueryLifecycle
       final RequestLogger requestLogger,
       final AuthorizerMapper authorizerMapper,
       final DefaultQueryConfig defaultQueryConfig,
+      final AuthConfig authConfig,
       final long startMs,
       final long startNs
   )
@@ -109,6 +123,7 @@ public class QueryLifecycle
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
     this.defaultQueryConfig = defaultQueryConfig;
+    this.authConfig = authConfig;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -173,20 +188,18 @@ public class QueryLifecycle
   {
     transition(State.NEW, State.INITIALIZED);
 
-    String queryId = baseQuery.getId();
-    if (Strings.isNullOrEmpty(queryId)) {
-      queryId = UUID.randomUUID().toString();
-    }
+    if (baseQuery.getQueryContext() == null) {
+      QueryContext context = new QueryContext(baseQuery.getContext());
+      context.addDefaultParam(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
+      context.addDefaultParams(defaultQueryConfig.getContext());
 
-    Map<String, Object> mergedUserAndConfigContext;
-    if (baseQuery.getContext() != null) {
-      mergedUserAndConfigContext = BaseQuery.computeOverriddenContext(defaultQueryConfig.getContext(), baseQuery.getContext());
+      this.baseQuery = baseQuery.withOverriddenContext(context.getMergedParams());
     } else {
-      mergedUserAndConfigContext = defaultQueryConfig.getContext();
+      baseQuery.getQueryContext().addDefaultParam(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
+      baseQuery.getQueryContext().addDefaultParams(defaultQueryConfig.getContext());
+      this.baseQuery = baseQuery;
     }
-
-    this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext).withId(queryId);
-    this.toolChest = warehouse.getToolChest(baseQuery);
+    this.toolChest = warehouse.getToolChest(this.baseQuery);
   }
 
   /**
@@ -200,14 +213,29 @@ public class QueryLifecycle
   public Access authorize(HttpServletRequest req)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
+    final Set<String> contextKeys;
+    if (baseQuery.getQueryContext() == null) {
+      contextKeys = baseQuery.getContext().keySet();
+    } else {
+      contextKeys = baseQuery.getQueryContext().getUserParams().keySet();
+    }
+    final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
+        Iterables.transform(
+            baseQuery.getDataSource().getTableNames(),
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
+        ),
+        authConfig.authorizeQueryContextParams()
+        ? Iterables.transform(
+            contextKeys,
+            contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
+        )
+        : Collections.emptyList()
+    );
     return doAuthorize(
         AuthorizationUtils.authenticationResultFromRequest(req),
         AuthorizationUtils.authorizeAllResourceActions(
             req,
-            Iterables.transform(
-                baseQuery.getDataSource().getTableNames(),
-                AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
-            ),
+            resourcesToAuthorize,
             authorizerMapper
         )
     );
@@ -343,9 +371,42 @@ public class QueryLifecycle
     }
   }
 
-  public Query getQuery()
+  @Nullable
+  public Query<?> getQuery()
   {
     return baseQuery;
+  }
+
+  public String getQueryId()
+  {
+    return baseQuery.getId();
+  }
+
+  public String threadName(String currThreadName)
+  {
+    return StringUtils.format(
+        "%s[%s_%s_%s]",
+        currThreadName,
+        baseQuery.getType(),
+        baseQuery.getDataSource().getTableNames(),
+        getQueryId()
+    );
+  }
+
+  private boolean isSerializeDateTimeAsLong()
+  {
+    final boolean shouldFinalize = QueryContexts.isFinalize(baseQuery, true);
+    return QueryContexts.isSerializeDateTimeAsLong(baseQuery, false)
+           || (!shouldFinalize && QueryContexts.isSerializeDateTimeAsLongInner(baseQuery, false));
+  }
+
+  public ObjectWriter newOutputWriter(ResourceIOReaderWriter ioReaderWriter)
+  {
+    return ioReaderWriter.getResponseWriter().newOutputWriter(
+        getToolChest(),
+        baseQuery,
+        isSerializeDateTimeAsLong()
+    );
   }
 
   public QueryToolChest getToolChest()
