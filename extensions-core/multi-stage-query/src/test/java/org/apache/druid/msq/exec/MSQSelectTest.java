@@ -25,6 +25,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.ColumnMapping;
@@ -59,6 +60,7 @@ import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
@@ -70,6 +72,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MSQSelectTest extends MSQTestBase
 {
@@ -1085,6 +1089,64 @@ public class MSQSelectTest extends MSQTestBase
         )
         .verifyResults();
   }
+
+  @Test
+  public void testGroupByOnFooWithDurableStoragePathAssertions()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("cnt", ColumnType.LONG)
+                                            .add("cnt1", ColumnType.LONG)
+                                            .build();
+
+    ExecutorService executorService = Execs.singleThreaded("path-verifier");
+    final AtomicBoolean existsOnce = new AtomicBoolean(false);
+    executorService.submit(() -> {
+      while (true) {
+        File successFile = new File(
+            localFileStorageDir,
+            "controller_query-test-query/worker_0/stage_0/part_0/query-test-query-worker0"
+        );
+        if (successFile.exists()) {
+          existsOnce.set(true);
+          break;
+        }
+      }
+    });
+
+
+    testSelectQuery()
+        .setSql("select cnt,count(*) as cnt1 from foo group by cnt")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(GroupByQuery.builder()
+                                                      .setDataSource(CalciteTests.DATASOURCE1)
+                                                      .setInterval(querySegmentSpec(Filtration
+                                                                                        .eternity()))
+                                                      .setGranularity(Granularities.ALL)
+                                                      .setDimensions(dimensions(
+                                                          new DefaultDimensionSpec(
+                                                              "cnt",
+                                                              "d0",
+                                                              ColumnType.LONG
+                                                          )
+                                                      ))
+                                                      .setAggregatorSpecs(aggregators(new CountAggregatorFactory(
+                                                          "a0")))
+                                                      .setContext(DEFAULT_MSQ_CONTEXT)
+                                                      .build())
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("d0", "cnt"),
+                                           new ColumnMapping("a0", "cnt1")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
+        .verifyResults();
+    Assert.assertTrue(existsOnce.get());
+  }
+
 
   @Nonnull
   private List<Object[]> expectedMultiValueFooRowsGroup()

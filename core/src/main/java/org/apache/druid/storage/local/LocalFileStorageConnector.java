@@ -29,12 +29,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
- * Implementation that uses local filesystem. All paths are appended with the base path, in such a way that its not visible
+ * Implementation that uses local filesystem. All paths are appended with the base path, in such a way that it is not visible
  * to the users of this class.
  */
 public class LocalFileStorageConnector implements StorageConnector
@@ -57,10 +54,6 @@ public class LocalFileStorageConnector implements StorageConnector
   /**
    * Reads the file present as basePath + path. Will throw an IO exception in case the file is not present.
    * Closing of the stream is the responsibility of the caller.
-   *
-   * @param path
-   * @return
-   * @throws IOException
    */
   @Override
   public InputStream read(String path) throws IOException
@@ -112,17 +105,6 @@ public class LocalFileStorageConnector implements StorageConnector
   public void deleteRecursively(String dirName) throws IOException
   {
     FileUtils.deleteDirectory(fileWithBasePath(dirName));
-  }
-
-  @Override
-  public List<String> lsFiles(String path) throws IOException
-  {
-    File sourceDirectoryPath = fileWithBasePath(path);
-    return Files.list(sourceDirectoryPath.toPath())
-                .map(Path::toFile)
-                .filter(File::isFile)
-                .map(File::getName)
-                .collect(Collectors.toList());
   }
 
   public File getBasePath()

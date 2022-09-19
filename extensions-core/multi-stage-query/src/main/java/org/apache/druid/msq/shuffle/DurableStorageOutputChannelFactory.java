@@ -29,6 +29,7 @@ import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.IOException;
@@ -38,8 +39,9 @@ import java.nio.channels.Channels;
 public class DurableStorageOutputChannelFactory implements OutputChannelFactory
 {
 
-  public static final String SUCCESSFUL_FILE_SUFFIX = "__success";
-  public static final String SUCCESSFUL_FILE_CONTENTS = "success";
+  private static final Logger LOG = new Logger(DurableStorageOutputChannelFactory.class);
+
+  public static final String SUCCESS_MARKER_FILENAME = "__success";
 
   private final String controllerTaskId;
   private final int workerNumber;
@@ -91,12 +93,12 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
   @Override
   public OutputChannel openChannel(int partitionNumber) throws IOException
   {
-    final String fileName = getPartitionOutputFileNameForTask(
+    final String fileName = getPartitionOutputsFileNameForPartition2(
         controllerTaskId,
-        workerNumber,
         stageNumber,
-        partitionNumber,
-        taskId
+        workerNumber,
+        taskId,
+        partitionNumber
     );
     final WritableFrameFileChannel writableChannel =
         new WritableFrameFileChannel(
@@ -117,12 +119,12 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
   @Override
   public OutputChannel openNilChannel(int partitionNumber)
   {
-    final String fileName = getPartitionOutputFileNameForTask(
+    final String fileName = getPartitionOutputsFileNameForPartition2(
         controllerTaskId,
-        workerNumber,
         stageNumber,
-        partitionNumber,
-        taskId
+        workerNumber,
+        taskId,
+        partitionNumber
     );
     // As tasks dependent on output of this partition will forever block if no file is present in RemoteStorage. Hence, writing a dummy frame.
     try {
@@ -146,18 +148,15 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
    * to the original file. Rename operation is not very quick in cloud storage like S3 due to which this alternative
    * route has been taken
    */
-  public void createSuccessFile(int partitionNumber) throws IOException
+  public void createSuccessFile(String taskId) throws IOException
   {
-    String oldPath = getPartitionOutputFileNameForTask(
-        controllerTaskId,
-        workerNumber,
-        stageNumber,
-        partitionNumber,
-        taskId
-    );
-    String newPath = StringUtils.format("%s%s", oldPath, SUCCESSFUL_FILE_SUFFIX);
-    PrintStream stream = new PrintStream(storageConnector.write(newPath));
-    stream.print(SUCCESSFUL_FILE_CONTENTS); // Add some dummy content in the file
+    String fileName = getSuccessFilePath(controllerTaskId, stageNumber, workerNumber);
+    if (storageConnector.pathExists(fileName)) {
+      LOG.warn("Path [%s] already exists. Won't attempt to rewrite on top of it.", fileName);
+      return;
+    }
+    PrintStream stream = new PrintStream(storageConnector.write(fileName));
+    stream.print(taskId); // Add some dummy content in the file
     stream.close();
   }
 
@@ -166,34 +165,61 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
     return StringUtils.format("controller_%s", IdUtils.validateId("controller task ID", controllerTaskId));
   }
 
-  public static String getPartitionOutputsFolderName(
+  public static String getSuccessFilePath(
       final String controllerTaskId,
-      final int workerNo,
       final int stageNumber,
-      final int partitionNumber
+      final int workerNumber
+  )
+  {
+    String folderName = getWorkerOutputFolderName2(
+        controllerTaskId,
+        stageNumber,
+        workerNumber
+    );
+    String fileName = StringUtils.format("%s/%s", folderName, SUCCESS_MARKER_FILENAME);
+    return fileName;
+  }
+
+  public static String getWorkerOutputFolderName2(
+      final String controllerTaskId,
+      final int stageNumber,
+      final int workerNumber
   )
   {
     return StringUtils.format(
-        "%s/worker_%d/stage_%d/part_%d",
+        "%s/stage_%d/worker_%d",
         getControllerDirectory(controllerTaskId),
-        workerNo,
         stageNumber,
-        partitionNumber
+        workerNumber
     );
   }
 
-  public static String getPartitionOutputFileNameForTask(
+  public static String getTaskIdOutputsFolderName2(
       final String controllerTaskId,
-      final int workerNo,
       final int stageNumber,
-      final int partitionNumber,
+      final int workerNumber,
       final String taskId
   )
   {
     return StringUtils.format(
-        "%s/%s",
-        getPartitionOutputsFolderName(controllerTaskId, workerNo, stageNumber, partitionNumber),
+        "%s/taskId_%s",
+        getWorkerOutputFolderName2(controllerTaskId, stageNumber, workerNumber),
         taskId
+    );
+  }
+
+  public static String getPartitionOutputsFileNameForPartition2(
+      final String controllerTaskId,
+      final int stageNumber,
+      final int workerNumber,
+      final String taskId,
+      final int partitionNumber
+  )
+  {
+    return StringUtils.format(
+        "%s/part_%d",
+        getTaskIdOutputsFolderName2(controllerTaskId, stageNumber, workerNumber, taskId),
+        partitionNumber
     );
   }
 }

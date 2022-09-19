@@ -695,11 +695,11 @@ public class WorkerImpl implements Worker
       // Therefore, the logic for cleaning the stage output in case of a worker/machine crash has to be external.
       // We currently take care of this in the controller.
       if (durableStageStorageEnabled) {
-        final String folderName = DurableStorageOutputChannelFactory.getPartitionOutputsFolderName(
+        final String folderName = DurableStorageOutputChannelFactory.getTaskIdOutputsFolderName2(
             task.getControllerTaskId(),
-            task.getWorkerNumber(),
             stageId.getStageNumber(),
-            partition
+            task.getWorkerNumber(),
+            task.getId()
         );
         try {
           MSQTasks.makeStorageConnector(context.injector()).deleteRecursively(folderName);
@@ -875,29 +875,29 @@ public class WorkerImpl implements Worker
               stageOutputs.computeIfAbsent(stageDef.getId(), ignored1 -> new ConcurrentHashMap<>())
                           .computeIfAbsent(channel.getPartitionNumber(), ignored2 -> channel.getReadableChannel());
 
-              if (durableStageStorageEnabled) {
-                // Once the outputs channels have been resolved and are ready for reading, the worker appends the filename
-                // with a special marker flag that allows the readers to recognize the complete file from partially
-                // written ones
-                DurableStorageOutputChannelFactory durableStorageOutputChannelFactory =
-                    DurableStorageOutputChannelFactory.createStandardImplementation(
-                        task.getControllerTaskId(),
-                        task().getWorkerNumber(),
-                        stageDef.getStageNumber(),
-                        task().getId(),
-                        frameContext.memoryParameters().getStandardFrameSize(),
-                        MSQTasks.makeStorageConnector(context.injector())
-                    );
-                try {
-                  durableStorageOutputChannelFactory.createSuccessFile(channel.getPartitionNumber());
-                }
-                catch (IOException e) {
-                  throw new ISE(
-                      e,
-                      "Unable to suffix the file with %s",
-                      DurableStorageOutputChannelFactory.SUCCESSFUL_FILE_SUFFIX
+            }
+
+            if (durableStageStorageEnabled) {
+              // Once the outputs channels have been resolved and are ready for reading, the worker appends the filename
+              // with a special marker flag and adds it to the
+              DurableStorageOutputChannelFactory durableStorageOutputChannelFactory =
+                  DurableStorageOutputChannelFactory.createStandardImplementation(
+                      task.getControllerTaskId(),
+                      task().getWorkerNumber(),
+                      stageDef.getStageNumber(),
+                      task().getId(),
+                      frameContext.memoryParameters().getStandardFrameSize(),
+                      MSQTasks.makeStorageConnector(context.injector())
                   );
-                }
+              try {
+                durableStorageOutputChannelFactory.createSuccessFile(task.getId());
+              }
+              catch (IOException e) {
+                throw new ISE(
+                    e,
+                    "Unable to suffix the file with %s",
+                    DurableStorageOutputChannelFactory.SUCCESS_MARKER_FILENAME
+                );
               }
             }
 

@@ -127,16 +127,6 @@ public class S3StorageConnector implements StorageConnector
     }
   }
 
-  @Override
-  public List<String> lsFiles(String path)
-  {
-    ListObjectsV2Request listObjectsRequest = new ListObjectsV2Request()
-        .withBucketName(config.getBucket())
-        .withPrefix(objectPath(path));
-    ListObjectsV2Result objectListing = s3Client.listObjectsV2(listObjectsRequest);
-    return null;
-  }
-
   @Nonnull
   private String objectPath(String path)
   {

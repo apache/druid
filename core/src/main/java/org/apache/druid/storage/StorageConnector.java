@@ -24,7 +24,6 @@ import org.apache.druid.guice.annotations.UnstableApi;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.List;
 
 /**
  * Low level interface for interacting with different storage providers like S3, GCS, Azure and local file system.
@@ -105,10 +104,4 @@ public interface StorageConnector
    * @throws IOException
    */
   void deleteRecursively(String path) throws IOException;
-
-  /**
-   * Lists all the files at the provided path. This should only return the files
-   * and not the directories
-   */
-  List<String> lsFiles(String path) throws IOException;
 }

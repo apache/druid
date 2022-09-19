@@ -20,23 +20,22 @@
 package org.apache.druid.msq.shuffle;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableInputStreamFrameChannel;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.storage.StorageConnector;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
-import java.util.Optional;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -45,6 +44,9 @@ import java.util.concurrent.Executors;
  */
 public class DurableStorageInputChannelFactory implements InputChannelFactory
 {
+
+  private static final Logger LOG = new Logger(DurableStorageInputChannelFactory.class);
+
   private final StorageConnector storageConnector;
   private final ExecutorService remoteInputStreamPool;
   private final String controllerTaskId;
@@ -87,17 +89,13 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
           stageId.getStageNumber(),
           partitionNumber
       );
-      if (remotePartitionPath == null) {
-        throw new ISE(
-            "Cannot find a successful write of a worker in the location [%s]",
-            DurableStorageOutputChannelFactory.getPartitionOutputsFolderName(
-                controllerTaskId,
-                workerNumber,
-                stageId.getStageNumber(),
-                partitionNumber
-            )
-        );
-      }
+      LOG.debug(
+          "Reading input for worker [%d], stage [%d], partition [%d] from the file at path [%s]",
+          workerNumber,
+          stageId.getStageNumber(),
+          partitionNumber,
+          remotePartitionPath
+      );
       RetryUtils.retry(() -> {
         if (!storageConnector.pathExists(remotePartitionPath)) {
           throw new ISE(
@@ -128,7 +126,6 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
     }
   }
 
-  @Nullable
   public String findSuccessfulPartitionOutput(
       final String controllerTaskId,
       final int workerNo,
@@ -136,26 +133,38 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
       final int partitionNumber
   ) throws IOException
   {
-    // ls will return only the file name for the folder
-    String outputFolderName = DurableStorageOutputChannelFactory.getPartitionOutputsFolderName(
+    String successfulFilePath = DurableStorageOutputChannelFactory.getSuccessFilePath(
         controllerTaskId,
-        workerNo,
         stageNumber,
+        workerNo
+    );
+
+    if (!storageConnector.pathExists(successfulFilePath)) {
+      throw new ISE(
+          "No file present at the location [%s]. Unable to read the inputs for worker: [%d], stage: [%d], partition: [%d]",
+          successfulFilePath,
+          workerNo,
+          stageNumber,
+          partitionNumber
+      );
+    }
+
+    String successfulTaskId;
+
+    try (InputStream is = storageConnector.read(successfulFilePath)) {
+      // TODO: Check if this call can block indefinitely
+      successfulTaskId = IOUtils.toString(is, StandardCharsets.UTF_8);
+    }
+    if (successfulTaskId == null) {
+      throw new ISE("Unable to read the task id from the file: [%s]", successfulFilePath);
+    }
+
+    return DurableStorageOutputChannelFactory.getPartitionOutputsFileNameForPartition2(
+        controllerTaskId,
+        stageNumber,
+        workerNo,
+        successfulTaskId,
         partitionNumber
     );
-    List<String> fileNames = storageConnector.lsFiles(outputFolderName);
-    Optional<String> maybeFileName = fileNames.stream()
-                                              .filter(fileName -> fileName.endsWith(DurableStorageOutputChannelFactory.SUCCESSFUL_FILE_SUFFIX))
-                                              .min(String::compareTo);
-    if (!maybeFileName.isPresent()) {
-      return null;
-    }
-    String markerFileName = maybeFileName.get();
-    // Following will remove the trailing marker and get the file with the actual contents
-    String fileName = markerFileName.substring(
-        0,
-        markerFileName.lastIndexOf(DurableStorageOutputChannelFactory.SUCCESSFUL_FILE_SUFFIX)
-    );
-    return StringUtils.format("%s/%s", outputFolderName, fileName);
   }
 }
