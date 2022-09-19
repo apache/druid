@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -32,7 +33,6 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.AbstractQueryResourceTestClient;
 import org.joda.time.Interval;
-import org.junit.Assert;
 
 import java.util.Collections;
 import java.util.List;
@@ -158,12 +158,12 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
             jsonMapper.writeValueAsString(queryWithResult.getExpectedResults()),
             jsonMapper.writeValueAsString(result)
         );
-        Assert.fail(StringUtils.format(
+        throw new ISE(
             "Results mismatch while executing the query %s.\n"
             + "Mismatch error: %s\n",
             queryWithResult.getQuery(),
             resultsComparison.getErrorMessage()
-        ));
+        );
       } else {
         LOG.info("Results Verified for Query %s", queryWithResult.getQuery());
       }
