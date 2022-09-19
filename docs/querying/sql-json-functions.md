@@ -62,11 +62,11 @@ Consider the following example input JSON:
 {"x":1, "y":[1, 2, 3]}
 ```
 
-- To return the entire JSON object:<br>
+- To return the entire JSON object:<br />
   `$`      -> `{"x":1, "y":[1, 2, 3]}`
-- To return the value of the key "x":<br>
+- To return the value of the key "x":<br />
   `$.x`    -> `1`
-- For a key that contains an array, to return the entire array:<br>
+- For a key that contains an array, to return the entire array:<br />
   `$['y']` -> `[1, 2, 3]`
-- For a key that contains an array, to return an item in the array:<br>
+- For a key that contains an array, to return an item in the array:<br />
   `$.y[1]` -> `2`
