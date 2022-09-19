@@ -388,7 +388,7 @@ Returns all rules for a specified datasource and includes default datasource.
 
 * `/druid/coordinator/v1/rules/history?count=<n>`
 
- Returns last <n> entries of audit history of rules for all datasources.
+ Returns last `n` entries of audit history of rules for all datasources.
 
 * `/druid/coordinator/v1/rules/{dataSourceName}/history?interval=<interval>`
 
@@ -396,7 +396,7 @@ Returns all rules for a specified datasource and includes default datasource.
 
 * `/druid/coordinator/v1/rules/{dataSourceName}/history?count=<n>`
 
- Returns last <n> entries of audit history of rules for a specified datasource.
+ Returns last `n` entries of audit history of rules for a specified datasource.
 
 ##### POST
 
