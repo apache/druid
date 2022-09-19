@@ -22,6 +22,7 @@ package org.apache.druid.testsEx.msq;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.sql.SqlTaskStatus;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
@@ -29,6 +30,7 @@ import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testsEx.categories.MultiStageQuery;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -106,8 +108,16 @@ public class ITMultiStageQuery
         );
 
     // Submit the task and wait for the datasource to get loaded
-    String taskId = msqHelper.submitMsqTask(queryLocal);
-    msqHelper.pollTaskIdForCompletion(taskId);
+    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(queryLocal);
+
+    if (sqlTaskStatus.getState().isFailure()) {
+      Assert.fail(StringUtils.format(
+          "Unable to start the task successfully.\nPossible exception: %s",
+          sqlTaskStatus.getError()
+      ));
+    }
+
+    msqHelper.pollTaskIdForCompletion(sqlTaskStatus.getTaskId());
     dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
 
     msqHelper.testQueriesFromFile(QUERY_FILE, datasource);

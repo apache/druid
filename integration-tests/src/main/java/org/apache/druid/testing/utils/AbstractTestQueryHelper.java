@@ -37,7 +37,6 @@ import org.junit.Assert;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 
 public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQueryWithResults>
@@ -147,9 +146,12 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
     for (QueryResultType queryWithResult : queries) {
       LOG.info("Running Query %s", queryWithResult.getQuery());
       List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
-      Optional<String> resultsComparison = QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults(),
-                                                                                             queryWithResult.getFieldsToTest());
-      if (resultsComparison.isPresent()) {
+      QueryResultVerifier.ResultVerificationObject resultsComparison = QueryResultVerifier.compareResults(
+          result,
+          queryWithResult.getExpectedResults(),
+          queryWithResult.getFieldsToTest()
+      );
+      if (!resultsComparison.isSuccess()) {
         LOG.error(
             "Failed while executing query %s \n expectedResults: %s \n actualResults : %s",
             queryWithResult.getQuery(),
@@ -158,13 +160,9 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
         );
         Assert.fail(StringUtils.format(
             "Results mismatch while executing the query %s.\n"
-            + "Expected results: %s\n"
-            + "Actual results: %s\n"
             + "Mismatch error: %s\n",
             queryWithResult.getQuery(),
-            jsonMapper.writeValueAsString(queryWithResult.getExpectedResults()),
-            jsonMapper.writeValueAsString(result),
-            resultsComparison.get()
+            resultsComparison.getErrorMessage()
         ));
       } else {
         LOG.info("Results Verified for Query %s", queryWithResult.getQuery());

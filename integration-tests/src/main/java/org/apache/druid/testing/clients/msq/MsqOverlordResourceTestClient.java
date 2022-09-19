@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
@@ -41,7 +40,7 @@ import java.util.Map;
  */
 public class MsqOverlordResourceTestClient extends OverlordResourceTestClient
 {
-  ObjectMapper jsonMapper;
+  private ObjectMapper jsonMapper;
 
   @Inject
   MsqOverlordResourceTestClient(
@@ -55,7 +54,7 @@ public class MsqOverlordResourceTestClient extends OverlordResourceTestClient
     this.jsonMapper.registerModules(new MSQIndexingModule().getJacksonModules());
   }
 
-  public Map<String, MSQTaskReport> getTaskReportForMsqTask(String taskId)
+  public Map<String, MSQTaskReport> getMsqTaskReport(String taskId)
   {
     try {
       StatusResponseHolder response = makeRequest(
@@ -70,7 +69,7 @@ public class MsqOverlordResourceTestClient extends OverlordResourceTestClient
       {
       });
     }
-    catch (ISE e) {
+    catch (RuntimeException e) {
       throw e;
     }
     catch (Exception e) {

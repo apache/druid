@@ -20,18 +20,20 @@
 package org.apache.druid.testing.utils;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public class QueryResultVerifier
 {
-  private static final Logger LOG = new Logger(QueryResultVerifier.class);
-
-  public static Optional<String> compareResults(
+  /**
+   * Tests the actual vs the expected results for equality and returns a {@link ResultVerificationObject} containing the
+   * result of the check. If fieldsToTest is not null and non empty, only the supplied fields would be tested for
+   * equality. Else, the whole row is compared
+   */
+  public static ResultVerificationObject compareResults(
       Iterable<Map<String, Object>> actual,
       Iterable<Map<String, Object>> expected,
       List<String> fieldsToTest
@@ -40,6 +42,7 @@ public class QueryResultVerifier
     Iterator<Map<String, Object>> actualIter = actual.iterator();
     Iterator<Map<String, Object>> expectedIter = expected.iterator();
 
+    int rowNumber = 1;
     while (actualIter.hasNext() && expectedIter.hasNext()) {
       Map<String, Object> actualRes = actualIter.next();
       Map<String, Object> expRes = expectedIter.next();
@@ -48,24 +51,27 @@ public class QueryResultVerifier
         for (String field : fieldsToTest) {
           if (!actualRes.get(field).equals(expRes.get(field))) {
             String mismatchMessage = StringUtils.format(
-                "Field [%s] mismatch. Expected: [%s], Actual: [%s]",
+                "Mismatch in row no. [%d], column [%s]. Expected: [%s], Actual: [%s]",
+                rowNumber,
                 field,
                 expRes,
                 actualRes
             );
-            return Optional.of(mismatchMessage);
+            return new ResultVerificationObject(mismatchMessage);
           }
         }
       } else {
         if (!actualRes.equals(expRes)) {
           String mismatchMessage = StringUtils.format(
-              "Row mismatch. Expected: [%s], Actual: [%s]",
+              "Mismatch in row no. [%d]. Expected: [%s], Actual: [%s]",
+              rowNumber,
               expRes,
               actualRes
           );
-          return Optional.of(mismatchMessage);
+          return new ResultVerificationObject(mismatchMessage);
         }
       }
+      ++rowNumber;
     }
 
     if (actualIter.hasNext() || expectedIter.hasNext()) {
@@ -74,8 +80,30 @@ public class QueryResultVerifier
               "Results size mismatch. The actual result contain %s rows than the expected result.",
               actualIter.hasNext() ? "more" : "less"
           );
-      return Optional.of(mismatchMessage);
+      return new ResultVerificationObject(mismatchMessage);
     }
-    return Optional.empty();
+    return new ResultVerificationObject(null);
+  }
+
+  public static class ResultVerificationObject
+  {
+    @Nullable
+    private final String errorMessage;
+
+    ResultVerificationObject(@Nullable final String errorMessage)
+    {
+      this.errorMessage = errorMessage;
+    }
+
+    public boolean isSuccess()
+    {
+      return getErrorMessage() == null;
+    }
+
+    @Nullable
+    public String getErrorMessage()
+    {
+      return errorMessage;
+    }
   }
 }

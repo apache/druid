@@ -49,9 +49,10 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Helper class to aid out ITs for MSQ.
@@ -92,7 +93,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
   /**
    * Submits a task to the MSQ API with the given query string, and default headers and parameters
    */
-  public String submitMsqTask(String sqlQueryString) throws ExecutionException, InterruptedException
+  public SqlTaskStatus submitMsqTask(String sqlQueryString) throws ExecutionException, InterruptedException
   {
     return submitMsqTask(new SqlQuery(sqlQueryString, null, false, false, false, ImmutableMap.of(), null));
   }
@@ -101,15 +102,21 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
 
   /**
    * Submits a {@link SqlQuery} to the MSQ API for execution. This method waits for the task to be accepted by the cluster
-   * and returns the task id associated with the submitted task
+   * and returns the status associated with the submitted task
    */
-  public String submitMsqTask(SqlQuery sqlQuery) throws ExecutionException, InterruptedException
+  public SqlTaskStatus submitMsqTask(SqlQuery sqlQuery) throws ExecutionException, InterruptedException
   {
     String queryUrl = getQueryURL(config.getBrokerUrl());
     Future<StatusResponseHolder> responseHolderFuture = msqClient.queryAsync(queryUrl, sqlQuery);
-    // It is okay to block here for the result because MSQ tasks return the task Id associated with it, which shouldn't
+    // It is okay to block here for the result because MSQ tasks return the task id associated with it, which shouldn't
     // consume a lot of time
-    StatusResponseHolder statusResponseHolder = responseHolderFuture.get();
+    StatusResponseHolder statusResponseHolder;
+    try {
+      statusResponseHolder = responseHolderFuture.get(5, TimeUnit.MINUTES);
+    }
+    catch (TimeoutException e) {
+      throw new ISE(e, "Unable to fetch the task id for the submitted task in time.");
+    }
 
     // Check if the task has been accepted successfully
     HttpResponseStatus httpResponseStatus = statusResponseHolder.getStatus();
@@ -128,10 +135,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     catch (JsonProcessingException e) {
       throw new ISE("Unable to parse the response");
     }
-    if (sqlTaskStatus.getState().isFailure()) {
-      throw new ISE("Unable to start the task successfully.\nPossible exception: %s", sqlTaskStatus.getError());
-    }
-    return sqlTaskStatus.getTaskId();
+    return sqlTaskStatus;
   }
 
   /**
@@ -159,7 +163,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
    */
   public Map<String, MSQTaskReport> fetchStatusReports(String taskId)
   {
-    return overlordClient.getTaskReportForMsqTask(taskId);
+    return overlordClient.getMsqTaskReport(taskId);
   }
 
   /**
@@ -196,12 +200,12 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
       yielder = yielder.next(null);
     }
 
-    Optional<String> resultsComparison = QueryResultVerifier.compareResults(
+    QueryResultVerifier.ResultVerificationObject resultsComparison = QueryResultVerifier.compareResults(
         actualResults,
         expectedQueryWithResults.getExpectedResults(),
         Collections.emptyList()
     );
-    if (resultsComparison.isPresent()) {
+    if (!resultsComparison.isSuccess()) {
       throw new IAE(
           "Expected query result is different from the actual result.\n"
           + "Query: %s\n"
@@ -211,7 +215,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
           expectedQueryWithResults.getQuery(),
           actualResults,
           expectedQueryWithResults.getExpectedResults(),
-          resultsComparison.get()
+          resultsComparison.getErrorMessage()
       );
     }
   }
@@ -233,7 +237,14 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     for (MsqQueryWithResults queryWithResults : queries) {
       String queryString = queryWithResults.getQuery();
       String queryWithDatasource = StringUtils.replace(queryString, "%%DATASOURCE%%", fullDatasourcePath);
-      String taskId = submitMsqTask(queryWithDatasource);
+      SqlTaskStatus sqlTaskStatus = submitMsqTask(queryWithDatasource);
+      if (sqlTaskStatus.getState().isFailure()) {
+        throw new ISE(
+            "Unable to start the task successfully.\nPossible exception: %s",
+            sqlTaskStatus.getError()
+        );
+      }
+      String taskId = sqlTaskStatus.getTaskId();
       pollTaskIdForCompletion(taskId);
       compareResults(taskId, queryWithResults);
     }
