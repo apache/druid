@@ -752,7 +752,7 @@ v9
 DskipTests
 Papache-release
 Pdist
-Ddruid.console.skip
+Dweb.console.skip
 yaml
 Phadoop3
 dist-hadoop3
