@@ -32,6 +32,7 @@ import org.apache.druid.msq.indexing.ColumnMapping;
 import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryDataSource;
@@ -1104,7 +1105,7 @@ public class MSQSelectTest extends MSQTestBase
       while (true) {
         File successFile = new File(
             localFileStorageDir,
-            "controller_query-test-query/worker_0/stage_0/part_0/query-test-query-worker0"
+            DurableStorageUtils.getSuccessFilePath("query-test-query", 0, 0)
         );
         if (successFile.exists()) {
           existsOnce.set(true);
@@ -1144,6 +1145,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
         .verifyResults();
+    executorService.shutdownNow();
     Assert.assertTrue(existsOnce.get());
   }
 
