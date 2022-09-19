@@ -39,6 +39,7 @@ import java.util.Map;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "loadByPeriod", value = PeriodLoadRule.class),
+    @JsonSubTypes.Type(name = LoadDropByPeriod.TYPE, value = LoadDropByPeriod.class),
     @JsonSubTypes.Type(name = "loadByInterval", value = IntervalLoadRule.class),
     @JsonSubTypes.Type(name = "loadForever", value = ForeverLoadRule.class),
     @JsonSubTypes.Type(name = "dropByPeriod", value = PeriodDropRule.class),
@@ -107,4 +108,11 @@ public interface Rule
    * See https://github.com/apache/druid/issues/7228
    */
   CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment);
+
+  default void cleanExpireReplicant(
+      final DruidCoordinatorRuntimeParams params,
+      final DataSegment segment
+  )
+  {
+  }
 }

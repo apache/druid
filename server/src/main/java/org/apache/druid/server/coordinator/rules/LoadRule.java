@@ -60,8 +60,8 @@ public abstract class LoadRule implements Rule
   public final String NON_PRIMARY_ASSIGNED_COUNT = "totalNonPrimaryReplicantsLoaded";
   public static final String REQUIRED_CAPACITY = "requiredCapacity";
 
-  private final Object2IntMap<String> targetReplicants = new Object2IntOpenHashMap<>();
-  private final Object2IntMap<String> currentReplicants = new Object2IntOpenHashMap<>();
+  protected final Object2IntMap<String> targetReplicants = new Object2IntOpenHashMap<>();
+  protected final Object2IntMap<String> currentReplicants = new Object2IntOpenHashMap<>();
 
   // Cache to hold unused results from strategy call in assignPrimary
   private final Map<String, ServerHolder> strategyCache = new HashMap<>();
@@ -439,7 +439,7 @@ public abstract class LoadRule implements Rule
   /**
    * Returns true if at least one tier in target replica assignment exists in cluster but does not have enough replicas.
    */
-  private boolean loadingInProgress(final DruidCluster druidCluster)
+  protected boolean loadingInProgress(final DruidCluster druidCluster)
   {
     for (final Object2IntMap.Entry<String> entry : targetReplicants.object2IntEntrySet()) {
       final String tier = entry.getKey();
@@ -452,7 +452,7 @@ public abstract class LoadRule implements Rule
     return false;
   }
 
-  private static int dropForTier(
+  protected static int dropForTier(
       final int numToDrop,
       final NavigableSet<ServerHolder> holdersInTier,
       final DataSegment segment,
