@@ -110,12 +110,7 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
   @Override
   public int estimatedRetainedKeys()
   {
-    // Rough estimation of retained keys for a given K for ~billions of total items, based on the table from
-    // https://datasketches.apache.org/docs/Quantiles/OrigQuantilesSketch.html.
-    final int estimatedMaxRetainedKeys = 11 * sketch.getK();
-
-    // Cast to int is safe because estimatedMaxRetainedKeys is always within int range.
-    return (int) Math.min(sketch.getN(), estimatedMaxRetainedKeys);
+    return sketch.getRetainedItems();
   }
 
   @Override
