@@ -246,7 +246,7 @@ FROM (
 PARTITIONED BY ALL
 ```
 
-## Ingest a JSON string as COMPLEX\<json>
+## Ingest a JSON string as COMPLEX<json\>
 
 If your source data uses a string representation of your JSON column, you can still ingest the data as `COMPLEX<JSON>` as follows:
 - During native batch ingestion, call the `parse_json` function in a `transform` object in the `transformSpec`.
