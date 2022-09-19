@@ -697,7 +697,7 @@ public class MSQSelectTest extends MSQTestBase
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table [INFORMATION_SCHEMA.SCHEMATA] with SQL engine 'msq-task'."))
+                    "Cannot query table INFORMATION_SCHEMA.SCHEMATA with SQL engine 'msq-task'."))
             )
         )
         .verifyPlanningErrors();
@@ -712,7 +712,7 @@ public class MSQSelectTest extends MSQTestBase
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table [sys.segments] with SQL engine 'msq-task'."))
+                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
             )
         )
         .verifyPlanningErrors();
@@ -727,7 +727,7 @@ public class MSQSelectTest extends MSQTestBase
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table [sys.segments] with SQL engine 'msq-task'."))
+                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
             )
         )
         .verifyPlanningErrors();
@@ -743,7 +743,7 @@ public class MSQSelectTest extends MSQTestBase
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table [sys.segments] with SQL engine 'msq-task'."))
+                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
             )
         )
         .verifyPlanningErrors();

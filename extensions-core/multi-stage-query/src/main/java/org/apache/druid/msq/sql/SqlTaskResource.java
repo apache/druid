@@ -147,8 +147,8 @@ public class SqlTaskResource
     final String sqlQueryId = stmt.sqlQueryId();
     try {
       final DirectStatement.ResultSet plan = stmt.plan();
-      final QueryResponse response = plan.run();
-      final Sequence sequence = response.getResults();
+      final QueryResponse<Object[]> response = plan.run();
+      final Sequence<Object[]> sequence = response.getResults();
       final SqlRowTransformer rowTransformer = plan.createRowTransformer();
       final boolean isTaskStruct = MSQTaskSqlEngine.TASK_STRUCT_FIELD_NAMES.equals(rowTransformer.getFieldList());
 
