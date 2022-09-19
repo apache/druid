@@ -63,7 +63,7 @@ The following built-in functions are available.
 
 |name|description|
 |----|-----------|
-|cast|cast(expr,'LONG' or 'DOUBLE' or 'STRING' or 'ARRAY<LONG>', or 'ARRAY<DOUBLE>' or 'ARRAY<STRING>') returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
+|cast|cast(expr,LONG or DOUBLE or STRING or ARRAY<LONG\>, or ARRAY<DOUBLE\> or ARRAY<STRING\>) returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
 |nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|

@@ -22,10 +22,16 @@ package org.apache.druid.msq.guice;
 import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Provides;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.LoadScope;
+import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.msq.sql.MSQTaskSqlEngine;
+import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -54,7 +60,21 @@ public class MSQSqlModule implements DruidModule
     // We want this module to bring InputSourceModule along for the ride.
     binder.install(new InputSourceModule());
 
+    binder.bind(MSQTaskSqlEngine.class).in(LazySingleton.class);
+
     // Set up the EXTERN macro.
     SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+  }
+
+
+  @Provides
+  @MSQ
+  @LazySingleton
+  public SqlStatementFactory makeMSQSqlStatementFactory(
+      final MSQTaskSqlEngine engine,
+      SqlToolbox toolbox
+  )
+  {
+    return new SqlStatementFactory(toolbox.withEngine(engine));
   }
 }

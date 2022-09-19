@@ -32,6 +32,7 @@ import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -53,6 +54,7 @@ import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.Access;
@@ -1089,7 +1091,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     EasyMock.expect(factoryMock.factorize()).andReturn(lifecycleMock).once();
     // This is the mat of the test, making sure that the query created by the method under test matches the expected query, specifically the operator configured context
     EasyMock.expect(lifecycleMock.runSimple(expectedMetadataQuery, AllowAllAuthenticator.ALLOW_ALL_RESULT, Access.OK))
-            .andReturn(null);
+            .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
 
     EasyMock.replay(factoryMock, lifecycleMock);
 

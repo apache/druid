@@ -68,7 +68,7 @@ public class CompressedBigDecimalColumn implements ComplexColumn
   }
 
   @Override
-  public CompressedBigDecimal<?> getRowValue(int rowNum)
+  public CompressedBigDecimal getRowValue(int rowNum)
   {
     int s = scale.get(rowNum);
 
@@ -91,20 +91,20 @@ public class CompressedBigDecimalColumn implements ComplexColumn
   }
 
   @Override
-  public ColumnValueSelector<?> makeColumnValueSelector(final ReadableOffset offset)
+  public ColumnValueSelector makeColumnValueSelector(final ReadableOffset offset)
   {
-    return new ObjectColumnSelector<CompressedBigDecimal<?>>()
+    return new ObjectColumnSelector<CompressedBigDecimal>()
     {
       @Override @Nullable
-      public CompressedBigDecimal<?> getObject()
+      public CompressedBigDecimal getObject()
       {
         return getRowValue(offset.getOffset());
       }
 
       @Override @SuppressWarnings("unchecked")
-      public Class<CompressedBigDecimal<?>> classOfObject()
+      public Class<CompressedBigDecimal> classOfObject()
       {
-        return (Class<CompressedBigDecimal<?>>) (Class<?>) CompressedBigDecimal.class;
+        return (Class<CompressedBigDecimal>) (Class) CompressedBigDecimal.class;
       }
 
       @Override

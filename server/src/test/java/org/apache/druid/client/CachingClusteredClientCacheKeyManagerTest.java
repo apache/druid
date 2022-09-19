@@ -43,6 +43,7 @@ import org.junit.runner.RunWith;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.apache.druid.query.QueryContexts.DEFAULT_BY_SEGMENT;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
@@ -66,7 +67,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   public void setup()
   {
     expect(strategy.computeCacheKey(query)).andReturn(QUERY_CACHE_KEY).anyTimes();
-    expect(query.getContextValue(QueryContexts.BY_SEGMENT_KEY)).andReturn(false).anyTimes();
+    expect(query.getContextBoolean(QueryContexts.BY_SEGMENT_KEY, DEFAULT_BY_SEGMENT)).andReturn(false).anyTimes();
   }
 
   @After
@@ -202,7 +203,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   {
     expect(dataSourceAnalysis.isJoin()).andReturn(false);
     reset(query);
-    expect(query.getContextValue(QueryContexts.BY_SEGMENT_KEY)).andReturn(true).anyTimes();
+    expect(query.getContextBoolean(QueryContexts.BY_SEGMENT_KEY, DEFAULT_BY_SEGMENT)).andReturn(true).anyTimes();
     replayAll();
     CachingClusteredClient.CacheKeyManager<Object> keyManager = makeKeyManager();
     Set<SegmentServerSelector> selectors = ImmutableSet.of(
@@ -271,7 +272,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   public void testSegmentQueryCacheKey_noCachingIfBySegment()
   {
     reset(query);
-    expect(query.getContextValue(QueryContexts.BY_SEGMENT_KEY)).andReturn(true).anyTimes();
+    expect(query.getContextBoolean(QueryContexts.BY_SEGMENT_KEY, DEFAULT_BY_SEGMENT)).andReturn(true).anyTimes();
     replayAll();
     byte[] cacheKey = makeKeyManager().computeSegmentLevelQueryCacheKey();
     Assert.assertNull(cacheKey);

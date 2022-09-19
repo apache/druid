@@ -259,7 +259,7 @@ The total memory usage of the MiddleManager + Tasks:
 If you use the [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.md) or [Kinesis Indexing Service](../development/extensions-core/kinesis-ingestion.md), the number of tasks required will depend on the number of partitions and your taskCount/replica settings.
 
 On top of those requirements, allocating more task slots in your cluster is a good idea, so that you have free task
-slots available for other tasks, such as [compaction tasks](../ingestion/compaction.md).
+slots available for other tasks, such as [compaction tasks](../data-management/compaction.md).
 
 ###### Hadoop ingestion
 

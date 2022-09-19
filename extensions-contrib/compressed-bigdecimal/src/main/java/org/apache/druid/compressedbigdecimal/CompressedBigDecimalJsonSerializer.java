@@ -28,7 +28,6 @@ import java.io.IOException;
 /**
  * CompressedBigDecimal json serializer.
  */
-@SuppressWarnings("rawtypes")
 public class CompressedBigDecimalJsonSerializer extends JsonSerializer<CompressedBigDecimal>
 {
 

@@ -187,7 +187,7 @@ public class MSQReplaceTest extends MSQTestBase
                          CoreMatchers.allOf(
                              CoreMatchers.instanceOf(SqlPlanningException.class),
                              ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                                 "Missing time chunk information in OVERWRITE clause for REPLACE, set it to OVERWRITE WHERE <__time based condition> or set it to overwrite the entire table with OVERWRITE ALL."))
+                                 "Missing time chunk information in OVERWRITE clause for REPLACE. Use OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table."))
                          )
                      )
                      .verifyPlanningErrors();
