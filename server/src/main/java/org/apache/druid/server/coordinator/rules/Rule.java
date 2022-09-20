@@ -109,10 +109,12 @@ public interface Rule
    */
   CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment);
 
-  default void cleanExpireReplicant(
-      final DruidCoordinatorRuntimeParams params,
-      final DataSegment segment
-  )
+  /**
+   * By default, when a segment matches multiple rules, as long as one of the rules matches, it will immediately break, and the remaining rules will have no effect.
+   * In some cases, even if some rules are matched, the remaining rules are expected to work.
+   */
+  default boolean isBreak()
   {
+    return true;
   }
 }

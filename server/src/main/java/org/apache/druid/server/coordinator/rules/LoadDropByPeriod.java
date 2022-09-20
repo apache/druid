@@ -24,12 +24,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
+import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 import org.joda.time.Period;
 
 import java.util.NavigableSet;
@@ -44,6 +47,7 @@ public class LoadDropByPeriod extends PeriodLoadRule
   static final String TYPE = "loadDropByPeriod";
   private final String tier;
   private final int replicants;
+  private boolean isBreak = true;
 
   @JsonCreator
   public LoadDropByPeriod(
@@ -77,16 +81,42 @@ public class LoadDropByPeriod extends PeriodLoadRule
     return replicants;
   }
 
+
   @Override
-  public void cleanExpireReplicant(
+  public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
+  {
+    return true;
+  }
+
+
+  @Override
+  public CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment)
+  {
+    if (super.appliesTo(segment, DateTimes.nowUtc())) {
+      isBreak = true;
+      return super.run(coordinator, params, segment);
+    } else {
+      isBreak = false;
+      return cleanExpireReplicant(params, segment);
+    }
+
+  }
+
+  @Override
+  public boolean isBreak()
+  {
+    return isBreak;
+  }
+
+  public CoordinatorStats cleanExpireReplicant(
       final DruidCoordinatorRuntimeParams params,
       final DataSegment segment
   )
   {
+    final CoordinatorStats stats = new CoordinatorStats();
     try {
       targetReplicants.putAll(getTieredReplicants());
       currentReplicants.putAll(params.getSegmentReplicantLookup().getClusterTiers(segment.getId()));
-      final CoordinatorStats stats = new CoordinatorStats();
 
       final DruidCluster druidCluster = params.getDruidCluster();
       final boolean isLoading = loadingInProgress(druidCluster);
@@ -133,5 +163,6 @@ public class LoadDropByPeriod extends PeriodLoadRule
       targetReplicants.clear();
       currentReplicants.clear();
     }
+    return stats;
   }
 }
