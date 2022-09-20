@@ -39,6 +39,11 @@ Metrics may have additional dimensions beyond those listed above.
 
 ## Query metrics
 
+### Router
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`query/time`|Milliseconds taken to complete a query.|Native Query: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id.|< 1s|
+
 ### Broker
 
 |Metric|Description|Dimensions|Normal Value|

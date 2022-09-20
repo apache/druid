@@ -27,7 +27,10 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.TestObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
+import org.junit.contrib.java.lang.system.RestoreSystemProperties;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.Validator;
@@ -42,6 +45,12 @@ public class JsonConfiguratorTest
   private static final String PROP_PREFIX = "test.property.prefix.";
   private final ObjectMapper mapper = new TestObjectMapper();
   private final Properties properties = new Properties();
+
+  @Rule
+  public final RestoreSystemProperties restoreSystemProperties = new RestoreSystemProperties();
+
+  @Rule
+  public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
   @Before
   public void setUp()
@@ -158,6 +167,71 @@ public class JsonConfiguratorTest
     Assert.assertEquals(ImmutableList.of(), obj.prop1List);
     Assert.assertEquals("prop1", obj.prop1);
 
+  }
+
+  @Test
+  public void testPropertyInterpolation()
+  {
+    System.setProperty("my.property", "value1");
+    List<String> list = ImmutableList.of("list", "of", "strings");
+    environmentVariables.set("MY_VAR", "value2");
+
+    final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
+    properties.setProperty(PROP_PREFIX + "prop1", "${sys:my.property}");
+    properties.setProperty(PROP_PREFIX + "prop1List", "${file:UTF-8:src/test/resources/list.json}");
+    properties.setProperty(PROP_PREFIX + "prop2.prop.2", "${env:MY_VAR}");
+    final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
+    Assert.assertEquals(System.getProperty("my.property"), obj.prop1);
+    Assert.assertEquals(list, obj.prop1List);
+    Assert.assertEquals("value2", obj.prop2);
+  }
+
+  @Test
+  public void testPropertyInterpolationInName()
+  {
+    System.setProperty("my.property", "value1");
+    List<String> list = ImmutableList.of("list", "of", "strings");
+    environmentVariables.set("MY_VAR", "value2");
+
+    environmentVariables.set("SYS_PROP", "my.property");
+    System.setProperty("json.path", "src/test/resources/list.json");
+    environmentVariables.set("PROP2_NAME", "MY_VAR");
+
+    final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
+    properties.setProperty(PROP_PREFIX + "prop1", "${sys:${env:SYS_PROP}}");
+    properties.setProperty(PROP_PREFIX + "prop1List", "${file:UTF-8:${sys:json.path}}");
+    properties.setProperty(PROP_PREFIX + "prop2.prop.2", "${env:${env:PROP2_NAME}}");
+    final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
+    Assert.assertEquals(System.getProperty("my.property"), obj.prop1);
+    Assert.assertEquals(list, obj.prop1List);
+    Assert.assertEquals("value2", obj.prop2);
+  }
+
+  @Test
+  public void testPropertyInterpolationFallback()
+  {
+    List<String> list = ImmutableList.of("list", "of", "strings");
+
+    final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
+    properties.setProperty(PROP_PREFIX + "prop1", "${sys:my.property:-value1}");
+    properties.setProperty(PROP_PREFIX + "prop1List", "${unknown:-[\"list\", \"of\", \"strings\"]}");
+    properties.setProperty(PROP_PREFIX + "prop2.prop.2", "${MY_VAR:-value2}");
+    final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
+    Assert.assertEquals("value1", obj.prop1);
+    Assert.assertEquals(list, obj.prop1List);
+    Assert.assertEquals("value2", obj.prop2);
+  }
+
+  @Test
+  public void testPropertyInterpolationUndefinedException()
+  {
+    final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
+    properties.setProperty(PROP_PREFIX + "prop1", "${sys:my.property}");
+
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> configurator.configurate(properties, PROP_PREFIX, MappableObject.class)
+    );
   }
 }
 

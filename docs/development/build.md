@@ -63,7 +63,7 @@ In addition to the basic stages, you may also want to add the following profiles
 - **-Papache-release** - Apache release profile: Generates GPG signature and checksums, and builds the source distribution tarball as `distribution/target/apache-druid-x.x.x-src.tar.gz`
 - **-Prat** - Apache Rat profile: Runs the Apache Rat license audit tool
 - **-DskipTests** - Skips unit tests (which reduces build time)
-- **-Ddruid.console.skip=true** - Skip front end project
+- **-Dweb.console.skip=true** - Skip front end project
 
 Putting these together, if you wish to build the source and binary distributions with signatures and checksums, audit licenses, and skip the unit tests, you would run:
 

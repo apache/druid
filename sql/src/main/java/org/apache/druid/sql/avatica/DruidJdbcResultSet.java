@@ -103,7 +103,7 @@ public class DruidJdbcResultSet implements Closeable
     ensure(State.NEW);
     try {
       state = State.RUNNING;
-      final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(stmt::execute).get();
+      final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(stmt::execute).get().getResults();
 
       // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
       final Sequence<Object[]> retSequence =

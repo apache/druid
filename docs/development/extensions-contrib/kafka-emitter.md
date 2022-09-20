@@ -27,7 +27,7 @@ To use this Apache Druid extension, [include](../../development/extensions.md#lo
 
 ## Introduction
 
-This extension emits Druid metrics to [Apache Kafka](https://kafka.apache.org) directly with JSON format.<br>
+This extension emits Druid metrics to [Apache Kafka](https://kafka.apache.org) directly with JSON format.<br />
 Currently, Kafka has not only their nice ecosystem but also consumer API readily available.
 So, If you currently use Kafka, It's easy to integrate various tool or UI
 to monitor the status of your Druid cluster with this extension.
