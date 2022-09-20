@@ -48,7 +48,7 @@ The SQL task endpoint accepts [SQL requests in the JSON-over-HTTP form](../query
 
 This endpoint accepts [INSERT](reference.md#insert) and [REPLACE](reference.md#replace) statements.
 
-This endpoint also accepts SELECT queries. SELECT query results are collected from workers
+As an experimental feature, this endpoint also accepts SELECT queries. SELECT query results are collected from workers
 by the controller, and written into the [task report](#get-the-report-for-a-query-task) as an array of arrays. The
 behavior and result format of plain SELECT queries (without INSERT or REPLACE) is subject to change.
 
@@ -202,7 +202,7 @@ Keep the following in mind when using the task API to view reports:
 - The task report for an entire job is associated with the `query_controller` task. The `query_worker` tasks do not have
   their own reports; their information is incorporated into the controller report.
 - The task report API may report `404 Not Found` temporarily while the task is in the process of starting up.
-- The MSQ task engine supports running SELECT queries. SELECT query results are written into
+- As an experimental feature, the MSQ task engine supports running SELECT queries. SELECT query results are written into
 the `multiStageQuery.payload.results.results` task report key as an array of arrays. The behavior and result format of plain
 SELECT queries (without INSERT or REPLACE) is subject to change.
 
