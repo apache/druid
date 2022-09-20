@@ -27,13 +27,13 @@ import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.IOException;
-import java.io.PrintStream;
+import java.io.OutputStreamWriter;
 import java.nio.channels.Channels;
+import java.nio.charset.StandardCharsets;
 
 public class DurableStorageOutputChannelFactory implements OutputChannelFactory
 {
@@ -153,8 +153,8 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
       LOG.warn("Path [%s] already exists. Won't attempt to rewrite on top of it.", fileName);
       return;
     }
-    PrintStream stream = new PrintStream(storageConnector.write(fileName), false, StringUtils.UTF8_STRING);
-    stream.print(taskId); // Add some dummy content in the file
-    stream.close();
+    OutputStreamWriter os = new OutputStreamWriter(storageConnector.write(fileName), StandardCharsets.UTF_8);
+    os.write(taskId); // Add some dummy content in the file
+    os.close();
   }
 }
