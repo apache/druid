@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
@@ -31,7 +32,6 @@ import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.timeline.DataSegment;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.io.IOException;
 

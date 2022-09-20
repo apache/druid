@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.frame.file.FrameFileHttpResponseHandler;
@@ -50,7 +51,6 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SpecificTaskRetryPolicy;
 import org.apache.druid.rpc.indexing.SpecificTaskServiceLocator;
 import org.apache.druid.utils.CloseableUtils;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nonnull;
 import javax.ws.rs.core.HttpHeaders;

@@ -21,6 +21,8 @@ package org.apache.druid.testsEx.cluster;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -35,8 +37,6 @@ import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testsEx.config.ResolvedConfig;
 import org.apache.druid.testsEx.config.ResolvedDruidService;
 import org.apache.druid.testsEx.config.ResolvedService.ResolvedInstance;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.inject.Inject;
 
