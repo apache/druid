@@ -34,16 +34,16 @@ by following one of them:
 * [Tutorial: Loading stream data from Kafka](../tutorials/tutorial-kafka.md)
 * [Tutorial: Loading a file using Hadoop](../tutorials/tutorial-batch-hadoop.md)
 
-There are various ways to run Druid SQL queries: from the Druid console, using a command line utility
+There are various ways to run Druid SQL queries: from the web console, using a command line utility
 and by posting the query by HTTP. We'll look at each of these. 
 
 
-## Query SQL from the Druid console
+## Query SQL from the web console
 
-The Druid console includes a view that makes it easier to build and test queries, and 
+The web console includes a view that makes it easier to build and test queries, and 
 view their results. 
 
-1. Start up the Druid cluster, if it's not already running, and open the Druid console in your web
+1. Start up the Druid cluster, if it's not already running, and open the web console in your web
 browser. 
 
 2. Click **Query** from the header to open the Query view:  
@@ -147,7 +147,7 @@ performance issues. For more information, see [Native queries](../querying/query
 
 9. Finally, click  `...`  and **Edit context** to see how you can add additional parameters controlling the execution of the query execution. In the field, enter query context options as JSON key-value pairs, as described in [Context flags](../querying/query-context.md).  
 
-That's it! We've built a simple query using some of the query builder features built into the Druid console. The following
+That's it! We've built a simple query using some of the query builder features built into the web console. The following
 sections provide a few more example queries you can try. Also, see [Other ways to invoke SQL queries](#other-ways-to-invoke-sql-queries) to learn how
 to run Druid SQL from the command line or over HTTP. 
 

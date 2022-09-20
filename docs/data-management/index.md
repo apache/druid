@@ -1,7 +1,7 @@
 ---
-id: tutorial-msq-external-data
-title: "Connect external data"
-sidebar_label: "Connect external data"
+id: index
+title: "Data management"
+sidebar_label: "Overview"
 ---
 
 <!--
@@ -23,22 +23,12 @@ sidebar_label: "Connect external data"
   ~ under the License.
   -->
 
-<!DOCTYPE html>
-<!--This redirects to the Multi-Stage Query tutorial. This redirect file exists cause duplicate entries in the left nav aren't allowed-->
-<html lang="en-US">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      http-equiv="refresh"
-      content="0; url=/docs/multi-stage-query/connect-external-data.html"
-    />
-    <script type="text/javascript">
-      window.location.href = '/docs/multi-stage-query/connect-external-data.html';
-    </script>
-    <title>About the Druid documentation</title>
-  </head>
-  <body>
-    If you are not redirected automatically, follow this
-    <a href="/docs/multi-stage-query/connect-external-data.html">link</a>.
-  </body>
-</html>
+Apache Druid stores data [partitioned by time chunk](../design/architecture.md#datasources-and-segments) in immutable
+files called [segments](../design/segments.md). Data management operations involving replacing, or deleting,
+these segments include:
+
+- [Updates](update.md) to existing data.
+- [Deletion](delete.md) of existing data.
+- [Schema changes](schema-changes.md) for new and existing data.
+- [Compaction](compaction.md) and [automatic compaction](automatic-compaction.md), which reindex existing data to
+  optimize storage footprint and performance.

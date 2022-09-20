@@ -35,6 +35,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
+import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -47,6 +48,7 @@ import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
+import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
@@ -125,6 +127,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
@@ -341,7 +344,17 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new JoinableFactoryModule(),
         new IndexingServiceTuningConfigModule(),
         new MSQIndexingModule(),
-        new MSQSqlModule(),
+        Modules.override(new MSQSqlModule()).with(
+            binder -> {
+              // Our Guice configuration currently requires bindings to exist even if they aren't ever used, the
+              // following bindings are overriding other bindings that end up needing a lot more dependencies.
+              // We replace the bindings with something that returns null to make things more brittle in case they
+              // actually are used somewhere in the test.
+              binder.bind(SqlStatementFactory.class).annotatedWith(MSQ.class).toProvider(Providers.of(null));
+              binder.bind(SqlToolbox.class).toProvider(Providers.of(null));
+              binder.bind(MSQTaskSqlEngine.class).toProvider(Providers.of(null));
+            }
+        ),
         new MSQExternalDataSourceModule()
     ));
 
@@ -580,7 +593,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         )
     );
 
-    final List<Object[]> sequence = stmt.execute().toList();
+    final List<Object[]> sequence = stmt.execute().getResults().toList();
     return (String) Iterables.getOnlyElement(sequence)[0];
   }
 

@@ -25,14 +25,10 @@ import java.util.Arrays;
 import java.util.function.ToIntBiFunction;
 
 /**
- * Mutable big decimal value that can be used to accumulate values without losing precision or reallocating memory. 
+ * Mutable big decimal value that can be used to accumulate values without losing precision or reallocating memory.
  * This helps in revenue based calculations
- *
- * @param <T> Type of actual derived class that contains the underlying data
  */
-@SuppressWarnings("serial")
-public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> extends Number
-    implements Comparable<CompressedBigDecimal<T>>
+public abstract class CompressedBigDecimal extends Number implements Comparable<CompressedBigDecimal>
 {
 
   private static final long INT_MASK = 0x00000000ffffffffL;
@@ -59,11 +55,10 @@ public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> ex
    * than this value (the result), then the higher order bits are dropped, similar to
    * what happens when adding a long to an int and storing the result in an int.
    *
-   * @param <S> type of compressedbigdecimal to accumulate
    * @param rhs The object to accumulate
    * @return a reference to <b>this</b>
    */
-  public <S extends CompressedBigDecimal<S>> CompressedBigDecimal<T> accumulate(CompressedBigDecimal<S> rhs)
+  public CompressedBigDecimal accumulate(CompressedBigDecimal rhs)
   {
     if (rhs.scale != scale) {
       throw new IllegalArgumentException("Cannot accumulate MutableBigDecimals with differing scales");
@@ -72,7 +67,8 @@ public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> ex
       throw new IllegalArgumentException("Right hand side too big to fit in the result value");
     }
     internalAdd(getArraySize(), this, CompressedBigDecimal::getArrayEntry, CompressedBigDecimal::setArrayEntry,
-        rhs.getArraySize(), rhs, CompressedBigDecimal::getArrayEntry);
+                rhs.getArraySize(), rhs, CompressedBigDecimal::getArrayEntry
+    );
     return this;
   }
 
@@ -81,7 +77,7 @@ public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> ex
    *
    * @return this
    */
-  public CompressedBigDecimal<T> reset()
+  public CompressedBigDecimal reset()
   {
     for (int ii = 0; ii < getArraySize(); ++ii) {
       setArrayEntry(ii, 0);
@@ -105,8 +101,15 @@ public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> ex
    * @param rhs    the object containing the right array data
    * @param rhsGet method reference to get an underlying right value
    */
-  static <R, S> void internalAdd(int llen, R lhs, ToIntBiFunction<R, Integer> lhsGet, ObjBiIntConsumer<R> lhsSet,
-                                 int rlen, S rhs, ToIntBiFunction<S, Integer> rhsGet)
+  static <R, S> void internalAdd(
+      int llen,
+      R lhs,
+      ToIntBiFunction<R, Integer> lhsGet,
+      ObjBiIntConsumer<R> lhsSet,
+      int rlen,
+      S rhs,
+      ToIntBiFunction<S, Integer> rhsGet
+  )
   {
     int commonLen = Integer.min(llen, rlen);
     long carry = 0;
@@ -180,6 +183,11 @@ public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> ex
   }
 
   /**
+   * @return a version of this object that is on heap. Returns this if already on-heap
+   */
+  public abstract CompressedBigDecimal toHeap();
+
+  /**
    * Return the array size.
    *
    * @return the array size
@@ -239,6 +247,7 @@ public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> ex
    * -1 if Negative
    * 0 if Zero
    * 1 if Positive
+   *
    * @param <S>     type of object containing the array
    * @param size    the underlying array size
    * @param rhs     object that contains the underlying array
@@ -266,13 +275,24 @@ public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> ex
    * @see java.lang.Comparable#compareTo(java.lang.Object)
    */
   @Override
-  public int compareTo(CompressedBigDecimal<T> o)
+  public int compareTo(CompressedBigDecimal o)
   {
-
-    if (this.equals(o)) {
+    if (super.equals(o)) {
       return 0;
     }
     return this.toBigDecimal().compareTo(o.toBigDecimal());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return toBigDecimal().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    return obj instanceof CompressedBigDecimal && toBigDecimal().equals(((CompressedBigDecimal) obj).toBigDecimal());
   }
 
   /**

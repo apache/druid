@@ -576,13 +576,6 @@ export class WorkbenchQuery {
       apiQuery.query = queryPrepend + apiQuery.query + queryAppend;
     }
 
-    const m = /(--:context\s.+)(?:\n|$)/.exec(apiQuery.query);
-    if (m) {
-      throw new Error(
-        `This query contains a context comment '${m[1]}'. Context comments have been deprecated. Please rewrite the context comment as a context parameter. The context parameter editor is located in the "Engine" dropdown.`,
-      );
-    }
-
     const ingestQuery = this.isIngestQuery();
     if (!unlimited && !ingestQuery) {
       apiQuery.context ||= {};

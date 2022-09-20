@@ -23,9 +23,9 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
@@ -98,7 +98,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
      * Do the actual execute step which allows subclasses to wrap the sequence,
      * as is sometimes needed for testing.
      */
-    public Sequence<Object[]> run()
+    public QueryResponse<Object[]> run()
     {
       try {
         // Check cancellation. Required for SqlResourceTest to work.
@@ -176,7 +176,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
    *
    * @return sequence which delivers query results
    */
-  public Sequence<Object[]> execute()
+  public QueryResponse<Object[]> execute()
   {
     return plan().run();
   }

@@ -39,12 +39,12 @@ This topic guides you through setting up automatic compaction for your Druid clu
 
 ## Enable automatic compaction
 
-You can enable automatic compaction for a datasource using the Druid console or programmatically via an API.
-This process differs for manual compaction tasks, which can be submitted from the [Tasks view of the Druid console](../operations/druid-console.md) or the [Tasks API](../operations/api-reference.md#post-5).
+You can enable automatic compaction for a datasource using the web console or programmatically via an API.
+This process differs for manual compaction tasks, which can be submitted from the [Tasks view of the web console](../operations/web-console.md) or the [Tasks API](../operations/api-reference.md#post-5).
 
-### Druid console
+### web console
 
-Use the Druid console to enable automatic compaction for a datasource as follows.
+Use the web console to enable automatic compaction for a datasource as follows.
 
 1. Click **Datasources** in the top-level navigation.
 2. In the **Compaction** column, click the edit icon for the datasource to compact.
@@ -142,13 +142,13 @@ druid.coordinator.compaction.period=PT60S
 
 After the Coordinator has initiated auto-compaction, you can view compaction statistics for the datasource, including the number of bytes, segments, and intervals already compacted and those awaiting compaction. The Coordinator also reports the total bytes, segments, and intervals not eligible for compaction in accordance with its [segment search policy](../design/coordinator.md#segment-search-policy-in-automatic-compaction).
 
-In the Druid console, the Datasources view displays auto-compaction statistics. The Tasks view shows the task information for compaction tasks that were triggered by the automatic compaction system.
+In the web console, the Datasources view displays auto-compaction statistics. The Tasks view shows the task information for compaction tasks that were triggered by the automatic compaction system.
 
 To get statistics by API, send a [`GET` request](../operations/api-reference.md#get-10) to `/druid/coordinator/v1/compaction/status`. To filter the results to a particular datasource, pass the datasource name as a query parameter to the request—for example, `/druid/coordinator/v1/compaction/status?dataSource=wikipedia`.
 
 ## Examples
 
-The following examples demonstrate potential use cases in which auto-compaction may improve your Druid performance. See more details in [Compaction strategies](../ingestion/compaction.md#compaction-strategies). The examples in this section do not change the underlying data.
+The following examples demonstrate potential use cases in which auto-compaction may improve your Druid performance. See more details in [Compaction strategies](../data-management/compaction.md#compaction-strategies). The examples in this section do not change the underlying data.
 
 ### Change segment granularity
 

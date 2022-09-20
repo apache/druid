@@ -1454,6 +1454,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       checkCurrentTaskState();
 
+      // If supervisor is already stopping, don't contend for stateChangeLock since the block can be skipped
+      if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
+        generateAndLogReport();
+        return;
+      }
+
       synchronized (stateChangeLock) {
         // if supervisor is not suspended, ensure required tasks are running
         // if suspended, ensure tasks have been requested to gracefully stop
@@ -1471,11 +1477,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
       }
 
-      if (log.isDebugEnabled()) {
-        log.debug(generateReport(true).toString());
-      } else {
-        log.info(generateReport(false).toString());
-      }
+      generateAndLogReport();
     }
     catch (Exception e) {
       stateManager.recordThrowableEvent(e);
@@ -1483,6 +1485,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     finally {
       stateManager.markRunFinished();
+    }
+  }
+
+  private void generateAndLogReport()
+  {
+    if (log.isDebugEnabled()) {
+      log.debug(generateReport(true).toString());
+    } else {
+      log.info(generateReport(false).toString());
     }
   }
 
