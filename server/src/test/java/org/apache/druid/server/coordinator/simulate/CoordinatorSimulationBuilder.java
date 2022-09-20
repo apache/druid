@@ -32,7 +32,7 @@ import org.apache.druid.java.util.common.concurrent.DirectExecutorService;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordinator.BalancerStrategyFactory;
@@ -149,7 +149,14 @@ public class CoordinatorSimulationBuilder
   /**
    * Specifies the CoordinatorDynamicConfig to be used in the simulation.
    * <p>
-   * Default values: Specified in {@link CoordinatorDynamicConfig.Builder}.
+   * Default values: {@code useBatchedSegmentSampler = true}, other params as
+   * specified in {@link CoordinatorDynamicConfig.Builder}.
+   * <p>
+   * Tests that verify balancing behaviour should set
+   * {@link CoordinatorDynamicConfig#useBatchedSegmentSampler()} to true.
+   * Otherwise, the segment sampling is random and can produce repeated values
+   * leading to flakiness in the tests. The simulation sets this field to true by
+   * default.
    */
   public CoordinatorSimulationBuilder withDynamicConfig(CoordinatorDynamicConfig dynamicConfig)
   {
@@ -353,9 +360,9 @@ public class CoordinatorSimulationBuilder
     }
 
     @Override
-    public List<Event> getMetricEvents()
+    public List<ServiceMetricEvent> getMetricEvents()
     {
-      return new ArrayList<>(env.serviceEmitter.getEvents());
+      return new ArrayList<>(env.serviceEmitter.getMetricEvents());
     }
   }
 

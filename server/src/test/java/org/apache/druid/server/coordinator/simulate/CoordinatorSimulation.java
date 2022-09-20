@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
 import java.util.List;
@@ -82,7 +83,7 @@ public interface CoordinatorSimulation
     /**
      * Returns the metric events emitted in the previous coordinator run.
      */
-    List<Event> getMetricEvents();
+    List<ServiceMetricEvent> getMetricEvents();
 
     /**
      * Gets the load percentage of the specified datasource as seen by the coordinator.

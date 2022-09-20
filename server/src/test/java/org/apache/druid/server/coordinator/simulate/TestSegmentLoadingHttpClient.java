@@ -74,7 +74,7 @@ public class TestSegmentLoadingHttpClient implements HttpClient
       HttpResponseHandler<Intermediate, Final> handler
   )
   {
-    throw new UnsupportedOperationException();
+    return go(request, handler, null);
   }
 
   @Override
@@ -84,13 +84,12 @@ public class TestSegmentLoadingHttpClient implements HttpClient
       Duration readTimeout
   )
   {
-    return executorService.submit(() -> processRequest(request, handler, readTimeout));
+    return executorService.submit(() -> processRequest(request, handler));
   }
 
   private <Intermediate, Final> Final processRequest(
       Request request,
-      HttpResponseHandler<Intermediate, Final> handler,
-      Duration readTimeout
+      HttpResponseHandler<Intermediate, Final> handler
   )
   {
     try {
