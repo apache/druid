@@ -572,6 +572,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
                                    .addValue(
                                        LookupExtractorFactoryContainerProvider.class.getName(),
                                        lookupProvider
+                                   ).
+                                   addValue(
+                                       JoinableFactoryWrapper.class,
+                                       new JoinableFactoryWrapper(CalciteTests.createDefaultJoinableFactory())
                                    )
     );
   }

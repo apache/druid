@@ -223,6 +223,12 @@ public class JoinDataSource implements DataSource
     return leftFilter;
   }
 
+  @Nullable
+  public JoinableFactoryWrapper getJoinableFactoryWrapper()
+  {
+    return joinableFactoryWrapper;
+  }
+
   @Override
   public List<DataSource> getChildren()
   {

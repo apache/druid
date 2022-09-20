@@ -191,11 +191,19 @@ public class Queries
   {
     final Query<T> retVal;
 
-    if (query.getDataSource() instanceof QueryDataSource) {
-      final Query<?> subQuery = ((QueryDataSource) query.getDataSource()).getQuery();
+    /*
+     * Currently, this method is implemented in terms of a static walk doing a bunch of instanceof checks.
+     * We should likely look into moving this functionality into the DataSource object itself so that they
+     * can walk and create new objects on their own.  This will be necessary as we expand the set of DataSources
+     * that do actual work, as each of them will need to show up in this if/then waterfall.
+     */
+    final DataSource theDataSource = query.getDataSource();
+    if (theDataSource instanceof QueryDataSource) {
+      final Query<?> subQuery = ((QueryDataSource) theDataSource).getQuery();
       retVal = query.withDataSource(new QueryDataSource(withBaseDataSource(subQuery, newBaseDataSource)));
-    } else {
-      final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    } else if (theDataSource instanceof JoinDataSource) {
+      JoinDataSource joinDataSource = (JoinDataSource) theDataSource;
+      final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(theDataSource);
 
       DataSource current = newBaseDataSource;
       DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
@@ -208,12 +216,14 @@ public class Queries
             clause.getCondition(),
             clause.getJoinType(),
             joinBaseFilter,
-            null
+            joinDataSource.getJoinableFactoryWrapper()
         );
         joinBaseFilter = null;
       }
 
       retVal = query.withDataSource(current);
+    } else {
+      retVal = query.withDataSource(newBaseDataSource);
     }
 
     // Verify postconditions, just in case.
