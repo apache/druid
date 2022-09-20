@@ -147,7 +147,7 @@ about [Java strong encapsulation](../operations/java.md#strong-encapsulation).
 
 ## Set the logs to asynchronously write
 
-If your logs are really chatty, you can set them to write asynchonously.
+If your logs are really chatty, you can set them to write asynchronously.
 The following example shows a `log4j2.xml` that configures some of the more chatty classes to write asynchronously:
 
 ```
