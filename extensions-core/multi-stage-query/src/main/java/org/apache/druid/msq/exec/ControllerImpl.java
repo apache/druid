@@ -1131,7 +1131,6 @@ public class ControllerImpl implements Controller
   private CounterSnapshotsTree getCountersFromAllTasks()
   {
     final CounterSnapshotsTree retVal = new CounterSnapshotsTree();
-    final List<String> taskList = workerTaskLauncher.getTaskList();
 
     final List<ListenableFuture<CounterSnapshotsTree>> futures = new ArrayList<>();
 
@@ -1151,8 +1150,6 @@ public class ControllerImpl implements Controller
 
   private void postFinishToAllTasks()
   {
-    final List<String> taskList = workerTaskLauncher.getTaskList();
-
     final List<ListenableFuture<Void>> futures = new ArrayList<>();
 
     for (int i = 0; i < workerTaskLauncher.getTaskList().size(); ++i) {
