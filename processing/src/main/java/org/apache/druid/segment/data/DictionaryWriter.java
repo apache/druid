@@ -26,6 +26,8 @@ import java.io.IOException;
 
 public interface DictionaryWriter<T> extends Serializer
 {
+  boolean isSorted();
+
   void open() throws IOException;
 
   void write(@Nullable T objectToWrite) throws IOException;

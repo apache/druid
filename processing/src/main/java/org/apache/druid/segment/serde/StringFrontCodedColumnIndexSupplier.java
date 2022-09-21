@@ -121,11 +121,11 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
     return null;
   }
 
-  private static final class FrontCodedStringIndexed implements Indexed<String>
+  public static final class FrontCodedStringIndexed implements Indexed<String>
   {
-    private final FrontCodedIndexed delegate;
+    private final Indexed<ByteBuffer> delegate;
 
-    FrontCodedStringIndexed(FrontCodedIndexed delegate)
+    public FrontCodedStringIndexed(Indexed<ByteBuffer> delegate)
     {
       this.delegate = delegate;
     }
@@ -140,11 +140,7 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
     @Override
     public String get(int index)
     {
-      final ByteBuffer buffer = delegate.get(index);
-      if (buffer == null) {
-        return null;
-      }
-      return StringUtils.fromUtf8(buffer);
+      return StringUtils.fromUtf8Nullable(delegate.get(index));
     }
 
     @Override
@@ -168,11 +164,7 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
         @Override
         public String next()
         {
-          final ByteBuffer buffer = delegateIterator.next();
-          if (buffer == null) {
-            return null;
-          }
-          return StringUtils.fromUtf8(buffer);
+          return StringUtils.fromUtf8Nullable(delegateIterator.next());
         }
       };
     }

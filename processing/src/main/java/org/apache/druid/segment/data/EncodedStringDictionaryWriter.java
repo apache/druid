@@ -44,6 +44,12 @@ public class EncodedStringDictionaryWriter implements DictionaryWriter<String>
   }
 
   @Override
+  public boolean isSorted()
+  {
+    return delegate.isSorted();
+  }
+
+  @Override
   public void open() throws IOException
   {
     delegate.open();

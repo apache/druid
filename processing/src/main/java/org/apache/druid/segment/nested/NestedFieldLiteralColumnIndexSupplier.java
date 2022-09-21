@@ -37,6 +37,7 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
@@ -60,6 +61,7 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
@@ -68,14 +70,15 @@ import java.util.SortedSet;
  * Supplies indexes for nested field columns {@link NestedFieldLiteralDictionaryEncodedColumn} of
  * {@link NestedDataComplexColumn}.
  */
-public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplier
+public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Indexed<ByteBuffer>>
+    implements ColumnIndexSupplier
 {
   @Nullable
   private final ColumnType singleType;
   private final BitmapFactory bitmapFactory;
   private final GenericIndexed<ImmutableBitmap> bitmaps;
   private final FixedIndexed<Integer> dictionary;
-  private final GenericIndexed<String> globalDictionary;
+  private final TStringDictionary globalDictionary;
   private final FixedIndexed<Long> globalLongDictionary;
   private final FixedIndexed<Double> globalDoubleDictionary;
 
@@ -87,7 +90,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
       BitmapFactory bitmapFactory,
       GenericIndexed<ImmutableBitmap> bitmaps,
       FixedIndexed<Integer> dictionary,
-      GenericIndexed<String> globalDictionary,
+      TStringDictionary globalDictionary,
       FixedIndexed<Long> globalLongDictionary,
       FixedIndexed<Double> globalDoubleDictionary
   )
@@ -282,7 +285,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
     {
       int globalIndex = dictionary.get(index);
       if (globalIndex < adjustLongId) {
-        return globalDictionary.get(globalIndex);
+        return StringUtils.fromUtf8Nullable(globalDictionary.get(globalIndex));
       } else if (globalIndex < adjustDoubleId) {
         return String.valueOf(globalLongDictionary.get(globalIndex - adjustLongId));
       } else {
@@ -308,7 +311,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
         public double estimateSelectivity(int totalRows)
         {
           return (double) getBitmap(
-              dictionary.indexOf(globalDictionary.indexOf(value))
+              dictionary.indexOf(globalDictionary.indexOf(StringUtils.toUtf8ByteBuffer(value)))
           ).size() / totalRows;
         }
 
@@ -317,7 +320,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
         {
           return bitmapResultFactory.wrapDimensionValue(
               getBitmap(
-                  dictionary.indexOf(globalDictionary.indexOf(value))
+                  dictionary.indexOf(globalDictionary.indexOf(StringUtils.toUtf8ByteBuffer(value)))
               )
           );
         }
@@ -364,7 +367,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
             {
               while (next < 0 && iterator.hasNext()) {
                 String nextValue = iterator.next();
-                next = dictionary.indexOf(globalDictionary.indexOf(nextValue));
+                next = dictionary.indexOf(globalDictionary.indexOf(StringUtils.toUtf8ByteBuffer(nextValue)));
               }
             }
           };
@@ -384,9 +387,9 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
     )
     {
       return makeRangeIndex(
-          NullHandling.emptyToNullIfNeeded(startValue),
+          StringUtils.toUtf8ByteBuffer(NullHandling.emptyToNullIfNeeded(startValue)),
           startStrict,
-          NullHandling.emptyToNullIfNeeded(endValue),
+          StringUtils.toUtf8ByteBuffer(NullHandling.emptyToNullIfNeeded(endValue)),
           endStrict,
           globalDictionary,
           0
@@ -408,9 +411,9 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
           final IntIntPair range = getLocalRangeFromDictionary(
-              startValue,
+              StringUtils.toUtf8ByteBuffer(startValue),
               startStrict,
-              endValue,
+              StringUtils.toUtf8ByteBuffer(endValue),
               endStrict,
               globalDictionary,
               0
@@ -427,7 +430,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
 
             private int findNext()
             {
-              while (currIndex < end && !matcher.apply(globalDictionary.get(dictionary.get(currIndex)))) {
+              while (currIndex < end && !matcher.apply(StringUtils.fromUtf8Nullable(globalDictionary.get(dictionary.get(currIndex))))) {
                 currIndex++;
               }
 
@@ -509,7 +512,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
             {
               while (!nextSet && iterator.hasNext()) {
                 Integer nextValue = iterator.next();
-                nextSet = stringPredicate.apply(globalDictionary.get(nextValue));
+                nextSet = stringPredicate.apply(StringUtils.fromUtf8Nullable(globalDictionary.get(nextValue)));
                 if (nextSet) {
                   next = index;
                 }
@@ -898,7 +901,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
       }
 
       // multi-type, return all that match
-      int globalId = globalDictionary.indexOf(value);
+      int globalId = globalDictionary.indexOf(StringUtils.toUtf8ByteBuffer(value));
       int localId = dictionary.indexOf(globalId);
       if (localId >= 0) {
         intList.add(localId);
@@ -1059,7 +1062,7 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
                 } else if (nextValue >= adjustLongId) {
                   nextSet = longPredicate.applyLong(globalLongDictionary.get(nextValue - adjustLongId));
                 } else {
-                  nextSet = stringPredicate.apply(globalDictionary.get(nextValue));
+                  nextSet = stringPredicate.apply(StringUtils.fromUtf8Nullable(globalDictionary.get(nextValue)));
                 }
                 if (nextSet) {
                   next = index;

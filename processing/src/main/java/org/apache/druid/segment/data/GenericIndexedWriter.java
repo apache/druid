@@ -224,6 +224,12 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     objectsSorted = false;
   }
 
+  @Override
+  public boolean isSorted()
+  {
+    return objectsSorted;
+  }
+
   @VisibleForTesting
   void setIntMaxForCasting(final int intMaxForCasting)
   {

@@ -173,6 +173,12 @@ public class FrontCodedIndexedWriter<T> implements DictionaryWriter<T>
     valuesOut.writeTo(channel);
   }
 
+  @Override
+  public boolean isSorted()
+  {
+    return true;
+  }
+
   private void flush() throws IOException
   {
     int remainder = numWritten % bucketSize;

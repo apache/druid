@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.IndexMerger;
@@ -30,8 +31,11 @@ import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ComplexColumn;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
+import org.apache.druid.segment.data.EncodedStringDictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexed;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 
 import java.io.IOException;
@@ -44,7 +48,8 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
   private final ImmutableBitmap nullValues;
   private final GenericIndexed<String> fields;
   private final NestedLiteralTypeInfo fieldInfo;
-  private final GenericIndexed<String> dictionary;
+  private final GenericIndexed<ByteBuffer> dictionary;
+  private final FrontCodedIndexed frontCodedDictionary;
   private final FixedIndexed<Long> longDictionary;
   private final FixedIndexed<Double> doubleDictionary;
   private final ColumnConfig columnConfig;
@@ -74,7 +79,25 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
             mapper,
             NestedDataColumnSerializer.STRING_DICTIONARY_FILE_NAME
         );
-        dictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.STRING_STRATEGY, mapper);
+
+        final int dictionaryStartPosition = stringDictionaryBuffer.position();
+        final byte dictionaryVersion = stringDictionaryBuffer.get();
+
+        if (dictionaryVersion == EncodedStringDictionaryWriter.VERSION) {
+          final byte encodingId = stringDictionaryBuffer.get();
+          if (encodingId == StringEncodingStrategy.FRONT_CODED_ID) {
+            frontCodedDictionary = FrontCodedIndexed.read(stringDictionaryBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY, metadata.getByteOrder());
+            dictionary = null;
+          } else {
+            throw new ISE("impossible, unknown encoding strategy id: %s", encodingId);
+          }
+        } else {
+          // legacy format that only supports plain utf8 enoding stored in GenericIndexed
+          // reset start position so the GenericIndexed version can be correctly read
+          stringDictionaryBuffer.position(dictionaryStartPosition);
+          dictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY, mapper);
+          frontCodedDictionary = null;
+        }
         final ByteBuffer longDictionaryBuffer = loadInternalFile(
             mapper,
             NestedDataColumnSerializer.LONG_DICTIONARY_FILE_NAME
@@ -126,14 +149,14 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
   @Override
   public ComplexColumn get()
   {
-    return new CompressedNestedDataComplexColumn(
+    return new CompressedNestedDataComplexColumn<>(
         metadata,
         columnConfig,
         compressedRawColumnSupplier,
         nullValues,
         fields,
         fieldInfo,
-        dictionary,
+        frontCodedDictionary == null ? dictionary : frontCodedDictionary,
         longDictionary,
         doubleDictionary,
         fileMapper

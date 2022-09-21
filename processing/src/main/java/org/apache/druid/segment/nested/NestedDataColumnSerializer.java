@@ -316,7 +316,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   ) throws IOException
   {
     Preconditions.checkState(closedForWrite, "Not closed yet!");
-
+    Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
     // version 3
     channel.write(ByteBuffer.wrap(new byte[]{0x03}));
     channel.write(ByteBuffer.wrap(metadataBytes));

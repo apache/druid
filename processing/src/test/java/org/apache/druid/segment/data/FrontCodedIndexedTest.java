@@ -22,7 +22,6 @@ package org.apache.druid.segment.data;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -124,7 +123,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     final int bucketSize = 16;
     final ByteBuffer buffer = ByteBuffer.allocate(1 << 24).order(order);
     for (int sizeAdjust = 0; sizeAdjust < bucketSize; sizeAdjust++) {
-      final TreeSet<String> values = new TreeSet<>(ColumnType.STRING.getNullableStrategy());
+      final TreeSet<String> values = new TreeSet<>(GenericIndexed.STRING_STRATEGY);
       for (int i = 0; i < sizeBase + sizeAdjust; i++) {
         values.add(IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId());
       }
@@ -160,7 +159,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     final int bucketSize = 16;
     final ByteBuffer buffer = ByteBuffer.allocate(1 << 24).order(order);
     for (int sizeAdjust = 0; sizeAdjust < bucketSize; sizeAdjust++) {
-      TreeSet<String> values = new TreeSet<>(ColumnType.STRING.getNullableStrategy());
+      TreeSet<String> values = new TreeSet<>(GenericIndexed.STRING_STRATEGY);
       values.add(null);
       for (int i = 0; i < sizeBase + sizeAdjust; i++) {
         values.add(IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId());
@@ -222,7 +221,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
     List<String> theList = ImmutableList.of("hello", "helloo", "hellooo", "hellooz", "helloozy");
-    TreeSet<String> values = new TreeSet<>(ColumnType.STRING.getNullableStrategy());
+    TreeSet<String> values = new TreeSet<>(GenericIndexed.STRING_STRATEGY);
     values.add(null);
     values.addAll(theList);
     fillBuffer(buffer, values.iterator(), 4);

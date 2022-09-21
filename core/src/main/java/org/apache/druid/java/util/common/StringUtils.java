@@ -108,6 +108,15 @@ public class StringUtils
     return StringUtils.fromUtf8(buffer, buffer.remaining());
   }
 
+  @Nullable
+  public static String fromUtf8Nullable(@Nullable final ByteBuffer buffer)
+  {
+    if (buffer == null) {
+      return null;
+    }
+    return StringUtils.fromUtf8(buffer, buffer.remaining());
+  }
+
   /**
    * Converts a string to a UTF-8 byte array.
    *
