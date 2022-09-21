@@ -64,21 +64,17 @@ create a query for the page dimension.
    returns no data, since by default the query filters for data from the last day, while our data is considerably
    older than that. Let's remove the filter.  
 
-5. In the datasource tree, click `__time` and **Remove Filter**. 
-
-   ![Clear WHERE filter](../assets/tutorial-query-03.png "Clear WHERE filter")
-
-6. Click **Run** to run the query.   
+5. Click **Run** to run the query.
 
    You should now see two columns of data, a page name and the count:
 
-   ![Query results](../assets/tutorial-query-04.png "Query results")
+   ![Query results](../assets/tutorial-query-03.png "Query results")
 
    Notice that the results are limited in the console to about a hundred, by default, due to the **Smart query limit** 
    feature. This helps users avoid inadvertently running queries that return an excessive amount of data, possibly
    overwhelming their system. 
 
-7. Let's edit the query directly and take a look at a few more query building features in the editor. 
+6. Let's edit the query directly and take a look at a few more query building features in the editor.
    Click in the query edit pane and make the following changes: 
 
    1.  Add a line after the first column, `"page"` and Start typing the name of a new column, `"countryName"`. Notice that the autocomplete menu suggests column names, functions, keywords, and more. Choose "countryName" and 
@@ -108,7 +104,7 @@ returns the number of edits for the page. Make the same column name change in th
    is null. Let's 
    show only rows with a `countryName` value.
 
-8. Click the countryName dimension in the left pane and choose the first filtering option. It's not exactly what we want, but
+7. Click the `countryName` dimension in the left pane and choose the first filtering option. It's not exactly what we want, but
 we'll edit it by hand. The new WHERE clause should appear in your query. 
 
 8. Modify the WHERE clause to exclude results that do not have a value for countryName: 
@@ -118,7 +114,7 @@ we'll edit it by hand. The new WHERE clause should appear in your query.
    ``` 
    Run the query again. You should now see the top edits by country:  
 
-   ![Finished query](../assets/tutorial-query-035.png "Finished query")
+   ![Finished query](../assets/tutorial-query-04.png "Finished query")
 
 9. Under the covers, every Druid SQL query is translated into a query in the JSON-based _Druid native query_ format before it runs
  on data nodes. You can view the native query for this query by clicking `...` and **Explain SQL Query**. 
@@ -126,7 +122,7 @@ we'll edit it by hand. The new WHERE clause should appear in your query.
    While you can use Druid SQL for most purposes, familiarity with native query is useful for composing complex queries and for troubleshooting 
 performance issues. For more information, see [Native queries](../querying/querying.md). 
 
-   ![Explain query](../assets/tutorial-query-06.png "Explain query")
+   ![Explain query](../assets/tutorial-query-05.png "Explain query")
 
     > Another way to view the explain plan is by adding EXPLAIN PLAN FOR to the front of your query, as follows:
     >
@@ -163,7 +159,7 @@ FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2015-09-12/2015-09-13')
 GROUP BY 1
 ```
 
-![Query example](../assets/tutorial-query-07.png "Query example")
+![Query example](../assets/tutorial-query-06.png "Query example")
 
 ### General group by
 
@@ -174,7 +170,7 @@ GROUP BY channel, page
 ORDER BY SUM(added) DESC
 ```
 
-![Query example](../assets/tutorial-query-08.png "Query example")
+![Query example](../assets/tutorial-query-07.png "Query example")
 
 
 ## Other ways to invoke SQL queries
