@@ -113,8 +113,7 @@ public class IndexSpec
   public IndexSpec(
       @JsonProperty("bitmap") @Nullable BitmapSerdeFactory bitmapSerdeFactory,
       @JsonProperty("dimensionCompression") @Nullable CompressionStrategy dimensionCompression,
-      @JsonProperty("stringDictionaryEncoding") @Nullable
-      StringEncodingStrategy stringDictionaryEncoding,
+      @JsonProperty("stringDictionaryEncoding") @Nullable StringEncodingStrategy stringDictionaryEncoding,
       @JsonProperty("metricCompression") @Nullable CompressionStrategy metricCompression,
       @JsonProperty("longEncoding") @Nullable CompressionFactory.LongEncodingStrategy longEncoding,
       @JsonProperty("jsonCompression") @Nullable CompressionStrategy jsonCompression,
