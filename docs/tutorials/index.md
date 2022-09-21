@@ -184,8 +184,9 @@ Follow these steps to load the sample Wikipedia dataset:
    ```
    </details>
 
-6. Optionally, click **Preview** to see the general shape of the data before you ingest it.  
-7. Click **Run** to execute the query. The task may take a minute or two to complete. When done, the task displays its duration and the number of rows inserted into the table. The view is set to automatically refresh, so you don't need to refresh the browser to see the status change.
+6. Optionally, click **Preview** to see the general shape of the data before you ingest it.
+7. Edit the first line of the query and change the default destination datasource name from `wikiticker-2015-09-12-sampled` to `wikipedia`.
+8. Click **Run** to execute the query. The task may take a minute or two to complete. When done, the task displays its duration and the number of rows inserted into the table. The view is set to automatically refresh, so you don't need to refresh the browser to see the status change.
 
     ![Run query](../assets/tutorial-quickstart-04.png "Run query")
 
@@ -201,7 +202,7 @@ In the **Query** view, run the following query to produce a list of top channels
 SELECT
   channel,
   COUNT(*)
-FROM "wikiticker-2015-09-12-sampled"
+FROM "wikipedia"
 GROUP BY channel
 ORDER BY COUNT(*) DESC
 ```
@@ -214,7 +215,7 @@ Congratulations! You've gone from downloading Druid to querying data with the MS
 
 See the following topics for more information:
 
-* [Druid SQL overview](../querying/sql.md) to learn about how to query the data you just ingested.
+* [Druid SQL overview](../querying/sql.md) or the [Query tutorial](./tutorial-query.md) to learn about how to query the data you just ingested.
 * [Ingestion overview](../ingestion/index.md) to explore options for ingesting more data.
 * [Tutorial: Load files using SQL](./tutorial-msq-extern.md) to learn how to generate a SQL query that loads external data into a Druid datasource.
 * [Tutorial: Load data with native batch ingestion](tutorial-batch-native.md) to load and query data with Druid's native batch ingestion feature.
