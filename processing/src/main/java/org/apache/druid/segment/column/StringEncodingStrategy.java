@@ -71,6 +71,12 @@ public interface StringEncodingStrategy
     }
 
     @Override
+    public int hashCode()
+    {
+      return Objects.hashCode(UTF8);
+    }
+
+    @Override
     public String toString()
     {
       return "Utf8{}";

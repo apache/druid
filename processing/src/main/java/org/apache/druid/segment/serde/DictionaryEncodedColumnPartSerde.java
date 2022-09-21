@@ -51,7 +51,6 @@ import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSupplier;
 import org.apache.druid.segment.data.VSizeColumnarInts;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
 import org.apache.druid.segment.data.WritableSupplier;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -151,9 +150,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   {
     private int flags = STARTING_FLAGS;
 
-    @MonotonicNonNull
+    @Nullable
     private VERSION version = null;
-    @MonotonicNonNull
+    @Nullable
     private DictionaryWriter<String> dictionaryWriter = null;
     @Nullable
     private ColumnarIntsSerializer valueWriter = null;
