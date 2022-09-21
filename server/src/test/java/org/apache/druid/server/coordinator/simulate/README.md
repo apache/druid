@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 # Coordinator simulations
 
 The simulation framework allows developers to recreate arbitrary cluster setups and verify coordinator behaviour. Tests
@@ -12,7 +31,11 @@ the underlying parts. In that regard, these simulations resemble integration tes
 The primary test target is the `DruidCoordinator` itself. The behaviour of the following entities can also be verified
 using simulations:
 
+<<<<<<< HEAD
 - `HttpLoadQueuePeon`, `LoadQueueTaskMaster`
+=======
+- `LoadQueuePeon`, `LoadQueueTaskMaster`
+>>>>>>> 0039409817530bb0eaed0a78549b278e56d51778
 - All coordinator duties, e.g. `BalanceSegments`, `RunRules`
 - All retention rules
 
@@ -55,7 +78,10 @@ of the coordinator in these situations.
 - It should not be used to verify the absolute values of execution latencies, e.g. the time taken to compute the
   balancing cost of a segment. But the relative values can still be a good indicator while doing comparisons between,
   say two balancing strategies.
+<<<<<<< HEAD
 - It does not support simulation of the zk-based `CuratorLoadQueuePeon`.
+=======
+>>>>>>> 0039409817530bb0eaed0a78549b278e56d51778
 
 ## Usage
 

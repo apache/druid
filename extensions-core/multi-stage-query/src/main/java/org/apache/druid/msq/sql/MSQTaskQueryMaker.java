@@ -105,7 +105,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   }
 
   @Override
-  public QueryResponse runQuery(final DruidQuery druidQuery)
+  public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
     String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
 

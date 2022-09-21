@@ -28,7 +28,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import javax.annotation.Nullable;
 import java.util.Set;
 
-public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
+public abstract class DruidRel<T extends DruidRel<?>> extends AbstractRelNode
 {
   private final PlannerContext plannerContext;
 
@@ -45,7 +45,7 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
   @Nullable
   public abstract PartialDruidQuery getPartialDruidQuery();
 
-  public QueryResponse runQuery()
+  public QueryResponse<Object[]> runQuery()
   {
     // runQuery doesn't need to finalize aggregations, because the fact that runQuery is happening suggests this
     // is the outermost query, and it will actually get run as a native query. Druid's native query layer will

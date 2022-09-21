@@ -57,6 +57,7 @@ public class KafkaRecordSupplierTest
 {
 
   private static String topic = "topic";
+  private static String additonal_parameter = "additional.parameter";
   private static long poll_timeout_millis = 1000;
   private static int pollRetry = 5;
   private static int topicPosFix = 0;
@@ -141,6 +142,30 @@ public class KafkaRecordSupplierTest
     public void configure(Map<String, ?> map, boolean b)
     {
 
+    }
+
+    @Override
+    public void close()
+    {
+
+    }
+
+    @Override
+    public byte[] deserialize(String topic, byte[] data)
+    {
+      return data;
+    }
+  }
+
+
+  public static class TestKafkaDeserializerRequiresParameter implements Deserializer<byte[]>
+  {
+    @Override
+    public void configure(Map<String, ?> map, boolean b)
+    {
+      if (!map.containsKey("additional.parameter")) {
+        throw new IllegalStateException("require additional.parameter configured");
+      }
     }
 
     @Override
@@ -242,6 +267,42 @@ public class KafkaRecordSupplierTest
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
     Assert.assertEquals(ImmutableSet.of(0, 1), recordSupplier.getPartitionIds(topic));
 
+    recordSupplier.close();
+  }
+
+
+  @Test
+  public void testSupplierSetupCustomDeserializerRequiresParameter()
+  {
+
+    Map<String, Object> properties = kafkaServer.consumerProperties();
+    properties.put("key.deserializer", KafkaRecordSupplierTest.TestKafkaDeserializerRequiresParameter.class.getName());
+    properties.put("value.deserializer", KafkaRecordSupplierTest.TestKafkaDeserializerRequiresParameter.class.getName());
+    properties.put(additonal_parameter, "stringValue");
+
+    KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
+            properties,
+            OBJECT_MAPPER
+    );
+
+    Assert.assertTrue(recordSupplier.getAssignment().isEmpty()); //just test recordSupplier is initiated
+    recordSupplier.close();
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testSupplierSetupCustomDeserializerRequiresParameterButMissingIt()
+  {
+
+    Map<String, Object> properties = kafkaServer.consumerProperties();
+    properties.put("key.deserializer", KafkaRecordSupplierTest.TestKafkaDeserializerRequiresParameter.class.getName());
+    properties.put("value.deserializer", KafkaRecordSupplierTest.TestKafkaDeserializerRequiresParameter.class.getName());
+
+    KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
+            properties,
+            OBJECT_MAPPER
+    );
+
+    Assert.assertTrue(recordSupplier.getAssignment().isEmpty()); //just test recordSupplier is initiated
     recordSupplier.close();
   }
 

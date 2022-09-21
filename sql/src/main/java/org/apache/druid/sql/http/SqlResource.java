@@ -128,7 +128,7 @@ public class SqlResource
     try {
       Thread.currentThread().setName(StringUtils.format("sql[%s]", sqlQueryId));
       ResultSet resultSet = stmt.plan();
-      final QueryResponse response = resultSet.run();
+      final QueryResponse<Object[]> response = resultSet.run();
       final SqlRowTransformer rowTransformer = resultSet.createRowTransformer();
       final Yielder<Object[]> finalYielder = Yielders.each(response.getResults());
 

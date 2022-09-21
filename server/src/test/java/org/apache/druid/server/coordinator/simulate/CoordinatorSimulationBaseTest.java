@@ -21,7 +21,7 @@ package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
@@ -57,7 +57,7 @@ public abstract class CoordinatorSimulationBaseTest
   static final double DOUBLE_DELTA = 10e-9;
 
   private CoordinatorSimulation sim;
-  private final Map<String, List<Event>> latestMetricEvents = new HashMap<>();
+  private final Map<String, List<ServiceMetricEvent>> latestMetricEvents = new HashMap<>();
 
   @Before
   public abstract void setUp();
@@ -87,18 +87,14 @@ public abstract class CoordinatorSimulationBaseTest
     sim.coordinator().runCoordinatorCycle();
 
     // Extract the metric values of this run
-    for (Event event : sim.coordinator().getMetricEvents()) {
-      Map<String, Object> eventMap = event.toMap();
-      String metricName = (String) eventMap.get("metric");
-      if (metricName != null) {
-        latestMetricEvents.computeIfAbsent(metricName, m -> new ArrayList<>())
-                          .add(event);
-      }
+    for (ServiceMetricEvent event : sim.coordinator().getMetricEvents()) {
+      latestMetricEvents.computeIfAbsent(event.getMetric(), m -> new ArrayList<>())
+                        .add(event);
     }
   }
 
   @Override
-  public List<Event> getMetricEvents()
+  public List<ServiceMetricEvent> getMetricEvents()
   {
     return sim.coordinator().getMetricEvents();
   }
@@ -179,17 +175,17 @@ public abstract class CoordinatorSimulationBaseTest
   private List<Number> getMetricValues(String metricName, Map<String, String> dimensionFilters)
   {
     final List<Number> values = new ArrayList<>();
-    final List<Event> events = latestMetricEvents.getOrDefault(metricName, Collections.emptyList());
+    final List<ServiceMetricEvent> events = latestMetricEvents.getOrDefault(metricName, Collections.emptyList());
     final Map<String, String> filters = dimensionFilters == null
                                         ? Collections.emptyMap() : dimensionFilters;
-    for (Event event : events) {
-      final Map<String, Object> eventMap = event.toMap();
+    for (ServiceMetricEvent event : events) {
+      final Map<String, Object> userDims = event.getUserDims();
       boolean match = filters.keySet().stream()
-                             .map(d -> filters.get(d).equals(eventMap.get(d)))
+                             .map(d -> filters.get(d).equals(userDims.get(d)))
                              .reduce((a, b) -> a && b)
                              .orElse(true);
       if (match) {
-        values.add((Number) eventMap.get("value"));
+        values.add(event.getValue());
       }
     }
 
@@ -197,6 +193,15 @@ public abstract class CoordinatorSimulationBaseTest
   }
 
   // Utility methods
+
+  /**
+   * Creates a {@link CoordinatorDynamicConfig} with the specified values of:
+   * {@code maxSegmentsToMove, maxSegmentsInNodeLoadingQueue and replicationThrottleLimit}.
+   * The created config always has {@code useBatchedSegmentSampler=true} to avoid
+   * flakiness in tests.
+   *
+   * @see CoordinatorSimulationBaseTest
+   */
   static CoordinatorDynamicConfig createDynamicConfig(
       int maxSegmentsToMove,
       int maxSegmentsInNodeLoadingQueue,

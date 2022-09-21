@@ -439,7 +439,7 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(SqlPlanningException.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                             "CLUSTERED BY found before PARTITIONED BY. In druid, the CLUSTERED BY clause has to be specified after the PARTITIONED BY clause"))
+                             "CLUSTERED BY found before PARTITIONED BY. In Druid, the CLUSTERED BY clause must follow the PARTITIONED BY clause"))
                      ))
                      .verifyPlanningErrors();
   }
@@ -531,7 +531,7 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(SqlPlanningException.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have a LIMIT unless sqlInsertSegmentGranularity is \"all\""))
+                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
                      ))
                      .verifyPlanningErrors();
   }

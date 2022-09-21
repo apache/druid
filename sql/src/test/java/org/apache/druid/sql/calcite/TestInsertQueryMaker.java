@@ -45,7 +45,7 @@ public class TestInsertQueryMaker implements QueryMaker
   }
 
   @Override
-  public QueryResponse runQuery(final DruidQuery druidQuery)
+  public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
     // Don't actually execute anything, but do record information that tests will check for.
 
