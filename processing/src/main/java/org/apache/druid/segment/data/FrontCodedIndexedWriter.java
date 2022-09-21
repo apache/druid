@@ -23,9 +23,8 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
@@ -34,25 +33,30 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
 
 /**
  * {@link DictionaryWriter} for a {@link FrontCodedIndexed}, written to a {@link SegmentWriteOutMedium}.
  *
- * Front coding is a type of delta encoding for strings, where values are grouped into buckets. The first value of
+ * Front coding is a type of delta encoding for byte arrays, where values are grouped into buckets. The first value of
  * the bucket is written entirely, and remaining values are stored as pairs of an integer which indicates how much
- * of the first string of the bucket to use as a prefix, followed by the remaining string value after the prefix.
+ * of the first byte array of the bucket to use as a prefix, followed by the remaining value bytes after the prefix.
  */
-public class FrontCodedIndexedWriter implements DictionaryWriter<String>
+public class FrontCodedIndexedWriter<T> implements DictionaryWriter<T>
 {
-  private static final NullableTypeStrategy<String> NULLABLE_STRING_STRATEGY = ColumnType.STRING.getNullableStrategy();
   private static final int MAX_LOG_BUFFER_SIZE = 26;
+
+  public static final FrontCoder<String> STRING_ENCODER = new StringFrontCoder();
 
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final int bucketSize;
   private final ByteOrder byteOrder;
 
   @Nullable
-  private String prevObject = null;
+  private T prevObject = null;
   @Nullable
   private WriteOutBytes headerOut = null;
   @Nullable
@@ -61,17 +65,28 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<String>
 
   private ByteBuffer scratch;
   private int logScratchSize = 10;
-  private final String[] bucketBuffer;
+  private final List<T> bucketBuffer;
   private boolean isClosed = false;
   private boolean hasNulls = false;
 
-  public FrontCodedIndexedWriter(SegmentWriteOutMedium segmentWriteOutMedium, ByteOrder byteOrder, int bucketSize)
+  private final FrontCoder<T> frontCoder;
+
+  public FrontCodedIndexedWriter(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      FrontCoder<T> frontCoder,
+      ByteOrder byteOrder,
+      int bucketSize
+  )
   {
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.scratch = ByteBuffer.allocate(1 << logScratchSize).order(byteOrder);
     this.bucketSize = bucketSize;
-    this.bucketBuffer = new String[bucketSize];
+    this.bucketBuffer = new ArrayList<>(bucketSize);
+    for (int i = 0; i < bucketSize; i++) {
+      bucketBuffer.add(null);
+    }
     this.byteOrder = byteOrder;
+    this.frontCoder = frontCoder;
   }
 
   @Override
@@ -82,10 +97,10 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<String>
   }
 
   @Override
-  public void write(@Nullable String value) throws IOException
+  public void write(@Nullable T value) throws IOException
   {
-    final String objectToWrite = NullHandling.emptyToNullIfNeeded(value);
-    if (prevObject != null && NULLABLE_STRING_STRATEGY.compare(prevObject, objectToWrite) >= 0) {
+    final T objectToWrite = frontCoder.processValue(value);
+    if (prevObject != null && frontCoder.compare(prevObject, objectToWrite) >= 0) {
       throw new ISE(
           "Values must be sorted and unique. Element [%s] with value [%s] is before or equivalent to [%s]",
           numWritten,
@@ -103,7 +118,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<String>
       resetScratch();
       int written;
       do {
-        written = FrontCodedIndexed.writeBucket(scratch, bucketBuffer, bucketSize);
+        written = writeBucket(scratch, bucketBuffer, bucketSize, frontCoder);
         if (written < 0) {
           growScratch();
         }
@@ -117,7 +132,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<String>
       Channels.writeFully(headerOut, scratch);
     }
 
-    bucketBuffer[numWritten % bucketSize] = objectToWrite;
+    bucketBuffer.set(numWritten % bucketSize, objectToWrite);
 
     ++numWritten;
     prevObject = objectToWrite;
@@ -164,7 +179,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<String>
     resetScratch();
     int written;
     do {
-      written = FrontCodedIndexed.writeBucket(scratch, bucketBuffer, remainder == 0 ? bucketSize : remainder);
+      written = writeBucket(scratch, bucketBuffer, remainder == 0 ? bucketSize : remainder, frontCoder);
       if (written < 0) {
         growScratch();
       }
@@ -187,6 +202,112 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<String>
       this.scratch = ByteBuffer.allocate(1 << ++logScratchSize).order(byteOrder);
     } else {
       throw new IllegalStateException("scratch buffer to big to write buckets");
+    }
+  }
+
+  public static <T> int writeBucket(ByteBuffer buffer, List<T> values, int numValues, FrontCoder<T> frontCoder)
+  {
+    int written = 0;
+    T first = null;
+    while (written < numValues) {
+      T next = values.get(written);
+      if (written == 0) {
+        first = next;
+        int rem = writeValue(buffer, frontCoder.toBytes(first));
+        if (rem < 0) {
+          return rem;
+        }
+      } else {
+        final FrontCoder.FrontCodedValue deltaEncoded = frontCoder.encodeValue(first, next);
+        int rem = buffer.remaining() - VByte.estimateIntSize(deltaEncoded.getPrefixLength());
+        if (rem < 0) {
+          return rem;
+        }
+        VByte.writeInt(buffer, deltaEncoded.getPrefixLength());
+        rem = writeValue(buffer, deltaEncoded.getSuffix());
+        if (rem < 0) {
+          return rem;
+        }
+      }
+      written++;
+    }
+    return written;
+  }
+
+  public static int writeValue(ByteBuffer buffer, byte[] bytes)
+  {
+    final int remaining = buffer.remaining() - VByte.estimateIntSize(bytes.length) - bytes.length;
+    if (remaining < 0) {
+      return remaining;
+    }
+    final int pos = buffer.position();
+    VByte.writeInt(buffer, bytes.length);
+    buffer.put(bytes, 0, bytes.length);
+    return buffer.position() - pos;
+  }
+
+  interface FrontCoder<T> extends Comparator<T>
+  {
+    @Nullable
+    T processValue(@Nullable T value);
+
+    byte[] toBytes(T value);
+    FrontCodedValue encodeValue(T first, T value);
+
+    class FrontCodedValue
+    {
+      private final int prefixLength;
+      private final byte[] suffix;
+
+      public FrontCodedValue(int prefixLength, byte[] suffix)
+      {
+        this.prefixLength = prefixLength;
+        this.suffix = suffix;
+      }
+
+      public int getPrefixLength()
+      {
+        return prefixLength;
+      }
+
+      public byte[] getSuffix()
+      {
+        return suffix;
+      }
+    }
+  }
+
+  public static final class StringFrontCoder implements FrontCoder<String>
+  {
+    @Nullable
+    @Override
+    public String processValue(@Nullable String value)
+    {
+      return NullHandling.emptyToNullIfNeeded(value);
+    }
+
+    @Override
+    public byte[] toBytes(String value)
+    {
+      return StringUtils.toUtf8(value);
+    }
+
+    @Override
+    public FrontCodedValue encodeValue(String first, String next)
+    {
+      int i = 0;
+      for (; i < first.length(); i++) {
+        if (first.charAt(i) != next.charAt(i)) {
+          break;
+        }
+      }
+      return new FrontCodedValue(i, toBytes(next.substring(i)));
+    }
+
+    @Override
+    public int compare(String o1, String o2)
+    {
+      return GenericIndexed.STRING_STRATEGY.compare(o1, o2);
     }
   }
 }

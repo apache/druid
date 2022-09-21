@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.benchmark.compression.EncodingSizeProfiler;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnType;
@@ -53,6 +54,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -119,8 +121,9 @@ public class FrontCodedIndexedBenchmark
     );
     genericIndexedWriter.open();
 
-    FrontCodedIndexedWriter frontCodedIndexedWriter = new FrontCodedIndexedWriter(
+    FrontCodedIndexedWriter<String> frontCodedIndexedWriter = new FrontCodedIndexedWriter<>(
         new OnHeapMemorySegmentWriteOutMedium(),
+        FrontCodedIndexedWriter.STRING_ENCODER,
         ByteOrder.nativeOrder(),
         "front-coded-4".equals(indexType) ? 4 : 16
     );
@@ -173,15 +176,22 @@ public class FrontCodedIndexedBenchmark
     );
     frontCodedIndexed = FrontCodedIndexed.read(
         byteBufferFrontCoded.order(ByteOrder.nativeOrder()),
+        GenericIndexed.BYTE_BUFFER_STRATEGY,
         ByteOrder.nativeOrder()
     );
 
     // sanity test
     for (int i = 0; i < numElements; i++) {
-      Preconditions.checkArgument(
-          Objects.equals(genericIndexed.get(i), frontCodedIndexed.get(i)),
-          "elements not equal: " + i + " " + genericIndexed.get(i) + " " + frontCodedIndexed.get(i)
-      );
+      final String expected = genericIndexed.get(i);
+      if (expected == null) {
+        Preconditions.checkArgument(frontCodedIndexed.get(i) == null);
+      } else {
+        final String actual = StringUtils.fromUtf8(frontCodedIndexed.get(i));
+        Preconditions.checkArgument(
+            Objects.equals(expected, actual),
+            "elements not equal: " + i + " " + expected + " " + actual
+        );
+      }
     }
 
     elementsToSearch = new String[numOperations];
@@ -209,7 +219,12 @@ public class FrontCodedIndexedBenchmark
       }
     } else {
       for (int i : iterationIndexes) {
-        bh.consume(frontCodedIndexed.get(i));
+        final ByteBuffer val = frontCodedIndexed.get(i);
+        if (val == null) {
+          bh.consume(null);
+        } else {
+          bh.consume(StringUtils.fromUtf8(val));
+        }
       }
     }
   }
@@ -224,7 +239,7 @@ public class FrontCodedIndexedBenchmark
       }
     } else {
       for (String elementToSearch : elementsToSearch) {
-        r ^= frontCodedIndexed.indexOf(elementToSearch);
+        r ^= frontCodedIndexed.indexOf(StringUtils.toUtf8ByteBuffer(elementToSearch));
       }
     }
     return r;
@@ -233,14 +248,22 @@ public class FrontCodedIndexedBenchmark
   @Benchmark
   public void iterator(Blackhole blackhole)
   {
-    final Iterator<String> iterator;
     if ("generic".equals(indexType)) {
-      iterator = genericIndexed.iterator();
+      final Iterator<String> iterator = genericIndexed.iterator();
+      while (iterator.hasNext()) {
+        blackhole.consume(iterator.next());
+      }
     } else {
-      iterator = frontCodedIndexed.iterator();
-    }
-    while (iterator.hasNext()) {
-      blackhole.consume(iterator.next());
+
+      final Iterator<ByteBuffer> iterator = frontCodedIndexed.iterator();
+      while (iterator.hasNext()) {
+        final ByteBuffer buffer = iterator.next();
+        if (buffer == null) {
+          blackhole.consume(null);
+        } else {
+          blackhole.consume(StringUtils.fromUtf8(buffer));
+        }
+      }
     }
   }
 

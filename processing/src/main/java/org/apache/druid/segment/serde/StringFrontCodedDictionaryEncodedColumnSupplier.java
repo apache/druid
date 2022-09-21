@@ -25,7 +25,6 @@ import org.apache.druid.segment.column.StringFrontCodedDictionaryEncodedColumn;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.FrontCodedIndexed;
-import org.apache.druid.segment.data.FrontCodedIndexedUtf8;
 
 import javax.annotation.Nullable;
 
@@ -35,19 +34,16 @@ import javax.annotation.Nullable;
  */
 public class StringFrontCodedDictionaryEncodedColumnSupplier implements Supplier<DictionaryEncodedColumn<?>>
 {
-  private final FrontCodedIndexed dictionary;
-  private final FrontCodedIndexedUtf8 utf8Dictionary;
+  private final FrontCodedIndexed utf8Dictionary;
   private final @Nullable Supplier<ColumnarInts> singleValuedColumn;
   private final @Nullable Supplier<ColumnarMultiInts> multiValuedColumn;
 
   public StringFrontCodedDictionaryEncodedColumnSupplier(
-      FrontCodedIndexed dictionary,
-      FrontCodedIndexedUtf8 utf8Dictionary,
+      FrontCodedIndexed utf8Dictionary,
       @Nullable Supplier<ColumnarInts> singleValuedColumn,
       @Nullable Supplier<ColumnarMultiInts> multiValuedColumn
   )
   {
-    this.dictionary = dictionary;
     this.utf8Dictionary = utf8Dictionary;
     this.singleValuedColumn = singleValuedColumn;
     this.multiValuedColumn = multiValuedColumn;
@@ -59,7 +55,6 @@ public class StringFrontCodedDictionaryEncodedColumnSupplier implements Supplier
     return new StringFrontCodedDictionaryEncodedColumn(
         singleValuedColumn != null ? singleValuedColumn.get() : null,
         multiValuedColumn != null ? multiValuedColumn.get() : null,
-        dictionary,
         utf8Dictionary
     );
   }

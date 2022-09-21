@@ -48,7 +48,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.data.CompressionFactory;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -217,7 +217,7 @@ public class TestIndex
           new IndexSpec(
               null,
               null,
-              CompressionFactory.StringDictionaryEncodingStrategy.FC4,
+              new StringEncodingStrategy.FrontCoded(4),
               null,
               null,
               null,

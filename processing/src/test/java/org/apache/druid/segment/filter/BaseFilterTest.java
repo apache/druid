@@ -81,8 +81,8 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
-import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -348,8 +348,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
             })
             .build();
 
-    CompressionFactory.StringDictionaryEncodingStrategy[] stringEncoding =
-        CompressionFactory.StringDictionaryEncodingStrategy.values();
+    StringEncodingStrategy[] stringEncoding = new StringEncodingStrategy[]{
+        new StringEncodingStrategy.Utf8(),
+        new StringEncodingStrategy.FrontCoded(4)
+    };
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
       for (Map.Entry<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactoryEntry :
           segmentWriteOutMediumFactories.entrySet()) {
@@ -357,7 +359,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
             finishers.entrySet()) {
           for (boolean cnf : ImmutableList.of(false, true)) {
             for (boolean optimize : ImmutableList.of(false, true)) {
-              for (CompressionFactory.StringDictionaryEncodingStrategy encodingStrategy : stringEncoding) {
+              for (StringEncodingStrategy encodingStrategy : stringEncoding) {
                 final String testName = StringUtils.format(
                     "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s], encoding[%s]",
                     bitmapSerdeFactoryEntry.getKey(),
@@ -365,7 +367,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                     finisherEntry.getKey(),
                     cnf,
                     optimize,
-                    encodingStrategy
+                    encodingStrategy.getType()
                 );
                 final IndexBuilder indexBuilder = IndexBuilder
                     .create()

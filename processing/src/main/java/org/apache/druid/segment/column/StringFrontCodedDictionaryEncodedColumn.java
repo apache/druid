@@ -31,7 +31,6 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.FrontCodedIndexed;
-import org.apache.druid.segment.data.FrontCodedIndexedUtf8;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.SingleIndexedInt;
@@ -53,12 +52,10 @@ import java.util.BitSet;
 /**
  * {@link DictionaryEncodedColumn<String>} for a column which uses a {@link FrontCodedIndexed} to store its value
  * dictionary, which 'delta encodes' strings (instead of {@link org.apache.druid.segment.data.GenericIndexed} like
- * {@link StringDictionaryEncodedColumn}.
+ * {@link StringDictionaryEncodedColumn}).
  *
- * This class is otherwise nearly identical to {@link StringDictionaryEncodedColumn}, however the dimension selectors
- * provided by this column do not implement {@link org.apache.druid.segment.DimensionSelector#lookupNameUtf8(int)}
- * since the raw bytes are not easily accessible due to many of the value strings being stored as partial fragments
- * which require decoding complete buckets.
+ * This class is otherwise nearly identical to {@link StringDictionaryEncodedColumn} other than the dictionary
+ * difference.
  */
 public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
 {
@@ -66,19 +63,16 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   private final ColumnarInts column;
   @Nullable
   private final ColumnarMultiInts multiValueColumn;
-  private final FrontCodedIndexed dictionary;
-  private final FrontCodedIndexedUtf8 utf8Dictionary;
+  private final FrontCodedIndexed utf8Dictionary;
 
   public StringFrontCodedDictionaryEncodedColumn(
       @Nullable ColumnarInts singleValueColumn,
       @Nullable ColumnarMultiInts multiValueColumn,
-      FrontCodedIndexed dictionary,
-      FrontCodedIndexedUtf8 utf8Dictionary
+      FrontCodedIndexed utf8Dictionary
   )
   {
     this.column = singleValueColumn;
     this.multiValueColumn = multiValueColumn;
-    this.dictionary = dictionary;
     this.utf8Dictionary = utf8Dictionary;
   }
 
@@ -110,7 +104,11 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   @Nullable
   public String lookupName(int id)
   {
-    return dictionary.get(id);
+    final ByteBuffer buffer = utf8Dictionary.get(id);
+    if (buffer == null) {
+      return null;
+    }
+    return StringUtils.fromUtf8(buffer);
   }
 
   @Override
@@ -122,7 +120,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   @Override
   public int getCardinality()
   {
-    return dictionary.size();
+    return utf8Dictionary.size();
   }
 
   @Override

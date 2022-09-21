@@ -34,15 +34,14 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnDescriptor;
+import org.apache.druid.segment.column.StringEncodingStrategies;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ByteBufferWriter;
-import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.DictionaryWriter;
-import org.apache.druid.segment.data.FrontCodedIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
-import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
@@ -52,7 +51,6 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.nio.ByteOrder;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -64,13 +62,6 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
 
   public static final Comparator<Pair<Integer, PeekingIterator<String>>> DICTIONARY_MERGING_COMPARATOR =
       DictionaryMergingIterator.makePeekingComparator();
-
-
-  @Nullable
-  private GenericIndexedWriter<String> genericIndexedWriter;
-
-  @Nullable
-  private FrontCodedIndexedWriter frontCodedIndexedWriter;
 
   @Nullable
   private ByteBufferWriter<ImmutableRTree> spatialWriter;
@@ -87,10 +78,10 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
     super(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress, closer);
     if (capabilities.hasSpatialIndexes()) {
       Preconditions.checkArgument(
-          indexSpec.getStringDictionaryEncoding() == CompressionFactory.StringDictionaryEncodingStrategy.NONE,
+          StringEncodingStrategy.UTF8.equals(indexSpec.getStringDictionaryEncoding().getType()),
           StringUtils.format(
               "Spatial indexes are incompatible with [%s] encoded dictionaries",
-              indexSpec.getStringDictionaryEncoding()
+              indexSpec.getStringDictionaryEncoding().getType()
           )
       );
     }
@@ -123,24 +114,11 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
   @Override
   protected DictionaryWriter<String> getWriter(String fileName)
   {
-    if (indexSpec.getStringDictionaryEncoding() == CompressionFactory.StringDictionaryEncodingStrategy.FC4) {
-      frontCodedIndexedWriter = new FrontCodedIndexedWriter(
-          segmentWriteOutMedium,
-          ByteOrder.nativeOrder(),
-          4
-      );
-      return frontCodedIndexedWriter;
-    } else if (indexSpec.getStringDictionaryEncoding() == CompressionFactory.StringDictionaryEncodingStrategy.FC16) {
-      frontCodedIndexedWriter = new FrontCodedIndexedWriter(
-          segmentWriteOutMedium,
-          ByteOrder.nativeOrder(),
-          16
-      );
-      return frontCodedIndexedWriter;
-    } else {
-      genericIndexedWriter = new GenericIndexedWriter<>(segmentWriteOutMedium, fileName, getObjectStrategy());
-      return genericIndexedWriter;
-    }
+    return StringEncodingStrategies.getStringDictionaryWriter(
+        indexSpec.getStringDictionaryEncoding(),
+        segmentWriteOutMedium,
+        fileName
+    );
   }
 
   @Nullable
@@ -163,8 +141,7 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
     builder.setHasMultipleValues(hasMultiValue);
     final DictionaryEncodedColumnPartSerde.SerializerBuilder partBuilder = DictionaryEncodedColumnPartSerde
         .serializerBuilder()
-        .withDictionary(genericIndexedWriter)
-        .withFrontCodedDictionary(frontCodedIndexedWriter)
+        .withDictionary(dictionaryWriter)
         .withValue(
             encodedValueSerializer,
             hasMultiValue,

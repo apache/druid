@@ -39,7 +39,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.data.CompressionFactory;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
@@ -78,7 +78,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -90,8 +89,8 @@ import java.util.concurrent.TimeUnit;
  */
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 5)
-@Measurement(iterations = 15)
+@Warmup(iterations = 3)
+@Measurement(iterations = 5)
 public class SqlBenchmark
 {
   static {
@@ -410,13 +409,14 @@ public class SqlBenchmark
 
   @Param({"false", "force"})
   private String vectorize;
-  @Param({"none", "fc4", "fc16"})
+  @Param({"none", "front-coded-4", "front-coded-16"})
   private String stringEncoding;
 
   @Param({"4", "5", "6", "7", "8", "10", "11", "12", "19", "21", "22", "23"})
   private String query;
 
-  @Param({STORAGE_MMAP, STORAGE_FRAME_ROW, STORAGE_FRAME_COLUMNAR})
+//  @Param({STORAGE_MMAP, STORAGE_FRAME_ROW, STORAGE_FRAME_COLUMNAR})
+  @Param({STORAGE_MMAP})
   private String storageType;
 
   private SqlEngine engine;
@@ -441,13 +441,21 @@ public class SqlBenchmark
 
     final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
     log.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
+    StringEncodingStrategy encodingStrategy;
+    if (stringEncoding.startsWith("front-coded")) {
+      String[] split = stringEncoding.split("-");
+      int bucketSize = Integer.parseInt(split[2]);
+      encodingStrategy = new StringEncodingStrategy.FrontCoded(bucketSize);
+    } else {
+      encodingStrategy = new StringEncodingStrategy.Utf8();
+    }
     final QueryableIndex index = segmentGenerator.generate(
         dataSegment,
         schemaInfo,
         new IndexSpec(
             null,
             null,
-            CompressionFactory.StringDictionaryEncodingStrategy.fromString(stringEncoding),
+            encodingStrategy,
             null,
             null,
             null,
@@ -550,19 +558,19 @@ public class SqlBenchmark
     }
   }
 
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void planSql(Blackhole blackhole) throws Exception
-  {
-    final Map<String, Object> context = ImmutableMap.of(
-        QueryContexts.VECTORIZE_KEY, vectorize,
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
-    );
-    final String sql = QUERIES.get(Integer.parseInt(query));
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, new QueryContext(context))) {
-      final PlannerResult plannerResult = planner.plan();
-      blackhole.consume(plannerResult);
-    }
-  }
+//  @Benchmark
+//  @BenchmarkMode(Mode.AverageTime)
+//  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+//  public void planSql(Blackhole blackhole) throws Exception
+//  {
+//    final Map<String, Object> context = ImmutableMap.of(
+//        QueryContexts.VECTORIZE_KEY, vectorize,
+//        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+//    );
+//    final String sql = QUERIES.get(Integer.parseInt(query));
+//    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, new QueryContext(context))) {
+//      final PlannerResult plannerResult = planner.plan();
+//      blackhole.consume(plannerResult);
+//    }
+//  }
 }

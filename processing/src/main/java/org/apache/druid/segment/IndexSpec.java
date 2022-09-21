@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory;
@@ -45,7 +46,7 @@ public class IndexSpec
 {
   private final BitmapSerdeFactory bitmapSerdeFactory;
   private final CompressionStrategy dimensionCompression;
-  private final CompressionFactory.StringDictionaryEncodingStrategy stringDictionaryEncoding;
+  private final StringEncodingStrategy stringDictionaryEncoding;
   private final CompressionStrategy metricCompression;
   private final CompressionFactory.LongEncodingStrategy longEncoding;
 
@@ -112,7 +113,8 @@ public class IndexSpec
   public IndexSpec(
       @JsonProperty("bitmap") @Nullable BitmapSerdeFactory bitmapSerdeFactory,
       @JsonProperty("dimensionCompression") @Nullable CompressionStrategy dimensionCompression,
-      @JsonProperty("stringDictionaryEncoding") @Nullable CompressionFactory.StringDictionaryEncodingStrategy stringDictionaryEncoding,
+      @JsonProperty("stringDictionaryEncoding") @Nullable
+      StringEncodingStrategy stringDictionaryEncoding,
       @JsonProperty("metricCompression") @Nullable CompressionStrategy metricCompression,
       @JsonProperty("longEncoding") @Nullable CompressionFactory.LongEncodingStrategy longEncoding,
       @JsonProperty("jsonCompression") @Nullable CompressionStrategy jsonCompression,
@@ -126,7 +128,7 @@ public class IndexSpec
                                 ? CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY
                                 : dimensionCompression;
     this.stringDictionaryEncoding = stringDictionaryEncoding == null
-                                    ? CompressionFactory.StringDictionaryEncodingStrategy.NONE
+                                    ? StringEncodingStrategy.DEFAULT
                                     : stringDictionaryEncoding;
 
     this.metricCompression = metricCompression == null
@@ -152,7 +154,7 @@ public class IndexSpec
   }
 
   @JsonProperty
-  public CompressionFactory.StringDictionaryEncodingStrategy getStringDictionaryEncoding()
+  public StringEncodingStrategy getStringDictionaryEncoding()
   {
     return stringDictionaryEncoding;
   }
@@ -204,7 +206,7 @@ public class IndexSpec
     IndexSpec indexSpec = (IndexSpec) o;
     return Objects.equals(bitmapSerdeFactory, indexSpec.bitmapSerdeFactory) &&
            dimensionCompression == indexSpec.dimensionCompression &&
-           stringDictionaryEncoding == indexSpec.stringDictionaryEncoding &&
+           Objects.equals(stringDictionaryEncoding, indexSpec.stringDictionaryEncoding) &&
            metricCompression == indexSpec.metricCompression &&
            longEncoding == indexSpec.longEncoding &&
            Objects.equals(jsonCompression, indexSpec.jsonCompression) &&
