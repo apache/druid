@@ -29,7 +29,7 @@ description: Introduces multi-stage query architecture and its task engine
 > ingestion method is right for you.
 
 Apache Druid supports SQL-based ingestion using the bundled [`druid-multi-stage-query` extension](#load-the-extension).
-This extension adds a [multi-stage query task engine for SQL](concepts.md#sql-task-engine) that allows running SQL
+This extension adds a [multi-stage query task engine for SQL](concepts.md#multi-stage-query-task-engine) that allows running SQL
 [INSERT](concepts.md#insert) and [REPLACE](concepts.md#replace) statements as batch tasks. As an experimental feature,
 the task engine also supports running SELECT queries as batch tasks.
 
