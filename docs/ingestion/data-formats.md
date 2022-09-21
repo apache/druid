@@ -75,7 +75,9 @@ parsing data is less efficient than writing a native Java parser or using an ext
 ## Input format
 
 You can use the `inputFormat` field to specify the data format for your input data.
-> `inputFormat` doesn't support all data formats or ingestion methods supported by Druid yet.
+
+> `inputFormat` doesn't support all data formats or ingestion methods supported by Druid.
+
 Especially if you want to use the Hadoop ingestion, you still need to use the [Parser](#parser).
 If your data is formatted in some format not listed in this section, please consider using the Parser instead.
 
@@ -437,7 +439,7 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 | type | String | Set value to `schema_registry`. | no |
 | url | String | Specifies the URL endpoint of the Schema Registry. | yes |
 | capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
-| urls | Array<String> | Specifies the URL endpoints of the multiple Schema Registry instances. | yes (if `url` is not provided) |
+| urls | Array<String\> | Specifies the URL endpoints of the multiple Schema Registry instances. | yes (if `url` is not provided) |
 | config | Json | To send additional configurations, configured for Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
 | headers | Json | To send headers to the Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
 
@@ -590,7 +592,7 @@ Configure your `flattenSpec` as follows:
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| useFieldDiscovery | If true, interpret all root-level fields as available fields for usage by [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec), [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), and [`metricsSpec`](./ingestion-spec.md#metricsspec).<br><br>If false, only explicitly specified fields (see `fields`) will be available for use. | `true` |
+| useFieldDiscovery | If true, interpret all root-level fields as available fields for usage by [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec), [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), and [`metricsSpec`](./ingestion-spec.md#metricsspec).<br /><br />If false, only explicitly specified fields (see `fields`) will be available for use. | `true` |
 | fields | Specifies the fields of interest and how they are accessed. See [Field flattening specifications](#field-flattening-specifications) for more detail. | `[]` |
 
 For example:
@@ -614,7 +616,7 @@ Each entry in the `fields` list can have the following components:
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| type | Options are as follows:<br><br><ul><li>`root`, referring to a field at the root level of the record. Only really useful if `useFieldDiscovery` is false.</li><li>`path`, referring to a field using [JsonPath](https://github.com/jayway/JsonPath) notation. Supported by most data formats that offer nesting, including `avro`, `json`, `orc`, and `parquet`.</li><li>`jq`, referring to a field using [jackson-jq](https://github.com/eiiches/jackson-jq) notation. Only supported for the `json` format.</li></ul> | none (required) |
+| type | Options are as follows:<br /><br /><ul><li>`root`, referring to a field at the root level of the record. Only really useful if `useFieldDiscovery` is false.</li><li>`path`, referring to a field using [JsonPath](https://github.com/jayway/JsonPath) notation. Supported by most data formats that offer nesting, including `avro`, `json`, `orc`, and `parquet`.</li><li>`jq`, referring to a field using [jackson-jq](https://github.com/eiiches/jackson-jq) notation. Only supported for the `json` format.</li></ul> | none (required) |
 | name | Name of the field after flattening. This name can be referred to by the [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec), [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), and [`metricsSpec`](./ingestion-spec.md#metricsspec).| none (required) |
 | expr | Expression for accessing the field while flattening. For type `path`, this should be [JsonPath](https://github.com/jayway/JsonPath). For type `jq`, this should be [jackson-jq](https://github.com/eiiches/jackson-jq) notation. For other types, this parameter is ignored. | none (required for types `path` and `jq`) |
 
@@ -638,7 +640,7 @@ Each entry in the `fields` list can have the following components:
   | sum()      | Provides the sum value of an array of numbers                       | Double      | &#10003;  |  &#10003;   |   &#10003;   |  &#10003;   |
   | concat(X)  | Provides a concatenated version of the path output with a new item  | like input  | &#10003;  |  &#10007;   |   &#10007;   | &#10007;   |
   | append(X)  | add an item to the json path output array                           | like input  | &#10003;  |  &#10007;   |   &#10007;   | &#10007;   |
-  | keys()     | Provides the property keys (An alternative for terminal tilde ~)    | Set<E>      | &#10007;  |  &#10007;   |   &#10007;   | &#10007;   |
+  | keys()     | Provides the property keys (An alternative for terminal tilde ~)    | Set<E\>      | &#10007;  |  &#10007;   |   &#10007;   | &#10007;   |
 
 
 ## Parser
@@ -1309,7 +1311,7 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 | type | String | Set value to `schema_registry`. | yes |
 | url | String | Specifies the URL endpoint of the Schema Registry. | yes |
 | capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
-| urls | Array<String> | Specifies the URL endpoints of the multiple Schema Registry instances. | yes (if `url` is not provided) |
+| urls | Array<String\> | Specifies the URL endpoints of the multiple Schema Registry instances. | yes (if `url` is not provided) |
 | config | Json | To send additional configurations, configured for Schema Registry. This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md).  | no |
 | headers | Json | To send headers to the Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
 

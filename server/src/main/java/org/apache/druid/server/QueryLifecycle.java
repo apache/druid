@@ -128,7 +128,6 @@ public class QueryLifecycle
     this.startNs = startNs;
   }
 
-
   /**
    * For callers who have already authorized their query, and where simplicity is desired over flexibility. This method
    * does it all in one call. Logs and metrics are emitted when the Sequence is either fully iterated or throws an
@@ -140,8 +139,7 @@ public class QueryLifecycle
    *
    * @return results
    */
-  @SuppressWarnings("unchecked")
-  public <T> QueryResponse runSimple(
+  public <T> QueryResponse<T> runSimple(
       final Query<T> query,
       final AuthenticationResult authenticationResult,
       final Access authorizationResult
@@ -151,7 +149,7 @@ public class QueryLifecycle
 
     final Sequence<T> results;
 
-    final QueryResponse queryResponse;
+    final QueryResponse<T> queryResponse;
     try {
       preAuthorized(authenticationResult, authorizationResult);
       if (!authorizationResult.isAllowed()) {
@@ -172,7 +170,7 @@ public class QueryLifecycle
      * cannot be moved into execute().  We leave this as an exercise for the future, however as this oddity
      * was discovered while just trying to expose HTTP response headers
      */
-    return new QueryResponse(
+    return new QueryResponse<T>(
         Sequences.wrap(
             results,
             new SequenceWrapper()
@@ -193,8 +191,7 @@ public class QueryLifecycle
    *
    * @param baseQuery the query
    */
-  @SuppressWarnings("unchecked")
-  public void initialize(final Query baseQuery)
+  public void initialize(final Query<?> baseQuery)
   {
     transition(State.NEW, State.INITIALIZED);
 
@@ -282,17 +279,18 @@ public class QueryLifecycle
    *
    * @return result sequence and response context
    */
-  public QueryResponse execute()
+  public <T> QueryResponse<T> execute()
   {
     transition(State.AUTHORIZED, State.EXECUTING);
 
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
-    final Sequence<?> res = QueryPlus.wrap(baseQuery)
+    @SuppressWarnings("unchecked")
+    final Sequence<T> res = QueryPlus.wrap((Query<T>) baseQuery)
                                   .withIdentity(authenticationResult.getIdentity())
                                   .run(texasRanger, responseContext);
 
-    return new QueryResponse(res == null ? Sequences.empty() : res, responseContext);
+    return new QueryResponse<T>(res == null ? Sequences.empty() : res, responseContext);
   }
 
   /**

@@ -33,5 +33,5 @@ public interface QueryMaker
    * created for. The returned arrays match the row type given by {@link SqlEngine#resultTypeForSelect} or
    * {@link SqlEngine#resultTypeForInsert}, depending on the nature of the statement.
    */
-  QueryResponse runQuery(DruidQuery druidQuery);
+  QueryResponse<Object[]> runQuery(DruidQuery druidQuery);
 }

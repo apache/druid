@@ -1,6 +1,6 @@
 ---
-id: druid-console
-title: "Druid console"
+id: web-console
+title: "Web console"
 ---
 
 <!--
@@ -25,21 +25,22 @@ title: "Druid console"
 Druid includes a web console for loading data, managing datasources and tasks, and viewing server status and segment information.
 You can also run SQL and native Druid queries in the console.
 
-Enable the following cluster settings to use the Druid console. Note that these settings are enabled by default.
+Enable the following cluster settings to use the web console. Note that these settings are enabled by default.
 - Enable the Router's [management proxy](../design/router.md#enabling-the-management-proxy).
 - Enable [Druid SQL](../configuration/index.md#sql) for the Broker processes in the cluster.
 
-The [Router](../design/router.md) service hosts the Druid console.
-Access the Druid console at the following address:
+The [Router](../design/router.md) service hosts the web console.
+Access the web console at the following address:
 ```
 http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
-> It is important to note that any Druid console user will have, effectively, the same file permissions as the user under which Druid runs. One way these permissions are surfaced is in the file browser dialog. The dialog
-will show console users the files that the underlying user has permissions to. In general, avoid running Druid as 
-root user. Consider creating a dedicated user account for running Druid.
+> **Security note:** Without [Druid user permissions](../operations/security-overview.md) configured, any user of the
+API or web console has effectively the same level of access to local files and network services as the user under which
+Druid runs. It is a best practice to avoid running Druid as the root user, and to use Druid permissions or network
+firewalls to restrict which users have access to potentially sensitive resources.
 
-This topic presents the high-level features and functionality of the Druid console.
+This topic presents the high-level features and functionality of the web console.
 
 ## Home
 

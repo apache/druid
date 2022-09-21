@@ -123,7 +123,7 @@ Use the following to verify the `pom.xml`:
 
 ```bash
 mvn dependency:analyze -DoutputXML=true -DignoreNonCompile=true \
-    -P skip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true \
+    -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true \
     -P skip-tests
 ```
 

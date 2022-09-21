@@ -92,6 +92,7 @@ public class BalanceSegments implements CoordinatorDuty
   )
   {
 
+    log.info("Balancing segments in tier [%s]", tier);
     if (params.getUsedSegments().size() == 0) {
       log.info("Metadata segments are not available. Cannot balance.");
       // suppress emit zero stats

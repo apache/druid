@@ -191,8 +191,8 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
           {message}
           <p>
             For more info check out the{' '}
-            <ExternalLink href={`${getLink('DOCS')}/operations/management-uis.html#druid-console`}>
-              console documentation
+            <ExternalLink href={`${getLink('DOCS')}/operations/web-console.html`}>
+              web console documentation
             </ExternalLink>
             .
           </p>

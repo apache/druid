@@ -2077,7 +2077,7 @@ public class SqlResourceTest extends CalciteTestBase
       return new ResultSet(plannerResult)
       {
         @Override
-        public QueryResponse run()
+        public QueryResponse<Object[]> run()
         {
           final Function<Sequence<Object[]>, Sequence<Object[]>> sequenceMapFn =
               Optional.ofNullable(sequenceMapFnSupplier.get()).orElse(Function.identity());
@@ -2085,12 +2085,12 @@ public class SqlResourceTest extends CalciteTestBase
           final NonnullPair<CountDownLatch, Boolean> executeLatch = executeLatchSupplier.get();
           if (executeLatch != null) {
             if (executeLatch.rhs) {
-              final QueryResponse resp = super.run();
+              final QueryResponse<Object[]> resp = super.run();
               Sequence<Object[]> sequence = sequenceMapFn.apply(resp.getResults());
               executeLatch.lhs.countDown();
               final ResponseContext respContext = resp.getResponseContext();
               respContext.merge(responseContextSupplier.get());
-              return new QueryResponse(sequence, respContext);
+              return new QueryResponse<>(sequence, respContext);
             } else {
               try {
                 if (!executeLatch.lhs.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
@@ -2103,11 +2103,11 @@ public class SqlResourceTest extends CalciteTestBase
             }
           }
 
-          final QueryResponse resp = super.run();
+          final QueryResponse<Object[]> resp = super.run();
           Sequence<Object[]> sequence = sequenceMapFn.apply(resp.getResults());
           final ResponseContext respContext = resp.getResponseContext();
           respContext.merge(responseContextSupplier.get());
-          return new QueryResponse(sequence, respContext);
+          return new QueryResponse<>(sequence, respContext);
         }
       };
     }
