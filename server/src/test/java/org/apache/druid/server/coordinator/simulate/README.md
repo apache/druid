@@ -31,11 +31,7 @@ the underlying parts. In that regard, these simulations resemble integration tes
 The primary test target is the `DruidCoordinator` itself. The behaviour of the following entities can also be verified
 using simulations:
 
-<<<<<<< HEAD
 - `HttpLoadQueuePeon`, `LoadQueueTaskMaster`
-=======
-- `LoadQueuePeon`, `LoadQueueTaskMaster`
->>>>>>> 0039409817530bb0eaed0a78549b278e56d51778
 - All coordinator duties, e.g. `BalanceSegments`, `RunRules`
 - All retention rules
 
@@ -67,6 +63,7 @@ of the coordinator in these situations.
    interfaces to communicate with external dependencies have been provided as simple in-memory implementations:
     - communication with metadata store: `SegmentMetadataManager`, `MetadataRuleManager`
     - communication with historicals: `HttpClient`, `ServerInventoryView`
+    - `CuratorFramework`: provided as a mock as simulations of `CuratorLoadQueuePeon` are not supported yet
 4. __Inventory__: The coordinator maintains an inventory view of the cluster state. Simulations can choose from two
    modes of inventory update - auto and manual. In auto update mode, any change made to the cluster is immediately
    reflected in the inventory view. In manual update mode, the inventory must be explicitly synchronized with the
@@ -78,10 +75,7 @@ of the coordinator in these situations.
 - It should not be used to verify the absolute values of execution latencies, e.g. the time taken to compute the
   balancing cost of a segment. But the relative values can still be a good indicator while doing comparisons between,
   say two balancing strategies.
-<<<<<<< HEAD
 - It does not support simulation of the zk-based `CuratorLoadQueuePeon`.
-=======
->>>>>>> 0039409817530bb0eaed0a78549b278e56d51778
 
 ## Usage
 
