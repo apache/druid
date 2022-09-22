@@ -24,6 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -31,11 +35,6 @@ import org.apache.druid.server.coordination.DataSegmentChangeCallback;
 import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
 
 import java.io.ByteArrayInputStream;
@@ -99,7 +98,6 @@ public class TestSegmentLoadingHttpClient implements HttpClient
       if (changeHandler == null) {
         final HttpResponse failureResponse =
             new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
-        failureResponse.setContent(ChannelBuffers.EMPTY_BUFFER);
         handler.handleResponse(failureResponse, NOOP_TRAFFIC_COP);
         return (Final) new ByteArrayInputStream(new byte[0]);
       }
@@ -114,7 +112,6 @@ public class TestSegmentLoadingHttpClient implements HttpClient
       // Set response content and status
       final HttpResponse response =
           new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-      response.setContent(ChannelBuffers.EMPTY_BUFFER);
       handler.handleResponse(response, NOOP_TRAFFIC_COP);
       return (Final) new ByteArrayInputStream(serializedContent);
     }
