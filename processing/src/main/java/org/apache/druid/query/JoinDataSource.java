@@ -156,7 +156,7 @@ public class JoinDataSource implements DataSource
       final JoinConditionAnalysis conditionAnalysis,
       final JoinType joinType,
       final DimFilter leftFilter,
-      final JoinableFactoryWrapper joinableFactoryWrapper
+      @Nullable @JacksonInject final JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
     return new JoinDataSource(

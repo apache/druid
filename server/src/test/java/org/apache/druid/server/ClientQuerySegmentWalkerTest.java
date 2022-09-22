@@ -504,7 +504,10 @@ public class ClientQuerySegmentWalkerTest
                                            JoinType.INNER,
                                            null,
                                            ExprMacroTable.nil(),
-                                           null
+                                           new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
+                                               null,
+                                               null,
+                                               null))
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -573,7 +576,10 @@ public class ClientQuerySegmentWalkerTest
                                            JoinType.INNER,
                                            null,
                                            ExprMacroTable.nil(),
-                                           null
+                                           new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
+                                               null,
+                                               null,
+                                               null))
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
