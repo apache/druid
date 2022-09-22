@@ -27,6 +27,8 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -35,15 +37,12 @@ import org.mockito.Mockito;
 
 import java.util.Collections;
 
+
 public class JoinDataSourceTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private final TableDataSource fooTable = new TableDataSource("foo");
   private final TableDataSource barTable = new TableDataSource("bar");
   private final LookupDataSource lookylooLookup = new LookupDataSource("lookyloo");
-
   private final JoinDataSource joinTableToLookup = JoinDataSource.create(
       fooTable,
       lookylooLookup,
@@ -54,7 +53,6 @@ public class JoinDataSourceTest
       ExprMacroTable.nil(),
       null
   );
-
   private final JoinDataSource joinTableToTable = JoinDataSource.create(
       fooTable,
       barTable,
@@ -65,6 +63,10 @@ public class JoinDataSourceTest
       ExprMacroTable.nil(),
       null
   );
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+  @Mock
+  private JoinableFactoryWrapper joinableFactoryWrapper;
 
   @Test
   public void test_getTableNames_tableToTable()
@@ -157,7 +159,7 @@ public class JoinDataSourceTest
   @Test
   public void test_serde() throws Exception
   {
-    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapperForJoinable(joinableFactoryWrapper);
     JoinDataSource joinDataSource = JoinDataSource.create(
         new TableDataSource("table1"),
         new TableDataSource("table2"),
@@ -166,7 +168,7 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         TrueDimFilter.instance(),
         ExprMacroTable.nil(),
-        null
+        joinableFactoryWrapper
     );
 
     final JoinDataSource deserialized = (JoinDataSource) jsonMapper.readValue(

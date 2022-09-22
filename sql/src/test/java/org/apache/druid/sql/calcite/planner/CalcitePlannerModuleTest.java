@@ -127,6 +127,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
           binder.bind(Key.get(new TypeLiteral<Set<SqlAggregator>>() {})).toInstance(aggregators);
           binder.bind(Key.get(new TypeLiteral<Set<SqlOperatorConversion>>() {})).toInstance(operatorConversions);
           binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
+          binder.bind(JoinableFactoryWrapper.class).toInstance(joinableFactoryWrapper);
         },
         target,
         binder -> {
