@@ -576,6 +576,18 @@ export class WorkbenchQuery {
       apiQuery.query = queryPrepend + apiQuery.query + queryAppend;
     }
 
+    const m = /--:ISSUE:(.+)(?:\n|$)/.exec(apiQuery.query);
+    if (m) {
+      throw new Error(
+        `This query contains an ISSUE comment: ${m[1]
+          .trim()
+          .replace(
+            /\.$/,
+            '',
+          )}. (Please resolve the issue in the comment, delete the ISSUE comment and re-run the query.)`,
+      );
+    }
+
     const ingestQuery = this.isIngestQuery();
     if (!unlimited && !ingestQuery) {
       apiQuery.context ||= {};
