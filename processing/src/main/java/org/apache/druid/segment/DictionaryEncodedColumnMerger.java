@@ -124,7 +124,6 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   protected abstract ObjectStrategy<T> getObjectStrategy();
   @Nullable
   protected abstract T coerceValue(T value);
-  protected abstract DictionaryWriter<T> getWriter(String fileName);
 
   @Override
   public void writeMergedValueDictionary(List<IndexableAdapter> adapters) throws IOException
@@ -388,7 +387,10 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     }
   }
 
-
+  protected DictionaryWriter<T> getWriter(String fileName)
+  {
+    return new GenericIndexedWriter<>(segmentWriteOutMedium, fileName, getObjectStrategy());
+  }
 
   @Nullable
   protected ExtendedIndexesMerger getExtendedIndexesMerger()
