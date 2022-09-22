@@ -64,6 +64,7 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
   {
     super(id, dataSource, context, IngestionMode.HADOOP);
     this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;
+    log.info("HadoopTask started with the following config:\n%s", EXTENSIONS_LOADER.config().toString());
   }
 
   public List<String> getHadoopDependencyCoordinates()
