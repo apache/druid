@@ -38,6 +38,7 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
@@ -73,7 +74,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -185,6 +185,9 @@ public class SqlNestedDataBenchmark
   })
   private String vectorize;
 
+  @Param({"none", "front-coded-4", "front-coded-16"})
+  private String stringEncoding;
+
   @Param({
       "0",
       "1",
@@ -258,12 +261,30 @@ public class SqlNestedDataBenchmark
                                               .add(new NestedDataDimensionSchema("nested"))
                                               .build();
     DimensionsSpec dimsSpec = new DimensionsSpec(dims);
+
+
+    StringEncodingStrategy encodingStrategy;
+    if (stringEncoding.startsWith("front-coded")) {
+      String[] split = stringEncoding.split("-");
+      int bucketSize = Integer.parseInt(split[2]);
+      encodingStrategy = new StringEncodingStrategy.FrontCoded(bucketSize);
+    } else {
+      encodingStrategy = new StringEncodingStrategy.Utf8();
+    }
     final QueryableIndex index = segmentGenerator.generate(
         dataSegment,
         schemaInfo,
         dimsSpec,
         transformSpec,
-        new IndexSpec(),
+        new IndexSpec(
+            null,
+            null,
+            encodingStrategy,
+            null,
+            null,
+            null,
+            null
+        ),
         Granularities.NONE,
         rowsPerSegment
     );
