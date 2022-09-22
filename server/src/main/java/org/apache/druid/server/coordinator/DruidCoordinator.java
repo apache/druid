@@ -33,7 +33,6 @@ import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
@@ -137,14 +136,10 @@ public class DruidCoordinator
 
   private final Object lock = new Object();
   private final DruidCoordinatorConfig config;
-  private final ZkPathsConfig zkPaths;
   private final JacksonConfigManager configManager;
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final ServerInventoryView serverInventoryView;
   private final MetadataRuleManager metadataRuleManager;
-
-  @Nullable // Null if zk is disabled
-  private final CuratorFramework curator;
 
   private final ServiceEmitter emitter;
   private final IndexingServiceClient indexingServiceClient;
@@ -251,17 +246,11 @@ public class DruidCoordinator
   )
   {
     this.config = config;
-    this.zkPaths = zkPaths;
     this.configManager = configManager;
 
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.serverInventoryView = serverInventoryView;
     this.metadataRuleManager = metadataRuleManager;
-    if (zkEnablementConfig.isEnabled()) {
-      this.curator = curatorProvider.get();
-    } else {
-      this.curator = null;
-    }
     this.emitter = emitter;
     this.indexingServiceClient = indexingServiceClient;
     this.taskMaster = taskMaster;
@@ -482,9 +471,6 @@ public class DruidCoordinator
             toHolder.getAvailableSize()
         );
       }
-
-      final String toLoadQueueSegPath =
-          ZKPaths.makePath(zkPaths.getLoadQueuePath(), toServer.getName(), segmentId.toString());
 
       final LoadPeonCallback loadPeonCallback = success -> {
         dropPeon.unmarkSegmentToDrop(segmentToLoad);
