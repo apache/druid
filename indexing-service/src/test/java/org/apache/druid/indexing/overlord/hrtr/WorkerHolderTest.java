@@ -19,7 +19,11 @@
 
 package org.apache.druid.indexing.overlord.hrtr;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.Futures;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -30,12 +34,16 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.WorkerHistoryItem;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
