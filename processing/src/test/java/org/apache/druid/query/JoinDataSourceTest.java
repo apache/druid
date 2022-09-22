@@ -153,6 +153,7 @@ public class JoinDataSourceTest
     EqualsVerifier.forClass(JoinDataSource.class)
                   .usingGetClass()
                   .withNonnullFields("left", "right", "rightPrefix", "conditionAnalysis", "joinType")
+                  .withIgnoredFields("joinableFactoryWrapper")
                   .verify();
   }
 

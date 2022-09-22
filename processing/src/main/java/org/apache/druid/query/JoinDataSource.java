@@ -303,14 +303,13 @@ public class JoinDataSource implements DataSource
            Objects.equals(rightPrefix, that.rightPrefix) &&
            Objects.equals(conditionAnalysis, that.conditionAnalysis) &&
            Objects.equals(leftFilter, that.leftFilter) &&
-           joinType == that.joinType &&
-           joinableFactoryWrapper == that.joinableFactoryWrapper;
+           joinType == that.joinType;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(left, right, rightPrefix, conditionAnalysis, joinType, leftFilter, joinableFactoryWrapper);
+    return Objects.hash(left, right, rightPrefix, conditionAnalysis, joinType, leftFilter);
   }
 
   @Override
