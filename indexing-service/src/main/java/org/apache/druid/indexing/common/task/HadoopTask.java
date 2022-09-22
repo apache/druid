@@ -64,7 +64,6 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
   {
     super(id, dataSource, context, IngestionMode.HADOOP);
     this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;
-    log.info("HadoopTask started with the following config:\n%s", EXTENSIONS_LOADER.config().toString());
   }
 
   public List<String> getHadoopDependencyCoordinates()
@@ -206,6 +205,15 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
     System.setProperty("druid.hadoop.internal.classpath", hadoopContainerDruidClasspathJars);
 
     return classLoader;
+  }
+
+  /**
+   * This method logs the {@link ExtensionsConfig} that was used to fetch the hadoop dependencies and build the classpath
+   * for the jobs
+   */
+  protected static void logExtensionsConfig()
+  {
+    log.info("HadoopTask started with the following config:\n%s", EXTENSIONS_LOADER.config().toString());
   }
 
   /**
