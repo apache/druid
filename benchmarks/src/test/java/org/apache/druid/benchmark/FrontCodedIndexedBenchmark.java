@@ -27,11 +27,11 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.FrontCodedIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
-import org.apache.druid.segment.serde.StringFrontCodedColumnIndexSupplier;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -193,7 +193,8 @@ public class FrontCodedIndexedBenchmark
 
     Iterator<String> genericIterator = genericIndexed.iterator();
     Iterator<ByteBuffer> frontCodedIterator = frontCodedIndexed.iterator();
-    Iterator<String> frontCodedStringIterator = new StringFrontCodedColumnIndexSupplier.FrontCodedStringIndexed(frontCodedIndexed).iterator();
+    Iterator<String> frontCodedStringIterator =
+        new StringEncodingStrategies.Utf8ToStringIndexed(frontCodedIndexed).iterator();
 
     int counter = 0;
     while (genericIterator.hasNext() && frontCodedIterator.hasNext() && frontCodedStringIterator.hasNext()) {

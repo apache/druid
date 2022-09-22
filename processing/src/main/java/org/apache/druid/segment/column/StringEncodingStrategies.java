@@ -20,14 +20,20 @@
 package org.apache.druid.segment.column;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.EncodedStringDictionaryWriter;
 import org.apache.druid.segment.data.FrontCodedIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Iterator;
 
 public class StringEncodingStrategies
 {
@@ -57,6 +63,65 @@ public class StringEncodingStrategies
         throw new ISE("Unknown encoding strategy: %s", encodingStrategy.getType());
       }
       return new EncodedStringDictionaryWriter(writer, encodingStrategy);
+    }
+  }
+
+  /**
+   * Adapter to convert {@link Indexed<ByteBuffer>} with utf8 encoded bytes into {@link Indexed<String>} to be frinedly
+   * to consumers.
+   */
+  public static final class Utf8ToStringIndexed implements Indexed<String>
+  {
+    private final Indexed<ByteBuffer> delegate;
+
+    public Utf8ToStringIndexed(Indexed<ByteBuffer> delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public int size()
+    {
+      return delegate.size();
+    }
+
+    @Nullable
+    @Override
+    public String get(int index)
+    {
+      return StringUtils.fromUtf8Nullable(delegate.get(index));
+    }
+
+    @Override
+    public int indexOf(@Nullable String value)
+    {
+      return delegate.indexOf(StringUtils.toUtf8ByteBuffer(value));
+    }
+
+    @Override
+    public Iterator<String> iterator()
+    {
+      final Iterator<ByteBuffer> delegateIterator = delegate.iterator();
+      return new Iterator<String>()
+      {
+        @Override
+        public boolean hasNext()
+        {
+          return delegateIterator.hasNext();
+        }
+
+        @Override
+        public String next()
+        {
+          return StringUtils.fromUtf8Nullable(delegateIterator.next());
+        }
+      };
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("delegateIndex", delegate);
     }
   }
 }

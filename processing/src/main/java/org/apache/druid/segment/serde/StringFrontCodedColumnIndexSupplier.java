@@ -23,8 +23,6 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
@@ -38,19 +36,18 @@ import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.column.SpatialIndex;
+import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
-import java.util.Iterator;
 
 public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
 {
   private final BitmapFactory bitmapFactory;
-  private final FrontCodedStringIndexed dictionary;
+  private final StringEncodingStrategies.Utf8ToStringIndexed dictionary;
   private final FrontCodedIndexed utf8Dictionary;
 
   @Nullable
@@ -68,7 +65,7 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
   {
     this.bitmapFactory = bitmapFactory;
     this.bitmaps = bitmaps;
-    this.dictionary = new FrontCodedStringIndexed(utf8Dictionary);
+    this.dictionary = new StringEncodingStrategies.Utf8ToStringIndexed(utf8Dictionary);
     this.utf8Dictionary = utf8Dictionary;
     this.indexedTree = indexedTree;
   }
@@ -119,60 +116,5 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
       return (T) (SpatialIndex) () -> indexedTree;
     }
     return null;
-  }
-
-  public static final class FrontCodedStringIndexed implements Indexed<String>
-  {
-    private final Indexed<ByteBuffer> delegate;
-
-    public FrontCodedStringIndexed(Indexed<ByteBuffer> delegate)
-    {
-      this.delegate = delegate;
-    }
-
-    @Override
-    public int size()
-    {
-      return delegate.size();
-    }
-
-    @Nullable
-    @Override
-    public String get(int index)
-    {
-      return StringUtils.fromUtf8Nullable(delegate.get(index));
-    }
-
-    @Override
-    public int indexOf(@Nullable String value)
-    {
-      return delegate.indexOf(StringUtils.toUtf8ByteBuffer(value));
-    }
-
-    @Override
-    public Iterator<String> iterator()
-    {
-      final Iterator<ByteBuffer> delegateIterator = delegate.iterator();
-      return new Iterator<String>()
-      {
-        @Override
-        public boolean hasNext()
-        {
-          return delegateIterator.hasNext();
-        }
-
-        @Override
-        public String next()
-        {
-          return StringUtils.fromUtf8Nullable(delegateIterator.next());
-        }
-      };
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-      inspector.visit("delegateIndex", delegate);
-    }
   }
 }

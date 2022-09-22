@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -37,7 +38,6 @@ import org.apache.druid.segment.nested.NestedDataColumnSerializer;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.NestedLiteralTypeInfo;
 import org.apache.druid.segment.serde.ComplexColumnPartSerde;
-import org.apache.druid.segment.serde.StringFrontCodedColumnIndexSupplier;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
@@ -214,7 +214,7 @@ public class NestedDataColumnMerger implements DimensionMergerV9
       });
     }
     return new GlobalDictionarySortedCollector(
-        new StringFrontCodedColumnIndexSupplier.FrontCodedStringIndexed(column.getStringDictionary()),
+        new StringEncodingStrategies.Utf8ToStringIndexed(column.getStringDictionary()),
         column.getLongDictionary(),
         column.getDoubleDictionary()
     );
