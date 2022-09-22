@@ -50,7 +50,7 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
 {
   private static final Logger log = new Logger(HadoopTask.class);
 
-  static final Injector INJECTOR = new StartupInjectorBuilder().withExtensions().build();
+  static final Injector INJECTOR = new StartupInjectorBuilder().forServer().build();
   private static final ExtensionsLoader EXTENSIONS_LOADER = ExtensionsLoader.instance(INJECTOR);
 
   private final List<String> hadoopDependencyCoordinates;
