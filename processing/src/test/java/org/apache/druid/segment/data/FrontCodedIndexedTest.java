@@ -241,6 +241,35 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     Assert.assertEquals(-7, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("wat")));
   }
 
+  @Test
+  public void testFrontCodedIndexedUnicodes() throws IOException
+  {
+    ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
+    List<String> theList = ImmutableList.of("Győ-Moson-Sopron", "Győr");
+    fillBuffer(buffer, theList.iterator(), 4);
+
+    buffer.position(0);
+    FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
+        buffer,
+        GenericIndexed.BYTE_BUFFER_STRATEGY,
+        buffer.order()
+    );
+
+    Iterator<ByteBuffer> utf8Iterator = codedUtf8Indexed.iterator();
+    Iterator<String> newListIterator = theList.iterator();
+    int ctr = 0;
+    while (newListIterator.hasNext() && utf8Iterator.hasNext()) {
+      final String next = newListIterator.next();
+      final ByteBuffer nextUtf8 = utf8Iterator.next();
+      Assert.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
+      nextUtf8.position(0);
+      Assert.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
+      Assert.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
+      ctr++;
+    }
+    Assert.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
+  }
+
   private static long fillBuffer(ByteBuffer buffer, Iterator<String> sortedStrings, int bucketSize) throws IOException
   {
     buffer.position(0);

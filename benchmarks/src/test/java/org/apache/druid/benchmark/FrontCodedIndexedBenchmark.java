@@ -31,6 +31,7 @@ import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.FrontCodedIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
+import org.apache.druid.segment.serde.StringFrontCodedColumnIndexSupplier;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -183,16 +184,35 @@ public class FrontCodedIndexedBenchmark
     // sanity test
     for (int i = 0; i < numElements; i++) {
       final String expected = genericIndexed.get(i);
-      if (expected == null) {
-        Preconditions.checkArgument(frontCodedIndexed.get(i) == null);
-      } else {
-        final String actual = StringUtils.fromUtf8(frontCodedIndexed.get(i));
-        Preconditions.checkArgument(
-            Objects.equals(expected, actual),
-            "elements not equal: " + i + " " + expected + " " + actual
-        );
-      }
+      final String actual = StringUtils.fromUtf8Nullable(frontCodedIndexed.get(i));
+      Preconditions.checkArgument(
+          Objects.equals(expected, actual),
+          "elements not equal: " + i + " " + expected + " " + actual
+      );
     }
+
+    Iterator<String> genericIterator = genericIndexed.iterator();
+    Iterator<ByteBuffer> frontCodedIterator = frontCodedIndexed.iterator();
+    Iterator<String> frontCodedStringIterator = new StringFrontCodedColumnIndexSupplier.FrontCodedStringIndexed(frontCodedIndexed).iterator();
+
+    int counter = 0;
+    while (genericIterator.hasNext() && frontCodedIterator.hasNext() && frontCodedStringIterator.hasNext()) {
+      final String expected = genericIterator.next();
+      final String actual = StringUtils.fromUtf8Nullable(frontCodedIterator.next());
+      final String actual2 = frontCodedStringIterator.next();
+      Preconditions.checkArgument(
+          Objects.equals(expected, actual),
+          "elements not equal: " + counter + " " + expected + " " + actual
+      );
+      Preconditions.checkArgument(
+          Objects.equals(expected, actual2),
+          "elements not equal: " + counter + " " + expected + " " + actual
+      );
+      counter++;
+    }
+    Preconditions.checkArgument(counter == numElements);
+    Preconditions.checkArgument(genericIterator.hasNext() == frontCodedIterator.hasNext());
+    Preconditions.checkArgument(genericIterator.hasNext() == frontCodedStringIterator.hasNext());
 
     elementsToSearch = new String[numOperations];
     for (int i = 0; i < numOperations; i++) {

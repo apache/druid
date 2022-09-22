@@ -307,7 +307,9 @@ public class FrontCodedIndexedWriter<T> implements DictionaryWriter<T>
           break;
         }
       }
-      return new FrontCodedValue(i, toBytes(next.substring(i)));
+      // convert to bytes because not every char is a single byte
+      byte[] prefixBytes = StringUtils.toUtf8(first.substring(0, i));
+      return new FrontCodedValue(prefixBytes.length, toBytes(next.substring(i)));
     }
 
     @Override
