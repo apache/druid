@@ -638,7 +638,7 @@
    file name: avatica-server-1.17.0.jar
    ]]></notes>
     <!--
-    We do not expose any of the built-in functions related to this CVE
+    We do not expose any of the SQL operators that were found vulnerable in this CVE.
     -->
     <cve>CVE-2022-39135</cve>
   </suppress>
@@ -649,7 +649,7 @@
    file name: calcite-core-1.21.0.jar
    ]]></notes>
     <!--
-    We do not expose any of the built-in functions related to this CVE
+    We do not expose any of the SQL operators that were found vulnerable in this CVE.
     -->
     <cve>CVE-2022-39135</cve>
   </suppress>
