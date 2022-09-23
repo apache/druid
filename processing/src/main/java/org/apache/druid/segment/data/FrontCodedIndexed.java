@@ -300,12 +300,18 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     }
     int pos = 0;
     int prefixLength;
-    byte[] fragment;
+    final byte[] fragment;
     // scan through bucket values until we reach offset
     do {
       prefixLength = VByte.readInt(bucket);
-      fragment = readBytes(bucket);
-    } while (++pos < offset);
+      if (++pos < offset) {
+        final int skipLength = VByte.readInt(bucket);
+        bucket.position(bucket.position() + skipLength);
+      } else {
+        fragment = readBytes(bucket);
+        break;
+      }
+    } while (true);
     return combinePrefixAndFragment(first, prefixLength, fragment);
   }
 
