@@ -523,7 +523,7 @@
     <cve>CVE-2015-7430</cve>
     <cve>CVE-2017-3162</cve>
   </suppress>
-  
+
   <suppress>
     <!-- Suppress avro cves that are only applicable to .NET SDK-->
     <notes><![CDATA[
