@@ -33,17 +33,20 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 
 
 /**
- * {@link DictionaryWriter} for a {@link FrontCodedIndexed}, written to a {@link SegmentWriteOutMedium}.
+ * {@link DictionaryWriter} for a {@link FrontCodedIndexed}, written to a {@link SegmentWriteOutMedium}. Values MUST
+ * be added to this dictionary writer in sorted order, which is enforced.
  *
  * Front coding is a type of delta encoding for byte arrays, where values are grouped into buckets. The first value of
  * the bucket is written entirely, and remaining values are stored as pairs of an integer which indicates how much
  * of the first byte array of the bucket to use as a prefix, followed by the remaining value bytes after the prefix.
+ *
+ * Uses a {@link FrontCoder} which is a helper mechanism to compare values to ensure sorted order, convert values to
+ * byte arrays, and to partition values to find the length prefix length and convert the remainder to a byte array.
+ * This can model any type of prefixing which can be done on byte boundaries.
  */
 public class FrontCodedIndexedWriter<T> implements DictionaryWriter<T>
 {
@@ -54,7 +57,8 @@ public class FrontCodedIndexedWriter<T> implements DictionaryWriter<T>
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final int bucketSize;
   private final ByteOrder byteOrder;
-
+  private final FrontCoder<T> frontCoder;
+  private final T[] bucketBuffer;
   @Nullable
   private T prevObject = null;
   @Nullable
@@ -62,14 +66,11 @@ public class FrontCodedIndexedWriter<T> implements DictionaryWriter<T>
   @Nullable
   private WriteOutBytes valuesOut = null;
   private int numWritten = 0;
-
   private ByteBuffer scratch;
   private int logScratchSize = 10;
-  private final List<T> bucketBuffer;
   private boolean isClosed = false;
   private boolean hasNulls = false;
 
-  private final FrontCoder<T> frontCoder;
 
   public FrontCodedIndexedWriter(
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -81,12 +82,9 @@ public class FrontCodedIndexedWriter<T> implements DictionaryWriter<T>
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.scratch = ByteBuffer.allocate(1 << logScratchSize).order(byteOrder);
     this.bucketSize = bucketSize;
-    this.bucketBuffer = new ArrayList<>(bucketSize);
-    for (int i = 0; i < bucketSize; i++) {
-      bucketBuffer.add(null);
-    }
     this.byteOrder = byteOrder;
     this.frontCoder = frontCoder;
+    this.bucketBuffer = frontCoder.getBucketBuffer(bucketSize);
   }
 
   @Override
@@ -114,9 +112,11 @@ public class FrontCodedIndexedWriter<T> implements DictionaryWriter<T>
       return;
     }
 
+    // if the bucket buffer is full, write the bucket
     if (numWritten > 0 && (numWritten % bucketSize) == 0) {
       resetScratch();
       int written;
+      // write the bucket, growing scratch buffer as necessary
       do {
         written = writeBucket(scratch, bucketBuffer, bucketSize, frontCoder);
         if (written < 0) {
@@ -127,12 +127,13 @@ public class FrontCodedIndexedWriter<T> implements DictionaryWriter<T>
       Channels.writeFully(valuesOut, scratch);
 
       resetScratch();
+      // write end offset for current value
       scratch.putInt((int) valuesOut.size());
       scratch.flip();
       Channels.writeFully(headerOut, scratch);
     }
 
-    bucketBuffer.set(numWritten % bucketSize, objectToWrite);
+    bucketBuffer[numWritten % bucketSize] = objectToWrite;
 
     ++numWritten;
     prevObject = objectToWrite;
@@ -211,26 +212,37 @@ public class FrontCodedIndexedWriter<T> implements DictionaryWriter<T>
     }
   }
 
-  public static <T> int writeBucket(ByteBuffer buffer, List<T> values, int numValues, FrontCoder<T> frontCoder)
+  /**
+   * Write bucket of values to a {@link ByteBuffer}, using a {@link FrontCoder} to partition and convert the values
+   * to byte arrays. The first value is written completely, subsequent values are written with an integer to indicate
+   * how much of the first value in the bucket is a prefix of the value, followed by the remaining bytes of the value.
+   * Uses {@link VByte} encoded integers to indicate prefix length and value length.
+   */
+  public static <T> int writeBucket(ByteBuffer buffer, T[] values, int numValues, FrontCoder<T> frontCoder)
   {
     int written = 0;
     T first = null;
     while (written < numValues) {
-      T next = values.get(written);
+      T next = values[written];
       if (written == 0) {
         first = next;
+        // the first value in the bucket is written completely as it is
         int rem = writeValue(buffer, frontCoder.toBytes(first));
+        // wasn't enough room, bail out
         if (rem < 0) {
           return rem;
         }
       } else {
+        // all other values must be partitioned into a prefix length and suffix bytes
         final FrontCoder.FrontCodedValue deltaEncoded = frontCoder.encodeValue(first, next);
         int rem = buffer.remaining() - VByte.estimateIntSize(deltaEncoded.getPrefixLength());
+        // wasn't enough room, bail out
         if (rem < 0) {
           return rem;
         }
         VByte.writeInt(buffer, deltaEncoded.getPrefixLength());
         rem = writeValue(buffer, deltaEncoded.getSuffix());
+        // wasn't enough room, bail out
         if (rem < 0) {
           return rem;
         }
@@ -240,6 +252,11 @@ public class FrontCodedIndexedWriter<T> implements DictionaryWriter<T>
     return written;
   }
 
+  /**
+   * Write a variable length byte[] value to a {@link ByteBuffer}, storing the length as a {@link VByte} encoded
+   * integer followed by the value itself. Returns the number of bytes written to the buffer. This method returns a
+   * negative value if there is no room available in the buffer, so that it can be grown if needed.
+   */
   public static int writeValue(ByteBuffer buffer, byte[] bytes)
   {
     final int remaining = buffer.remaining() - VByte.estimateIntSize(bytes.length) - bytes.length;
@@ -252,14 +269,40 @@ public class FrontCodedIndexedWriter<T> implements DictionaryWriter<T>
     return buffer.position() - pos;
   }
 
+  /**
+   * Helper mechanism to encode values for {@link FrontCodedIndexedWriter}, to model any type of prefixing which can be
+   * done on byte boundaries. Provides facilities to compare values to ensure sorted order, convert values to byte
+   * arrays, and to partition values to find the length prefix length and convert the remainder to a byte array for
+   * writing the delta encoded buckets.
+   */
   interface FrontCoder<T> extends Comparator<T>
   {
+    /**
+     * Called by {@link FrontCodedIndexedWriter#write(Object)} to allow a chance to coerce values as necessary.
+     */
     @Nullable
     T processValue(@Nullable T value);
 
+    /**
+     * Convert a value to a byte array
+     */
     byte[] toBytes(T value);
+
+    /**
+     * Partition a value into the length of bytes which overlap with the first value, and a byte array of the remainder
+     * of the value
+     */
     FrontCodedValue encodeValue(T first, T value);
 
+    /**
+     * Allocate a type appropriate array to use as a buffer for the current bucket being written to by
+     * {@link FrontCodedIndexedWriter#write(Object)}
+     */
+    T[] getBucketBuffer(int bucketSize);
+
+    /**
+     * Delta encoded bucket value, composed of a prefix length and the remaining byte array
+     */
     class FrontCodedValue
     {
       private final int prefixLength;
@@ -283,8 +326,17 @@ public class FrontCodedIndexedWriter<T> implements DictionaryWriter<T>
     }
   }
 
+  /**
+   * UTF8 String implementation of {@link FrontCoder}
+   */
   public static final class StringFrontCoder implements FrontCoder<String>
   {
+    @Override
+    public String[] getBucketBuffer(int bucketSize)
+    {
+      return new String[bucketSize];
+    }
+
     @Nullable
     @Override
     public String processValue(@Nullable String value)
