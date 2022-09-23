@@ -499,7 +499,6 @@ public class DruidCoordinator
                     && !dropPeon.getSegmentsToDrop().contains(segment)
                     && (taskMaster.isHttpLoading()
                      || serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment))) {
-                  // TODO: is the checkExists still needed?
                   dropPeon.dropSegment(segment, loadPeonCallback);
                 } else {
                   loadPeonCallback.execute(success);

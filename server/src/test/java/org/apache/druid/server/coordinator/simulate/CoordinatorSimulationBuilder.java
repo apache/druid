@@ -310,7 +310,7 @@ public class CoordinatorSimulationBuilder
           !env.autoSyncInventory,
           "Cannot invoke syncInventoryView as simulation is running in auto-sync mode."
       );
-      env.coordinatorInventoryView.sync(env.historicalInventoryView);
+      env.coordinatorInventoryView.sync(env.inventory);
     }
 
     @Override
@@ -347,6 +347,12 @@ public class CoordinatorSimulationBuilder
       }
     }
 
+    @Override
+    public void removeServer(DruidServer server)
+    {
+      env.inventory.removeServer(server);
+    }
+
     private void verifySimulationRunning()
     {
       if (!running.get()) {
@@ -373,24 +379,35 @@ public class CoordinatorSimulationBuilder
   private static class Environment
   {
     private final Lifecycle lifecycle = new Lifecycle("coord-sim");
-
-    // Executors
-    private final ExecutorFactory executorFactory;
-
-    private final TestDruidLeaderSelector leaderSelector = new TestDruidLeaderSelector();
-    private final TestSegmentsMetadataManager segmentManager;
-    private final TestMetadataRuleManager ruleManager;
-    private final TestServerInventoryView historicalInventoryView;
-
-    private final LoadQueueTaskMaster loadQueueTaskMaster;
     private final StubServiceEmitter serviceEmitter
         = new StubServiceEmitter("coordinator", "coordinator");
+    private final AtomicReference<CoordinatorDynamicConfig> dynamicConfig
+        = new AtomicReference<>();
+    private final TestDruidLeaderSelector leaderSelector
+        = new TestDruidLeaderSelector();
+
+    private final ExecutorFactory executorFactory;
+    private final TestSegmentsMetadataManager segmentManager;
+    private final TestMetadataRuleManager ruleManager;
+
+    private final LoadQueueTaskMaster loadQueueTaskMaster;
+
+    /**
+     * Represents the current inventory of all servers (typically historicals)
+     * actually present in the cluster.
+     */
+    private final TestServerInventoryView inventory;
+
+    /**
+     * Represents the view of the cluster inventory as seen by the coordinator.
+     * When {@code autoSyncInventory=true}, this is the same as {@link #inventory}.
+     */
     private final TestServerInventoryView coordinatorInventoryView;
 
-    private final AtomicReference<CoordinatorDynamicConfig> dynamicConfig = new AtomicReference<>();
     private final JacksonConfigManager jacksonConfigManager;
     private final LookupCoordinatorManager lookupCoordinatorManager;
     private final DruidCoordinatorConfig coordinatorConfig;
+
     private final boolean loadImmediately;
     private final boolean autoSyncInventory;
 
@@ -405,7 +422,7 @@ public class CoordinatorSimulationBuilder
         boolean autoSyncInventory
     )
     {
-      this.historicalInventoryView = clusterInventory;
+      this.inventory = clusterInventory;
       this.segmentManager = segmentManager;
       this.ruleManager = ruleManager;
       this.loadImmediately = loadImmediately;
@@ -451,7 +468,7 @@ public class CoordinatorSimulationBuilder
     private void setUp() throws Exception
     {
       EmittingLogger.registerEmitter(serviceEmitter);
-      historicalInventoryView.setUp();
+      inventory.setUp();
       coordinatorInventoryView.setUp();
       lifecycle.start();
       executorFactory.setUp();
