@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.RetryPolicy;
@@ -42,6 +43,7 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -163,7 +165,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
           }
         }
 
-        log.info("Task [%s] pause timeout, force to be finished", id);
+        log.info("Could not finish pausing task [%s]. Pause request has been cancelled.", id);
         return ImmutableMap.of();
       } else {
         throw new ISE(
@@ -394,38 +396,29 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
 
   public void cancelTaskPauseRequests()
   {
+    List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> pausingTaskFutures = new ArrayList<>();
+
     for (Map.Entry<String, TaskPauseControlInfo> entry : pausingTaskFutureMap.entrySet()) {
       String taskId = entry.getKey();
-      TaskPauseControlInfo taskPauseControl = entry.getValue();
+      TaskPauseControlInfo taskPauseControlInfo = entry.getValue();
 
-      if (!taskPauseControl.getFuture().isDone()) {
-        this.stopPausingTask(taskId, taskPauseControl);
-        log.info("Cancel unfinished pause task [%s]", taskId);
+      if (!taskPauseControlInfo.getFuture().isDone()) {
+        taskPauseControlInfo.markNotRunning();
+        pausingTaskFutures.add(taskPauseControlInfo.getFuture());
+        log.debug("Cancel unfinished pause of task [%s]", taskId);
       } else {
-        log.info("Finished pause task [%s]", taskId);
+        log.debug("Task [%s] is already paused", taskId);
       }
     }
 
-    pausingTaskFutureMap.clear();
-  }
-
-  @VisibleForTesting
-  public int getPauseFutureSize()
-  {
-    return pausingTaskFutureMap.size();
-  }
-
-  @VisibleForTesting
-  protected void stopPausingTask(String taskId, TaskPauseControlInfo taskPauseControl)
-  {
-    taskPauseControl.markNotRunning();
-
     try {
-      taskPauseControl.getFuture().get();
+      Futures.successfulAsList(pausingTaskFutures).get();
     }
     catch (Exception e) {
-      log.warn(e, "Future get() exception, taskId = %s", taskId);
+      log.warn(e, "Exception occured during pausingTaskFutures()");
     }
+
+    pausingTaskFutureMap.clear();
   }
 
   public ListenableFuture<Boolean> setEndOffsetsAsync(

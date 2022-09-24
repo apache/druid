@@ -2833,16 +2833,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> future = futures.get(i);
 
         if (future.isDone()) {
-          log.info("GroupId [%d] checking task finished", groupId);
+          log.debug("Finished checkpoint for groupId [%d]", groupId);
 
           try {
-            this.moveGroupFromReadingToPending(groupId, future.get());
+            this.moveTaskGroupToPendingCompletion(groupId, future.get());
           }
           catch (Exception e1) {
             log.warn(e1, "Get future result failed for groupId[%d]", groupId);
           }
         } else {
-          log.warn("GroupId [%d] checking task not finished", groupId);
+          log.info("Could not finish checkpoint for groupId [%d]", groupId);
         }
       }
 
@@ -2850,7 +2850,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  protected void moveGroupFromReadingToPending(Integer groupId, Map<PartitionIdType, SequenceOffsetType> endOffsets)
+  protected void moveTaskGroupToPendingCompletion(Integer groupId, Map<PartitionIdType, SequenceOffsetType> endOffsets)
   {
     TaskGroup group = activelyReadingTaskGroups.get(groupId);
 

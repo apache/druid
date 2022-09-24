@@ -55,7 +55,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -228,23 +227,6 @@ public class SeekableStreamIndexTaskClientTest extends EasyMockSupport
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
       Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(0, 1L)), responses.get(i));
     }
-
-    taskClient.cancelTaskPauseRequests();
-  }
-
-  @Test
-  public void testGetPauseFutureSize()
-  {
-    Assert.assertEquals(taskClient.getPauseFutureSize(), 0);
-  }
-
-  @Test
-  public void testStopPauingTaskOk()
-  {
-    ListenableFuture future = Futures.immediateFuture(Collections.emptyMap());
-    SeekableStreamIndexTaskClient.TaskPauseControlInfo taskPauseControlInfo = taskClient.new TaskPauseControlInfo(future, true);
-    taskClient.stopPausingTask(TEST_ID, taskPauseControlInfo);
-    Assert.assertEquals(taskClient.getPauseFutureSize(), 0);
   }
 
   private static class MySeekableStreamIndexTaskClient extends SeekableStreamIndexTaskClient

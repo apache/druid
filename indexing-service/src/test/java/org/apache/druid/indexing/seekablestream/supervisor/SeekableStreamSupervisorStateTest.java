@@ -158,11 +158,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         EasyMock.anyInt(),
         EasyMock.anyObject(),
         EasyMock.anyLong()
-    )).andReturn(
-        indexTaskClient).anyTimes();
+    )).andReturn(indexTaskClient).anyTimes();
 
     indexTaskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -837,7 +836,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
-  public void testMoveGroupFromReadingToPendingEndoffsetIsNull() throws Exception
+  public void testMoveTaskGroupToPendingCompletionEndoffsetIsNull() throws Exception
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
@@ -864,13 +863,13 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         Collections.emptySet());
 
     Assert.assertEquals(supervisor.getActiveTaskGroupsCount(), 2);
-    supervisor.moveGroupFromReadingToPending(1, null);
+    supervisor.moveTaskGroupToPendingCompletion(1, null);
 
     verifyAll();
   }
 
   @Test
-  public void testMoveGroupFromReadingToPendingEndoffsetEmpty() throws Exception
+  public void testMoveTaskGroupToPendingCompletionEndoffsetEmpty() throws Exception
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
@@ -898,7 +897,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     );
 
     Assert.assertEquals(supervisor.getActiveTaskGroupsCount(), 2);
-    supervisor.moveGroupFromReadingToPending(1, Collections.emptyMap());
+    supervisor.moveTaskGroupToPendingCompletion(1, Collections.emptyMap());
 
     Assert.assertEquals(supervisor.getActiveTaskGroupsCount(), 1);
 
@@ -906,7 +905,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
-  public void testMoveGroupFromReadingToPendingEndoffsetNotEmpty() throws Exception
+  public void testMoveTaskGroupToPendingCompletionEndoffsetNotEmpty() throws Exception
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
@@ -934,7 +933,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     );
 
     Assert.assertEquals(supervisor.getActiveTaskGroupsCount(), 2);
-    supervisor.moveGroupFromReadingToPending(1, offsets);
+    supervisor.moveTaskGroupToPendingCompletion(1, offsets);
 
     Assert.assertEquals(supervisor.getActiveTaskGroupsCount(), 1);
 
@@ -942,7 +941,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
-  public void testMoveGroupFromReadingToPendingEndoffsetIsEOF() throws Exception
+  public void testMoveTaskGroupToPendingCompletionEndoffsetIsEOF() throws Exception
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
@@ -970,7 +969,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     );
 
     Assert.assertEquals(supervisor.getActiveTaskGroupsCount(), 2);
-    supervisor.moveGroupFromReadingToPending(1, offsets);
+    supervisor.moveTaskGroupToPendingCompletion(1, offsets);
 
     Assert.assertEquals(supervisor.getActiveTaskGroupsCount(), 1);
 

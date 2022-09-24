@@ -1786,14 +1786,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     if (status == Status.NOT_STARTED || status == Status.STARTING) {
       return Response.status(Response.Status.BAD_REQUEST)
               .type(MediaType.TEXT_PLAIN)
-              .entity(StringUtils.format("Can't pause, task state is invalid (state: [%s])", status))
+              .entity(StringUtils.format("Cannot pause task in state [%s]", status))
               .build();
     }
 
     // if status in [PAUSED, READING], need to pause
     // if status == PUBLISHING, return current offset, not to report exception
     if (status == Status.PAUSED || status == Status.READING) {
-      log.info("Task state is pausable, taskId: [%s], state: [%s])", task.getId(), status);
+      log.info("Pausing taskId [%s] in state [%s])", task.getId(), status);
 
       pauseLock.lockInterruptibly();
       try {
@@ -1825,7 +1825,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         pauseLock.unlock();
       }
     } else {
-      log.info("Return current offsets directly, taskId: [%s], state: [%s]", task.getId(), status);
+      log.info("Need not pause taskId [%s] as it is already in state [%s]", task.getId(), status);
     }
 
     try {

@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -93,6 +94,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   private SeekableStreamSupervisorTuningConfig seekableStreamSupervisorTuningConfig;
   private SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig;
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
+  private SeekableStreamIndexTaskClient taskClient;
   private SeekableStreamIndexTaskClientFactory taskClientFactory;
   private static final String STREAM = "stream";
   private static final String DATASOURCE = "testDS";
@@ -118,6 +120,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     dataSchema = EasyMock.mock(DataSchema.class);
     seekableStreamSupervisorTuningConfig = EasyMock.mock(SeekableStreamSupervisorTuningConfig.class);
     seekableStreamSupervisorIOConfig = EasyMock.mock(SeekableStreamSupervisorIOConfig.class);
+    taskClient = EasyMock.mock(SeekableStreamIndexTaskClient.class);
     taskClientFactory = EasyMock.mock(SeekableStreamIndexTaskClientFactory.class);
     spec = EasyMock.mock(SeekableStreamSupervisorSpec.class);
     supervisorConfig = new SupervisorStateManagerConfig();
@@ -735,6 +738,10 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
     EasyMock.replay(taskMaster);
 
+    EasyMock.expect(taskClientFactory.build(EasyMock.anyObject(TaskInfoProvider.class), EasyMock.anyString(), EasyMock.anyInt(), EasyMock.anyObject(Duration.class), EasyMock.anyLong()))
+            .andReturn(taskClient).anyTimes();
+    EasyMock.replay(taskClientFactory);
+
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(3);
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
@@ -753,7 +760,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals(1, taskCountBeforeScaleOut);
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, taskCountAfterScaleOut);
+    Assert.assertEquals(2, taskCountAfterScaleOut);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -780,6 +787,10 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
     EasyMock.replay(taskMaster);
 
+    EasyMock.expect(taskClientFactory.build(EasyMock.anyObject(TaskInfoProvider.class), EasyMock.anyString(), EasyMock.anyInt(), EasyMock.anyObject(Duration.class), EasyMock.anyLong()))
+            .andReturn(taskClient).anyTimes();
+    EasyMock.replay(taskClientFactory);
+
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(2);
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
@@ -797,7 +808,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals(1, taskCountBeforeScaleOut);
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, taskCountAfterScaleOut);
+    Assert.assertEquals(2, taskCountAfterScaleOut);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -824,6 +835,10 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
     EasyMock.replay(taskMaster);
 
+    EasyMock.expect(taskClientFactory.build(EasyMock.anyObject(TaskInfoProvider.class), EasyMock.anyString(), EasyMock.anyInt(), EasyMock.anyObject(Duration.class), EasyMock.anyLong()))
+            .andReturn(taskClient).anyTimes();
+    EasyMock.replay(taskClientFactory);
+
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(3);
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
@@ -845,7 +860,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals(2, taskCountBeforeScaleOut);
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(2, taskCountAfterScaleOut);
+    Assert.assertEquals(1, taskCountAfterScaleOut);
 
     autoScaler.reset();
     autoScaler.stop();

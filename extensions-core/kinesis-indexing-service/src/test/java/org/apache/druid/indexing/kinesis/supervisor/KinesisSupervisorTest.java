@@ -253,7 +253,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
@@ -354,7 +354,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
@@ -432,7 +432,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     replayAll();
 
@@ -607,7 +607,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     replayAll();
 
@@ -671,7 +671,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     replayAll();
 
@@ -752,7 +752,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     replayAll();
 
@@ -808,7 +808,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     replayAll();
 
@@ -877,7 +877,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ).anyTimes();
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
     replayAll();
@@ -942,7 +942,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ).anyTimes();
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     replayAll();
 
@@ -995,7 +995,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(existingTasks).anyTimes();
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
@@ -1101,7 +1101,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getTask("id4")).andReturn(Optional.of(id4)).anyTimes();
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
@@ -1168,8 +1168,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
-
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
             .anyTimes();
@@ -1311,7 +1310,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.expect(taskClient.getStatusAsync("id1"))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING));
@@ -1354,7 +1353,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     // for the newly created replica task
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
@@ -1427,7 +1426,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
@@ -1455,7 +1454,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.reset(taskClient);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
@@ -1519,7 +1518,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskQueue.add(EasyMock.capture(newTasksCapture))).andReturn(true).times(2);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.expect(taskClient.stopAsync(EasyMock.capture(shutdownTaskIdCapture), EasyMock.eq(false)))
             .andReturn(Futures.immediateFuture(true));
@@ -1568,7 +1567,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskQueue.add(EasyMock.capture(firstTasks))).andReturn(true).times(4);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
@@ -1595,7 +1594,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
@@ -1737,7 +1736,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ).anyTimes();
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.expect(taskClient.getStatusAsync("id1"))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.PUBLISHING));
@@ -1902,7 +1901,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ).anyTimes();
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.expect(taskClient.getStatusAsync("id1"))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.PUBLISHING));
@@ -2080,7 +2079,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         )
     ).anyTimes();
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync("id1"))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.PUBLISHING));
     EasyMock.expect(taskClient.getStatusAsync("id2"))
@@ -2209,7 +2208,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(4);
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
@@ -2235,7 +2234,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
     checkpoints2.put(0, ImmutableMap.of(SHARD_ID0, "0"));
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints1))
             .times(2);
@@ -2296,7 +2295,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(4);
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
@@ -2321,7 +2320,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
     checkpoints2.put(0, ImmutableMap.of(SHARD_ID0, "0"));
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints1))
             .times(2);
@@ -2409,7 +2408,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(4);
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
@@ -2434,7 +2433,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
     checkpoints2.put(0, ImmutableMap.of(SHARD_ID0, "0"));
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints1))
             .times(2);
@@ -2641,7 +2640,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         )
     ).anyTimes();
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync("id1"))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.PUBLISHING));
     EasyMock.expect(taskClient.getStatusAsync("id2"))
@@ -2683,7 +2682,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.pauseAsync("id2"))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(
                 SHARD_ID1,
@@ -2904,7 +2903,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         .times(2);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     // Since shard 2 was in metadata before but is not in the list of shards returned by the record supplier,
     // it gets deleted from metadata (it is an expired shard)
@@ -3065,7 +3064,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         )
     ).anyTimes();
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync("id1"))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.PUBLISHING));
     EasyMock.expect(taskClient.getStatusAsync("id2"))
@@ -3222,7 +3221,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         )
     ).anyTimes();
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync("id1"))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING));
     EasyMock.expect(taskClient.getStatusAsync("id2"))
@@ -3379,8 +3378,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
         indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(new KinesisDataSourceMetadata(
         null)
     ).anyTimes();
+
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync("id1"))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING));
     EasyMock.expect(taskClient.getStatusAsync("id2"))
@@ -3534,8 +3534,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
         indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(new KinesisDataSourceMetadata(
         null)
     ).anyTimes();
+
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     replayAll();
 
@@ -3588,8 +3589,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
       Assert.fail();
       return null;
     }).anyTimes();
-    taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().anyTimes();
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
@@ -3712,9 +3711,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         )
     ).anyTimes();
 
-    taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
-
     EasyMock.expect(taskClient.getStatusAsync("id1"))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.PUBLISHING));
     EasyMock.expect(taskClient.getStatusAsync("id2"))
@@ -3766,6 +3762,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     taskQueue.shutdown("id3", "Killing task [%s] which hasn't been assigned to a worker", "id3");
     EasyMock.expectLastCall().times(1);
 
+    taskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().andVoid().anyTimes();
+
     replayAll();
     supervisor.start();
     supervisor.runInternal();
@@ -3782,8 +3781,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
-    taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().anyTimes();
+
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
 
@@ -3914,7 +3912,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
     EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(task)).anyTimes();
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
             .anyTimes();
@@ -4014,7 +4012,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(task)).anyTimes();
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
@@ -4238,7 +4236,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
@@ -4266,7 +4264,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.reset(taskClient);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
             .anyTimes();
@@ -4352,7 +4350,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
             .anyTimes();
@@ -4375,7 +4373,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.reset(taskClient);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
             .anyTimes();
@@ -4534,7 +4532,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
             .anyTimes();
@@ -4564,7 +4562,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.reset(taskClient);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
             .anyTimes();
@@ -4700,7 +4698,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
             .anyTimes();
@@ -4727,7 +4725,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.reset(taskClient);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
             .anyTimes();
@@ -4824,7 +4822,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
             .anyTimes();
@@ -4854,7 +4852,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.reset(taskClient);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
             .anyTimes();
@@ -4985,7 +4983,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
             .anyTimes();
@@ -5010,7 +5008,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.reset(taskClient);
 
     taskClient.cancelTaskPauseRequests();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
             .anyTimes();

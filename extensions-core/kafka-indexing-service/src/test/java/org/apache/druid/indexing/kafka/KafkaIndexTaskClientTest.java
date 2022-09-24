@@ -1075,13 +1075,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
       futures.add(client.pauseAsync(testId));
     }
 
-    Assert.assertEquals(client.getPauseFutureSize(), TEST_IDS.size());
-
     Futures.allAsList(futures).get();
     verifyAll();
-
-    client.cancelTaskPauseRequests();
-    Assert.assertEquals(client.getPauseFutureSize(), 0);
   }
 
   private ListenableFuture<Either> okResponseHolder()
