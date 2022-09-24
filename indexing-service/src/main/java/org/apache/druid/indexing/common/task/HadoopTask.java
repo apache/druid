@@ -50,7 +50,7 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
 {
   private static final Logger log = new Logger(HadoopTask.class);
 
-  static final Injector INJECTOR = new StartupInjectorBuilder().withExtensions().build();
+  static final Injector INJECTOR = new StartupInjectorBuilder().forServer().build();
   private static final ExtensionsLoader EXTENSIONS_LOADER = ExtensionsLoader.instance(INJECTOR);
 
   private final List<String> hadoopDependencyCoordinates;
@@ -205,6 +205,15 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
     System.setProperty("druid.hadoop.internal.classpath", hadoopContainerDruidClasspathJars);
 
     return classLoader;
+  }
+
+  /**
+   * This method logs the {@link ExtensionsConfig} that was used to fetch the hadoop dependencies and build the classpath
+   * for the jobs
+   */
+  protected static void logExtensionsConfig()
+  {
+    log.info("HadoopTask started with the following config:\n%s", EXTENSIONS_LOADER.config().toString());
   }
 
   /**
