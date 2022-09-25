@@ -404,7 +404,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
     Assert.assertTrue(task.supportsQueries());
@@ -463,7 +464,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -509,7 +511,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
     task.addToContext(Tasks.STORE_EMPTY_COLUMNS_KEY, false);
@@ -541,6 +544,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             kafkaServer.consumerProperties(),
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
+            null,
             null,
             null,
             null
@@ -587,7 +591,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -641,7 +646,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -719,7 +725,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -823,7 +830,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -950,7 +958,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -1036,7 +1045,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
     final KafkaIndexTask staleReplica = createTask(
@@ -1051,7 +1061,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -1119,7 +1130,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             DateTimes.of("2010"),
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -1170,7 +1182,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             DateTimes.of("2010"),
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -1230,7 +1243,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -1305,7 +1319,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            new TestKafkaInputFormat(INPUT_FORMAT)
+            new TestKafkaInputFormat(INPUT_FORMAT),
+            null
         )
     );
     Assert.assertTrue(task.supportsQueries());
@@ -1381,7 +1396,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            KAFKA_INPUT_FORMAT
+            KAFKA_INPUT_FORMAT,
+            null
         )
     );
     Assert.assertTrue(task.supportsQueries());
@@ -1436,7 +1452,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -1474,7 +1491,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -1523,7 +1541,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -1577,7 +1596,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -1618,7 +1638,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -1712,7 +1733,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -1786,7 +1808,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
     final KafkaIndexTask task2 = createTask(
@@ -1801,7 +1824,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -1852,7 +1876,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
     final KafkaIndexTask task2 = createTask(
@@ -1867,7 +1892,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -1920,7 +1946,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             false,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
     final KafkaIndexTask task2 = createTask(
@@ -1935,7 +1962,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             false,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -1986,7 +2014,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -2034,7 +2063,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
     final KafkaIndexTask task2 = createTask(
@@ -2049,7 +2079,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -2103,7 +2134,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -2144,7 +2176,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -2206,7 +2239,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -2255,7 +2289,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -2317,7 +2352,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -2407,7 +2443,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -2443,7 +2480,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -2489,7 +2527,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         ),
         context
     );
@@ -2536,7 +2575,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -2574,7 +2614,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -2685,7 +2726,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
                     true,
                     null,
                     null,
-                    INPUT_FORMAT
+                    INPUT_FORMAT,
+                    null
             )
     );
 
@@ -2744,7 +2786,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -2766,7 +2809,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -2815,7 +2859,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 
@@ -3207,7 +3252,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             true,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         )
     );
 

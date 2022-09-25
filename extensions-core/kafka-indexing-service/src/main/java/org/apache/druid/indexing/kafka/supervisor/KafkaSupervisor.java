@@ -126,7 +126,11 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
   @Override
   protected RecordSupplier<Integer, Long, KafkaRecordEntity> setupRecordSupplier()
   {
-    return new KafkaRecordSupplier(spec.getIoConfig().getConsumerProperties(), sortingMapper);
+    return new KafkaRecordSupplier(
+        spec.getIoConfig().getConsumerProperties(),
+        sortingMapper,
+        spec.getIoConfig().getConfigOverrides()
+    );
   }
 
   @Override
@@ -197,7 +201,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
         true,
         minimumMessageTime,
         maximumMessageTime,
-        ioConfig.getInputFormat()
+        ioConfig.getInputFormat(),
+        kafkaIoConfig.getConfigOverrides()
     );
   }
 

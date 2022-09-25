@@ -23,12 +23,10 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.google.inject.Provider;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -54,22 +52,18 @@ public class AuthenticatorMapperModule implements DruidModule
     binder.bind(AuthenticatorMapper.class)
           .toProvider(new AuthenticatorMapperProvider())
           .in(LazySingleton.class);
-
-    LifecycleModule.register(binder, AuthenticatorMapper.class);
   }
 
   private static class AuthenticatorMapperProvider implements Provider<AuthenticatorMapper>
   {
     private AuthConfig authConfig;
-    private Injector injector;
     private Properties props;
     private JsonConfigurator configurator;
 
     @Inject
-    public void inject(Injector injector, Properties props, JsonConfigurator configurator)
+    public void inject(AuthConfig authConfig, Properties props, JsonConfigurator configurator)
     {
-      this.authConfig = injector.getInstance(AuthConfig.class);
-      this.injector = injector;
+      this.authConfig = authConfig;
       this.props = props;
       this.configurator = configurator;
     }
@@ -91,7 +85,10 @@ public class AuthenticatorMapperModule implements DruidModule
       }
 
       for (String authenticatorName : authenticators) {
-        final String authenticatorPropertyBase = StringUtils.format(AUTHENTICATOR_PROPERTIES_FORMAT_STRING, authenticatorName);
+        final String authenticatorPropertyBase = StringUtils.format(
+            AUTHENTICATOR_PROPERTIES_FORMAT_STRING,
+            authenticatorName
+        );
         final JsonConfigProvider<Authenticator> authenticatorProvider = JsonConfigProvider.of(
             authenticatorPropertyBase,
             Authenticator.class

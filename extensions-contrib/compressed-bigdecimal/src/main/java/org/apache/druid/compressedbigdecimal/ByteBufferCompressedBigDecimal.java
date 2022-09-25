@@ -24,8 +24,7 @@ import java.nio.ByteBuffer;
 /**
  * A compressed big decimal that holds its data with an embedded array.
  */
-@SuppressWarnings("serial")
-public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal<ByteBufferCompressedBigDecimal>
+public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal
 {
 
   private final ByteBuffer buf;
@@ -57,7 +56,7 @@ public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal<ByteBuf
    * @param position the position in the ByteBuffer
    * @param val      initial value
    */
-  public ByteBufferCompressedBigDecimal(ByteBuffer buf, int position, CompressedBigDecimal<?> val)
+  public ByteBufferCompressedBigDecimal(ByteBuffer buf, int position, CompressedBigDecimal val)
   {
     super(val.getScale());
     this.buf = buf;
@@ -65,6 +64,12 @@ public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal<ByteBuf
     this.size = val.getArraySize();
 
     copyToBuffer(buf, position, size, val);
+  }
+
+  @Override
+  public CompressedBigDecimal toHeap()
+  {
+    return new ArrayCompressedBigDecimal(this);
   }
 
   /* (non-Javadoc)
@@ -100,6 +105,7 @@ public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal<ByteBuf
     buf.putInt(position + idx * Integer.BYTES, val);
   }
 
+
   /**
    * Copy a compressed big decimal into a Bytebuffer in a format understood by this class.
    *
@@ -108,7 +114,7 @@ public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal<ByteBuf
    * @param size     The space (in number of ints) allocated for the value
    * @param val      THe value to copy
    */
-  public static void copyToBuffer(ByteBuffer buf, int position, int size, CompressedBigDecimal<?> val)
+  public static void copyToBuffer(ByteBuffer buf, int position, int size, CompressedBigDecimal val)
   {
     if (val.getArraySize() > size) {
       throw new IllegalArgumentException("Right hand side too big to fit in the result value");

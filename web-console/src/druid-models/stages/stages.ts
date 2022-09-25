@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { sum } from 'd3-array';
+import { max, sum } from 'd3-array';
 import hasOwnProp from 'has-own-prop';
 
 import { deleteKeys, filterMap, oneOf, zeroDivide } from '../../utils';
@@ -461,20 +461,31 @@ export class Stages {
     if (!counterNames.length) return [];
 
     if (!this.hasCounterForStage(stage, counterNames[0])) return [];
+    const stageCounters = this.getCountersForStage(stage);
 
     const { partitionCount } = stage;
+    const partitionNumber =
+      type === 'output'
+        ? partitionCount
+        : max(stageCounters, stageCounter =>
+            max(counterNames, counterName => {
+              const channelCounter = stageCounter[counterName];
+              if (channelCounter?.type !== 'channel') return 0;
+              return channelCounter.rows?.length || 0;
+            }),
+          );
+
+    if (!partitionNumber) return [];
+
     const simpleCounters: SimpleWideCounter[] = [];
-    if (type === 'output' && partitionCount) {
-      // If we are in output mode then we clearly know how many partitions to expect to initialize their counters with 0s
-      for (let i = 0; i < partitionCount; i++) {
-        simpleCounters.push({
-          index: i,
-          [counterNames[0]]: zeroChannelFields(),
-        } as SimpleWideCounter);
-      }
+
+    // Initialize all portions and their counters to 0s
+    for (let i = 0; i < partitionNumber; i++) {
+      const newSimpleCounter: SimpleWideCounter = { index: i };
+      for (const counterName of counterNames) newSimpleCounter[counterName] = zeroChannelFields();
+      simpleCounters.push(newSimpleCounter);
     }
 
-    const stageCounters = this.getCountersForStage(stage);
     for (const stageCounter of stageCounters) {
       for (const counterName of counterNames) {
         const channelCounter = stageCounter[counterName];
@@ -482,24 +493,13 @@ export class Stages {
         const n = channelCounter.rows?.length || 0;
         if (!n) continue;
 
-        for (let partitionNumber = 0; partitionNumber < n; partitionNumber++) {
-          let mySimpleCounter = simpleCounters[partitionNumber];
-          if (!mySimpleCounter) {
-            simpleCounters[partitionNumber] = mySimpleCounter = {
-              index: partitionNumber,
-            };
-          }
-
-          let c = mySimpleCounter[counterName];
-          if (!c) {
-            mySimpleCounter[counterName] = c = zeroChannelFields();
-          }
-
-          c.rows += channelCounter.rows?.[partitionNumber] || 0;
-          c.bytes += channelCounter.bytes?.[partitionNumber] || 0;
-          c.frames += channelCounter.frames?.[partitionNumber] || 0;
-          c.files += channelCounter.files?.[partitionNumber] || 0;
-          c.totalFiles += channelCounter.totalFiles?.[partitionNumber] || 0;
+        for (let i = 0; i < n; i++) {
+          const c = simpleCounters[i][counterName]!; // This must be defined as we initialized all the counters above
+          c.rows += channelCounter.rows?.[i] || 0;
+          c.bytes += channelCounter.bytes?.[i] || 0;
+          c.frames += channelCounter.frames?.[i] || 0;
+          c.files += channelCounter.files?.[i] || 0;
+          c.totalFiles += channelCounter.totalFiles?.[i] || 0;
         }
       }
     }

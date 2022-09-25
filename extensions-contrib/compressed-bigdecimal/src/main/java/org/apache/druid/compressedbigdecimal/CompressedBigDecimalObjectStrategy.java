@@ -28,7 +28,7 @@ import java.nio.IntBuffer;
 /**
  * Defines strategy on how to read and write data from deep storage.
  */
-public class CompressedBigDecimalObjectStrategy implements ObjectStrategy<CompressedBigDecimal<?>>
+public class CompressedBigDecimalObjectStrategy implements ObjectStrategy<CompressedBigDecimal>
 {
 
   /*
@@ -61,7 +61,7 @@ public class CompressedBigDecimalObjectStrategy implements ObjectStrategy<Compre
    * @see org.apache.druid.segment.data.ObjectStrategy#fromByteBuffer(java.nio.ByteBuffer, int)
    */
   @Override
-  public CompressedBigDecimal<?> fromByteBuffer(ByteBuffer buffer, int numBytes)
+  public CompressedBigDecimal fromByteBuffer(ByteBuffer buffer, int numBytes)
   {
     ByteBuffer myBuf = buffer.slice();
     myBuf.order(ByteOrder.LITTLE_ENDIAN);
@@ -79,7 +79,7 @@ public class CompressedBigDecimalObjectStrategy implements ObjectStrategy<Compre
    * @see org.apache.druid.segment.data.ObjectStrategy#toBytes(java.lang.Object)
    */
   @Override
-  public byte[] toBytes(CompressedBigDecimal<?> val)
+  public byte[] toBytes(CompressedBigDecimal val)
   {
     ByteBuffer buf = ByteBuffer.allocate(4 * (val.getArraySize() + 1));
     buf.order(ByteOrder.LITTLE_ENDIAN);

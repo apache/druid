@@ -44,22 +44,14 @@ import java.util.List;
  * An aggregator factory to generate longSum aggregator object.
  */
 public class CompressedBigDecimalAggregatorFactory
-    extends NullableNumericAggregatorFactory<ColumnValueSelector<CompressedBigDecimal<?>>>
+    extends NullableNumericAggregatorFactory<ColumnValueSelector<CompressedBigDecimal>>
 {
 
   public static final int DEFAULT_SCALE = 9;
   public static final int DEFAULT_SIZE = 3;
   private static final byte CACHE_TYPE_ID = 0x37;
 
-  public static final Comparator<CompressedBigDecimal<?>> COMPARATOR = new Comparator<CompressedBigDecimal<?>>()
-  {
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    @Override
-    public int compare(CompressedBigDecimal lhs, CompressedBigDecimal rhs)
-    {
-      return lhs.compareTo(rhs);
-    }
-  };
+  public static final Comparator<CompressedBigDecimal> COMPARATOR = CompressedBigDecimal::compareTo;
 
   private final String name;
   private final String fieldName;
@@ -90,21 +82,21 @@ public class CompressedBigDecimalAggregatorFactory
 
   @SuppressWarnings("unchecked")
   @Override
-  protected ColumnValueSelector<CompressedBigDecimal<?>> selector(ColumnSelectorFactory metricFactory)
+  protected ColumnValueSelector<CompressedBigDecimal> selector(ColumnSelectorFactory metricFactory)
   {
-    return (ColumnValueSelector<CompressedBigDecimal<?>>) metricFactory.makeColumnValueSelector(fieldName);
+    return (ColumnValueSelector<CompressedBigDecimal>) metricFactory.makeColumnValueSelector(fieldName);
   }
 
   @Override
   protected Aggregator factorize(ColumnSelectorFactory metricFactory,
-                                 @Nonnull ColumnValueSelector<CompressedBigDecimal<?>> selector)
+                                 @Nonnull ColumnValueSelector<CompressedBigDecimal> selector)
   {
     return new CompressedBigDecimalAggregator(size, scale, selector);
   }
 
   @Override
   protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory,
-                                               @Nonnull ColumnValueSelector<CompressedBigDecimal<?>> selector)
+                                               @Nonnull ColumnValueSelector<CompressedBigDecimal> selector)
   {
     return new CompressedBigDecimalBufferAggregator(size, scale, selector);
   }
@@ -113,7 +105,7 @@ public class CompressedBigDecimalAggregatorFactory
    * @see org.apache.druid.query.aggregation.AggregatorFactory#getComparator()
    */
   @Override
-  public Comparator<CompressedBigDecimal<?>> getComparator()
+  public Comparator<CompressedBigDecimal> getComparator()
   {
     return COMPARATOR;
   }
@@ -137,9 +129,9 @@ public class CompressedBigDecimalAggregatorFactory
       // due to truncation when the deserialized objects aren't big enough to hold the accumlated result.
       // The most common case this avoids is deserializing 0E-9 into a CompressedBigDecimal with array
       // size 1 and then accumulating a larger value into it.
-      CompressedBigDecimal<?> retVal = ArrayCompressedBigDecimal.allocate(size, scale);
-      CompressedBigDecimal<?> left = (CompressedBigDecimal<?>) lhs;
-      CompressedBigDecimal<?> right = (CompressedBigDecimal<?>) rhs;
+      CompressedBigDecimal retVal = ArrayCompressedBigDecimal.allocate(size, scale);
+      CompressedBigDecimal left = (CompressedBigDecimal) lhs;
+      CompressedBigDecimal right = (CompressedBigDecimal) rhs;
       if (left.signum() != 0) {
         retVal.accumulate(left);
       }
@@ -160,7 +152,7 @@ public class CompressedBigDecimalAggregatorFactory
   }
 
   @Override
-  public AggregateCombiner<CompressedBigDecimal<?>> makeAggregateCombiner()
+  public AggregateCombiner<CompressedBigDecimal> makeAggregateCombiner()
   {
     return new CompressedBigDecimalAggregateCombiner();
   }
@@ -214,7 +206,7 @@ public class CompressedBigDecimalAggregatorFactory
   {
     return ValueType.COMPLEX;
   }
-  
+
   /* (non-Javadoc)
    * @see org.apache.druid.query.aggregation.AggregatorFactory#getTypeName()
    */
@@ -223,7 +215,7 @@ public class CompressedBigDecimalAggregatorFactory
   {
     return CompressedBigDecimalModule.COMPRESSED_BIG_DECIMAL;
   }
- 
+
   /* (non-Javadoc)
    * @see org.apache.druid.query.aggregation.AggregatorFactory#getCacheKey()
    */
@@ -240,7 +232,7 @@ public class CompressedBigDecimalAggregatorFactory
   @Override
   public Object finalizeComputation(Object object)
   {
-    CompressedBigDecimal<?> compressedBigDecimal = (CompressedBigDecimal<?>) object;
+    CompressedBigDecimal compressedBigDecimal = (CompressedBigDecimal) object;
     BigDecimal bigDecimal = compressedBigDecimal.toBigDecimal();
     return bigDecimal.compareTo(BigDecimal.ZERO) == 0 ? 0 : bigDecimal;
   }

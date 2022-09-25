@@ -168,6 +168,7 @@ import { ExamplePicker } from './example-picker/example-picker';
 import { FilterTable, filterTableSelectedColumnName } from './filter-table/filter-table';
 import { FormEditor } from './form-editor/form-editor';
 import {
+  AppendToExistingIssue,
   ConnectMessage,
   FilterMessage,
   ParserMessage,
@@ -1490,7 +1491,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (canFlatten && !flattenFields.length && parserQueryState.data) {
       suggestedFlattenFields = computeFlattenPathsForData(
         filterMap(parserQueryState.data.rows, r => r.input),
-        'path',
         'ignore-arrays',
       );
     }
@@ -3003,6 +3003,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <div className="control">
           <PartitionMessage />
           {nonsensicalSingleDimPartitioningMessage}
+          <AppendToExistingIssue spec={spec} onChangeSpec={this.updateSpec} />
         </div>
         {this.renderNextBar({
           disabled: invalidPartitionConfig(spec),
@@ -3096,8 +3097,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 label: 'Append to existing',
                 type: 'boolean',
                 defaultValue: false,
-                defined: spec =>
-                  deepGet(spec, 'spec.tuningConfig.partitionsSpec.type') === 'dynamic',
+                // appendToExisting can only be set on 'dynamic' portioning.
+                // We chose to show it always and instead have a specific message, separate from this form, to notify the user of the issue.
                 info: (
                   <>
                     Creates segments as additional shards of the latest version, effectively
@@ -3166,6 +3167,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </div>
         <div className="control">
           <PublishMessage />
+          <AppendToExistingIssue spec={spec} onChangeSpec={this.updateSpec} />
         </div>
         {this.renderNextBar({})}
       </>
@@ -3234,6 +3236,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               >{`There is an issue with the spec: ${issueWithSpec}`}</Callout>
             </FormGroup>
           )}
+          <AppendToExistingIssue spec={spec} onChangeSpec={this.updateSpec} />
         </div>
         <div className="next-bar">
           {!isEmptyIngestionSpec(spec) && (

@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.parser;
 
-import com.google.common.base.Preconditions;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
@@ -38,21 +37,13 @@ import javax.annotation.Nullable;
  * This class extends the {@link SqlInsert} so that this SqlNode can be used in
  * {@link org.apache.calcite.sql2rel.SqlToRelConverter} for getting converted into RelNode, and further processing
  */
-public class DruidSqlReplace extends SqlInsert
+public class DruidSqlReplace extends DruidSqlIngest
 {
   public static final String SQL_REPLACE_TIME_CHUNKS = "sqlReplaceTimeChunks";
 
   public static final SqlOperator OPERATOR = new SqlSpecialOperator("REPLACE", SqlKind.OTHER);
 
-  private final Granularity partitionedBy;
-
-  // Used in the unparse function to generate the original query since we convert the string to an enum
-  private final String partitionedByStringForUnparse;
-
   private final SqlNode replaceTimeQuery;
-
-  @Nullable
-  private final SqlNodeList clusteredBy;
 
   /**
    * While partitionedBy and partitionedByStringForUnparse can be null as arguments to the constructor, this is
@@ -66,44 +57,25 @@ public class DruidSqlReplace extends SqlInsert
       @Nullable String partitionedByStringForUnparse,
       @Nullable SqlNodeList clusteredBy,
       @Nullable SqlNode replaceTimeQuery
-  ) throws ParseException
+  )
   {
     super(
         insertNode.getParserPosition(),
         (SqlNodeList) insertNode.getOperandList().get(0), // No better getter to extract this
         insertNode.getTargetTable(),
         insertNode.getSource(),
-        insertNode.getTargetColumnList()
+        insertNode.getTargetColumnList(),
+        partitionedBy,
+        partitionedByStringForUnparse,
+        clusteredBy
     );
-    if (replaceTimeQuery == null) {
-      throw new ParseException("Missing time chunk information in OVERWRITE clause for REPLACE, set it to OVERWRITE WHERE <__time based condition> or set it to overwrite the entire table with OVERWRITE ALL.");
-    }
-    if (partitionedBy == null) {
-      throw new ParseException("REPLACE statements must specify PARTITIONED BY clause explicitly");
-    }
-    this.partitionedBy = partitionedBy;
-
-    this.partitionedByStringForUnparse = Preconditions.checkNotNull(partitionedByStringForUnparse);
 
     this.replaceTimeQuery = replaceTimeQuery;
-
-    this.clusteredBy = clusteredBy;
   }
 
   public SqlNode getReplaceTimeQuery()
   {
     return replaceTimeQuery;
-  }
-
-  public Granularity getPartitionedBy()
-  {
-    return partitionedBy;
-  }
-
-  @Nullable
-  public SqlNodeList getClusteredBy()
-  {
-    return clusteredBy;
   }
 
   @Nonnull

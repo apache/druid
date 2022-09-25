@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -92,24 +93,29 @@ public abstract class FlatTextInputFormat implements InputFormat
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<String> getColumns()
   {
     return columns;
   }
 
+  @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getListDelimiter()
   {
     return listDelimiter;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean isFindColumnsFromHeader()
   {
     return findColumnsFromHeader;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public int getSkipHeaderRows()
   {
     return skipHeaderRows;
