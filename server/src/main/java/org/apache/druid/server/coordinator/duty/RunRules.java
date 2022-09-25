@@ -133,7 +133,7 @@ public class RunRules implements CoordinatorDuty
           if (
               stats.getGlobalStat(
                   "totalNonPrimaryReplicantsLoaded") >= paramsWithReplicationManager.getCoordinatorDynamicConfig()
-                                                                                   .getMaxNonPrimaryReplicantsToLoad()
+                                                                                    .getMaxNonPrimaryReplicantsToLoad()
               && !paramsWithReplicationManager.getReplicationManager().isLoadPrimaryReplicantsOnly()
           ) {
             log.info(
@@ -145,6 +145,9 @@ public class RunRules implements CoordinatorDuty
           stats.accumulate(rule.run(coordinator, paramsWithReplicationManager, segment));
           foundMatchingRule = true;
           break;
+        } else {
+          //Clear the inapplicable replicant from the corresponding tier
+          rule.cleanExpireReplicant(paramsWithReplicationManager, segment);
         }
       }
 
