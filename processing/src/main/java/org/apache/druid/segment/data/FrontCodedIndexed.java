@@ -154,7 +154,8 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     // find the bucket which contains the value with maths
     final int offsetNum = adjustedIndex >> div;
     final int bucketIndex = adjustedIndex & rem;
-    // get offset of that bucket in the value buffer
+    // get offset of that bucket in the value buffer, subtract 1 to get the starting position because we only store the
+    // ending offset
     final int offset = offsetNum > 0 ? buffer.getInt(offsetsPosition + ((offsetNum - 1) * Integer.BYTES)) : 0;
     ByteBuffer copy = buffer.asReadOnlyBuffer().order(buffer.order());
     copy.position(bucketsPosition + offset);

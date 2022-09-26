@@ -26,15 +26,21 @@ import org.apache.druid.segment.data.Indexed;
 import javax.annotation.Nullable;
 
 public final class IndexedStringDictionaryEncodedStringValueIndex<T extends Indexed<String>>
-    extends BaseIndexedDictionaryEncodedIndex<String, T> implements DictionaryEncodedStringValueIndex
+    implements DictionaryEncodedStringValueIndex
 {
+  private final BitmapFactory bitmapFactory;
+  private final T dictionary;
+  private final Indexed<ImmutableBitmap> bitmaps;
+
   public IndexedStringDictionaryEncodedStringValueIndex(
       BitmapFactory bitmapFactory,
       T dictionary,
       Indexed<ImmutableBitmap> bitmaps
   )
   {
-    super(bitmapFactory, dictionary, bitmaps);
+    this.bitmapFactory = bitmapFactory;
+    this.dictionary = dictionary;
+    this.bitmaps = bitmaps;
   }
 
   @Override
@@ -48,5 +54,16 @@ public final class IndexedStringDictionaryEncodedStringValueIndex<T extends Inde
   public String getValue(int index)
   {
     return dictionary.get(index);
+  }
+
+  @Override
+  public ImmutableBitmap getBitmap(int idx)
+  {
+    if (idx < 0) {
+      return bitmapFactory.makeEmptyImmutableBitmap();
+    }
+
+    final ImmutableBitmap bitmap = bitmaps.get(idx);
+    return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
   }
 }

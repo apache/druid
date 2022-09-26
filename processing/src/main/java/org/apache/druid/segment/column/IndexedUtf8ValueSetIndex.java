@@ -32,18 +32,24 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
 
-public final class IndexedUtf8ValueSetIndex<TIndex extends Indexed<ByteBuffer>>
-    extends BaseIndexedDictionaryEncodedIndex<ByteBuffer, TIndex> implements StringValueSetIndex, Utf8ValueSetIndex
+public final class IndexedUtf8ValueSetIndex<T extends Indexed<ByteBuffer>>
+    implements StringValueSetIndex, Utf8ValueSetIndex
 {
   private static final int SIZE_WORTH_CHECKING_MIN = 8;
 
+  private final BitmapFactory bitmapFactory;
+  private final T dictionary;
+  private final Indexed<ImmutableBitmap> bitmaps;
+
   public IndexedUtf8ValueSetIndex(
       BitmapFactory bitmapFactory,
-      TIndex dictionary,
+      T dictionary,
       Indexed<ImmutableBitmap> bitmaps
   )
   {
-    super(bitmapFactory, dictionary, bitmaps);
+    this.bitmapFactory = bitmapFactory;
+    this.dictionary = dictionary;
+    this.bitmaps = bitmaps;
   }
 
   @Override
@@ -97,6 +103,16 @@ public final class IndexedUtf8ValueSetIndex<TIndex extends Indexed<ByteBuffer>>
     }
 
     return getBitmapColumnIndexForSortedIterableUtf8(tailSet);
+  }
+
+  private ImmutableBitmap getBitmap(int idx)
+  {
+    if (idx < 0) {
+      return bitmapFactory.makeEmptyImmutableBitmap();
+    }
+
+    final ImmutableBitmap bitmap = bitmaps.get(idx);
+    return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
   }
 
   /**

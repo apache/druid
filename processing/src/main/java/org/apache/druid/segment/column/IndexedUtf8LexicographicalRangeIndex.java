@@ -23,7 +23,6 @@ import com.google.common.base.Predicate;
 import it.unimi.dsi.fastutil.ints.IntIntImmutablePair;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import it.unimi.dsi.fastutil.ints.IntIterator;
-import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
@@ -36,18 +35,20 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public final class IndexedUtf8LexicographicalRangeIndex<T extends Indexed<ByteBuffer>>
-    extends BaseIndexedDictionaryEncodedIndex<ByteBuffer, T> implements LexicographicalRangeIndex
+    implements LexicographicalRangeIndex
 {
+  private final T dictionary;
+  private final Indexed<ImmutableBitmap> bitmaps;
   private final boolean hasNull;
 
   public IndexedUtf8LexicographicalRangeIndex(
-      BitmapFactory bitmapFactory,
       T dictionary,
       Indexed<ImmutableBitmap> bitmaps,
       boolean hasNull
   )
   {
-    super(bitmapFactory, dictionary, bitmaps);
+    this.dictionary = dictionary;
+    this.bitmaps = bitmaps;
     this.hasNull = hasNull;
   }
 
@@ -79,7 +80,7 @@ public final class IndexedUtf8LexicographicalRangeIndex<T extends Indexed<ByteBu
           @Override
           public ImmutableBitmap next()
           {
-            return getBitmap(rangeIterator.nextInt());
+            return bitmaps.get(rangeIterator.nextInt());
           }
         };
       }
@@ -140,7 +141,7 @@ public final class IndexedUtf8LexicographicalRangeIndex<T extends Indexed<ByteBu
             }
 
             found = findNext();
-            return getBitmap(cur);
+            return bitmaps.get(cur);
           }
         };
       }
