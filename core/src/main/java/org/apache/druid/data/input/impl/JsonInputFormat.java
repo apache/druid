@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 
 import javax.annotation.Nullable;
@@ -108,6 +109,9 @@ public class JsonInputFormat extends NestedInputFormat
     this.lineSplittable = lineSplittable;
     this.assumeNewlineDelimited = assumeNewlineDelimited != null && assumeNewlineDelimited;
     this.useJsonNodeReader = useJsonNodeReader != null && useJsonNodeReader;
+    if (this.assumeNewlineDelimited && this.useJsonNodeReader) {
+      throw new IAE("useJsonNodeReader cannot be set to true when assumeNewlineDelimited is true.");
+    }
   }
 
   @JsonProperty
