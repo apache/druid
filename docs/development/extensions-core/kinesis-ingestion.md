@@ -456,7 +456,7 @@ On each iteration of the supervisor's run loop, the supervisor completes the fol
   4) Handle tasks that have exceeded `taskDuration` and should transition from the reading to publishing state.
   5) Handle tasks that have finished publishing and signal redundant replica tasks to stop.
   6) Handle tasks that have failed and clean up the supervisor's internal state.
-  7) Compare the list of healthy tasks to the requested `taskCount` and `replicas` configurations and create additional tasks if required incase supervisor is not idle.
+  7) Compare the list of healthy tasks to the requested `taskCount` and `replicas` configurations and create additional tasks if required in case supervisor is not idle.
 
 The `detailedState` field will show additional values (those marked with "first iteration only") the first time the
 supervisor executes this run loop after startup or after resuming from a suspension. This is intended to surface
