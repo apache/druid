@@ -31,7 +31,15 @@ Firehose ingestion doesn't work with newer Druid versions, so you must be using 
 
 ## Migrate from firehose ingestion to an input source
 
-To migrate from firehose ingestion, copy your existing ingestion spec into a new file. Refer to [Native batch ingestion with firehose (Deprecated)](./native-batch-firehose.md) for a description of firehose properties.
+To migrate from firehose ingestion, you can use the Druid console to update your ingestion spec, or you can update it manally.
+
+### Use the Druid console
+
+
+
+### Update your ingestion spec manually
+
+To update your ingestion spec manually, copy your existing spec into a new file. Refer to [Native batch ingestion with firehose (Deprecated)](./native-batch-firehose.md) for a description of firehose properties.
 
 Edit the new file as follows:
 
