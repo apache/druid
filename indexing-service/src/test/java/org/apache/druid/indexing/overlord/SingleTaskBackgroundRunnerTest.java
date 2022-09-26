@@ -98,7 +98,8 @@ public class SingleTaskBackgroundRunnerTest
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
+        null,
+        false
     );
     final ServiceEmitter emitter = new NoopServiceEmitter();
     EmittingLogger.registerEmitter(emitter);
@@ -138,7 +139,9 @@ public class SingleTaskBackgroundRunnerTest
         new NoopOverlordClient(),
         null,
         null,
-        null
+        null,
+        null,
+        "1"
     );
     runner = new SingleTaskBackgroundRunner(
         toolboxFactory,
@@ -239,7 +242,7 @@ public class SingleTaskBackgroundRunnerTest
         new RestorableTask(new BooleanHolder())
         {
           @Override
-          public TaskStatus run(TaskToolbox toolbox)
+          public TaskStatus runTask(TaskToolbox toolbox)
           {
             throw new Error("task failure test");
           }
@@ -336,7 +339,7 @@ public class SingleTaskBackgroundRunnerTest
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox)
+    public TaskStatus runTask(TaskToolbox toolbox)
     {
       return TaskStatus.success(getId());
     }

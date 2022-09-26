@@ -1378,7 +1378,7 @@ public class TaskLockboxTest
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox)
+    public TaskStatus runTask(TaskToolbox toolbox)
     {
       return TaskStatus.failure("how?", "Dummy task status err msg");
     }

@@ -90,7 +90,7 @@ spec:
     #
     # Extensions
     #
-    druid.extensions.loadList=["druid-avro-extensions","druid-hdfs-storage", "druid-kafka-indexing-service", "druid-datasketches", "druid-kubernetes-extensions"]
+    druid.extensions.loadList=["druid-avro-extensions","druid-hdfs-storage", "druid-kafka-indexing-service", "druid-datasketches", "druid-kubernetes-extensions", "druid-kubernetes-overlord-extensions"]
 
     #
     # Service discovery
@@ -160,7 +160,7 @@ spec:
       volumes:
         - name: data-volume
           hostPath:
-            path: REPLACE_VOLUMES/tmp
+            path: ${REPLACE_VOLUMES}/tmp
       resources:
         requests:
           memory: "800Mi"
@@ -201,6 +201,16 @@ spec:
         druid.coordinator.asOverlord.enabled=true
         druid.coordinator.asOverlord.overlordService=druid/overlord
         druid.indexer.queue.startDelay=PT30S
+
+        # k8s options
+        druid.indexer.runner.type=${TASK_MODE}
+        druid.indexer.runner.namespace=${NAMESPACE}
+        druid.indexer.task.enableTaskLevelLogPush=true
+        druid.indexer.runner.javaOptsArray=["-server -Xms128m -Xmx128m -XX:MaxDirectMemorySize=256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Djava.io.tmpdir=/druid/data/tmp -XX:+ExitOnOutOfMemoryError -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"]
+        druid.indexer.task.baseTaskDir=/druid/data/baseTaskDir
+        druid.indexer.fork.property.druid.processing.buffer.sizeBytes=25000000
+        druid.indexer.fork.property.druid.processing.numMergeBuffers=2
+        druid.indexer.fork.property.druid.processing.numThreads=1
       extra.jvm.options: |-
         -Xmx800m
         -Xms800m
@@ -210,7 +220,7 @@ spec:
       volumes:
         - name: data-volume
           hostPath:
-            path: REPLACE_VOLUMES/tmp
+            path: ${REPLACE_VOLUMES}/tmp
       resources:
         requests:
           memory: "1G"
@@ -254,7 +264,7 @@ spec:
       volumes:
         - name: data-volume
           hostPath:
-            path: REPLACE_VOLUMES/tmp
+            path: ${REPLACE_VOLUMES}/tmp
       resources:
         requests:
           memory: "1G"
@@ -338,7 +348,7 @@ spec:
       volumes:
         - name: data-volume
           hostPath:
-            path: REPLACE_VOLUMES/tmp
+            path: ${REPLACE_VOLUMES}  /tmp
       resources:
         requests:
           memory: "1G"

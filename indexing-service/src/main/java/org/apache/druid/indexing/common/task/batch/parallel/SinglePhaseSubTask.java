@@ -226,7 +226,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   }
 
   @Override
-  public TaskStatus runTask(final TaskToolbox toolbox)
+  public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
     try {
       if (missingIntervalsInOverwriteMode) {

@@ -135,4 +135,12 @@ public interface TaskRunner
   Map<String, Long> getLazyTaskSlotCount();
 
   Map<String, Long> getBlacklistedTaskSlotCount();
+
+  /**
+   * Beacause the k8s task runner is an extension, we need to know the task runner type in the overlord resource
+   */
+  default boolean isK8sTaskRunner()
+  {
+    return false;
+  }
 }

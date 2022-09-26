@@ -41,8 +41,10 @@ mkdir tmp
 chmod 777 tmp
 
 $KUBECTL apply -f integration-tests/k8s/role-and-binding.yaml
-sed -i "s|REPLACE_VOLUMES|`pwd`|g" integration-tests/k8s/tiny-cluster.yaml
-$KUBECTL apply -f integration-tests/k8s/tiny-cluster.yaml
+export REPLACE_VOLUMES="$(pwd)"
+export TASK_MODE=${INDEXER_MODE:-k8s}
+export NAMESPACE=${NAMESPACE:-default}
+envsubst < integration-tests/k8s/tiny-cluster.yaml | $KUBECTL apply -f -
 
 # Wait a bit
 sleep 180

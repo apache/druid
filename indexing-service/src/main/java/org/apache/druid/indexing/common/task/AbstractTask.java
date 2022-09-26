@@ -27,10 +27,13 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.Query;
@@ -40,13 +43,17 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public abstract class AbstractTask implements Task
 {
+
+  private static final Logger log = new Logger(AbstractTask.class);
 
   // This is mainly to avoid using combinations of IOConfig flags to figure out the ingestion mode and
   // also to use the mode as dimension in metrics
@@ -82,6 +89,8 @@ public abstract class AbstractTask implements Task
   private final String dataSource;
 
   private final Map<String, Object> context;
+  private File reportsFile;
+  private File logFile;
 
   private final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
 
@@ -123,6 +132,50 @@ public abstract class AbstractTask implements Task
   )
   {
     this(id, groupId, taskResource, dataSource, context, IngestionMode.NONE);
+  }
+
+  @Nullable
+  public String setup(TaskToolbox toolbox) throws Exception
+  {
+    File taskDir = toolbox.getConfig().getTaskDir(getId());
+    FileUtils.mkdirp(taskDir);
+    File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", toolbox.getAttemptId()).toFile();
+    FileUtils.mkdirp(attemptDir);
+    File statusFile = new File(attemptDir, "status.json");
+    reportsFile = new File(attemptDir, "report.json");
+    log.debug("Task setup complete");
+    return null;
+  }
+
+  @Override
+  public final TaskStatus run(TaskToolbox taskToolbox) throws Exception
+  {
+    try {
+      String errorMessage = setup(taskToolbox);
+      if (org.apache.commons.lang3.StringUtils.isNotBlank(errorMessage)) {
+        return TaskStatus.failure(getId(), errorMessage);
+      }
+      return runTask(taskToolbox);
+    }
+    finally {
+      cleanUp(taskToolbox);
+    }
+  }
+
+  public abstract TaskStatus runTask(TaskToolbox taskToolbox) throws Exception;
+
+  public void cleanUp(TaskToolbox toolbox) throws Exception
+  {
+    if (toolbox.getConfig().isEnableTaskLevelLogPush()) {
+      if (reportsFile != null && reportsFile.exists()) {
+        toolbox.getTaskLogPusher().pushTaskReports(id, reportsFile);
+        log.debug("Pushed task reports");
+      } else {
+        log.debug("No task reports file exists to push");
+      }
+    } else {
+      log.debug("Not pushing task logs and reports from task.");
+    }
   }
 
   public static String getOrMakeId(@Nullable String id, final String typeName, String dataSource)

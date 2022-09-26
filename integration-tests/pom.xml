@@ -693,6 +693,7 @@
                 <pod.name>int-test</pod.name>
                 <pod.namespace>default</pod.namespace>
                 <build.druid.cluster>false</build.druid.cluster>
+                <druid.indexer.mode>k8s</druid.indexer.mode>
                 <override.config.path />
                 <resource.file.dir.path />
 
@@ -716,6 +717,7 @@
                                         <POD_NAME>${pod.name}</POD_NAME>
                                         <POD_NAMESPACE>${pod.namespace}</POD_NAMESPACE>
                                         <BUILD_DRUID_CLSUTER>${build.druid.cluster}</BUILD_DRUID_CLSUTER>
+                                        <INDEXER_MODE>${druid.indexer.mode}</INDEXER_MODE>
                                     </environmentVariables>
                                     <executable>${project.basedir}/script/build_run_k8s_cluster.sh</executable>
                                 </configuration>
