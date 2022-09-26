@@ -20,6 +20,8 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexing.common.RetryPolicy;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -28,8 +30,6 @@ import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 
 import javax.ws.rs.core.MediaType;
@@ -84,7 +84,7 @@ public class RemoteTaskActionClient implements TaskActionClient
                              .setContent(MediaType.APPLICATION_JSON, dataToSend)
         );
 
-        if (fullResponseHolder.getStatus().getCode() / 100 == 2) {
+        if (fullResponseHolder.getStatus().code() / 100 == 2) {
           final Map<String, Object> responseDict = jsonMapper.readValue(
               fullResponseHolder.getContent(),
               JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT

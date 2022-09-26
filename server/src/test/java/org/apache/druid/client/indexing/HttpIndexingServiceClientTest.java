@@ -22,6 +22,9 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -33,12 +36,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.jboss.netty.buffer.BigEndianHeapChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -46,7 +43,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class HttpIndexingServiceClientTest
@@ -98,14 +94,13 @@ public class HttpIndexingServiceClientTest
     };
 
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
-    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.expect(response.status()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         response,
-        StandardCharsets.UTF_8
-    ).addChunk(jsonMapper.writeValueAsString(samplerResponse));
+        jsonMapper.writeValueAsString(samplerResponse)
+    );
 
     EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(responseHolder)
@@ -151,14 +146,10 @@ public class HttpIndexingServiceClientTest
       }
     };
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
-    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.INTERNAL_SERVER_ERROR).anyTimes();
-    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.expect(response.status()).andReturn(HttpResponseStatus.INTERNAL_SERVER_ERROR).anyTimes();
     EasyMock.replay(response);
 
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        response,
-        StandardCharsets.UTF_8
-    ).addChunk("");
+    StringFullResponseHolder responseHolder = new StringFullResponseHolder(response, "");
 
     EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(responseHolder)
@@ -179,16 +170,15 @@ public class HttpIndexingServiceClientTest
   {
     String taskId = "testTaskId";
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
-    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.expect(response.status()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.replay(response);
 
     Map<String, Object> dummyResponse = ImmutableMap.of("test", "value");
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         response,
-        StandardCharsets.UTF_8
-    ).addChunk(jsonMapper.writeValueAsString(dummyResponse));
+        jsonMapper.writeValueAsString(dummyResponse)
+    );
 
     EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(responseHolder)
@@ -215,17 +205,13 @@ public class HttpIndexingServiceClientTest
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
     String errorMsg = "No task reports were found for this task. "
                       + "The task may not exist, or it may not have completed yet.";
-    ChannelBuffer buf = ChannelBuffers.buffer(errorMsg.length());
-    buf.writeBytes(errorMsg.getBytes(StandardCharsets.UTF_8));
-
-    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).anyTimes();
-    EasyMock.expect(response.getContent()).andReturn(buf);
+    EasyMock.expect(response.status()).andReturn(HttpResponseStatus.NOT_FOUND).anyTimes();
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         response,
-        StandardCharsets.UTF_8
-    ).addChunk("");
+        errorMsg
+    );
 
     EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(responseHolder)
@@ -250,14 +236,13 @@ public class HttpIndexingServiceClientTest
   {
     String taskId = "testTaskId";
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
-    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.expect(response.status()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         response,
-        StandardCharsets.UTF_8
-    ).addChunk("");
+        ""
+    );
 
     EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(responseHolder)
@@ -293,14 +278,13 @@ public class HttpIndexingServiceClientTest
     );
     Capture captureTask = EasyMock.newCapture();
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
-    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.expect(response.status()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         response,
-        StandardCharsets.UTF_8
-    ).addChunk(jsonMapper.writeValueAsString(ImmutableMap.of("task", "aaa")));
+        jsonMapper.writeValueAsString(ImmutableMap.of("task", "aaa"))
+    );
 
     EasyMock.expect(druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/task"))
             .andReturn(new Request(HttpMethod.POST, new URL("http://localhost:8090/druid/indexer/v1/task")))
@@ -361,14 +345,13 @@ public class HttpIndexingServiceClientTest
     );
     Capture captureTask = EasyMock.newCapture();
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
-    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.expect(response.status()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         response,
-        StandardCharsets.UTF_8
-    ).addChunk(jsonMapper.writeValueAsString(ImmutableMap.of("task", "aaa")));
+        jsonMapper.writeValueAsString(ImmutableMap.of("task", "aaa"))
+    );
 
     EasyMock.expect(druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/task"))
             .andReturn(new Request(HttpMethod.POST, new URL("http://localhost:8090/druid/indexer/v1/task")))
@@ -420,14 +403,16 @@ public class HttpIndexingServiceClientTest
     int maximumCapacityWithAutoScale = 10;
     // Mock response for /druid/indexer/v1/totalWorkerCapacity
     HttpResponse totalWorkerCapacityResponse = EasyMock.createMock(HttpResponse.class);
-    EasyMock.expect(totalWorkerCapacityResponse.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(totalWorkerCapacityResponse.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.expect(totalWorkerCapacityResponse.status()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.replay(totalWorkerCapacityResponse);
-    IndexingTotalWorkerCapacityInfo indexingTotalWorkerCapacityInfo = new IndexingTotalWorkerCapacityInfo(currentClusterCapacity, maximumCapacityWithAutoScale);
+    IndexingTotalWorkerCapacityInfo indexingTotalWorkerCapacityInfo = new IndexingTotalWorkerCapacityInfo(
+        currentClusterCapacity,
+        maximumCapacityWithAutoScale
+    );
     StringFullResponseHolder autoScaleResponseHolder = new StringFullResponseHolder(
         totalWorkerCapacityResponse,
-        StandardCharsets.UTF_8
-    ).addChunk(jsonMapper.writeValueAsString(indexingTotalWorkerCapacityInfo));
+        jsonMapper.writeValueAsString(indexingTotalWorkerCapacityInfo)
+    );
     EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(autoScaleResponseHolder)
             .once();

@@ -156,18 +156,6 @@
     <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-mapper-asl:1.9.13 ince it is via curator-x-discovery -->
   </suppress>
   <suppress>
-    <!-- TODO: Fix by updating org.apache.druid.java.util.http.client.NettyHttpClient to use netty 4 -->
-    <notes><![CDATA[
-   file name: netty-3.10.6.Final.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/io\.netty/netty@3.10.6.Final$</packageUrl>
-    <cve>CVE-2019-16869</cve>
-    <cve>CVE-2019-20444</cve>
-    <cve>CVE-2019-20445</cve>
-    <cve>CVE-2021-37136</cve>
-    <cve>CVE-2021-37137</cve>
-  </suppress>
-  <suppress>
     <!-- TODO: Fix by upgrading hadoop-auth version -->
     <notes><![CDATA[
    file name: nimbus-jose-jwt-4.41.1.jar

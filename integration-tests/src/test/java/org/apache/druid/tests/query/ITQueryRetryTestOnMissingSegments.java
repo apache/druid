@@ -22,6 +22,7 @@ package org.apache.druid.tests.query;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
@@ -37,7 +38,6 @@ import org.apache.druid.testing.utils.QueryWithResults;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractIndexerTest;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
@@ -153,7 +153,7 @@ public class ITQueryRetryTestOnMissingSegments
             .queryAsync(queryHelper.getQueryURL(config.getBrokerUrl()), queryWithResult.getQuery())
             .get();
 
-        if (responseHolder.getStatus().getCode() == HttpResponseStatus.OK.getCode()) {
+        if (responseHolder.getStatus().code() == HttpResponseStatus.OK.code()) {
           querySuccess++;
 
           List<Map<String, Object>> result = jsonMapper.readValue(
@@ -180,7 +180,7 @@ public class ITQueryRetryTestOnMissingSegments
           } else {
             resultMatches++;
           }
-        } else if (responseHolder.getStatus().getCode() == HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode() &&
+        } else if (responseHolder.getStatus().code() == HttpResponseStatus.INTERNAL_SERVER_ERROR.code() &&
                    expectation == Expectation.QUERY_FAILURE) {
           final Map<String, Object> response = jsonMapper.readValue(responseHolder.getContent(), Map.class);
           final String errorMessage = (String) response.get("errorMessage");

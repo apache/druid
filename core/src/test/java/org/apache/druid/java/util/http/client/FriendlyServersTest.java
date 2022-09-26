@@ -19,7 +19,10 @@
 
 package org.apache.druid.java.util.http.client;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
@@ -32,13 +35,11 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
 import java.io.BufferedReader;
@@ -51,7 +52,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -65,27 +65,22 @@ public class FriendlyServersTest
     final ExecutorService exec = Executors.newSingleThreadExecutor();
     final ServerSocket serverSocket = new ServerSocket(0);
     exec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            while (!Thread.currentThread().isInterrupted()) {
-              try (
-                  Socket clientSocket = serverSocket.accept();
-                  BufferedReader in = new BufferedReader(
-                      new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
-                  );
-                  OutputStream out = clientSocket.getOutputStream()
-              ) {
-                while (!in.readLine().equals("")) {
-                  // skip lines
-                }
-                out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+        () -> {
+          while (!Thread.currentThread().isInterrupted()) {
+            try (
+                Socket clientSocket = serverSocket.accept();
+                BufferedReader in = new BufferedReader(
+                    new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
+                );
+                OutputStream out = clientSocket.getOutputStream()
+            ) {
+              while (!in.readLine().equals("")) {
+                // skip lines
               }
-              catch (Exception e) {
-                // Suppress
-              }
+              out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+            }
+            catch (Exception e) {
+              // Suppress
             }
           }
         }
@@ -104,7 +99,7 @@ public class FriendlyServersTest
               StatusResponseHandler.getInstance()
           ).get();
 
-      Assert.assertEquals(200, response.getStatus().getCode());
+      Assert.assertEquals(200, response.getStatus().code());
       Assert.assertEquals("hello!", response.getContent());
     }
     finally {
@@ -122,35 +117,30 @@ public class FriendlyServersTest
     final ExecutorService exec = Executors.newSingleThreadExecutor();
     final ServerSocket serverSocket = new ServerSocket(0);
     exec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            while (!Thread.currentThread().isInterrupted()) {
-              try (
-                  Socket clientSocket = serverSocket.accept();
-                  BufferedReader in = new BufferedReader(
-                      new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
-                  );
-                  OutputStream out = clientSocket.getOutputStream()
-              ) {
-                StringBuilder request = new StringBuilder();
-                String line;
-                while (!"".equals((line = in.readLine()))) {
-                  request.append(line).append("\r\n");
-                }
-                requestContent.set(request.toString());
-                out.write("HTTP/1.1 200 OK\r\n\r\n".getBytes(StandardCharsets.UTF_8));
+        () -> {
+          while (!Thread.currentThread().isInterrupted()) {
+            try (
+                Socket clientSocket = serverSocket.accept();
+                BufferedReader in = new BufferedReader(
+                    new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
+                );
+                OutputStream out = clientSocket.getOutputStream()
+            ) {
+              StringBuilder request = new StringBuilder();
+              String line;
+              while (!"".equals((line = in.readLine()))) {
+                request.append(line).append("\r\n");
+              }
+              requestContent.set(request.toString());
+              out.write("HTTP/1.1 200 OK\r\n\r\n".getBytes(StandardCharsets.UTF_8));
 
-                while (!in.readLine().equals("")) {
-                  // skip lines
-                }
-                out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+              while (!in.readLine().equals("")) {
+                // skip lines
               }
-              catch (Exception e) {
-                Assert.fail(e.toString());
-              }
+              out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+            }
+            catch (Exception e) {
+              Assert.fail(e.toString());
             }
           }
         }
@@ -174,11 +164,11 @@ public class FriendlyServersTest
               StatusResponseHandler.getInstance()
           ).get();
 
-      Assert.assertEquals(200, response.getStatus().getCode());
+      Assert.assertEquals(200, response.getStatus().code());
       Assert.assertEquals("hello!", response.getContent());
 
       Assert.assertEquals(
-          "CONNECT anotherHost:8080 HTTP/1.1\r\nProxy-Authorization: Basic Ym9iOnNhbGx5\r\n",
+          "CONNECT anotherHost:8080 HTTP/1.1\r\nproxy-authorization: Basic Ym9iOnNhbGx5\r\n",
           requestContent.get()
       );
     }
@@ -194,37 +184,7 @@ public class FriendlyServersTest
   {
     final ExecutorService exec = Executors.newSingleThreadExecutor();
     final ServerSocket serverSocket = new ServerSocket(0);
-    final AtomicBoolean foundAcceptEncoding = new AtomicBoolean();
-    exec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            while (!Thread.currentThread().isInterrupted()) {
-              try (
-                  Socket clientSocket = serverSocket.accept();
-                  BufferedReader in = new BufferedReader(
-                      new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
-                  );
-                  OutputStream out = clientSocket.getOutputStream()
-              ) {
-                // Read headers
-                String header;
-                while (!(header = in.readLine()).equals("")) {
-                  if ("Accept-Encoding: identity".equals(header)) {
-                    foundAcceptEncoding.set(true);
-                  }
-                }
-                out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
-              }
-              catch (Exception e) {
-                // Suppress
-              }
-            }
-          }
-        }
-    );
+    final AtomicReference<String> foundAcceptEncoding = acceptEncodingServer(exec, serverSocket);
 
     final Lifecycle lifecycle = new Lifecycle();
     try {
@@ -241,15 +201,81 @@ public class FriendlyServersTest
               StatusResponseHandler.getInstance()
           ).get();
 
-      Assert.assertEquals(200, response.getStatus().getCode());
+      Assert.assertEquals(200, response.getStatus().code());
       Assert.assertEquals("hello!", response.getContent());
-      Assert.assertTrue(foundAcceptEncoding.get());
+      Assert.assertEquals("accept-encoding: identity", foundAcceptEncoding.get());
     }
     finally {
       exec.shutdownNow();
       serverSocket.close();
       lifecycle.stop();
     }
+  }
+
+  @Test
+  public void testCompressionCodecHeader() throws Exception
+  {
+    final ExecutorService exec = Executors.newSingleThreadExecutor();
+    final ServerSocket serverSocket = new ServerSocket(0);
+    final AtomicReference<String> foundAcceptEncoding = acceptEncodingServer(exec, serverSocket);
+
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClientConfig config = HttpClientConfig.builder()
+                                                      .withCompressionCodec(HttpClientConfig.CompressionCodec.IDENTITY)
+                                                      .build();
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle);
+      final StatusResponseHolder response = client
+          .go(
+              new Request(
+                  HttpMethod.GET,
+                  new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))
+              ).addHeader(HttpHeaderNames.ACCEPT_ENCODING.toString(), "gzip"),
+              StatusResponseHandler.getInstance()
+          ).get();
+
+      Assert.assertEquals(200, response.getStatus().code());
+      Assert.assertEquals("hello!", response.getContent());
+      Assert.assertEquals("accept-encoding: gzip", foundAcceptEncoding.get());
+    }
+    finally {
+      exec.shutdownNow();
+      serverSocket.close();
+      lifecycle.stop();
+    }
+  }
+
+  @Nonnull
+  private AtomicReference<String> acceptEncodingServer(ExecutorService exec, ServerSocket serverSocket)
+  {
+    final AtomicReference<String> foundAcceptEncoding = new AtomicReference<>(null);
+
+    exec.submit(
+        () -> {
+          while (!Thread.currentThread().isInterrupted()) {
+            try (
+                Socket clientSocket = serverSocket.accept();
+                BufferedReader in = new BufferedReader(
+                    new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
+                );
+                OutputStream out = clientSocket.getOutputStream()
+            ) {
+              // Read headers
+              String header;
+              while (!(header = in.readLine()).equals("")) {
+                if (header.startsWith("accept-encoding:")) {
+                  foundAcceptEncoding.set(header);
+                }
+              }
+              out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+            }
+            catch (Exception ignored) {
+              // Suppress
+            }
+          }
+        }
+    );
+    return foundAcceptEncoding;
   }
 
   @Test
@@ -297,56 +323,42 @@ public class FriendlyServersTest
                 ),
                 StatusResponseHandler.getInstance()
             ).get().getStatus();
-        Assert.assertEquals(404, status.getCode());
+        Assert.assertEquals(404, status.code());
       }
 
       // Incorrect name ("127.0.0.1")
-      {
-        final ListenableFuture<StatusResponseHolder> response1 = trustingClient
+      final Throwable cause = Assert.assertThrows(ExecutionException.class, () -> {
+        trustingClient
             .go(
                 new Request(
                     HttpMethod.GET,
                     new URL(StringUtils.format("https://127.0.0.1:%d/", sslConnector.getLocalPort()))
                 ),
                 StatusResponseHandler.getInstance()
-            );
+            ).get();
 
-        Throwable ea = null;
-        try {
-          response1.get();
-        }
-        catch (ExecutionException e) {
-          ea = e.getCause();
-        }
 
-        Assert.assertTrue("ChannelException thrown by 'get'", ea instanceof ChannelException);
-        Assert.assertTrue("Expected error message", ea.getCause().getMessage().contains("Failed to handshake"));
-      }
+      }).getCause();
+      Assert.assertTrue("ChannelException thrown by 'get'", cause instanceof ChannelException);
+      Assert.assertTrue("Expected error message", cause.getCause().getMessage().contains("Failed to handshake"));
 
-      {
+      final Throwable untrustedCause = Assert.assertThrows(ExecutionException.class, () -> {
         // Untrusting client
-        final ListenableFuture<StatusResponseHolder> response2 = skepticalClient
+        skepticalClient
             .go(
                 new Request(
                     HttpMethod.GET,
                     new URL(StringUtils.format("https://localhost:%d/", sslConnector.getLocalPort()))
                 ),
                 StatusResponseHandler.getInstance()
-            );
-
-        Throwable eb = null;
-        try {
-          response2.get();
-        }
-        catch (ExecutionException e) {
-          eb = e.getCause();
-        }
-        Assert.assertNotNull("ChannelException thrown by 'get'", eb);
-        Assert.assertTrue(
-            "Root cause is SSLHandshakeException",
-            eb.getCause().getCause() instanceof SSLHandshakeException
-        );
-      }
+            )
+            .get();
+      }).getCause();
+      Assert.assertTrue("ChannelException thrown by 'get'", untrustedCause instanceof ChannelException);
+      Assert.assertTrue(
+          "Root cause is SSLHandshakeException",
+          untrustedCause.getCause().getCause() instanceof SSLHandshakeException
+      );
     }
     finally {
       lifecycle.stop();
@@ -370,7 +382,7 @@ public class FriendlyServersTest
                 StatusResponseHandler.getInstance()
             ).get().getStatus();
 
-        Assert.assertEquals(200, status.getCode());
+        Assert.assertEquals(200, status.code());
       }
 
       {
@@ -381,7 +393,7 @@ public class FriendlyServersTest
                 StatusResponseHandler.getInstance()
             ).get().getStatus();
 
-        Assert.assertEquals(200, status.getCode());
+        Assert.assertEquals(200, status.code());
       }
     }
     finally {

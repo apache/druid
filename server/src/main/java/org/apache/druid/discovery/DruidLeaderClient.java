@@ -21,6 +21,9 @@ package org.apache.druid.discovery;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
@@ -35,9 +38,6 @@ import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -130,7 +130,7 @@ public class DruidLeaderClient
   /**
    * Executes a Request object aimed at the leader. Throws IOException if the leader cannot be located.
    */
-  public <T, H extends FullResponseHolder<T>> H go(Request request, HttpResponseHandler<H, H> responseHandler)
+  public <T, I, H extends FullResponseHolder<T>> H go(Request request, HttpResponseHandler<I, H> responseHandler)
       throws IOException, InterruptedException
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
@@ -155,13 +155,11 @@ public class DruidLeaderClient
 
         try {
           if (request.getUrl().getQuery() == null) {
-            request = withUrl(
-                request,
+            request = request.withUrl(
                 new URL(StringUtils.format("%s%s", getCurrentKnownLeader(false), request.getUrl().getPath()))
             );
           } else {
-            request = withUrl(
-                request,
+            request = request.withUrl(
                 new URL(StringUtils.format(
                     "%s%s?%s",
                     getCurrentKnownLeader(false),
@@ -183,7 +181,7 @@ public class DruidLeaderClient
         }
       }
 
-      if (HttpResponseStatus.TEMPORARY_REDIRECT.equals(fullResponseHolder.getResponse().getStatus())) {
+      if (HttpResponseStatus.TEMPORARY_REDIRECT.equals(fullResponseHolder.getResponse().status())) {
         String redirectUrlStr = fullResponseHolder.getResponse().headers().get("Location");
         if (redirectUrlStr == null) {
           throw new IOE("No redirect location is found in response from url[%s].", request.getUrl());
@@ -212,7 +210,7 @@ public class DruidLeaderClient
             redirectUrl.getPort()
         ));
 
-        request = withUrl(request, redirectUrl);
+        request = request.withUrl(redirectUrl);
       } else {
         return fullResponseHolder;
       }
@@ -232,7 +230,7 @@ public class DruidLeaderClient
       throw new ISE(ex, "Couldn't find leader.");
     }
 
-    if (responseHolder.getStatus().getCode() == 200) {
+    if (responseHolder.getStatus().code() == 200) {
       String leaderUrl = responseHolder.getContent();
 
       //verify this is valid url
@@ -251,7 +249,7 @@ public class DruidLeaderClient
 
     throw new ISE(
         "Couldn't find leader, failed response status is [%s] and content [%s].",
-        responseHolder.getStatus().getCode(),
+        responseHolder.getStatus().code(),
         responseHolder.getContent()
     );
   }
@@ -286,13 +284,4 @@ public class DruidLeaderClient
     return null;
   }
 
-  private Request withUrl(Request old, URL url)
-  {
-    Request req = new Request(old.getMethod(), url);
-    req.addHeaderValues(old.getHeaders());
-    if (old.hasContent()) {
-      req.setContent(old.getContent());
-    }
-    return req;
-  }
 }

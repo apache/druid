@@ -19,24 +19,28 @@
 
 package org.apache.druid.java.util.http.client.netty;
 
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.DefaultChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpClientCodec;
-import org.jboss.netty.handler.codec.http.HttpContentDecompressor;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpContentDecompressor;
+import io.netty.handler.codec.http.HttpObjectDecoder;
 
 /**
  */
-public class HttpClientPipelineFactory implements ChannelPipelineFactory
+public class HttpClientInitializer extends ChannelInitializer<Channel>
 {
   @Override
-  public ChannelPipeline getPipeline()
+  public void initChannel(Channel channel)
   {
-    ChannelPipeline pipeline = new DefaultChannelPipeline();
-
-    pipeline.addLast("codec", new HttpClientCodec());
-    pipeline.addLast("inflater", new HttpContentDecompressor());
-
-    return pipeline;
+    channel.pipeline()
+           .addLast("codec", new HttpClientCodec(
+               HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH,
+               HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE,
+               HttpObjectDecoder.DEFAULT_MAX_CHUNK_SIZE,
+               HttpClientCodec.DEFAULT_FAIL_ON_MISSING_RESPONSE,
+               HttpObjectDecoder.DEFAULT_VALIDATE_HEADERS,
+               true // continue parsing requests after HTTP CONNECT
+           ))
+           .addLast("inflater", new HttpContentDecompressor());
   }
 }

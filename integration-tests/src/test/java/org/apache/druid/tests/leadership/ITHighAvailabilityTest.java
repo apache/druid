@@ -22,6 +22,8 @@ package org.apache.druid.tests.leadership;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.cli.CliCustomNodeRole;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
@@ -45,8 +47,6 @@ import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractIndexerTest;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -196,7 +196,7 @@ public class ITHighAvailabilityTest
           new Request(HttpMethod.GET, new URL(location)),
           StatusResponseHandler.getInstance()
       ).get();
-      LOG.info("%s responded with %s", location, response.getStatus().getCode());
+      LOG.info("%s responded with %s", location, response.getStatus().code());
       Assert.assertEquals(response.getStatus(), HttpResponseStatus.OK);
       count++;
     }

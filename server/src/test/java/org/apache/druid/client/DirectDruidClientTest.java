@@ -23,6 +23,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.timeout.ReadTimeoutException;
 import org.apache.druid.client.selector.ConnectionCountServerSelectorStrategy;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.QueryableDruidServer;
@@ -50,9 +53,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Before;
@@ -197,7 +197,7 @@ public class DirectDruidClientTest
     // simulate read timeout
     client.run(QueryPlus.wrap(query));
     Assert.assertEquals(2, client.getNumOpenConnections());
-    futureException.setException(new ReadTimeoutException());
+    futureException.setException(ReadTimeoutException.INSTANCE);
     Assert.assertEquals(1, client.getNumOpenConnections());
 
     // subsequent connections should work
@@ -260,7 +260,7 @@ public class DirectDruidClientTest
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
     query = query.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE));
-    cancellationFuture.set(new StatusResponseHolder(HttpResponseStatus.OK, new StringBuilder("cancelled")));
+    cancellationFuture.set(new StatusResponseHolder(HttpResponseStatus.OK, "cancelled"));
     Sequence results = client.run(QueryPlus.wrap(query));
     Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
     Assert.assertEquals(0, client.getNumOpenConnections());

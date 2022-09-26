@@ -212,6 +212,17 @@ public class AppendableByteArrayInputStreamTest
   }
 
   @Test
+  public void testExceptionBeforeFirstAdd()
+  {
+    AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
+
+    in.exceptionCaught(new RuntimeException("exception before add"));
+
+    IOException e = Assert.assertThrows(IOException.class, in::read);
+    Assert.assertEquals("exception before add", e.getCause().getMessage());
+  }
+
+  @Test
   public void testExceptionUnblocks() throws InterruptedException
   {
     final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();

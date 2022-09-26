@@ -19,12 +19,12 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
+import org.apache.druid.java.util.common.StringUtils;
 
-import java.nio.charset.StandardCharsets;
-
-public class StatusResponseHandler implements HttpResponseHandler<StatusResponseHolder, StatusResponseHolder>
+public class StatusResponseHandler implements HttpResponseHandler<BytesFullResponseHolder, StatusResponseHolder>
 {
 
   private static final StatusResponseHandler INSTANCE = new StatusResponseHandler();
@@ -39,41 +39,36 @@ public class StatusResponseHandler implements HttpResponseHandler<StatusResponse
   }
 
   @Override
-  public ClientResponse<StatusResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
+  public ClientResponse<BytesFullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
     return ClientResponse.unfinished(
-        new StatusResponseHolder(
-            response.getStatus(),
-            new StringBuilder(response.getContent().toString(StandardCharsets.UTF_8))
-        )
+        new BytesFullResponseHolder(response)
     );
   }
 
   @Override
-  public ClientResponse<StatusResponseHolder> handleChunk(
-      ClientResponse<StatusResponseHolder> response,
-      HttpChunk chunk,
+  public ClientResponse<BytesFullResponseHolder> handleChunk(
+      ClientResponse<BytesFullResponseHolder> response,
+      HttpContent chunk,
       long chunkNum
   )
   {
-    final StringBuilder builder = response.getObj().getBuilder();
-
-    if (builder == null) {
-      return ClientResponse.finished(null);
-    }
-
-    builder.append(chunk.getContent().toString(StandardCharsets.UTF_8));
+    response.getObj().addChunk(ByteBufUtil.getBytes(chunk.content()));
     return response;
   }
 
   @Override
-  public ClientResponse<StatusResponseHolder> done(ClientResponse<StatusResponseHolder> response)
+  public ClientResponse<StatusResponseHolder> done(ClientResponse<BytesFullResponseHolder> response)
   {
-    return ClientResponse.finished(response.getObj());
+    return ClientResponse.finished(
+        new StatusResponseHolder(
+            response.getObj().getStatus(),
+            StringUtils.fromUtf8(response.getObj().getContent())
+        ));
   }
 
   @Override
-  public void exceptionCaught(ClientResponse<StatusResponseHolder> clientResponse, Throwable e)
+  public void exceptionCaught(ClientResponse<BytesFullResponseHolder> clientResponse, Throwable e)
   {
     // Its safe to Ignore as the ClientResponse returned in handleChunk were unfinished
   }

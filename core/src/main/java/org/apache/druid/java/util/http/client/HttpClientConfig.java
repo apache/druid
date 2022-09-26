@@ -67,9 +67,6 @@ public class HttpClientConfig
 
   public static final CompressionCodec DEFAULT_COMPRESSION_CODEC = CompressionCodec.GZIP;
 
-  // Default from NioClientSocketChannelFactory.DEFAULT_BOSS_COUNT, which is private:
-  private static final int DEFAULT_BOSS_COUNT = 1;
-
   // Default from SelectorUtil.DEFAULT_IO_THREADS, which is private:
   private static final int DEFAULT_WORKER_COUNT = JvmUtils.getRuntimeInfo().getAvailableProcessors() * 2;
 
@@ -86,7 +83,6 @@ public class HttpClientConfig
   private final HttpClientProxyConfig proxyConfig;
   private final Duration readTimeout;
   private final Duration sslHandshakeTimeout;
-  private final int bossPoolSize;
   private final int workerPoolSize;
   private final CompressionCodec compressionCodec;
   private final Duration unusedConnectionTimeoutDuration;
@@ -98,7 +94,6 @@ public class HttpClientConfig
       HttpClientProxyConfig proxyConfig,
       Duration readTimeout,
       Duration sslHandshakeTimeout,
-      int bossPoolSize,
       int workerPoolSize,
       CompressionCodec compressionCodec,
       Duration unusedConnectionTimeoutDuration
@@ -110,7 +105,6 @@ public class HttpClientConfig
     this.proxyConfig = proxyConfig;
     this.readTimeout = readTimeout;
     this.sslHandshakeTimeout = sslHandshakeTimeout;
-    this.bossPoolSize = bossPoolSize;
     this.workerPoolSize = workerPoolSize;
     this.compressionCodec = compressionCodec;
     this.unusedConnectionTimeoutDuration = unusedConnectionTimeoutDuration;
@@ -146,11 +140,6 @@ public class HttpClientConfig
     return sslHandshakeTimeout;
   }
 
-  public int getBossPoolSize()
-  {
-    return bossPoolSize;
-  }
-
   public int getWorkerPoolSize()
   {
     return workerPoolSize;
@@ -174,7 +163,6 @@ public class HttpClientConfig
     private HttpClientProxyConfig proxyConfig = null;
     private Duration readTimeout = null;
     private Duration sslHandshakeTimeout = null;
-    private int bossCount = DEFAULT_BOSS_COUNT;
     private int workerCount = DEFAULT_WORKER_COUNT;
     private CompressionCodec compressionCodec = DEFAULT_COMPRESSION_CODEC;
     private Duration unusedConnectionTimeoutDuration = DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION;
@@ -246,7 +234,6 @@ public class HttpClientConfig
           proxyConfig,
           readTimeout,
           sslHandshakeTimeout,
-          bossCount,
           workerCount,
           compressionCodec,
           unusedConnectionTimeoutDuration

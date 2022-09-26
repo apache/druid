@@ -19,32 +19,24 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.handler.codec.http.HttpResponse;
-
-import java.nio.charset.Charset;
+import io.netty.handler.codec.http.HttpResponse;
 
 public class StringFullResponseHolder extends FullResponseHolder<String>
 {
-  private final StringBuilder builder;
+  private final String content;
 
   public StringFullResponseHolder(
       HttpResponse response,
-      Charset charset
+      String content
   )
   {
     super(response);
-    this.builder = new StringBuilder(response.getContent().toString(charset));
-  }
-
-  public StringFullResponseHolder addChunk(String chunk)
-  {
-    builder.append(chunk);
-    return this;
+    this.content = content;
   }
 
   @Override
   public String getContent()
   {
-    return builder.toString();
+    return content;
   }
 }

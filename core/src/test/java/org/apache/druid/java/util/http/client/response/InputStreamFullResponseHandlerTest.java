@@ -19,14 +19,15 @@
 
 package org.apache.druid.java.util.http.client.response;
 
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.jboss.netty.buffer.BigEndianHeapChannelBuffer;
-import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,14 +39,15 @@ public class InputStreamFullResponseHandlerTest
   public void testSimple() throws Exception
   {
     HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    response.setChunked(false);
-    response.setContent(new BigEndianHeapChannelBuffer("abcd".getBytes(StringUtils.UTF8_STRING)));
 
     InputStreamFullResponseHandler responseHandler = new InputStreamFullResponseHandler();
     ClientResponse<InputStreamFullResponseHolder> clientResp = responseHandler.handleResponse(response, null);
 
-    DefaultHttpChunk chunk = new DefaultHttpChunk(new BigEndianHeapChannelBuffer("efg".getBytes(StringUtils.UTF8_STRING)));
-    clientResp = responseHandler.handleChunk(clientResp, chunk, 0);
+    HttpContent chunk0 = new DefaultHttpContent(Unpooled.wrappedBuffer("abcd".getBytes(StringUtils.UTF8_STRING)));
+    clientResp = responseHandler.handleChunk(clientResp, chunk0, 0);
+
+    HttpContent chunk1 = new DefaultHttpContent(Unpooled.wrappedBuffer("efg".getBytes(StringUtils.UTF8_STRING)));
+    clientResp = responseHandler.handleChunk(clientResp, chunk1, 1);
 
     clientResp = responseHandler.done(clientResp);
 
@@ -54,11 +56,9 @@ public class InputStreamFullResponseHandlerTest
   }
 
   @Test
-  public void testException() throws Exception
+  public void testException()
   {
     HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    response.setChunked(false);
-    response.setContent(new BigEndianHeapChannelBuffer("abcd".getBytes(StringUtils.UTF8_STRING)));
 
     InputStreamFullResponseHandler responseHandler = new InputStreamFullResponseHandler();
     ClientResponse<InputStreamFullResponseHolder> clientResp = responseHandler.handleResponse(response, null);

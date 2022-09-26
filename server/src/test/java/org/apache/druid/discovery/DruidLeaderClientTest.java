@@ -21,14 +21,13 @@ package org.apache.druid.discovery;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -49,11 +48,8 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -69,9 +65,6 @@ import java.nio.charset.StandardCharsets;
  */
 public class DruidLeaderClientTest extends BaseJettyTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private DiscoveryDruidNode discoveryDruidNode;
   private HttpClient httpClient;
 
@@ -82,22 +75,17 @@ public class DruidLeaderClientTest extends BaseJettyTest
     discoveryDruidNode = new DiscoveryDruidNode(node, NodeRole.PEON, ImmutableMap.of());
 
     Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                JsonConfigProvider.bindInstance(
-                    binder,
-                    Key.get(DruidNode.class, Self.class),
-                    node
-                );
-                binder.bind(Integer.class).annotatedWith(Names.named("port")).toInstance(node.getPlaintextPort());
-                binder.bind(JettyServerInitializer.class).to(TestJettyServerInitializer.class).in(LazySingleton.class);
-                Jerseys.addResource(binder, SimpleResource.class);
-                LifecycleModule.register(binder, Server.class);
-              }
+        GuiceInjectors.makeStartupInjector(), ImmutableList.of(
+            binder -> {
+              JsonConfigProvider.bindInstance(
+                  binder,
+                  Key.get(DruidNode.class, Self.class),
+                  node
+              );
+              binder.bind(Integer.class).annotatedWith(Names.named("port")).toInstance(node.getPlaintextPort());
+              binder.bind(JettyServerInitializer.class).to(TestJettyServerInitializer.class).in(LazySingleton.class);
+              Jerseys.addResource(binder, SimpleResource.class);
+              LifecycleModule.register(binder, Server.class);
             }
         )
     );
@@ -132,7 +120,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
   }
 
   @Test
-  public void testNoLeaderFound() throws Exception
+  public void testNoLeaderFound()
   {
     DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
     EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of());
@@ -150,9 +138,10 @@ public class DruidLeaderClientTest extends BaseJettyTest
     );
     druidLeaderClient.start();
 
-    expectedException.expect(IOException.class);
-    expectedException.expectMessage("No known server");
-    druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
+    final IOException exception = Assert.assertThrows(IOException.class, () -> {
+      druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
+    });
+    Assert.assertEquals("No known server", exception.getMessage());
   }
 
   @Test

@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 
 /**
  * A handler for an HTTP request.
@@ -59,7 +59,7 @@ public interface HttpResponseHandler<IntermediateType, FinalType>
   ClientResponse<IntermediateType> handleResponse(HttpResponse response, TrafficCop trafficCop);
 
   /**
-   * Called for chunked responses, indicating another HttpChunk has arrived.
+   * Called for chunked responses, indicating another HttpContent has arrived.
    *
    * @param clientResponse last response returned by the prior handleResponse() or handleChunk()
    * @param chunk          the new chunk of data
@@ -69,7 +69,7 @@ public interface HttpResponseHandler<IntermediateType, FinalType>
    */
   ClientResponse<IntermediateType> handleChunk(
       ClientResponse<IntermediateType> clientResponse,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   );
 

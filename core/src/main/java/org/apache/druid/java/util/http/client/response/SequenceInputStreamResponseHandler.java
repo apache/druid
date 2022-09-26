@@ -19,12 +19,12 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import com.google.common.io.ByteSource;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferInputStream;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -56,18 +56,16 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   @Override
   public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    try (ChannelBufferInputStream channelStream = new ChannelBufferInputStream(response.getContent())) {
-      queue.put(channelStream);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
+    try {
+      // SequenceInputStream constructor blocks if the queue is empty, however no content will be queued until
+      // the first chunk comes in. Adding an empty initial buffer to unblock.
+      queue.put(new ByteBufInputStream(Unpooled.EMPTY_BUFFER)); // lgtm [java/input-resource-leak]
     }
     catch (InterruptedException e) {
-      log.error(e, "Queue appending interrupted");
+      log.warn(e, "Thread interrupted while taking from queue");
       Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
-    byteCount.addAndGet(response.getContent().readableBytes());
     return ClientResponse.finished(
         new SequenceInputStream(
             new Enumeration<InputStream>()
@@ -102,20 +100,18 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   @Override
   public ClientResponse<InputStream> handleChunk(
       ClientResponse<InputStream> clientResponse,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   )
   {
-    final ChannelBuffer channelBuffer = chunk.getContent();
-    final int bytes = channelBuffer.readableBytes();
+    final ByteBuf byteBuf = chunk.content();
+    final int bytes = byteBuf.readableBytes();
     if (bytes > 0) {
-      try (ChannelBufferInputStream channelStream = new ChannelBufferInputStream(channelBuffer)) {
-        queue.put(channelStream);
+      try {
+        // input streams will be closed by the consumer as we iterate through them in SequenceInputStream
+        queue.put(new ByteBufInputStream(byteBuf.retain(), true)); // lgtm [java/input-resource-leak]
         // Queue.size() can be expensive in some implementations, but LinkedBlockingQueue.size is just an AtomicLong
         log.debug("Added stream. Queue length %d", queue.size());
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
       }
       catch (InterruptedException e) {
         log.warn(e, "Thread interrupted while adding to queue");
@@ -136,17 +132,12 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
       try {
         // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
         // after done is set to true, regardless of the rest of the stream's state.
-        queue.put(ByteSource.empty().openStream());
+        queue.put(new ByteBufInputStream(Unpooled.EMPTY_BUFFER)); // lgtm [java/input-resource-leak]
         log.debug("Added terminal empty stream");
       }
       catch (InterruptedException e) {
         log.warn(e, "Thread interrupted while adding to queue");
         Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
-      }
-      catch (IOException e) {
-        // This should never happen
-        log.error(e, "The empty stream threw an IOException");
         throw new RuntimeException(e);
       }
       finally {

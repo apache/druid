@@ -24,6 +24,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import junitparams.converters.Nullable;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -99,11 +104,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -1287,7 +1287,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class))).andReturn(responseHolder).once();
 
-    EasyMock.expect(responseHandler.getStatus()).andReturn(httpResp.getStatus().getCode()).anyTimes();
+    EasyMock.expect(responseHandler.getStatus()).andReturn(httpResp.status().code()).anyTimes();
     EasyMock.expect(request.getUrl())
             .andReturn(new URL("http://test-host:1234/druid/indexer/v1/supervisor?system"))
             .anyTimes();
@@ -1358,7 +1358,7 @@ public class SystemSchemaTest extends CalciteTestBase
             .andReturn(createFullResponseHolder(httpResponse, json));
 
     EasyMock.expect(responseHandler.getStatus())
-            .andReturn(httpResponse.getStatus().getCode())
+            .andReturn(httpResponse.status().code())
             .anyTimes();
     EasyMock.expect(request.getUrl())
             .andReturn(new URL("http://test-host:1234/druid/indexer/v1/supervisor?system"))

@@ -28,6 +28,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.concurrent.LifecycleLock;
@@ -45,8 +47,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -71,7 +71,7 @@ import java.util.function.Function;
 
 /**
  * This class provide a basic {@link LookupExtractorFactory} references manager. It allows basic operations fetching,
- * listing, adding and deleting of {@link LookupExtractor} objects, and can take periodic snap shot of the loaded lookup
+ * listing, adding and deleting of {@link LookupExtractor} objects, and can take periodic snapshot of the loaded lookup
  * extractor specifications in order to bootstrap nodes after restart.
  *
  * It also implements {@link LookupExtractorFactoryContainerProvider}, to supply queries and indexing transformations

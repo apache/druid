@@ -36,6 +36,9 @@ import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.concurrent.LifecycleLock;
@@ -57,9 +60,6 @@ import org.apache.druid.java.util.http.client.response.SequenceInputStreamRespon
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.http.HostAndPortWithScheme;
 import org.apache.druid.server.listener.resource.ListenerResource;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
@@ -796,8 +796,8 @@ public class LookupCoordinatorManager
 
       try (final InputStream result = httpClient.go(
           new Request(HttpMethod.POST, url)
-              .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
-              .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+              .addHeader(HttpHeaderNames.ACCEPT.toString(), SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+              .addHeader(HttpHeaderNames.CONTENT_TYPE.toString(), SmileMediaTypes.APPLICATION_JACKSON_SMILE)
               .setContent(smileMapper.writeValueAsBytes(lookupsUpdate)),
           makeResponseHandler(returnCode, reasonString),
           lookupCoordinatorManagerConfig.getHostTimeout()
@@ -849,7 +849,7 @@ public class LookupCoordinatorManager
 
       try (final InputStream result = httpClient.go(
           new Request(HttpMethod.GET, url)
-              .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
+              .addHeader(HttpHeaderNames.ACCEPT.toString(), SmileMediaTypes.APPLICATION_JACKSON_SMILE),
           makeResponseHandler(returnCode, reasonString),
           lookupCoordinatorManagerConfig.getHostTimeout()
       ).get()) {
@@ -902,8 +902,8 @@ public class LookupCoordinatorManager
         @Override
         public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
         {
-          returnCode.set(response.getStatus().getCode());
-          reasonString.set(response.getStatus().getReasonPhrase());
+          returnCode.set(response.status().code());
+          reasonString.set(response.status().reasonPhrase());
           return super.handleResponse(response, trafficCop);
         }
       };

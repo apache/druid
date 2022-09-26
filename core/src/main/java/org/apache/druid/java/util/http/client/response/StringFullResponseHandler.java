@@ -19,8 +19,9 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 
 import java.nio.charset.Charset;
 
@@ -29,7 +30,7 @@ import java.nio.charset.Charset;
  * The stream data is appended to {@link StringFullResponseHolder} whenever {@link #handleChunk} is called.
  */
 public class StringFullResponseHandler
-    implements HttpResponseHandler<StringFullResponseHolder, StringFullResponseHolder>
+    implements HttpResponseHandler<BytesFullResponseHolder, StringFullResponseHolder>
 {
   private final Charset charset;
 
@@ -39,36 +40,41 @@ public class StringFullResponseHandler
   }
 
   @Override
-  public ClientResponse<StringFullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
+  public ClientResponse<BytesFullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    return ClientResponse.unfinished(new StringFullResponseHolder(response, charset));
+    return ClientResponse.unfinished(new BytesFullResponseHolder(response));
   }
 
   @Override
-  public ClientResponse<StringFullResponseHolder> handleChunk(
-      ClientResponse<StringFullResponseHolder> response,
-      HttpChunk chunk,
+  public ClientResponse<BytesFullResponseHolder> handleChunk(
+      ClientResponse<BytesFullResponseHolder> response,
+      HttpContent chunk,
       long chunkNum
   )
   {
-    final StringFullResponseHolder holder = response.getObj();
+    final BytesFullResponseHolder holder = response.getObj();
 
     if (holder == null) {
       return ClientResponse.finished(null);
     }
 
-    holder.addChunk(chunk.getContent().toString(charset));
+    holder.addChunk(ByteBufUtil.getBytes(chunk.content()));
     return response;
   }
 
   @Override
-  public ClientResponse<StringFullResponseHolder> done(ClientResponse<StringFullResponseHolder> response)
+  public ClientResponse<StringFullResponseHolder> done(ClientResponse<BytesFullResponseHolder> response)
   {
-    return ClientResponse.finished(response.getObj());
+    return ClientResponse.finished(
+        new StringFullResponseHolder(
+            response.getObj().getResponse(),
+            new String(response.getObj().getContent(), charset)
+        )
+    );
   }
 
   @Override
-  public void exceptionCaught(ClientResponse<StringFullResponseHolder> clientResponse, Throwable e)
+  public void exceptionCaught(ClientResponse<BytesFullResponseHolder> clientResponse, Throwable e)
   {
     // Its safe to Ignore as the ClientResponse returned in handleChunk were unfinished
   }

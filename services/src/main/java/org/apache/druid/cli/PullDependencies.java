@@ -126,7 +126,7 @@ public class PullDependencies implements Runnable
       "com.metamx.druid",
       "asm",
       "org.ow2.asm",
-      "org.jboss.netty",
+      "io.netty",
       "com.google.guava",
       "com.google.code.findbugs",
       "com.google.protobuf",

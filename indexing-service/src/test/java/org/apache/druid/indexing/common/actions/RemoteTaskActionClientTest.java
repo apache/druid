@@ -20,6 +20,9 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -33,19 +36,12 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.easymock.EasyMock;
-import org.jboss.netty.buffer.BigEndianHeapChannelBuffer;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -53,9 +49,6 @@ import java.util.Map;
 
 public class RemoteTaskActionClientTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private DruidLeaderClient druidLeaderClient;
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
 
@@ -84,14 +77,13 @@ public class RemoteTaskActionClientTest
     ));
     responseBody.put("result", expectedLocks);
     String strResult = objectMapper.writeValueAsString(responseBody);
-    final HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
-    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    final HttpResponse response = EasyMock.createMock(HttpResponse.class);
+    EasyMock.expect(response.status()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.replay(response);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         response,
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
+        strResult
+    );
 
     // set up mocks
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
@@ -119,14 +111,13 @@ public class RemoteTaskActionClientTest
             .andReturn(request);
 
     // return status code 200 and a list with size equals 1
-    final HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
-    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.BAD_REQUEST).anyTimes();
-    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    final HttpResponse response = EasyMock.createMock(HttpResponse.class);
+    EasyMock.expect(response.status()).andReturn(HttpResponseStatus.BAD_REQUEST).anyTimes();
     EasyMock.replay(response);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         response,
-        StandardCharsets.UTF_8
-    ).addChunk("testSubmitWithIllegalStatusCode");
+        "testSubmitWithIllegalStatusCode"
+    );
 
     // set up mocks
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
@@ -139,11 +130,14 @@ public class RemoteTaskActionClientTest
         new RetryPolicyFactory(objectMapper.readValue("{\"maxRetryCount\":0}", RetryPolicyConfig.class)),
         objectMapper
     );
-    expectedException.expect(IOException.class);
-    expectedException.expectMessage(
-        "Error with status[400 Bad Request] and message[testSubmitWithIllegalStatusCode]. "
-        + "Check overlord logs for details."
+    final IOException exception = Assert.assertThrows(
+        IOException.class,
+        () -> client.submit(new LockListAction())
     );
-    client.submit(new LockListAction());
+    Assert.assertEquals(
+        "Error with status[400 Bad Request] and message[testSubmitWithIllegalStatusCode]. "
+        + "Check overlord logs for details.",
+        exception.getMessage()
+    );
   }
 }

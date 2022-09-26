@@ -21,27 +21,22 @@ package org.apache.druid.java.util.http.client;
 
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.java.util.http.client.netty.HttpClientPipelineFactory;
+import org.apache.druid.java.util.http.client.netty.HttpClientInitializer;
 import org.apache.druid.java.util.http.client.pool.ChannelResourceFactory;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.apache.druid.java.util.http.client.pool.ResourcePoolConfig;
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.socket.nio.NioClientBossPool;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioWorkerPool;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.logging.Slf4JLoggerFactory;
-import org.jboss.netty.util.HashedWheelTimer;
-import org.jboss.netty.util.ThreadNameDeterminer;
-import org.jboss.netty.util.Timer;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
 import java.security.KeyStore;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -51,41 +46,13 @@ public class HttpClientInit
   public static HttpClient createClient(HttpClientConfig config, Lifecycle lifecycle)
   {
     try {
-      // We need to use the full constructor in order to set a ThreadNameDeterminer. The other parameters are taken
-      // from the defaults in HashedWheelTimer's other constructors.
-      final HashedWheelTimer timer = new HashedWheelTimer(
-          new ThreadFactoryBuilder().setDaemon(true)
-                                    .setNameFormat("HttpClient-Timer-%s")
-                                    .build(),
-          ThreadNameDeterminer.CURRENT,
-          100,
-          TimeUnit.MILLISECONDS,
-          512
-      );
-      lifecycle.addMaybeStartHandler(
-          new Lifecycle.Handler()
-          {
-            @Override
-            public void start()
-            {
-              timer.start();
-            }
-
-            @Override
-            public void stop()
-            {
-              timer.stop();
-            }
-          }
-      );
       return lifecycle.addMaybeStartManagedInstance(
           new NettyHttpClient(
               new ResourcePool<>(
                   new ChannelResourceFactory(
-                      createBootstrap(lifecycle, timer, config.getBossPoolSize(), config.getWorkerPoolSize()),
+                      createBootstrap(lifecycle, config.getWorkerPoolSize()),
                       config.getSslContext(),
                       config.getProxyConfig(),
-                      timer,
                       config.getSslHandshakeTimeout() == null ? -1 : config.getSslHandshakeTimeout().getMillis()
                   ),
                   new ResourcePoolConfig(
@@ -95,8 +62,7 @@ public class HttpClientInit
                   config.isEagerInitialization()
               ),
               config.getReadTimeout(),
-              config.getCompressionCodec(),
-              timer
+              config.getCompressionCodec()
           )
       );
     }
@@ -125,37 +91,25 @@ public class HttpClientInit
     }
   }
 
-  private static ClientBootstrap createBootstrap(Lifecycle lifecycle, Timer timer, int bossPoolSize, int workerPoolSize)
+  private static Bootstrap createBootstrap(Lifecycle lifecycle, int workerPoolSize)
   {
-    final NioClientBossPool bossPool = new NioClientBossPool(
-        Executors.newCachedThreadPool(
-            new ThreadFactoryBuilder()
-                .setDaemon(true)
-                .setNameFormat("HttpClient-Netty-Boss-%s")
-                .build()
-        ),
-        bossPoolSize,
-        timer,
-        ThreadNameDeterminer.CURRENT
-    );
 
-    final NioWorkerPool workerPool = new NioWorkerPool(
+    final EventLoopGroup workerGroup = new NioEventLoopGroup(
+        workerPoolSize,
         Executors.newCachedThreadPool(
             new ThreadFactoryBuilder()
                 .setDaemon(true)
                 .setNameFormat("HttpClient-Netty-Worker-%s")
                 .build()
-        ),
-        workerPoolSize,
-        ThreadNameDeterminer.CURRENT
+        )
     );
 
-    final ClientBootstrap bootstrap = new ClientBootstrap(new NioClientSocketChannelFactory(bossPool, workerPool));
-
-    bootstrap.setOption("keepAlive", true);
-    bootstrap.setPipelineFactory(new HttpClientPipelineFactory());
-
-    InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
+    final Bootstrap bootstrap = new Bootstrap()
+        .group(workerGroup)
+        .channel(NioSocketChannel.class)
+        .option(ChannelOption.SO_KEEPALIVE, true)
+        .option(ChannelOption.AUTO_READ, false)
+        .handler(new HttpClientInitializer());
 
     try {
       lifecycle.addMaybeStartHandler(
@@ -169,7 +123,7 @@ public class HttpClientInit
             @Override
             public void stop()
             {
-              bootstrap.releaseExternalResources();
+              workerGroup.shutdownGracefully();
             }
           }
       );

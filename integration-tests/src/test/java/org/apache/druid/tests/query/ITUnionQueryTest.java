@@ -20,6 +20,8 @@
 package org.apache.druid.tests.query;
 
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
@@ -43,8 +45,6 @@ import org.apache.druid.testing.utils.ServerDiscoveryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractITBatchIndexTest;
 import org.apache.druid.tests.indexer.AbstractIndexerTest;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Guice;

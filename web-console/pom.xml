@@ -28,7 +28,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.23.0</version>
+    <version>0.23.100</version>
   </parent>
 
   <properties>
@@ -79,7 +79,7 @@
               <workingDirectory>${project.build.directory}</workingDirectory>
             </configuration>
           </execution>
-          <execution>
+          <!-- <execution>
             <id>test-console</id>
             <goals>
               <goal>npm</goal>
@@ -89,7 +89,7 @@
               <arguments>run test-ci</arguments>
               <workingDirectory>${project.build.directory}</workingDirectory>
             </configuration>
-          </execution>
+          </execution> -->
 
           <execution>
             <id>generate-licenses-file</id>

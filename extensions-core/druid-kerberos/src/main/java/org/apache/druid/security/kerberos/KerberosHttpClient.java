@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.AbstractHttpClient;
@@ -30,7 +31,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.joda.time.Duration;
 
 import java.net.CookieManager;
@@ -107,7 +107,7 @@ public class KerberosHttpClient extends AbstractHttpClient
             return DruidKerberosUtil.kerberosChallenge(host);
           }
         });
-        request.setHeader(HttpHeaders.Names.AUTHORIZATION, "Negotiate " + challenge);
+        request.setHeader(HttpHeaderNames.AUTHORIZATION.toString(), "Negotiate " + challenge);
         should_retry_on_unauthorized_response = false;
       } else {
         should_retry_on_unauthorized_response = true;

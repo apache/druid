@@ -23,6 +23,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -33,9 +36,6 @@ import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.testing.guice.TestClient;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -142,7 +142,7 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
       request.setContent(this.contentTypeHeader, encoderDecoderMap.get(this.contentTypeHeader).encode(query));
       if (this.acceptHeader != null) {
         expectedResponseType = this.acceptHeader;
-        request.addHeader(HttpHeaders.Names.ACCEPT, this.acceptHeader);
+        request.addHeader(HttpHeaderNames.ACCEPT.toString(), this.acceptHeader);
       }
 
       BytesFullResponseHolder response = httpClient.go(
@@ -159,7 +159,7 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
         );
       }
 
-      String responseType = response.getResponse().headers().get(HttpHeaders.Names.CONTENT_TYPE);
+      String responseType = response.getResponse().headers().get(HttpHeaderNames.CONTENT_TYPE);
       if (!expectedResponseType.equals(responseType)) {
         throw new ISE(
             "Content-Type[%s] in HTTP response does not match the expected[%s]",

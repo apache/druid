@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.security;
 
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
@@ -30,7 +31,6 @@ import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.HttpUtil;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;

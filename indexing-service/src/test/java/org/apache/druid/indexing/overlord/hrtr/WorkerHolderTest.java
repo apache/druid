@@ -19,7 +19,11 @@
 
 package org.apache.druid.indexing.overlord.hrtr;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.Futures;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -30,12 +34,16 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.WorkerHistoryItem;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
@@ -191,5 +199,73 @@ public class WorkerHolderTest
     Assert.assertTrue(updates.get(2).getTaskStatus().isRunnable());
 
     updates.clear();
+  }
+
+  @Test
+  public void testAssign() throws Exception
+  {
+    final Capture<Request> capturedRequest = EasyMock.newCapture();
+    final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
+    EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject())).andReturn(
+        Futures.immediateFuture(new StatusResponseHolder(HttpResponseStatus.NOT_FOUND, "not found"))
+    ).once();
+    EasyMock.expect(httpClient.go(EasyMock.capture(capturedRequest), EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(
+        Futures.immediateFuture(new StatusResponseHolder(HttpResponseStatus.OK, "ok"))
+    ).once();
+    EasyMock.replay(httpClient);
+
+    final ObjectMapper smileMapper = TestHelper.makeJsonMapper();
+    WorkerHolder workerHolder = new WorkerHolder(
+        smileMapper,
+        httpClient,
+        new HttpRemoteTaskRunnerConfig(),
+        EasyMock.createNiceMock(ScheduledExecutorService.class),
+        (taskAnnouncement, holder) -> {},
+        new Worker("http", "localhost", "127.0.0.1", 5, "v0", WorkerConfig.DEFAULT_CATEGORY),
+        ImmutableList.of()
+    );
+
+    ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> syncListener = workerHolder.createSyncListener();
+
+    syncListener.fullSync(ImmutableList.of(
+        new WorkerHistoryItem.Metadata(false)
+        ));
+
+    Assert.assertTrue(workerHolder.assignTask(NoopTask.create("task2", 0)));
+    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+
+    Assert.assertEquals(new URI("http://localhost/druid-internal/v1/worker/assignTask"),
+                        capturedRequest.getValue().getUrl().toURI());
+    Assert.assertEquals(NoopTask.create("task2", 0),
+                        smileMapper.readValue(capturedRequest.getValue().getContent().array(), Task.class));
+  }
+
+  @Test
+  public void testShutdown() throws Exception
+  {
+    final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
+    final Capture<Request> capturedRequest = EasyMock.newCapture();
+    EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject())).andReturn(
+        Futures.immediateFuture(new StatusResponseHolder(HttpResponseStatus.NOT_FOUND, "not found"))
+    ).once();
+    EasyMock.expect(httpClient.go(EasyMock.capture(capturedRequest), EasyMock.anyObject(), EasyMock.anyObject())).andReturn(
+        Futures.immediateFuture(new StatusResponseHolder(HttpResponseStatus.OK, "ok"))
+    ).once();
+    EasyMock.replay(httpClient);
+
+    WorkerHolder workerHolder = new WorkerHolder(
+        TestHelper.makeJsonMapper(),
+        httpClient,
+        new HttpRemoteTaskRunnerConfig(),
+        EasyMock.createNiceMock(ScheduledExecutorService.class),
+        (taskAnnouncement, holder) -> {},
+        new Worker("http", "localhost", "127.0.0.1", 5, "v0", WorkerConfig.DEFAULT_CATEGORY),
+        ImmutableList.of()
+    );
+
+    workerHolder.shutdownTask("task0");
+    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    Assert.assertEquals(new URI("http://localhost/druid/worker/v1/task/task0/shutdown"), capturedRequest.getValue().getUrl().toURI());
   }
 }

@@ -23,6 +23,8 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
@@ -33,8 +35,6 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -181,7 +181,7 @@ public class WorkerTaskRunnerQueryAdpaterTest
   {
     SettableFuture<StatusResponseHolder> futureResult = SettableFuture.create();
     futureResult.set(
-        new StatusResponseHolder(httpStatus, new StringBuilder(responseContent))
+        new StatusResponseHolder(httpStatus, responseContent)
     );
     Capture<Request> capturedRequest = EasyMock.newCapture();
     EasyMock.expect(
