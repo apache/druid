@@ -29,12 +29,26 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.23.0</version>
+    <version>0.23.100</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
     <description>Druid - A Distributed Column Store</description>
     <url>https://druid.apache.org/</url>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub VertaAI Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/VertaAI/druid</url>
+        </repository>
+        <snapshotRepository>
+            <id>github</id>
+            <name>GitHub VertaAI Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/VertaAI/druid</url>
+        </snapshotRepository>
+    </distributionManagement>
+
 
     <licenses>
         <license>
@@ -207,6 +221,14 @@
             <id>${repoOrgId}</id>
             <name>${repoOrgName}</name>
             <url>${repoOrgUrl}</url>
+        </repository>
+
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/VertaAI/druid</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
         </repository>
 
         <!-- Only used by core, but moved to root for parallel build dependency resolution -->
