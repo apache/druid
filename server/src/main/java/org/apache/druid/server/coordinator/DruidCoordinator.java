@@ -486,15 +486,15 @@ public class DruidCoordinator
         loadPeon.loadSegment(
             segmentToLoad,
             success -> {
-              try {
-                // Drop segment only if:
-                // (1) segment load was successful on toServer
-                // AND (2) segment not already queued for drop on fromServer
-                // AND (3a) loading is http-based
-                //     OR (3b) inventory shows segment loaded on toServer
+              // Drop segment only if:
+              // (1) segment load was successful on toServer
+              // AND (2) segment not already queued for drop on fromServer
+              // AND (3a) loading is http-based
+              //     OR (3b) inventory shows segment loaded on toServer
 
-                // Do not check the inventory with http loading as the HTTP
-                // response is enough to determine load success or failure
+              // Do not check the inventory with http loading as the HTTP
+              // response is enough to determine load success or failure
+              try {
                 if (success
                     && !dropPeon.getSegmentsToDrop().contains(segment)
                     && (taskMaster.isHttpLoading()
