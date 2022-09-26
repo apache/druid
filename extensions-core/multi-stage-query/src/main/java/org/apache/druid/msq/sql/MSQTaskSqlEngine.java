@@ -32,7 +32,6 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
-import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -55,7 +54,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@LazySingleton
 public class MSQTaskSqlEngine implements SqlEngine
 {
   public static final Set<String> SYSTEM_CONTEXT_PARAMETERS =
@@ -277,10 +275,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       // and LIMIT/OFFSET prevent shuffle statistics from being generated. This is because they always send everything
       // to a single partition, so there are no shuffle statistics.
       throw new ValidationException(
-          StringUtils.format(
-              "INSERT and REPLACE queries cannot have a LIMIT unless %s is \"all\".",
-              DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY
-          )
+          "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\"."
       );
     }
     if (sort != null && sort.offset != null) {

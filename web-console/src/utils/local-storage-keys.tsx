@@ -18,6 +18,14 @@
 
 import * as JSONBig from 'json-bigint-native';
 
+function noLocalStorage(): boolean {
+  try {
+    return typeof localStorage === 'undefined';
+  } catch {
+    return true;
+  }
+}
+
 export const LocalStorageKeys = {
   CAPABILITIES_OVERRIDE: 'capabilities-override' as const,
   INGESTION_SPEC: 'ingestion-spec' as const,
@@ -65,7 +73,7 @@ function prependNamespace(key: string): string {
 }
 
 export function localStorageSet(key: LocalStorageKeys, value: string): void {
-  if (typeof localStorage === 'undefined') return;
+  if (noLocalStorage()) return;
   try {
     localStorage.setItem(prependNamespace(key), value);
   } catch (e) {
@@ -78,7 +86,7 @@ export function localStorageSetJson(key: LocalStorageKeys, value: any): void {
 }
 
 export function localStorageGet(key: LocalStorageKeys): string | undefined {
-  if (typeof localStorage === 'undefined') return;
+  if (noLocalStorage()) return;
   try {
     return localStorage.getItem(prependNamespace(key)) || localStorage.getItem(key) || undefined;
   } catch (e) {
@@ -98,7 +106,7 @@ export function localStorageGetJson(key: LocalStorageKeys): any {
 }
 
 export function localStorageRemove(key: LocalStorageKeys): void {
-  if (typeof localStorage === 'undefined') return;
+  if (noLocalStorage()) return;
   try {
     localStorage.removeItem(prependNamespace(key));
   } catch (e) {

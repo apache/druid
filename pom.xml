@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.24.0-SNAPSHOT</version>
+    <version>25.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -75,7 +75,7 @@
         <java.version>8</java.version>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
-        <apache.curator.version>4.3.0</apache.curator.version>
+        <apache.curator.version>5.3.0</apache.curator.version>
         <apache.kafka.version>3.2.0</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
@@ -186,6 +186,7 @@
         <module>extensions-core/druid-ranger-security</module>
         <module>extensions-core/testing-tools</module>
         <!-- Community extensions -->
+        <module>extensions-contrib/compressed-bigdecimal</module>
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
         <module>extensions-contrib/dropwizard-emitter</module>
@@ -269,7 +270,12 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.8.1</version>
+                <version>3.12.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-text</artifactId>
+                <version>1.9</version>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
@@ -348,23 +354,15 @@
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-client</artifactId>
                 <version>${apache.curator.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.curator</groupId>
-                <artifactId>curator-framework</artifactId>
-                <version>${apache.curator.version}</version>
                 <exclusions>
                     <exclusion>
-                        <groupId>org.jboss.netty</groupId>
-                        <artifactId>netty</artifactId>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-api</artifactId>
                     </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.curator</groupId>
-                <artifactId>curator-recipes</artifactId>
-                <version>${apache.curator.version}</version>
-                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.guava</groupId>
+                        <artifactId>guava</artifactId>
+                    </exclusion>
                     <exclusion>
                         <groupId>org.apache.zookeeper</groupId>
                         <artifactId>zookeeper</artifactId>
@@ -372,9 +370,25 @@
                 </exclusions>
             </dependency>
             <dependency>
-              <groupId>org.apache.curator</groupId>
-              <artifactId>curator-x-discovery</artifactId>
-              <version>${apache.curator.version}</version>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-framework</artifactId>
+                <version>${apache.curator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-recipes</artifactId>
+                <version>${apache.curator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-x-discovery</artifactId>
+                <version>${apache.curator.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-databind</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
@@ -716,6 +730,11 @@
                 <version>1.8.0</version>
             </dependency>
             <dependency>
+                <groupId>org.xerial.snappy</groupId>
+                <artifactId>snappy-java</artifactId>
+                <version>1.1.8.4</version>
+            </dependency>
+            <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
                 <version>${protobuf.version}</version>
@@ -832,11 +851,6 @@
                 <artifactId>async-http-client</artifactId>
                 <!-- Uses Netty 4.1.x -->
                 <version>2.5.3</version>
-            </dependency>
-            <dependency>
-                <groupId>org.gridkit.lab</groupId>
-                <artifactId>jvm-attach-api</artifactId>
-                <version>1.5</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
@@ -986,8 +1000,8 @@
                 <version>${apache.curator.version}</version>
                 <exclusions>
                     <exclusion>
-                        <groupId>org.jboss.netty</groupId>
-                        <artifactId>netty</artifactId>
+                        <groupId>org.junit.jupiter</groupId>
+                        <artifactId>junit-jupiter-api</artifactId>
                     </exclusion>
                 </exclusions>
                 <scope>test</scope>
@@ -1682,10 +1696,6 @@
             </activation>
             <properties>
                 <jdk.surefire.argLine>
-                    <!-- required for JvmMonitor on Java 11+ -->
-                    --add-exports=java.base/jdk.internal.perf=ALL-UNNAMED
-                    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
-
                     <!-- required for DataSketches Memory on Java 11+ -->
                     --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
                     --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED

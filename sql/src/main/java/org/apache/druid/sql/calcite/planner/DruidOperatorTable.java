@@ -65,6 +65,7 @@ import org.apache.druid.sql.calcite.expression.builtin.ArrayOrdinalOfOperatorCon
 import org.apache.druid.sql.calcite.expression.builtin.ArrayOrdinalOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayOverlapOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayPrependOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayQuantileOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArraySliceOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayToStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.BTrimOperatorConversion;
@@ -225,6 +226,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new ArrayOrdinalOperatorConversion())
                    .add(new ArrayOffsetOfOperatorConversion())
                    .add(new ArrayOrdinalOfOperatorConversion())
+                   .add(new ArrayQuantileOperatorConversion())
                    .add(new ArraySliceOperatorConversion())
                    .add(new ArrayToStringOperatorConversion())
                    .add(new StringToArrayOperatorConversion())
@@ -299,13 +301,13 @@ public class DruidOperatorTable implements SqlOperatorTable
 
   private static final List<SqlOperatorConversion> NESTED_DATA_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
-                   .add(new NestedDataOperatorConversions.GetPathOperatorConversion())
-                   .add(new NestedDataOperatorConversions.JsonGetPathAliasOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonKeysOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonPathsOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonQueryOperatorConversion())
-                   .add(new NestedDataOperatorConversions.JsonValueOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonValueAnyOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueBigintOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueDoubleOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueVarcharOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonObjectOperatorConversion())
                    .add(new NestedDataOperatorConversions.ToJsonStringOperatorConversion())
                    .add(new NestedDataOperatorConversions.ParseJsonOperatorConversion())

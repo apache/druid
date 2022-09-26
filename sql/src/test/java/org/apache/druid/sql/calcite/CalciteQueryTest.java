@@ -28,6 +28,7 @@ import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -7372,7 +7373,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         ))
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
-                                expressionPostAgg("p0", "((1 - (\"a1\" / \"a0\")) * 100)")
+                                expressionPostAgg("p0", "((1.0 - (\"a1\" / \"a0\")) * 100)")
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -13806,7 +13807,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .virtualColumns(
                                  expressionVirtualColumn("v0", "'none'", ColumnType.STRING),
                                  expressionVirtualColumn("v1", "0", ColumnType.LONG),
-                                 expressionVirtualColumn("v2", "0", ColumnType.DOUBLE)
+                                 expressionVirtualColumn("v2", "0.0", ColumnType.DOUBLE)
                              )
                              .dimension(
                                  new DefaultDimensionSpec("v0", "d0")
@@ -14117,6 +14118,37 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"2", 1L},
             new Object[]{"abc", 0L},
             new Object[]{"def", 0L}
+        )
+    );
+  }
+
+  @Test
+  public void testTimeseriesQueryWithEmptyInlineDatasourceAndGranularity()
+  {
+    // the SQL query contains an always FALSE filter ('bar' = 'baz'), which optimizes the query to also remove time
+    // filter. the converted query hence contains ETERNITY interval but still a MONTH granularity due to the grouping.
+    // Such a query should fail since it will create a huge amount of time grains which can lead to OOM or a very very
+    // high query time.
+    Assert.assertThrows(IAE.class, () ->
+        testQuery(
+            "SELECT TIME_FLOOR(__time, 'P1m'), max(m1) from \"foo\"\n"
+            + "WHERE __time > CURRENT_TIMESTAMP - INTERVAL '3' MONTH  AND 'bar'='baz'\n"
+            + "GROUP BY 1\n"
+            + "ORDER BY 1 DESC",
+            ImmutableList.of(
+                Druids.newTimeseriesQueryBuilder()
+                      .dataSource(
+                          InlineDataSource.fromIterable(
+                              ImmutableList.of(),
+                              RowSignature.builder().addTimeColumn().add("m1", ColumnType.STRING).build()
+                          ))
+                      .intervals(ImmutableList.of(Intervals.ETERNITY))
+                      .descending(true)
+                      .granularity(Granularities.MONTH)
+                      .aggregators(new LongMaxAggregatorFactory("a0", "m1"))
+                      .build()
+            ),
+            ImmutableList.of()
         )
     );
   }

@@ -22,7 +22,7 @@ describe('flatten-spec', () => {
   describe('computeFlattenExprsForData', () => {
     const data = [
       {
-        context: { host: 'cla', topic: 'moon', bonus: { foo: 'bar' } },
+        context: { host: 'cla', topic: 'moon', bonus: { 'fo.o': 'bar' } },
         tags: ['a', 'b', 'c'],
         messages: [
           { metric: 'request/time', value: 122 },
@@ -32,7 +32,7 @@ describe('flatten-spec', () => {
         value: 5,
       },
       {
-        context: { host: 'piv', popic: 'sun' },
+        context: { 'host': 'piv', '1pic': 'sun' },
         tags: ['a', 'd'],
         messages: [
           { metric: 'request/time', value: 44 },
@@ -41,7 +41,7 @@ describe('flatten-spec', () => {
         value: 4,
       },
       {
-        context: { host: 'imp', dopik: 'fun' },
+        context: { 'host': 'imp', "d\\o\npi'c'": 'fun' },
         tags: ['x', 'y'],
         messages: [
           { metric: 'request/time', value: 4 },
@@ -53,22 +53,12 @@ describe('flatten-spec', () => {
     ];
 
     it('works for path, ignore-arrays', () => {
-      expect(computeFlattenExprsForData(data, 'path', 'ignore-arrays')).toEqual([
-        '$.context.bonus.foo',
-        '$.context.dopik',
+      expect(computeFlattenExprsForData(data, 'ignore-arrays')).toEqual([
+        "$.context.bonus['fo.o']",
         '$.context.host',
-        '$.context.popic',
         '$.context.topic',
-      ]);
-    });
-
-    it('works for jq, ignore-arrays', () => {
-      expect(computeFlattenExprsForData(data, 'jq', 'ignore-arrays')).toEqual([
-        '.context.bonus.foo',
-        '.context.dopik',
-        '.context.host',
-        '.context.popic',
-        '.context.topic',
+        "$.context['1pic']",
+        "$.context['d\\\\o\npi\\'c\\'']",
       ]);
     });
   });

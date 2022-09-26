@@ -49,6 +49,14 @@ exports[`TableCell matches snapshot array long 1`] = `
 </div>
 `;
 
+exports[`TableCell matches snapshot array mixed 1`] = `
+<div
+  class="table-cell plain"
+>
+  ["a",{"v":"b"},"c"]
+</div>
+`;
+
 exports[`TableCell matches snapshot array short 1`] = `
 <div
   class="table-cell plain"

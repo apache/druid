@@ -22,15 +22,18 @@ package org.apache.druid.testsEx.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
 import org.apache.druid.cli.GuiceRunnable;
 import org.apache.druid.curator.CuratorModule;
 import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.DruidProcessingConfigModule;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -82,6 +85,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * The magic needed to piece together enough of Druid to allow clients to
@@ -141,11 +145,16 @@ public class Initializer
           .in(LazySingleton.class);
 
       // Dummy DruidNode instance to make Guice happy. This instance is unused.
+      DruidNode dummy = new DruidNode("integration-tests", "localhost", false, 9191, null, null, true, false);
       binder
           .bind(DruidNode.class)
           .annotatedWith(Self.class)
-          .toInstance(
-              new DruidNode("integration-tests", "localhost", false, 9191, null, null, true, false));
+          .toInstance(dummy);
+
+      // Required for MSQIndexingModule
+      binder.bind(new TypeLiteral<Set<NodeRole>>()
+      {
+      }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
 
       // Reduced form of SQLMetadataStorageDruidModule
       String prop = SQLMetadataStorageDruidModule.PROPERTY;
@@ -260,7 +269,6 @@ public class Initializer
       // previously set in Maven.
       propertyEnvVarBinding("druid.test.config.dockerIp", "DOCKER_IP");
       propertyEnvVarBinding("druid.zk.service.host", "DOCKER_IP");
-      propertyEnvVarBinding("druid.test.config.hadoopDir", "HADOOP_DIR");
       property("druid.client.https.trustStorePath", "client_tls/truststore.jks");
       property("druid.client.https.trustStorePassword", "druid123");
       property("druid.client.https.keyStorePath", "client_tls/client.jks");
