@@ -62,9 +62,11 @@ import javax.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -244,15 +246,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
     if (latestSequenceFromStream == null) {
       return null;
     }
-
-    if (!latestSequenceFromStream.keySet().equals(highestCurrentOffsets.keySet())) {
-      log.warn(
-          "Lag metric: Kafka partitions %s do not match task partitions %s",
-          latestSequenceFromStream.keySet(),
-          highestCurrentOffsets.keySet()
-      );
-    }
-
+    validateWithLatestOffsets(highestCurrentOffsets);
     return getRecordLagPerPartition(highestCurrentOffsets);
   }
 
@@ -375,6 +369,48 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
     }
     finally {
       getRecordSupplierLock().unlock();
+    }
+  }
+
+  @Override
+  // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
+  @SuppressWarnings("SSBasedInspection")
+  protected LagStats computeLagStatsForOffsets(Map<Integer, Long> offsets)
+  {
+    if (latestSequenceFromStream == null) {
+      return new LagStats(0, 0, 0);
+    }
+    validateWithLatestOffsets(offsets);
+
+    Map<Integer, Long> partitionLags =
+        latestSequenceFromStream
+        .entrySet()
+        .stream()
+        .collect(
+            Collectors.toMap(
+                Entry::getKey,
+                e -> e.getValue() == null
+                     ? 0
+                     : e.getValue() - Optional.ofNullable(offsets.get(e.getKey())).orElse(0L)
+            )
+        );
+    return computeLags(partitionLags);
+  }
+
+  @Override
+  protected Map<Integer, Long> getLatestSequences()
+  {
+    return latestSequenceFromStream != null ? latestSequenceFromStream : new HashMap<>();
+  }
+
+  private void validateWithLatestOffsets(Map<Integer, Long> offsets)
+  {
+    if (!latestSequenceFromStream.keySet().equals(offsets.keySet())) {
+      log.warn(
+          "Lag metric: Kafka partitions %s do not match task partitions %s",
+          latestSequenceFromStream.keySet(),
+          offsets.keySet()
+      );
     }
   }
 

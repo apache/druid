@@ -62,6 +62,7 @@ public class SupervisorStateManager
 
     PENDING(true, true),
     RUNNING(true, false),
+    IDLE(true, false),
     SUSPENDED(true, false),
     STOPPING(true, false);
 
@@ -193,8 +194,9 @@ public class SupervisorStateManager
     // Try to set the state to RUNNING or SUSPENDED. This will be rejected if we haven't had atLeastOneSuccessfulRun
     // (in favor of the more specific states for the initial run) and will instead trigger setting the state to an
     // unhealthy one if we are now over the error thresholds.
-    maybeSetState(healthySteadyState);
-
+    if (!BasicState.IDLE.equals(supervisorState)) {
+      maybeSetState(healthySteadyState);
+    }
     // reset for next run
     currentRunSuccessful = true;
   }
@@ -232,6 +234,11 @@ public class SupervisorStateManager
   protected boolean isStoreStackTrace()
   {
     return supervisorStateManagerConfig.isStoreStackTrace();
+  }
+
+  public boolean isEnableIdleBehavior()
+  {
+    return supervisorStateManagerConfig.isEnableIdleBehaviour();
   }
 
   protected State getSpecificUnhealthySupervisorState()

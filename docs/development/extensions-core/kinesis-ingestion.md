@@ -157,6 +157,7 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 | `taskCountMax` | Maximum number of Kinesis ingestion tasks. Must be greater than or equal to `taskCountMin`. If greater than `{numKinesisShards}`, the maximum number of reading tasks is `{numKinesisShards}` and `taskCountMax` is ignored.  | yes |
 | `taskCountMin` | Minimum number of Kinesis ingestion tasks. When you enable the auto scaler, Druid ignores the value of taskCount in `IOConfig` and uses`taskCountMin` for the initial number of tasks to launch.| yes |
 | `minTriggerScaleActionFrequencyMillis` | Minimum time interval between two scale actions | no (default == 600000) |
+| `minPauseSupervisorIfStreamIdleMillis` | Minimum time interval to wait until stream is considered idle. (i.e. all existing data is caught up and no new data arrives) | no (default == 60000) |
 | `autoScalerStrategy` | The algorithm of `autoScaler`. ONLY `lagBased` is supported for now. See [Lag Based AutoScaler Strategy Related Properties](#lag-based-autoscaler-strategy-related-properties) for details.| no (default == `lagBased`) |
 
 ##### Lag Based AutoScaler Strategy Related Properties
@@ -227,6 +228,7 @@ The following example demonstrates a supervisor spec with `lagBased` autoScaler 
       "taskCountMax": 6,
       "taskCountMin": 2,
       "minTriggerScaleActionFrequencyMillis": 600000,
+      "minPauseSupervisorIfStreamIdleMillis": 60000,
       "autoScalerStrategy": "lagBased",
       "lagCollectionIntervalMillis": 30000,
       "lagCollectionRangeMillis": 600000,
@@ -441,6 +443,7 @@ The list of `detailedState` values and their corresponding `state` mapping is as
 |DISCOVERING_INITIAL_TASKS (first iteration only)|RUNNING|The supervisor is discovering already-running tasks|
 |CREATING_TASKS (first iteration only)|RUNNING|The supervisor is creating tasks and discovering state|
 |RUNNING|RUNNING|The supervisor has started tasks and is waiting for taskDuration to elapse|
+|IDLE|IDLE|The supervisor is not creating tasks any longer since stream is idle|
 |SUSPENDED|SUSPENDED|The supervisor has been suspended|
 |STOPPING|STOPPING|The supervisor is stopping|
 
@@ -453,14 +456,14 @@ On each iteration of the supervisor's run loop, the supervisor completes the fol
   4) Handle tasks that have exceeded `taskDuration` and should transition from the reading to publishing state.
   5) Handle tasks that have finished publishing and signal redundant replica tasks to stop.
   6) Handle tasks that have failed and clean up the supervisor's internal state.
-  7) Compare the list of healthy tasks to the requested `taskCount` and `replicas` configurations and create additional tasks if required.
+  7) Compare the list of healthy tasks to the requested `taskCount` and `replicas` configurations and create additional tasks if required incase supervisor is not idle.
 
 The `detailedState` field will show additional values (those marked with "first iteration only") the first time the
 supervisor executes this run loop after startup or after resuming from a suspension. This is intended to surface
 initialization-type issues, where the supervisor is unable to reach a stable state (perhaps because it can't connect to
 Kinesis, it can't read from the stream, or it can't communicate with existing tasks). Once the supervisor is stable -
 that is, once it has completed a full execution without encountering any issues - `detailedState` will show a `RUNNING`
-state until it is stopped, suspended, or hits a failure threshold and transitions to an unhealthy state.
+state until it is idle, stopped, suspended, or hits a failure threshold and transitions to an unhealthy state.
 
 ### Updating Existing Supervisors
 

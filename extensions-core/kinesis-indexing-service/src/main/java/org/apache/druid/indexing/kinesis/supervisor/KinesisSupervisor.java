@@ -51,6 +51,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
@@ -64,6 +65,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -95,6 +97,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   // Poll closed shards once and store the result to avoid redundant costly calls to kinesis
   private final Set<String> emptyClosedShardIds = new TreeSet<>();
   private final Set<String> nonEmptyClosedShardIds = new TreeSet<>();
+  private volatile Map<String, String> latestSequenceFromStream;
 
   public KinesisSupervisor(
       final TaskStorage taskStorage,
@@ -336,8 +339,33 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   protected void updatePartitionLagFromStream()
   {
     KinesisRecordSupplier supplier = (KinesisRecordSupplier) recordSupplier;
-    // this recordSupplier method is thread safe, so does not need to acquire the recordSupplierLock
-    currentPartitionTimeLag = supplier.getPartitionsTimeLag(getIoConfig().getStream(), getHighestCurrentOffsets());
+    Set<String> partitions = supplier.getPartitionIds(spec.getSource());
+    latestSequenceFromStream = partitions
+        .stream()
+        .collect(
+            Collectors.toMap(
+                partition -> partition,
+                partition -> Optional.ofNullable(supplier.getLatestSequenceNumber(
+                    new StreamPartition<>(getIoConfig().getStream(), partition)))
+                                     .orElse("")
+            )
+        );
+    currentPartitionTimeLag = getPartitionTimeLagForOffsets(getHighestCurrentOffsets());
+  }
+
+  @Override
+  protected LagStats computeLagStatsForOffsets(Map<String, String> offsets)
+  {
+    if (isIdle()) {
+      return computeLags(getPartitionTimeLagForOffsets(offsets));
+    }
+    return computeLagStats();
+  }
+
+  @Override
+  protected Map<String, String> getLatestSequences()
+  {
+    return latestSequenceFromStream != null ? latestSequenceFromStream : new HashMap<>();
   }
 
   @Override
@@ -350,6 +378,14 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   protected Map<String, Long> getPartitionTimeLag()
   {
     return currentPartitionTimeLag;
+  }
+
+  @Override
+  protected Map<String, Long> getPartitionTimeLagForOffsets(Map<String, String> offsets)
+  {
+    KinesisRecordSupplier supplier = (KinesisRecordSupplier) recordSupplier;
+    // this recordSupplier method is thread safe, so does not need to acquire the recordSupplierLock
+    return supplier.getPartitionsTimeLag(getIoConfig().getStream(), offsets);
   }
 
   @Override

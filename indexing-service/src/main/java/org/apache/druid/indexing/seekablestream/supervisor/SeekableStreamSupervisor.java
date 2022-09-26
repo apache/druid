@@ -428,6 +428,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     @Override
     public void handle()
     {
+      stateManager.maybeSetState(SupervisorStateManager.BasicState.RUNNING);
       if (autoScalerConfig == null) {
         log.warn("autoScalerConfig is null but dynamic allocation notice is submitted, how can it be ?");
       } else {
@@ -474,6 +475,24 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     public String getType()
     {
       return TYPE;
+    }
+  }
+
+  private class IdleNotice implements Notice
+  {
+    private static final String TYPE = "idle_notice";
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
+    }
+
+    @Override
+    public void handle() throws InterruptedException, ExecutionException, TimeoutException
+    {
+      stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
+      log.info("Marked Supervisor idle for dataSource [%s].", dataSource);
     }
   }
 
@@ -742,6 +761,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean stopped = false;
   private volatile boolean lifecycleStarted = false;
   private final ServiceEmitter emitter;
+
+  protected final ConcurrentHashMap<PartitionIdType, SequenceOffsetType> previousPartitionOffsetsSnapshot = new ConcurrentHashMap<>();
 
   public SeekableStreamSupervisor(
       final String supervisorId,
@@ -1079,9 +1100,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction)
+  public Runnable submitIdleOrDynamicAllocationTasksNotice(Callable<Integer> scaleAction, Callable<Boolean> isIdle)
   {
-    return () -> notices.add(new DynamicAllocationTasksNotice(scaleAction));
+    return () -> {
+      Boolean idle = null;
+      try {
+        idle = isIdle.call();
+      }
+      catch (Exception ex) {
+        log.warn(ex, "Errored while deciding between DynamicAllocationTaskNotice and IdleNotice");
+      }
+      if (stateManager.isEnableIdleBehavior() && Boolean.TRUE.equals(idle)) {
+        addNotice(new IdleNotice());
+      } else {
+        addNotice(new DynamicAllocationTasksNotice(scaleAction));
+      }
+    };
   }
 
   private Runnable buildRunTask()
@@ -2324,6 +2358,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private boolean updatePartitionDataFromStream()
   {
+    previousPartitionOffsetsSnapshot.clear();
+    previousPartitionOffsetsSnapshot.putAll(getLatestSequences());
     List<PartitionIdType> previousPartitionIds = new ArrayList<>(partitionIds);
     Set<PartitionIdType> partitionIdsFromSupplier;
     recordSupplierLock.lock();
@@ -2491,11 +2527,48 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return true;
   }
 
+  public Long computeTotalLag()
+  {
+    if (isIdle()) {
+      Map<PartitionIdType, SequenceOffsetType> oldOffsets = getOffsetsFromMetadataStorage();
+      return computeLagStatsForOffsets(oldOffsets).getTotalLag();
+    }
+
+    LagStats lagStats = computeLagStats();
+    return lagStats != null ? lagStats.getTotalLag() : 0L;
+  }
+
+  public boolean areLatestOffsetsConstant()
+  {
+    Map<PartitionIdType, SequenceOffsetType> latestSequenceFromStream = getLatestSequences();
+    return latestSequenceFromStream.equals(previousPartitionOffsetsSnapshot);
+  }
+
+  protected LagStats computeLagStatsForOffsets(Map<PartitionIdType, SequenceOffsetType> offsets)
+  {
+    return null;
+  }
+
+  protected Map<PartitionIdType, Long> getPartitionTimeLagForOffsets(Map<PartitionIdType, SequenceOffsetType> offsets)
+  {
+    return null;
+  }
+
+  protected Map<PartitionIdType, SequenceOffsetType> getLatestSequences()
+  {
+    return null;
+  }
+
+  protected boolean isIdle()
+  {
+    return SupervisorStateManager.BasicState.IDLE.equals(getState());
+  }
+
   private void assignRecordSupplierToPartitionIds()
   {
     recordSupplierLock.lock();
     try {
-      final Set partitions = partitionIds.stream()
+      final Set<StreamPartition<PartitionIdType>> partitions = partitionIds.stream()
                                          .map(partitionId -> new StreamPartition<>(ioConfig.getStream(), partitionId))
                                          .collect(Collectors.toSet());
       if (!recordSupplier.getAssignment().containsAll(partitions)) {
@@ -3339,6 +3412,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
+    if (isIdle()) {
+      log.debug("Supervisor is idle, hence skipping task creation");
+      return;
+    }
+
     // iterate through all the current task groups and make sure each one has the desired number of replica tasks
     boolean createdTask = false;
     for (Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
@@ -3584,7 +3662,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // if we aren't in a steady state, chill out for a bit, don't worry, we'll get called later, but if we aren't
     // healthy go ahead and try anyway to try if possible to provide insight into how much time is left to fix the
     // issue for cluster operators since this feeds the lag metrics
-    if (stateManager.isSteadyState() || !stateManager.isHealthy()) {
+    if (isIdle() || stateManager.isSteadyState() || !stateManager.isHealthy()) {
       try {
         updateCurrentOffsets();
         updatePartitionLagFromStream();
@@ -3966,14 +4044,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected void emitLag()
   {
-    if (spec.isSuspended() || !stateManager.isSteadyState()) {
+    if (!isIdle() || spec.isSuspended() || !stateManager.isSteadyState()) {
       // don't emit metrics if supervisor is suspended or not in a healthy running state
       // (lag should still available in status report)
       return;
     }
     try {
-      Map<PartitionIdType, Long> partitionRecordLags = getPartitionRecordLag();
-      Map<PartitionIdType, Long> partitionTimeLags = getPartitionTimeLag();
+      Map<PartitionIdType, SequenceOffsetType> offsetsFromMetadatStorage = getOffsetsFromMetadataStorage();
+      Map<PartitionIdType, Long> partitionRecordLags;
+      Map<PartitionIdType, Long> partitionTimeLags;
+
+      if (isIdle()) {
+        partitionRecordLags = getRecordLagPerPartition(offsetsFromMetadatStorage);
+        partitionTimeLags = getPartitionTimeLagForOffsets(offsetsFromMetadatStorage);
+      } else {
+        partitionRecordLags = getPartitionRecordLag();
+        partitionTimeLags = getPartitionTimeLag();
+      }
 
       if (partitionRecordLags == null && partitionTimeLags == null) {
         throw new ISE("Latest offsets have not been fetched");

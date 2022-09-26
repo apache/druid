@@ -63,6 +63,7 @@ This topic contains configuration reference information for the Apache Kafka sup
 | `taskCountMax` | Maximum number of ingestion tasks. Set `taskCountMax >= taskCountMin`. If `taskCountMax > {numKafkaPartitions}`, Druid only scales reading tasks up to the `{numKafkaPartitions}`. In this case `taskCountMax` is ignored.  | yes |
 | `taskCountMin` | Minimum number of ingestion tasks. When you enable autoscaler, Druid ignores the value of taskCount in `IOConfig` and starts with the `taskCountMin` number of tasks.| yes |
 | `minTriggerScaleActionFrequencyMillis` | Minimum time interval between two scale actions. | no (default == 600000) |
+| `minPauseSupervisorIfStreamIdleMillis` | Minimum time interval to wait until stream is considered idle. (i.e. all existing data is caught up and no new data arrives) | no (default == 60000) |
 | `autoScalerStrategy` | The algorithm of `autoScaler`. Only supports `lagBased`. See [Lag Based AutoScaler Strategy Related Properties](#lag-based-autoscaler-strategy-related-properties) for details.| no (default == `lagBased`) |
 
 ## Lag Based AutoScaler Strategy Related Properties
@@ -100,6 +101,7 @@ The following example demonstrates supervisor spec with `lagBased` autoScaler en
               "taskCountMax": 6,
               "taskCountMin": 2,
              "minTriggerScaleActionFrequencyMillis": 600000,
+             "minPauseSupervisorIfStreamIdleMillis": 60000,
              "autoScalerStrategy": "lagBased",
               "lagCollectionIntervalMillis": 30000,
               "lagCollectionRangeMillis": 600000,

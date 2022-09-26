@@ -36,6 +36,7 @@ public interface AutoScalerConfig
 {
   boolean getEnableTaskAutoScaler();
   long getMinTriggerScaleActionFrequencyMillis();
+  long getMinPauseSupervisorIfStreamIdleMillis();
   int getTaskCountMax();
   int getTaskCountMin();
   SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec);

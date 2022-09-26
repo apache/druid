@@ -44,6 +44,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   private final int scaleOutStep;
   private final boolean enableTaskAutoScaler;
   private final long minTriggerScaleActionFrequencyMillis;
+  private final long minPauseSupervisorIfStreamIdleMillis;
 
   @JsonCreator
   public LagBasedAutoScalerConfig(
@@ -60,7 +61,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
           @Nullable @JsonProperty("scaleInStep") Integer scaleInStep,
           @Nullable @JsonProperty("scaleOutStep") Integer scaleOutStep,
           @Nullable @JsonProperty("enableTaskAutoScaler") Boolean enableTaskAutoScaler,
-          @Nullable @JsonProperty("minTriggerScaleActionFrequencyMillis") Long minTriggerScaleActionFrequencyMillis
+          @Nullable @JsonProperty("minTriggerScaleActionFrequencyMillis") Long minTriggerScaleActionFrequencyMillis,
+          @Nullable @JsonProperty("minPauseSupervisorIfStreamIdleMillis") Long minPauseSupervisorIfStreamIdleMillis
   )
   {
     this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
@@ -89,6 +91,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
     this.scaleOutStep = scaleOutStep != null ? scaleOutStep : 2;
     this.minTriggerScaleActionFrequencyMillis = minTriggerScaleActionFrequencyMillis
         != null ? minTriggerScaleActionFrequencyMillis : 600000;
+    this.minPauseSupervisorIfStreamIdleMillis = minPauseSupervisorIfStreamIdleMillis
+        != null ? minPauseSupervisorIfStreamIdleMillis : 60000;
   }
 
   @JsonProperty
@@ -183,6 +187,13 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   public long getMinTriggerScaleActionFrequencyMillis()
   {
     return minTriggerScaleActionFrequencyMillis;
+  }
+
+  @Override
+  @JsonProperty
+  public long getMinPauseSupervisorIfStreamIdleMillis()
+  {
+    return minPauseSupervisorIfStreamIdleMillis;
   }
 
   @Override
