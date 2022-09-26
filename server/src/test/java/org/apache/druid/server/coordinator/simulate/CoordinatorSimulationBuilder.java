@@ -22,10 +22,8 @@ package org.apache.druid.server.coordinator.simulate;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
@@ -48,7 +46,6 @@ import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.rules.Rule;
-import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -199,12 +196,10 @@ public class CoordinatorSimulationBuilder
     // Build the coordinator
     final DruidCoordinator coordinator = new DruidCoordinator(
         env.coordinatorConfig,
-        new ZkPathsConfig(),
         env.jacksonConfigManager,
         env.segmentManager,
         env.coordinatorInventoryView,
         env.ruleManager,
-        () -> EasyMock.niceMock(CuratorFramework.class),
         env.serviceEmitter,
         env.executorFactory,
         null,
@@ -218,8 +213,7 @@ public class CoordinatorSimulationBuilder
                                         : new CostBalancerStrategyFactory(),
         env.lookupCoordinatorManager,
         env.leaderSelector,
-        OBJECT_MAPPER,
-        ZkEnablementConfig.ENABLED
+        OBJECT_MAPPER
     );
 
     return new SimulationImpl(coordinator, env);
