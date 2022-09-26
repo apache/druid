@@ -489,7 +489,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     @Override
-    public void handle() throws InterruptedException, ExecutionException, TimeoutException
+    public void handle()
     {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
       log.info("Marked Supervisor idle for dataSource [%s].", dataSource);
@@ -2567,7 +2567,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected Map<PartitionIdType, SequenceOffsetType> getLatestSequences()
   {
-    return null;
+    return new HashMap<>();
   }
 
   protected boolean isIdle()
