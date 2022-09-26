@@ -87,7 +87,7 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
         ) : (
           <AceEditor
             mode="hjson"
-            theme="tomorrow"
+            theme="solarized_dark"
             readOnly
             fontSize={12}
             width="100%"

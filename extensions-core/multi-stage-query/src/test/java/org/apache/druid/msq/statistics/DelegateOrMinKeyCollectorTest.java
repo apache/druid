@@ -20,6 +20,7 @@
 package org.apache.druid.msq.statistics;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.frame.key.RowKey;
@@ -40,6 +41,10 @@ public class DelegateOrMinKeyCollectorTest
   private final ClusterBy clusterBy = new ClusterBy(ImmutableList.of(new SortColumn("x", false)), 0);
   private final RowSignature signature = RowSignature.builder().add("x", ColumnType.LONG).build();
   private final Comparator<RowKey> comparator = clusterBy.keyComparator();
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   @Test
   public void testEmpty()

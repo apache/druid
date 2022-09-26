@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -79,17 +78,6 @@ public class ExprUtils
     }
 
     return new PeriodGranularity(period, origin, timeZone);
-  }
-
-  public static String createErrMsg(String functionName, String msg)
-  {
-    String prefix = "Function[" + functionName + "] ";
-    return prefix + msg;
-  }
-
-  static void checkLiteralArgument(String functionName, Expr arg, String argName)
-  {
-    Preconditions.checkArgument(arg.isLiteral(), createErrMsg(functionName, argName + " arg must be a literal"));
   }
 
   /**

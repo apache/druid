@@ -60,7 +60,7 @@ Tips for maximizing rollup:
      When queries only involve dimensions in the "abbreviated" set, use the second datasource to reduce query times. Often, this method only requires a small increase in storage footprint because abbreviated datasources tend to be substantially smaller.
 - If you use a [best-effort rollup](#perfect-rollup-vs-best-effort-rollup) ingestion configuration that does not guarantee perfect rollup, try one of the following:
     - Switch to a guaranteed perfect rollup option.
-    - [Reindex](data-management.md#reingesting-data) or [compact](compaction.md) your data in the background after initial ingestion.
+    - [Reindex](../data-management/update.md#reindex) or [compact](../data-management/compaction.md) your data in the background after initial ingestion.
 
 ## Perfect rollup vs best-effort rollup
 
@@ -80,6 +80,7 @@ The following table shows how each method handles rollup:
 |Method|How it works|
 |------|------------|
 |[Native batch](native-batch.md)|`index_parallel` and `index` type may be either perfect or best-effort, based on configuration.|
+|[SQL-based batch](../multi-stage-query/index.md)|Always perfect.|
 |[Hadoop](hadoop.md)|Always perfect.|
 |[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Always best-effort.|
 |[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Always best-effort.|

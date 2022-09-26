@@ -29,6 +29,8 @@ import java.util.Properties;
  */
 public class MetadataStorageConnectorConfig
 {
+  public static final String PROPERTY_BASE = "druid.metadata.storage.connector";
+
   @JsonProperty
   private boolean createTables = true;
 

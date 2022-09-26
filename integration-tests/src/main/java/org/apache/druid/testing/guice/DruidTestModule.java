@@ -21,10 +21,13 @@ package org.apache.druid.testing.guice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
 import org.apache.druid.curator.CuratorConfig;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.EscalatedClient;
@@ -41,6 +44,8 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.IntegrationTestingConfigProvider;
 import org.apache.druid.testing.IntegrationTestingCuratorConfig;
 
+import java.util.Set;
+
 /**
  */
 public class DruidTestModule implements Module
@@ -51,7 +56,7 @@ public class DruidTestModule implements Module
     binder.bind(IntegrationTestingConfig.class)
           .toProvider(IntegrationTestingConfigProvider.class)
           .in(ManageLifecycle.class);
-    JsonConfigProvider.bind(binder, "druid.test.config", IntegrationTestingConfigProvider.class);
+    JsonConfigProvider.bind(binder, IntegrationTestingConfigProvider.PROPERTY_BASE, IntegrationTestingConfigProvider.class);
 
     binder.bind(CuratorConfig.class).to(IntegrationTestingCuratorConfig.class);
 
@@ -59,6 +64,11 @@ public class DruidTestModule implements Module
     binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(
         new DruidNode("integration-tests", "localhost", false, 9191, null, null, true, false)
     );
+
+    // Required for MSQIndexingModule
+    binder.bind(new TypeLiteral<Set<NodeRole>>()
+    {
+    }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
   }
 
   @Provides

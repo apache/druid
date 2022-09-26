@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
+<!--
+Builds the Docker image used for integration testing.
+
+* Removes the image in the clean phase.
+* Uses the Druid build from the distribution project.
+* Assembles the set of needed files in the compile phase.
+* Builds the Docker image in the install phase.
+
+If you have already built Druid up to the distribution install phase,
+then this project can be run over and over if you need to debug
+changes to the image.
+
+Reference: https://dzone.com/articles/build-docker-image-from-maven
+-->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <packaging>pom</packaging>
+
+    <groupId>org.apache.druid.integration-tests</groupId>
+    <artifactId>druid-it-image</artifactId>
+    <name>druid-it-image</name>
+    <description>Build the Docker image for integration tests.</description>
+
+    <parent>
+        <artifactId>druid</artifactId>
+        <groupId>org.apache.druid</groupId>
+        <version>25.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <properties>
+        <!-- Default image name when run locally. When run as part of a build, the
+             image name will typically be provided by the build enfironment, and will
+             override this default name. -->
+        <druid.it.image-name>${project.groupId}/test:${project.version}</druid.it.image-name>
+        <confluent-version>5.5.1</confluent-version>
+        <mariadb.version>2.7.3</mariadb.version>
+        <mysql.image.version>5.7-debian</mysql.image.version>
+        <hadoop.integ.libs>"org.apache.hadoop:hadoop-client:${hadoop.compile.version}", "org.apache.hadoop:hadoop-azure:${hadoop.compile.version}"</hadoop.integ.libs>
+        <hadoop.s3.impl>org.apache.hadoop.fs.s3native.NativeS3FileSystem</hadoop.s3.impl>
+    </properties>
+
+    <repositories>
+        <!-- For the Kafka protobuf provider. -->
+        <repository>
+            <id>confluent</id>
+            <name>Confluent</name>
+            <url>https://packages.confluent.io/maven/</url>
+        </repository>
+    </repositories>
+
+    <profiles>
+        <profile>
+            <id>test-image</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+
+            <!-- Dependencies are inside the profile so they are ignored if not building
+                 the image. This is required for the "animal-sniffer" stage in the build
+                 which builds everything except distribution, so our distribution dependency
+                 fails if not scoped wihtin the profile. -->
+            <dependencies>
+                <!-- Dependencies placed in the image. -->
+                <dependency>
+                    <groupId>org.apache.druid</groupId>
+                    <artifactId>distribution</artifactId>
+                    <version>${project.parent.version}</version>
+                    <type>pom</type>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.druid.integration-tests</groupId>
+                    <artifactId>druid-it-tools</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.confluent</groupId>
+                    <artifactId>kafka-protobuf-provider</artifactId>
+                    <version>${confluent-version}</version>
+                </dependency>
+                <!-- Tests can choose either the MySQL or MariaDB driver. -->
+                <dependency>
+                    <groupId>mysql</groupId>
+                    <artifactId>mysql-connector-java</artifactId>
+                    <version>${mysql.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.mariadb.jdbc</groupId>
+                    <artifactId>mariadb-java-client</artifactId>
+                    <version>${mariadb.version}</version>
+                </dependency>
+            </dependencies>
+
+            <build>
+                <plugins>
+                    <!-- Populate the target/docker directory with the MySQL
+                       and Kafka clients. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>3.3.0</version>
+                        <executions>
+                            <execution>
+                                <id>copy</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <artifactItems>
+                                        <artifactItem>
+                                            <groupId>mysql</groupId>
+                                            <artifactId>mysql-connector-java</artifactId>
+                                            <version>${mysql.version}</version>
+                                            <type>jar</type>
+                                            <overWrite>true</overWrite>
+                                            <outputDirectory>${project.build.directory}/docker</outputDirectory>
+                                        </artifactItem>
+                                        <artifactItem>
+                                            <groupId>org.mariadb.jdbc</groupId>
+                                            <artifactId>mariadb-java-client</artifactId>
+                                            <version>${mariadb.version}</version>
+                                            <type>jar</type>
+                                            <overWrite>true</overWrite>
+                                            <outputDirectory>${project.build.directory}/docker</outputDirectory>
+                                        </artifactItem>
+                                        <artifactItem>
+                                            <groupId>io.confluent</groupId>
+                                            <artifactId>kafka-protobuf-provider</artifactId>
+                                            <version>${confluent-version}</version>
+                                            <type>jar</type>
+                                            <overWrite>true</overWrite>
+                                            <outputDirectory>${project.build.directory}/docker</outputDirectory>
+                                        </artifactItem>
+                                        <artifactItem>
+                                            <groupId>org.apache.druid.integration-tests</groupId>
+                                            <artifactId>druid-it-tools</artifactId>
+                                            <version>${project.version}</version>
+                                            <type>jar</type>
+                                            <overWrite>true</overWrite>
+                                            <outputDirectory>${project.build.directory}/docker</outputDirectory>
+                                        </artifactItem>
+                                    </artifactItems>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+
+                            <!-- Remove existing image from local repo -->
+                            <execution>
+                                <id>docker-clean</id>
+                                <phase>clean</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>docker</executable>
+                                    <workingDirectory>${project.basedir}</workingDirectory>
+                                    <arguments>
+                                        <argument>rmi</argument>
+                                        <argument>-f</argument> <!-- Prevent error if no image. -->
+                                        <argument>${druid.it.image-name}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+
+                            <!-- Create the docker image via a script which will also grab
+                                 the distribution tarball. -->
+                            <execution>
+                                <id>build-image</id>
+                                <phase>install</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <environmentVariables>
+                                        <MYSQL_VERSION>${mysql.version}</MYSQL_VERSION>
+                                        <MARIADB_VERSION>${mariadb.version}</MARIADB_VERSION>
+                                        <MYSQL_DRIVER_CLASSNAME>com.mysql.jdbc.Driver</MYSQL_DRIVER_CLASSNAME>
+                                        <MYSQL_IMAGE_VERSION>${mysql.image.version}</MYSQL_IMAGE_VERSION>
+                                        <CONFLUENT_VERSION>${confluent-version}</CONFLUENT_VERSION>
+                                        <KAFKA_VERSION>${apache.kafka.version}</KAFKA_VERSION>
+                                        <ZK_VERSION>${zookeeper.version}</ZK_VERSION>
+                                        <HADOOP_VERSION>${hadoop.compile.version}</HADOOP_VERSION>
+                                        <DRUID_VERSION>${project.version}</DRUID_VERSION>
+                                        <DRUID_IT_IMAGE_NAME>${druid.it.image-name}</DRUID_IT_IMAGE_NAME>
+                                        <TARGET_DIR>${project.build.directory}</TARGET_DIR>
+                                        <!-- Maven has no good way to get the root directory, so
+                                             this is as close as we can get. -->
+                                        <PARENT_DIR>${project.basedir}/../..</PARENT_DIR>
+                                    </environmentVariables>
+                                    <workingDirectory>${project.basedir}</workingDirectory>
+                                    <executable>bash</executable>
+                                    <arguments>
+                                        <argument>build-image.sh</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.owasp</groupId>
+                        <artifactId>dependency-check-maven</artifactId>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

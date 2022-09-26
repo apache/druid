@@ -41,6 +41,7 @@ import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -65,6 +66,7 @@ import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -695,7 +697,7 @@ public class MSQSelectTest extends MSQTestBase
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table [INFORMATION_SCHEMA.SCHEMATA] with SQL engine 'msq-task'."))
+                    "Cannot query table INFORMATION_SCHEMA.SCHEMATA with SQL engine 'msq-task'."))
             )
         )
         .verifyPlanningErrors();
@@ -710,7 +712,7 @@ public class MSQSelectTest extends MSQTestBase
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table [sys.segments] with SQL engine 'msq-task'."))
+                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
             )
         )
         .verifyPlanningErrors();
@@ -725,7 +727,7 @@ public class MSQSelectTest extends MSQTestBase
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table [sys.segments] with SQL engine 'msq-task'."))
+                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
             )
         )
         .verifyPlanningErrors();
@@ -741,7 +743,7 @@ public class MSQSelectTest extends MSQTestBase
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table [sys.segments] with SQL engine 'msq-task'."))
+                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
             )
         )
         .verifyPlanningErrors();
@@ -941,6 +943,74 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedResultRows(
             expectedMultiValueFooRowsGroupByList()
         )
+        .verifyResults();
+  }
+
+  @Test
+  public void testGroupByArrayWithMultiValueMvToArray()
+  {
+    Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .put("groupByEnableMultiValueUnnesting", true)
+                                              .build();
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("EXPR$0", ColumnType.STRING_ARRAY)
+                                            .add("cnt1", ColumnType.LONG)
+                                            .build();
+
+    ArrayList<Object[]> expected = new ArrayList<>();
+    expected.add(new Object[]{Collections.singletonList(null), !useDefault ? 2L : 3L});
+    if (!useDefault) {
+      expected.add(new Object[]{Collections.singletonList(""), 1L});
+    }
+    expected.addAll(ImmutableList.of(
+        new Object[]{Arrays.asList("a", "b"), 1L},
+        new Object[]{Arrays.asList("b", "c"), 1L},
+        new Object[]{Collections.singletonList("d"), 1L}
+    ));
+
+    testSelectQuery()
+        .setSql("select MV_TO_ARRAY(dim3), count(*) as cnt1 from foo group by MV_TO_ARRAY(dim3)")
+        .setQueryContext(context)
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(GroupByQuery.builder()
+                                                      .setDataSource(CalciteTests.DATASOURCE1)
+                                                      .setInterval(querySegmentSpec(Filtration.eternity()))
+                                                      .setGranularity(Granularities.ALL)
+                                                      .setDimensions(
+                                                          dimensions(
+                                                              new DefaultDimensionSpec(
+                                                                  "v0",
+                                                                  "d0",
+                                                                  ColumnType.STRING_ARRAY
+                                                              )
+                                                          )
+                                                      )
+                                                      .setVirtualColumns(
+                                                          new ExpressionVirtualColumn(
+                                                              "v0",
+                                                              "mv_to_array(\"dim3\")",
+                                                              ColumnType.STRING_ARRAY,
+                                                              TestExprMacroTable.INSTANCE
+                                                          )
+                                                      )
+                                                      .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                                      .setContext(context)
+                                                      .build()
+                                   )
+                                   .columnMappings(
+                                       new ColumnMappings(
+                                           ImmutableList.of(
+                                               new ColumnMapping("d0", "EXPR$0"),
+                                               new ColumnMapping("a0", "cnt1")
+                                           )
+                                       )
+                                   )
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(expected)
         .verifyResults();
   }
 

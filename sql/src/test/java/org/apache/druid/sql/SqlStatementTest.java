@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql;
 
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -70,7 +69,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.servlet.http.HttpServletRequest;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -159,15 +157,18 @@ public class SqlStatementTest
         new CalciteRulesManager(ImmutableSet.of())
     );
 
-    this.sqlStatementFactory = new SqlStatementFactoryFactory(
-        plannerFactory,
-        new NoopServiceEmitter(),
-        testRequestLogger,
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new AuthConfig(),
-        Suppliers.ofInstance(defaultQueryConfig),
-        new SqlLifecycleManager()
-    ).factorize(CalciteTests.createMockSqlEngine(walker, conglomerate));
+    this.sqlStatementFactory = new SqlStatementFactory(
+        new SqlToolbox(
+            CalciteTests.createMockSqlEngine(walker, conglomerate),
+            plannerFactory,
+            new NoopServiceEmitter(),
+            testRequestLogger,
+            QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+            new AuthConfig(),
+            defaultQueryConfig,
+            new SqlLifecycleManager()
+        )
+    );
   }
 
   @After
@@ -221,7 +222,7 @@ public class SqlStatementTest
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     ResultSet resultSet = stmt.plan();
     assertTrue(resultSet.runnable());
-    List<Object[]> results = resultSet.run().toList();
+    List<Object[]> results = resultSet.run().getResults().toList();
     assertEquals(1, results.size());
     assertEquals(6L, results.get(0)[0]);
     assertEquals("foo", results.get(0)[1]);
@@ -341,7 +342,7 @@ public class SqlStatementTest
         makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo"),
         request(true)
         );
-    List<Object[]> results = stmt.execute().toList();
+    List<Object[]> results = stmt.execute().getResults().toList();
     assertEquals(1, results.size());
     assertEquals(6L, results.get(0)[0]);
     assertEquals("foo", results.get(0)[1]);
@@ -422,6 +423,7 @@ public class SqlStatementTest
       List<Object[]> results = stmt
           .execute(Collections.emptyList())
           .execute()
+          .getResults()
           .toList();
       assertEquals(1, results.size());
       assertEquals(6L, results.get(0)[0]);

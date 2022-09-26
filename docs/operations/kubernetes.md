@@ -23,10 +23,10 @@ title: "kubernetes"
   -->
 
 
-Apache Druid distribution is also available as [Docker](https://www.docker.com/) image from [Docker Hub](https://hub.docker.com/r/apache/druid) . For example, you can obtain release 0.16.0-incubating using the command below.
+Apache Druid distribution is also available as [Docker](https://www.docker.com/) image from [Docker Hub](https://hub.docker.com/r/apache/druid) . For example, you can obtain latest release using the command below.
 
 ```
-$docker pull apache/druid:0.16.0-incubating
+$ docker pull apache/druid
 ```
 
 [druid-operator](https://github.com/druid-io/druid-operator) can be used to manage a Druid cluster on [Kubernetes](https://kubernetes.io/) .
