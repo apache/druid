@@ -35,7 +35,11 @@ To migrate from firehose ingestion, you can use the Druid console to update your
 
 ### Use the Druid console
 
+To update your ingestion spec using the Druid console, open the console and copy your spec into the **Edit spec** stage of the data loader.
 
+Druid converts the spec into one with a defined input source. For example, it converts the [example firehose ingestion spec](#example-firehose-ingestion-spec) below into the [example ingestion spec after migration](#example-ingestion-spec-after-migration).
+
+If you're unable to use the console or you have problems with the console method, the alternative is to update your ingestion spec manually.
 
 ### Update your ingestion spec manually
 
@@ -93,6 +97,7 @@ An example firehose ingestion spec is as follows:
            "intervals" : [ "2013-08-31/2013-09-01" ]
         },
         "parser": {
+           "type": "string",
            "parseSpec": {
               "format": "json",
               "timestampSpec" : {
