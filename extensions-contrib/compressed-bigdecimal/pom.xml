@@ -65,7 +65,7 @@
     <dependency>
       <groupId>org.apache.calcite</groupId>
       <artifactId>calcite-core</artifactId>
-      <version>1.21.0</version>
+      <version>1.32.0</version>
       <scope>provided</scope>
     </dependency>
 
