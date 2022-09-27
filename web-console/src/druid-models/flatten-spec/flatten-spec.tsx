@@ -61,18 +61,22 @@ export const FLATTEN_FIELD_FIELDS: Field<FlattenField>[] = [
   },
 ];
 
-export type ExprType = 'path' | 'jq';
 export type ArrayHandling = 'ignore-arrays' | 'include-arrays';
+
+function escapePathKey(pathKey: string): string {
+  return /^[a-z]\w*$/i.test(pathKey)
+    ? `.${pathKey}`
+    : `['${pathKey.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}']`;
+}
 
 export function computeFlattenPathsForData(
   data: Record<string, any>[],
-  exprType: ExprType,
   arrayHandling: ArrayHandling,
 ): FlattenField[] {
-  return computeFlattenExprsForData(data, exprType, arrayHandling).map(expr => {
+  return computeFlattenExprsForData(data, arrayHandling).map(expr => {
     return {
-      name: expr.replace(/^\$?\./, ''),
-      type: exprType,
+      name: expr.replace(/^\$\./, '').replace(/['\]]/g, '').replace(/\[/g, '.'),
+      type: 'path',
       expr,
     };
   });
@@ -80,7 +84,6 @@ export function computeFlattenPathsForData(
 
 export function computeFlattenExprsForData(
   data: Record<string, any>[],
-  exprType: ExprType,
   arrayHandling: ArrayHandling,
   includeTopLevel = false,
 ): string[] {
@@ -91,12 +94,7 @@ export function computeFlattenExprsForData(
     for (const datumKey of datumKeys) {
       const datumValue = datum[datumKey];
       if (includeTopLevel || isNested(datumValue)) {
-        addPath(
-          seenPaths,
-          exprType === 'path' ? `$.${datumKey}` : `.${datumKey}`,
-          datumValue,
-          arrayHandling,
-        );
+        addPath(seenPaths, `$${escapePathKey(datumKey)}`, datumValue, arrayHandling);
       }
     }
   }
@@ -114,7 +112,7 @@ function addPath(
     if (!Array.isArray(value)) {
       const valueKeys = Object.keys(value);
       for (const valueKey of valueKeys) {
-        addPath(paths, `${path}.${valueKey}`, value[valueKey], arrayHandling);
+        addPath(paths, `${path}${escapePathKey(valueKey)}`, value[valueKey], arrayHandling);
       }
     } else if (arrayHandling === 'include-arrays') {
       for (let i = 0; i < value.length; i++) {

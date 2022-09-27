@@ -419,7 +419,9 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
             className: 'padded',
             accessor: row => deepGet(row, 'spec.extractionNamespace.pollPeriod'),
             Cell: ({ original }) => {
-              if (original.spec.type === 'map') return 'Static map';
+              const { type } = original.spec;
+              if (type === 'map') return 'Static map';
+              if (type === 'kafka') return 'Kafka based';
               const pollPeriod = deepGet(original, 'spec.extractionNamespace.pollPeriod');
               if (!pollPeriod) {
                 return (

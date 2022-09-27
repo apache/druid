@@ -19,6 +19,8 @@
 
 package org.apache.druid.compressedbigdecimal;
 
+import org.apache.druid.java.util.common.IAE;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
@@ -241,6 +243,16 @@ public abstract class CompressedBigDecimal extends Number implements Comparable<
     return signumInternal(getArraySize(), this, CompressedBigDecimal::getArrayEntry);
   }
 
+  public boolean isNegative()
+  {
+    return getArrayEntry(getArraySize() - 1) < 0;
+  }
+
+  public boolean isPositive()
+  {
+    return !isNegative();
+  }
+
   /**
    * Internal implementation if signum.
    * For the Provided Compressed big decimal value it checks and returns
@@ -271,16 +283,79 @@ public abstract class CompressedBigDecimal extends Number implements Comparable<
     }
   }
 
-  /* (non-Javadoc)
-   * @see java.lang.Comparable#compareTo(java.lang.Object)
-   */
   @Override
   public int compareTo(CompressedBigDecimal o)
   {
+    return compareTo(o, false);
+  }
+
+  public int compareTo(CompressedBigDecimal o, boolean expectOptimized)
+  {
     if (super.equals(o)) {
       return 0;
+    } else if (getScale() == o.getScale()) {
+      return directCompareCompressedBigDecimal(this, o);
+    } else {
+      if (expectOptimized) {
+        throw new IAE("expected optimized path");
+      }
+
+      return this.toBigDecimal().compareTo(o.toBigDecimal());
     }
-    return this.toBigDecimal().compareTo(o.toBigDecimal());
+  }
+
+  /**
+   * performs a subtraction of lhs - rhs to compare elements
+   *
+   * @param lhs
+   * @param rhs
+   * @return
+   */
+  private static int directCompareCompressedBigDecimal(CompressedBigDecimal lhs, CompressedBigDecimal rhs)
+  {
+    // this short-circuit serves two functions: 1. it speeds up comparison in +/- cases 2. it avoids the case of
+    // overflow of positive - negative and negative - positive. p - p and n - n both fit in the given allotment of ints
+    if (lhs.isPositive() && rhs.isNegative()) {
+      return 1;
+    } else if (lhs.isNegative() && rhs.isPositive()) {
+      return -1;
+    }
+
+    int size = Math.max(lhs.getArraySize(), rhs.getArraySize());
+    int[] result = new int[size];
+    int borrow = 0;
+    // for each argument, if it's negative, our extension will be -1/INT_MASK (all 1s). else, all 0s
+    long lhsExtension = lhs.getArrayEntry(lhs.getArraySize() - 1) < 0 ? INT_MASK : 0;
+    long rhsExtension = rhs.getArrayEntry(rhs.getArraySize() - 1) < 0 ? INT_MASK : 0;
+    boolean nonZeroValues = false;
+
+    for (int i = 0; i < size; i++) {
+      // "dynamically" extend lhs/rhs if it's shorter than the other using extensions computed above
+      long leftElement = i < lhs.getArraySize() ? (INT_MASK & lhs.getArrayEntry(i)) : lhsExtension;
+      long rightElement = i < rhs.getArraySize() ? (INT_MASK & rhs.getArrayEntry(i)) : rhsExtension;
+      long resultElement = leftElement - rightElement - borrow;
+
+      borrow = 0;
+
+      if (resultElement < 0) {
+        borrow = 1;
+        resultElement += 1L << 32;
+      }
+
+      result[i] = (int) resultElement;
+
+      if (!nonZeroValues && resultElement != 0) {
+        nonZeroValues = true;
+      }
+    }
+
+    int signum = 0;
+
+    if (nonZeroValues) {
+      signum = result[size - 1] < 0 ? -1 : 1;
+    }
+
+    return signum;
   }
 
   @Override
