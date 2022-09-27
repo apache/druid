@@ -133,6 +133,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private static final InputFormat INPUT_FORMAT = new JsonInputFormat(
       new JSONPathSpec(true, ImmutableList.of()),
       ImmutableMap.of(),
+      false,
+      false,
       false
   );
   private static final String TOPIC_PREFIX = "testTopic";
@@ -297,6 +299,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             new Period("PT30M"),
             null,
             null,
+            null,
             null
     );
 
@@ -447,7 +450,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         ),
         new KafkaIndexTaskTuningConfig(
             null,
@@ -3649,6 +3653,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         null
     );
 
@@ -3761,6 +3766,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         null
     );
 
@@ -3877,6 +3883,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         null
     );
 
@@ -4020,7 +4027,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             true,
             minimumMessageTime,
             maximumMessageTime,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         ),
         Collections.emptyMap(),
         OBJECT_MAPPER

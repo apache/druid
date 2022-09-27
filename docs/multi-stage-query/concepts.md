@@ -27,7 +27,7 @@ sidebar_label: "Key concepts"
 > extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
 > ingestion method is right for you.
 
-## SQL task engine
+## Multi-stage query task engine
 
 The `druid-multi-stage-query` extension adds a multi-stage query (MSQ) task engine that executes SQL statements as batch
 tasks in the indexing service, which execute on [Middle Managers](../design/architecture.md#druid-services).

@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.data.IndexedInts;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.ByteBuffer;
 import java.util.function.ToIntBiFunction;
 
@@ -103,7 +104,7 @@ public class Utils
     }
     BufferAccessor accessor = BufferAccessor.prepare(pos);
     if (rhs.getScale() != lhsScale) {
-      rhs = Utils.scaleUp(rhs);
+      rhs = Utils.scale(rhs, lhsScale);
     }
     CompressedBigDecimal.internalAdd(
         lhsSize,
@@ -116,27 +117,17 @@ public class Utils
     );
   }
 
-  /**
-   * Returns a {@code CompressedBigDecimal} whose scale is moderated as per the default scale.
-   *
-   * @param val The value to scale up
-   * @return Scaled up compressedBigDecimal
-   */
-  public static CompressedBigDecimal scaleUp(CompressedBigDecimal val)
+  public static CompressedBigDecimal scale(CompressedBigDecimal val, int scale)
   {
-    return new ArrayCompressedBigDecimal(
-        val.toBigDecimal().setScale(CompressedBigDecimalAggregatorFactory.DEFAULT_SCALE, BigDecimal.ROUND_UP)
-    );
-  }
-
-  public static CompressedBigDecimal scaleUp(CompressedBigDecimal val, int scale)
-  {
-    return new ArrayCompressedBigDecimal(
-        val.toBigDecimal().setScale(scale, BigDecimal.ROUND_UP)
-    );
+    return new ArrayCompressedBigDecimal(val.toBigDecimal().setScale(scale, RoundingMode.UP));
   }
 
   public static CompressedBigDecimal objToCompressedBigDecimal(Object obj)
+  {
+    return objToCompressedBigDecimal(obj, false);
+  }
+
+  public static CompressedBigDecimal objToCompressedBigDecimal(Object obj, boolean strictNumberParse)
   {
     CompressedBigDecimal result;
     if (obj == null) {
@@ -152,7 +143,16 @@ public class Utils
     } else if (obj instanceof Float) {
       result = new ArrayCompressedBigDecimal(BigDecimal.valueOf((Float) obj));
     } else if (obj instanceof String) {
-      result = new ArrayCompressedBigDecimal(new BigDecimal((String) obj));
+      try {
+        result = new ArrayCompressedBigDecimal(new BigDecimal((String) obj));
+      }
+      catch (NumberFormatException e) {
+        if (strictNumberParse) {
+          throw e;
+        } else {
+          result = new ArrayCompressedBigDecimal(0L, 0);
+        }
+      }
     } else if (obj instanceof CompressedBigDecimal) {
       result = (CompressedBigDecimal) obj;
     } else {
