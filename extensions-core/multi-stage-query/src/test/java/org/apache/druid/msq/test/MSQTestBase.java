@@ -248,7 +248,14 @@ public class MSQTestBase extends BaseCalciteQueryTest
   @Before
   public void setUp2()
   {
-    Injector secondInjector = GuiceInjectors.makeStartupInjector();
+    Injector secondInjector = GuiceInjectors.makeStartupInjectorWithModules(
+        ImmutableList.of(
+            binder -> {
+              binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
+              binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
+            }
+        )
+    );
 
     groupByBuffers = TestGroupByBuffers.createDefault();
 
@@ -332,6 +339,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
           binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
         },
+
         binder -> {
           // Requirements of JoinableFactoryModule
           binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class));
