@@ -98,6 +98,7 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
         );
       } else if (clazz.equals(LexicographicalRangeIndex.class)) {
         return (T) new IndexedUtf8LexicographicalRangeIndex<>(
+            bitmapFactory,
             utf8Dictionary,
             singleThreadedBitmaps,
             NullHandling.isNullOrEquivalent(dictionary.get(0))

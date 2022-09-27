@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import it.unimi.dsi.fastutil.ints.IntIntImmutablePair;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import it.unimi.dsi.fastutil.ints.IntIterator;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
@@ -34,19 +35,22 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public final class IndexedUtf8LexicographicalRangeIndex<T extends Indexed<ByteBuffer>>
+public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Indexed<ByteBuffer>>
     implements LexicographicalRangeIndex
 {
-  private final T dictionary;
+  private final BitmapFactory bitmapFactory;
+  private final TDictionary dictionary;
   private final Indexed<ImmutableBitmap> bitmaps;
   private final boolean hasNull;
 
   public IndexedUtf8LexicographicalRangeIndex(
-      T dictionary,
+      BitmapFactory bitmapFactory,
+      TDictionary dictionary,
       Indexed<ImmutableBitmap> bitmaps,
       boolean hasNull
   )
   {
+    this.bitmapFactory = bitmapFactory;
     this.dictionary = dictionary;
     this.bitmaps = bitmaps;
     this.hasNull = hasNull;
@@ -80,7 +84,7 @@ public final class IndexedUtf8LexicographicalRangeIndex<T extends Indexed<ByteBu
           @Override
           public ImmutableBitmap next()
           {
-            return bitmaps.get(rangeIterator.nextInt());
+            return getBitmap(rangeIterator.nextInt());
           }
         };
       }
@@ -141,7 +145,7 @@ public final class IndexedUtf8LexicographicalRangeIndex<T extends Indexed<ByteBu
             }
 
             found = findNext();
-            return bitmaps.get(cur);
+            return getBitmap(cur);
           }
         };
       }
@@ -193,5 +197,15 @@ public final class IndexedUtf8LexicographicalRangeIndex<T extends Indexed<ByteBu
 
     endIndex = Math.max(startIndex, endIndex);
     return new IntIntImmutablePair(startIndex, endIndex);
+  }
+
+  private ImmutableBitmap getBitmap(int idx)
+  {
+    if (idx < 0) {
+      return bitmapFactory.makeEmptyImmutableBitmap();
+    }
+
+    final ImmutableBitmap bitmap = bitmaps.get(idx);
+    return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
   }
 }

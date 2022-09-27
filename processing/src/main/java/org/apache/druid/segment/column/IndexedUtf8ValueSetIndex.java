@@ -32,18 +32,18 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
 
-public final class IndexedUtf8ValueSetIndex<T extends Indexed<ByteBuffer>>
+public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuffer>>
     implements StringValueSetIndex, Utf8ValueSetIndex
 {
   private static final int SIZE_WORTH_CHECKING_MIN = 8;
 
   private final BitmapFactory bitmapFactory;
-  private final T dictionary;
+  private final TDictionary dictionary;
   private final Indexed<ImmutableBitmap> bitmaps;
 
   public IndexedUtf8ValueSetIndex(
       BitmapFactory bitmapFactory,
-      T dictionary,
+      TDictionary dictionary,
       Indexed<ImmutableBitmap> bitmaps
   )
   {

@@ -29,15 +29,15 @@ import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public final class IndexedStringDruidPredicateIndex<T extends Indexed<String>> implements DruidPredicateIndex
+public final class IndexedStringDruidPredicateIndex<TDictionary extends Indexed<String>> implements DruidPredicateIndex
 {
   private final BitmapFactory bitmapFactory;
-  private final T dictionary;
+  private final TDictionary dictionary;
   private final Indexed<ImmutableBitmap> bitmaps;
 
   public IndexedStringDruidPredicateIndex(
       BitmapFactory bitmapFactory,
-      T dictionary,
+      TDictionary dictionary,
       Indexed<ImmutableBitmap> bitmaps
   )
   {

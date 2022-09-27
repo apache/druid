@@ -94,6 +94,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
         return (T) new IndexedStringDruidPredicateIndex<>(bitmapFactory, singleThreadedStrings, singleThreadedBitmaps);
       } else if (clazz.equals(LexicographicalRangeIndex.class)) {
         return (T) new IndexedUtf8LexicographicalRangeIndex<>(
+            bitmapFactory,
             singleThreadedUtf8,
             singleThreadedBitmaps,
             NullHandling.isNullOrEquivalent(dictionary.get(0))

@@ -25,16 +25,16 @@ import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
 
-public final class IndexedStringDictionaryEncodedStringValueIndex<T extends Indexed<String>>
+public final class IndexedStringDictionaryEncodedStringValueIndex<TDictionary extends Indexed<String>>
     implements DictionaryEncodedStringValueIndex
 {
   private final BitmapFactory bitmapFactory;
-  private final T dictionary;
+  private final TDictionary dictionary;
   private final Indexed<ImmutableBitmap> bitmaps;
 
   public IndexedStringDictionaryEncodedStringValueIndex(
       BitmapFactory bitmapFactory,
-      T dictionary,
+      TDictionary dictionary,
       Indexed<ImmutableBitmap> bitmaps
   )
   {
