@@ -26,6 +26,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.sql.guice.SqlBindings;
+
 import java.util.List;
 
 /**
@@ -37,6 +39,12 @@ public class CompressedBigDecimalModule implements DruidModule
 
   @Override
   public void configure(Binder binder)
+  {
+    registerSerde();
+    SqlBindings.addAggregator(binder, CompressedBigDecimalSqlAggregator.class);
+  }
+
+  public static void registerSerde()
   {
     if (ComplexMetrics.getSerdeForType(COMPRESSED_BIG_DECIMAL) == null) {
       ComplexMetrics.registerSerde(COMPRESSED_BIG_DECIMAL, new CompressedBigDecimalMetricSerde());
