@@ -40,7 +40,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 
-public class JsonReaderTest
+public class JsonNodeReaderTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -62,9 +62,9 @@ public class JsonReaderTest
         ),
         null,
         null,
-        false, //make sure JsonReader is used
+        false, //make sure JsonReader is used,
         false,
-        false
+        true
     );
 
     final ByteEntity source = new ByteEntity(
@@ -126,7 +126,7 @@ public class JsonReaderTest
         null,
         false, //make sure JsonReader is used
         false,
-        false
+        true
     );
 
     final ByteEntity source = new ByteEntity(
@@ -195,7 +195,7 @@ public class JsonReaderTest
         null,
         false, //make sure JsonReader is used
         false,
-        false
+        true
     );
 
     final ByteEntity source = new ByteEntity(
@@ -251,7 +251,7 @@ public class JsonReaderTest
         null,
         false, //make sure JsonReader is used
         false,
-        false
+        true
     );
 
     final ByteEntity source = new ByteEntity(
@@ -276,24 +276,22 @@ public class JsonReaderTest
 
         final InputRowListPlusRawValues rawValues = iterator.next();
 
-        // 3 rows returned together
-        Assert.assertEquals(3, rawValues.getInputRows().size());
+        // 1 row returned 3 times
+        Assert.assertEquals(1, rawValues.getInputRows().size());
+        InputRow row = rawValues.getInputRows().get(0);
 
-        for (int i = 0; i < 3; i++) {
-          InputRow row = rawValues.getInputRows().get(i);
+        final String msgId = String.valueOf(++acturalRowCount);
+        Assert.assertEquals(DateTimes.of("2019-01-01"), row.getTimestamp());
+        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("jq_omg")));
 
-          final String msgId = String.valueOf(++acturalRowCount);
-          Assert.assertEquals(DateTimes.of("2019-01-01"), row.getTimestamp());
-          Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-          Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("path_omg")));
-          Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
 
-          Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-          Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-          Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
-        }
       }
     }
 
@@ -319,12 +317,14 @@ public class JsonReaderTest
         null,
         false, //make sure JsonReader is used
         false,
-        false
+        true
     );
 
-    //2nd row is ill-formed
+    //2nd row is has an invalid timestamp which causes a parse exception, but is valid JSON
+    //3rd row is malformed json and terminates the row iteration
     final ByteEntity source = new ByteEntity(
         StringUtils.toUtf8("{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":1}}"
+                           + "{\"timestamp\":\"invalidtimestamp\",\"bar\":null,\"foo\":\"x\",\"baz\":5,\"o\":{\"mg\":2}}\n"
                            + "{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4xxx,\"o\":{\"mg\":2}}\n"
                            //value of baz is invalid
                            + "{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":3}}\n")
@@ -340,9 +340,10 @@ public class JsonReaderTest
         null
     );
 
-    // the invalid character in line 2 stops parsing of the 3-line text in a whole
-    // so the total num of iteration is 1
-    final int numExpectedIterations = 1;
+    // the invalid timestamp in line 2 causes a parse exception, but because it is valid JSON, parsing can continue
+    // the invalid character in line 3 stops parsing of the 4-line text as a whole
+    // so the total num of iteration is 3
+    final int numExpectedIterations = 3;
 
     try (CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample()) {
       int numActualIterations = 0;
@@ -351,7 +352,9 @@ public class JsonReaderTest
 
         final InputRowListPlusRawValues rawValues = iterator.next();
 
-        Assert.assertNotNull(rawValues.getParseException());
+        if (numActualIterations == 2 || numActualIterations == 3) {
+          Assert.assertNotNull(rawValues.getParseException());
+        }
       }
 
       Assert.assertEquals(numExpectedIterations, numActualIterations);
@@ -377,7 +380,7 @@ public class JsonReaderTest
         null,
         false, //make sure JsonReader is used
         false,
-        false
+        true
     );
 
     //input is empty
@@ -435,7 +438,7 @@ public class JsonReaderTest
         null,
         false, //make sure JsonReader is used
         false,
-        false
+        true
     );
 
     //input is empty
