@@ -60,7 +60,7 @@ public class TestIndexTask extends IndexTask
             new IndexTask.IndexIOConfig(
                 null,
                 new LocalInputSource(new File("lol"), "rofl"),
-                new JsonInputFormat(null, null, null),
+                new JsonInputFormat(null, null, null, null, null),
                 false,
                 false
             ),

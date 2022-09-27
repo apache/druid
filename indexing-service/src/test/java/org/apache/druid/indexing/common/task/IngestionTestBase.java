@@ -244,7 +244,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   {
     if (parseSpec instanceof JSONParseSpec) {
       JSONParseSpec jsonParseSpec = (JSONParseSpec) parseSpec;
-      return new JsonInputFormat(jsonParseSpec.getFlattenSpec(), jsonParseSpec.getFeatureSpec(), jsonParseSpec.getKeepNullColumns());
+      return new JsonInputFormat(jsonParseSpec.getFlattenSpec(), jsonParseSpec.getFeatureSpec(), jsonParseSpec.getKeepNullColumns(), null, null);
     } else if (parseSpec instanceof CSVParseSpec) {
       CSVParseSpec csvParseSpec = (CSVParseSpec) parseSpec;
       boolean getColumnsFromHeader = csvParseSpec.isHasHeaderRow() && csvParseSpec.getSkipHeaderRows() == 0;
