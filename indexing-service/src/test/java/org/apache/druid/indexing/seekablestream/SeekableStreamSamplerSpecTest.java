@@ -172,8 +172,8 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
 
     SeekableStreamSamplerSpec samplerSpec = new TestableSeekableStreamSamplerSpec(
         supervisorSpec,
-        new SamplerConfig(5, null),
-        new InputSourceSampler()
+        new SamplerConfig(5, null, null, null),
+        new InputSourceSampler(new DefaultObjectMapper())
     );
 
     SamplerResponse response = samplerSpec.sample();
