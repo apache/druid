@@ -50,7 +50,7 @@ import static org.junit.Assert.assertThat;
 /**
  * Unit tests for AccumulatingDecimalAggregator.
  */
-public class CompressedBigDecimalAggregatorTimeseriesTest
+public class CompressedBigDecimalMaxAggregatorTimeseriesTest
 {
   private final AggregationTestHelper helper;
 
@@ -62,19 +62,20 @@ public class CompressedBigDecimalAggregatorTimeseriesTest
   public final TemporaryFolder tempFolder = new TemporaryFolder(new File("target"));
 
   /**
-     * Constructor.
-   * * */
-  public CompressedBigDecimalAggregatorTimeseriesTest()
+   * Constructor.
+   * *
+   */
+  public CompressedBigDecimalMaxAggregatorTimeseriesTest()
   {
     CompressedBigDecimalModule module = new CompressedBigDecimalModule();
     CompressedBigDecimalModule.registerSerde();
     helper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
-            module.getJacksonModules(), tempFolder);
+        module.getJacksonModules(), tempFolder);
   }
 
   /**
-     * Default setup of UTC timezone.
-  */
+   * Default setup of UTC timezone.
+   */
   @BeforeClass
   public static void setupClass()
   {
@@ -91,30 +92,36 @@ public class CompressedBigDecimalAggregatorTimeseriesTest
   public void testIngestAndTimeseriesQuery() throws IOException, Exception
   {
     Sequence seq = helper.createIndexAndRunQueryOnSegment(
-            this.getClass().getResourceAsStream("/" + "bd_test_data.csv"),
-            Resources.asCharSource(getClass().getResource(
-                    "/" + "bd_test_data_parser.json"),
-                    StandardCharsets.UTF_8
-            ).read(),
-                Resources.asCharSource(
-                        this.getClass().getResource("/" + "bd_test_aggregators.json"),
-                        StandardCharsets.UTF_8
-                ).read(),
-                0,
-                Granularities.NONE,
-                5,
-                Resources.asCharSource(
-                        this.getClass().getResource("/" + "bd_test_timeseries_query.json"),
-                        StandardCharsets.UTF_8
-                ).read()
-        );
+        this.getClass().getResourceAsStream("/" + "bd_test_data.csv"),
+        Resources.asCharSource(
+            getClass().getResource(
+                "/" + "bd_test_data_parser.json"),
+            StandardCharsets.UTF_8
+        ).read(),
+        Resources.asCharSource(
+            this.getClass().getResource("/" + "bd_max_test_aggregators.json"),
+            StandardCharsets.UTF_8
+        ).read(),
+        0,
+        Granularities.NONE,
+        5,
+        Resources.asCharSource(
+            this.getClass().getResource("/" + "bd_max_test_timeseries_query.json"),
+            StandardCharsets.UTF_8
+        ).read()
+    );
 
     TimeseriesResultValue result = ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getValue();
     Map<String, Object> event = result.getBaseObject();
-    assertEquals(new DateTime("2017-01-01T00:00:00Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"))),
-            ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getTimestamp());
+    assertEquals(
+        new DateTime("2017-01-01T00:00:00Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"))),
+        ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getTimestamp()
+    );
     assertThat(event, aMapWithSize(1));
-    assertThat(event, hasEntry("revenue", new BigDecimal("15000000010.000000005")));
+    assertThat(
+        event,
+        hasEntry("cbdStringRevenue", new ArrayCompressedBigDecimal(new BigDecimal("9999999999.000000000")))
+    );
   }
 
   /**
@@ -127,40 +134,56 @@ public class CompressedBigDecimalAggregatorTimeseriesTest
   {
     File segmentDir1 = tempFolder.newFolder();
     helper.createIndex(
-            new File(this.getClass().getResource("/" + "bd_test_data.csv").getFile()),
-            Resources.asCharSource(this.getClass().getResource("/" + "bd_test_data_parser.json"),
-                    StandardCharsets.UTF_8).read(),
-            Resources.asCharSource(this.getClass().getResource("/" + "bd_test_aggregators.json"),
-                    StandardCharsets.UTF_8).read(),
-            segmentDir1,
-            0,
-            Granularities.NONE,
-            5);
+        new File(this.getClass().getResource("/" + "bd_test_data.csv").getFile()),
+        Resources.asCharSource(
+            this.getClass().getResource("/" + "bd_test_data_parser.json"),
+            StandardCharsets.UTF_8
+        ).read(),
+        Resources.asCharSource(
+            this.getClass().getResource("/" + "bd_max_test_aggregators.json"),
+            StandardCharsets.UTF_8
+        ).read(),
+        segmentDir1,
+        0,
+        Granularities.NONE,
+        5
+    );
     File segmentDir2 = tempFolder.newFolder();
     helper.createIndex(
-            new File(this.getClass().getResource("/" + "bd_test_zero_data.csv").getFile()),
-            Resources.asCharSource(this.getClass().getResource("/" + "bd_test_data_parser.json"),
-                    StandardCharsets.UTF_8).read(),
-            Resources.asCharSource(this.getClass().getResource("/" + "bd_test_aggregators.json"),
-                    StandardCharsets.UTF_8).read(),
-            segmentDir2,
-            0,
-            Granularities.NONE,
-            5);
+        new File(this.getClass().getResource("/" + "bd_test_zero_data.csv").getFile()),
+        Resources.asCharSource(
+            this.getClass().getResource("/" + "bd_test_data_parser.json"),
+            StandardCharsets.UTF_8
+        ).read(),
+        Resources.asCharSource(
+            this.getClass().getResource("/" + "bd_max_test_aggregators.json"),
+            StandardCharsets.UTF_8
+        ).read(),
+        segmentDir2,
+        0,
+        Granularities.NONE,
+        5
+    );
 
     Sequence seq = helper.runQueryOnSegments(
-            Arrays.asList(segmentDir1, segmentDir2),
-            Resources.asCharSource(
-                    this.getClass().getResource("/" + "bd_test_timeseries_query.json"),
-                    StandardCharsets.UTF_8
-            ).read());
+        Arrays.asList(segmentDir1, segmentDir2),
+        Resources.asCharSource(
+            this.getClass().getResource("/" + "bd_max_test_timeseries_query.json"),
+            StandardCharsets.UTF_8
+        ).read()
+    );
 
     TimeseriesResultValue result = ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getValue();
     Map<String, Object> event = result.getBaseObject();
-    assertEquals(new DateTime("2017-01-01T00:00:00Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"))),
-            ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getTimestamp());
+    assertEquals(
+        new DateTime("2017-01-01T00:00:00Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"))),
+        ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getTimestamp()
+    );
     assertThat(event, aMapWithSize(1));
-    assertThat(event, hasEntry("revenue", new BigDecimal("15000000010.000000005")));
+    assertThat(
+        event,
+        hasEntry("cbdStringRevenue", new ArrayCompressedBigDecimal(new BigDecimal("9999999999.000000000")))
+    );
 
   }
 }

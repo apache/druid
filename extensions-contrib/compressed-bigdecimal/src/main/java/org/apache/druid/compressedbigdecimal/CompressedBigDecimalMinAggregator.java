@@ -23,14 +23,16 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
 /**
- * An Aggregator to aggregate big decimal values.
+ * An Aggregator to compute min bigDecimal values
  */
-public class CompressedBigDecimalAggregator implements Aggregator
+public class CompressedBigDecimalMinAggregator implements Aggregator
 {
 
   private final ColumnValueSelector<CompressedBigDecimal> selector;
   private final boolean strictNumberParsing;
-  private final CompressedBigDecimal sum;
+  private final CompressedBigDecimal min;
+
+  private boolean empty = true;
 
   /**
    * Constructor.
@@ -40,7 +42,7 @@ public class CompressedBigDecimalAggregator implements Aggregator
    * @param selector            that has the metric value
    * @param strictNumberParsing true => NumberFormatExceptions thrown; false => NumberFormatException returns 0
    */
-  public CompressedBigDecimalAggregator(
+  public CompressedBigDecimalMinAggregator(
       int size,
       int scale,
       ColumnValueSelector<CompressedBigDecimal> selector,
@@ -49,55 +51,42 @@ public class CompressedBigDecimalAggregator implements Aggregator
   {
     this.selector = selector;
     this.strictNumberParsing = strictNumberParsing;
-    this.sum = ArrayCompressedBigDecimal.allocate(size, scale);
+    min = ArrayCompressedBigDecimal.allocateMax(size, scale);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.Aggregator#aggregate()
-   */
   @Override
   public void aggregate()
   {
-    CompressedBigDecimal selectedObject = Utils.objToCompressedBigDecimal(selector.getObject(), strictNumberParsing);
+    CompressedBigDecimal selectedObject = Utils.objToCompressedBigDecimalWithScale(
+        selector.getObject(),
+        min.getScale(),
+        strictNumberParsing
+    );
 
     if (selectedObject != null) {
-      if (selectedObject.getScale() != sum.getScale()) {
-        selectedObject = Utils.scale(selectedObject, sum.getScale());
-      }
-      sum.accumulate(selectedObject);
+      empty = false;
+      min.accumulateMin(selectedObject);
     }
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.Aggregator#get()
-   */
   @Override
   public Object get()
   {
-    return sum;
+    return empty ? null : min;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.Aggregator#getFloat()
-   */
   @Override
   public float getFloat()
   {
-    throw new UnsupportedOperationException("CompressedBigDecimalAggregator does not support getFloat()");
+    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getFloat()");
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.Aggregator#getLong()
-   */
   @Override
   public long getLong()
   {
-    throw new UnsupportedOperationException("CompressedBigDecimalAggregator does not support getLong()");
+    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getLong()");
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.Aggregator#close()
-   */
   @Override
   public void close()
   {

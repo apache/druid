@@ -47,10 +47,10 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class CompressedBigDecimalSqlAggregator implements SqlAggregator
+public class CompressedBigDecimalMaxSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new CompressedBigDecimalSqlAggFunction();
-  private static final String NAME = "BIG_SUM";
+  private static final SqlAggFunction FUNCTION_INSTANCE = new CompressedBigDecimalMaxSqlAggFunction();
+  private static final String NAME = "BIG_MAX";
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -139,7 +139,7 @@ public class CompressedBigDecimalSqlAggregator implements SqlAggregator
     }
 
     // create the factory
-    AggregatorFactory aggregatorFactory = new CompressedBigDecimalAggregatorFactory(
+    AggregatorFactory aggregatorFactory = new CompressedBigDecimalMaxAggregatorFactory(
         StringUtils.format("%s:agg", name),
         sumColumnName,
         size,
@@ -150,22 +150,22 @@ public class CompressedBigDecimalSqlAggregator implements SqlAggregator
     return Aggregation.create(ImmutableList.of(aggregatorFactory), null);
   }
 
-  private static class CompressedBigDecimalSqlAggFunction extends SqlAggFunction
+  private static class CompressedBigDecimalMaxSqlAggFunction extends SqlAggFunction
   {
     private static final String SIGNATURE2 = "'" + NAME + "'(column, size)";
     private static final String SIGNATURE3 = "'" + NAME + "'(column, size, scale)";
     private static final String SIGNATURE4 = "'" + NAME + "'(column, size, scale, strictNumberParsing)";
 
-    CompressedBigDecimalSqlAggFunction()
+    CompressedBigDecimalMaxSqlAggFunction()
     {
       super(
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.OTHER),
+          ReturnTypes.explicit(SqlTypeName.VARCHAR),
           null,
           OperandTypes.or(
-              // first signature is the colum only, BIG_SUM(column)
+              // first signature is the colum only, BIG_MAX(column)
               OperandTypes.and(OperandTypes.ANY, OperandTypes.family(SqlTypeFamily.ANY)),
               OperandTypes.and(
                   OperandTypes.sequence(SIGNATURE2, OperandTypes.ANY, OperandTypes.POSITIVE_INTEGER_LITERAL),

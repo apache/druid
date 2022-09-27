@@ -57,7 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class CompressedBigDecimalSqlAggregatorTest extends BaseCalciteQueryTest
+public class CompressedBigDecimalSumSqlAggregatorTest extends BaseCalciteQueryTest
 {
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
@@ -120,7 +120,7 @@ public class CompressedBigDecimalSqlAggregatorTest extends BaseCalciteQueryTest
   @Override
   public DruidOperatorTable createOperatorTable()
   {
-    return new DruidOperatorTable(ImmutableSet.of(new CompressedBigDecimalSqlAggregator()), ImmutableSet.of());
+    return new DruidOperatorTable(ImmutableSet.of(new CompressedBigDecimalSumSqlAggregator()), ImmutableSet.of());
   }
 
   @Override
@@ -144,9 +144,9 @@ public class CompressedBigDecimalSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      new CompressedBigDecimalAggregatorFactory("a0:agg", "m1", 9, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a1:agg", "m2", 9, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a2:agg", "dim1", 9, 9, false)
+                      new CompressedBigDecimalSumAggregatorFactory("a0:agg", "m1", 9, 9, false),
+                      new CompressedBigDecimalSumAggregatorFactory("a1:agg", "m2", 9, 9, false),
+                      new CompressedBigDecimalSumAggregatorFactory("a2:agg", "dim1", 9, 9, false)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -160,7 +160,7 @@ public class CompressedBigDecimalSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test(expected = NumberFormatException.class)
-  public void testCompressedBigDecimalAggWithNumberParse2()
+  public void testCompressedBigDecimalAggWithStrictNumberParse()
   {
     cannotVectorize();
     testQuery(
@@ -171,12 +171,12 @@ public class CompressedBigDecimalSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      new CompressedBigDecimalAggregatorFactory("a0:agg", "dim1", 9, 9, true)
+                      new CompressedBigDecimalSumAggregatorFactory("a0:agg", "dim1", 9, 9, true)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(new Object[]{"13.100000000"})
+        ImmutableList.of(new Object[]{"unused"})
     );
   }
 
@@ -192,9 +192,9 @@ public class CompressedBigDecimalSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      new CompressedBigDecimalAggregatorFactory("a0:agg", "m1", 9, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a1:agg", "m2", 9, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a2:agg", "dim1", 9, 9, false)
+                      new CompressedBigDecimalSumAggregatorFactory("a0:agg", "m1", 9, 9, false),
+                      new CompressedBigDecimalSumAggregatorFactory("a1:agg", "m2", 9, 9, false),
+                      new CompressedBigDecimalSumAggregatorFactory("a2:agg", "dim1", 9, 9, false)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -219,9 +219,9 @@ public class CompressedBigDecimalSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      new CompressedBigDecimalAggregatorFactory("a0:agg", "m1", 9, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a1:agg", "m2", 9, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a2:agg", "dim1", 9, 9, false)
+                      new CompressedBigDecimalSumAggregatorFactory("a0:agg", "m1", 9, 9, false),
+                      new CompressedBigDecimalSumAggregatorFactory("a1:agg", "m2", 9, 9, false),
+                      new CompressedBigDecimalSumAggregatorFactory("a2:agg", "dim1", 9, 9, false)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -246,9 +246,9 @@ public class CompressedBigDecimalSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      new CompressedBigDecimalAggregatorFactory("a0:agg", "m1", 6, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a1:agg", "m2", 6, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a2:agg", "dim1", 6, 9, false)
+                      new CompressedBigDecimalSumAggregatorFactory("a0:agg", "m1", 6, 9, false),
+                      new CompressedBigDecimalSumAggregatorFactory("a1:agg", "m2", 6, 9, false),
+                      new CompressedBigDecimalSumAggregatorFactory("a2:agg", "dim1", 6, 9, false)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()

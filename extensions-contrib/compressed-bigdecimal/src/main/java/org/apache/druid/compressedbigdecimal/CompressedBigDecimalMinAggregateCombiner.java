@@ -26,11 +26,11 @@ import org.apache.druid.segment.ColumnValueSelector;
 import javax.annotation.Nullable;
 
 /**
- * AggregateCombiner for CompressedBigDecimals.
+ * AggregateCombiner for CompressedBigDecimals computing a min
  */
-public class CompressedBigDecimalAggregateCombiner implements AggregateCombiner<CompressedBigDecimal>
+public class CompressedBigDecimalMinAggregateCombiner implements AggregateCombiner<CompressedBigDecimal>
 {
-  private CompressedBigDecimal sum;
+  private CompressedBigDecimal min;
 
   @Override
   public void reset(@SuppressWarnings("rawtypes") ColumnValueSelector columnValueSelector)
@@ -40,11 +40,10 @@ public class CompressedBigDecimalAggregateCombiner implements AggregateCombiner<
         (ColumnValueSelector<CompressedBigDecimal>) columnValueSelector;
 
     CompressedBigDecimal cbd = selector.getObject();
-    if (sum == null) {
-      sum = new ArrayCompressedBigDecimal(cbd);
+    if (min == null) {
+      min = new ArrayCompressedBigDecimal(cbd);
     } else {
-      sum.reset();
-      sum.accumulate(cbd);
+      min.setValue(cbd);
     }
   }
 
@@ -54,41 +53,38 @@ public class CompressedBigDecimalAggregateCombiner implements AggregateCombiner<
     @SuppressWarnings("unchecked")
     ColumnValueSelector<CompressedBigDecimal> selector =
         (ColumnValueSelector<CompressedBigDecimal>) columnValueSelector;
-
     CompressedBigDecimal cbd = selector.getObject();
 
-    if (sum == null) {
-      sum = new ArrayCompressedBigDecimal(cbd);
+    if (min == null) {
+      min = new ArrayCompressedBigDecimal(cbd);
     } else {
-      if (cbd.signum() != 0) {
-        sum.accumulate(cbd);
-      }
+      min.accumulateMin(cbd);
     }
   }
 
   @Override
   public double getDouble()
   {
-    throw new UnsupportedOperationException("CompressedBigDecimalCombiner does not support getDouble()");
+    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getDouble()");
   }
 
   @Override
   public float getFloat()
   {
-    throw new UnsupportedOperationException("CompressedBigDecimalCombiner does not support getFloat()");
+    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getFloat()");
   }
 
   @Override
   public long getLong()
   {
-    throw new UnsupportedOperationException("CompressedBigDecimalCombiner does not support getLong()");
+    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getLong()");
   }
 
   @Nullable
   @Override
   public CompressedBigDecimal getObject()
   {
-    return sum;
+    return min;
   }
 
   @Override

@@ -30,11 +30,10 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
@@ -42,17 +41,18 @@ import java.util.List;
 
 
 /**
- * An aggregator factory to generate longSum aggregator object.
+ * An aggregator factory to generate min of BigDecimal aggregator object.
  */
-public class CompressedBigDecimalAggregatorFactory
+public class CompressedBigDecimalMinAggregatorFactory
     extends NullableNumericAggregatorFactory<ColumnValueSelector<CompressedBigDecimal>>
 {
 
   public static final int DEFAULT_SCALE = 9;
   public static final int DEFAULT_SIZE = 6;
   public static final boolean DEFAULT_STRICT_NUMBER_PARSING = false;
+  public static final int BUFFER_AGGREGATOR_HEADER_SIZE_BYTES = 1;
 
-  private static final byte CACHE_TYPE_ID = 0x37;
+  private static final byte CACHE_TYPE_ID = 0x39;
 
   public static final Comparator<CompressedBigDecimal> COMPARATOR = CompressedBigDecimal::compareTo;
 
@@ -61,6 +61,8 @@ public class CompressedBigDecimalAggregatorFactory
   private final int size;
   private final int scale;
   private final boolean strictNumberParsing;
+  private final byte[] cacheKey;
+  private ArrayCompressedBigDecimal zeroCompressedBigDecimal;
 
   /**
    * Constructor.
@@ -73,7 +75,7 @@ public class CompressedBigDecimalAggregatorFactory
    *                            returned
    */
   @JsonCreator
-  public CompressedBigDecimalAggregatorFactory(
+  public CompressedBigDecimalMinAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
       @JsonProperty(value = "size", required = false) Integer size,
@@ -86,6 +88,14 @@ public class CompressedBigDecimalAggregatorFactory
     this.size = size == null ? DEFAULT_SIZE : size;
     this.scale = scale == null ? DEFAULT_SCALE : scale;
     this.strictNumberParsing = strictNumberParsing == null ? DEFAULT_STRICT_NUMBER_PARSING : strictNumberParsing;
+
+    cacheKey = ByteBuffer.allocate(1 + StringUtils.toUtf8(fieldName).length + 2 * Integer.BYTES + 1)
+                         .put(CACHE_TYPE_ID)
+                         .put(StringUtils.toUtf8(fieldName))
+                         .putInt(this.size)
+                         .putInt(this.scale)
+                         .put((byte) (this.strictNumberParsing ? 1 : 0))
+                         .array();
   }
 
   @SuppressWarnings("unchecked")
@@ -101,7 +111,7 @@ public class CompressedBigDecimalAggregatorFactory
       @Nonnull ColumnValueSelector<CompressedBigDecimal> selector
   )
   {
-    return new CompressedBigDecimalAggregator(size, scale, selector, strictNumberParsing);
+    return new CompressedBigDecimalMinAggregator(size, scale, selector, strictNumberParsing);
   }
 
   @Override
@@ -110,27 +120,21 @@ public class CompressedBigDecimalAggregatorFactory
       @Nonnull ColumnValueSelector<CompressedBigDecimal> selector
   )
   {
-    return new CompressedBigDecimalBufferAggregator(size, scale, selector, strictNumberParsing);
+    return new CompressedBigDecimalMinBufferAggregator(size, scale, selector, strictNumberParsing);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.AggregatorFactory#getComparator()
-   */
   @Override
   public Comparator<CompressedBigDecimal> getComparator()
   {
     return COMPARATOR;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.AggregatorFactory#combine(java.lang.Object, java.lang.Object)
-   */
   @Nullable
   @Override
   public Object combine(Object lhs, Object rhs)
   {
     if (lhs == null && rhs == null) {
-      return ArrayCompressedBigDecimal.allocate(size, scale);
+      return null;
     } else if (lhs == null) {
       return rhs;
     } else if (rhs == null) {
@@ -141,42 +145,34 @@ public class CompressedBigDecimalAggregatorFactory
       // due to truncation when the deserialized objects aren't big enough to hold the accumlated result.
       // The most common case this avoids is deserializing 0E-9 into a CompressedBigDecimal with array
       // size 1 and then accumulating a larger value into it.
-      CompressedBigDecimal retVal = ArrayCompressedBigDecimal.allocate(size, scale);
+      CompressedBigDecimal retVal = ArrayCompressedBigDecimal.allocateMax(size, scale);
       CompressedBigDecimal left = (CompressedBigDecimal) lhs;
       CompressedBigDecimal right = (CompressedBigDecimal) rhs;
-      if (left.signum() != 0) {
-        retVal.accumulate(left);
-      }
-      if (right.signum() != 0) {
-        retVal.accumulate(right);
-      }
+
+      retVal.accumulateMin(left);
+      retVal.accumulateMin(right);
+
       return retVal;
     }
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.AggregatorFactory#getCombiningFactory()
-   */
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new CompressedBigDecimalAggregatorFactory(name, name, size, scale, strictNumberParsing);
+    return new CompressedBigDecimalMinAggregatorFactory(name, name, size, scale, strictNumberParsing);
   }
 
   @Override
   public AggregateCombiner<CompressedBigDecimal> makeAggregateCombiner()
   {
-    return new CompressedBigDecimalAggregateCombiner();
+    return new CompressedBigDecimalMinAggregateCombiner();
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.AggregatorFactory#getRequiredColumns()
-   */
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new CompressedBigDecimalAggregatorFactory(
-        fieldName,
+    return Collections.singletonList(new CompressedBigDecimalMinAggregatorFactory(
+        name,
         fieldName,
         size,
         scale,
@@ -184,75 +180,37 @@ public class CompressedBigDecimalAggregatorFactory
     ));
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.AggregatorFactory#deserialize(java.lang.Object)
-   */
   @Nullable
   @Override
   public Object deserialize(Object object)
   {
-    if (object == null) {
-      return null;
-    } else if (object instanceof BigDecimal) {
-      return new ArrayCompressedBigDecimal((BigDecimal) object);
-    } else if (object instanceof Double) {
-      return new ArrayCompressedBigDecimal(new BigDecimal((Double) object));
-    } else if (object instanceof String) {
-      return new ArrayCompressedBigDecimal(new BigDecimal((String) object));
-    } else {
-      throw new RuntimeException("unknown type in deserialize: " + object.getClass().getSimpleName());
-    }
+    return Utils.objToCompressedBigDecimal(object);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.AggregatorFactory#requiredFields()
-   */
   @Override
   public List<String> requiredFields()
   {
     return Collections.singletonList(fieldName);
   }
 
-  /* (non-Javadoc) Get Type */
   @Override
-  public ValueType getType()
+  public ColumnType getIntermediateType()
   {
-    return ValueType.COMPLEX;
+    return ColumnType.ofComplex(CompressedBigDecimalModule.COMPRESSED_BIG_DECIMAL);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.AggregatorFactory#getTypeName()
-   */
-  @Override
-  public String getComplexTypeName()
-  {
-    return CompressedBigDecimalModule.COMPRESSED_BIG_DECIMAL;
-  }
-
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.AggregatorFactory#getCacheKey()
-   */
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-    return ByteBuffer.allocate(1 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).array();
+    return cacheKey;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.AggregatorFactory#finalizeComputation(java.lang.Object)
-   */
   @Override
   public Object finalizeComputation(Object object)
   {
-    CompressedBigDecimal compressedBigDecimal = (CompressedBigDecimal) object;
-    BigDecimal bigDecimal = compressedBigDecimal.toBigDecimal();
-    return bigDecimal.compareTo(BigDecimal.ZERO) == 0 ? 0 : bigDecimal;
+    return object;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.AggregatorFactory#getName()
-   */
   @Override
   @JsonProperty
   public String getName()
@@ -289,13 +247,10 @@ public class CompressedBigDecimalAggregatorFactory
     return strictNumberParsing;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.AggregatorFactory#getMaxIntermediateSize()
-   */
   @Override
   public int getMaxIntermediateSize()
   {
-    return Integer.BYTES * size;
+    return BUFFER_AGGREGATOR_HEADER_SIZE_BYTES + Integer.BYTES * size;
   }
 
   @Override
@@ -307,7 +262,7 @@ public class CompressedBigDecimalAggregatorFactory
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    CompressedBigDecimalAggregatorFactory that = (CompressedBigDecimalAggregatorFactory) o;
+    CompressedBigDecimalMinAggregatorFactory that = (CompressedBigDecimalMinAggregatorFactory) o;
     return size == that.size
            && scale == that.scale
            && Objects.equal(name, that.name)
@@ -324,9 +279,9 @@ public class CompressedBigDecimalAggregatorFactory
   @Override
   public String toString()
   {
-    return "CompressedBigDecimalSumAggregatorFactory{" +
+    return "CompressedBigDecimalMinAggregatorFactory{" +
            "name='" + getName() + '\'' +
-           ", type='" + getComplexTypeName() + '\'' +
+           ", type='" + getIntermediateType().asTypeString() + '\'' +
            ", fieldName='" + getFieldName() + '\'' +
            ", requiredFields='" + requiredFields() + '\'' +
            ", size='" + getSize() + '\'' +

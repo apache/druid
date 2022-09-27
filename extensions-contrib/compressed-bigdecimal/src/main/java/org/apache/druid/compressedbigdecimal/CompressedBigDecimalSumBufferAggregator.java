@@ -27,7 +27,7 @@ import java.nio.ByteBuffer;
 /**
  * A buffered aggregator to aggregate big decimal value.
  */
-public class CompressedBigDecimalBufferAggregator implements BufferAggregator
+public class CompressedBigDecimalSumBufferAggregator implements BufferAggregator
 {
 
   //Cache will hold the aggregated value.
@@ -35,7 +35,7 @@ public class CompressedBigDecimalBufferAggregator implements BufferAggregator
   private final ColumnValueSelector<CompressedBigDecimal> selector;
   private final int size;
   private final int scale;
-  private boolean strictNumberParsing;
+  private final boolean strictNumberParsing;
 
   /**
    * Constructor.
@@ -44,8 +44,8 @@ public class CompressedBigDecimalBufferAggregator implements BufferAggregator
    * @param scale               the scale
    * @param selector            a ColumnSelector to retrieve incoming values
    * @param strictNumberParsing true => NumberFormatExceptions thrown; false => NumberFormatException returns 0
-   * */
-  public CompressedBigDecimalBufferAggregator(
+   */
+  public CompressedBigDecimalSumBufferAggregator(
       int size,
       int scale,
       ColumnValueSelector<CompressedBigDecimal> selector,
@@ -58,32 +58,28 @@ public class CompressedBigDecimalBufferAggregator implements BufferAggregator
     this.strictNumberParsing = strictNumberParsing;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.BufferAggregator#init(java.nio.ByteBuffer, int)
-   */
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    for (int ii = 0; ii < size; ++ii) {
-      buf.putInt(position + (ii * Integer.BYTES), 0);
-    }
+    ByteBufferCompressedBigDecimal.initZero(buf, position, size);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.BufferAggregator#aggregate(java.nio.ByteBuffer, int)
-   */
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    CompressedBigDecimal addend = Utils.objToCompressedBigDecimal(selector.getObject(), strictNumberParsing);
+    CompressedBigDecimal addend = Utils.objToCompressedBigDecimalWithScale(
+        selector.getObject(),
+        scale,
+        strictNumberParsing
+    );
+
     if (addend != null) {
-      Utils.accumulate(buf, position, size, scale, addend);
+      CompressedBigDecimal existing = new ByteBufferCompressedBigDecimal(buf, position, size, scale);
+
+      existing.accumulateSum(addend);
     }
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.BufferAggregator#get(java.nio.ByteBuffer, int)
-   */
   @Override
   public Object get(ByteBuffer buf, int position)
   {
@@ -99,27 +95,18 @@ public class CompressedBigDecimalBufferAggregator implements BufferAggregator
     return heapCompressedBigDecimal;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.BufferAggregator#getFloat(java.nio.ByteBuffer, int)
-   */
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    throw new UnsupportedOperationException("CompressedBigDecimalBufferAggregator does not support getFloat()");
+    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getFloat()");
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.BufferAggregator#getLong(java.nio.ByteBuffer, int)
-   */
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    throw new UnsupportedOperationException("CompressedBigDecimalBufferAggregator does not support getLong()");
+    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getLong()");
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.druid.query.aggregation.BufferAggregator#close()
-   */
   @Override
   public void close()
   {

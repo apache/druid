@@ -54,10 +54,10 @@ import java.util.TimeZone;
 
 
 /**
- * Unit tests for AccumulatingDecimalAggregator.
+ * Unit tests for {@link CompressedBigDecimalMaxAggregatorFactory}.
  */
 @RunWith(Parameterized.class)
-public class CompressedBigDecimalAggregatorGroupByTest
+public class CompressedBigDecimalMaxAggregatorGroupByTest
 {
   private final AggregationTestHelper helper;
 
@@ -69,7 +69,7 @@ public class CompressedBigDecimalAggregatorGroupByTest
    *
    * @param config config object
    */
-  public CompressedBigDecimalAggregatorGroupByTest(GroupByQueryConfig config)
+  public CompressedBigDecimalMaxAggregatorGroupByTest(GroupByQueryConfig config)
   {
     CompressedBigDecimalModule module = new CompressedBigDecimalModule();
     CompressedBigDecimalModule.registerSerde();
@@ -112,7 +112,7 @@ public class CompressedBigDecimalAggregatorGroupByTest
   {
 
     String groupByQueryJson = Resources.asCharSource(
-        this.getClass().getResource("/" + "bd_test_groupby_query.json"),
+        this.getClass().getResource("/" + "bd_max_test_groupby_query.json"),
         StandardCharsets.UTF_8
     ).read();
 
@@ -124,7 +124,7 @@ public class CompressedBigDecimalAggregatorGroupByTest
             StandardCharsets.UTF_8
         ).read(),
         Resources.asCharSource(
-            this.getClass().getResource("/" + "bd_test_aggregators.json"),
+            this.getClass().getResource("/" + "bd_max_test_aggregators.json"),
             StandardCharsets.UTF_8
         ).read(),
         0,
@@ -147,17 +147,26 @@ public class CompressedBigDecimalAggregatorGroupByTest
     Assert.assertThat(event, IsMapWithSize.aMapWithSize(3));
     Assert.assertThat(
         event,
-        IsMapContaining.hasEntry("cbdRevenueFromString", new BigDecimal("15000000010.000000005"))
+        IsMapContaining.hasEntry(
+            "cbdRevenueFromString",
+            new ArrayCompressedBigDecimal(new BigDecimal("9999999999.000000000"))
+        )
     );
     // long conversion of 5000000000.000000005 results in null/0 value
     Assert.assertThat(
         event,
-        IsMapContaining.hasEntry("cbdRevenueFromLong", new BigDecimal("10000000010.000000000"))
+        IsMapContaining.hasEntry(
+            "cbdRevenueFromLong",
+            new ArrayCompressedBigDecimal(new BigDecimal("9999999999.000000000"))
+        )
     );
     // double input changes 5000000000.000000005 to 5000000000.5 to fit in double mantissa space
     Assert.assertThat(
         event,
-        IsMapContaining.hasEntry("cbdRevenueFromDouble", new BigDecimal("15000000010.500000000"))
+        IsMapContaining.hasEntry(
+            "cbdRevenueFromDouble",
+            new ArrayCompressedBigDecimal(new BigDecimal("9999999999.000000000"))
+        )
     );
   }
 }
