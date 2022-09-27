@@ -271,12 +271,16 @@ public class KafkaSupervisorTest extends EasyMockSupport
     autoScalerConfig.put("scaleInThreshold", 1000000);
     autoScalerConfig.put("triggerScaleInFractionThreshold", 0.8);
     autoScalerConfig.put("scaleActionStartDelayMillis", 0);
-    autoScalerConfig.put("scaleActionPeriodMillis", 100);
+    autoScalerConfig.put("scaleActionPeriodMillis", 600);
     autoScalerConfig.put("taskCountMax", 2);
     autoScalerConfig.put("taskCountMin", 1);
     autoScalerConfig.put("scaleInStep", 1);
     autoScalerConfig.put("scaleOutStep", 2);
     autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
+    autoScalerConfig.put("minPauseSupervisorIfStreamIdleMillis", 1000);
+
+    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
+    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
 
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("myCustomKey", "myCustomValue");
@@ -349,7 +353,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
-            new SupervisorStateManagerConfig()
+            OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class)
     );
 
     supervisor = new TestableKafkaSupervisor(
@@ -387,11 +391,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(1, taskCountBeforeScale);
     autoscaler.start();
     supervisor.runInternal();
-    Thread.sleep(1 * 1000);
+    Thread.sleep(1200);
     verifyAll();
 
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScale);
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getStateManager().getSupervisorState());
 
 
     KafkaIndexTask task = captured.getValue();

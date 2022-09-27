@@ -356,10 +356,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   @Override
   protected LagStats computeLagStatsForOffsets(Map<String, String> offsets)
   {
-    if (isIdle()) {
-      return computeLags(getPartitionTimeLagForOffsets(offsets));
-    }
-    return computeLagStats();
+    return computeLags(getPartitionTimeLagForOffsets(offsets));
   }
 
   @Override

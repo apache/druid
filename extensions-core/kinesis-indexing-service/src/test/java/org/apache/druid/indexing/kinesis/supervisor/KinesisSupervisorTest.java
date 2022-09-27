@@ -301,12 +301,17 @@ public class KinesisSupervisorTest extends EasyMockSupport
     autoScalerConfigMap.put("scaleInThreshold", 1000000);
     autoScalerConfigMap.put("triggerScaleInFractionThreshold", 0.8);
     autoScalerConfigMap.put("scaleActionStartDelayMillis", 0);
-    autoScalerConfigMap.put("scaleActionPeriodMillis", 100);
+    autoScalerConfigMap.put("scaleActionPeriodMillis", 600);
     autoScalerConfigMap.put("taskCountMax", 2);
     autoScalerConfigMap.put("taskCountMin", 1);
     autoScalerConfigMap.put("scaleInStep", 1);
     autoScalerConfigMap.put("scaleOutStep", 2);
     autoScalerConfigMap.put("minTriggerScaleActionFrequencyMillis", 1200000);
+    autoScalerConfigMap.put("minPauseSupervisorIfStreamIdleMillis", 1000);
+
+    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
+    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
+    supervisorConfig = OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class);
 
     AutoScalerConfig autoScalerConfig = OBJECT_MAPPER.convertValue(autoScalerConfigMap, AutoScalerConfig.class);
     supervisor = getTestableSupervisor(
@@ -358,9 +363,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisor.runInternal();
     verifyAll();
-    Thread.sleep(1 * 1000);
+    Thread.sleep(1200);
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScale);
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getStateManager().getSupervisorState());
   }
 
   @Test
@@ -375,12 +381,17 @@ public class KinesisSupervisorTest extends EasyMockSupport
     autoScalerConfigMap.put("scaleInThreshold", 0);
     autoScalerConfigMap.put("triggerScaleInFractionThreshold", 0.0);
     autoScalerConfigMap.put("scaleActionStartDelayMillis", 0);
-    autoScalerConfigMap.put("scaleActionPeriodMillis", 100);
+    autoScalerConfigMap.put("scaleActionPeriodMillis", 600);
     autoScalerConfigMap.put("taskCountMax", 2);
     autoScalerConfigMap.put("taskCountMin", 1);
     autoScalerConfigMap.put("scaleInStep", 1);
     autoScalerConfigMap.put("scaleOutStep", 2);
     autoScalerConfigMap.put("minTriggerScaleActionFrequencyMillis", 1200000);
+    autoScalerConfigMap.put("minPauseSupervisorIfStreamIdleMillis", 1000);
+
+    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
+    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
+    supervisorConfig = OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class);
 
     AutoScalerConfig autoScalerConfig = OBJECT_MAPPER.convertValue(autoScalerConfigMap, AutoScalerConfig.class);
     supervisor = getTestableSupervisor(
@@ -436,9 +447,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisor.runInternal();
     verifyAll();
-    Thread.sleep(1 * 1000);
+    Thread.sleep(1200);
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountAfterScale);
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getStateManager().getSupervisorState());
   }
 
   @Test

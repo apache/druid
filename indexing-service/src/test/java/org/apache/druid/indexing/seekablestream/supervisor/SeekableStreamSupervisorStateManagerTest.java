@@ -36,6 +36,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -49,9 +50,12 @@ public class SeekableStreamSupervisorStateManagerTest
   @Before
   public void setupTest()
   {
-    config = new SupervisorStateManagerConfig(10);
-    stateManager = new SeekableStreamSupervisorStateManager(config, false);
     defaultMapper = new DefaultObjectMapper();
+    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
+    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
+    supervisorStateManagerConfig.put("maxStoredExceptionEvents", 10);
+    config = defaultMapper.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class);
+    stateManager = new SeekableStreamSupervisorStateManager(config, false);
   }
 
   @Test
@@ -94,6 +98,48 @@ public class SeekableStreamSupervisorStateManagerTest
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
 
     stateManager.markRunFinished();
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
+  }
+
+  @Test
+  public void testIdlePath()
+  {
+    Assert.assertEquals(BasicState.PENDING, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.PENDING, stateManager.getSupervisorState().getBasicState());
+
+    stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CONNECTING_TO_STREAM);
+    Assert.assertEquals(SeekableStreamState.CONNECTING_TO_STREAM, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
+
+    stateManager.maybeSetState(SeekableStreamState.DISCOVERING_INITIAL_TASKS);
+    Assert.assertEquals(SeekableStreamState.DISCOVERING_INITIAL_TASKS, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
+
+    stateManager.maybeSetState(SeekableStreamState.CREATING_TASKS);
+    Assert.assertEquals(SeekableStreamState.CREATING_TASKS, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
+
+    // Refuse to switch to IDLE state if there is not atleast one successful run
+    stateManager.maybeSetState(BasicState.IDLE);
+    Assert.assertEquals(SeekableStreamState.CREATING_TASKS, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
+
+    stateManager.markRunFinished();
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
+
+    // Emulates submitting Idle notice
+    stateManager.maybeSetState(BasicState.IDLE);
+    Assert.assertEquals(BasicState.IDLE, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.IDLE, stateManager.getSupervisorState().getBasicState());
+
+    // Stay in idle state when supervisor is running until or unless it is specifically set to a different state
+    stateManager.markRunFinished();
+    Assert.assertEquals(BasicState.IDLE, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.IDLE, stateManager.getSupervisorState().getBasicState());
+
+    stateManager.maybeSetState(BasicState.RUNNING);
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
   }
