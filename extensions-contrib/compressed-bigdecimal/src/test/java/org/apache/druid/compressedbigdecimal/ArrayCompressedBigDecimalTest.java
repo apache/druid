@@ -166,10 +166,10 @@ public class ArrayCompressedBigDecimalTest
         CompressedBigDecimalAggregatorFactory.DEFAULT_SCALE
     );
 
-    d1.accumulate(Utils.scaleUp(new ArrayCompressedBigDecimal(new BigDecimal(Integer.MAX_VALUE)), d1.getScale()));
-    d2.accumulate(Utils.scaleUp(new ArrayCompressedBigDecimal(new BigDecimal(-2L * Integer.MAX_VALUE)), d2.getScale()));
-    d3.accumulate(Utils.scaleUp(new ArrayCompressedBigDecimal(new BigDecimal(8L * Integer.MAX_VALUE)), d3.getScale()));
-    d4.accumulate(Utils.scaleUp(new ArrayCompressedBigDecimal(new BigDecimal(8L * Integer.MAX_VALUE)), d4.getScale()));
+    d1.accumulate(Utils.scale(new ArrayCompressedBigDecimal(new BigDecimal(Integer.MAX_VALUE)), d1.getScale()));
+    d2.accumulate(Utils.scale(new ArrayCompressedBigDecimal(new BigDecimal(-2L * Integer.MAX_VALUE)), d2.getScale()));
+    d3.accumulate(Utils.scale(new ArrayCompressedBigDecimal(new BigDecimal(8L * Integer.MAX_VALUE)), d3.getScale()));
+    d4.accumulate(Utils.scale(new ArrayCompressedBigDecimal(new BigDecimal(8L * Integer.MAX_VALUE)), d4.getScale()));
 
     Assert.assertEquals(-1, d2.compareTo(d1, true));
     Assert.assertEquals(1, d1.compareTo(d2, true));
@@ -227,10 +227,10 @@ public class ArrayCompressedBigDecimalTest
         CompressedBigDecimalAggregatorFactory.DEFAULT_SCALE
     );
 
-    d1.accumulate(Utils.scaleUp(new ArrayCompressedBigDecimal(new BigDecimal(Integer.MAX_VALUE)), d1.getScale()));
-    d2.accumulate(Utils.scaleUp(new ArrayCompressedBigDecimal(new BigDecimal(-8L * Integer.MAX_VALUE)), d2.getScale()));
-    d3.accumulate(Utils.scaleUp(new ArrayCompressedBigDecimal(new BigDecimal(8L * Integer.MAX_VALUE)), d3.getScale()));
-    d4.accumulate(Utils.scaleUp(new ArrayCompressedBigDecimal(new BigDecimal(8L * Integer.MAX_VALUE)), d4.getScale()));
+    d1.accumulate(Utils.scale(new ArrayCompressedBigDecimal(new BigDecimal(Integer.MAX_VALUE)), d1.getScale()));
+    d2.accumulate(Utils.scale(new ArrayCompressedBigDecimal(new BigDecimal(-8L * Integer.MAX_VALUE)), d2.getScale()));
+    d3.accumulate(Utils.scale(new ArrayCompressedBigDecimal(new BigDecimal(8L * Integer.MAX_VALUE)), d3.getScale()));
+    d4.accumulate(Utils.scale(new ArrayCompressedBigDecimal(new BigDecimal(8L * Integer.MAX_VALUE)), d4.getScale()));
 
     Assert.assertEquals(-1, d2.compareTo(d1, true));
     Assert.assertEquals(1, d1.compareTo(d2, true));
@@ -558,6 +558,14 @@ public class ArrayCompressedBigDecimalTest
 
     CompressedBigDecimalObjectStrategy c1 = new CompressedBigDecimalObjectStrategy();
     c1.compare(bd, add);
+  }
+
+  @Test
+  public void testScaleDown()
+  {
+    CompressedBigDecimal bd = new ArrayCompressedBigDecimal(new BigDecimal("1.1234567890"));
+    CompressedBigDecimal scaled = Utils.scale(bd, 9);
+    Assert.assertEquals("1.123456789", scaled.toString());
   }
 
   /**

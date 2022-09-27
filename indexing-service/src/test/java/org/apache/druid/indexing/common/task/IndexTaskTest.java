@@ -1599,7 +1599,7 @@ public class IndexTaskTest extends IngestionTestBase
           tmpDir,
           timestampSpec,
           dimensionsSpec,
-          new JsonInputFormat(null, null, null),
+          new JsonInputFormat(null, null, null, null, null),
           null,
           null,
           tuningConfig,
