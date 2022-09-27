@@ -252,6 +252,9 @@ Worker tasks use both JVM heap memory and off-heap ("direct") memory.
 On Peons launched by Middle Managers, the bulk of the JVM heap (75%) is split up into two bundles of equal size: one
 processor bundle and one worker bundle. Each one comprises 37.5% of the available JVM heap.
 
+Depending on the type of query, each worker and controller task can use a sketch for generating partition boundaries.
+Each sketch uses at most approximately 300MB.
+
 The processor memory bundle is used for query processing and segment generation. Each processor bundle must also
 provides space to buffer I/O between stages. Specifically, each downstream stage requires 1 MB of buffer space for each
 upstream worker. For example, if you have 100 workers running in stage 0, and stage 1 reads from stage 0, then each
