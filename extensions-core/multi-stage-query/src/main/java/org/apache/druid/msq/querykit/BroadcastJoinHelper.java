@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.querykit;
 
-import com.google.common.annotations.VisibleForTesting;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
@@ -32,17 +31,12 @@ import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.Query;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class BroadcastJoinHelper
@@ -137,16 +131,9 @@ public class BroadcastJoinHelper
     return sideChannelNumbers;
   }
 
-  public Function<SegmentReference, SegmentReference> makeSegmentMapFn(final Query<?> query)
-  {
-    final DataSource dataSourceWithInlinedChannelData = inlineChannelData(query.getDataSource());
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(dataSourceWithInlinedChannelData);
 
-    return analysis.getDataSource().createSegmentMapFunction(query, new AtomicLong());
-  }
 
-  @VisibleForTesting
-  DataSource inlineChannelData(final DataSource originalDataSource)
+  public DataSource inlineChannelData(final DataSource originalDataSource)
   {
     if (originalDataSource instanceof InputNumberDataSource) {
       final int inputNumber = ((InputNumberDataSource) originalDataSource).getInputNumber();

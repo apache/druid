@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
@@ -38,11 +39,17 @@ import java.util.function.Function;
 public class InputNumberDataSource implements DataSource
 {
   private final int inputNumber;
+  private BroadcastJoinHelper broadcastJoinHelper;
 
   @JsonCreator
   public InputNumberDataSource(@JsonProperty("inputNumber") int inputNumber)
   {
     this.inputNumber = inputNumber;
+  }
+
+  public void setBroadcastJoinHelper(BroadcastJoinHelper broadcastJoinHelper)
+  {
+    this.broadcastJoinHelper = broadcastJoinHelper;
   }
 
   @Override
@@ -91,7 +98,9 @@ public class InputNumberDataSource implements DataSource
       AtomicLong cpuTime
   )
   {
-    return Function.identity();
+    final DataSource dataSourceWithInlinedChannelData = broadcastJoinHelper.inlineChannelData(query.getDataSource());
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(dataSourceWithInlinedChannelData);
+    return analysis.getDataSource().createSegmentMapFunction(query, new AtomicLong());
   }
 
   @JsonProperty

@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
@@ -152,13 +153,23 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
       segmentMapFn = Function.identity();
       return true;
     } else {
-      final boolean retVal = broadcastJoinHelper.buildBroadcastTablesIncrementally(readableInputs);
-
-      if (retVal) {
-        segmentMapFn = broadcastJoinHelper.makeSegmentMapFn(query);
+      if (query.getDataSource() instanceof InputNumberDataSource) {
+        final boolean retVal = broadcastJoinHelper.buildBroadcastTablesIncrementally(readableInputs);
+        if (retVal) {
+          InputNumberDataSource inputNumberDataSource = (InputNumberDataSource) query.getDataSource();
+          // The InputNumberData source was going through the broadcastJoinHelper which
+          // was using the JoinableFactoryWrapper to create segment map function.
+          // After refactoring, the segment map function creation is moved to data source
+          // Hence for InputNumberDataSource we are setting the broadcast join helper for the data source
+          // and moving the segment map function creation there
+          inputNumberDataSource.setBroadcastJoinHelper(broadcastJoinHelper);
+          segmentMapFn = inputNumberDataSource.createSegmentMapFunction(query, new AtomicLong());
+        }
+        return retVal;
+      } else {
+        segmentMapFn = Function.identity();
+        return true;
       }
-
-      return retVal;
     }
   }
 
