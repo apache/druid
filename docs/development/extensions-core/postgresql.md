@@ -69,7 +69,7 @@ To use this Apache Druid extension, [include](../../development/extensions.md#lo
 
 ## Configuration
 
-In most cases, the configuration options map directly to the [postgres JDBC connection options](https://jdbc.postgresql.org/documentation/head/connect.html).
+In most cases, the configuration options map directly to the [postgres JDBC connection options](https://jdbc.postgresql.org/documentation/use/#connecting-to-the-database).
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|

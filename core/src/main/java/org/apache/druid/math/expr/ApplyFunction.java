@@ -19,13 +19,10 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
@@ -43,13 +40,8 @@ import java.util.stream.Stream;
  * Base interface describing the mechanism used to evaluate an {@link ApplyFunctionExpr}, which 'applies' a
  * {@link LambdaExpr} to one or more array {@link Expr}.  All {@link ApplyFunction} implementations are immutable.
  */
-public interface ApplyFunction
+public interface ApplyFunction extends NamedFunction
 {
-  /**
-   * Name of the function
-   */
-  String name();
-
   /**
    * Check if an apply function can be 'vectorized', for a given {@link LambdaExpr} and set of {@link Expr} inputs.
    * If this method returns true, {@link #asVectorProcessor} is expected to produce a {@link ExprVectorProcessor} which
@@ -101,7 +93,9 @@ public interface ApplyFunction
   }
 
   /**
-   * Validate apply function arguments, throwing an exception if incorrect
+   * Validate function arguments. This method is called whenever a {@link ApplyFunctionExpr} is created, and should
+   * validate everything that is feasible up front. Note that input type information is typically unavailable at the
+   * time {@link Expr} are parsed, and so this method is incapable of performing complete validation.
    */
   void validateArguments(LambdaExpr lambdaExpr, List<Expr> args);
 
@@ -194,13 +188,8 @@ public interface ApplyFunction
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      Preconditions.checkArgument(args.size() == 1);
-      if (lambdaExpr.identifierCount() > 0) {
-        Preconditions.checkArgument(
-            args.size() == lambdaExpr.identifierCount(),
-            StringUtils.format("lambda expression argument count does not match %s argument count", name())
-        );
-      }
+      validationHelperCheckArgumentCount(lambdaExpr, args, 1);
+
     }
   }
 
@@ -260,13 +249,7 @@ public interface ApplyFunction
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      Preconditions.checkArgument(args.size() > 0);
-      if (lambdaExpr.identifierCount() > 0) {
-        Preconditions.checkArgument(
-            args.size() == lambdaExpr.identifierCount(),
-            StringUtils.format("lambda expression argument count does not match %s argument count", name())
-        );
-      }
+      validationHelperCheckMinArgumentCount(lambdaExpr, args, 1);
     }
   }
 
@@ -358,11 +341,7 @@ public interface ApplyFunction
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      Preconditions.checkArgument(args.size() == 2);
-      Preconditions.checkArgument(
-          args.size() == lambdaExpr.identifierCount(),
-          StringUtils.format("lambda expression argument count does not match %s argument count", name())
-      );
+      validationHelperCheckArgumentCount(lambdaExpr, args, 2);
     }
   }
 
@@ -407,7 +386,7 @@ public interface ApplyFunction
         return ExprEval.of(null);
       }
       if (hadEmpty) {
-        return ExprEval.ofStringArray(new String[0]);
+        return ExprEval.ofStringArray(new Object[0]);
       }
       Expr accExpr = argsExpr.get(argsExpr.size() - 1);
 
@@ -432,10 +411,7 @@ public interface ApplyFunction
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      Preconditions.checkArgument(
-          args.size() == lambdaExpr.identifierCount(),
-          StringUtils.format("lambda expression argument count does not match %s argument count", name())
-      );
+      validationHelperCheckMinArgumentCount(lambdaExpr, args, 1);
     }
   }
 
@@ -477,21 +453,13 @@ public interface ApplyFunction
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
-      if (args.size() != 1) {
-        throw new IAE("ApplyFunction[%s] needs 1 argument", name());
-      }
-
       return ImmutableSet.of(args.get(0));
     }
 
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      Preconditions.checkArgument(args.size() == 1);
-      Preconditions.checkArgument(
-          args.size() == lambdaExpr.identifierCount(),
-          StringUtils.format("lambda expression argument count does not match %s argument count", name())
-      );
+      validationHelperCheckArgumentCount(lambdaExpr, args, 1);
     }
 
     @Nullable
@@ -532,21 +500,13 @@ public interface ApplyFunction
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
-      if (args.size() != 1) {
-        throw new IAE("ApplyFunction[%s] needs 1 argument", name());
-      }
-
       return ImmutableSet.of(args.get(0));
     }
 
     @Override
     public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
     {
-      Preconditions.checkArgument(args.size() == 1);
-      Preconditions.checkArgument(
-          args.size() == lambdaExpr.identifierCount(),
-          StringUtils.format("lambda expression argument count does not match %s argument count", name())
-      );
+      validationHelperCheckArgumentCount(lambdaExpr, args, 1);
     }
 
     @Nullable
@@ -576,9 +536,12 @@ public interface ApplyFunction
     @Override
     public ExprEval match(Object[] values, LambdaExpr expr, SettableLambdaBinding bindings)
     {
-      boolean anyMatch = Arrays.stream(values)
-                               .anyMatch(o -> expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean());
-      return ExprEval.ofLongBoolean(anyMatch);
+      for (Object o : values) {
+        if (expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean()) {
+          return ExprEval.ofLongBoolean(true);
+        }
+      }
+      return ExprEval.ofLongBoolean(false);
     }
   }
 
@@ -599,9 +562,12 @@ public interface ApplyFunction
     @Override
     public ExprEval match(Object[] values, LambdaExpr expr, SettableLambdaBinding bindings)
     {
-      boolean allMatch = Arrays.stream(values)
-                               .allMatch(o -> expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean());
-      return ExprEval.ofLongBoolean(allMatch);
+      for (Object o : values) {
+        if (!expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean()) {
+          return ExprEval.ofLongBoolean(false);
+        }
+      }
+      return ExprEval.ofLongBoolean(true);
     }
   }
 

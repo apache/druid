@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.run;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -53,6 +54,7 @@ import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -92,7 +94,7 @@ public class NativeQueryMaker implements QueryMaker
   }
 
   @Override
-  public Sequence<Object[]> runQuery(final DruidQuery druidQuery)
+  public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
     final Query<?> query = druidQuery.getQuery();
 
@@ -171,7 +173,8 @@ public class NativeQueryMaker implements QueryMaker
                              .orElseGet(query::getIntervals);
   }
 
-  private <T> Sequence<Object[]> execute(Query<T> query, final List<String> newFields, final List<SqlTypeName> newTypes)
+  @SuppressWarnings("unchecked")
+  private <T> QueryResponse<Object[]> execute(Query<?> query, final List<String> newFields, final List<SqlTypeName> newTypes)
   {
     Hook.QUERY_PLAN.run(query);
 
@@ -179,6 +182,8 @@ public class NativeQueryMaker implements QueryMaker
       final String queryId = UUID.randomUUID().toString();
       plannerContext.addNativeQueryId(queryId);
       query = query.withId(queryId);
+    } else {
+      plannerContext.addNativeQueryId(query.getId());
     }
 
     query = query.withSqlQueryId(plannerContext.getSqlQueryId());
@@ -191,23 +196,27 @@ public class NativeQueryMaker implements QueryMaker
     // otherwise it won't yet be initialized. (A bummer, since ideally, we'd verify the toolChest exists and can do
     // array-based results before starting the query; but in practice we don't expect this to happen since we keep
     // tight control over which query types we generate in the SQL layer. They all support array-based results.)
-    final Sequence<T> results = queryLifecycle.runSimple(query, authenticationResult, authorizationResult);
+    final QueryResponse<T> results = queryLifecycle.runSimple((Query<T>) query, authenticationResult, authorizationResult);
 
-    //noinspection unchecked
-    final QueryToolChest<T, Query<T>> toolChest = queryLifecycle.getToolChest();
-    final List<String> resultArrayFields = toolChest.resultArraySignature(query).getColumnNames();
-    final Sequence<Object[]> resultArrays = toolChest.resultsAsArrays(query, results);
-
-    return mapResultSequence(resultArrays, resultArrayFields, newFields, newTypes);
+    return mapResultSequence(
+        results,
+        (QueryToolChest<T, Query<T>>) queryLifecycle.getToolChest(),
+        (Query<T>) query,
+        newFields,
+        newTypes
+    );
   }
 
-  private Sequence<Object[]> mapResultSequence(
-      final Sequence<Object[]> sequence,
-      final List<String> originalFields,
+  private <T> QueryResponse<Object[]> mapResultSequence(
+      final QueryResponse<T> results,
+      final QueryToolChest<T, Query<T>> toolChest,
+      final Query<T> query,
       final List<String> newFields,
       final List<SqlTypeName> newTypes
   )
   {
+    final List<String> originalFields = toolChest.resultArraySignature(query).getColumnNames();
+
     // Build hash map for looking up original field positions, in case the number of fields is super high.
     final Object2IntMap<String> originalFieldsLookup = new Object2IntOpenHashMap<>();
     originalFieldsLookup.defaultReturnValue(-1);
@@ -231,15 +240,20 @@ public class NativeQueryMaker implements QueryMaker
       mapping[i] = idx;
     }
 
-    return Sequences.map(
-        sequence,
-        array -> {
-          final Object[] newArray = new Object[mapping.length];
-          for (int i = 0; i < mapping.length; i++) {
-            newArray[i] = coerce(array[mapping[i]], newTypes.get(i));
-          }
-          return newArray;
-        }
+    //noinspection unchecked
+    final Sequence<Object[]> sequence = toolChest.resultsAsArrays(query, results.getResults());
+    return new QueryResponse(
+        Sequences.map(
+            sequence,
+            array -> {
+              final Object[] newArray = new Object[mapping.length];
+              for (int i = 0; i < mapping.length; i++) {
+                newArray[i] = coerce(array[mapping[i]], newTypes.get(i));
+              }
+              return newArray;
+            }
+        ),
+        results.getResponseContext()
     );
   }
 
@@ -355,7 +369,8 @@ public class NativeQueryMaker implements QueryMaker
   }
 
 
-  private static Object maybeCoerceArrayToList(Object value, boolean mustCoerce)
+  @VisibleForTesting
+  static Object maybeCoerceArrayToList(Object value, boolean mustCoerce)
   {
     if (value instanceof List) {
       return value;
@@ -366,10 +381,21 @@ public class NativeQueryMaker implements QueryMaker
     } else if (value instanceof Double[]) {
       return Arrays.asList((Double[]) value);
     } else if (value instanceof Object[]) {
-      Object[] array = (Object[]) value;
-      ArrayList<Object> lst = new ArrayList<>(array.length);
+      final Object[] array = (Object[]) value;
+      final ArrayList<Object> lst = new ArrayList<>(array.length);
       for (Object o : array) {
         lst.add(maybeCoerceArrayToList(o, false));
+      }
+      return lst;
+    } else if (value instanceof long[]) {
+      return Arrays.stream((long[]) value).boxed().collect(Collectors.toList());
+    } else if (value instanceof double[]) {
+      return Arrays.stream((double[]) value).boxed().collect(Collectors.toList());
+    } else if (value instanceof float[]) {
+      final float[] array = (float[]) value;
+      final ArrayList<Object> lst = new ArrayList<>(array.length);
+      for (float f : array) {
+        lst.add(f);
       }
       return lst;
     } else if (value instanceof ComparableStringArray) {

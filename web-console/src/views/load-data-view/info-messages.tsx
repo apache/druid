@@ -16,14 +16,13 @@
  * limitations under the License.
  */
 
-import { Callout, Code, FormGroup } from '@blueprintjs/core';
+import { Button, Callout, Code, FormGroup, Intent } from '@blueprintjs/core';
 import React from 'react';
 
-import { ExternalLink } from '../../components';
+import { ExternalLink, LearnMore } from '../../components';
 import { DimensionMode, getIngestionDocLink, IngestionSpec } from '../../druid-models';
 import { getLink } from '../../links';
-
-import { LearnMore } from './learn-more/learn-more';
+import { deepGet, deepSet } from '../../utils';
 
 export interface ConnectMessageProps {
   inlineMode: boolean;
@@ -214,6 +213,51 @@ export const SpecMessage = React.memo(function SpecMessage() {
         </p>
         <p>Submit the spec to begin loading data into Druid.</p>
         <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#ingestion-specs`} />
+      </Callout>
+    </FormGroup>
+  );
+});
+
+export interface AppendToExistingIssueProps {
+  spec: Partial<IngestionSpec>;
+  onChangeSpec(newSpec: Partial<IngestionSpec>): void;
+}
+
+export const AppendToExistingIssue = React.memo(function AppendToExistingIssue(
+  props: AppendToExistingIssueProps,
+) {
+  const { spec, onChangeSpec } = props;
+
+  const partitionsSpecType = deepGet(spec, 'spec.tuningConfig.partitionsSpec.type');
+  if (
+    partitionsSpecType === 'dynamic' ||
+    deepGet(spec, 'spec.ioConfig.appendToExisting') !== true
+  ) {
+    return null;
+  }
+
+  const dynamicPartitionSpec = {
+    type: 'dynamic',
+    maxRowsPerSegment:
+      deepGet(spec, 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment') ||
+      deepGet(spec, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment'),
+  };
+
+  return (
+    <FormGroup>
+      <Callout intent={Intent.DANGER}>
+        <p>
+          Only <Code>dynamic</Code> partitioning supports <Code>appendToExisting: true</Code>. You
+          have currently selected <Code>{partitionsSpecType}</Code> partitioning.
+        </p>
+        <Button
+          intent={Intent.SUCCESS}
+          onClick={() =>
+            onChangeSpec(deepSet(spec, 'spec.tuningConfig.partitionsSpec', dynamicPartitionSpec))
+          }
+        >
+          Change to <Code>dynamic</Code> partitioning
+        </Button>
       </Callout>
     </FormGroup>
   );

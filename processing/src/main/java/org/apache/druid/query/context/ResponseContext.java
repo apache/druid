@@ -39,7 +39,6 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -733,6 +732,10 @@ public abstract class ResponseContext
    */
   public void merge(ResponseContext responseContext)
   {
+    if (responseContext == null) {
+      return;
+    }
+
     responseContext.getDelegate().forEach((key, newValue) -> {
       if (newValue != null) {
         add(key, newValue);

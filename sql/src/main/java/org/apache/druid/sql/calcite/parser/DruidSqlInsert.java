@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.parser;
 
-import com.google.common.base.Preconditions;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
@@ -32,23 +31,15 @@ import javax.annotation.Nullable;
 
 /**
  * Extends the 'insert' call to hold custom parameters specific to Druid i.e. PARTITIONED BY and CLUSTERED BY
- * This class extends the {@link SqlInsert} so that this SqlNode can be used in
+ * This class extends the {@link DruidSqlIngest} so that this SqlNode can be used in
  * {@link org.apache.calcite.sql2rel.SqlToRelConverter} for getting converted into RelNode, and further processing
  */
-public class DruidSqlInsert extends SqlInsert
+public class DruidSqlInsert extends DruidSqlIngest
 {
   public static final String SQL_INSERT_SEGMENT_GRANULARITY = "sqlInsertSegmentGranularity";
 
   // This allows reusing super.unparse
   public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
-
-  private final Granularity partitionedBy;
-
-  // Used in the unparse function to generate the original query since we convert the string to an enum
-  private final String partitionedByStringForUnparse;
-
-  @Nullable
-  private final SqlNodeList clusteredBy;
 
   /**
    * While partitionedBy and partitionedByStringForUnparse can be null as arguments to the constructor, this is
@@ -61,35 +52,18 @@ public class DruidSqlInsert extends SqlInsert
       @Nullable Granularity partitionedBy,
       @Nullable String partitionedByStringForUnparse,
       @Nullable SqlNodeList clusteredBy
-  ) throws ParseException
+  )
   {
     super(
         insertNode.getParserPosition(),
         (SqlNodeList) insertNode.getOperandList().get(0), // No better getter to extract this
         insertNode.getTargetTable(),
         insertNode.getSource(),
-        insertNode.getTargetColumnList()
+        insertNode.getTargetColumnList(),
+        partitionedBy,
+        partitionedByStringForUnparse,
+        clusteredBy
     );
-    if (partitionedBy == null) {
-      throw new ParseException("INSERT statements must specify PARTITIONED BY clause explicitly");
-    }
-    this.partitionedBy = partitionedBy;
-
-    Preconditions.checkNotNull(partitionedByStringForUnparse);
-    this.partitionedByStringForUnparse = partitionedByStringForUnparse;
-
-    this.clusteredBy = clusteredBy;
-  }
-
-  @Nullable
-  public SqlNodeList getClusteredBy()
-  {
-    return clusteredBy;
-  }
-
-  public Granularity getPartitionedBy()
-  {
-    return partitionedBy;
   }
 
   @Nonnull

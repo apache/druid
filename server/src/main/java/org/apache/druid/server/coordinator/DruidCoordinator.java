@@ -973,6 +973,14 @@ public class DruidCoordinator
     {
       return duties;
     }
+
+    @Override
+    public String toString()
+    {
+      return "DutiesRunnable{" +
+             "dutiesRunnableAlias='" + dutiesRunnableAlias + '\'' +
+             '}';
+    }
   }
 
   /**

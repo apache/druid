@@ -178,7 +178,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringWorksLikeStringScan()
   {
-    final String nullVal = NullHandling.replaceWithDefault() ? "[\"foo\"]" : "[null]";
+    final String nullVal = NullHandling.replaceWithDefault() ? "foo" : null;
     testQuery(
         "SELECT concat(dim3, 'foo') FROM druid.numfoo",
         ImmutableList.of(
@@ -195,8 +195,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"[\"afoo\",\"bfoo\"]"},
             new Object[]{"[\"bfoo\",\"cfoo\"]"},
-            new Object[]{"[\"dfoo\"]"},
-            new Object[]{"[\"foo\"]"},
+            new Object[]{"dfoo"},
+            new Object[]{"foo"},
             new Object[]{nullVal},
             new Object[]{nullVal}
         )
@@ -206,7 +206,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringWorksLikeStringSelfConcatScan()
   {
-    final String nullVal = NullHandling.replaceWithDefault() ? "[\"-lol-\"]" : "[null]";
+    final String nullVal = NullHandling.replaceWithDefault() ? "-lol-" : null;
     testQuery(
         "SELECT concat(dim3, '-lol-', dim3) FROM druid.numfoo",
         ImmutableList.of(
@@ -223,8 +223,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"[\"a-lol-a\",\"b-lol-b\"]"},
             new Object[]{"[\"b-lol-b\",\"c-lol-c\"]"},
-            new Object[]{"[\"d-lol-d\"]"},
-            new Object[]{"[\"-lol-\"]"},
+            new Object[]{"d-lol-d"},
+            new Object[]{"-lol-"},
             new Object[]{nullVal},
             new Object[]{nullVal}
         )
@@ -387,8 +387,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"[\"b\"]"},
-            new Object[]{"[\"c\"]"},
+            new Object[]{"b"},
+            new Object[]{"c"},
             new Object[]{"[]"},
             new Object[]{useDefault ? NULL_STRING : "[]"},
             new Object[]{NULL_STRING},

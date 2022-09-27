@@ -20,10 +20,8 @@
 package org.apache.druid.curator;
 
 import com.google.inject.Injector;
+import org.apache.curator.CuratorZookeeperClient;
 import org.apache.curator.RetryPolicy;
-import org.apache.curator.ensemble.EnsembleProvider;
-import org.apache.curator.ensemble.exhibitor.ExhibitorEnsembleProvider;
-import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -33,6 +31,8 @@ import org.apache.druid.testing.junit.LoggerCaptureRule;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -44,10 +44,8 @@ import java.util.Properties;
 
 public final class CuratorModuleTest
 {
-  private static final String CURATOR_HOST_KEY = CuratorConfig.CONFIG_PREFIX + "." + CuratorConfig.HOST;
   private static final String CURATOR_CONNECTION_TIMEOUT_MS_KEY =
       CuratorConfig.CONFIG_PREFIX + "." + CuratorConfig.CONNECTION_TIMEOUT_MS;
-  private static final String EXHIBITOR_HOSTS_KEY = ExhibitorConfig.CONFIG_PREFIX + ".hosts";
 
   @Rule
   public final ExpectedSystemExit exit = ExpectedSystemExit.none();
@@ -56,74 +54,19 @@ public final class CuratorModuleTest
   public final LoggerCaptureRule logger = new LoggerCaptureRule(CuratorModule.class);
 
   @Test
-  public void defaultEnsembleProvider()
+  public void createsCuratorFrameworkAsConfigured()
   {
-    Injector injector = newInjector(new Properties());
-    injector.getInstance(CuratorFramework.class); // initialize related components
-    EnsembleProvider ensembleProvider = injector.getInstance(EnsembleProvider.class);
-    Assert.assertTrue(
-        "EnsembleProvider should be FixedEnsembleProvider",
-        ensembleProvider instanceof FixedEnsembleProvider
-    );
-    Assert.assertEquals(
-        "The connectionString should be 'localhost'",
-        "localhost", ensembleProvider.getConnectionString()
-    );
-  }
+    CuratorConfig config = CuratorConfig.create("myhost1:2888,myhost2:2888");
+    CuratorFramework curatorFramework = CuratorModule.createCurator(config);
+    CuratorZookeeperClient client = curatorFramework.getZookeeperClient();
 
-  @Test
-  public void fixedZkHosts()
-  {
-    Properties props = new Properties();
-    props.setProperty(CURATOR_HOST_KEY, "hostA");
-    Injector injector = newInjector(props);
+    Assert.assertEquals(config.getZkHosts(), client.getCurrentConnectionString());
+    Assert.assertEquals(config.getZkConnectionTimeoutMs(), client.getConnectionTimeoutMs());
 
-    injector.getInstance(CuratorFramework.class); // initialize related components
-    EnsembleProvider ensembleProvider = injector.getInstance(EnsembleProvider.class);
-    Assert.assertTrue(
-        "EnsembleProvider should be FixedEnsembleProvider",
-        ensembleProvider instanceof FixedEnsembleProvider
-    );
-    Assert.assertEquals(
-        "The connectionString should be 'hostA'",
-        "hostA", ensembleProvider.getConnectionString()
-    );
-  }
-
-  @Test
-  public void exhibitorEnsembleProvider()
-  {
-    Properties props = new Properties();
-    props.setProperty(CURATOR_HOST_KEY, "hostA");
-    props.setProperty(EXHIBITOR_HOSTS_KEY, "[\"hostB\"]");
-    Injector injector = newInjector(props);
-
-    injector.getInstance(CuratorFramework.class); // initialize related components
-    EnsembleProvider ensembleProvider = injector.getInstance(EnsembleProvider.class);
-    Assert.assertTrue(
-        "EnsembleProvider should be ExhibitorEnsembleProvider",
-        ensembleProvider instanceof ExhibitorEnsembleProvider
-    );
-  }
-
-  @Test
-  public void emptyExhibitorHosts()
-  {
-    Properties props = new Properties();
-    props.setProperty(CURATOR_HOST_KEY, "hostB");
-    props.setProperty(EXHIBITOR_HOSTS_KEY, "[]");
-    Injector injector = newInjector(props);
-
-    injector.getInstance(CuratorFramework.class); // initialize related components
-    EnsembleProvider ensembleProvider = injector.getInstance(EnsembleProvider.class);
-    Assert.assertTrue(
-        "EnsembleProvider should be FixedEnsembleProvider",
-        ensembleProvider instanceof FixedEnsembleProvider
-    );
-    Assert.assertEquals(
-        "The connectionString should be 'hostB'",
-        "hostB", ensembleProvider.getConnectionString()
-    );
+    MatcherAssert.assertThat(client.getRetryPolicy(), Matchers.instanceOf(BoundedExponentialBackoffRetry.class));
+    BoundedExponentialBackoffRetry retryPolicy = (BoundedExponentialBackoffRetry) client.getRetryPolicy();
+    Assert.assertEquals(CuratorModule.BASE_SLEEP_TIME_MS, retryPolicy.getBaseSleepTimeMs());
+    Assert.assertEquals(CuratorModule.MAX_SLEEP_TIME_MS, retryPolicy.getMaxSleepTimeMs());
   }
 
   @Test

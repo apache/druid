@@ -63,37 +63,139 @@ appreciated.
 ## Interpreting EXPLAIN PLAN output
 
 The [EXPLAIN PLAN](sql.md#explain-plan) functionality can help you understand how a given SQL query will
-be translated to native. For simple queries that do not involve subqueries or joins, the output of EXPLAIN PLAN
-is easy to interpret. The native query that will run is embedded as JSON inside a "DruidQueryRel" line:
+be translated to native.
+EXPLAIN PLAN statements return a `RESOURCES` column that describes the resource being queried as well as a `PLAN` column that contains a JSON array of native queries that Druid will run.
+For example, consider the following query:
 
-```
-> EXPLAIN PLAN FOR SELECT COUNT(*) FROM wikipedia
-
-DruidQueryRel(query=[{"queryType":"timeseries","dataSource":"wikipedia","intervals":"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z","granularity":"all","aggregations":[{"type":"count","name":"a0"}]}], signature=[{a0:LONG}])
-```
-
-For more complex queries that do involve subqueries or joins, EXPLAIN PLAN is somewhat more difficult to interpret.
-For example, consider this query:
-
-```
-> EXPLAIN PLAN FOR
-> SELECT
->     channel,
->     COUNT(*)
-> FROM wikipedia
-> WHERE channel IN (SELECT page FROM wikipedia GROUP BY page ORDER BY COUNT(*) DESC LIMIT 10)
-> GROUP BY channel
-
-DruidJoinQueryRel(condition=[=($1, $3)], joinType=[inner], query=[{"queryType":"groupBy","dataSource":{"type":"table","name":"__join__"},"intervals":{"type":"intervals","intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]},"granularity":"all","dimensions":["channel"],"aggregations":[{"type":"count","name":"a0"}]}], signature=[{d0:STRING, a0:LONG}])
-  DruidQueryRel(query=[{"queryType":"scan","dataSource":{"type":"table","name":"wikipedia"},"intervals":{"type":"intervals","intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]},"resultFormat":"compactedList","columns":["__time","channel","page"],"granularity":"all"}], signature=[{__time:LONG, channel:STRING, page:STRING}])
-  DruidQueryRel(query=[{"queryType":"topN","dataSource":{"type":"table","name":"wikipedia"},"dimension":"page","metric":{"type":"numeric","metric":"a0"},"threshold":10,"intervals":{"type":"intervals","intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]},"granularity":"all","aggregations":[{"type":"count","name":"a0"}]}], signature=[{d0:STRING}])
+```sql
+EXPLAIN PLAN FOR
+SELECT
+  channel,
+  COUNT(*)
+FROM wikipedia
+WHERE channel IN (SELECT page FROM wikipedia GROUP BY page ORDER BY COUNT(*) DESC LIMIT 10)
+GROUP BY channel
 ```
 
-Here, there is a join with two inputs. The way to read this is to consider each line of the EXPLAIN PLAN output as
-something that might become a query, or might just become a simple datasource. The `query` field they all have is
-called a "partial query" and represents what query would be run on the datasource represented by that line, if that
-line ran by itself. In some cases — like the "scan" query in the second line of this example — the query does not
-actually run, and it ends up being translated to a simple table datasource. See the [Join translation](#joins) section
+The EXPLAIN PLAN statement returns the following plan:
+
+```json
+[
+  {
+    "query": {
+      "queryType": "topN",
+      "dataSource": {
+        "type": "join",
+        "left": {
+          "type": "table",
+          "name": "wikipedia"
+        },
+        "right": {
+          "type": "query",
+          "query": {
+            "queryType": "groupBy",
+            "dataSource": {
+              "type": "table",
+              "name": "wikipedia"
+            },
+            "intervals": {
+              "type": "intervals",
+              "intervals": [
+                "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+              ]
+            },
+            "granularity": {
+              "type": "all"
+            },
+            "dimensions": [
+              {
+                "type": "default",
+                "dimension": "page",
+                "outputName": "d0",
+                "outputType": "STRING"
+              }
+            ],
+            "aggregations": [
+              {
+                "type": "count",
+                "name": "a0"
+              }
+            ],
+            "limitSpec": {
+              "type": "default",
+              "columns": [
+                {
+                  "dimension": "a0",
+                  "direction": "descending",
+                  "dimensionOrder": {
+                    "type": "numeric"
+                  }
+                }
+              ],
+              "limit": 10
+            },
+            "context": {
+              "sqlOuterLimit": 101,
+              "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
+              "useApproximateCountDistinct": false,
+              "useApproximateTopN": false
+            }
+          }
+        },
+        "rightPrefix": "j0.",
+        "condition": "(\"channel\" == \"j0.d0\")",
+        "joinType": "INNER"
+      },
+      "dimension": {
+        "type": "default",
+        "dimension": "channel",
+        "outputName": "d0",
+        "outputType": "STRING"
+      },
+      "metric": {
+        "type": "dimension",
+        "ordering": {
+          "type": "lexicographic"
+        }
+      },
+      "threshold": 101,
+      "intervals": {
+        "type": "intervals",
+        "intervals": [
+          "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+        ]
+      },
+      "granularity": {
+        "type": "all"
+      },
+      "aggregations": [
+        {
+          "type": "count",
+          "name": "a0"
+        }
+      ],
+      "context": {
+        "sqlOuterLimit": 101,
+        "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
+        "useApproximateCountDistinct": false,
+        "useApproximateTopN": false
+      }
+    },
+    "signature": [
+      {
+        "name": "d0",
+        "type": "STRING"
+      },
+      {
+        "name": "a0",
+        "type": "LONG"
+      }
+    ]
+  }
+]
+```
+
+In this case the JOIN operator gets translated to a `join` datasource. See the [Join translation](#joins) section
 for more details about how this works.
 
 We can see this for ourselves using Druid's [request logging](../configuration/index.md#request-logging) feature. After

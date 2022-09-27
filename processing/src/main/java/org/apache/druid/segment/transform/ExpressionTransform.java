@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -78,7 +79,7 @@ public class ExpressionTransform implements Transform
   @Override
   public RowFunction getRowFunction()
   {
-    return new ExpressionRowFunction(parsedExpression.get());
+    return new ExpressionRowFunction(name, parsedExpression.get());
   }
 
   @Override
@@ -89,19 +90,32 @@ public class ExpressionTransform implements Transform
 
   static class ExpressionRowFunction implements RowFunction
   {
+    private final String name;
     private final Expr expr;
 
-    ExpressionRowFunction(final Expr expr)
+    ExpressionRowFunction(final String name, final Expr expr)
     {
+      this.name = name;
       this.expr = expr;
     }
 
     @Override
     public Object eval(final Row row)
     {
-      return ExpressionSelectors.coerceEvalToSelectorObject(
-          expr.eval(InputBindings.forFunction(name -> getValueFromRow(row, name)))
-      );
+      try {
+        // this will need adjusted if we want to allow expression transforms to produce true arrays. Currently, calling
+        // this method will coerce any expression output into:
+        //    - the expression value if the value is not an array
+        //    - the single array element if the value is an array with 1 element
+        //    - a list with all of the array elements if the value is an array with more than 1 element
+        // and so is tuned towards multi-value strings
+        return ExpressionSelectors.coerceEvalToObjectOrList(
+            expr.eval(InputBindings.forFunction(name -> getValueFromRow(row, name)))
+        );
+      }
+      catch (Throwable t) {
+        throw new ISE(t, "Could not transform value for %s reason: %s", name, t.getMessage());
+      }
     }
   }
 

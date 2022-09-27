@@ -431,7 +431,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .emitCPUTimeMetric(emitter)
         .postProcess(
             objectMapper.convertValue(
-                query.<String>getContextValue("postProcessing"),
+                query.getQueryContext().getAsString("postProcessing"),
                 new TypeReference<PostProcessingOperator<T>>() {}
             )
         )

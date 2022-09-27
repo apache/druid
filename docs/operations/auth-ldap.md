@@ -130,7 +130,7 @@ The following command associates the permissions in the JSON file with the role
 curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d@perm.json  http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/roles/readRole/permissions
 ```
 
-Note that the STATE and CONFIG permissions in `perm.json` are needed to see the data source in the Druid console. If only querying permissions are needed, the READ action is sufficient:
+Note that the STATE and CONFIG permissions in `perm.json` are needed to see the data source in the web console. If only querying permissions are needed, the READ action is sufficient:
 
 ```
 [{ "resource": { "name": "wikipedia", "type": "DATASOURCE" }, "action": "READ" }]

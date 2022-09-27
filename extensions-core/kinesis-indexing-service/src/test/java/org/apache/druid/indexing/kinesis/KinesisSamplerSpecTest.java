@@ -162,8 +162,8 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
 
     KinesisSamplerSpec samplerSpec = new TestableKinesisSamplerSpec(
         supervisorSpec,
-        new SamplerConfig(5, null),
-        new InputSourceSampler(),
+        new SamplerConfig(5, null, null, null),
+        new InputSourceSampler(new DefaultObjectMapper()),
         null
     );
 
