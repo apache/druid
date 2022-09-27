@@ -2538,7 +2538,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return true;
   }
 
-  public Long computeTotalLag()
+  public long computeTotalLag()
   {
     if (isIdle()) {
       Map<PartitionIdType, SequenceOffsetType> oldOffsets = getOffsetsFromMetadataStorage();
@@ -2546,7 +2546,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     LagStats lagStats = computeLagStats();
-    return lagStats != null ? lagStats.getTotalLag() : 0L;
+    return lagStats != null ? lagStats.getTotalLag() : 0;
   }
 
   public boolean areLatestOffsetsConstant()
@@ -4055,7 +4055,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected void emitLag()
   {
-    if (!isIdle() || spec.isSuspended() || !stateManager.isSteadyState()) {
+    if (!isIdle() && spec.isSuspended() || !stateManager.isSteadyState()) {
       // don't emit metrics if supervisor is suspended or not in a healthy running state
       // (lag should still available in status report)
       return;

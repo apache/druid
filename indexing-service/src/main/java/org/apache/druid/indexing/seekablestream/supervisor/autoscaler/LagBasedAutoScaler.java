@@ -148,8 +148,8 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
       LOCK.lock();
       try {
         if (!spec.isSuspended()) {
-          Long totalLags = supervisor.computeTotalLag();
-          Long currentLagsCollectedMillis = Instant.now().toEpochMilli();
+          long totalLags = supervisor.computeTotalLag();
+          long currentLagsCollectedMillis = Instant.now().toEpochMilli();
           if (supervisor.areLatestOffsetsConstant() && totalLags == 0 && lastLagsCollectedMillis != null) {
             idleTime.addAndGet(currentLagsCollectedMillis - lastLagsCollectedMillis);
           } else {
