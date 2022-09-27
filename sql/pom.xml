@@ -199,8 +199,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.calcite</groupId>
-      <artifactId>calcite-core</artifactId>
-      <type>test-jar</type>
+      <artifactId>calcite-testkit</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -287,7 +286,7 @@
                   <type>jar</type>
                   <overWrite>true</overWrite>
                   <outputDirectory>${project.build.directory}/</outputDirectory>
-                  <includes>**/Parser.jj</includes>
+                  <includes>**/Parser.jj,**/default_config.fmpp</includes>
                 </artifactItem>
               </artifactItems>
             </configuration>
@@ -339,6 +338,47 @@
           </execution>
         </executions>
       </plugin>
+      <!-- <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>generate-fmpp-sources</id>
+            <phase>generate-sources</phase>
+            <configuration>
+              <target>
+                <taskdef name="fmpp" classname="fmpp.tools.AntTask" classpath="maven.plugin.classpath" />
+                <fmpp sourceRoot="${project.build.directory}/codegen/templates"
+                  outputRoot="${project.build.directory}/generated-sources/annotations"
+                  configuration="${project.build.directory}/codegen/config.fmpp"
+                  />
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>net.sourceforge.fmpp</groupId>
+            <artifactId>fmpp</artifactId>
+            <version>0.9.16</version>
+            <exclusions>
+              <exclusion>
+                <groupId>ant</groupId>
+                <artifactId>ant</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
+          <dependency>
+            <groupId>org.freemarker</groupId>
+            <artifactId>freemarker</artifactId>
+            <version>2.3.31</version>
+          </dependency>
+        </dependencies>
+      </plugin> -->
 
       <!-- Creates a Java class for the custom parser from the Parser.jj -->
       <plugin>

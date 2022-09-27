@@ -937,9 +937,8 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
-                <artifactId>calcite-core</artifactId>
+                <artifactId>calcite-testkit</artifactId>
                 <version>${calcite.version}</version>
-                <type>test-jar</type>
                 <scope>test</scope>
             </dependency>
             <dependency>
