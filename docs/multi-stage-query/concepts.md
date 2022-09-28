@@ -253,7 +253,7 @@ On Peons launched by Middle Managers, the bulk of the JVM heap (75%) is split up
 processor bundle and one worker bundle. Each one comprises 37.5% of the available JVM heap.
 
 Depending on the type of query, each worker and controller task can use a sketch for generating partition boundaries.
-Each sketch uses at most approximately 300MB.
+Each sketch uses at most approximately 300 MB.
 
 The processor memory bundle is used for query processing and segment generation. Each processor bundle must also
 provides space to buffer I/O between stages. Specifically, each downstream stage requires 1 MB of buffer space for each

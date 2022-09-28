@@ -111,7 +111,6 @@ public class QuantilesSketchKeyCollectorTest
     final List<Pair<RowKey, Integer>> keyWeights = KeyCollectorTestUtils.uniformRandomKeys(numKeys);
     final RowKey finalMinKey =
         ClusterByStatisticsCollectorImplTest.computeSortedKeyWeightsFromWeightedKeys(keyWeights, comparator).firstKey();
-    int expectedRetainedBytes = 22 * finalMinKey.getNumberOfBytes();
 
     KeyCollectorTestUtils.doTest(
         QuantilesSketchKeyCollectorFactory.create(clusterBy),
@@ -123,7 +122,7 @@ public class QuantilesSketchKeyCollectorTest
           }
 
           Assert.assertEquals(testName, 2, collector.getSketch().getK());
-          Assert.assertEquals(testName, expectedRetainedBytes, collector.estimatedRetainedBytes(), 0);
+          Assert.assertEquals(testName, 14, collector.estimatedRetainedKeys());
 
           // Don't use verifyCollector, since this collector is downsampled so aggressively that it can't possibly
           // hope to pass those tests. Grade on a curve.
