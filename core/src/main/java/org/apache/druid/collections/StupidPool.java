@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.Cleaners;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.lang.ref.WeakReference;
@@ -156,7 +157,7 @@ public class StupidPool<T> implements NonBlockingPool<T>
       if (POISONED.get()) {
         final RuntimeException exception = capturedException.get();
         if (exception == null) {
-          resourceHolder.notifier.except = new RuntimeException("leaky leak!");
+          resourceHolder.notifier.except = new RE("Thread[%s]: leaky leak!", Thread.currentThread().getName());
         } else {
           throw exception;
         }
@@ -316,7 +317,7 @@ public class StupidPool<T> implements NonBlockingPool<T>
       poolReference = new WeakReference<>(pool);
       leakedObjectsCounter = pool.leakedObjectsCounter;
 
-      except = poisoned ? new RuntimeException("drip drip") : null;
+      except = poisoned ? new RE("Thread[%s]: drip drip", Thread.currentThread().getName()) : null;
     }
 
     @Override

@@ -21,6 +21,7 @@ package org.apache.druid.compressedbigdecimal;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Objects;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -48,7 +49,9 @@ public class CompressedBigDecimalAggregatorFactory
 {
 
   public static final int DEFAULT_SCALE = 9;
-  public static final int DEFAULT_SIZE = 3;
+  public static final int DEFAULT_SIZE = 6;
+  public static final boolean DEFAULT_STRICT_NUMBER_PARSING = false;
+
   private static final byte CACHE_TYPE_ID = 0x37;
 
   public static final Comparator<CompressedBigDecimal> COMPARATOR = CompressedBigDecimal::compareTo;
@@ -57,27 +60,32 @@ public class CompressedBigDecimalAggregatorFactory
   private final String fieldName;
   private final int size;
   private final int scale;
+  private final boolean strictNumberParsing;
 
   /**
    * Constructor.
    *
-   * @param name      metric field name
-   * @param fieldName fieldName metric field name
-   * @param size      size of the int array used for calculations
-   * @param scale     scale of the number
+   * @param name                metric field name
+   * @param fieldName           fieldName metric field name
+   * @param size                size of the int array used for calculations
+   * @param scale               scale of the number
+   * @param strictNumberParsing if true, failure to parse strings to numbers throws an exception. otherwise 0 is
+   *                            returned
    */
   @JsonCreator
   public CompressedBigDecimalAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
       @JsonProperty(value = "size", required = false) Integer size,
-      @JsonProperty(value = "scale", required = false) Integer scale
+      @JsonProperty(value = "scale", required = false) Integer scale,
+      @JsonProperty(value = "strictNumberParsing", required = false) Boolean strictNumberParsing
   )
   {
     this.name = name;
     this.fieldName = fieldName;
     this.size = size == null ? DEFAULT_SIZE : size;
     this.scale = scale == null ? DEFAULT_SCALE : scale;
+    this.strictNumberParsing = strictNumberParsing == null ? DEFAULT_STRICT_NUMBER_PARSING : strictNumberParsing;
   }
 
   @SuppressWarnings("unchecked")
@@ -88,17 +96,21 @@ public class CompressedBigDecimalAggregatorFactory
   }
 
   @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory,
-                                 @Nonnull ColumnValueSelector<CompressedBigDecimal> selector)
+  protected Aggregator factorize(
+      ColumnSelectorFactory metricFactory,
+      @Nonnull ColumnValueSelector<CompressedBigDecimal> selector
+  )
   {
-    return new CompressedBigDecimalAggregator(size, scale, selector);
+    return new CompressedBigDecimalAggregator(size, scale, selector, strictNumberParsing);
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory,
-                                               @Nonnull ColumnValueSelector<CompressedBigDecimal> selector)
+  protected BufferAggregator factorizeBuffered(
+      ColumnSelectorFactory metricFactory,
+      @Nonnull ColumnValueSelector<CompressedBigDecimal> selector
+  )
   {
-    return new CompressedBigDecimalBufferAggregator(size, scale, selector);
+    return new CompressedBigDecimalBufferAggregator(size, scale, selector, strictNumberParsing);
   }
 
   /* (non-Javadoc)
@@ -148,7 +160,7 @@ public class CompressedBigDecimalAggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new CompressedBigDecimalAggregatorFactory(name, name, size, scale);
+    return new CompressedBigDecimalAggregatorFactory(name, name, size, scale, strictNumberParsing);
   }
 
   @Override
@@ -167,7 +179,8 @@ public class CompressedBigDecimalAggregatorFactory
         fieldName,
         fieldName,
         size,
-        scale
+        scale,
+        strictNumberParsing
     ));
   }
 
@@ -270,6 +283,12 @@ public class CompressedBigDecimalAggregatorFactory
     return size;
   }
 
+  @JsonProperty
+  public boolean getStrictNumberParsing()
+  {
+    return strictNumberParsing;
+  }
+
   /* (non-Javadoc)
    * @see org.apache.druid.query.aggregation.AggregatorFactory#getMaxIntermediateSize()
    */
@@ -280,15 +299,39 @@ public class CompressedBigDecimalAggregatorFactory
   }
 
   @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    CompressedBigDecimalAggregatorFactory that = (CompressedBigDecimalAggregatorFactory) o;
+    return size == that.size
+           && scale == that.scale
+           && Objects.equal(name, that.name)
+           && Objects.equal(fieldName, that.fieldName)
+           && Objects.equal(strictNumberParsing, that.strictNumberParsing);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(name, fieldName, size, scale, strictNumberParsing);
+  }
+
+  @Override
   public String toString()
   {
-    return "CompressedBigDecimalAggregatorFactory{" +
-        "name='" + getName() + '\'' +
-        ", type='" + getComplexTypeName() + '\'' +
-        ", fieldName='" + getFieldName() + '\'' +
-        ", requiredFields='" + requiredFields() + '\'' +
-        ", size='" + getSize() + '\'' +
-        ", scale='" + getScale() + '\'' +
-        '}';
+    return "CompressedBigDecimalSumAggregatorFactory{" +
+           "name='" + getName() + '\'' +
+           ", type='" + getComplexTypeName() + '\'' +
+           ", fieldName='" + getFieldName() + '\'' +
+           ", requiredFields='" + requiredFields() + '\'' +
+           ", size='" + getSize() + '\'' +
+           ", scale='" + getScale() + '\'' +
+           ", strictNumberParsing='" + getStrictNumberParsing() + '\'' +
+           '}';
   }
 }

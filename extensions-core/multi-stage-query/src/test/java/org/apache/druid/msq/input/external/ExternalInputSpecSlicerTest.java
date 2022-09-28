@@ -49,7 +49,7 @@ import java.util.stream.Stream;
 
 public class ExternalInputSpecSlicerTest
 {
-  static final InputFormat INPUT_FORMAT = new JsonInputFormat(null, null, null);
+  static final InputFormat INPUT_FORMAT = new JsonInputFormat(null, null, null, null, null);
   static final RowSignature SIGNATURE = RowSignature.builder().add("s", ColumnType.STRING).build();
 
   private ExternalInputSpecSlicer slicer;

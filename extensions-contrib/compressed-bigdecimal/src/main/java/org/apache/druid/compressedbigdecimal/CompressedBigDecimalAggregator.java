@@ -29,22 +29,26 @@ public class CompressedBigDecimalAggregator implements Aggregator
 {
 
   private final ColumnValueSelector<CompressedBigDecimal> selector;
+  private final boolean strictNumberParsing;
   private final CompressedBigDecimal sum;
 
   /**
    * Constructor.
    *
-   * @param size     the size to allocate
-   * @param scale    the scale
-   * @param selector that has the metric value
+   * @param size                the size to allocate
+   * @param scale               the scale
+   * @param selector            that has the metric value
+   * @param strictNumberParsing true => NumberFormatExceptions thrown; false => NumberFormatException returns 0
    */
   public CompressedBigDecimalAggregator(
       int size,
       int scale,
-      ColumnValueSelector<CompressedBigDecimal> selector
+      ColumnValueSelector<CompressedBigDecimal> selector,
+      boolean strictNumberParsing
   )
   {
     this.selector = selector;
+    this.strictNumberParsing = strictNumberParsing;
     this.sum = ArrayCompressedBigDecimal.allocate(size, scale);
   }
 
@@ -54,10 +58,11 @@ public class CompressedBigDecimalAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    CompressedBigDecimal selectedObject = Utils.objToCompressedBigDecimal(selector.getObject());
+    CompressedBigDecimal selectedObject = Utils.objToCompressedBigDecimal(selector.getObject(), strictNumberParsing);
+
     if (selectedObject != null) {
       if (selectedObject.getScale() != sum.getScale()) {
-        selectedObject = Utils.scaleUp(selectedObject, sum.getScale());
+        selectedObject = Utils.scale(selectedObject, sum.getScale());
       }
       sum.accumulate(selectedObject);
     }
