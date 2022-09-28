@@ -57,6 +57,7 @@ public class DistinctCountBufferAggregator implements BufferAggregator
       int index = row.get(i);
       mutableBitmap.add(index);
     }
+
     buf.putLong(position, mutableBitmap.size());
   }
 

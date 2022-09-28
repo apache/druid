@@ -80,6 +80,17 @@
             <artifactId>fastutil-core</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+          <groupId>org.apache.calcite</groupId>
+          <artifactId>calcite-core</artifactId>
+          <scope>provided</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.druid</groupId>
+          <artifactId>druid-sql</artifactId>
+          <version>${project.parent.version}</version>
+          <scope>provided</scope>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -97,6 +108,25 @@
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-server</artifactId>
+            <version>${project.parent.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.easymock</groupId>
+            <artifactId>easymock</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-sql</artifactId>
+            <version>${project.parent.version}</version>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
     </dependencies>

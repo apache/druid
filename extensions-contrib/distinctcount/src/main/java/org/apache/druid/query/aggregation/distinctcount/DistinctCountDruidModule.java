@@ -25,6 +25,8 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.aggregation.distinctcount.sql.SegmentDistinctSqlAggregator;
+import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.List;
 
@@ -45,5 +47,6 @@ public class DistinctCountDruidModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    SqlBindings.addAggregator(binder, SegmentDistinctSqlAggregator.class);
   }
 }
