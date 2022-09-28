@@ -32,6 +32,7 @@ import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.FrontCodedIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -95,8 +96,10 @@ public class FrontCodedIndexedBenchmark
   private File fileGeneric;
   private File smooshDirFrontCoded;
   private File smooshDirGeneric;
-  private GenericIndexed<String> genericIndexed;
+  private GenericIndexed<ByteBuffer> genericIndexed;
   private FrontCodedIndexed frontCodedIndexed;
+
+  private Indexed<ByteBuffer> indexed;
 
   private String[] values;
   private int[] iterationIndexes;
@@ -122,9 +125,8 @@ public class FrontCodedIndexedBenchmark
     );
     genericIndexedWriter.open();
 
-    FrontCodedIndexedWriter<String> frontCodedIndexedWriter = new FrontCodedIndexedWriter<>(
+    FrontCodedIndexedWriter frontCodedIndexedWriter = new FrontCodedIndexedWriter(
         new OnHeapMemorySegmentWriteOutMedium(),
-        FrontCodedIndexedWriter.STRING_ENCODER,
         ByteOrder.nativeOrder(),
         "front-coded-4".equals(indexType) ? 4 : 16
     );
@@ -134,7 +136,7 @@ public class FrontCodedIndexedBenchmark
     while (iterator.hasNext()) {
       final String next = iterator.next();
       values[count++] = next;
-      frontCodedIndexedWriter.write(next);
+      frontCodedIndexedWriter.write(StringUtils.toUtf8Nullable(next));
       genericIndexedWriter.write(next);
     }
     smooshDirFrontCoded = FileUtils.createTempDir();
@@ -172,18 +174,17 @@ public class FrontCodedIndexedBenchmark
 
     genericIndexed = GenericIndexed.read(
         byteBufferGeneric,
-        GenericIndexed.STRING_STRATEGY,
+        GenericIndexed.BYTE_BUFFER_STRATEGY,
         SmooshedFileMapper.load(smooshDirFrontCoded)
     );
     frontCodedIndexed = FrontCodedIndexed.read(
         byteBufferFrontCoded.order(ByteOrder.nativeOrder()),
-        GenericIndexed.BYTE_BUFFER_STRATEGY,
         ByteOrder.nativeOrder()
-    );
+    ).get();
 
     // sanity test
     for (int i = 0; i < numElements; i++) {
-      final String expected = genericIndexed.get(i);
+      final String expected = StringUtils.fromUtf8Nullable(genericIndexed.get(i));
       final String actual = StringUtils.fromUtf8Nullable(frontCodedIndexed.get(i));
       Preconditions.checkArgument(
           Objects.equals(expected, actual),
@@ -191,14 +192,14 @@ public class FrontCodedIndexedBenchmark
       );
     }
 
-    Iterator<String> genericIterator = genericIndexed.iterator();
+    Iterator<ByteBuffer> genericIterator = genericIndexed.iterator();
     Iterator<ByteBuffer> frontCodedIterator = frontCodedIndexed.iterator();
     Iterator<String> frontCodedStringIterator =
         new StringEncodingStrategies.Utf8ToStringIndexed(frontCodedIndexed).iterator();
 
     int counter = 0;
     while (genericIterator.hasNext() && frontCodedIterator.hasNext() && frontCodedStringIterator.hasNext()) {
-      final String expected = genericIterator.next();
+      final String expected = StringUtils.fromUtf8Nullable(genericIterator.next());
       final String actual = StringUtils.fromUtf8Nullable(frontCodedIterator.next());
       final String actual2 = frontCodedStringIterator.next();
       Preconditions.checkArgument(
@@ -219,34 +220,22 @@ public class FrontCodedIndexedBenchmark
     for (int i = 0; i < numOperations; i++) {
       elementsToSearch[i] = values[ThreadLocalRandom.current().nextInt(numElements)];
     }
-  }
-
-
-  @Setup(Level.Trial)
-  public void createIterationIndexes()
-  {
     iterationIndexes = new int[numOperations];
     for (int i = 0; i < numOperations; i++) {
       iterationIndexes[i] = ThreadLocalRandom.current().nextInt(numElements);
+    }
+    if ("generic".equals(indexType)) {
+      indexed = genericIndexed.singleThreaded();
+    } else {
+      indexed = frontCodedIndexed;
     }
   }
 
   @Benchmark
   public void get(Blackhole bh)
   {
-    if ("generic".equals(indexType)) {
-      for (int i : iterationIndexes) {
-        bh.consume(genericIndexed.get(i));
-      }
-    } else {
-      for (int i : iterationIndexes) {
-        final ByteBuffer val = frontCodedIndexed.get(i);
-        if (val == null) {
-          bh.consume(null);
-        } else {
-          bh.consume(StringUtils.fromUtf8(val));
-        }
-      }
+    for (int i : iterationIndexes) {
+      bh.consume(indexed.get(i));
     }
   }
 
@@ -254,14 +243,8 @@ public class FrontCodedIndexedBenchmark
   public int indexOf()
   {
     int r = 0;
-    if ("generic".equals(indexType)) {
-      for (String elementToSearch : elementsToSearch) {
-        r ^= genericIndexed.indexOf(elementToSearch);
-      }
-    } else {
-      for (String elementToSearch : elementsToSearch) {
-        r ^= frontCodedIndexed.indexOf(StringUtils.toUtf8ByteBuffer(elementToSearch));
-      }
+    for (String elementToSearch : elementsToSearch) {
+      r ^= indexed.indexOf(StringUtils.toUtf8ByteBuffer(elementToSearch));
     }
     return r;
   }
@@ -269,21 +252,13 @@ public class FrontCodedIndexedBenchmark
   @Benchmark
   public void iterator(Blackhole blackhole)
   {
-    if ("generic".equals(indexType)) {
-      final Iterator<String> iterator = genericIndexed.iterator();
-      while (iterator.hasNext()) {
-        blackhole.consume(iterator.next());
-      }
-    } else {
-
-      final Iterator<ByteBuffer> iterator = frontCodedIndexed.iterator();
-      while (iterator.hasNext()) {
-        final ByteBuffer buffer = iterator.next();
-        if (buffer == null) {
-          blackhole.consume(null);
-        } else {
-          blackhole.consume(StringUtils.fromUtf8(buffer));
-        }
+    final Iterator<ByteBuffer> iterator = indexed.iterator();
+    while (iterator.hasNext()) {
+      final ByteBuffer buffer = iterator.next();
+      if (buffer == null) {
+        blackhole.consume(null);
+      } else {
+        blackhole.consume(StringUtils.fromUtf8(buffer));
       }
     }
   }

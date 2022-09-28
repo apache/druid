@@ -34,12 +34,12 @@ import javax.annotation.Nullable;
  */
 public class StringFrontCodedDictionaryEncodedColumnSupplier implements Supplier<DictionaryEncodedColumn<?>>
 {
-  private final FrontCodedIndexed utf8Dictionary;
+  private final Supplier<FrontCodedIndexed> utf8Dictionary;
   private final @Nullable Supplier<ColumnarInts> singleValuedColumn;
   private final @Nullable Supplier<ColumnarMultiInts> multiValuedColumn;
 
   public StringFrontCodedDictionaryEncodedColumnSupplier(
-      FrontCodedIndexed utf8Dictionary,
+      Supplier<FrontCodedIndexed> utf8Dictionary,
       @Nullable Supplier<ColumnarInts> singleValuedColumn,
       @Nullable Supplier<ColumnarMultiInts> multiValuedColumn
   )
@@ -55,7 +55,7 @@ public class StringFrontCodedDictionaryEncodedColumnSupplier implements Supplier
     return new StringFrontCodedDictionaryEncodedColumn(
         singleValuedColumn != null ? singleValuedColumn.get() : null,
         multiValuedColumn != null ? multiValuedColumn.get() : null,
-        utf8Dictionary
+        utf8Dictionary.get()
     );
   }
 }

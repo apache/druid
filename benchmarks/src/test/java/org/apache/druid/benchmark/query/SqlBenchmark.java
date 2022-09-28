@@ -399,7 +399,11 @@ public class SqlBenchmark
       "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimUniform NOT LIKE '%3' GROUP BY 1, 2",
       "SELECT dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential = '311' GROUP BY 1 ORDER BY 1",
       // 23: full scan
-      "SELECT * from foo"
+      "SELECT * FROM foo",
+      "SELECT * FROM foo WHERE dimSequential IN ('1', '2', '3', '4', '5', '10', '11', '20', '21', '23', '40', '50', '64', '70', '100')",
+      "SELECT * FROM foo WHERE dimSequential > '10' AND dimSequential < '8500'",
+      "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential IN ('1', '2', '3', '4', '5', '10', '11', '20', '21', '23', '40', '50', '64', '70', '100') GROUP BY 1, 2",
+      "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential > '10' AND dimSequential < '8500' GROUP BY 1, 2"
 
 
   );
@@ -412,7 +416,7 @@ public class SqlBenchmark
   @Param({"none", "front-coded-4", "front-coded-16"})
   private String stringEncoding;
 
-  @Param({"4", "5", "6", "7", "8", "10", "11", "12", "19", "21", "22", "23"})
+  @Param({"4", "5", "6", "7", "8", "10", "11", "12", "19", "21", "22", "23", "26", "27"})
   private String query;
 
   @Param({STORAGE_MMAP, STORAGE_FRAME_ROW, STORAGE_FRAME_COLUMNAR})

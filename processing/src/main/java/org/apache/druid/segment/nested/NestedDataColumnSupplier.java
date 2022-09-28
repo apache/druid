@@ -49,7 +49,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
   private final GenericIndexed<String> fields;
   private final NestedLiteralTypeInfo fieldInfo;
   private final GenericIndexed<ByteBuffer> dictionary;
-  private final FrontCodedIndexed frontCodedDictionary;
+  private final Supplier<FrontCodedIndexed> frontCodedDictionary;
   private final FixedIndexed<Long> longDictionary;
   private final FixedIndexed<Double> doubleDictionary;
   private final ColumnConfig columnConfig;
@@ -86,7 +86,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
         if (dictionaryVersion == EncodedStringDictionaryWriter.VERSION) {
           final byte encodingId = stringDictionaryBuffer.get();
           if (encodingId == StringEncodingStrategy.FRONT_CODED_ID) {
-            frontCodedDictionary = FrontCodedIndexed.read(stringDictionaryBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY, metadata.getByteOrder());
+            frontCodedDictionary = FrontCodedIndexed.read(stringDictionaryBuffer, metadata.getByteOrder());
             dictionary = null;
           } else {
             throw new ISE("impossible, unknown encoding strategy id: %s", encodingId);
@@ -156,7 +156,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
         nullValues,
         fields,
         fieldInfo,
-        frontCodedDictionary == null ? dictionary : frontCodedDictionary,
+        frontCodedDictionary == null ? dictionary : frontCodedDictionary.get(),
         longDictionary,
         doubleDictionary,
         fileMapper

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.serde;
 
+import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
@@ -47,8 +48,8 @@ import javax.annotation.Nullable;
 public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
 {
   private final BitmapFactory bitmapFactory;
-  private final StringEncodingStrategies.Utf8ToStringIndexed dictionary;
-  private final FrontCodedIndexed utf8Dictionary;
+  private final Supplier<StringEncodingStrategies.Utf8ToStringIndexed> dictionary;
+  private final Supplier<FrontCodedIndexed> utf8Dictionary;
 
   @Nullable
   private final GenericIndexed<ImmutableBitmap> bitmaps;
@@ -58,15 +59,15 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
 
   public StringFrontCodedColumnIndexSupplier(
       BitmapFactory bitmapFactory,
-      FrontCodedIndexed utf8Dictionary,
+      Supplier<FrontCodedIndexed> utf8Dictionary,
       @Nullable GenericIndexed<ImmutableBitmap> bitmaps,
       @Nullable ImmutableRTree indexedTree
   )
   {
     this.bitmapFactory = bitmapFactory;
     this.bitmaps = bitmaps;
-    this.dictionary = new StringEncodingStrategies.Utf8ToStringIndexed(utf8Dictionary);
     this.utf8Dictionary = utf8Dictionary;
+    this.dictionary = () -> new StringEncodingStrategies.Utf8ToStringIndexed(this.utf8Dictionary.get());
     this.indexedTree = indexedTree;
   }
 
@@ -78,7 +79,8 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
       final Indexed<ImmutableBitmap> singleThreadedBitmaps = bitmaps.singleThreaded();
       if (clazz.equals(NullValueIndex.class)) {
         final BitmapColumnIndex nullIndex;
-        if (NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+        final StringEncodingStrategies.Utf8ToStringIndexed stringDictionary = dictionary.get();
+        if (NullHandling.isNullOrEquivalent(stringDictionary.get(0))) {
           nullIndex = new SimpleImmutableBitmapIndex(bitmaps.get(0));
         } else {
           nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
@@ -87,27 +89,28 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
       } else if (clazz.equals(StringValueSetIndex.class)) {
         return (T) new IndexedUtf8ValueSetIndex<>(
             bitmapFactory,
-            utf8Dictionary,
+            utf8Dictionary.get(),
             singleThreadedBitmaps
         );
       } else if (clazz.equals(DruidPredicateIndex.class)) {
         return (T) new IndexedStringDruidPredicateIndex<>(
             bitmapFactory,
-            dictionary,
+            dictionary.get(),
             singleThreadedBitmaps
         );
       } else if (clazz.equals(LexicographicalRangeIndex.class)) {
+        final FrontCodedIndexed dict = utf8Dictionary.get();
         return (T) new IndexedUtf8LexicographicalRangeIndex<>(
             bitmapFactory,
-            utf8Dictionary,
+            dict,
             singleThreadedBitmaps,
-            NullHandling.isNullOrEquivalent(dictionary.get(0))
+            dict.get(0) == null
         );
       } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
                  || clazz.equals(DictionaryEncodedValueIndex.class)) {
         return (T) new IndexedStringDictionaryEncodedStringValueIndex<>(
             bitmapFactory,
-            dictionary,
+            dictionary.get(),
             bitmaps
         );
       }

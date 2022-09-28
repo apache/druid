@@ -51,11 +51,10 @@ public class StringEncodingStrategies
       // a version byte that should hopefully never conflict with a GenericIndexed version, along with a byte
       // from StringEncodingStrategy.getId to indicate which encoding strategy is used for the dictionary before
       // writing the dictionary itself
-      DictionaryWriter<String> writer;
+      DictionaryWriter<byte[]> writer;
       if (StringEncodingStrategy.FRONT_CODED.equals(encodingStrategy.getType())) {
-        writer = new FrontCodedIndexedWriter<>(
+        writer = new FrontCodedIndexedWriter(
             writeoutMedium,
-            FrontCodedIndexedWriter.STRING_ENCODER,
             ByteOrder.nativeOrder(),
             ((StringEncodingStrategy.FrontCoded) encodingStrategy).getBucketSize()
         );

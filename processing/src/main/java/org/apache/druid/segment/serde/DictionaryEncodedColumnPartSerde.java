@@ -22,6 +22,7 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
@@ -414,9 +415,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           boolean hasMultipleValues
       )
       {
-        final FrontCodedIndexed rUtf8Dictionary = FrontCodedIndexed.read(
+        final Supplier<FrontCodedIndexed> rUtf8Dictionary = FrontCodedIndexed.read(
             buffer,
-            GenericIndexed.BYTE_BUFFER_STRATEGY,
             byteOrder
         );
 
@@ -431,7 +431,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           rMultiValuedColumn = null;
         }
 
-        final boolean hasNulls = rUtf8Dictionary.get(0) == null;
+        final boolean hasNulls = rUtf8Dictionary.get().get(0) == null;
 
         StringFrontCodedDictionaryEncodedColumnSupplier dictionaryEncodedColumnSupplier =
             new StringFrontCodedDictionaryEncodedColumnSupplier(

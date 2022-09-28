@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.data;
 
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 
@@ -32,10 +34,10 @@ public class EncodedStringDictionaryWriter implements DictionaryWriter<String>
   public static final byte VERSION = Byte.MAX_VALUE; // hopefully GenericIndexed never makes a version this high...
 
   private final StringEncodingStrategy encodingStrategy;
-  private final DictionaryWriter<String> delegate;
+  private final DictionaryWriter<byte[]> delegate;
 
   public EncodedStringDictionaryWriter(
-      DictionaryWriter<String> delegate,
+      DictionaryWriter<byte[]> delegate,
       StringEncodingStrategy encodingStrategy
   )
   {
@@ -58,7 +60,7 @@ public class EncodedStringDictionaryWriter implements DictionaryWriter<String>
   @Override
   public void write(@Nullable String objectToWrite) throws IOException
   {
-    delegate.write(objectToWrite);
+    delegate.write(StringUtils.toUtf8Nullable(NullHandling.emptyToNullIfNeeded(objectToWrite)));
   }
 
   @Override
