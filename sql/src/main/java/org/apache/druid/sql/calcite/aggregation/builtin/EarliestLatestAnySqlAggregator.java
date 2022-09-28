@@ -207,7 +207,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           maxStringBytes = RexLiteral.intValue(rexNodes.get(1));
         }
         catch (AssertionError ae) {
-          plannerContext.setPlanningError("The second argument '%s' to function '%s' is not a number", aggregateCall.getName(), rexNodes.get(1));
+          plannerContext.setPlanningError("The second argument '%s' to function '%s' is not a number", rexNodes.get(1), aggregateCall.getName());
           return null;
         }
         theAggFactory = aggregatorType.createAggregatorFactory(
