@@ -999,7 +999,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringLatestGroupByWithImpossibleQuery()
+  public void testStringLatestGroupByWithAlwaysFalseCondition()
   {
     testQuery(
         "SELECT LATEST(dim4, 10),dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN( 'something else') ) GROUP BY dim2",
@@ -1024,7 +1024,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringLatestByGroupByWithImpossibleQuery()
+  public void testStringLatestByGroupByWithAlwaysFalseCondition()
   {
     testQuery(
         "SELECT LATEST_BY(dim4, __time, 10),dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN( 'something else') ) GROUP BY dim2",
