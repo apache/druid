@@ -224,9 +224,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     }
     final int offset = getBucketOffset(minBucketIndex);
 
-    // hi i'm fragmented search, you might remember me from such code blocks as ~100 lines ago
-    // you know the drill, compare first value in bucket to get common prefix length, if it matches, short circuit,
-    // else scan through the bucket until we get to values with the same or smaller prefixes and have at it.
+    // like we did in the loop, except comparison being smaller the first value here is a short circuit
     buffer.position(offset);
     final int firstLength = VByte.readInt(buffer);
     final int firstOffset = buffer.position();
@@ -242,7 +240,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     }
 
     if (comparison > 0) {
-      // value preceedes bucket
+      // value preceedes bucket, so bail out
       return -(bucketIndexBase + adjustIndex) - 1;
     }
 
