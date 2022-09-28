@@ -19,26 +19,22 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-public class CompressedBigDecimalMaxAggregatorTimeseriesTest extends CompressedBigDecimalAggregatorTimeseriesTestBase
+import org.apache.druid.segment.ColumnValueSelector;
+import org.easymock.EasyMock;
+
+import java.math.BigDecimal;
+
+public class CompressedBigDecimalSumAggregatorTest extends CompressedBigDecimalAggregatorTestBase
 {
   @Override
-  public void testIngestAndTimeseriesQuery() throws Exception
+  public void testNoData()
   {
-    testIngestAndTimeseriesQueryHelper(
-        "bd_max_test_aggregators.json",
-        "bd_max_test_timeseries_query.json",
-        "9999999999.000000000"
+    CompressedBigDecimalSumAggregator aggregator = new CompressedBigDecimalSumAggregator(
+        4,
+        9,
+        EasyMock.createMock(ColumnValueSelector.class),
+        false
     );
-  }
-
-  @Override
-  public void testIngestMultipleSegmentsAndTimeseriesQuery() throws Exception
-  {
-    testIngestMultipleSegmentsAndTimeseriesQueryHelper(
-        "bd_max_test_aggregators.json",
-        "bd_max_test_timeseries_query.json",
-        "9999999999.000000000"
-    );
+    testNoDataHelper(aggregator, new ArrayCompressedBigDecimal(BigDecimal.ZERO));
   }
 }
-

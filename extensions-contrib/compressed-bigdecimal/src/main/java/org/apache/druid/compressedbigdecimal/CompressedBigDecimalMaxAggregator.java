@@ -19,20 +19,13 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
 /**
  * An Aggregator to aggregate big decimal values.
  */
-public class CompressedBigDecimalMaxAggregator implements Aggregator
+public class CompressedBigDecimalMaxAggregator extends CompressedBigDecimalAggregatorBase
 {
-
-  private final ColumnValueSelector<CompressedBigDecimal> selector;
-  private final boolean strictNumberParsing;
-  private final CompressedBigDecimal max;
-
-  private boolean empty;
 
   /**
    * Constructor.
@@ -49,10 +42,13 @@ public class CompressedBigDecimalMaxAggregator implements Aggregator
       boolean strictNumberParsing
   )
   {
-    this.selector = selector;
-    this.strictNumberParsing = strictNumberParsing;
-    max = ArrayCompressedBigDecimal.allocateMin(size, scale);
-    empty = true;
+    super(size, scale, selector, strictNumberParsing, CompressedBigDecimalMaxAggregator.class.getSimpleName());
+  }
+
+  @Override
+  protected CompressedBigDecimal initValue(int size, int scale)
+  {
+    return ArrayCompressedBigDecimal.allocateMin(size, scale);
   }
 
   @Override
@@ -60,37 +56,13 @@ public class CompressedBigDecimalMaxAggregator implements Aggregator
   {
     CompressedBigDecimal selectedObject = Utils.objToCompressedBigDecimalWithScale(
         selector.getObject(),
-        max.getScale(),
+        value.getScale(),
         strictNumberParsing
     );
 
     if (selectedObject != null) {
       empty = false;
-      max.accumulateMax(selectedObject);
+      value.accumulateMax(selectedObject);
     }
-  }
-
-  @Override
-  public Object get()
-  {
-    return empty ? null : max;
-  }
-
-  @Override
-  public float getFloat()
-  {
-    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getFloat()");
-  }
-
-  @Override
-  public long getLong()
-  {
-    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getLong()");
-  }
-
-  @Override
-  public void close()
-  {
-    // no resources to cleanup
   }
 }

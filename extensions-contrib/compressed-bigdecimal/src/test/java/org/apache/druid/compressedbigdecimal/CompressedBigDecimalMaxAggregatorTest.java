@@ -21,12 +21,10 @@ package org.apache.druid.compressedbigdecimal;
 
 import org.apache.druid.segment.ColumnValueSelector;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
 
-public class CompressedBigDecimalMaxAggregatorTest
+public class CompressedBigDecimalMaxAggregatorTest extends CompressedBigDecimalAggregatorTestBase
 {
-  @Test
+  @Override
   public void testNoData()
   {
     CompressedBigDecimalMaxAggregator aggregator = new CompressedBigDecimalMaxAggregator(
@@ -35,7 +33,6 @@ public class CompressedBigDecimalMaxAggregatorTest
         EasyMock.createMock(ColumnValueSelector.class),
         false
     );
-
-    Assert.assertNull(aggregator.get());
+    testNoDataHelper(aggregator, null);
   }
 }

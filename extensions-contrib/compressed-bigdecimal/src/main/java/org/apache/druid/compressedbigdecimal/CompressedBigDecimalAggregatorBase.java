@@ -19,13 +19,21 @@
 
 package org.apache.druid.compressedbigdecimal;
 
+import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
 /**
- * An Aggregator to compute min bigDecimal values
+ * An Aggregator to aggregate big decimal values.
  */
-public class CompressedBigDecimalMinAggregator extends CompressedBigDecimalAggregatorBase
+public abstract class CompressedBigDecimalAggregatorBase implements Aggregator
 {
+  protected final ColumnValueSelector<CompressedBigDecimal> selector;
+  protected final boolean strictNumberParsing;
+  protected final CompressedBigDecimal value;
+  protected boolean empty;
+
+  private final String className;
+
   /**
    * Constructor.
    *
@@ -34,34 +42,47 @@ public class CompressedBigDecimalMinAggregator extends CompressedBigDecimalAggre
    * @param selector            that has the metric value
    * @param strictNumberParsing true => NumberFormatExceptions thrown; false => NumberFormatException returns 0
    */
-  public CompressedBigDecimalMinAggregator(
+  protected CompressedBigDecimalAggregatorBase(
       int size,
       int scale,
       ColumnValueSelector<CompressedBigDecimal> selector,
-      boolean strictNumberParsing
+      boolean strictNumberParsing,
+      String className
   )
   {
-    super(size, scale, selector, strictNumberParsing, CompressedBigDecimalMinAggregator.class.getSimpleName());
+    this.selector = selector;
+    this.strictNumberParsing = strictNumberParsing;
+    this.className = className;
+    value = initValue(size, scale);
+    empty = true;
+  }
+
+  protected abstract CompressedBigDecimal initValue(int size, int scale);
+
+  @Override
+  public abstract void aggregate();
+
+  @Override
+  public Object get()
+  {
+    return empty ? null : value;
   }
 
   @Override
-  protected CompressedBigDecimal initValue(int size, int scale)
+  public float getFloat()
   {
-    return ArrayCompressedBigDecimal.allocateMax(size, scale);
+    throw new UnsupportedOperationException(className + " does not support getFloat()");
   }
 
   @Override
-  public void aggregate()
+  public long getLong()
   {
-    CompressedBigDecimal selectedObject = Utils.objToCompressedBigDecimalWithScale(
-        selector.getObject(),
-        value.getScale(),
-        strictNumberParsing
-    );
+    throw new UnsupportedOperationException(className + " does not support getLong()");
+  }
 
-    if (selectedObject != null) {
-      empty = false;
-      value.accumulateMin(selectedObject);
-    }
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
   }
 }

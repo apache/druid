@@ -19,26 +19,15 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-public class CompressedBigDecimalMaxAggregatorTimeseriesTest extends CompressedBigDecimalAggregatorTimeseriesTestBase
+import org.apache.druid.query.aggregation.AggregatorFactory;
+
+public interface CompressedBigDecimalAggregatorFactoryCreator
 {
-  @Override
-  public void testIngestAndTimeseriesQuery() throws Exception
-  {
-    testIngestAndTimeseriesQueryHelper(
-        "bd_max_test_aggregators.json",
-        "bd_max_test_timeseries_query.json",
-        "9999999999.000000000"
-    );
-  }
-
-  @Override
-  public void testIngestMultipleSegmentsAndTimeseriesQuery() throws Exception
-  {
-    testIngestMultipleSegmentsAndTimeseriesQueryHelper(
-        "bd_max_test_aggregators.json",
-        "bd_max_test_timeseries_query.json",
-        "9999999999.000000000"
-    );
-  }
+  AggregatorFactory create(
+      String name,
+      String fieldName,
+      Integer size,
+      Integer scale,
+      Boolean strictNumberParsing
+  );
 }
-

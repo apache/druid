@@ -208,4 +208,10 @@ public class CompressedBigDecimalMinFactoryTest extends CompressedBigDecimalFact
 
     testCompressedBigDecimalAggregatorGetLongHelper(aggregator);
   }
+
+  @Override
+  public void testCacheKeyEquality()
+  {
+    testCacheKeyEqualityHelper(CompressedBigDecimalMinAggregatorFactory::new);
+  }
 }

@@ -203,4 +203,10 @@ public class CompressedBigDecimalSumFactoryTest extends CompressedBigDecimalFact
 
     testCompressedBigDecimalAggregatorGetLongHelper(aggregator);
   }
+
+  @Override
+  public void testCacheKeyEquality()
+  {
+    testCacheKeyEqualityHelper(CompressedBigDecimalSumAggregatorFactory::new);
+  }
 }

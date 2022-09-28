@@ -19,62 +19,25 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.Resources;
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.aggregation.AggregationTestHelper;
-import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
-import org.apache.druid.query.groupby.ResultRow;
-import org.hamcrest.collection.IsCollectionWithSize;
-import org.hamcrest.collection.IsMapContaining;
-import org.hamcrest.collection.IsMapWithSize;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.File;
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
 
 
-/**
- * Unit tests for {@link CompressedBigDecimalMinAggregatorFactory}.
- */
 @RunWith(Parameterized.class)
-public class CompressedBigDecimalMinAggregatorGroupByTest
+public class CompressedBigDecimalMinAggregatorGroupByTest extends CompressedBigDecimalAggregatorGroupByTestBase
 {
-  private final AggregationTestHelper helper;
-
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder(new File("target"));
-
-  /**
-   * Constructor.
-   *
-   * @param config config object
-   */
-  public CompressedBigDecimalMinAggregatorGroupByTest(GroupByQueryConfig config)
+  public CompressedBigDecimalMinAggregatorGroupByTest(
+      GroupByQueryConfig config,
+      CompressedBigDecimalGroupByQueryConfig cbdGroupByQueryConfig
+  )
   {
-    CompressedBigDecimalModule module = new CompressedBigDecimalModule();
-    CompressedBigDecimalModule.registerSerde();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        module.getJacksonModules(), config, tempFolder);
+    super(config, cbdGroupByQueryConfig);
   }
 
   /**
@@ -85,79 +48,17 @@ public class CompressedBigDecimalMinAggregatorGroupByTest
   @Parameterized.Parameters(name = "{0}")
   public static Collection<?> constructorFeeder()
   {
-    final List<Object[]> constructors = new ArrayList<>();
+    List<Object[]> constructors = new ArrayList<>();
+    CompressedBigDecimalGroupByQueryConfig cbdGroupByQueryConfig = new CompressedBigDecimalGroupByQueryConfig(
+        "bd_min_test_groupby_query.json",
+        "bd_min_test_aggregators.json",
+        "-1.000000000",
+        "-1.000000000",
+        "-1.000000000"
+    );
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      constructors.add(new Object[]{config});
+      constructors.add(new Object[]{config, cbdGroupByQueryConfig});
     }
     return constructors;
-  }
-
-  /**
-   * Default setup of UTC timezone.
-   */
-  @BeforeClass
-  public static void setupClass()
-  {
-    System.setProperty("user.timezone", "UTC");
-  }
-
-  /**
-   * ingetion method for all groupBy query.
-   *
-   * @throws IOException IOException
-   * @throws Exception   Exception
-   */
-  @Test
-  public void testIngestAndGroupByAllQuery() throws IOException, Exception
-  {
-
-    String groupByQueryJson = Resources.asCharSource(
-        this.getClass().getResource("/" + "bd_min_test_groupby_query.json"),
-        StandardCharsets.UTF_8
-    ).read();
-
-    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
-        this.getClass().getResourceAsStream("/" + "bd_test_data.csv"),
-        Resources.asCharSource(
-            this.getClass().getResource(
-                "/" + "bd_test_data_parser.json"),
-            StandardCharsets.UTF_8
-        ).read(),
-        Resources.asCharSource(
-            this.getClass().getResource("/" + "bd_min_test_aggregators.json"),
-            StandardCharsets.UTF_8
-        ).read(),
-        0,
-        Granularities.NONE,
-        5,
-        groupByQueryJson
-    );
-
-    List<ResultRow> results = seq.toList();
-    Assert.assertThat(results, IsCollectionWithSize.hasSize(1));
-    ResultRow row = results.get(0);
-    ObjectMapper mapper = helper.getObjectMapper();
-    GroupByQuery groupByQuery = mapper.readValue(groupByQueryJson, GroupByQuery.class);
-    MapBasedRow mapBasedRow = row.toMapBasedRow(groupByQuery);
-    Map<String, Object> event = mapBasedRow.getEvent();
-    Assert.assertEquals(
-        new DateTime("2017-01-01T00:00:00Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"))),
-        mapBasedRow.getTimestamp()
-    );
-    Assert.assertThat(event, IsMapWithSize.aMapWithSize(3));
-    Assert.assertThat(
-        event,
-        IsMapContaining.hasEntry("cbdRevenueFromString", new ArrayCompressedBigDecimal(new BigDecimal("-1.000000000")))
-    );
-    // long conversion of 5000000000.000000005 results in null/0 value
-    Assert.assertThat(
-        event,
-        IsMapContaining.hasEntry("cbdRevenueFromLong", new ArrayCompressedBigDecimal(new BigDecimal("-1.000000000")))
-    );
-    // double input changes 5000000000.000000005 to 5000000000.5 to fit in double mantissa space
-    Assert.assertThat(
-        event,
-        IsMapContaining.hasEntry("cbdRevenueFromDouble", new ArrayCompressedBigDecimal(new BigDecimal("-1.000000000")))
-    );
   }
 }

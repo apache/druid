@@ -20,17 +20,17 @@
 package org.apache.druid.compressedbigdecimal;
 
 
-import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.segment.ColumnValueSelector;
-
-import javax.annotation.Nullable;
 
 /**
  * AggregateCombiner for CompressedBigDecimals computing a max
  */
-public class CompressedBigDecimalMaxAggregateCombiner implements AggregateCombiner<CompressedBigDecimal>
+public class CompressedBigDecimalMaxAggregateCombiner extends CompressedBigDecimalAggregateCombinerBase
 {
-  private CompressedBigDecimal max;
+  public CompressedBigDecimalMaxAggregateCombiner()
+  {
+    super(CompressedBigDecimalMaxAggregateCombiner.class.getSimpleName());
+  }
 
   @Override
   public void reset(@SuppressWarnings("rawtypes") ColumnValueSelector columnValueSelector)
@@ -40,10 +40,10 @@ public class CompressedBigDecimalMaxAggregateCombiner implements AggregateCombin
         (ColumnValueSelector<CompressedBigDecimal>) columnValueSelector;
 
     CompressedBigDecimal cbd = selector.getObject();
-    if (max == null) {
-      max = new ArrayCompressedBigDecimal(cbd);
+    if (value == null) {
+      value = new ArrayCompressedBigDecimal(cbd);
     } else {
-      max.setValue(cbd);
+      value.setValue(cbd);
     }
   }
 
@@ -55,41 +55,10 @@ public class CompressedBigDecimalMaxAggregateCombiner implements AggregateCombin
         (ColumnValueSelector<CompressedBigDecimal>) columnValueSelector;
     CompressedBigDecimal cbd = selector.getObject();
 
-    if (max == null) {
-      max = new ArrayCompressedBigDecimal(cbd);
+    if (value == null) {
+      value = new ArrayCompressedBigDecimal(cbd);
     } else {
-      max.accumulateMax(cbd);
+      value.accumulateMax(cbd);
     }
-  }
-
-  @Override
-  public double getDouble()
-  {
-    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getDouble()");
-  }
-
-  @Override
-  public float getFloat()
-  {
-    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getFloat()");
-  }
-
-  @Override
-  public long getLong()
-  {
-    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getLong()");
-  }
-
-  @Nullable
-  @Override
-  public CompressedBigDecimal getObject()
-  {
-    return max;
-  }
-
-  @Override
-  public Class<CompressedBigDecimal> classOfObject()
-  {
-    return CompressedBigDecimal.class;
   }
 }

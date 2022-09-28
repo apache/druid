@@ -19,7 +19,6 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
@@ -27,17 +26,10 @@ import java.nio.ByteBuffer;
 /**
  * A buffered aggregator to compute a max CompressedBigDecimal
  */
-public class CompressedBigDecimalMaxBufferAggregator implements BufferAggregator
+public class CompressedBigDecimalMaxBufferAggregator extends CompressedBigDecimalBufferAggregatorBase
 {
   private static final int HEADER_SIZE_BYTES =
-      CompressedBigDecimalMaxAggregatorFactory.BUFFER_AGGREGATOR_HEADER_SIZE_BYTES;
-
-  //Cache will hold the aggregated value.
-  //We are using ByteBuffer to hold the key to the aggregated value.
-  private final ColumnValueSelector<CompressedBigDecimal> selector;
-  private final int size;
-  private final int scale;
-  private final boolean strictNumberParsing;
+        CompressedBigDecimalAggregatorFactoryBase.BUFFER_AGGREGATOR_HEADER_SIZE_BYTES;
 
   /**
    * Constructor.
@@ -54,17 +46,13 @@ public class CompressedBigDecimalMaxBufferAggregator implements BufferAggregator
       boolean strictNumberParsing
   )
   {
-    this.selector = selector;
-    this.size = size;
-    this.scale = scale;
-    this.strictNumberParsing = strictNumberParsing;
+    super(size, scale, selector, strictNumberParsing, HEADER_SIZE_BYTES);
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
     ByteBufferCompressedBigDecimal.initMin(buf, position + HEADER_SIZE_BYTES, size);
-    setEmpty(true, buf, position);
   }
 
   @Override
@@ -89,52 +77,4 @@ public class CompressedBigDecimalMaxBufferAggregator implements BufferAggregator
       existing.accumulateMax(addend);
     }
   }
-
-  @Override
-  public Object get(ByteBuffer buf, int position)
-  {
-    if (isEmpty(buf, position)) {
-      return null;
-    }
-
-    ByteBufferCompressedBigDecimal byteBufferCompressedBigDecimal = new ByteBufferCompressedBigDecimal(
-        buf,
-        position + HEADER_SIZE_BYTES,
-        size,
-        scale
-    );
-
-    CompressedBigDecimal heapCompressedBigDecimal = byteBufferCompressedBigDecimal.toHeap();
-
-    return heapCompressedBigDecimal;
-  }
-
-  @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getFloat()");
-  }
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getLong()");
-  }
-
-  @Override
-  public void close()
-  {
-    // no resources to cleanup
-  }
-
-  private static void setEmpty(boolean value, ByteBuffer byteBuffer, int position)
-  {
-    byteBuffer.put(position, (byte) (value ? 1 : 0));
-  }
-
-  private static boolean isEmpty(ByteBuffer byteBuffer, int position)
-  {
-    return byteBuffer.get(position) != 0;
-  }
-
 }

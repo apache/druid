@@ -19,7 +19,6 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
@@ -27,16 +26,8 @@ import java.nio.ByteBuffer;
 /**
  * A buffered aggregator to aggregate big decimal value.
  */
-public class CompressedBigDecimalSumBufferAggregator implements BufferAggregator
+public class CompressedBigDecimalSumBufferAggregator extends CompressedBigDecimalBufferAggregatorBase
 {
-
-  //Cache will hold the aggregated value.
-  //We are using ByteBuffer to hold the key to the aggregated value.
-  private final ColumnValueSelector<CompressedBigDecimal> selector;
-  private final int size;
-  private final int scale;
-  private final boolean strictNumberParsing;
-
   /**
    * Constructor.
    *
@@ -52,10 +43,7 @@ public class CompressedBigDecimalSumBufferAggregator implements BufferAggregator
       boolean strictNumberParsing
   )
   {
-    this.selector = selector;
-    this.size = size;
-    this.scale = scale;
-    this.strictNumberParsing = strictNumberParsing;
+    super(size, scale, selector, strictNumberParsing, 0);
   }
 
   @Override
@@ -78,21 +66,6 @@ public class CompressedBigDecimalSumBufferAggregator implements BufferAggregator
 
       existing.accumulateSum(addend);
     }
-  }
-
-  @Override
-  public Object get(ByteBuffer buf, int position)
-  {
-    ByteBufferCompressedBigDecimal byteBufferCompressedBigDecimal = new ByteBufferCompressedBigDecimal(
-        buf,
-        position,
-        size,
-        scale
-    );
-
-    CompressedBigDecimal heapCompressedBigDecimal = byteBufferCompressedBigDecimal.toHeap();
-
-    return heapCompressedBigDecimal;
   }
 
   @Override

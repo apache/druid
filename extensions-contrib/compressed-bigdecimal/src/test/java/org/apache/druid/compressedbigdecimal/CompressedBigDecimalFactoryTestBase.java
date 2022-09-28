@@ -34,12 +34,15 @@ import org.junit.Test;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.util.Base64;
 
 /**
  * common tests for {@link AggregatorFactory} implementations
  */
 public abstract class CompressedBigDecimalFactoryTestBase
 {
+  private static final Object FLAG = new Object();
+
   @Test
   public abstract void testJsonSerialize() throws IOException;
 
@@ -78,6 +81,9 @@ public abstract class CompressedBigDecimalFactoryTestBase
 
   @Test(expected = UnsupportedOperationException.class)
   public abstract void testCompressedBigDecimalBufferAggregatorGetLong();
+
+  @Test
+  public abstract void testCacheKeyEquality();
 
   protected <T> void testJsonSerializeHelper(Class<T> clazz, T aggregatorFactory) throws IOException
   {
@@ -202,5 +208,114 @@ public abstract class CompressedBigDecimalFactoryTestBase
   protected void testCompressedBigDecimalAggregatorGetLongHelper(Aggregator aggregator)
   {
     aggregator.getLong();
+  }
+
+  /**
+   * creates a series of pairs of instances that should not be unique and verifies. Also tests when cache keys should
+   * be the same
+   */
+  protected void testCacheKeyEqualityHelper(CompressedBigDecimalAggregatorFactoryCreator factoryCreator)
+  {
+    Assert.assertEquals(
+        Base64.getEncoder().encodeToString(
+            factoryCreator.create(
+                "name1",
+                "fieldName1",
+                10,
+                3,
+                true
+            ).getCacheKey()
+        ),
+        Base64.getEncoder().encodeToString(
+            factoryCreator.create(
+                "name2",
+                "fieldName1",
+                10,
+                3,
+                true
+            ).getCacheKey()
+        )
+    );
+    Assert.assertNotEquals(
+        Base64.getEncoder().encodeToString(
+            factoryCreator.create(
+                "name1",
+                "fieldName1",
+                10,
+                3,
+                true
+            ).getCacheKey()
+        ),
+        Base64.getEncoder().encodeToString(
+            factoryCreator.create(
+                "name1",
+                "fieldName2",
+                10,
+                3,
+                true
+            ).getCacheKey()
+        )
+    );
+    Assert.assertNotEquals(
+        Base64.getEncoder().encodeToString(
+            factoryCreator.create(
+                "name1",
+                "fieldName1",
+                10,
+                3,
+                true
+            ).getCacheKey()
+        ),
+        Base64.getEncoder().encodeToString(
+            factoryCreator.create(
+                "name1",
+                "fieldName1",
+                6,
+                3,
+                true
+            ).getCacheKey()
+        )
+    );
+    Assert.assertNotEquals(
+        Base64.getEncoder().encodeToString(
+            factoryCreator.create(
+                "name1",
+                "fieldName1",
+                10,
+                3,
+                true
+            ).getCacheKey()
+        ),
+        Base64.getEncoder().encodeToString(
+            factoryCreator.create(
+                "name1",
+                "fieldName1",
+                10,
+                9,
+                true
+            ).getCacheKey()
+        )
+    );
+    Assert.assertNotEquals(
+        Base64.getEncoder().encodeToString(
+            factoryCreator.create(
+                "name1",
+                "fieldName1",
+                10,
+                3,
+                true
+            ).getCacheKey()
+        ),
+        Base64.getEncoder().encodeToString(
+            factoryCreator.create(
+                "name1",
+                "fieldName1",
+                10,
+                3,
+                false
+            ).getCacheKey()
+        )
+    );
+
   }
 }

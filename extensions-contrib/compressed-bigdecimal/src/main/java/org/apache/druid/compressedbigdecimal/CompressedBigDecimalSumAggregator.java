@@ -19,19 +19,13 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
 /**
  * An Aggregator to aggregate big decimal values.
  */
-public class CompressedBigDecimalSumAggregator implements Aggregator
+public class CompressedBigDecimalSumAggregator extends CompressedBigDecimalAggregatorBase
 {
-
-  private final ColumnValueSelector<CompressedBigDecimal> selector;
-  private final boolean strictNumberParsing;
-  private final CompressedBigDecimal sum;
-
   /**
    * Constructor.
    *
@@ -47,9 +41,14 @@ public class CompressedBigDecimalSumAggregator implements Aggregator
       boolean strictNumberParsing
   )
   {
-    this.selector = selector;
-    this.strictNumberParsing = strictNumberParsing;
-    this.sum = ArrayCompressedBigDecimal.allocateZero(size, scale);
+    super(size, scale, selector, strictNumberParsing, CompressedBigDecimalSumAggregator.class.getSimpleName());
+    empty = false;
+  }
+
+  @Override
+  protected CompressedBigDecimal initValue(int size, int scale)
+  {
+    return ArrayCompressedBigDecimal.allocateZero(size, scale);
   }
 
   @Override
@@ -57,36 +56,12 @@ public class CompressedBigDecimalSumAggregator implements Aggregator
   {
     CompressedBigDecimal selectedObject = Utils.objToCompressedBigDecimalWithScale(
         selector.getObject(),
-        sum.getScale(),
+        value.getScale(),
         strictNumberParsing
     );
 
     if (selectedObject != null) {
-      sum.accumulateSum(selectedObject);
+      value.accumulateSum(selectedObject);
     }
-  }
-
-  @Override
-  public Object get()
-  {
-    return sum;
-  }
-
-  @Override
-  public float getFloat()
-  {
-    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getFloat()");
-  }
-
-  @Override
-  public long getLong()
-  {
-    throw new UnsupportedOperationException(getClass().getSimpleName() + " does not support getLong()");
-  }
-
-  @Override
-  public void close()
-  {
-    // no resources to cleanup
   }
 }

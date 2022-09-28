@@ -207,4 +207,10 @@ public class CompressedBigDecimalMaxFactoryTest extends CompressedBigDecimalFact
 
     testCompressedBigDecimalAggregatorGetLongHelper(aggregator);
   }
+
+  @Override
+  public void testCacheKeyEquality()
+  {
+    testCacheKeyEqualityHelper(CompressedBigDecimalMaxAggregatorFactory::new);
+  }
 }
