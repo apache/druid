@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.scan;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.collections.MultiColumnSorter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -143,6 +144,7 @@ class TopKOffsetSequence extends BaseSequence<ScanResultValue, Iterator<ScanResu
           final Object value;
 
           if (legacy && allColumns.get(i).equals(ScanQueryEngine.LEGACY_TIMESTAMP_KEY)) {
+            Preconditions.checkNotNull(selector);
             value = DateTimes.utc((long) selector.getObject());
           } else {
             value = selector == null ? null : selector.getObject();
