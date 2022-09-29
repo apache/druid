@@ -414,16 +414,21 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
    */
   private static ByteBuffer getFromBucket(ByteBuffer buffer, int offset)
   {
-    int firstPosition = buffer.position();
+    int prefixPosition;
     if (offset == 0) {
-      return ByteBuffer.wrap(readBytes(buffer));
+      final int length = VByte.readInt(buffer);
+      final ByteBuffer firstValue = buffer.asReadOnlyBuffer().order(buffer.order());
+      firstValue.limit(firstValue.position() + length);
+      return firstValue;
     } else {
       final int firstLength = VByte.readInt(buffer);
+      prefixPosition = buffer.position();
       buffer.position(buffer.position() + firstLength);
     }
     int pos = 0;
     int prefixLength;
-    final byte[] fragment;
+    int fragmentLength;
+    int fragmentPosition;
     // scan through bucket values until we reach offset
     do {
       prefixLength = VByte.readInt(buffer);
@@ -433,13 +438,22 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
         buffer.position(buffer.position() + skipLength);
       } else {
         // we've reached our destination
-        fragment = readBytes(buffer);
+        fragmentLength = VByte.readInt(buffer);
+        fragmentPosition = buffer.position();
         break;
       }
     } while (true);
-    buffer.position(firstPosition);
-    final byte[] prefix = readBytes(buffer, prefixLength);
-    return combinePrefixAndFragment(prefix, prefixLength, fragment);
+    final int valueLength = prefixLength + fragmentLength;
+    ByteBuffer value = ByteBuffer.allocate(valueLength);
+    for (int i = 0; i < valueLength; i++) {
+      if (i < prefixLength) {
+        value.put(buffer.get(prefixPosition + i));
+      } else {
+        value.put(buffer.get(fragmentPosition + i - prefixLength));
+      }
+    }
+    value.flip();
+    return value;
   }
 
 
@@ -450,57 +464,24 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
    */
   private static ByteBuffer[] readBucket(ByteBuffer bucket, int numValues)
   {
-    final byte[] prefixBytes = readBytes(bucket);
+    final int length = VByte.readInt(bucket);
+    final byte[] prefixBytes = new byte[length];
+    bucket.get(prefixBytes, 0, length);
     final ByteBuffer[] bucketBuffers = new ByteBuffer[numValues];
     bucketBuffers[0] = ByteBuffer.wrap(prefixBytes);
     int pos = 1;
     while (pos < numValues) {
       final int prefixLength = VByte.readInt(bucket);
-      final byte[] fragment = readBytes(bucket);
-      final ByteBuffer utf8 = combinePrefixAndFragment(prefixBytes, prefixLength, fragment);
-      bucketBuffers[pos++] = utf8;
+      final int fragmentLength = VByte.readInt(bucket);
+      final byte[] fragment = new byte[fragmentLength];
+      bucket.get(fragment, 0, fragmentLength);
+      final ByteBuffer value = ByteBuffer.allocate(prefixLength + fragmentLength);
+      value.put(prefixBytes, 0, prefixLength);
+      value.put(fragment);
+      value.flip();
+      bucketBuffers[pos++] = value;
     }
     return bucketBuffers;
-  }
-
-  /**
-   * Read the bytes of a single variable length bucket value with a {@link VByte} encoded length value as a prefix.
-   *
-   * This method modifies the position of the buffer.
-   */
-  private static byte[] readBytes(ByteBuffer buffer)
-  {
-    int length = VByte.readInt(buffer);
-    final byte[] blob = new byte[length];
-    buffer.get(blob, 0, length);
-    return blob;
-  }
-
-  /**
-   * Read up to the limit worth of the bytes of a single variable length bucket value with a {@link VByte} encoded
-   * length value as a prefix.
-   *
-   * This method modifies the position of the buffer.
-   */
-  private static byte[] readBytes(ByteBuffer buffer, int limit)
-  {
-    int length = VByte.readInt(buffer);
-    final byte[] blob = new byte[length];
-    buffer.get(blob, 0, Math.min(length, limit));
-    return blob;
-  }
-
-  /**
-   * reconstruct a value given the bytes of the first bucket value, the length of the first value to use as a prefix,
-   * and the fragment of the value to use after the prefix.
-   */
-  private static ByteBuffer combinePrefixAndFragment(byte[] first, int prefixLength, byte[] fragment)
-  {
-    ByteBuffer next = ByteBuffer.allocate(prefixLength + fragment.length);
-    next.put(first, 0, prefixLength);
-    next.put(fragment);
-    next.flip();
-    return next;
   }
 
   public static int unsignedByteCompare(byte b1, byte b2)
