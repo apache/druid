@@ -19,22 +19,20 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.easymock.EasyMock;
 
-import java.io.IOException;
-
-/**
- * CompressedBigDecimal json serializer.
- */
-public class CompressedBigDecimalJsonSerializer extends JsonSerializer<CompressedBigDecimal>
+public class CompressedBigDecimalMinAggregatorTest extends CompressedBigDecimalAggregatorTestBase
 {
-
   @Override
-  public void serialize(CompressedBigDecimal value, JsonGenerator jgen, SerializerProvider provider)
-      throws IOException
+  public void testNoData()
   {
-    jgen.writeString(value.toString());
+    CompressedBigDecimalMinAggregator aggregator = new CompressedBigDecimalMinAggregator(
+        4,
+        9,
+        EasyMock.createMock(ColumnValueSelector.class),
+        false
+    );
+    testNoDataHelper(aggregator, null);
   }
 }

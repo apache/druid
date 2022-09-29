@@ -1,6 +1,6 @@
 [
     {
-        "type": "compressedBigDecimal",
+        "type": "compressedBigDecimalSum",
         "name": "bigDecimalRevenue",
         "fieldName": "revenue",
         "scale": 9,

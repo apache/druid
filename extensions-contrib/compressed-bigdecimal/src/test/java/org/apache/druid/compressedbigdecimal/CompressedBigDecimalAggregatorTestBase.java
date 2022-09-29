@@ -19,22 +19,17 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
+import org.apache.druid.query.aggregation.Aggregator;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.io.IOException;
-
-/**
- * CompressedBigDecimal json serializer.
- */
-public class CompressedBigDecimalJsonSerializer extends JsonSerializer<CompressedBigDecimal>
+public abstract class CompressedBigDecimalAggregatorTestBase
 {
+  @Test
+  public abstract void testNoData();
 
-  @Override
-  public void serialize(CompressedBigDecimal value, JsonGenerator jgen, SerializerProvider provider)
-      throws IOException
+  protected void testNoDataHelper(Aggregator aggregator, Object expectedValue)
   {
-    jgen.writeString(value.toString());
+    Assert.assertEquals(expectedValue, aggregator.get());
   }
 }

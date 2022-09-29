@@ -19,22 +19,26 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-
-import java.io.IOException;
-
-/**
- * CompressedBigDecimal json serializer.
- */
-public class CompressedBigDecimalJsonSerializer extends JsonSerializer<CompressedBigDecimal>
+public class CompressedBigDecimalSumAggregatorTimeseriesTest extends CompressedBigDecimalAggregatorTimeseriesTestBase
 {
+  @Override
+  public void testIngestAndTimeseriesQuery() throws Exception
+  {
+    testIngestAndTimeseriesQueryHelper(
+        "bd_sum_test_aggregators.json",
+        "bd_sum_test_timeseries_query.json",
+        "15000000010.000000005"
+    );
+  }
 
   @Override
-  public void serialize(CompressedBigDecimal value, JsonGenerator jgen, SerializerProvider provider)
-      throws IOException
+  public void testIngestMultipleSegmentsAndTimeseriesQuery() throws Exception
   {
-    jgen.writeString(value.toString());
+    testIngestMultipleSegmentsAndTimeseriesQueryHelper(
+        "bd_sum_test_aggregators.json",
+        "bd_sum_test_timeseries_query.json",
+        "15000000010.000000005"
+    );
   }
 }
+

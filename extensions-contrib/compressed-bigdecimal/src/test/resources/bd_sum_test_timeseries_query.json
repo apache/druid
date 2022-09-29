@@ -4,8 +4,8 @@
     "granularity": "ALL",
     "aggregations": [
         {
-            "type": "compressedBigDecimal",
-            "name": "revenue",
+            "type": "compressedBigDecimalSum",
+            "name": "cbdStringRevenue",
             "fieldName": "revenue",
             "scale": 9,
             "size": 3

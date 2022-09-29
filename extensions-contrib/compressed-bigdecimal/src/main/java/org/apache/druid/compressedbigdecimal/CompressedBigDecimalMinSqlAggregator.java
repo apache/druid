@@ -19,22 +19,12 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-
-import java.io.IOException;
-
-/**
- * CompressedBigDecimal json serializer.
- */
-public class CompressedBigDecimalJsonSerializer extends JsonSerializer<CompressedBigDecimal>
+public class CompressedBigDecimalMinSqlAggregator extends CompressedBigDecimalSqlAggregatorBase
 {
+  static final String NAME = "BIG_MIN";
 
-  @Override
-  public void serialize(CompressedBigDecimal value, JsonGenerator jgen, SerializerProvider provider)
-      throws IOException
+  public CompressedBigDecimalMinSqlAggregator()
   {
-    jgen.writeString(value.toString());
+    super(NAME, CompressedBigDecimalMinAggregatorFactory::new);
   }
 }
