@@ -146,6 +146,7 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 |`awsExternalId`|String|The AWS external id to use for additional permissions.|no|
 |`deaggregate`|Boolean|Whether to use the de-aggregate function of the KCL. See below for details.|no|
 |`autoScalerConfig`|Object|Defines auto scaling behavior for Kinesis ingest tasks. See [Tasks Autoscaler Properties](#task-autoscaler-properties).|no (default == null)|
+|`idleSupervisorForStreamIdleMillis`|Minimum time interval to wait until stream is considered idle. (i.e. all existing data is caught up and no new data arrives).| no (default == 60000) |
 
 #### Task Autoscaler Properties
 
@@ -157,7 +158,6 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 | `taskCountMax` | Maximum number of Kinesis ingestion tasks. Must be greater than or equal to `taskCountMin`. If greater than `{numKinesisShards}`, the maximum number of reading tasks is `{numKinesisShards}` and `taskCountMax` is ignored.  | yes |
 | `taskCountMin` | Minimum number of Kinesis ingestion tasks. When you enable the auto scaler, Druid ignores the value of taskCount in `IOConfig` and uses`taskCountMin` for the initial number of tasks to launch.| yes |
 | `minTriggerScaleActionFrequencyMillis` | Minimum time interval between two scale actions | no (default == 600000) |
-| `minPauseSupervisorIfStreamIdleMillis` | Minimum time interval to wait until stream is considered idle. (i.e. all existing data is caught up and no new data arrives) | no (default == 60000) |
 | `autoScalerStrategy` | The algorithm of `autoScaler`. ONLY `lagBased` is supported for now. See [Lag Based AutoScaler Strategy Related Properties](#lag-based-autoscaler-strategy-related-properties) for details.| no (default == `lagBased`) |
 
 ##### Lag Based AutoScaler Strategy Related Properties
@@ -228,7 +228,6 @@ The following example demonstrates a supervisor spec with `lagBased` autoScaler 
       "taskCountMax": 6,
       "taskCountMin": 2,
       "minTriggerScaleActionFrequencyMillis": 600000,
-      "minPauseSupervisorIfStreamIdleMillis": 60000,
       "autoScalerStrategy": "lagBased",
       "lagCollectionIntervalMillis": 30000,
       "lagCollectionRangeMillis": 600000,
@@ -249,7 +248,8 @@ The following example demonstrates a supervisor spec with `lagBased` autoScaler 
     "replicas": 1,
     "taskDuration": "PT1H",
     "recordsPerFetch": 4000,
-    "fetchDelayMillis": 0
+    "fetchDelayMillis": 0,
+    "idleSupervisorForStreamIdleMillis": 60000
   },
   "tuningConfig": {
     "type": "kinesis",
