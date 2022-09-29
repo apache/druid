@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.common.task.Task;
@@ -268,17 +269,17 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
   @SuppressWarnings("SSBasedInspection")
   protected Map<Integer, Long> getRecordLagPerPartition(Map<Integer, Long> currentOffsets)
   {
-    return currentOffsets
+    if (latestSequenceFromStream == null) {
+      return ImmutableMap.of();
+    }
+
+    return latestSequenceFromStream
         .entrySet()
         .stream()
         .collect(
             Collectors.toMap(
                 Entry::getKey,
-                e -> latestSequenceFromStream != null
-                     && latestSequenceFromStream.get(e.getKey()) != null
-                     && e.getValue() != null
-                     ? latestSequenceFromStream.get(e.getKey()) - e.getValue()
-                     : Integer.MIN_VALUE
+                e -> e.getValue() != null ? e.getValue() - Optional.ofNullable(e.getKey()).orElse(0) : 0
             )
         );
   }
@@ -375,31 +376,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
     finally {
       getRecordSupplierLock().unlock();
     }
-  }
-
-  @Override
-  // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
-  @SuppressWarnings("SSBasedInspection")
-  protected LagStats computeLagStatsForOffsets(Map<Integer, Long> offsets)
-  {
-    if (latestSequenceFromStream == null) {
-      return new LagStats(0, 0, 0);
-    }
-    validateWithLatestOffsets(offsets);
-
-    Map<Integer, Long> partitionLags =
-        latestSequenceFromStream
-        .entrySet()
-        .stream()
-        .collect(
-            Collectors.toMap(
-                Entry::getKey,
-                e -> e.getValue() == null
-                     ? 0
-                     : e.getValue() - Optional.ofNullable(offsets.get(e.getKey())).orElse(0L)
-            )
-        );
-    return computeLags(partitionLags);
   }
 
   @Override

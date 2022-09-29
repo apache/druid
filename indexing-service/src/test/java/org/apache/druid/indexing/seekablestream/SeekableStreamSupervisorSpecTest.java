@@ -865,7 +865,10 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         false,
         new Period("PT30M"),
         null,
-        null, null, null
+        null,
+        null,
+        null,
+        null
     )
     {
     };
@@ -937,7 +940,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           new Period("PT30M"),
           null,
           null,
-          mapper.convertValue(getScaleOutProperties(2), AutoScalerConfig.class), null
+          mapper.convertValue(getScaleOutProperties(2), AutoScalerConfig.class), null, null
       )
       {
       };
@@ -954,7 +957,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           new Period("PT30M"),
           null,
           null,
-          mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class), null
+          mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class), null,
+          null
       )
       {
       };

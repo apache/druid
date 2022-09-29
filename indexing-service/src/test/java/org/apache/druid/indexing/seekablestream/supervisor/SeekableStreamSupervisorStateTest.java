@@ -908,6 +908,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -964,7 +965,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         false,
         new Period("PT30M"),
         null,
-        null, OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class), null
+        null,
+        OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class),
+        null,
+        null
     )
     {
     };

@@ -48,6 +48,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   private final Optional<Duration> earlyMessageRejectionPeriod;
   private final Optional<DateTime> lateMessageRejectionStartDateTime;
   @Nullable private final AutoScalerConfig autoScalerConfig;
+  private final long idleSupervisorForStreamIdleMillis;
 
   public SeekableStreamSupervisorIOConfig(
       String stream,
@@ -62,7 +63,8 @@ public abstract class SeekableStreamSupervisorIOConfig
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
       @Nullable AutoScalerConfig autoScalerConfig,
-      DateTime lateMessageRejectionStartDateTime
+      DateTime lateMessageRejectionStartDateTime,
+      Long idleSupervisorForStreamIdleMillis
   )
   {
     this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
@@ -97,6 +99,10 @@ public abstract class SeekableStreamSupervisorIOConfig
                 + "both properties lateMessageRejectionStartDateTime "
           + "and lateMessageRejectionPeriod.");
     }
+
+    this.idleSupervisorForStreamIdleMillis = idleSupervisorForStreamIdleMillis != null
+                                             ? idleSupervisorForStreamIdleMillis
+                                             : 60000;
   }
 
   private static Duration defaultDuration(final Period period, final String theDefault)
@@ -187,5 +193,11 @@ public abstract class SeekableStreamSupervisorIOConfig
   public Optional<DateTime> getLateMessageRejectionStartDateTime()
   {
     return lateMessageRejectionStartDateTime;
+  }
+
+  @JsonProperty
+  public long getIdleSupervisorForStreamIdleMillis()
+  {
+    return idleSupervisorForStreamIdleMillis;
   }
 }

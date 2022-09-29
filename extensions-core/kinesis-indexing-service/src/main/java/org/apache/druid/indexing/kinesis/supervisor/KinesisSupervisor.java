@@ -354,12 +354,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   @Override
-  protected LagStats computeLagStatsForOffsets(Map<String, String> offsets)
-  {
-    return computeLags(getPartitionTimeLagForOffsets(offsets));
-  }
-
-  @Override
   protected Map<String, String> getLatestSequences()
   {
     return latestSequenceFromStream != null ? latestSequenceFromStream : new HashMap<>();

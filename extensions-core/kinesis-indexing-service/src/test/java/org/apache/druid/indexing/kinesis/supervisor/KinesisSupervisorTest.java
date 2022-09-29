@@ -307,7 +307,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     autoScalerConfigMap.put("scaleInStep", 1);
     autoScalerConfigMap.put("scaleOutStep", 2);
     autoScalerConfigMap.put("minTriggerScaleActionFrequencyMillis", 1200000);
-    autoScalerConfigMap.put("minPauseSupervisorIfStreamIdleMillis", 1000);
 
     Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
     supervisorStateManagerConfig.put("enableIdleBehaviour", true);
@@ -363,7 +362,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisor.runInternal();
     verifyAll();
-    Thread.sleep(1200);
+    Thread.sleep(1000);
+    supervisor.runInternal();
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScale);
     Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getStateManager().getSupervisorState());
@@ -387,7 +387,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     autoScalerConfigMap.put("scaleInStep", 1);
     autoScalerConfigMap.put("scaleOutStep", 2);
     autoScalerConfigMap.put("minTriggerScaleActionFrequencyMillis", 1200000);
-    autoScalerConfigMap.put("minPauseSupervisorIfStreamIdleMillis", 1000);
 
     Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
     supervisorStateManagerConfig.put("enableIdleBehaviour", true);
@@ -447,7 +446,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisor.runInternal();
     verifyAll();
-    Thread.sleep(1200);
+    Thread.sleep(1000);
+    supervisor.runInternal();
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountAfterScale);
     Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getStateManager().getSupervisorState());
@@ -476,7 +476,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null
     );
     KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, OBJECT_MAPPER);
     KinesisSupervisor supervisor = new KinesisSupervisor(
@@ -540,7 +541,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            false
+            false,
+            null
     );
 
     AutoScalerConfig autoscalerConfigNull = kinesisSupervisorIOConfigWithNullAutoScalerConfig.getAutoScalerConfig();
@@ -567,7 +569,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             null,
              OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
-            false
+            false,
+            null
     );
 
     AutoScalerConfig autoscalerConfig = kinesisSupervisorIOConfigWithEmptyAutoScalerConfig.getAutoScalerConfig();
@@ -5038,7 +5041,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5183,7 +5187,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
          autoScalerConfig,
-        false
+        false,
+        1000L
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5271,7 +5276,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5361,7 +5367,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(

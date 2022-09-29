@@ -74,7 +74,8 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
       @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
-      @JsonProperty("deaggregate") boolean deaggregate
+      @JsonProperty("deaggregate") boolean deaggregate,
+      @JsonProperty("idleSupervisorForStreamIdleMillis") Long idleSupervisorForStreamIdleMillis
   )
   {
     super(
@@ -90,7 +91,8 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         autoScalerConfig,
-        lateMessageRejectionStartDateTime
+        lateMessageRejectionStartDateTime,
+        idleSupervisorForStreamIdleMillis
     );
 
     this.endpoint = endpoint != null

@@ -21,19 +21,18 @@ package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
 import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
@@ -46,8 +45,6 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
   private final SupervisorSpec spec;
   private final SeekableStreamSupervisor supervisor;
   private final LagBasedAutoScalerConfig lagBasedAutoScalerConfig;
-  private final AtomicLong idleTime = new AtomicLong(0);
-  private volatile Long lastLagsCollectedMillis;
 
   private static final ReentrantLock LOCK = new ReentrantLock(true);
 
@@ -65,7 +62,6 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     this.lagComputationExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Computation-%d");
     this.spec = spec;
     this.supervisor = supervisor;
-    this.lastLagsCollectedMillis = null;
   }
 
   @Override
@@ -90,8 +86,6 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
       return desiredTaskCount;
     };
 
-    Callable<Boolean> isIdle = () -> idleTime.get() > lagBasedAutoScalerConfig.getMinPauseSupervisorIfStreamIdleMillis();
-
     lagComputationExec.scheduleAtFixedRate(
         computeAndCollectLag(),
         lagBasedAutoScalerConfig.getScaleActionStartDelayMillis(), // wait for tasks to start up
@@ -99,7 +93,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         TimeUnit.MILLISECONDS
     );
     allocationExec.scheduleAtFixedRate(
-        supervisor.submitIdleOrDynamicAllocationTasksNotice(scaleAction, isIdle),
+        supervisor.buildDynamicAllocationTask(scaleAction),
         lagBasedAutoScalerConfig.getScaleActionStartDelayMillis() + lagBasedAutoScalerConfig
             .getLagCollectionRangeMillis(),
         lagBasedAutoScalerConfig.getScaleActionPeriodMillis(),
@@ -148,15 +142,13 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
       LOCK.lock();
       try {
         if (!spec.isSuspended()) {
-          long totalLags = supervisor.computeTotalLag();
-          long currentLagsCollectedMillis = Instant.now().toEpochMilli();
-          if (supervisor.areLatestOffsetsConstant() && totalLags == 0 && lastLagsCollectedMillis != null) {
-            idleTime.addAndGet(currentLagsCollectedMillis - lastLagsCollectedMillis);
+          LagStats lagStats = supervisor.computeLagStats();
+          if (lagStats == null) {
+            lagMetricsQueue.offer(0L);
           } else {
-            idleTime.set(0L);
+            long totalLags = lagStats.getTotalLag();
+            lagMetricsQueue.offer(totalLags > 0 ? totalLags : 0L);
           }
-          lastLagsCollectedMillis = currentLagsCollectedMillis;
-          lagMetricsQueue.offer(totalLags > 0 ? totalLags : 0L);
           log.debug("Current lags [%s] for dataSource [%s].", new ArrayList<>(lagMetricsQueue), dataSource);
         } else {
           log.warn("[%s] supervisor is suspended, skipping lag collection", dataSource);
