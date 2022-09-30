@@ -120,11 +120,6 @@ public class SeekableStreamSupervisorStateManagerTest
     Assert.assertEquals(SeekableStreamState.CREATING_TASKS, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
 
-    // Refuse to switch to IDLE state if there is not atleast one successful run
-    stateManager.maybeSetState(BasicState.IDLE);
-    Assert.assertEquals(SeekableStreamState.CREATING_TASKS, stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
-
     stateManager.markRunFinished();
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
