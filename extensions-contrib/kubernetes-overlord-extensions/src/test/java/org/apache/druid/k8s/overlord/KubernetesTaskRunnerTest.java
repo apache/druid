@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -281,7 +280,7 @@ class KubernetesTaskRunnerTest
 
     DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
 
-    when(peonClient.listPeonPods()).thenReturn(Lists.newArrayList(peonPod));
+    when(peonClient.listPeonPods()).thenReturn(Collections.singletonList(peonPod));
     when(peonClient.jobExists(eq(k8sTaskId))).thenReturn(Optional.of(job));
     when(peonClient.launchJobAndWaitForStart(isA(Job.class), anyLong(), isA(TimeUnit.class))).thenReturn(peonPod);
     when(peonClient.getMainJobPod(eq(k8sTaskId))).thenReturn(peonPod);
@@ -350,7 +349,7 @@ class KubernetesTaskRunnerTest
 
     DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
 
-    when(peonClient.listPeonPods()).thenReturn(Lists.newArrayList(peonPod));
+    when(peonClient.listPeonPods()).thenReturn(Collections.singletonList(peonPod));
     when(peonClient.jobExists(eq(k8sTaskId))).thenReturn(Optional.of(job));
     when(peonClient.launchJobAndWaitForStart(isA(Job.class), anyLong(), isA(TimeUnit.class))).thenReturn(peonPod);
     when(peonClient.getMainJobPod(eq(k8sTaskId))).thenReturn(peonPod);

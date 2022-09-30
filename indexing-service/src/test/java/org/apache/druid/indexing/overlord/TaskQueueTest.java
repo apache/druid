@@ -373,14 +373,14 @@ public class TaskQueueTest extends IngestionTestBase
     }
 
     @Override
-    public String setup(TaskToolbox toolbox) throws Exception
+    public String setup(TaskToolbox toolbox)
     {
       // do nothing
       return null;
     }
 
     @Override
-    public void cleanUp(TaskToolbox toolbox) throws Exception
+    public void cleanUp(TaskToolbox toolbox)
     {
       // do nothing
     }

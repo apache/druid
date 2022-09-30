@@ -141,7 +141,6 @@ public abstract class AbstractTask implements Task
     FileUtils.mkdirp(taskDir);
     File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", toolbox.getAttemptId()).toFile();
     FileUtils.mkdirp(attemptDir);
-    File statusFile = new File(attemptDir, "status.json");
     reportsFile = new File(attemptDir, "report.json");
     log.debug("Task setup complete");
     return null;

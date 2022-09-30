@@ -27,9 +27,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 
 @RunWith(Parameterized.class)
@@ -41,8 +38,6 @@ public class MainTest
     return ImmutableList.of(
         new Object[]{new CliOverlord()},
         new Object[]{new CliBroker()},
-        // Takes arguments. Cannot be used in this test
-        new Object[]{new FakeCliPeon(true)},
         new Object[]{new CliHistorical()},
         new Object[]{new CliCoordinator()},
         new Object[]{new CliMiddleManager()},
@@ -64,32 +59,5 @@ public class MainTest
     final Injector injector = GuiceInjectors.makeStartupInjector();
     injector.injectMembers(runnable);
     Assert.assertNotNull(runnable.makeInjector(runnable.getNodeRoles(new Properties())));
-  }
-
-  private static class FakeCliPeon extends CliPeon
-  {
-    List<String> forkTaskAndStatusFile = new ArrayList<String>();
-
-    FakeCliPeon(boolean runningOnK8s)
-    {
-      forkTaskAndStatusFile.add("src/test/resources");
-      forkTaskAndStatusFile.add("task_id");
-      forkTaskAndStatusFile.add("1");
-
-      try {
-        Field privateField = CliPeon.class
-            .getDeclaredField("taskAndStatusFile");
-        privateField.setAccessible(true);
-        privateField.set(this, forkTaskAndStatusFile);
-
-        if (runningOnK8s) {
-          System.setProperty("druid.indexer.runner.type", "k8s");
-        }
-      }
-      catch (Exception ex) {
-        // do nothing.
-      }
-
-    }
   }
 }

@@ -68,7 +68,7 @@ public class DruidKubernetesPeonClientTest
   }
 
   @Test
-  void testTheFlow() throws Exception
+  void testTheFlow()
   {
     DruidKubernetesPeonClient peonClient = new DruidKubernetesPeonClient(new TestKubernetesClient(this.client), "test",
                                                                          false

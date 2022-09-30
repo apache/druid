@@ -64,6 +64,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -161,9 +162,24 @@ public class SingleTaskBackgroundRunnerTest
   @Test
   public void testRun() throws ExecutionException, InterruptedException
   {
+    NoopTask task = new NoopTask(null, null, null, 500L, 0, null, null, null)
+    {
+      @Nullable
+      @Override
+      public String setup(TaskToolbox toolbox)
+      {
+        return null;
+      }
+
+      @Override
+      public void cleanUp(TaskToolbox toolbox)
+      {
+        // do nothing
+      }
+    };
     Assert.assertEquals(
         TaskState.SUCCESS,
-        runner.run(new NoopTask(null, null, null, 500L, 0, null, null, null)).get().getStatusCode()
+        runner.run(task).get().getStatusCode()
     );
   }
 
@@ -245,6 +261,19 @@ public class SingleTaskBackgroundRunnerTest
           public TaskStatus runTask(TaskToolbox toolbox)
           {
             throw new Error("task failure test");
+          }
+
+          @Nullable
+          @Override
+          public String setup(TaskToolbox toolbox) throws Exception
+          {
+            return null;
+          }
+
+          @Override
+          public void cleanUp(TaskToolbox toolbox) throws Exception
+          {
+            // do nothing
           }
         }
     );
@@ -355,6 +384,21 @@ public class SingleTaskBackgroundRunnerTest
     {
       gracefullyStopped.set();
     }
+
+    @Nullable
+    @Override
+    public String setup(TaskToolbox toolbox) throws Exception
+    {
+      return null;
+    }
+
+    @Override
+    public void cleanUp(TaskToolbox toolbox) throws Exception
+    {
+      // do nothing
+    }
+
+
   }
 
   private static class BooleanHolder

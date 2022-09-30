@@ -143,7 +143,7 @@ public class CliPeon extends GuiceRunnable
 {
   @SuppressWarnings("WeakerAccess")
   @Required
-  @Arguments(description = "taskDir attemptId")
+  @Arguments(description = "taskDirPath attemptId")
   public List<String> taskAndStatusFile;
 
   // path to the task Directory

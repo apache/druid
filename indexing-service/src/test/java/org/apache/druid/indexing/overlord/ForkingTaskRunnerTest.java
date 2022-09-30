@@ -191,7 +191,7 @@ public class ForkingTaskRunnerTest
     );
     assertEquals(
         originalAndExpectedCommand.rhs,
-        forkingTaskRunner.getMaskedCommand(
+        ForkingTaskRunner.getMaskedCommand(
             startupLoggingConfig.getMaskProperties(),
             originalAndExpectedCommand.lhs
         )
