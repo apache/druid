@@ -13,3 +13,4 @@ updates:
       - dependency-name: "org.eclipse.jetty"
         versions: "[9.5,)"
       - dependency-name: "org.apache.hadoop"
+      - dependency-name: "org.apache.calcite"
