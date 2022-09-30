@@ -95,11 +95,31 @@ public class TestCaseWriter
     List<String> keys = new ArrayList<>(map.keySet());
     Collections.sort(keys);
     for (String key : keys) {
-      writer.append(key)
-            .append("=")
-            .append(map.get(key).toString())
-            .append("\n");
+      emitQuotedString(key);
+      writer.append(": ");
+      emitJsonValue(map.get(key));
+      writer.append("\n");
     }
+  }
+
+  private void emitJsonValue(Object value) throws IOException
+  {
+    if (value == null) {
+      writer.append("null");
+    } else if (value instanceof String) {
+      emitQuotedString((String) value);
+    } else {
+      writer.append(value.toString());
+    }
+  }
+
+  private void emitQuotedString(String str) throws IOException
+  {
+    str = StringUtils.replace(str, "\\", "\\\\");
+    str = StringUtils.replace(str, "\"", "\\\"");
+    writer.append("\"")
+          .append(str)
+          .append("\"");
   }
 
   public void emitUser(String user) throws IOException
@@ -111,14 +131,15 @@ public class TestCaseWriter
   {
     emitSection("parameters");
     for (SqlParameter p : parameters) {
-      if (p == null) {
-        writer.append("null\n");
+      emitQuotedString(p.getType().name());
+      writer.append(", ");
+      Object value = p.getValue();
+      if (p.getValue() == null) {
+        writer.append("null");
       } else {
-        writer.append(StringUtils.toLowerCase(p.getType().name()))
-              .append(": ")
-              .append(QueryTestCases.valueToString(p.getValue()))
-              .append("\n");
+        emitJsonValue(value);
       }
+      writer.append("\n");
     }
   }
 
@@ -154,15 +175,15 @@ public class TestCaseWriter
         }
     );
     for (ResourceAction action : actions) {
-      emitOptionalLine(new ResourcesSection.Resource(action).toString());
+      emitOptionalLine(new Resources.Resource(action).toString());
     }
   }
 
-  public void emitResources(List<ResourcesSection.Resource> resources) throws IOException
+  public void emitResources(List<Resources.Resource> resources) throws IOException
   {
     emitSection("resources");
 
-    for (ResourcesSection.Resource resource : resources) {
+    for (Resources.Resource resource : resources) {
       writer
           .append(resource.type)
           .append("/")

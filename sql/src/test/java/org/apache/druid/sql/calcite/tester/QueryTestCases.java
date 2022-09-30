@@ -161,17 +161,6 @@ public class QueryTestCases
     }
   }
 
-  public static String valueToString(Object value)
-  {
-    if (value == null) {
-      return "\\N";
-    } else if (value instanceof String) {
-      return "\"" + StringUtils.replace((String) value, "\"", "\\\"") + "\"";
-    } else {
-      return value.toString();
-    }
-  }
-
   public static Map<String, Object> rewriteContext(Map<String, Object> context)
   {
     Map<String, Object> copy = new HashMap<>(context);
@@ -212,46 +201,46 @@ public class QueryTestCases
         .toBuilder()
         .maxTopNLimit(
             QueryContexts.getAsInt(
-                OptionsSection.PLANNER_MAX_TOP_N,
-                options.get(OptionsSection.PLANNER_MAX_TOP_N),
+                TestOptions.PLANNER_MAX_TOP_N,
+                options.get(TestOptions.PLANNER_MAX_TOP_N),
                 base.getMaxTopNLimit()))
         .useApproximateCountDistinct(
             booleanOption(
                 options,
-                OptionsSection.PLANNER_APPROX_COUNT_DISTINCT,
+                TestOptions.PLANNER_APPROX_COUNT_DISTINCT,
                 base.isUseApproximateCountDistinct()))
         .useApproximateTopN(
             booleanOption(
                 options,
-                OptionsSection.PLANNER_APPROX_TOP_N,
+                TestOptions.PLANNER_APPROX_TOP_N,
                 base.isUseApproximateTopN()))
         .requireTimeCondition(
             booleanOption(
                 options,
-                OptionsSection.PLANNER_REQUIRE_TIME_CONDITION,
+                TestOptions.PLANNER_REQUIRE_TIME_CONDITION,
                 base.isRequireTimeCondition()))
         .useGroupingSetForExactDistinct(
             booleanOption(
                 options,
-                OptionsSection.PLANNER_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                TestOptions.PLANNER_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
                 base.isUseGroupingSetForExactDistinct()))
         .computeInnerJoinCostAsFilter(
             booleanOption(
                 options,
-                OptionsSection.PLANNER_COMPUTE_INNER_JOIN_COST_AS_FILTER,
+                TestOptions.PLANNER_COMPUTE_INNER_JOIN_COST_AS_FILTER,
                 base.isComputeInnerJoinCostAsFilter()))
         .useNativeQueryExplain(
             booleanOption(
                 options,
-                OptionsSection.PLANNER_NATIVE_QUERY_EXPLAIN,
+                TestOptions.PLANNER_NATIVE_QUERY_EXPLAIN,
                 base.isUseNativeQueryExplain()))
         .maxNumericInFilters(
             QueryContexts.getAsInt(
-                OptionsSection.PLANNER_MAX_NUMERIC_IN_FILTERS,
-                options.get(OptionsSection.PLANNER_MAX_NUMERIC_IN_FILTERS),
+                TestOptions.PLANNER_MAX_NUMERIC_IN_FILTERS,
+                options.get(TestOptions.PLANNER_MAX_NUMERIC_IN_FILTERS),
                 base.getMaxNumericInFilters()));
 
-    String timeZone = options.get(OptionsSection.PLANNER_SQL_TIME_ZONE);
+    String timeZone = options.get(TestOptions.PLANNER_SQL_TIME_ZONE);
     if (timeZone != null) {
       builder.sqlTimeZone(DateTimes.inferTzFromString(timeZone));
     }

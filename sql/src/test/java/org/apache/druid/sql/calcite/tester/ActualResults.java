@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.calcite.tester.LinesSection.ResultsSection;
-import org.apache.druid.sql.calcite.tester.TestSection.Section;
+import org.apache.druid.sql.calcite.tester.LinesElement.ExpectedResults;
+import org.apache.druid.sql.calcite.tester.TestElement.ElementType;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -76,7 +76,7 @@ public class ActualResults
   }
 
   /**
-   * Equivalent of a {@link TestSection}, but for actual results.
+   * Equivalent of a {@link TestElement}, but for actual results.
    * Holds a specific, labeled kind of actual results and tracks
    * if those actuals match the expected results.
    */
@@ -93,10 +93,10 @@ public class ActualResults
    */
   public static class StringResults extends ActualResultsSection
   {
-    final PatternSection expected;
+    final ExpectedPattern expected;
     final String actual;
 
-    public StringResults(PatternSection expected, String actual)
+    public StringResults(ExpectedPattern expected, String actual)
     {
       this.expected = expected;
       this.actual = actual;
@@ -125,10 +125,10 @@ public class ActualResults
    */
   public static class StringArrayResults extends ActualResultsSection
   {
-    final PatternSection expected;
+    final ExpectedPattern expected;
     final String[] actual;
 
-    public StringArrayResults(PatternSection expected, String[] actual)
+    public StringArrayResults(ExpectedPattern expected, String[] actual)
     {
       this.expected = expected;
       this.actual = actual;
@@ -156,10 +156,10 @@ public class ActualResults
    */
   public static class RowResults extends ActualResultsSection
   {
-    final ResultsSection expected;
+    final ExpectedResults expected;
     final List<String> actual;
 
-    public RowResults(ResultsSection expected, List<String> actual)
+    public RowResults(ExpectedResults expected, List<String> actual)
     {
       this.expected = expected;
       this.actual = actual;
@@ -189,12 +189,12 @@ public class ActualResults
    */
   public static class JsonResults extends ActualResultsSection
   {
-    final ResultsSection expected;
+    final ExpectedResults expected;
     final List<Object[]> actual;
     final ObjectMapper mapper;
 
     public JsonResults(
-        ResultsSection expected,
+        ExpectedResults expected,
         List<Object[]> actual,
         ObjectMapper mapper)
     {
@@ -258,10 +258,10 @@ public class ActualResults
    */
   public static class ResourceResults extends ActualResultsSection
   {
-    final ResourcesSection expected;
+    final Resources expected;
     final Set<ResourceAction> actual;
 
-    public ResourceResults(ResourcesSection expected, Set<ResourceAction> actual)
+    public ResourceResults(Resources expected, Set<ResourceAction> actual)
     {
       this.expected = expected;
       this.actual = actual;
@@ -302,8 +302,8 @@ public class ActualResults
         ObjectMapper mapper)
     {
       this.run = run;
-      ResultsSection results = run.resultsSection();
-      boolean typedCompare = run.booleanOption(OptionsSection.TYPED_COMPARE);
+      ExpectedResults results = run.resultsSection();
+      boolean typedCompare = run.booleanOption(TestOptions.TYPED_COMPARE);
       if (typedCompare) {
         this.rows = new JsonResults(results, rows, mapper);
       } else {
@@ -328,7 +328,7 @@ public class ActualResults
       } else {
         this.exception = new ExceptionResults(exSection, e);
       }
-      PatternSection errorSection = testCase.error();
+      ExpectedPattern errorSection = testCase.error();
       if (errorSection == null) {
         this.error = null;
       } else {
@@ -398,8 +398,8 @@ public class ActualResults
         }
         return;
       }
-      for (TestSection section : run.fileOrder) {
-        if (section.section() == Section.RESULTS) {
+      for (TestElement section : run.fileOrder) {
+        if (section.type() == ElementType.RESULTS) {
           rows.write(writer);
         } else {
           section.write(writer);
@@ -436,53 +436,53 @@ public class ActualResults
     if (exSection != null) {
       this.exception = new ExceptionResults(exSection, e);
     }
-    PatternSection errorSection = testCase.error();
+    ExpectedPattern errorSection = testCase.error();
     if (errorSection != null) {
       this.error = new StringResults(errorSection, e.getMessage());
     }
   }
 
-  public void unparsed(PatternSection section, String text)
+  public void unparsed(ExpectedPattern section, String text)
   {
     this.unparsed = new StringResults(section, text);
   }
 
-  public void ast(PatternSection section, String text)
+  public void ast(ExpectedPattern section, String text)
   {
     this.ast = new StringResults(section, text);
   }
 
-  public void plan(PatternSection section, String text)
+  public void plan(ExpectedPattern section, String text)
   {
     this.plan = new StringResults(section, text);
   }
 
-  public void execPlan(PatternSection section, String text)
+  public void execPlan(ExpectedPattern section, String text)
   {
     this.execPlan = new StringResults(section, text);
   }
 
-  public void schema(PatternSection section, String[] schema)
+  public void schema(ExpectedPattern section, String[] schema)
   {
     this.schema = new StringArrayResults(section, schema);
   }
 
-  public void targetSchema(PatternSection section, String[] schema)
+  public void targetSchema(ExpectedPattern section, String[] schema)
   {
     this.targetSchema = new StringArrayResults(section, schema);
   }
 
-  public void nativeQuery(PatternSection section, String text)
+  public void nativeQuery(ExpectedPattern section, String text)
   {
     this.nativeQuery = new StringResults(section, text);
   }
 
-  public void resourceActions(ResourcesSection section, Set<ResourceAction> resourceActions)
+  public void resourceActions(Resources section, Set<ResourceAction> resourceActions)
   {
     this.resourceActions = new ResourceResults(section, resourceActions);
   }
 
-  public void explain(PatternSection section, String text)
+  public void explain(ExpectedPattern section, String text)
   {
     this.explain = new StringResults(section, text);
   }
@@ -577,8 +577,8 @@ public class ActualResults
 
   private void writeSetup(TestCaseWriter writer) throws IOException
   {
-    for (TestSection section : testCase.sections()) {
-      switch (section.section()) {
+    for (TestElement section : testCase.sections()) {
+      switch (section.type()) {
         case COMMENTS:
           section.write(writer);
           writer.emitErrors(errors.errors);
@@ -599,8 +599,8 @@ public class ActualResults
   private void writeFailure(TestCaseWriter writer) throws IOException
   {
     if (testCase.shouldFail()) {
-      for (TestSection section : testCase.sections()) {
-        switch (section.section()) {
+      for (TestElement section : testCase.sections()) {
+        switch (section.type()) {
           case EXCEPTION:
             if (actualException == null) {
               section.write(writer);
@@ -627,8 +627,8 @@ public class ActualResults
 
   private void writeResults(TestCaseWriter writer) throws IOException
   {
-    for (TestSection section : testCase.sections()) {
-      switch (section.section()) {
+    for (TestElement section : testCase.sections()) {
+      switch (section.type()) {
         case AST:
           writeSection(section, ast, writer);
           break;
@@ -693,7 +693,7 @@ public class ActualResults
   }
 
   private void writeSection(
-      TestSection testSection,
+      TestElement testSection,
       ActualResultsSection resultsSection,
       TestCaseWriter writer
   ) throws IOException

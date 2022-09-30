@@ -19,57 +19,45 @@
 
 package org.apache.druid.sql.calcite.tester;
 
+import org.apache.druid.sql.http.SqlParameter;
+
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
- * The (query) context test case section.
+ * The parameters test case section.
  */
-public class ContextSection extends TestSection
+public class Parameters extends TestElement
 {
-  protected final Map<String, Object> context;
+  protected final List<SqlParameter> parameters;
 
-  protected ContextSection(Map<String, Object> context)
+  protected Parameters(List<SqlParameter> parameters)
   {
-    this(context, false);
+    this(parameters, false);
   }
 
-  protected ContextSection(Map<String, Object> context, boolean copy)
+  protected Parameters(List<SqlParameter> parameters, boolean copy)
   {
-    super(Section.CONTEXT.sectionName(), copy);
-    this.context = context;
+    super(ElementType.PARAMETERS.sectionName(), copy);
+    this.parameters = parameters;
+  }
+
+  public List<SqlParameter> parameters()
+  {
+    return parameters;
   }
 
   @Override
-  public TestSection.Section section()
+  public ElementType type()
   {
-    return TestSection.Section.CONTEXT;
+    return ElementType.PARAMETERS;
   }
 
   @Override
-  public TestSection copy()
+  public TestElement copy()
   {
-    return new ContextSection(context, true);
-  }
-
-  public Map<String, Object> context()
-  {
-    return context;
-  }
-
-  public List<String> sorted()
-  {
-    List<String> keys = new ArrayList<>(context.keySet());
-    Collections.sort(keys);
-    List<String> sorted = new ArrayList<>();
-    for (String key : keys) {
-      sorted.add(key + "=" + context.get(key));
-    }
-    return sorted;
+    return new Parameters(parameters, true);
   }
 
   @Override
@@ -81,8 +69,8 @@ public class ContextSection extends TestSection
     if (o == null || o.getClass() != getClass()) {
       return false;
     }
-    ContextSection other = (ContextSection) o;
-    return context.equals(other.context);
+    Parameters other = (Parameters) o;
+    return parameters.equals(other.parameters);
   }
 
   /**
@@ -91,12 +79,12 @@ public class ContextSection extends TestSection
   @Override
   public int hashCode()
   {
-    return Objects.hash(context);
+    return Objects.hash(parameters);
   }
 
   @Override
-  public void writeSection(TestCaseWriter writer) throws IOException
+  public void writeElement(TestCaseWriter writer) throws IOException
   {
-    writer.emitContext(context);
+    writer.emitParameters(parameters);
   }
 }

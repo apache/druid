@@ -24,7 +24,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import java.io.IOException;
 import java.util.Objects;
 
-abstract class TextSection extends TestSection
+abstract class TextSection extends TestElement
 {
   /**
    * The SQL test case section.
@@ -42,13 +42,13 @@ abstract class TextSection extends TestSection
     }
 
     @Override
-    public TestSection.Section section()
+    public TestElement.ElementType type()
     {
-      return TestSection.Section.SQL;
+      return TestElement.ElementType.SQL;
     }
 
     @Override
-    public TestSection copy()
+    public TestElement copy()
     {
       return new SqlSection(name, text, true);
     }
@@ -66,17 +66,17 @@ abstract class TextSection extends TestSection
 
     protected ExceptionSection(String text, boolean copy)
     {
-      super(Section.EXCEPTION.sectionName(), copy, text);
+      super(ElementType.EXCEPTION.sectionName(), copy, text);
     }
 
     @Override
-    public TestSection.Section section()
+    public TestElement.ElementType type()
     {
-      return TestSection.Section.EXCEPTION;
+      return TestElement.ElementType.EXCEPTION;
     }
 
     @Override
-    public TestSection copy()
+    public TestElement copy()
     {
       return new ExceptionSection(text, true);
     }
@@ -90,7 +90,7 @@ abstract class TextSection extends TestSection
         }
         cause = cause.getCause();
       }
-      errors.setSection(section().sectionName());
+      errors.setSection(type().sectionName());
       errors.add(StringUtils.format(
           "Expected exception [%s] but got [%s]: [%s]",
           text,
@@ -114,7 +114,7 @@ abstract class TextSection extends TestSection
   }
 
   @Override
-  public void writeSection(TestCaseWriter writer) throws IOException
+  public void writeElement(TestCaseWriter writer) throws IOException
   {
     writer.emitSection(name, text);
   }

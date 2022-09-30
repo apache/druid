@@ -196,7 +196,7 @@ public class TestCaseAnalyzerTest
         "=== plan\n";
     List<QueryTestCase> cases = load(input);
     assertEquals(1, cases.size());
-    PatternSection.ExpectedText plan = cases.get(0).plan().expected;
+    ExpectedPattern.ExpectedText plan = cases.get(0).plan().expected;
     assertTrue(plan.lines.isEmpty());
 
     input =
@@ -209,7 +209,7 @@ public class TestCaseAnalyzerTest
     assertEquals(1, cases.size());
     plan = cases.get(0).plan().expected;
     assertEquals(1, plan.lines.size());
-    assertEquals("  a plan  ", ((PatternSection.ExpectedLiteral) plan.lines.get(0)).line);
+    assertEquals("  a plan  ", ((ExpectedPattern.ExpectedLiteral) plan.lines.get(0)).line);
 
     input =
         "=== case\n" +
@@ -225,11 +225,11 @@ public class TestCaseAnalyzerTest
     assertEquals(1, cases.size());
     plan = cases.get(0).plan().expected;
     assertEquals(5, plan.lines.size());
-    assertTrue(plan.lines.get(0) instanceof PatternSection.SkipAny);
-    assertEquals("a plan", ((PatternSection.ExpectedLiteral) plan.lines.get(1)).line);
-    assertEquals("count \\d+  ", ((PatternSection.ExpectedRegex) plan.lines.get(2)).line);
-    assertEquals("  ", ((PatternSection.ExpectedLiteral) plan.lines.get(3)).line);
-    assertEquals("!foo ", ((PatternSection.ExpectedLiteral) plan.lines.get(4)).line);
+    assertTrue(plan.lines.get(0) instanceof ExpectedPattern.SkipAny);
+    assertEquals("a plan", ((ExpectedPattern.ExpectedLiteral) plan.lines.get(1)).line);
+    assertEquals("count \\d+  ", ((ExpectedPattern.ExpectedRegex) plan.lines.get(2)).line);
+    assertEquals("  ", ((ExpectedPattern.ExpectedLiteral) plan.lines.get(3)).line);
+    assertEquals("!foo ", ((ExpectedPattern.ExpectedLiteral) plan.lines.get(4)).line);
   }
 
   @Test
@@ -333,12 +333,12 @@ public class TestCaseAnalyzerTest
         "=== SQL\n" +
         "SELECT 1\n" +
         "=== context\n" +
-        "foo=bar\n" +
-        QueryContexts.USE_CACHE_KEY + "=true\n" +
-        QueryContexts.TIMEOUT_KEY + "=10\n";
+        "foo: \"bar\"\n" +
+        QueryContexts.USE_CACHE_KEY + ": true\n" +
+        QueryContexts.TIMEOUT_KEY + ": 10\n";
     cases = load(input);
     assertEquals(1, cases.size());
-    Map<String, Object> context = cases.get(0).contextSection().context;
+    Map<String, Object> context = cases.get(0).contextSection().context();
     assertEquals(3, context.size());
     assertEquals("bar", context.get("foo"));
     assertEquals(true, context.get(QueryContexts.USE_CACHE_KEY));
@@ -366,7 +366,7 @@ public class TestCaseAnalyzerTest
         "foo/bar/" + Action.READ.name() + "\n";
     cases = load(input);
     assertEquals(1, cases.get(0).resourceActions().resourceActions.size());
-    ResourcesSection.Resource resource = cases.get(0).resourceActions().resourceActions.get(0);
+    Resources.Resource resource = cases.get(0).resourceActions().resourceActions.get(0);
     assertEquals("foo", resource.type);
     assertEquals("bar", resource.name);
     assertEquals(Action.READ, resource.action);
@@ -390,14 +390,14 @@ public class TestCaseAnalyzerTest
         "=== SQL\n" +
         "SELECT 1\n" +
         "=== parameters\n" +
-        "int: 10\n" +
-        "integer: 20 \n" +
-        "long: 30\n" +
-        "bigint: 40\n" +
-        "float: 50.1  \n" +
-        "double: 60.2\n" +
-        "string: foo \n" +
-        "varchar: bar  \n";
+        "\"int\", 10\n" +
+        "\"integer\", 20 \n" +
+        "\"long\", 30\n" +
+        "\"bigint\", 40\n" +
+        "\"float\", 50.1  \n" +
+        "\"double\", 60.2\n" +
+        "\"string\", \"foo\" \n" +
+        "\"varchar\", \"bar\"  \n";
     cases = load(input);
     List<SqlParameter> params = cases.get(0).parameters();
     assertEquals(8, params.size());
@@ -432,11 +432,12 @@ public class TestCaseAnalyzerTest
         "=== SQL\n" +
         "SELECT 1\n" +
         "=== parameters\n" +
-        "string: ' foo '\n" +
-        "varchar: \"  bar  \"\n";
+        "\"string\", \" foo \"\n" +
+        "\"varchar\", \"  bar  \"\n" +
+        "\"varchar\", null\n";
     cases = load(input);
     params = cases.get(0).parameters();
-    assertEquals(2, params.size());
+    assertEquals(3, params.size());
 
     assertEquals(SqlType.VARCHAR, params.get(0).getType());
     assertEquals(" foo ", params.get(0).getValue());
@@ -444,14 +445,17 @@ public class TestCaseAnalyzerTest
     assertEquals(SqlType.VARCHAR, params.get(1).getType());
     assertEquals("  bar  ", params.get(1).getValue());
 
+    assertEquals(SqlType.VARCHAR, params.get(2).getType());
+    assertNull(params.get(2).getValue());
+
     input =
         "=== case\n" +
         "first\n" +
         "=== SQL\n" +
         "SELECT 1\n" +
         "=== parameters\n" +
-        "date: \"2022-05-09\"\n" +
-        "timestamp: \"2022-05-09 01:02:03\"\n";
+        "\"date\", \"2022-05-09\"\n" +
+        "\"timestamp\", \"2022-05-09 01:02:03\"\n";
     cases = load(input);
     params = cases.get(0).parameters();
     assertEquals(2, params.size());
@@ -481,11 +485,11 @@ public class TestCaseAnalyzerTest
         "=== SQL\n" +
         "SELECT 1\n" +
         "=== options\n" +
-        "p1=foo\n" +
-        " p2 = bar \n" +
-        "p3=\"  mumble  \"\n";
+        "p1: \"foo\"\n" +
+        " p2 : \"bar\" \n" +
+        "p3: \"  mumble  \"\n";
     cases = load(input);
-    Map<String, String> options = cases.get(0).optionsSection().options;
+    Map<String, Object> options = cases.get(0).optionsSection().options;
     assertEquals(3, options.size());
     assertEquals("foo", options.get("p1"));
     assertEquals("bar", options.get("p2"));
@@ -579,7 +583,7 @@ public class TestCaseAnalyzerTest
         "=== SQL\n" +
         "SELECT 1\n" +
         "=== context\n" +
-        "foo=bar\n" +
+        "foo: \"bar\"\n" +
         "=== case\n" +
         "second\n" +
         "=== SQL copy\n" +
@@ -593,7 +597,7 @@ public class TestCaseAnalyzerTest
         "=== SQL\n" +
         "SELECT 1\n" +
         "=== options\n" +
-        "foo=bar\n" +
+        "foo: \"bar\"\n" +
         "=== case\n" +
         "second\n" +
         "=== SQL copy\n" +
@@ -607,7 +611,7 @@ public class TestCaseAnalyzerTest
         "=== SQL\n" +
         "SELECT 1\n" +
         "=== parameters\n" +
-        "VARCHAR: foo\n" +
+        "\"VARCHAR\", \"foo\"\n" +
         "=== case\n" +
         "second\n" +
         "=== SQL copy\n" +
@@ -654,7 +658,7 @@ public class TestCaseAnalyzerTest
         "SELECT 1\n" +
         "=== run\n" +
         "=== options\n" +
-        "foo=bar\n";
+        "foo: \"bar\"\n";
     cases = load(input);
     run = cases.get(0).runs().get(0);
     assertEquals("", run.label());
@@ -667,11 +671,11 @@ public class TestCaseAnalyzerTest
         "=== SQL\n" +
         "SELECT 1\n" +
         "=== options\n" +
-        "x=a\n" +
-        "foo=mumble\n" +
+        "x: \"a\"\n" +
+        "foo: \"mumble\"\n" +
         "=== run\n" +
         "=== options\n" +
-        "foo=bar\n";
+        "foo: \"bar\"\n";
     cases = load(input);
     run = cases.get(0).runs().get(0);
     assertEquals("Run 1", run.displayLabel());
@@ -685,12 +689,12 @@ public class TestCaseAnalyzerTest
         "SELECT 1\n" +
         "=== run\n" +
         "=== options\n" +
-        "foo=bar\n" +
+        "foo: \"bar\"\n" +
         "=== results\n" +
         "[\"a\", 10]\n" +
         "=== run\n" +
         "=== options\n" +
-        "user=bob\n" +
+        "user: \"bob\"\n" +
         "=== results\n" +
         "[\"b\", 20]\n";
     cases = load(input);
@@ -714,7 +718,7 @@ public class TestCaseAnalyzerTest
         "=== run\n" +
         "fast\n" +
         "=== options\n" +
-        "user=bob\n";
+        "user: \"bob\"\n";
     cases = load(input);
     run = cases.get(0).runs().get(0);
     assertEquals("fast", run.label());

@@ -24,14 +24,15 @@ import org.apache.druid.java.util.common.StringUtils;
 import java.io.IOException;
 
 /**
- * One section of the test case.
+ * One element of the test case. Elements are either input to the test,
+ * or expected results from the test.
  */
-public abstract class TestSection
+public abstract class TestElement
 {
   /**
-   * Enum which identifies the supported test sections.
+   * Enum which identifies the supported test elements.
    */
-  public enum Section
+  public enum ElementType
   {
     CASE("case"),
     SQL("sql"),
@@ -55,7 +56,7 @@ public abstract class TestSection
 
     private final String name;
 
-    Section(String name)
+    ElementType(String name)
     {
       this.name = name;
     }
@@ -65,10 +66,10 @@ public abstract class TestSection
       return name;
     }
 
-    public static Section forSection(String section)
+    public static ElementType forElement(String section)
     {
       section = StringUtils.toLowerCase(section);
-      for (Section value : values()) {
+      for (ElementType value : values()) {
         if (value.name.equals(section)) {
           return value;
         }
@@ -80,14 +81,14 @@ public abstract class TestSection
   protected final String name;
   protected final boolean copy;
 
-  protected TestSection(String name, boolean copy)
+  protected TestElement(String name, boolean copy)
   {
     this.name = name;
     this.copy = copy;
   }
 
-  public abstract TestSection.Section section();
-  public abstract TestSection copy();
+  public abstract ElementType type();
+  public abstract TestElement copy();
 
   public String name()
   {
@@ -104,9 +105,9 @@ public abstract class TestSection
     if (copy) {
       writer.emitCopy(name);
     } else {
-      writeSection(writer);
+      writeElement(writer);
     }
   }
 
-  protected abstract void writeSection(TestCaseWriter writer) throws IOException;
+  protected abstract void writeElement(TestCaseWriter writer) throws IOException;
 }

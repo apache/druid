@@ -33,7 +33,7 @@ import java.util.Set;
 /**
  * The resource (actions) test case section.
  */
-public class ResourcesSection extends TestSection
+public class Resources extends TestElement
 {
   /**
    * Indicates an expected resource action.
@@ -120,34 +120,34 @@ public class ResourcesSection extends TestSection
     }
   }
 
-  protected final List<ResourcesSection.Resource> resourceActions;
+  protected final List<Resources.Resource> resourceActions;
 
-  protected ResourcesSection(List<Resource> resourceActions)
+  protected Resources(List<Resource> resourceActions)
   {
     this(resourceActions, false);
   }
 
-  protected ResourcesSection(List<Resource> resourceActions, boolean copy)
+  protected Resources(List<Resource> resourceActions, boolean copy)
   {
-    super(Section.RESOURCES.sectionName(), copy);
+    super(ElementType.RESOURCES.sectionName(), copy);
     this.resourceActions = resourceActions;
   }
 
-  public List<ResourcesSection.Resource> resourceActions()
+  public List<Resources.Resource> resourceActions()
   {
     return resourceActions;
   }
 
   @Override
-  public TestSection.Section section()
+  public ElementType type()
   {
-    return TestSection.Section.RESOURCES;
+    return ElementType.RESOURCES;
   }
 
   @Override
-  public TestSection copy()
+  public TestElement copy()
   {
-    return new ResourcesSection(resourceActions, true);
+    return new Resources(resourceActions, true);
   }
 
   public boolean verify(Set<ResourceAction> actual, ActualResults.ErrorCollector errors)
@@ -156,7 +156,7 @@ public class ResourcesSection extends TestSection
       return true;
     }
     if (actual.size() != resourceActions.size()) {
-      errors.setSection(section().sectionName());
+      errors.setSection(type().sectionName());
       errors.add(
           StringUtils.format(
               "expected %d entries, got %d",
@@ -164,11 +164,11 @@ public class ResourcesSection extends TestSection
               actual.size()));
       return false;
     }
-    List<ResourcesSection.Resource> expectedActions = ResourcesSection.Resource.sort(resourceActions);
-    List<ResourcesSection.Resource> actualActions = ResourcesSection.Resource.sort(ResourcesSection.Resource.convert(actual));
+    List<Resources.Resource> expectedActions = Resources.Resource.sort(resourceActions);
+    List<Resources.Resource> actualActions = Resources.Resource.sort(Resources.Resource.convert(actual));
     for (int i = 0; i < expectedActions.size(); i++) {
       if (!expectedActions.get(i).equals(actualActions.get(i))) {
-        errors.setSection(section().sectionName());
+        errors.setSection(type().sectionName());
         errors.add(
             StringUtils.format(
                 "resource did not match: [%s]",
@@ -188,7 +188,7 @@ public class ResourcesSection extends TestSection
     if (o == null || o.getClass() != getClass()) {
       return false;
     }
-    ResourcesSection other = (ResourcesSection) o;
+    Resources other = (Resources) o;
     return resourceActions.equals(other.resourceActions);
   }
 
@@ -202,7 +202,7 @@ public class ResourcesSection extends TestSection
   }
 
   @Override
-  public void writeSection(TestCaseWriter writer) throws IOException
+  public void writeElement(TestCaseWriter writer) throws IOException
   {
     writer.emitResources(resourceActions);
   }

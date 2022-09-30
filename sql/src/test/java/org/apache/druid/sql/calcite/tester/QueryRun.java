@@ -22,7 +22,7 @@ package org.apache.druid.sql.calcite.tester;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.sql.calcite.tester.LinesSection.ResultsSection;
+import org.apache.druid.sql.calcite.tester.LinesElement.ExpectedResults;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -41,7 +41,7 @@ import java.util.Map;
  * covers SQL-compatible null handling. Options and query context "inherit"
  * values from the query test case, overridden by any values set in the run.
  */
-public class QueryRun extends SectionContainer
+public class QueryRun extends ElementContainer
 {
   /**
    * Builder for a test case. Allows the test case itself to be
@@ -51,7 +51,7 @@ public class QueryRun extends SectionContainer
   {
     private final String label;
     protected boolean isExplicit;
-    protected List<TestSection> sections = new ArrayList<>();
+    protected List<TestElement> sections = new ArrayList<>();
     protected String exception;
 
     public Builder(String label)
@@ -65,7 +65,7 @@ public class QueryRun extends SectionContainer
       return this;
     }
 
-    public void add(TestSection section)
+    public void add(TestElement section)
     {
       if (section != null) {
         sections.add(section);
@@ -101,7 +101,7 @@ public class QueryRun extends SectionContainer
   public QueryRun(
       QueryTestCase testCase,
       String label,
-      List<TestSection> sections,
+      List<TestElement> sections,
       boolean isExplicit)
   {
     super(label, sections);
@@ -130,22 +130,22 @@ public class QueryRun extends SectionContainer
     }
   }
 
-  public ResultsSection resultsSection()
+  public ExpectedResults resultsSection()
   {
-    return (LinesSection.ResultsSection) section(TestSection.Section.RESULTS);
+    return (LinesElement.ExpectedResults) section(TestElement.ElementType.RESULTS);
   }
 
   public List<String> results()
   {
-    ResultsSection resultsSection = resultsSection();
+    ExpectedResults resultsSection = resultsSection();
     return resultsSection == null ? Collections.emptyList() : resultsSection.lines;
   }
 
   @Override
   public Map<String, Object> context()
   {
-    ContextSection section = contextSection();
-    ContextSection querySection = testCase.contextSection();
+    Context section = contextSection();
+    Context querySection = testCase.contextSection();
     if (querySection == null) {
       return section == null ? ImmutableMap.of() : section.context;
     }
@@ -165,21 +165,21 @@ public class QueryRun extends SectionContainer
 
   public boolean failOnRun()
   {
-    return OptionsSection.FAIL_AT_RUN.equalsIgnoreCase(option(OptionsSection.FAILURE_OPTION));
+    return TestOptions.FAIL_AT_RUN.equalsIgnoreCase(option(TestOptions.FAILURE_OPTION));
   }
 
   @Override
-  public Map<String, String> options()
+  public Map<String, Object> options()
   {
-    Map<String, String> caseOptions = testCase.options();
-    Map<String, String> options = super.options();
+    Map<String, Object> caseOptions = testCase.options();
+    Map<String, Object> options = super.options();
     if (caseOptions.isEmpty()) {
       return options;
     }
     if (options.isEmpty()) {
       return caseOptions;
     }
-    Map<String, String> merged = new HashMap<>(caseOptions);
+    Map<String, Object> merged = new HashMap<>(caseOptions);
     merged.putAll(options);
     return merged;
   }
@@ -218,7 +218,7 @@ public class QueryRun extends SectionContainer
         writer.emitOptionalLine(label);
       }
     }
-    for (TestSection section : fileOrder) {
+    for (TestElement section : fileOrder) {
       section.write(writer);
     }
   }

@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 /**
  * Generic regex-based test case section.
  */
-public class PatternSection extends TestSection
+public class ExpectedPattern extends TestElement
 {
   public interface ExpectedLine
   {
@@ -293,36 +293,36 @@ public class PatternSection extends TestSection
     }
   }
 
-  protected final TestSection.Section section;
-  protected final PatternSection.ExpectedText expected;
+  protected final TestElement.ElementType section;
+  protected final ExpectedPattern.ExpectedText expected;
 
-  protected PatternSection(Section section, String name, ExpectedText expected)
+  protected ExpectedPattern(ElementType section, String name, ExpectedText expected)
   {
     this(section, name, expected, false);
   }
 
-  protected PatternSection(Section section, String name, ExpectedText expected, boolean copy)
+  protected ExpectedPattern(ElementType section, String name, ExpectedText expected, boolean copy)
   {
     super(name, copy);
     this.section = section;
     this.expected = expected;
   }
 
-  public PatternSection.ExpectedText expected()
+  public ExpectedPattern.ExpectedText expected()
   {
     return expected;
   }
 
   @Override
-  public TestSection.Section section()
+  public TestElement.ElementType type()
   {
     return section;
   }
 
   @Override
-  public TestSection copy()
+  public TestElement copy()
   {
-    return new PatternSection(section, name, expected, true);
+    return new ExpectedPattern(section, name, expected, true);
   }
 
   public boolean verify(String actual, ActualResults.ErrorCollector errors)
@@ -333,7 +333,7 @@ public class PatternSection extends TestSection
 
   public boolean verify(String[] actual, ActualResults.ErrorCollector errors)
   {
-    errors.setSection(section().sectionName());
+    errors.setSection(type().sectionName());
     if (actual == null) {
       errors.add("Section " + section + " actual results are missing.");
       return false;
@@ -351,7 +351,7 @@ public class PatternSection extends TestSection
     if (o == null || o.getClass() != getClass()) {
       return false;
     }
-    PatternSection other = (PatternSection) o;
+    ExpectedPattern other = (ExpectedPattern) o;
     return expected.equals(other.expected);
   }
 
@@ -365,7 +365,7 @@ public class PatternSection extends TestSection
   }
 
   @Override
-  public void writeSection(TestCaseWriter writer) throws IOException
+  public void writeElement(TestCaseWriter writer) throws IOException
   {
     writer.emitSection(name);
     expected.write(writer);

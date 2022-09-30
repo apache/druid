@@ -50,14 +50,14 @@ public class TestCaseTest
     assertEquals("SELECT 1", cases.get(0).sql());
   }
 
-  public void expectOK(PatternSection expected, String actual)
+  public void expectOK(ExpectedPattern expected, String actual)
   {
     ActualResults.ErrorCollector errors = new ActualResults.ErrorCollector();
     expected.verify(actual, errors);
     assertTrue(errors.ok());
   }
 
-  public void expectError(PatternSection expected, String actual)
+  public void expectError(ExpectedPattern expected, String actual)
   {
     ActualResults.ErrorCollector errors = new ActualResults.ErrorCollector();
     expected.verify(actual, errors);

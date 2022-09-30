@@ -32,21 +32,21 @@ import java.util.Map;
  * and contain sections. Sections are kept in file order for writing,
  * and indexed for retrieval.
  */
-public abstract class SectionContainer
+public abstract class ElementContainer
 {
   protected final String label;
-  protected final Map<TestSection.Section, TestSection> sections = new HashMap<>();
-  protected final List<TestSection> fileOrder;
+  protected final Map<TestElement.ElementType, TestElement> sections = new HashMap<>();
+  protected final List<TestElement> fileOrder;
 
-  public SectionContainer(
+  public ElementContainer(
       String label,
-      List<TestSection> sections
+      List<TestElement> sections
   )
   {
     this.label = label;
     this.fileOrder = sections;
-    for (TestSection section : sections) {
-      this.sections.put(section.section(), section);
+    for (TestElement section : sections) {
+      this.sections.put(section.type(), section);
     }
   }
 
@@ -55,46 +55,47 @@ public abstract class SectionContainer
     return label;
   }
 
-  public List<TestSection> sections()
+  public List<TestElement> sections()
   {
     return fileOrder;
   }
 
-  public TestSection section(TestSection.Section section)
+  public TestElement section(TestElement.ElementType section)
   {
     return sections.get(section);
   }
 
-  public OptionsSection optionsSection()
+  public TestOptions optionsSection()
   {
-    return (OptionsSection) section(TestSection.Section.OPTIONS);
+    return (TestOptions) section(TestElement.ElementType.OPTIONS);
   }
 
-  public Map<String, String> options()
+  public Map<String, Object> options()
   {
-    OptionsSection section = optionsSection();
+    TestOptions section = optionsSection();
     return section == null ? Collections.emptyMap() : section.options();
   }
 
   public String option(String key)
   {
-    OptionsSection options = optionsSection();
-    return options == null ? null : options.options.get(key);
+    TestOptions options = optionsSection();
+    Object value = options == null ? null : options.options.get(key);
+    return value == null ? null : value.toString();
   }
 
-  public ContextSection contextSection()
+  public Context contextSection()
   {
-    return (ContextSection) section(TestSection.Section.CONTEXT);
+    return (Context) section(TestElement.ElementType.CONTEXT);
   }
 
   public ExceptionSection exception()
   {
-    return (TextSection.ExceptionSection) section(TestSection.Section.EXCEPTION);
+    return (TextSection.ExceptionSection) section(TestElement.ElementType.EXCEPTION);
   }
 
-  public PatternSection error()
+  public ExpectedPattern error()
   {
-    return (PatternSection) section(TestSection.Section.ERROR);
+    return (ExpectedPattern) section(TestElement.ElementType.ERROR);
   }
 
   public boolean shouldFail()

@@ -19,37 +19,40 @@
 
 package org.apache.druid.sql.calcite.tester;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.security.Action;
-import org.apache.druid.sql.calcite.tester.LinesSection.CaseSection;
-import org.apache.druid.sql.calcite.tester.LinesSection.ResultsSection;
-import org.apache.druid.sql.calcite.tester.PatternSection.ExpectedLine;
-import org.apache.druid.sql.calcite.tester.PatternSection.ExpectedRegex;
-import org.apache.druid.sql.calcite.tester.PatternSection.ExpectedText;
-import org.apache.druid.sql.calcite.tester.PatternSection.SkipAny;
-import org.apache.druid.sql.calcite.tester.TestSection.Section;
+import org.apache.druid.sql.calcite.tester.ExpectedPattern.ExpectedLine;
+import org.apache.druid.sql.calcite.tester.ExpectedPattern.ExpectedRegex;
+import org.apache.druid.sql.calcite.tester.ExpectedPattern.ExpectedText;
+import org.apache.druid.sql.calcite.tester.ExpectedPattern.SkipAny;
+import org.apache.druid.sql.calcite.tester.LinesElement.CaseLabel;
+import org.apache.druid.sql.calcite.tester.LinesElement.ExpectedResults;
+import org.apache.druid.sql.calcite.tester.TestElement.ElementType;
 import org.apache.druid.sql.calcite.tester.TestSetSpec.SectionSpec;
 import org.apache.druid.sql.calcite.tester.TestSetSpec.TestCaseSpec;
 import org.apache.druid.sql.calcite.tester.TextSection.ExceptionSection;
 import org.apache.druid.sql.calcite.tester.TextSection.SqlSection;
 import org.apache.druid.sql.http.SqlParameter;
 
-import java.io.IOException;
-import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Properties;
 
+/**
+ * Analyzes a test test parse tree into the semantisized form used to
+ * run a test.
+ */
 public class TestCaseAnalyzer
 {
   private final TestSetSpec setSpec;
   private final List<QueryTestCase> testCases = new ArrayList<>();
+  private final ObjectMapper jsonMapper = new ObjectMapper();
   private QueryTestCase.Builder testCase;
   private QueryTestCase prevCase;
   private QueryRun.Builder queryRun;
@@ -57,6 +60,7 @@ public class TestCaseAnalyzer
   public TestCaseAnalyzer(final TestSetSpec setSpec)
   {
     this.setSpec = setSpec;
+    jsonMapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
   }
 
   public String sourceLabel()
@@ -105,20 +109,20 @@ public class TestCaseAnalyzer
       default:
         break;
     }
-    Section sectionKind = parseSectionName(sectionSpec);
+    ElementType sectionKind = parseSectionName(sectionSpec);
     if ("copy".equalsIgnoreCase(sectionSpec.arg)) {
       copySection(sectionSpec, sectionKind);
     } else {
-      addSection(analyzeSection(sectionSpec, sectionKind));
+      addElement(analyzeSection(sectionSpec, sectionKind));
     }
   }
 
   private void analyzeCase(SectionSpec sectionSpec)
   {
-    testCase.add(new CaseSection(sectionSpec.lines));
+    testCase.add(new CaseLabel(sectionSpec.lines));
   }
 
-  private TestSection analyzeSection(SectionSpec sectionSpec, Section sectionKind)
+  private TestElement analyzeSection(SectionSpec sectionSpec, ElementType sectionKind)
   {
     switch (sectionKind) {
       case SQL:
@@ -157,9 +161,9 @@ public class TestCaseAnalyzer
     }
   }
 
-  private Section parseSectionName(SectionSpec sectionSpec)
+  private ElementType parseSectionName(SectionSpec sectionSpec)
   {
-    Section section = Section.forSection(sectionSpec.name);
+    ElementType section = ElementType.forElement(sectionSpec.name);
     if (section == null) {
       throw new IAE(
           StringUtils.format(
@@ -173,7 +177,7 @@ public class TestCaseAnalyzer
     return section;
   }
 
-  private void copySection(SectionSpec sectionSpec, Section sectionKind)
+  private void copySection(SectionSpec sectionSpec, ElementType sectionKind)
   {
     if (prevCase == null) {
       throw new IAE(
@@ -195,7 +199,7 @@ public class TestCaseAnalyzer
           )
       );
     }
-    if (sectionKind == Section.RESULTS && queryRun != null) {
+    if (sectionKind == ElementType.RESULTS && queryRun != null) {
       throw new IAE(
           StringUtils.format(
               "[%s:%d]: Cannot use \"copy\" option in run section",
@@ -204,8 +208,8 @@ public class TestCaseAnalyzer
           )
       );
     }
-    TestSection copiedSection;
-    if (sectionKind == Section.RESULTS) {
+    TestElement copiedSection;
+    if (sectionKind == ElementType.RESULTS) {
       if (prevCase.runs().size() != 1) {
         throw new IAE(
             StringUtils.format(
@@ -216,7 +220,7 @@ public class TestCaseAnalyzer
             )
         );
       }
-      copiedSection = prevCase.runs().get(0).section(Section.RESULTS);
+      copiedSection = prevCase.runs().get(0).section(ElementType.RESULTS);
     } else {
       copiedSection = prevCase.copySection(sectionKind);
     }
@@ -230,7 +234,7 @@ public class TestCaseAnalyzer
           )
       );
     }
-    addSection(copiedSection);
+    addElement(copiedSection);
   }
 
   private void analyzeRun(SectionSpec sectionSpec)
@@ -239,12 +243,12 @@ public class TestCaseAnalyzer
     queryRun = testCase.addRun(label, true);
   }
 
-  private void addSection(TestSection section)
+  private void addElement(TestElement section)
   {
     if (section == null) {
       return;
     }
-    switch (section.section()) {
+    switch (section.type()) {
       case RESULTS:
         if (queryRun == null) {
           queryRun = testCase.addRun("", false);
@@ -265,7 +269,7 @@ public class TestCaseAnalyzer
     }
   }
 
-  private TestSection analyzeQuery(SectionSpec sectionSpec)
+  private TestElement analyzeQuery(SectionSpec sectionSpec)
   {
     String sql = sectionSpec.toText().trim();
     if (Strings.isNullOrEmpty(sql)) {
@@ -280,10 +284,10 @@ public class TestCaseAnalyzer
     return new SqlSection("SQL", sql);
   }
 
-  private TestSection analyzePattern(Section section, SectionSpec sectionSpec)
+  private TestElement analyzePattern(ElementType section, SectionSpec sectionSpec)
   {
     List<ExpectedLine> result = analyzeExpected(sectionSpec);
-    return new PatternSection(section, sectionSpec.name, new ExpectedText(result));
+    return new ExpectedPattern(section, sectionSpec.name, new ExpectedText(result));
   }
 
   private List<ExpectedLine> analyzeExpected(SectionSpec sectionSpec)
@@ -301,14 +305,14 @@ public class TestCaseAnalyzer
       if (line.startsWith("\\")) {
         line = line.substring(1);
       }
-      lines.add(new PatternSection.ExpectedLiteral(line));
+      lines.add(new ExpectedPattern.ExpectedLiteral(line));
     }
     return lines;
   }
 
-  private TestSection analyzeResources(SectionSpec sectionSpec)
+  private TestElement analyzeResources(SectionSpec sectionSpec)
   {
-    List<ResourcesSection.Resource> resourceActions = new ArrayList<>();
+    List<Resources.Resource> resourceActions = new ArrayList<>();
     for (String entry : sectionSpec.lines) {
       String[] parts = entry.split("/");
       if (parts.length != 3) {
@@ -332,158 +336,146 @@ public class TestCaseAnalyzer
           )
         );
       }
-      resourceActions.add(new ResourcesSection.Resource(parts[0], parts[1], action));
+      resourceActions.add(new Resources.Resource(parts[0], parts[1], action));
     }
-    return new ResourcesSection(resourceActions);
+    return new Resources(resourceActions);
   }
 
-  private TestSection analyzeContext(SectionSpec sectionSpec)
+  private TestElement analyzeContext(SectionSpec sectionSpec)
   {
-    Properties props = new Properties();
+    Map<String, Object> context = convertMap(sectionSpec);
+    return context.isEmpty() ? null : new Context(context);
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> convertMap(SectionSpec sectionSpec)
+  {
+    String json = "{" +
+        String.join(",\n", sectionSpec.lines) +
+        "\n}";
     try {
-      props.load(new StringReader(sectionSpec.toText()));
+      return jsonMapper.readValue(json, Map.class);
     }
-    catch (IOException e) {
+    catch (JsonProcessingException e) {
       throw new IAE(
-          StringUtils.format(
-              "[%s:%d]: failed to parse context: %s",
-              sourceLabel(),
-              sectionSpec.startLine,
-              e.getMessage()
-          )
+          "[%s:%d]: JSON parse failed: %s",
+          sourceLabel(),
+          sectionSpec.startLine,
+          e.getMessage()
       );
     }
-    if (props.isEmpty()) {
-      return null;
-    }
-    Map<String, Object> context = new HashMap<>();
-    for (Entry<Object, Object> entry : props.entrySet()) {
-      String key = entry.getKey().toString();
-      context.put(
-          key,
-          QueryTestCases.definition(key).parse(
-              entry.getValue().toString()));
-    }
-    return new ContextSection(context);
   }
 
-  private TestSection analyzeException(SectionSpec sectionSpec)
+  private TestElement analyzeException(SectionSpec sectionSpec)
   {
     return new ExceptionSection(sectionSpec.toText());
   }
 
-  private TestSection analyzeParameters(SectionSpec sectionSpec)
+  @SuppressWarnings("unchecked")
+  private TestElement analyzeParameters(SectionSpec sectionSpec)
   {
+    StringBuilder buf = new StringBuilder()
+        .append("[");
+    for (int i = 0; i < sectionSpec.lines.size(); i++) {
+      if (i > 0) {
+        buf.append(", ");
+      }
+      buf.append("[").append(sectionSpec.lines.get(i)).append("]");
+    }
+    String json = buf.append("]").toString();
+    List<List<Object>> values;
+    try {
+      values = jsonMapper.readValue(json, List.class);
+    }
+    catch (JsonProcessingException e) {
+      throw new IAE(
+          "[%s:%d]: JSON parse failed: %s",
+          sourceLabel(),
+          sectionSpec.startLine,
+          e.getMessage()
+      );
+    }
     List<SqlParameter> parameters = new ArrayList<>();
-    for (String entry : sectionSpec.lines) {
-      if ("null".equals(entry)) {
-        parameters.add(null);
-        continue;
-      }
-      int posn = entry.indexOf(':');
-      if (posn == -1) {
-        throw new IAE(
-            StringUtils.format(
-                "[%s:%d]: Parameter is not in type: value format: [%s]",
-                sourceLabel(),
-                sectionSpec.startLine,
-                entry
-            )
-        );
-      }
-      String type = StringUtils.toLowerCase(entry.substring(0, posn).trim());
-      String value = entry.substring(posn + 1).trim();
+    for (List<Object> paramValue : values) {
       try {
-        parameters.add(parseParameter(type, value));
+        parameters.add(parseParameter(paramValue));
       }
       catch (Exception e) {
-        throw new IAE(
-            StringUtils.format(
-                "[%s:%d]: parameter [%s]: %s",
-                sourceLabel(),
-                sectionSpec.startLine,
-                entry,
-                e.getMessage()
-            )
+        throw new IAE("[%s:%d]: %s",
+            sourceLabel(),
+            sectionSpec.startLine,
+            e.getMessage()
         );
       }
     }
-    return new ParametersSection(parameters);
+    return new Parameters(parameters);
   }
 
-  public static SqlParameter parseParameter(String type, String value)
+  public SqlParameter parseParameter(List<Object> value)
   {
-    if ("int".equalsIgnoreCase(type)) {
-      type = SqlType.INTEGER.name();
-    } else if ("long".equalsIgnoreCase(type)) {
-      type = SqlType.BIGINT.name();
-    } else if ("string".equalsIgnoreCase(type)) {
-      type = SqlType.VARCHAR.name();
+    if (value.size() != 2 || !(value.get(0) instanceof String)) {
+      throw new IAE("Parameter not in \"<type>\": <value> form: [%s]", value);
     }
-    SqlType sqlType = SqlType.valueOf(StringUtils.toUpperCase(type));
-    if (sqlType == null) {
-      throw new RuntimeException("Unsupported parameter type: " + type);
+    String typeStr = StringUtils.toUpperCase((String) value.get(0));
+    if ("INT".equals(typeStr)) {
+      typeStr = SqlType.INTEGER.name();
+    } else if ("STRING".equals(typeStr)) {
+      typeStr = SqlType.VARCHAR.name();
+    } else if ("LONG".equals(typeStr)) {
+      typeStr = SqlType.BIGINT.name();
     }
-    if ("\\N".equals(value)) {
+    SqlType sqlType;
+    try {
+      sqlType = SqlType.valueOf(typeStr);
+    }
+    catch (IllegalArgumentException e) {
+      throw new IAE("Parameter type [%s] is not a valid SQL type", value.get(0));
+    }
+    Object rawValue = value.get(1);
+    if (rawValue == null) {
       return new SqlParameter(sqlType, null);
     }
+
+    // Crude-but-effective way to coerce the type JSON chose to the
+    // type specified for JSON.
+    String strValue = rawValue.toString();
     Object sqlValue;
     switch (sqlType) {
       case INTEGER:
-        sqlValue = Integer.parseInt(value);
+        sqlValue = Integer.parseInt(strValue);
         break;
       case BIGINT:
-        sqlValue = Long.parseLong(value);
+        sqlValue = Long.parseLong(strValue);
         break;
       case FLOAT:
       case REAL:
-        sqlValue = Float.parseFloat(value);
+        sqlValue = Float.parseFloat(strValue);
         break;
       case DOUBLE:
-        sqlValue = Double.parseDouble(value);
+        sqlValue = Double.parseDouble(strValue);
         break;
       case VARCHAR:
-        sqlValue = QueryTestCases.unquote(value);
+        sqlValue = QueryTestCases.unquote(strValue);
         break;
       case TIMESTAMP:
       case DATE:
         // Timestamps seem to appear as both quoted strings and numbers.
-        sqlValue = QueryTestCases.unquote(value);
+        sqlValue = QueryTestCases.unquote(strValue);
         break;
       default:
-        throw new RuntimeException("Unsupported SQL type: " + type);
+        throw new IAE("Unsupported SQL type: %s", sqlType);
     }
     return new SqlParameter(sqlType, sqlValue);
   }
 
-  private TestSection analyzeOptions(SectionSpec sectionSpec)
+  private TestElement analyzeOptions(SectionSpec sectionSpec)
   {
-    Map<String, String> options = new HashMap<>();
-    for (String line : sectionSpec.lines) {
-      int posn = line.indexOf('=');
-      if (posn == -1) {
-        throw new IAE(
-            StringUtils.format(
-                "[%s:%d]: Option is not in key=value format: [%s]",
-                sourceLabel(),
-                sectionSpec.startLine,
-                line
-            )
-        );
-      }
-      String key = line.substring(0, posn).trim();
-      String value = QueryTestCases.unquote(line.substring(posn + 1).trim());
-      options.put(key, value);
-    }
-    if (options.isEmpty()) {
-      return null;
-    } else {
-      return new OptionsSection(options);
-    }
+    Map<String, Object> options = convertMap(sectionSpec);
+    return options.isEmpty() ? null : new TestOptions(options);
   }
 
-  private TestSection analyzeResults(SectionSpec sectionSpec)
+  private TestElement analyzeResults(SectionSpec sectionSpec)
   {
-    return new ResultsSection(sectionSpec.lines);
+    return new ExpectedResults(sectionSpec.lines);
   }
 }

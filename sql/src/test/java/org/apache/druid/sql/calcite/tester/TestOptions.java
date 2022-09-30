@@ -29,7 +29,7 @@ import java.util.Objects;
 /**
  * The options test case section.
  */
-public class OptionsSection extends TestSection
+public class TestOptions extends TestElement
 {
   /**
    * Specifies the "user" (actually, authentication result) to use.
@@ -104,39 +104,45 @@ public class OptionsSection extends TestSection
    */
   public static final String HOMOGENIZE_NULL_MULTI_VALUE_STRINGS = "homogenizeNullMultiValueStrings";
 
-  protected final Map<String, String> options;
+  protected final Map<String, Object> options;
 
-  protected OptionsSection(Map<String, String> options)
+  protected TestOptions(Map<String, Object> options)
   {
     this(options, false);
   }
 
-  protected OptionsSection(Map<String, String> options, boolean copy)
+  protected TestOptions(Map<String, Object> options, boolean copy)
   {
-    super(Section.OPTIONS.sectionName(), copy);
+    super(ElementType.OPTIONS.sectionName(), copy);
     this.options = options;
   }
 
   @Override
-  public TestSection.Section section()
+  public ElementType type()
   {
-    return TestSection.Section.OPTIONS;
+    return ElementType.OPTIONS;
   }
 
   @Override
-  public TestSection copy()
+  public TestElement copy()
   {
-    return new OptionsSection(options, true);
+    return new TestOptions(options, true);
   }
 
-  public Map<String, String> options()
+  public Map<String, Object> options()
   {
     return options;
   }
 
-  public String get(String key)
+  public Object get(String key)
   {
     return options.get(key);
+  }
+
+  public String getString(String key)
+  {
+    Object value = get(key);
+    return value == null ? null : value.toString();
   }
 
   public List<String> sorted()
@@ -159,7 +165,7 @@ public class OptionsSection extends TestSection
     if (o == null || o.getClass() != getClass()) {
       return false;
     }
-    OptionsSection other = (OptionsSection) o;
+    TestOptions other = (TestOptions) o;
     return options.equals(other.options);
   }
 
@@ -173,7 +179,7 @@ public class OptionsSection extends TestSection
   }
 
   @Override
-  public void writeSection(TestCaseWriter writer) throws IOException
+  public void writeElement(TestCaseWriter writer) throws IOException
   {
     writer.emitOptions(options);
   }

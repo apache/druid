@@ -110,35 +110,43 @@ LIMIT 1
 
 ## `context` Section
 
-The `context` section provides the query context, in "Java properties" format:
-that is, as `name=value` pairs:
+The `context` section provides the query context, in JSON format as name/value
+pairs. The format is the content of a JSON object, but without the opening
+and closing brackets.
+
+The JSON form ensures that values are parsed by tests in the same way that
+they would be parsed if passed in JSON to a query.
+
+Example:
 
 ```text
 === context
-maxSubqueryRows=2
+"maxSubqueryRows": 2
 ```
 
-The tests use metadata to determine the context variable type. In the above,
-metdata tells
-us that `maxSubqueryRows` is an `int`, so the value is converted to an `int`
-internally. The type is assumed to be `String` if there is no metadata. If you
-add a query context value, or use one not in the `QueryContexts` metadata table,
-you may encounter an error if the test case loader guess the type wrong. To fix
-the issue, add your parameter to the `QueryContexts` metadata table.
+The JSON parser used allows key names without quotes:
 
-As a result, you can choose to quote strings or not. You must quote
-strings if they start or end with spaces:
-
-```
+```text
 === context
-example=" quote me! "
+maxSubqueryRows: 2
+```
+
+The parser expects one context pair per line, and automatically inserts commas
+between lines:
+
+```text
+=== context
+maxSubqueryRows: 2
+enableParallelMerge: false
 ```
 
 ## `parameters` Section
 
 Druid supports query parameters. The `parameters` section provides the
 parameter values to use when planning the query. Parameter values are typed,
-so you provide values using a `<type>: <value>` syntax:
+using JSON syntax. The content of the section is a JSON array of the type
+(as a string) and the value. There is one value per line, without the
+opening or closing brackets:
 
 ```text
 === sql
@@ -149,8 +157,8 @@ SELECT
   WHERE foo = ?
     AND bar < ?
 === parameters
-varchar: "a"
-integer: 1
+"varchar", "a"
+"integer", 1
 ```
 
 Use SQL types: `varchar` for `string`, `bigint` for `long`, etc.
@@ -162,33 +170,24 @@ Names are case-insensitive:
 
 ```text
 === parameters
-VARCHAR: "a"
-INT: 1
+"VARCHAR", "a"
+"INT", 1
 ```
 
 SQL requires that there be one parameter value for each parameter in the
 query, listed in the order that the parameters appear textual in the query.
-
-Quoting of strings is optional. If unquoted, leading and trailing whitespace
-is removed. Use quotes if you want to include such whitespace:
-
-```text
-=== parameters
-VARCHAR: "  quote me!  "
-INT: 1
-```
 
 ## `options` Section
 
 The `options` section provides instructions for setting up the planner or for
 running the test. Options specify things which would otherwise be specified in code
 or in the various `.properties` files. The name are mostly specific to this test
-framework.
+framework. The format is the same JSON-like format used for `context`.
 
 ```text
 === options
-failure=run
-replacewithDefault=true
+failure: "run"
+replacewithDefault: true
 ```
 
 Supported option names include:

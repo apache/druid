@@ -21,8 +21,8 @@ package org.apache.druid.sql.calcite.tester;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.druid.sql.calcite.tester.LinesSection.CommentsSection;
-import org.apache.druid.sql.calcite.tester.TestSection.Section;
+import org.apache.druid.sql.calcite.tester.LinesElement.TestComments;
+import org.apache.druid.sql.calcite.tester.TestElement.ElementType;
 import org.apache.druid.sql.http.SqlParameter;
 
 import java.io.IOException;
@@ -43,7 +43,7 @@ import java.util.Objects;
  * runs of the query, each with optional results. Typically there are one
  * or two runs: one for each kind of null handling.
  */
-public class QueryTestCase extends SectionContainer
+public class QueryTestCase extends ElementContainer
 {
   /**
    * Builder for a test case. Allows the test case itself to be
@@ -52,7 +52,7 @@ public class QueryTestCase extends SectionContainer
   public static class Builder
   {
     private final String label;
-    protected List<TestSection> sections = new ArrayList<>();
+    protected List<TestElement> sections = new ArrayList<>();
     protected String exception;
     protected List<QueryRun.Builder> runBuilders = new ArrayList<>();
 
@@ -61,7 +61,7 @@ public class QueryTestCase extends SectionContainer
       this.label = label;
     }
 
-    public void add(TestSection section)
+    public void add(TestElement section)
     {
       if (section != null) {
         sections.add(section);
@@ -105,13 +105,13 @@ public class QueryTestCase extends SectionContainer
 
   public TextSection.SqlSection sqlSection()
   {
-    return (TextSection.SqlSection) section(TestSection.Section.SQL);
+    return (TextSection.SqlSection) section(TestElement.ElementType.SQL);
   }
 
   public String sql()
   {
     String sql = sqlSection().text();
-    if (booleanOption(OptionsSection.UNICODE_ESCAPE_OPTION)) {
+    if (booleanOption(TestOptions.UNICODE_ESCAPE_OPTION)) {
       sql = StringEscapeUtils.unescapeJava(sql);
     }
     return sql;
@@ -119,7 +119,7 @@ public class QueryTestCase extends SectionContainer
 
   public String comment()
   {
-    CommentsSection comments = (CommentsSection) section(TestSection.Section.COMMENTS);
+    TestComments comments = (TestComments) section(TestElement.ElementType.COMMENTS);
     if (comments == null || comments.lines.isEmpty()) {
       return null;
     }
@@ -131,70 +131,70 @@ public class QueryTestCase extends SectionContainer
 
   public String user()
   {
-    OptionsSection options = optionsSection();
-    return options == null ? null : options.get(OptionsSection.USER_OPTION);
+    TestOptions options = optionsSection();
+    return options == null ? null : options.getString(TestOptions.USER_OPTION);
   }
 
-  public PatternSection ast()
+  public ExpectedPattern ast()
   {
-    return (PatternSection) section(TestSection.Section.AST);
+    return (ExpectedPattern) section(TestElement.ElementType.AST);
   }
 
-  public PatternSection plan()
+  public ExpectedPattern plan()
   {
-    return (PatternSection) section(TestSection.Section.PLAN);
+    return (ExpectedPattern) section(TestElement.ElementType.PLAN);
   }
 
-  public PatternSection execPlan()
+  public ExpectedPattern execPlan()
   {
-    return (PatternSection) section(TestSection.Section.EXEC_PLAN);
+    return (ExpectedPattern) section(TestElement.ElementType.EXEC_PLAN);
   }
 
   @Override
   public Map<String, Object> context()
   {
-    ContextSection section = contextSection();
+    Context section = contextSection();
     return section == null ? ImmutableMap.of() : section.context;
   }
 
-  public PatternSection explain()
+  public ExpectedPattern explain()
   {
-    return (PatternSection) section(TestSection.Section.EXPLAIN);
+    return (ExpectedPattern) section(TestElement.ElementType.EXPLAIN);
   }
 
-  public PatternSection unparsed()
+  public ExpectedPattern unparsed()
   {
-    return (PatternSection) section(TestSection.Section.UNPARSED);
+    return (ExpectedPattern) section(TestElement.ElementType.UNPARSED);
   }
 
-  public PatternSection schema()
+  public ExpectedPattern schema()
   {
-    return (PatternSection) section(TestSection.Section.SCHEMA);
+    return (ExpectedPattern) section(TestElement.ElementType.SCHEMA);
   }
 
-  public PatternSection targetSchema()
+  public ExpectedPattern targetSchema()
   {
-    return (PatternSection) section(TestSection.Section.TARGET_SCHEMA);
+    return (ExpectedPattern) section(TestElement.ElementType.TARGET_SCHEMA);
   }
 
-  public PatternSection nativeQuery()
+  public ExpectedPattern nativeQuery()
   {
-    return (PatternSection) section(TestSection.Section.NATIVE);
+    return (ExpectedPattern) section(TestElement.ElementType.NATIVE);
   }
 
-  public ResourcesSection resourceActions()
+  public Resources resourceActions()
   {
-    return (ResourcesSection) section(TestSection.Section.RESOURCES);
+    return (Resources) section(TestElement.ElementType.RESOURCES);
   }
 
-  public ParametersSection parametersSection()
+  public Parameters parametersSection()
   {
-    return (ParametersSection) section(TestSection.Section.PARAMETERS);
+    return (Parameters) section(TestElement.ElementType.PARAMETERS);
   }
 
   public List<SqlParameter> parameters()
   {
-    ParametersSection params = parametersSection();
+    Parameters params = parametersSection();
     return params == null ? Collections.emptyList() : params.parameters();
   }
 
@@ -206,7 +206,7 @@ public class QueryTestCase extends SectionContainer
    */
   public boolean requiresCustomPlanner()
   {
-    OptionsSection options = optionsSection();
+    TestOptions options = optionsSection();
     if (options == null) {
       return false;
     }
@@ -228,15 +228,15 @@ public class QueryTestCase extends SectionContainer
     return runs != null && !runs.isEmpty();
   }
 
-  protected TestSection copySection(Section section)
+  protected TestElement copySection(ElementType section)
   {
-    TestSection thisSection = section(section);
+    TestElement thisSection = section(section);
     return thisSection == null ? null : thisSection.copy();
   }
 
   public void write(TestCaseWriter writer) throws IOException
   {
-    for (TestSection section : fileOrder) {
+    for (TestElement section : fileOrder) {
       section.write(writer);
     }
     for (QueryRun run : runs) {

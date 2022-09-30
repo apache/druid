@@ -35,57 +35,57 @@ import java.util.Objects;
 /**
  * A test case section that consists of a set of literal lines.
  */
-public abstract class LinesSection extends TestSection
+public abstract class LinesElement extends TestElement
 {
   /**
    * The case test case section. Contents is a single line
    * that gives the test case label.
    */
-  public static class CaseSection extends LinesSection
+  public static class CaseLabel extends LinesElement
   {
-    protected CaseSection(List<String> lines)
+    protected CaseLabel(List<String> lines)
     {
-      super(Section.CASE.sectionName(), lines, false);
+      super(ElementType.CASE.sectionName(), lines, false);
     }
 
     @Override
-    public TestSection.Section section()
+    public TestElement.ElementType type()
     {
-      return TestSection.Section.CASE;
+      return TestElement.ElementType.CASE;
     }
 
     @Override
-    public TestSection copy()
+    public TestElement copy()
     {
-      throw new UOE("CaseSection.copy()");
+      throw new UOE("CaseElement.copy()");
     }
   }
 
   /**
    * The (expected) results test case section.
    */
-  public static class ResultsSection extends LinesSection
+  public static class ExpectedResults extends LinesElement
   {
-    protected ResultsSection(List<String> lines)
+    protected ExpectedResults(List<String> lines)
     {
       this(lines, false);
     }
 
-    protected ResultsSection(List<String> lines, boolean copy)
+    protected ExpectedResults(List<String> lines, boolean copy)
     {
-      super(Section.RESULTS.sectionName(), lines, copy);
+      super(ElementType.RESULTS.sectionName(), lines, copy);
     }
 
     @Override
-    public TestSection.Section section()
+    public ElementType type()
     {
-      return TestSection.Section.RESULTS;
+      return ElementType.RESULTS;
     }
 
     @Override
-    public TestSection copy()
+    public TestElement copy()
     {
-      return new ResultsSection(lines, true);
+      return new ExpectedResults(lines, true);
     }
 
     /**
@@ -240,21 +240,21 @@ public abstract class LinesSection extends TestSection
    * The comments test case section which precedes the
    * start of the test case.
    */
-  public static class CommentsSection extends LinesSection
+  public static class TestComments extends LinesElement
   {
-    protected CommentsSection(List<String> lines)
+    protected TestComments(List<String> lines)
     {
-      super(Section.COMMENTS.sectionName(), lines, false);
+      super(ElementType.COMMENTS.sectionName(), lines, false);
     }
 
     @Override
-    public TestSection.Section section()
+    public ElementType type()
     {
-      return TestSection.Section.COMMENTS;
+      return ElementType.COMMENTS;
     }
 
     @Override
-    public TestSection copy()
+    public TestElement copy()
     {
       throw new UOE("CommentsSection.copy()");
     }
@@ -268,7 +268,7 @@ public abstract class LinesSection extends TestSection
 
   protected final List<String> lines;
 
-  protected LinesSection(String name, List<String> lines, boolean copy)
+  protected LinesElement(String name, List<String> lines, boolean copy)
   {
     super(name, copy);
     this.lines = lines;
@@ -283,7 +283,7 @@ public abstract class LinesSection extends TestSection
     if (o == null || o.getClass() != getClass()) {
       return false;
     }
-    LinesSection other = (LinesSection) o;
+    LinesElement other = (LinesElement) o;
     return lines.equals(other.lines);
   }
 
@@ -297,7 +297,7 @@ public abstract class LinesSection extends TestSection
   }
 
   @Override
-  public void writeSection(TestCaseWriter writer) throws IOException
+  public void writeElement(TestCaseWriter writer) throws IOException
   {
     writer.emitSection(name, lines);
   }
