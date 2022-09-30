@@ -135,16 +135,6 @@ public interface Query<T>
   }
 
   /**
-   * @deprecated use {@code queryContext().get<Type>(defaultValue)} instead
-   */
-  @SuppressWarnings("unchecked")
-  @Deprecated
-  default <ContextType> ContextType getContextValue(String key, ContextType defaultValue)
-  {
-    return (ContextType) context().get(key, defaultValue);
-  }
-
-  /**
    * @deprecated use {@code queryContext().getBoolean()} instead.
    */
   @Deprecated

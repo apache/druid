@@ -64,8 +64,10 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -104,7 +106,7 @@ public class QueryLifecycle
   @MonotonicNonNull
   private Query<?> baseQuery;
   @MonotonicNonNull
-  private Map<String, Object> userContext;
+  private Set<String> userContextKeys;
 
   public QueryLifecycle(
       final QueryToolChestWarehouse warehouse,
@@ -198,7 +200,7 @@ public class QueryLifecycle
   {
     transition(State.NEW, State.INITIALIZED);
 
-    userContext = baseQuery.getContext();
+    userContextKeys = new HashSet<>(baseQuery.getContext().keySet());
     String queryId = baseQuery.getId();
     if (Strings.isNullOrEmpty(queryId)) {
       queryId = UUID.randomUUID().toString();
@@ -228,7 +230,7 @@ public class QueryLifecycle
         ),
         authConfig.authorizeQueryContextParams()
         ? Iterables.transform(
-            userContext.keySet(),
+            userContextKeys,
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
         : Collections.emptyList()
