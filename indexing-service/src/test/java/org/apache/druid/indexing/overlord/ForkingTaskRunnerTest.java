@@ -59,7 +59,7 @@ import static org.junit.Assert.assertEquals;
 public class ForkingTaskRunnerTest
 {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
