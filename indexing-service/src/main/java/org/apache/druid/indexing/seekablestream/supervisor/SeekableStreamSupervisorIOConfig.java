@@ -48,6 +48,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   private final Optional<Duration> earlyMessageRejectionPeriod;
   private final Optional<DateTime> lateMessageRejectionStartDateTime;
   @Nullable private final AutoScalerConfig autoScalerConfig;
+  private final boolean enableIdleBehaviour;
   private final long idleSupervisorForStreamIdleMillis;
 
   public SeekableStreamSupervisorIOConfig(
@@ -64,6 +65,7 @@ public abstract class SeekableStreamSupervisorIOConfig
       Period earlyMessageRejectionPeriod,
       @Nullable AutoScalerConfig autoScalerConfig,
       DateTime lateMessageRejectionStartDateTime,
+      Boolean enableIdleBehaviour,
       Long idleSupervisorForStreamIdleMillis
   )
   {
@@ -100,6 +102,7 @@ public abstract class SeekableStreamSupervisorIOConfig
           + "and lateMessageRejectionPeriod.");
     }
 
+    this.enableIdleBehaviour = enableIdleBehaviour != null && enableIdleBehaviour;
     this.idleSupervisorForStreamIdleMillis = idleSupervisorForStreamIdleMillis != null
                                              ? idleSupervisorForStreamIdleMillis
                                              : 60000;
@@ -193,6 +196,12 @@ public abstract class SeekableStreamSupervisorIOConfig
   public Optional<DateTime> getLateMessageRejectionStartDateTime()
   {
     return lateMessageRejectionStartDateTime;
+  }
+
+  @JsonProperty
+  public boolean isEnableIdleBehaviour()
+  {
+    return enableIdleBehaviour;
   }
 
   @JsonProperty

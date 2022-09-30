@@ -75,6 +75,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("awsExternalId") String awsExternalId,
       @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
       @JsonProperty("deaggregate") boolean deaggregate,
+      @JsonProperty("enableIdleBehaviour") Boolean enableIdleBehaviour,
       @JsonProperty("idleSupervisorForStreamIdleMillis") Long idleSupervisorForStreamIdleMillis
   )
   {
@@ -92,6 +93,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         earlyMessageRejectionPeriod,
         autoScalerConfig,
         lateMessageRejectionStartDateTime,
+        enableIdleBehaviour,
         idleSupervisorForStreamIdleMillis
     );
 

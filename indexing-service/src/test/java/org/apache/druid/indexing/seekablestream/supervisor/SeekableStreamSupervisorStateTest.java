@@ -909,6 +909,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -967,6 +968,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class),
+        null,
         null,
         null
     )
@@ -1343,7 +1345,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     @Override
     public LagStats computeLagStats()
     {
-      return null;
+      return new LagStats(0, 0, 0);
     }
   }
 

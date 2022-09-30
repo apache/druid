@@ -279,7 +279,9 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
         .collect(
             Collectors.toMap(
                 Entry::getKey,
-                e -> e.getValue() != null ? e.getValue() - Optional.ofNullable(e.getKey()).orElse(0) : 0
+                e -> e.getValue() != null
+                     ? e.getValue() - Optional.ofNullable(currentOffsets.get(e.getKey())).orElse(0L)
+                     : 0
             )
         );
   }

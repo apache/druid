@@ -2525,7 +2525,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected Map<PartitionIdType, SequenceOffsetType> getLatestSequences()
   {
-    return null;
+    return new HashMap<>();
   }
 
   private boolean isIdle()
@@ -3277,12 +3277,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private void checkIfStreamInactiveAndTurnSupervisorIdle()
   {
+    if (!spec.getSupervisorStateManagerConfig().isEnableIdleBehaviour()
+        || !spec.getIoConfig().isEnableIdleBehaviour()) {
+      return;
+    }
+
     Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequences();
     long nowTime = Instant.now().toEpochMilli();
     boolean idle;
     if (lagsVerifiedlastTime > 0
         && previousPartitionOffsetsSnapshot.equals(latestSequencesFromStream)
-        && computeLagStats().getTotalLag() == 0) {
+        && computLags() == 0) {
       idleTime += nowTime - lagsVerifiedlastTime;
       idle = true;
     } else {
@@ -3293,9 +3298,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     if (!idle) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.RUNNING);
-    } else if (idle && idleTime > spec.getSpec().getIOConfig().getIdleSupervisorForStreamIdleMillis()) {
+    } else if (!isIdle() && idleTime > spec.getSpec().getIOConfig().getIdleSupervisorForStreamIdleMillis()) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
     }
+  }
+
+  private long computLags()
+  {
+    LagStats lagStats = computeLagStats();
+    return lagStats != null ? lagStats.getTotalLag() : 0;
   }
 
   /**
@@ -4035,7 +4046,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected void emitLag()
   {
-    if (!isIdle() || spec.isSuspended() || !stateManager.isSteadyState()) {
+    log.info(stateManager.getSupervisorState().getBasicState().toString());
+    log.info("!isIdle: %s, spec.isSuspended: %s, !statemanager.isSteadyState %s", !isIdle(), spec.isSuspended(), !stateManager.isSteadyState());
+    if (spec.isSuspended() || !stateManager.isSteadyState() && !isIdle()) {
       // don't emit metrics if supervisor is suspended or not in a healthy running state
       // (lag should still available in status report)
       return;

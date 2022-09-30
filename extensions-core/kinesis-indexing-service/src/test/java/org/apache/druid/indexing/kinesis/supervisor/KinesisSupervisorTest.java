@@ -351,7 +351,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
                     null
             )
     ).anyTimes();
-    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).anyTimes();
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
 
@@ -477,6 +477,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         false,
+        null,
         null
     );
     KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, OBJECT_MAPPER);
@@ -542,6 +543,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             null,
             false,
+            null,
             null
     );
 
@@ -570,6 +572,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
              OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
             false,
+            null,
             null
     );
 
@@ -5042,6 +5045,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         false,
+        null,
         null
     );
 
@@ -5188,6 +5192,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
          autoScalerConfig,
         false,
+        true,
         1000L
     );
 
@@ -5277,6 +5282,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         false,
+        null,
         null
     );
 
@@ -5368,6 +5374,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         false,
+        null,
         null
     );
 

@@ -302,6 +302,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
+            true,
             1000L
     );
 
@@ -3659,6 +3660,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         null,
         null,
+        null,
         null
     );
 
@@ -3771,6 +3773,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         null,
         null,
         null
@@ -3889,6 +3892,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         null,
         null,
         null
