@@ -5653,7 +5653,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.14.24
+version: 0.15.1
 
 ---
 
@@ -5722,7 +5722,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Ruben Verborgh
-version: 1.14.7
+version: 1.15.1
 license_file_path: licenses/bin/follow-redirects.MIT
 
 ---
