@@ -145,8 +145,9 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|no|
 |`awsExternalId`|String|The AWS external id to use for additional permissions.|no|
 |`deaggregate`|Boolean|Whether to use the de-aggregate function of the KCL. See below for details.|no|
+|`enableIdleBehaviour`|Boolean|To turn on/off idle behaviour per Supervisor.|no (default == false)|
+|`idleSupervisorForStreamIdleMillis`|Long|Minimum time interval to wait until stream is considered idle. (i.e. all existing data is caught up and no new data arrives).| no (default == 60000) |
 |`autoScalerConfig`|Object|Defines auto scaling behavior for Kinesis ingest tasks. See [Tasks Autoscaler Properties](#task-autoscaler-properties).|no (default == null)|
-|`idleSupervisorForStreamIdleMillis`|Minimum time interval to wait until stream is considered idle. (i.e. all existing data is caught up and no new data arrives).| no (default == 60000) |
 
 #### Task Autoscaler Properties
 
