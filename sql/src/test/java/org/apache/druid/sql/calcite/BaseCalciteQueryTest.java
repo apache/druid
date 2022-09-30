@@ -19,24 +19,21 @@
 
 package org.apache.druid.sql.calcite;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
@@ -78,7 +75,6 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.PreparedStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -88,7 +84,6 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFramework;
@@ -114,7 +109,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -631,35 +625,26 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
       final List<Object[]> expectedResults
   )
   {
-    testQuery(
-        PLANNER_CONFIG_DEFAULT,
-        QUERY_CONTEXT_DEFAULT,
-        DEFAULT_PARAMETERS,
-        sql,
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        expectedQueries,
-        expectedResults,
-        null
-    );
+    testBuilder()
+        .sql(sql)
+        .expectedQueries(expectedQueries)
+        .expectedResults(expectedResults)
+        .run();
   }
 
   public void testQuery(
       final String sql,
       final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults,
-      final RowSignature expectedResultRowSignature
+      final RowSignature expectedResultSignature
   )
   {
-    testQuery(
-        PLANNER_CONFIG_DEFAULT,
-        QUERY_CONTEXT_DEFAULT,
-        DEFAULT_PARAMETERS,
-        sql,
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        expectedQueries,
-        expectedResults,
-        expectedResultRowSignature
-    );
+    testBuilder()
+        .sql(sql)
+        .expectedQueries(expectedQueries)
+        .expectedResults(expectedResults)
+        .expectedSignature(expectedResultSignature)
+        .run();
   }
 
   public void testQuery(
@@ -669,16 +654,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
       final List<Object[]> expectedResults
   )
   {
-    testQuery(
-        PLANNER_CONFIG_DEFAULT,
-        queryContext,
-        DEFAULT_PARAMETERS,
-        sql,
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        expectedQueries,
-        expectedResults,
-        null
-    );
+    testBuilder()
+        .queryContext(queryContext)
+        .sql(sql)
+        .expectedQueries(expectedQueries)
+        .expectedResults(expectedResults)
+        .run();
   }
 
   public void testQuery(
@@ -688,16 +669,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
       final List<SqlParameter> parameters
   )
   {
-    testQuery(
-        PLANNER_CONFIG_DEFAULT,
-        QUERY_CONTEXT_DEFAULT,
-        parameters,
-        sql,
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        expectedQueries,
-        expectedResults,
-        null
-    );
+    testBuilder()
+        .sql(sql)
+        .parameters(parameters)
+        .expectedQueries(expectedQueries)
+        .expectedResults(expectedResults)
+        .run();
   }
 
   public void testQuery(
@@ -708,16 +685,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
       final List<Object[]> expectedResults
   )
   {
-    testQuery(
-        plannerConfig,
-        QUERY_CONTEXT_DEFAULT,
-        DEFAULT_PARAMETERS,
-        sql,
-        authenticationResult,
-        expectedQueries,
-        expectedResults,
-        null
-    );
+    testBuilder()
+        .plannerConfig(plannerConfig)
+        .sql(sql)
+        .authResult(authenticationResult)
+        .expectedQueries(expectedQueries)
+        .expectedResults(expectedResults)
+        .run();
   }
 
   public void testQuery(
@@ -727,16 +701,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
       final ResultsVerifier expectedResultsVerifier
   )
   {
-    testQuery(
-        PLANNER_CONFIG_DEFAULT,
-        queryContext,
-        DEFAULT_PARAMETERS,
-        sql,
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        expectedQueries,
-        expectedResultsVerifier,
-        null
-    );
+    testBuilder()
+        .sql(sql)
+        .queryContext(queryContext)
+        .expectedQueries(expectedQueries)
+        .expectedResults(expectedResultsVerifier)
+        .run();
   }
 
   public void testQuery(
@@ -748,16 +718,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
       final List<Object[]> expectedResults
   )
   {
-    testQuery(
-        plannerConfig,
-        queryContext,
-        Collections.emptyList(),
-        sql,
-        authenticationResult,
-        expectedQueries,
-        expectedResults,
-        null
-    );
+    testBuilder()
+        .plannerConfig(plannerConfig)
+        .queryContext(queryContext)
+        .sql(sql)
+        .authResult(authenticationResult)
+        .expectedQueries(expectedQueries)
+        .expectedResults(expectedResults)
+        .run();
   }
 
   public void testQuery(
@@ -770,44 +738,17 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
       final List<Object[]> expectedResults
   )
   {
-    testQuery(
-        plannerConfig,
-        queryContext,
-        parameters,
-        sql,
-        authenticationResult,
-        expectedQueries,
-        expectedResults,
-        null
-    );
+    testBuilder()
+        .plannerConfig(plannerConfig)
+        .queryContext(queryContext)
+        .parameters(parameters)
+        .sql(sql)
+        .authResult(authenticationResult)
+        .expectedQueries(expectedQueries)
+        .expectedResults(expectedResults)
+        .run();
   }
 
-  public void testQuery(
-      final PlannerConfig plannerConfig,
-      final Map<String, Object> queryContext,
-      final List<SqlParameter> parameters,
-      final String sql,
-      final AuthenticationResult authenticationResult,
-      final List<Query<?>> expectedQueries,
-      final List<Object[]> expectedResults,
-      final RowSignature expectedResultSignature
-  )
-  {
-    testQuery(
-        plannerConfig,
-        queryContext,
-        parameters,
-        sql,
-        authenticationResult,
-        expectedQueries,
-        new DefaultResultsVerifier(expectedResults, expectedResultSignature),
-        null
-    );
-  }
-
-  /**
-   * All testQuery roads lead to this method.
-   */
   public void testQuery(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
@@ -819,62 +760,83 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
       @Nullable final Consumer<ExpectedException> expectedExceptionInitializer
   )
   {
-    log.info("SQL: %s", sql);
-
-    final SqlStatementFactory sqlStatementFactory = getSqlStatementFactory(plannerConfig);
-    final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(sql)
-        .sqlParameters(parameters)
-        .auth(authenticationResult)
-        .build();
-
-    final List<String> vectorizeValues = new ArrayList<>();
-    vectorizeValues.add("false");
-    if (!skipVectorize) {
-      vectorizeValues.add("force");
-    }
-
-    for (final String vectorize : vectorizeValues) {
-      queryLogHook.clearRecordedQueries();
-
-      final Map<String, Object> theQueryContext = new HashMap<>(queryContext);
-      theQueryContext.put(QueryContexts.VECTORIZE_KEY, vectorize);
-      theQueryContext.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize);
-
-      if (!"false".equals(vectorize)) {
-        theQueryContext.put(QueryContexts.VECTOR_SIZE_KEY, 2); // Small vector size to ensure we use more than one.
-      }
-
-      final List<Query<?>> theQueries = new ArrayList<>();
-      for (Query<?> query : expectedQueries) {
-        theQueries.add(recursivelyOverrideContext(query, theQueryContext));
-      }
-
-      if (cannotVectorize && "force".equals(vectorize)) {
-        expectedException.expect(RuntimeException.class);
-        expectedException.expectMessage("Cannot vectorize");
-      } else if (expectedExceptionInitializer != null) {
-        expectedExceptionInitializer.accept(expectedException);
-      }
-
-      final Pair<RowSignature, List<Object[]>> plannerResults = getResults(
-          sqlStatementFactory,
-          sqlQuery.withContext(theQueryContext));
-      verifyResults(sql, theQueries, plannerResults, expectedResultsVerifier);
-    }
+    testBuilder()
+        .plannerConfig(plannerConfig)
+        .queryContext(queryContext)
+        .parameters(parameters)
+        .sql(sql)
+        .authResult(authenticationResult)
+        .expectedQueries(expectedQueries)
+        .expectedResults(expectedResultsVerifier)
+        .expectedException(expectedExceptionInitializer)
+        .run();
   }
 
-  public Pair<RowSignature, List<Object[]>> getResults(
-      final SqlStatementFactory sqlStatementFactory,
-      final SqlQueryPlus query
-  )
+  protected QueryTestBuilder testBuilder()
   {
-    final DirectStatement stmt = sqlStatementFactory.directStatement(query);
-    Sequence<Object[]> results = stmt.execute().getResults();
-    RelDataType rowType = stmt.prepareResult().getReturnedRowType();
-    return new Pair<>(
-        RowSignatures.fromRelDataType(rowType.getFieldNames(), rowType),
-        results.toList()
-    );
+    return new QueryTestBuilder(new CalciteTestConfig())
+        .cannotVectorize(cannotVectorize)
+        .skipVectorize(skipVectorize);
+  }
+
+  public class CalciteTestConfig implements QueryTestBuilder.QueryTestConfig
+  {
+    @Override
+    public QueryTestRunner analyze(QueryTestBuilder builder)
+    {
+      if (builder.expectedResultsVerifier == null && builder.expectedResults != null) {
+        builder.expectedResultsVerifier = defaultResultsVerifier(
+            builder.expectedResults,
+            builder.expectedResultSignature
+        );
+      }
+      final List<QueryTestRunner.QueryRunStep> runSteps = new ArrayList<>();
+      final List<QueryTestRunner.QueryVerifyStep> verifySteps = new ArrayList<>();
+      if (builder.expectedResources != null) {
+        Preconditions.checkArgument(
+            builder.expectedResultsVerifier == null,
+            "Cannot check both results and resources"
+        );
+        QueryTestRunner.PrepareQuery execStep = new QueryTestRunner.PrepareQuery(builder);
+        runSteps.add(execStep);
+        verifySteps.add(new QueryTestRunner.VerifyResources(execStep));
+      } else {
+        QueryTestRunner.ExecuteQuery execStep = new QueryTestRunner.ExecuteQuery(builder);
+        runSteps.add(execStep);
+        if (builder.expectedResultsVerifier != null) {
+          verifySteps.add(new QueryTestRunner.VerifyResults(execStep));
+        }
+        if (builder.expectedQueries != null) {
+          verifySteps.add(new QueryTestRunner.VerifyNativeQueries(execStep));
+        }
+        verifySteps.add(new QueryTestRunner.VerifyExpectedException(execStep));
+      }
+      return new QueryTestRunner(runSteps, verifySteps);
+    }
+
+    @Override
+    public QueryLogHook queryLogHook()
+    {
+      return queryLogHook;
+    }
+
+    @Override
+    public ExpectedException expectedException()
+    {
+      return expectedException;
+    }
+
+    @Override
+    public SqlStatementFactory statementFactory(PlannerConfig plannerConfig, AuthConfig authConfig)
+    {
+      return getSqlStatementFactory(plannerConfig, authConfig);
+    }
+
+    @Override
+    public ObjectMapper jsonMapper()
+    {
+      return queryFramework().queryJsonMapper();
+    }
   }
 
   public Set<ResourceAction> analyzeResources(
@@ -885,71 +847,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
     PreparedStatement stmt = sqlStatementFactory.preparedStatement(query);
     stmt.prepare();
     return stmt.allResources();
-  }
-
-  public void verifyResults(
-      final String sql,
-      final List<Query<?>> expectedQueries,
-      final List<Object[]> expectedResults,
-      final Pair<RowSignature, List<Object[]>> results
-  )
-  {
-    verifyResults(sql, expectedQueries, results, new DefaultResultsVerifier(expectedResults, null));
-  }
-
-  public void verifyResults(
-      final String sql,
-      final List<Query<?>> expectedQueries,
-      final Pair<RowSignature, List<Object[]>> results,
-      final ResultsVerifier expectedResultsVerifier
-  )
-  {
-    for (int i = 0; i < results.rhs.size(); i++) {
-      log.info("row #%d: %s", i, Arrays.toString(results.rhs.get(i)));
-    }
-
-    expectedResultsVerifier.verifyRowSignature(results.lhs);
-    expectedResultsVerifier.verify(sql, results.rhs);
-
-    verifyQueries(sql, expectedQueries);
-  }
-
-  private void verifyQueries(
-      final String sql,
-      @Nullable final List<Query<?>> expectedQueries
-  )
-  {
-    if (expectedQueries != null) {
-      final List<Query<?>> recordedQueries = queryLogHook.getRecordedQueries();
-
-      Assert.assertEquals(
-          StringUtils.format("query count: %s", sql),
-          expectedQueries.size(),
-          recordedQueries.size()
-      );
-      for (int i = 0; i < expectedQueries.size(); i++) {
-        Assert.assertEquals(
-            StringUtils.format("query #%d: %s", i + 1, sql),
-            expectedQueries.get(i),
-            recordedQueries.get(i)
-        );
-
-        ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
-        try {
-          // go through some JSON serde and back, round tripping both queries and comparing them to each other, because
-          // Assert.assertEquals(recordedQueries.get(i), stringAndBack) is a failure due to a sorted map being present
-          // in the recorded queries, but it is a regular map after deserialization
-          final String recordedString = queryJsonMapper.writeValueAsString(recordedQueries.get(i));
-          final Query<?> stringAndBack = queryJsonMapper.readValue(recordedString, Query.class);
-          final String expectedString = queryJsonMapper.writeValueAsString(expectedQueries.get(i));
-          final Query<?> expectedStringAndBack = queryJsonMapper.readValue(expectedString, Query.class);
-          Assert.assertEquals(expectedStringAndBack, stringAndBack);
-        }
-        catch (JsonProcessingException e) {
-          Assert.fail(e.getMessage());
-        }
-      }
-    }
   }
 
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
@@ -965,7 +862,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
 
   public void testQueryThrows(final String sql, Consumer<ExpectedException> expectedExceptionInitializer)
   {
-    testQueryThrows(sql, new HashMap<>(QUERY_CONTEXT_DEFAULT), ImmutableList.of(), expectedExceptionInitializer);
+    testBuilder()
+        .sql(sql)
+        .expectedException(expectedExceptionInitializer)
+        .build()
+        .run();
   }
 
   public void testQueryThrows(
@@ -975,42 +876,58 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
       final Consumer<ExpectedException> expectedExceptionInitializer
   )
   {
-    testQuery(
-        PLANNER_CONFIG_DEFAULT,
-        queryContext,
-        DEFAULT_PARAMETERS,
-        sql,
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        expectedQueries,
-        (query, results) -> {},
-        expectedExceptionInitializer
-    );
+    testBuilder()
+        .sql(sql)
+        .queryContext(queryContext)
+        .expectedQueries(expectedQueries)
+        .expectedException(expectedExceptionInitializer)
+        .build()
+        .run();
   }
 
-  public Set<ResourceAction> analyzeResources(
-      PlannerConfig plannerConfig,
+  public void analyzeResources(
       String sql,
-      AuthenticationResult authenticationResult
+      List<ResourceAction> expectedActions
   )
   {
-    return analyzeResources(plannerConfig, new AuthConfig(), sql, ImmutableMap.of(), authenticationResult);
+    testBuilder()
+        .sql(sql)
+        .expectedResources(expectedActions)
+        .run();
   }
 
-  public Set<ResourceAction> analyzeResources(
+  public void analyzeResources(
+      PlannerConfig plannerConfig,
+      String sql,
+      AuthenticationResult authenticationResult,
+      List<ResourceAction> expectedActions
+  )
+  {
+    testBuilder()
+        .plannerConfig(plannerConfig)
+        .sql(sql)
+        .authResult(authenticationResult)
+        .expectedResources(expectedActions)
+        .run();
+  }
+
+  public void analyzeResources(
       PlannerConfig plannerConfig,
       AuthConfig authConfig,
       String sql,
       Map<String, Object> contexts,
-      AuthenticationResult authenticationResult
+      AuthenticationResult authenticationResult,
+      List<ResourceAction> expectedActions
   )
   {
-    SqlQueryPlus sqlQuery = SqlQueryPlus.builder(sql)
-        .context(contexts)
-        .auth(authenticationResult)
-        .build();
-    final SqlStatementFactory sqlStatementFactory =
-        getSqlStatementFactory(plannerConfig, authConfig);
-    return analyzeResources(sqlStatementFactory, sqlQuery);
+    testBuilder()
+        .plannerConfig(plannerConfig)
+        .authConfig(authConfig)
+        .sql(sql)
+        .queryContext(contexts)
+        .authResult(authenticationResult)
+        .expectedResources(expectedActions)
+        .run();
   }
 
   public SqlStatementFactory getSqlStatementFactory(
@@ -1181,6 +1098,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
     }
 
     void verify(String sql, List<Object[]> results);
+  }
+
+  private ResultsVerifier defaultResultsVerifier(
+      final List<Object[]> expectedResults,
+      final RowSignature expectedSignature
+  )
+  {
+    return new DefaultResultsVerifier(expectedResults, expectedSignature);
   }
 
   public class DefaultResultsVerifier implements ResultsVerifier

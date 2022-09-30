@@ -24,11 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.Query;
@@ -36,13 +34,11 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlQueryPlus;
-import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -244,13 +240,15 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
       try {
         log.info("SQL: %s", sql);
-        queryLogHook.clearRecordedQueries();
 
         if (validationErrorMatcher != null) {
           verifyValidationError();
         } else {
           verifySuccess();
         }
+      }
+      catch (RuntimeException e) {
+        throw e;
       }
       catch (Exception e) {
         throw new RuntimeException(e);
@@ -271,11 +269,11 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
         throw new ISE("Test must not have expectedQuery");
       }
 
-      final SqlStatementFactory sqlStatementFactory = getSqlStatementFactory(plannerConfig);
+      queryLogHook.clearRecordedQueries();
       final Throwable e = Assert.assertThrows(
           Throwable.class,
           () -> {
-            getResults(sqlStatementFactory, sqlQuery());
+            getSqlStatementFactory(plannerConfig).directStatement(sqlQuery()).execute();
           }
       );
 
@@ -293,25 +291,22 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
         throw new ISE("Test must have expectedResources");
       }
 
-      final List<Query<?>> expectedQueries =
-          expectedQuery == null
-          ? Collections.emptyList()
-          : Collections.singletonList(recursivelyOverrideContext(expectedQuery, queryContext));
+      testBuilder()
+          .sql(sql)
+          .queryContext(queryContext)
+          .authResult(authenticationResult)
+          .plannerConfig(plannerConfig)
+          .expectedResources(expectedResources)
+          .run();
 
-      Assert.assertEquals(
-          ImmutableSet.copyOf(expectedResources),
-          analyzeResources(plannerConfig, new AuthConfig(), sql, queryContext, authenticationResult)
-      );
-
-      final SqlStatementFactory sqlStatementFactory = getSqlStatementFactory(plannerConfig);
-      final Pair<RowSignature, List<Object[]>> results = getResults(sqlStatementFactory, sqlQuery());
-
-      verifyResults(
-          sql,
-          expectedQueries,
-          Collections.singletonList(new Object[]{expectedTargetDataSource, expectedTargetSignature}),
-          results
-      );
+      testBuilder()
+          .sql(sql)
+          .queryContext(queryContext)
+          .authResult(authenticationResult)
+          .plannerConfig(plannerConfig)
+          .expectedQuery(expectedQuery)
+          .expectedResults(Collections.singletonList(new Object[]{expectedTargetDataSource, expectedTargetSignature}))
+          .run();
     }
 
     private SqlQueryPlus sqlQuery()
@@ -321,7 +316,6 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           .auth(authenticationResult)
           .build();
     }
-
   }
 
   protected static ResourceAction viewRead(final String viewName)
