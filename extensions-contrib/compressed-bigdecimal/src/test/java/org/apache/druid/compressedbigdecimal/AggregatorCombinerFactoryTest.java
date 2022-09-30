@@ -56,9 +56,15 @@ public class AggregatorCombinerFactoryTest
   @Test
   public void testCompressedBigDecimalAggregatorFactory()
   {
-    CompressedBigDecimalAggregatorFactory cf = new CompressedBigDecimalAggregatorFactory("name", "fieldName", 9, 0);
+    CompressedBigDecimalAggregatorFactory cf = new CompressedBigDecimalAggregatorFactory(
+        "name",
+        "fieldName",
+        9,
+        0,
+        false
+    );
     Assert.assertEquals(
-        "CompressedBigDecimalAggregatorFactory{name='name', type='compressedBigDecimal', fieldName='fieldName', requiredFields='[fieldName]', size='9', scale='0'}",
+        "CompressedBigDecimalSumAggregatorFactory{name='name', type='compressedBigDecimal', fieldName='fieldName', requiredFields='[fieldName]', size='9', scale='0', strictNumberParsing='false'}",
         cf.toString()
     );
     Assert.assertNotNull(cf.getCacheKey());
@@ -67,7 +73,7 @@ public class AggregatorCombinerFactoryTest
     Assert.assertEquals("5", cf.deserialize(5d).toString());
     Assert.assertEquals("5", cf.deserialize("5").toString());
     Assert.assertEquals(
-        "[CompressedBigDecimalAggregatorFactory{name='fieldName', type='compressedBigDecimal', fieldName='fieldName', requiredFields='[fieldName]', size='9', scale='0'}]",
+        "[CompressedBigDecimalSumAggregatorFactory{name='fieldName', type='compressedBigDecimal', fieldName='fieldName', requiredFields='[fieldName]', size='9', scale='0', strictNumberParsing='false'}]",
         Arrays.toString(cf.getRequiredColumns().toArray())
     );
     Assert.assertEquals("0", cf.combine(null, null).toString());
@@ -88,7 +94,13 @@ public class AggregatorCombinerFactoryTest
   @Test(expected = RuntimeException.class)
   public void testCompressedBigDecimalAggregatorFactoryDeserialize()
   {
-    CompressedBigDecimalAggregatorFactory cf = new CompressedBigDecimalAggregatorFactory("name", "fieldName", 9, 0);
+    CompressedBigDecimalAggregatorFactory cf = new CompressedBigDecimalAggregatorFactory(
+        "name",
+        "fieldName",
+        9,
+        0,
+        false
+    );
     cf.deserialize(5);
   }
 
@@ -100,7 +112,7 @@ public class AggregatorCombinerFactoryTest
   {
     ColumnValueSelector<CompressedBigDecimal> cs = EasyMock.createMock(ColumnValueSelector.class);
     ByteBuffer bbuf = ByteBuffer.allocate(10);
-    CompressedBigDecimalBufferAggregator ca = new CompressedBigDecimalBufferAggregator(4, 0, cs);
+    CompressedBigDecimalBufferAggregator ca = new CompressedBigDecimalBufferAggregator(4, 0, cs, false);
     ca.getFloat(bbuf, 0);
   }
 
@@ -112,7 +124,7 @@ public class AggregatorCombinerFactoryTest
   {
     ColumnValueSelector<CompressedBigDecimal> cs = EasyMock.createMock(ColumnValueSelector.class);
     ByteBuffer bbuf = ByteBuffer.allocate(10);
-    CompressedBigDecimalBufferAggregator ca = new CompressedBigDecimalBufferAggregator(4, 0, cs);
+    CompressedBigDecimalBufferAggregator ca = new CompressedBigDecimalBufferAggregator(4, 0, cs, false);
     ca.getLong(bbuf, 0);
   }
 
@@ -174,7 +186,7 @@ public class AggregatorCombinerFactoryTest
   public void testCompressedBigDecimalAggregatorGetFloat()
   {
     ColumnValueSelector cv = EasyMock.createMock(ColumnValueSelector.class);
-    CompressedBigDecimalAggregator cc = new CompressedBigDecimalAggregator(2, 0, cv);
+    CompressedBigDecimalAggregator cc = new CompressedBigDecimalAggregator(2, 0, cv, false);
     cc.getFloat();
   }
 
@@ -185,7 +197,7 @@ public class AggregatorCombinerFactoryTest
   public void testCompressedBigDecimalAggregatorGetLong()
   {
     ColumnValueSelector cv = EasyMock.createMock(ColumnValueSelector.class);
-    CompressedBigDecimalAggregator cc = new CompressedBigDecimalAggregator(2, 0, cv);
+    CompressedBigDecimalAggregator cc = new CompressedBigDecimalAggregator(2, 0, cv, false);
     cc.getLong();
   }
 }

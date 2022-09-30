@@ -104,10 +104,10 @@ public class HttpLoadQueuePeonTest
         segment4.getId(), new CountDownLatch(1)
     );
 
-    httpLoadQueuePeon.dropSegment(segment1, () -> latches.get(segment1.getId()).countDown());
-    httpLoadQueuePeon.loadSegment(segment2, () -> latches.get(segment2.getId()).countDown());
-    httpLoadQueuePeon.dropSegment(segment3, () -> latches.get(segment3.getId()).countDown());
-    httpLoadQueuePeon.loadSegment(segment4, () -> latches.get(segment4.getId()).countDown());
+    httpLoadQueuePeon.dropSegment(segment1, success -> latches.get(segment1.getId()).countDown());
+    httpLoadQueuePeon.loadSegment(segment2, success -> latches.get(segment2.getId()).countDown());
+    httpLoadQueuePeon.dropSegment(segment3, success -> latches.get(segment3.getId()).countDown());
+    httpLoadQueuePeon.loadSegment(segment4, success -> latches.get(segment4.getId()).countDown());
 
     latches.get(segment1.getId()).await();
     latches.get(segment2.getId()).await();
@@ -141,13 +141,13 @@ public class HttpLoadQueuePeonTest
         segment4.getId(), new CountDownLatch(1)
     );
 
-    httpLoadQueuePeon.dropSegment(segment1, () -> latches.get(segment1.getId()).countDown());
-    httpLoadQueuePeon.loadSegment(segment2, () -> latches.get(segment2.getId()).countDown());
+    httpLoadQueuePeon.dropSegment(segment1, success -> latches.get(segment1.getId()).countDown());
+    httpLoadQueuePeon.loadSegment(segment2, success -> latches.get(segment2.getId()).countDown());
     latches.get(segment1.getId()).await();
     latches.get(segment2.getId()).await();
     httpLoadQueuePeon.stop();
-    httpLoadQueuePeon.dropSegment(segment3, () -> latches.get(segment3.getId()).countDown());
-    httpLoadQueuePeon.loadSegment(segment4, () -> latches.get(segment4.getId()).countDown());
+    httpLoadQueuePeon.dropSegment(segment3, success -> latches.get(segment3.getId()).countDown());
+    httpLoadQueuePeon.loadSegment(segment4, success -> latches.get(segment4.getId()).countDown());
     latches.get(segment3.getId()).await();
     latches.get(segment4.getId()).await();
 
