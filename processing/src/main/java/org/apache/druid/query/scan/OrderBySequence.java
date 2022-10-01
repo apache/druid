@@ -39,14 +39,14 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-class OrderByLimitSequence extends BaseSequence<ScanResultValue, Iterator<ScanResultValue>>
+class OrderBySequence extends BaseSequence<ScanResultValue, Iterator<ScanResultValue>>
 {
-  public OrderByLimitSequence(IteratorMaker<ScanResultValue, Iterator<ScanResultValue>> maker)
+  public OrderBySequence(IteratorMaker<ScanResultValue, Iterator<ScanResultValue>> maker)
   {
     super(maker);
   }
 
-  static class OrderByLimitIteratorMaker
+  static class OrderByIteratorMaker
       implements BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>
   {
 
@@ -60,7 +60,7 @@ class OrderByLimitSequence extends BaseSequence<ScanResultValue, Iterator<ScanRe
     private final ResponseContext responseContext;
     private final Set<Long> topKOffset;
 
-    public OrderByLimitIteratorMaker(
+    public OrderByIteratorMaker(
         boolean legacy,
         Cursor cursor,
         boolean hasTimeout,

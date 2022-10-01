@@ -55,12 +55,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-class OrderByLimitQueryRunner implements QueryRunner<ScanResultValue>
+class OrderByQueryRunner implements QueryRunner<ScanResultValue>
 {
   private final ScanQueryEngine engine;
   private final Segment segment;
 
-  public OrderByLimitQueryRunner(ScanQueryEngine engine, Segment segment)
+  public OrderByQueryRunner(ScanQueryEngine engine, Segment segment)
   {
     this.engine = engine;
     this.segment = segment;
@@ -234,16 +234,16 @@ class OrderByLimitQueryRunner implements QueryRunner<ScanResultValue>
                 (query.getTimeOrder().equals(ScanQuery.Order.NONE) && query.isDescending()),
                 queryMetrics
             )
-            .map(cursor -> new OrderByLimitSequence(
-                new OrderByLimitSequence.OrderByLimitIteratorMaker(legacy,
-                                                                   cursor,
-                                                                   hasTimeout,
-                                                                   timeoutAt,
-                                                                   query,
-                                                                   segmentId,
-                                                                   allColumns,
-                                                                   responseContext,
-                                                                   topKOffset)
+            .map(cursor -> new OrderBySequence(
+                new OrderBySequence.OrderByIteratorMaker(legacy,
+                                                         cursor,
+                                                         hasTimeout,
+                                                         timeoutAt,
+                                                         query,
+                                                         segmentId,
+                                                         allColumns,
+                                                         responseContext,
+                                                         topKOffset)
             ))
     );
   }

@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -82,7 +81,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   @Override
   public QueryRunner<ScanResultValue> createRunner(Segment segment)
   {
-    return new OrderByLimitQueryRunner(engine, segment);
+    return new OrderByQueryRunner(engine, segment);
   }
 
   @Override
