@@ -20,75 +20,24 @@
 package org.apache.druid.collections;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Ordering;
-import org.apache.druid.java.util.common.ISE;
 
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
 
-public class MultiColumnSorter<T>
+public interface MultiColumnSorter<T>
 {
-
-  private final MinMaxPriorityQueue<MultiColumnSorterElement<T>> queue;
-
-  public MultiColumnSorter(int limit, Comparator<MultiColumnSorterElement<T>> comparator)
-  {
-    this.queue = MinMaxPriorityQueue
-        .orderedBy(Ordering.from(comparator))
-        .maximumSize(limit)
-        .create();
-  }
-
   /**
    * Offer an element to the sorter.If there are multiple values of different types in the same column, a CalssCastException will be thrown
    */
-  public void add(T element, List<Comparable> orderByColumns)
-  {
-    for (Comparable orderByColumn : orderByColumns) {
-      if (Objects.isNull(orderByColumn)) {
-        return;
-      }
-    }
-    try {
-      queue.offer(new MultiColumnSorterElement<>(element, orderByColumns));
-    }
-    catch (ClassCastException e) {
-      throw new ISE("Multiple values of different types scanOrderBy are not allowed in the same column.");
-    }
-  }
+  void add(MultiColumnSorterElement<T> sorterElement);
 
   /**
    * Drain elements in sorted order (least first).
    */
-  public Iterator<T> drain()
-  {
-    return new Iterator<T>()
-    {
-      @Override
-      public boolean hasNext()
-      {
-        return !queue.isEmpty();
-      }
-
-      @Override
-      public T next()
-      {
-        return queue.poll().getElement();
-      }
-
-      @Override
-      public void remove()
-      {
-        throw new UnsupportedOperationException();
-      }
-    };
-  }
+  Iterator<T> drain();
 
   @VisibleForTesting
-  public static class MultiColumnSorterElement<T>
+  class MultiColumnSorterElement<T>
   {
     private final T element;
     private final List<Comparable> orderByColumValues;
@@ -110,4 +59,5 @@ public class MultiColumnSorter<T>
     }
 
   }
+
 }

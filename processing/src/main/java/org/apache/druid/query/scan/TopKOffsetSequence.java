@@ -132,7 +132,7 @@ class TopKOffsetSequence extends BaseSequence<ScanResultValue, Iterator<ScanResu
             List<Comparable> sortValues = sortColumns.stream()
                                                      .map(c -> (Comparable) getColumnValue(sortColumns.indexOf(c)))
                                                      .collect(Collectors.toList());
-            multiColumnSorter.add(this.offset, sortValues);
+            multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement<>(this.offset, sortValues));
             cursor.advance();
             ++this.offset;
           }

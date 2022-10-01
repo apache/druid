@@ -21,6 +21,7 @@ package org.apache.druid.query.scan;
 
 import com.google.common.collect.Iterators;
 import org.apache.druid.collections.MultiColumnSorter;
+import org.apache.druid.collections.QueueBasedMultiColumnSorter;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -80,7 +81,7 @@ public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
         return 0;
       }
     };
-    MultiColumnSorter<Object> multiColumnSorter = new MultiColumnSorter<Object>(limit, comparator);
+    MultiColumnSorter<Object> multiColumnSorter = new QueueBasedMultiColumnSorter<Object>(limit, comparator);
 
     List<String> columns = new ArrayList<>();
     while (!yielder.isDone()) {
@@ -97,7 +98,7 @@ public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
           sortValues = idxs.stream().map(idx -> ((List<Comparable>) event).get(idx)).collect(Collectors.toList());
         }
 
-        multiColumnSorter.add(event, sortValues);
+        multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement<>(event, sortValues));
       }
 
       yielder = yielder.next(null);

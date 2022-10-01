@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
+import org.apache.druid.collections.MultiColumnSorter;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -48,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ScanQuery extends BaseQuery<ScanResultValue>
 {
@@ -428,6 +430,33 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
         )
     );
   }
+
+  public Ordering<MultiColumnSorter.MultiColumnSorterElement<ScanResultValue>> getOrderByNoneTimeResultOrdering()
+  {
+    List<String> orderByDirection = getOrderBys().stream().map(orderBy -> orderBy.getOrder().toString()).collect(Collectors.toList());
+    Comparator<MultiColumnSorter.MultiColumnSorterElement<ScanResultValue>> comparator = new Comparator<MultiColumnSorter.MultiColumnSorterElement<ScanResultValue>>()
+    {
+      @Override
+      public int compare(
+          MultiColumnSorter.MultiColumnSorterElement<ScanResultValue> o1,
+          MultiColumnSorter.MultiColumnSorterElement<ScanResultValue> o2
+      )
+      {
+        for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
+          if (!o1.getOrderByColumValues().get(i).equals(o2.getOrderByColumValues().get(i))) {
+            if (ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))) {
+              return o1.getOrderByColumValues().get(i).compareTo(o2.getOrderByColumValues().get(i));
+            } else {
+              return o2.getOrderByColumValues().get(i).compareTo(o1.getOrderByColumValues().get(i));
+            }
+          }
+        }
+        return 0;
+      }
+    };
+    return Ordering.from(comparator);
+  }
+
 
   @Nullable
   @Override

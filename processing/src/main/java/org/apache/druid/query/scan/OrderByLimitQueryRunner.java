@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import org.apache.druid.collections.MultiColumnSorter;
+import org.apache.druid.collections.QueueBasedMultiColumnSorter;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -191,7 +192,7 @@ class OrderByLimitQueryRunner implements QueryRunner<ScanResultValue>
         return 0;
       }
     };
-    MultiColumnSorter<Long> multiColumnSorter = new MultiColumnSorter<Long>(limit, comparator);
+    MultiColumnSorter<Long> multiColumnSorter = new QueueBasedMultiColumnSorter<Long>(limit, comparator);
 
     Sequence<Cursor> cursorSequence = adapter.makeCursors(
         filter,
@@ -221,6 +222,7 @@ class OrderByLimitQueryRunner implements QueryRunner<ScanResultValue>
 
     final Set<Long> topKOffset = Sets.newHashSetWithExpectedSize(limit);
     Iterators.addAll(topKOffset, multiColumnSorter.drain());
+
     return Sequences.concat(
         adapter
             .makeCursors(
