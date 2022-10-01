@@ -1312,17 +1312,18 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testScanOrderByLimitExceeded_UnsupportedSQLQueryException() throws Exception
   {
+    SqlQuery sqlQuery = createSimpleQueryWithId("id", "SELECT dim1 FROM druid.foo ORDER BY dim1 limit " + Long.MAX_VALUE);
     final QueryException exception = doPost(
-        createSimpleQueryWithId("id", "SELECT dim1 FROM druid.foo ORDER BY dim1 limit " + Long.MAX_VALUE)
+        sqlQuery
     ).lhs;
 
     Assert.assertNotNull(exception);
-    Assert.assertEquals("Unsupported operation", exception.getErrorCode());
-    Assert.assertEquals(UOE.class.getName(), exception.getErrorClass());
+    Assert.assertEquals("Resource limit exceeded", exception.getErrorCode());
+    Assert.assertEquals(ResourceLimitExceededException.class.getName(), exception.getErrorClass());
     Assert.assertTrue(
         exception.getMessage()
                  .contains(
-                     "Limit of 9,223,372,036,854,775,807 rows not supported for priority queue strategy of non-time-ordering scan results")
+                     "The limit cannot be greater than maxRowsQueuedForOrdering，try reducing your query limit below maxRowsQueuedForOrdering")
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
@@ -1791,6 +1792,17 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertTrue(queryContextException.getMessage().contains("2000'"));
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
+  }
+
+
+  @Test
+  public void testInlineEmptyDatesetScanOrderQueryByLimit() throws Exception
+  {
+
+    List<Map<String, Object>> rows = doPost(
+        createSimpleQueryWithId("id", "SELECT * FROM druid.foo WHERE FALSE ORDER BY __time desc limit 100")
+    ).rhs;
+    Assert.assertEquals(rows.size(), 0);
   }
 
   @Test

@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -481,9 +482,17 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
 
   public boolean scanOrderByNonTime()
   {
-    if (orderBys.size() > 1 || (orderBys.size() > 0 && !ColumnHolder.TIME_COLUMN_NAME.equals(orderBys.get(0).getColumnName()))) {
+
+    if (orderBys.size() > 1 || (orderBys.size() == 1 && !ColumnHolder.TIME_COLUMN_NAME.equals(orderBys.get(0).getColumnName()))) {
+      //order by Ordinary column
       return true;
     }
+
+    if (orderBys.size() == 1 && ColumnHolder.TIME_COLUMN_NAME.equals(orderBys.get(0).getColumnName()) && getDataSource() instanceof InlineDataSource) {
+      //The type of datasource is inlineDataSource and order by __time
+      return true;
+    }
+
     return false;
   }
 

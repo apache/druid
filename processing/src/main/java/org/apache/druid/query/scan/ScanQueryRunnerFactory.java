@@ -133,9 +133,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           intervalsOrdered = Lists.reverse(intervalsOrdered);
           queryRunnersOrdered = Lists.reverse(queryRunnersOrdered);
         }
-        int maxRowsQueuedForOrdering = (query.getMaxRowsQueuedForOrdering() == null
-                                        ? scanQueryConfig.getMaxRowsQueuedForOrdering()
-                                        : query.getMaxRowsQueuedForOrdering());
+        int maxRowsQueuedForOrdering = getMaxRowsQueuedForOrdering(query);
         if (query.getScanRowsLimit() <= maxRowsQueuedForOrdering) {
           // Use priority queue strategy
           try {
@@ -220,6 +218,13 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     };
   }
 
+  private int getMaxRowsQueuedForOrdering(ScanQuery query)
+  {
+    return query.getMaxRowsQueuedForOrdering() == null
+                                          ? scanQueryConfig.getMaxRowsQueuedForOrdering()
+                                          : query.getMaxRowsQueuedForOrdering();
+  }
+
   /**
    * Returns a sorted and limited copy of the provided {@param inputSequence}. Materializes the full sequence
    * in memory before returning it. The amount of memory use is limited by the limit of the {@param scanQuery}.
@@ -295,6 +300,14 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       ScanQuery scanQuery
   ) throws IOException
   {
+
+    int maxRowsQueuedForOrdering = getMaxRowsQueuedForOrdering(scanQuery);
+    if (scanQuery.getScanRowsLimit() > maxRowsQueuedForOrdering) {
+      throw ResourceLimitExceededException.withMessage(
+          "The limit cannot be greater than maxRowsQueuedForOrdering，try reducing your query limit below maxRowsQueuedForOrdering (currently %,d)",
+          maxRowsQueuedForOrdering);
+    }
+
     if (scanQuery.getScanRowsLimit() > Integer.MAX_VALUE) {
       throw new UOE(
           "Limit of %,d rows not supported for priority queue strategy of non-time-ordering scan results",
