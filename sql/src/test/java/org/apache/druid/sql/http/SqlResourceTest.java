@@ -40,7 +40,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -1309,26 +1308,6 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
-  @Test
-  public void testScanOrderByLimitExceeded_UnsupportedSQLQueryException() throws Exception
-  {
-    SqlQuery sqlQuery = createSimpleQueryWithId("id", "SELECT dim1 FROM druid.foo ORDER BY dim1 limit " + Long.MAX_VALUE);
-    final QueryException exception = doPost(
-        sqlQuery
-    ).lhs;
-
-    Assert.assertNotNull(exception);
-    Assert.assertEquals("Resource limit exceeded", exception.getErrorCode());
-    Assert.assertEquals(ResourceLimitExceededException.class.getName(), exception.getErrorClass());
-    Assert.assertTrue(
-        exception.getMessage()
-                 .contains(
-                     "The limit cannot be greater than maxRowsQueuedForOrdering，try reducing your query limit below maxRowsQueuedForOrdering")
-    );
-    checkSqlRequestLog(false);
-    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
-  }
-
   /**
    * This test is for {@link UnsupportedSQLQueryException} exceptions that are thrown by druid rules during query
    * planning. e.g. doing max aggregation on string type. The test checks that the API returns correct error messages
@@ -1792,17 +1771,6 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertTrue(queryContextException.getMessage().contains("2000'"));
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
-  }
-
-
-  @Test
-  public void testInlineEmptyDatesetScanOrderQueryByLimit() throws Exception
-  {
-
-    List<Map<String, Object>> rows = doPost(
-        createSimpleQueryWithId("id", "SELECT * FROM druid.foo WHERE FALSE ORDER BY __time desc limit 100")
-    ).rhs;
-    Assert.assertEquals(rows.size(), 0);
   }
 
   @Test
