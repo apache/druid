@@ -14,10 +14,11 @@
     "spellcheck": "mdspell --en-us --ignore-numbers --report '../docs/**/*.md'"
   },
   "engines": {
-    "node": ">=12"
+    "node": ">=16"
   },
   "volta": {
-    "node": "12.22.12"
+    "node": "16.17.0",
+    "npm": "8.15.0"
   },
   "devDependencies": {
     "docusaurus": "^1.14.7",
