@@ -233,10 +233,8 @@ public class SeekableStreamIndexTaskClientTest extends EasyMockSupport
   public void testCancelTaskPauseRequests_Ok() throws Exception
   {
     final int numRequests = TEST_IDS.size();
-    EasyMock.reset(responseHolder);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
-    EasyMock.reset(httpClient);
     EasyMock.expect(httpClient.go(
             EasyMock.anyObject(Request.class),
             EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
@@ -264,10 +262,8 @@ public class SeekableStreamIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testCancelTaskPauseRequests_Accept() throws Exception
   {
-    EasyMock.reset(responseHolder);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.ACCEPTED).anyTimes();
     EasyMock.expect(responseHolder.getContent()).andReturn("READING").anyTimes();
-    EasyMock.reset(httpClient);
     EasyMock.expect(httpClient.go(
             EasyMock.anyObject(Request.class),
             EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
