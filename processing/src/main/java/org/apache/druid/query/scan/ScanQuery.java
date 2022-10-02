@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
@@ -433,7 +434,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
 
   public Ordering<MultiColumnSorter.MultiColumnSorterElement<ScanResultValue>> getOrderByNoneTimeResultOrdering()
   {
-    List<String> orderByDirection = getOrderBys().stream().map(orderBy -> orderBy.getOrder().toString()).collect(Collectors.toList());
+    List<String> orderByDirection = getOrderBys().stream()
+                                                 .map(orderBy -> orderBy.getOrder().toString())
+                                                 .collect(Collectors.toList());
     Comparator<MultiColumnSorter.MultiColumnSorterElement<ScanResultValue>> comparator = new Comparator<MultiColumnSorter.MultiColumnSorterElement<ScanResultValue>>()
     {
       @Override
@@ -443,11 +446,13 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       )
       {
         for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
-          if (!o1.getOrderByColumValues().get(i).equals(o2.getOrderByColumValues().get(i))) {
+          if (!Objects.equals(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i))) {
             if (ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))) {
-              return o1.getOrderByColumValues().get(i).compareTo(o2.getOrderByColumValues().get(i));
+              return Comparators.<Comparable>naturalNullsFirst()
+                                .compare(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i));
             } else {
-              return o2.getOrderByColumValues().get(i).compareTo(o1.getOrderByColumValues().get(i));
+              return Comparators.<Comparable>naturalNullsFirst()
+                                .compare(o2.getOrderByColumValues().get(i), o1.getOrderByColumValues().get(i));
             }
           }
         }
@@ -456,7 +461,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     };
     return Ordering.from(comparator);
   }
-
 
   @Nullable
   @Override

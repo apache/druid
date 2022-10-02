@@ -36,6 +36,16 @@ public interface MultiColumnSorter<T>
    */
   Iterator<T> drain();
 
+  default Iterator<T> drain(int limit)
+  {
+    return drain();
+  }
+
+  /**
+   * Size of elements
+   */
+  int size();
+
   @VisibleForTesting
   class MultiColumnSorterElement<T>
   {

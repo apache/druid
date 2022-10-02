@@ -21,14 +21,17 @@ package org.apache.druid.collections;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
 public class QueueBasedMultiColumnSorterTests
 {
@@ -36,26 +39,7 @@ public class QueueBasedMultiColumnSorterTests
   public void singleColumnAscSort()
   {
     List<String> orderByDirection = ImmutableList.of("ASCENDING");
-    Comparator<MultiColumnSorter.MultiColumnSorterElement<Integer>> comparator = new Comparator<MultiColumnSorter.MultiColumnSorterElement<Integer>>()
-    {
-      @Override
-      public int compare(
-          MultiColumnSorter.MultiColumnSorterElement<Integer> o1,
-          MultiColumnSorter.MultiColumnSorterElement<Integer> o2
-      )
-      {
-        for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
-          if (!o1.getOrderByColumValues().get(i).equals(o2.getOrderByColumValues().get(i))) {
-            if (ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))) {
-              return o1.getOrderByColumValues().get(i).compareTo(o2.getOrderByColumValues().get(i));
-            } else {
-              return o2.getOrderByColumValues().get(i).compareTo(o1.getOrderByColumValues().get(i));
-            }
-          }
-        }
-        return 0;
-      }
-    };
+    Comparator<MultiColumnSorter.MultiColumnSorterElement<Integer>> comparator = getMultiColumnSorterElementComparator(orderByDirection);
     QueueBasedMultiColumnSorter queueBasedMultiColumnSorter = new QueueBasedMultiColumnSorter(5, comparator);
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(1, ImmutableList.of(1)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(2, ImmutableList.of(2)));
@@ -79,29 +63,10 @@ public class QueueBasedMultiColumnSorterTests
   }
 
   @Test
-  public void singleColumnAscSortSkipNull()
+  public void singleColumnAscSortNaturalNullsFirst()
   {
     List<String> orderByDirection = ImmutableList.of("ASCENDING");
-    Comparator<MultiColumnSorter.MultiColumnSorterElement<Integer>> comparator = new Comparator<MultiColumnSorter.MultiColumnSorterElement<Integer>>()
-    {
-      @Override
-      public int compare(
-          MultiColumnSorter.MultiColumnSorterElement<Integer> o1,
-          MultiColumnSorter.MultiColumnSorterElement<Integer> o2
-      )
-      {
-        for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
-          if (!o1.getOrderByColumValues().get(i).equals(o2.getOrderByColumValues().get(i))) {
-            if (ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))) {
-              return o1.getOrderByColumValues().get(i).compareTo(o2.getOrderByColumValues().get(i));
-            } else {
-              return o2.getOrderByColumValues().get(i).compareTo(o1.getOrderByColumValues().get(i));
-            }
-          }
-        }
-        return 0;
-      }
-    };
+    Comparator<MultiColumnSorter.MultiColumnSorterElement<Integer>> comparator = getMultiColumnSorterElementComparator(orderByDirection);
     QueueBasedMultiColumnSorter queueBasedMultiColumnSorter = new QueueBasedMultiColumnSorter(5, comparator);
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(1, ImmutableList.of(1)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(2, ImmutableList.of(2)));
@@ -119,17 +84,16 @@ public class QueueBasedMultiColumnSorterTests
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(9, ImmutableList.of(6)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(11, ImmutableList.of(6)));
     Iterator<Integer> it = queueBasedMultiColumnSorter.drain();
-    List<Integer> expectedValues = ImmutableList.of(1, 1, 2, 1, 3);
+    List<Integer> expectedValues = ImmutableList.of(100, 1, 1, 2, 1);
     int i = 0;
     while (it.hasNext()) {
       Assert.assertEquals(expectedValues.get(i++), it.next());
     }
   }
 
-  @Test
-  public void multiColumnSort()
+  @Nonnull
+  private Comparator<MultiColumnSorter.MultiColumnSorterElement<Integer>> getMultiColumnSorterElementComparator(List<String> orderByDirection)
   {
-    List<String> orderByDirection = ImmutableList.of("ASCENDING", "DESCENDING", "DESCENDING");
     Comparator<MultiColumnSorter.MultiColumnSorterElement<Integer>> comparator = new Comparator<MultiColumnSorter.MultiColumnSorterElement<Integer>>()
     {
       @Override
@@ -139,17 +103,25 @@ public class QueueBasedMultiColumnSorterTests
       )
       {
         for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
-          if (!o1.getOrderByColumValues().get(i).equals(o2.getOrderByColumValues().get(i))) {
+          if (!Objects.equals(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i))) {
             if (ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))) {
-              return o1.getOrderByColumValues().get(i).compareTo(o2.getOrderByColumValues().get(i));
+              return Comparators.<Comparable>naturalNullsFirst().compare(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i));
             } else {
-              return o2.getOrderByColumValues().get(i).compareTo(o1.getOrderByColumValues().get(i));
+              return Comparators.<Comparable>naturalNullsFirst().compare(o2.getOrderByColumValues().get(i), o1.getOrderByColumValues().get(i));
             }
           }
         }
         return 0;
       }
     };
+    return comparator;
+  }
+
+  @Test
+  public void multiColumnSort()
+  {
+    List<String> orderByDirection = ImmutableList.of("ASCENDING", "DESCENDING", "DESCENDING");
+    Comparator<MultiColumnSorter.MultiColumnSorterElement<Integer>> comparator = getMultiColumnSorterElementComparator(orderByDirection);
     QueueBasedMultiColumnSorter queueBasedMultiColumnSorter = new QueueBasedMultiColumnSorter(5, comparator);
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(1, ImmutableList.of(0, 0, 1)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(2, ImmutableList.of(0, 0, 2)));
@@ -174,30 +146,10 @@ public class QueueBasedMultiColumnSorterTests
 
 
   @Test
-  public void multiColumnSorSkipNull()
+  public void multiColumnSorWithNull()
   {
     List<String> orderByDirection = ImmutableList.of("ASCENDING", "DESCENDING", "DESCENDING");
-    Comparator<MultiColumnSorter.MultiColumnSorterElement<Integer>> comparator = new Comparator<MultiColumnSorter.MultiColumnSorterElement<Integer>>()
-    {
-      @Override
-      public int compare(
-          MultiColumnSorter.MultiColumnSorterElement<Integer> o1,
-          MultiColumnSorter.MultiColumnSorterElement<Integer> o2
-      )
-      {
-        for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
-          if (!o1.getOrderByColumValues().get(i).equals(o2.getOrderByColumValues().get(i))) {
-            if (ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))) {
-              return o1.getOrderByColumValues().get(i).compareTo(o2.getOrderByColumValues().get(i));
-            } else {
-              return o2.getOrderByColumValues().get(i).compareTo(o1.getOrderByColumValues().get(i));
-            }
-          }
-        }
-        return 0;
-      }
-    };
-    QueueBasedMultiColumnSorter queueBasedMultiColumnSorter = new QueueBasedMultiColumnSorter(4, comparator);
+    QueueBasedMultiColumnSorter queueBasedMultiColumnSorter = new QueueBasedMultiColumnSorter(4, getMultiColumnSorterElementComparator(orderByDirection));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(1, ImmutableList.of(0, 0, 1)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(2, ImmutableList.of(0, 0, 2)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(3, ImmutableList.of(0, 0, 3)));
@@ -216,7 +168,7 @@ public class QueueBasedMultiColumnSorterTests
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(9, ImmutableList.of(0, 0, 6)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(11, ImmutableList.of(0, 0, 6)));
     Iterator<Integer> it = queueBasedMultiColumnSorter.drain();
-    List<Integer> expectedValues = ImmutableList.of(5, 1, 7, 9);
+    List<Integer> expectedValues = ImmutableList.of(6, 5, 1, 7);
     int i = 0;
     while (it.hasNext()) {
       Assert.assertEquals(expectedValues.get(i++), it.next());
@@ -228,27 +180,7 @@ public class QueueBasedMultiColumnSorterTests
   public void multiColumnSortCalssCastException()
   {
     List<String> orderByDirection = ImmutableList.of("ASCENDING", "DESCENDING", "DESCENDING");
-    Comparator<MultiColumnSorter.MultiColumnSorterElement<Integer>> comparator = new Comparator<MultiColumnSorter.MultiColumnSorterElement<Integer>>()
-    {
-      @Override
-      public int compare(
-          MultiColumnSorter.MultiColumnSorterElement<Integer> o1,
-          MultiColumnSorter.MultiColumnSorterElement<Integer> o2
-      )
-      {
-        for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
-          if (!o1.getOrderByColumValues().get(i).equals(o2.getOrderByColumValues().get(i))) {
-            if (ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))) {
-              return o1.getOrderByColumValues().get(i).compareTo(o2.getOrderByColumValues().get(i));
-            } else {
-              return o2.getOrderByColumValues().get(i).compareTo(o1.getOrderByColumValues().get(i));
-            }
-          }
-        }
-        return 0;
-      }
-    };
-    QueueBasedMultiColumnSorter queueBasedMultiColumnSorter = new QueueBasedMultiColumnSorter(5, comparator);
+    QueueBasedMultiColumnSorter queueBasedMultiColumnSorter = new QueueBasedMultiColumnSorter(5, getMultiColumnSorterElementComparator(orderByDirection));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(1, ImmutableList.of(0, 0, 1)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(2, ImmutableList.of(0, 0, 2)));
     ISE ise = null;
@@ -258,6 +190,6 @@ public class QueueBasedMultiColumnSorterTests
     catch (ISE e) {
       ise = e;
     }
-    Assert.assertEquals("Multiple values of different types scanOrderBy are not allowed in the same column.", ise.getMessage());
+    Assert.assertEquals("The sorted column cannot have different types of values.", ise.getMessage());
   }
 }

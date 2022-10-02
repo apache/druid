@@ -28,6 +28,7 @@ import org.apache.druid.collections.QueueBasedMultiColumnSorter;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Query;
@@ -57,8 +58,8 @@ import java.util.stream.Collectors;
 
 class OrderByQueryRunner implements QueryRunner<ScanResultValue>
 {
-  private final ScanQueryEngine engine;
-  private final Segment segment;
+  protected final ScanQueryEngine engine;
+  protected final Segment segment;
 
   public OrderByQueryRunner(ScanQueryEngine engine, Segment segment)
   {
@@ -80,13 +81,49 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
       responseContext.putTimeoutTime(JodaUtils.MAX_INSTANT);
     }
     if (scanQuery.scanOrderByNonTime()) {
+      if (scanQuery.getContext().containsKey(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)) {
+        if (ListBasedOrderByQueryRunner.class.getSimpleName()
+                                             .toLowerCase()
+                                             .equals(scanQuery.getContext().get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE).toString().toLowerCase())) {
+          return new ListBasedOrderByQueryRunner(engine, segment).process(
+              scanQuery,
+              segment,
+              responseContext,
+              queryPlus.getQueryMetrics()
+          );
+        } else if (TreeMultisetBasedOrderByQueryRunner.class.getSimpleName()
+                                                            .toLowerCase()
+                                                            .equals(scanQuery.getContext()
+                                                                             .get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)
+                                                                             .toString()
+                                                                             .toLowerCase())) {
+          return new TreeMultisetBasedOrderByQueryRunner(engine, segment).process(
+              scanQuery,
+              segment,
+              responseContext,
+              queryPlus.getQueryMetrics()
+          );
+        } else if (TreeSetBasedOrderByQueryRunner.class.getSimpleName()
+                                                       .toLowerCase()
+                                                       .equals(scanQuery.getContext()
+                                                                        .get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)
+                                                                        .toString()
+                                                                        .toLowerCase())) {
+          return new TreeSetBasedOrderByQueryRunner(engine, segment).process(
+              scanQuery,
+              segment,
+              responseContext,
+              queryPlus.getQueryMetrics()
+          );
+        }
+      }
       return process(scanQuery, segment, responseContext, queryPlus.getQueryMetrics());
     } else {
       return new ScanQueryRunnerFactory.ScanQueryRunner(engine, segment).run(queryPlus, responseContext);
     }
   }
 
-  private Sequence<ScanResultValue> process(
+  protected Sequence<ScanResultValue> process(
       final ScanQuery query,
       final Segment segment,
       final ResponseContext responseContext,
@@ -101,7 +138,11 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
     final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "Expected non-null 'legacy' parameter");
 
     final Long numScannedRows = responseContext.getRowScanCount();
-    if (numScannedRows != null && numScannedRows >= query.getScanRowsLimit() && query.getTimeOrder().equals(ScanQuery.Order.NONE) && !query.scanOrderByNonTime()) {
+    if (numScannedRows != null
+        && numScannedRows >= query.getScanRowsLimit()
+        && query.getTimeOrder()
+                .equals(ScanQuery.Order.NONE)
+        && !query.scanOrderByNonTime()) {
       return Sequences.empty();
     }
     final boolean hasTimeout = QueryContexts.hasTimeout(query);
@@ -153,9 +194,22 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
 
     // If the row count is not set, set it to 0, else do nothing.
     responseContext.addRowScanCount(0);
-    return getScanOrderByResultValueSequence(query, responseContext, legacy, hasTimeout, timeoutAt, adapter, allColumns, intervals, segmentId, filter, queryMetrics);
+    return getScanOrderByResultValueSequence(
+        query,
+        responseContext,
+        legacy,
+        hasTimeout,
+        timeoutAt,
+        adapter,
+        allColumns,
+        intervals,
+        segmentId,
+        filter,
+        queryMetrics
+    );
   }
-  private Sequence<ScanResultValue> getScanOrderByResultValueSequence(
+
+  protected Sequence<ScanResultValue> getScanOrderByResultValueSequence(
       final ScanQuery query,
       final ResponseContext responseContext,
       final boolean legacy,
@@ -169,8 +223,14 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-    List<String> sortColumns = query.getOrderBys().stream().map(orderBy -> orderBy.getColumnName()).collect(Collectors.toList());
-    List<String> orderByDirection = query.getOrderBys().stream().map(orderBy -> orderBy.getOrder().toString()).collect(Collectors.toList());
+    List<String> sortColumns = query.getOrderBys()
+                                    .stream()
+                                    .map(orderBy -> orderBy.getColumnName())
+                                    .collect(Collectors.toList());
+    List<String> orderByDirection = query.getOrderBys()
+                                         .stream()
+                                         .map(orderBy -> orderBy.getOrder().toString())
+                                         .collect(Collectors.toList());
     final int limit = Math.toIntExact(query.getScanRowsLimit());
     Comparator<MultiColumnSorter.MultiColumnSorterElement<Long>> comparator = new Comparator<MultiColumnSorter.MultiColumnSorterElement<Long>>()
     {
@@ -181,11 +241,13 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
       )
       {
         for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
-          if (!o1.getOrderByColumValues().get(i).equals(o2.getOrderByColumValues().get(i))) {
+          if (o1.getOrderByColumValues().get(i) != (o2.getOrderByColumValues().get(i))) {
             if (ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))) {
-              return o1.getOrderByColumValues().get(i).compareTo(o2.getOrderByColumValues().get(i));
+              return Comparators.<Comparable>naturalNullsFirst()
+                                .compare(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i));
             } else {
-              return o2.getOrderByColumValues().get(i).compareTo(o1.getOrderByColumValues().get(i));
+              return Comparators.<Comparable>naturalNullsFirst()
+                                .compare(o2.getOrderByColumValues().get(i), o1.getOrderByColumValues().get(i));
             }
           }
         }
@@ -220,7 +282,7 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
       s.toList();
     });
 
-    final Set<Long> topKOffset = Sets.newHashSetWithExpectedSize(limit);
+    final Set<Long> topKOffset = Sets.newHashSetWithExpectedSize(multiColumnSorter.size());
     Iterators.addAll(topKOffset, multiColumnSorter.drain());
 
     return Sequences.concat(
@@ -235,15 +297,17 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
                 queryMetrics
             )
             .map(cursor -> new OrderBySequence(
-                new OrderBySequence.OrderByIteratorMaker(legacy,
-                                                         cursor,
-                                                         hasTimeout,
-                                                         timeoutAt,
-                                                         query,
-                                                         segmentId,
-                                                         allColumns,
-                                                         responseContext,
-                                                         topKOffset)
+                new OrderBySequence.OrderByIteratorMaker(
+                    legacy,
+                    cursor,
+                    hasTimeout,
+                    timeoutAt,
+                    query,
+                    segmentId,
+                    allColumns,
+                    responseContext,
+                    topKOffset
+                )
             ))
     );
   }

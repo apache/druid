@@ -23,6 +23,7 @@ import com.google.common.collect.Iterators;
 import org.apache.druid.collections.MultiColumnSorter;
 import org.apache.druid.collections.QueueBasedMultiColumnSorter;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.context.ResponseContext;
@@ -70,11 +71,11 @@ public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
       )
       {
         for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
-          if (!o1.getOrderByColumValues().get(i).equals(o2.getOrderByColumValues().get(i))) {
+          if (o1.getOrderByColumValues().get(i) != (o2.getOrderByColumValues().get(i))) {
             if (ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))) {
-              return o1.getOrderByColumValues().get(i).compareTo(o2.getOrderByColumValues().get(i));
+              return Comparators.<Comparable>naturalNullsFirst().compare(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i));
             } else {
-              return o2.getOrderByColumValues().get(i).compareTo(o1.getOrderByColumValues().get(i));
+              return Comparators.<Comparable>naturalNullsFirst().compare(o2.getOrderByColumValues().get(i), o1.getOrderByColumValues().get(i));
             }
           }
         }
@@ -104,7 +105,7 @@ public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
       yielder = yielder.next(null);
       count++;
     }
-    final List<Object> sortedElements = new ArrayList<>(limit);
+    final List<Object> sortedElements = new ArrayList<>(multiColumnSorter.size());
     Iterators.addAll(sortedElements, multiColumnSorter.drain());
     return new ScanResultValue(null, columns, sortedElements);
   }

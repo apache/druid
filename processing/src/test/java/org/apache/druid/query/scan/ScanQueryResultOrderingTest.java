@@ -142,11 +142,12 @@ public class ScanQueryResultOrderingTest
   private final int limit;
   private final int batchSize;
   private final int maxRowsQueuedForOrdering;
+  private final String orderByQueryRunnerType;
 
   private ScanQueryRunnerFactory queryRunnerFactory;
   private List<QueryRunner<ScanResultValue>> segmentRunners;
 
-  @Parameterized.Parameters(name = "Segment-to-server map[{0}], limit[{1}], batchSize[{2}], maxRowsQueuedForOrdering[{3}]")
+  @Parameterized.Parameters(name = "Segment-to-server map[{0}], limit[{1}], batchSize[{2}], maxRowsQueuedForOrdering[{3}],orderByQueryRunnerTypes[{4}]")
   public static Iterable<Object[]> constructorFeeder()
   {
     // Set number of server equal to number of segments, then try all possible distributions of segments to servers.
@@ -169,11 +170,15 @@ public class ScanQueryResultOrderingTest
     final Set<Integer> batchSizes = ImmutableSortedSet.of(1, 2, 100);
     final Set<Integer> maxRowsQueuedForOrderings = ImmutableSortedSet.of(1, 7, 100000);
 
+    //orderByQueryRunnerType
+    final Set<String> orderByQueryRunnerTypes = ImmutableSortedSet.of("listBasedOrderByQueryRunner", "treeMultisetBasedOrderByQueryRunner", "treeSetBasedOrderByQueryRunner", "orderByQueryRunner");
+
     return Sets.cartesianProduct(
         segmentToServerMaps,
         limits,
         batchSizes,
-        maxRowsQueuedForOrderings
+        maxRowsQueuedForOrderings,
+        orderByQueryRunnerTypes
     ).stream().map(args -> args.toArray(new Object[0])).collect(Collectors.toList());
   }
 
@@ -181,13 +186,15 @@ public class ScanQueryResultOrderingTest
       final List<Integer> segmentToServerMap,
       final int limit,
       final int batchSize,
-      final int maxRowsQueuedForOrdering
+      final int maxRowsQueuedForOrdering,
+      final String orderByQueryRunnerType
   )
   {
     this.segmentToServerMap = segmentToServerMap;
     this.limit = limit;
     this.batchSize = batchSize;
     this.maxRowsQueuedForOrdering = maxRowsQueuedForOrdering;
+    this.orderByQueryRunnerType = orderByQueryRunnerType;
   }
 
   @Before
@@ -486,7 +493,9 @@ public class ScanQueryResultOrderingTest
                                            .withOverriddenContext(
                                                ImmutableMap.of(
                                                    ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING,
-                                                   maxRowsQueuedForOrdering
+                                                   maxRowsQueuedForOrdering,
+                                                   ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE,
+                                                   orderByQueryRunnerType
                                                )
                                            ),
         brokerRunner
@@ -579,7 +588,9 @@ public class ScanQueryResultOrderingTest
                                            .withOverriddenContext(
                                                ImmutableMap.of(
                                                    ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING,
-                                                   maxRowsQueuedForOrdering
+                                                   maxRowsQueuedForOrdering,
+                                                   ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE,
+                                                   orderByQueryRunnerType
                                                )
                                            ),
         brokerRunner
@@ -666,7 +677,9 @@ public class ScanQueryResultOrderingTest
                                            .withOverriddenContext(
                                                ImmutableMap.of(
                                                    ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING,
-                                                   maxRowsQueuedForOrdering
+                                                   maxRowsQueuedForOrdering,
+                                                   ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE,
+                                                   orderByQueryRunnerType
                                                )
                                            ),
         brokerRunner

@@ -175,8 +175,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                                          .get();
 
           int maxSegmentPartitionsOrderedInMemory = query.getMaxSegmentPartitionsOrderedInMemory() == null
-                                      ? scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory()
-                                      : query.getMaxSegmentPartitionsOrderedInMemory();
+                                                    ? scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory()
+                                                    : query.getMaxSegmentPartitionsOrderedInMemory();
           if (maxNumPartitionsInSegment <= maxSegmentPartitionsOrderedInMemory) {
             // Use n-way merge strategy
 
@@ -217,7 +217,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   )
   {
     try {
-      if (query.getScanRowsLimit() < getMaxRowsQueuedForOrdering(query) || query.getDataSource() instanceof InlineDataSource) {
+      boolean b = query.getScanRowsLimit() < getMaxRowsQueuedForOrdering(query) || query.getDataSource() instanceof InlineDataSource;
+      if (b) {
         // Use priority queue strategy
         return multiColumnSort(
             Sequences.concat(Sequences.map(
@@ -292,8 +293,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   private int getMaxRowsQueuedForOrdering(ScanQuery query)
   {
     return query.getMaxRowsQueuedForOrdering() == null
-                                          ? scanQueryConfig.getMaxRowsQueuedForOrdering()
-                                          : query.getMaxRowsQueuedForOrdering();
+           ? scanQueryConfig.getMaxRowsQueuedForOrdering()
+           : query.getMaxRowsQueuedForOrdering();
   }
 
   /**
@@ -410,7 +411,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         yielder = yielder.next(null);
         doneScanning = yielder.isDone();
       }
-      final List<ScanResultValue> sortedElements = new ArrayList<>(limit);
+      final List<ScanResultValue> sortedElements = new ArrayList<>(multiColumnSorter.size());
       Iterators.addAll(sortedElements, multiColumnSorter.drain());
       return Sequences.simple(sortedElements);
     }
@@ -552,11 +553,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                     ).map(multiColumnSorterElement -> multiColumnSorterElement.getElement())
             )
         );
-    long limit = ((ScanQuery) (queryPlus.getQuery())).getScanRowsLimit();
-    if (limit == Long.MAX_VALUE) {
-      return resultSequence;
-    }
-    return resultSequence.limit(limit);
+    return resultSequence;
   }
 
   @Override

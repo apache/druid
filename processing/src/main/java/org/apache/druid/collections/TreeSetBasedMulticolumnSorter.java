@@ -19,44 +19,31 @@
 
 package org.apache.druid.collections;
 
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.ISE;
 
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 /**
- * This sorter is applicable to two cases:
- * 1.Result Set Merge
- * 2.Sort the internal data of segment in the way of delayed materialization
+ *  This sorter will de duplicate key during sorting
  */
-public class QueueBasedMultiColumnSorter<T> implements MultiColumnSorter<T>
+public class TreeSetBasedMulticolumnSorter<T> implements MultiColumnSorter<T>
 {
+  private final TreeSet<MultiColumnSorterElement<T>> sortedMultiset;
 
-  private final MinMaxPriorityQueue<MultiColumnSorter.MultiColumnSorterElement<T>> queue;
-
-  public QueueBasedMultiColumnSorter(int limit, Comparator<MultiColumnSorter.MultiColumnSorterElement<T>> comparator)
+  public TreeSetBasedMulticolumnSorter(Comparator<MultiColumnSorter.MultiColumnSorterElement<T>> comparator)
   {
-    this.queue = MinMaxPriorityQueue
-        .orderedBy(Ordering.from(comparator))
-        .maximumSize(limit)
-        .create();
+    sortedMultiset = new TreeSet<>(comparator);
   }
 
-  public QueueBasedMultiColumnSorter(int limit, Ordering<MultiColumnSorter.MultiColumnSorterElement<T>> ordering)
-  {
-    this.queue = MinMaxPriorityQueue
-        .orderedBy(ordering)
-        .maximumSize(limit)
-        .create();
-  }
 
   @Override
   public void add(MultiColumnSorter.MultiColumnSorterElement<T> sorterElement)
   {
     try {
-      queue.offer(sorterElement);
+      sortedMultiset.add(sorterElement);
     }
     catch (ClassCastException e) {
       throw new ISE("The sorted column cannot have different types of values.");
@@ -66,31 +53,21 @@ public class QueueBasedMultiColumnSorter<T> implements MultiColumnSorter<T>
   @Override
   public Iterator<T> drain()
   {
-    return new Iterator<T>()
-    {
-      @Override
-      public boolean hasNext()
-      {
-        return !queue.isEmpty();
-      }
+    return sortedMultiset.stream()
+                         .map(sorterElement -> sorterElement.getElement())
+                         .collect(Collectors.toSet())
+                         .iterator();
+  }
 
-      @Override
-      public T next()
-      {
-        return queue.poll().getElement();
-      }
-
-      @Override
-      public void remove()
-      {
-        throw new UnsupportedOperationException();
-      }
-    };
+  @Override
+  public Iterator<T> drain(int limit)
+  {
+    return sortedMultiset.stream().limit(limit).map(sorterElement -> sorterElement.getElement()).collect(Collectors.toList()).iterator();
   }
 
   @Override
   public int size()
   {
-    return queue.size();
+    return sortedMultiset.size();
   }
 }
