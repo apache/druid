@@ -52,7 +52,6 @@ abstract class BasedSorterIterator implements Iterator<ScanResultValue>
   protected final List<String> allColumns;
   protected List<String> orderByDirection;
   protected final List<BaseObjectColumnValueSelector> columnSelectors;
-  protected long offset = 0;
 
   BasedSorterIterator(
       List<String> sortColumns,
@@ -116,7 +115,7 @@ abstract class BasedSorterIterator implements Iterator<ScanResultValue>
   protected List<List<Object>> rowsToCompactedList()
   {
     final MultiColumnSorter<List<Object>> multiColumnSorter = rowsToCompactedListMulticolumnSorter();
-    for (; !cursor.isDone(); cursor.advance(), offset++) {
+    for (; !cursor.isDone(); cursor.advance()) {
       final List<Object> theEvent = new ArrayList<>(allColumns.size());
       List<Comparable> sortValues = new ArrayList<>();
       for (int j = 0; j < allColumns.size(); j++) {
@@ -136,7 +135,7 @@ abstract class BasedSorterIterator implements Iterator<ScanResultValue>
 
     final MultiColumnSorter<Map<String, Object>> multiColumnSorter = rowsToListMulticolumnSorter();
 
-    for (; !cursor.isDone(); cursor.advance(), offset++) {
+    for (; !cursor.isDone(); cursor.advance()) {
       final Map<String, Object> theEvent = new LinkedHashMap<>();
       List<Comparable> sortValues = new ArrayList<>();
       for (int j = 0; j < allColumns.size(); j++) {
