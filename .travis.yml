@@ -395,7 +395,10 @@ jobs:
 
     - name: "docs"
       stage: Tests - phase 1
-      install: ./check_test_suite.py && travis_terminate 0 || (cd website && nvm install 16.17.0 && npm install)
+      before_script:
+        - ./check_test_suite.py && travis_terminate 0 || echo 'Starting nvm install...'
+        - nvm install 16.17.0
+        - (cd web-console && npm install && node --version)
       script: |-
         (cd website && npm run lint && npm run spellcheck) || { echo "
 
