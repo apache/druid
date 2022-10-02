@@ -65,7 +65,6 @@ public class ListBasedOrderByQueryRunner extends OrderByQueryRunner
                                          .stream()
                                          .map(orderBy -> orderBy.getOrder().toString())
                                          .collect(Collectors.toList());
-    final int limit = Math.toIntExact(query.getScanRowsLimit());
 
     return Sequences.concat(adapter.makeCursors(
         filter,

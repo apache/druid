@@ -100,7 +100,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       responseContext.putTimeoutTime(timeoutAt);
 
       if (query.scanOrderByNonTime()) {
-        return getScanResultValueSequence(queryRunners, queryPlus, responseContext, query);
+        return getScanOrderByNonTimeSequence(queryRunners, queryPlus, responseContext, query);
       }
 
       if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
@@ -209,7 +209,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     };
   }
 
-  private Sequence<ScanResultValue> getScanResultValueSequence(
+  private Sequence<ScanResultValue> getScanOrderByNonTimeSequence(
       Iterable<QueryRunner<ScanResultValue>> queryRunners,
       QueryPlus<ScanResultValue> queryPlus,
       ResponseContext responseContext,
@@ -501,6 +501,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                                                                  .stream()
                                                                  .map(orderBy -> orderBy.getColumnName())
                                                                  .collect(Collectors.toList());
+    long limit = ((ScanQuery) (queryPlus.getQuery())).getScanRowsLimit();
     Sequence<ScanResultValue> resultSequence =
         Sequences.concat(
             Sequences.map(
@@ -510,7 +511,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                         Sequences.simple(runnerGroup),
                         (input) -> Sequences.concat(
                             Sequences.map(
-                                input.run(queryPlus, responseContext),
+                                input.run(queryPlus, responseContext).limit(limit),
                                 srv -> Sequences.simple(srv.toSingleEventScanResultValues())
                             )
                         )

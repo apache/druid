@@ -83,8 +83,9 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
     if (scanQuery.scanOrderByNonTime()) {
       if (scanQuery.getContext().containsKey(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)) {
         if (ListBasedOrderByQueryRunner.class.getSimpleName()
-                                             .toLowerCase()
-                                             .equals(scanQuery.getContext().get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE).toString().toLowerCase())) {
+                                             .equalsIgnoreCase(scanQuery.getContext()
+                                                                        .get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)
+                                                                        .toString())) {
           return new ListBasedOrderByQueryRunner(engine, segment).process(
               scanQuery,
               segment,
@@ -92,11 +93,10 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
               queryPlus.getQueryMetrics()
           );
         } else if (TreeMultisetBasedOrderByQueryRunner.class.getSimpleName()
-                                                            .toLowerCase()
-                                                            .equals(scanQuery.getContext()
-                                                                             .get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)
-                                                                             .toString()
-                                                                             .toLowerCase())) {
+                                                            .equalsIgnoreCase(scanQuery.getContext()
+                                                                                       .get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)
+                                                                                       .toString()
+                                                            )) {
           return new TreeMultisetBasedOrderByQueryRunner(engine, segment).process(
               scanQuery,
               segment,
@@ -104,11 +104,10 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
               queryPlus.getQueryMetrics()
           );
         } else if (TreeSetBasedOrderByQueryRunner.class.getSimpleName()
-                                                       .toLowerCase()
-                                                       .equals(scanQuery.getContext()
-                                                                        .get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)
-                                                                        .toString()
-                                                                        .toLowerCase())) {
+                                                       .equalsIgnoreCase(scanQuery.getContext()
+                                                                                  .get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)
+                                                                                  .toString()
+                                                       )) {
           return new TreeSetBasedOrderByQueryRunner(engine, segment).process(
               scanQuery,
               segment,

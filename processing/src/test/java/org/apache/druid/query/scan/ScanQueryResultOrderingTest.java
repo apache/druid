@@ -320,7 +320,7 @@ public class ScanQueryResultOrderingTest
     assertOrderByIdResultsEquals(
         Druids.newScanQueryBuilder()
               .dataSource("ds")
-              .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P1D"))))
+              .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P10D"))))
               .columns(ColumnHolder.TIME_COLUMN_NAME, ID_COLUMN)
               .orderBy(ImmutableList.of(new ScanQuery.OrderBy(ID_COLUMN, ScanQuery.Order.ASCENDING)))
               .build(),

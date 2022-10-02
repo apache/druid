@@ -20,7 +20,6 @@
 package org.apache.druid.collections;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.TreeMultiset;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanQuery;
