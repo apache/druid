@@ -149,7 +149,7 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
       const jsonColumn = column.nativeType === 'COMPLEX<json>';
       return (
         <Menu>
-          {ex && val && !jsonColumn && (
+          {ex?.getFirstColumn() && val && !jsonColumn && (
             <>
               {filterOnMenuItem(IconNames.FILTER, ex.equal(val))}
               {filterOnMenuItem(IconNames.FILTER, ex.unequal(val))}

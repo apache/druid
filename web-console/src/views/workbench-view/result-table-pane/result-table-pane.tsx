@@ -606,7 +606,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
       const jsonColumn = column.nativeType === 'COMPLEX<json>';
       return (
         <Menu>
-          {ex && val && !jsonColumn && (
+          {ex?.getFirstColumn() && val && !jsonColumn && (
             <>
               {filterOnMenuItem(IconNames.FILTER, ex.equal(val), having)}
               {filterOnMenuItem(IconNames.FILTER, ex.unequal(val), having)}

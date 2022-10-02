@@ -129,7 +129,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
     const jsonColumn = column.nativeType === 'COMPLEX<json>';
     return (
       <Menu>
-        {ex && val && !jsonColumn && (
+        {ex?.getFirstColumn() && val && !jsonColumn && (
           <>
             {filterOnMenuItem(IconNames.FILTER, ex.equal(val))}
             {filterOnMenuItem(IconNames.FILTER, ex.unequal(val))}
