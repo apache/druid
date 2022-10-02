@@ -573,16 +573,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                                            )
                                                        ).registerSubtypes(ExternalDataSource.class));
     DruidSecondaryModule.setupJackson(injector, mapper);
-/*
-    mapper.setInjectableValues(
-        new InjectableValues.Std()
-            .addValue(ObjectMapper.class, mapper)
-            .addValue(Injector.class, injector)
-            .addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT)
-            .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
-            .addValue(ExprMacroTable.class, CalciteTests.createExprMacroTable())
-    );
-*/
 
     mapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
 

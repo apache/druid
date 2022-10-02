@@ -157,11 +157,12 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
         final boolean retVal = broadcastJoinHelper.buildBroadcastTablesIncrementally(readableInputs);
         if (retVal) {
           InputNumberDataSource inputNumberDataSource = (InputNumberDataSource) query.getDataSource();
-          // The InputNumberData source was going through the broadcastJoinHelper which
-          // was using the JoinableFactoryWrapper to create segment map function.
-          // After refactoring, the segment map function creation is moved to data source
-          // Hence for InputNumberDataSource we are setting the broadcast join helper for the data source
-          // and moving the segment map function creation there
+          // The InputNumberDataSource requires a BroadcastJoinHelper to be able to create its
+          // segment map function.  It would be a lot better if the InputNumberDataSource actually
+          // had a way to get that injected into it on its own, but the relationship between these objects
+          // was figured out during a refactor and using a setter here seemed like the least-bad way to
+          // make progress on the refactor without breaking functionality.  Hopefully, some future
+          // developer will move this away from a setter.
           inputNumberDataSource.setBroadcastJoinHelper(broadcastJoinHelper);
           segmentMapFn = inputNumberDataSource.createSegmentMapFunction(query, new AtomicLong());
         }

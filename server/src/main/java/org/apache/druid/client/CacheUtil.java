@@ -108,9 +108,9 @@ public class CacheUtil
       ServerType serverType
   )
   {
-    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType)
+    return cacheConfig.isUseCache()
            && QueryContexts.isUseCache(query)
-           && cacheConfig.isUseCache();
+           && isQueryCacheable(query, cacheStrategy, cacheConfig, serverType);
   }
 
   /**
