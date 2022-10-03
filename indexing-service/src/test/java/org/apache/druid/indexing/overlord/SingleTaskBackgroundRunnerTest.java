@@ -265,13 +265,13 @@ public class SingleTaskBackgroundRunnerTest
 
           @Nullable
           @Override
-          public String setup(TaskToolbox toolbox) throws Exception
+          public String setup(TaskToolbox toolbox)
           {
             return null;
           }
 
           @Override
-          public void cleanUp(TaskToolbox toolbox) throws Exception
+          public void cleanUp(TaskToolbox toolbox)
           {
             // do nothing
           }
@@ -387,13 +387,13 @@ public class SingleTaskBackgroundRunnerTest
 
     @Nullable
     @Override
-    public String setup(TaskToolbox toolbox) throws Exception
+    public String setup(TaskToolbox toolbox)
     {
       return null;
     }
 
     @Override
-    public void cleanUp(TaskToolbox toolbox) throws Exception
+    public void cleanUp(TaskToolbox toolbox)
     {
       // do nothing
     }

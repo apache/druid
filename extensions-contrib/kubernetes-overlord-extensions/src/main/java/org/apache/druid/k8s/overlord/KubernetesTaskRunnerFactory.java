@@ -22,6 +22,7 @@ package org.apache.druid.k8s.overlord;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import io.fabric8.kubernetes.client.Config;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -72,7 +73,16 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   @Override
   public KubernetesTaskRunner build()
   {
-    DruidKubernetesClient client = new DruidKubernetesClient();
+    DruidKubernetesClient client;
+    if (kubernetesTaskRunnerConfig.disableClientProxy) {
+      Config config = Config.autoConfigure(null);
+      config.setHttpsProxy(null);
+      config.setHttpProxy(null);
+      client = new DruidKubernetesClient(config);
+    } else {
+      client = new DruidKubernetesClient();
+    }
+
     K8sTaskAdapter adapter;
     if (kubernetesTaskRunnerConfig.sidecarSupport) {
       adapter = new MultiContainerTaskAdapter(client, kubernetesTaskRunnerConfig, smileMapper);

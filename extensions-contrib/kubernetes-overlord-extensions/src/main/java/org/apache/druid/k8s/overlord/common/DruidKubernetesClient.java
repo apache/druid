@@ -19,15 +19,29 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 public class DruidKubernetesClient implements KubernetesClientApi
 {
+
+  private final Config config;
+
+  public DruidKubernetesClient()
+  {
+    this(Config.autoConfigure(null));
+  }
+
+  public DruidKubernetesClient(Config config)
+  {
+    this.config = config;
+  }
+
   @Override
   public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
   {
-    try (KubernetesClient client = new DefaultKubernetesClient()) {
+    try (KubernetesClient client = new DefaultKubernetesClient(config)) {
       return executor.executeRequest(client);
     }
   }

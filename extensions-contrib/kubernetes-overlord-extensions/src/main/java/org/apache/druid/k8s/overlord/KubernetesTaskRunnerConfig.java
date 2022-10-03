@@ -52,6 +52,10 @@ public class KubernetesTaskRunnerConfig
   public Long graceTerminationPeriodSeconds = null;
 
   @JsonProperty
+  // disable using http / https proxy environment variables
+  public boolean disableClientProxy;
+
+  @JsonProperty
   @NotNull
   public Period maxTaskDuration = new Period("PT4H");
 

@@ -28,7 +28,7 @@ Apache Druid Extension to enable using Kubernetes for launching and managing tas
 
 ## How it works
 
-It takes the podSpec of your `Overlord`pod and creates a kubernetes job from this podSpec.  Thus if you have sidecars such as splunk, hubble, istio it can optionally launch a task as a k8s job.  All jobs are natively restorable, they are decopled from the druid deployment, thus restarting pods or doing upgrades has no affect on tasks in flight.  They will continue to run and when the overlord comes back up it will start tracking them again.  
+It takes the podSpec of your `Overlord` pod and creates a kubernetes job from this podSpec.  Thus if you have sidecars such as splunk, hubble, istio it can optionally launch a task as a k8s job.  All jobs are natively restorable, they are decopled from the druid deployment, thus restarting pods or doing upgrades has no affect on tasks in flight.  They will continue to run and when the overlord comes back up it will start tracking them again.  
 
 ## Configuration
 
@@ -55,6 +55,7 @@ Additional Configuration
 |`druid.indexer.runner.debugJobs`|`boolean`|Clean up k8s jobs after tasks complete.|False|No|
 |`druid.indexer.runner.sidecarSupport`|`boolean`|If your overlord pod has sidecars, this will attempt to start the task with the same sidecars as the overlord pod.|False|No|
 |`druid.indexer.runner.kubexitImage`|`String`|Used kubexit project to help shutdown sidecars when the main pod completes.  Otherwise jobs with sidecars never terminate.|karlkfi/kubexit:latest|No|
+|`druid.indexer.runner.disableClientProxy`|`boolean`|Use this if you have a global http(s) proxy and you wish to bypass it.|false|No|
 |`druid.indexer.runner.maxTaskDuration`|`Duration`|Max time a task is allowed to run for before getting killed|4H|No|
 |`druid.indexer.runner.taskCleanupDelay`|`Duration`|How long do jobs stay around before getting reaped from k8s|2D|No|
 |`druid.indexer.runner.taskCleanupInterval`|`Duration`|How often to check for jobs to be reaped|10m|No|
@@ -66,6 +67,34 @@ Additional Configuration
 
 - You must have in your role the abiliity to launch jobs.  
 - All Druid Pods belonging to one Druid cluster must be inside same kubernetes namespace.
+- For the sidecar support to work, your entrypoint / command in docker must be explicitly defined your spec.  
+
+You can't have something like this: 
+Dockerfile: 
+``` ENTRYPOINT: ["foo.sh"] ```
+
+and in your sidecar specs: 
+``` container:
+        name: foo
+        args: 
+           - arg1
+           - arg2 
+```
+
+That will not work, because we cannot decipher what your command is, the extension needs to know it explicitly. 
+**Even for sidecars like isito which are dynamically created by the service mesh, this needs to happen.* 
+
+Instead do the following: 
+You can keep your Dockerfile the same but you must have a sidecar spec like so: 
+``` container:
+        name: foo
+        command: foo.sh
+        args: 
+           - arg1
+           - arg2 
+```
+
+The following roles must also be accessible. An example spec could be: 
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1

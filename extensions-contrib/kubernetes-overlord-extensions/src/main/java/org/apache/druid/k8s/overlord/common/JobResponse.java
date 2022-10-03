@@ -67,16 +67,14 @@ public class JobResponse
   {
     Optional<Long> duration = Optional.absent();
     try {
-      if (job.getStatus() != null) {
-        if (job.getStatus().getStartTime() != null) {
-          if (job.getStatus().getCompletionTime() != null) {
-            duration = Optional.of((long) new Period(
-                DateTimes.of(job.getStatus().getStartTime()),
-                DateTimes.of(job.getStatus().getCompletionTime()),
-                PeriodType.millis()
-            ).getMillis());
-          }
-        }
+      if (job.getStatus() != null
+          && job.getStatus().getStartTime() != null
+          && job.getStatus().getCompletionTime() != null) {
+        duration = Optional.of((long) new Period(
+            DateTimes.of(job.getStatus().getStartTime()),
+            DateTimes.of(job.getStatus().getCompletionTime()),
+            PeriodType.millis()
+        ).getMillis());
       }
     }
     catch (Exception e) {

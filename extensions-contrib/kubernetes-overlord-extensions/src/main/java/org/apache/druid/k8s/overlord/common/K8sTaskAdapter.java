@@ -56,11 +56,11 @@ import java.util.Optional;
  * peon task.
  * The two subclasses of this class are the SingleContainerTaskAdapter and the MultiContainerTaskAdapter
  * This class runs on the overlord, to convert a task into a job, it will take its own podSpec (the current running overlord)
- * keep volumees, secrets, env variables, config maps, etc..and add some additional information as well as provide a new
+ * keep volumees, secrets, env variables, config maps, etc. and add some additional information as well as provide a new
  * command for running the task.
  * The SingleContainerTaskAdapter only runs a task in a single container (no sidecars)
- * The MultiContainerTaskAdapter runs with all of the sidecars the current running overlord runs with.  Thus it needs
- * to add some extra coordination to shutdown sidecar containers when the main pod exits.
+ * The MultiContainerTaskAdapter runs with all the sidecars the current running overlord runs with.  Thus, it needs
+ * to add some extra coordination to shut down sidecar containers when the main pod exits.
  */
 
 public abstract class K8sTaskAdapter implements TaskAdapter<Pod, Job>
