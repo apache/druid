@@ -25,25 +25,16 @@
   height: 42px;
   margin: 0; }
 
-.navigationSlider .slidingNav ul li a {
+.navigationSlider .slidingNav ul li > a {
   color: #9caeff;
   font-weight: 600;
   font-size: 15px; }
 
-.navigationSlider .slidingNav ul li:last-child a {
-  display: inline-block;
-  height: 32px;
-  line-height: 32px;
-  background: #9caeff;
-  border-radius: 2px;
-  padding: 0 10px;
-  color: #1C1C26;
-  font-weight: 600;
-  min-width: 106px;
-  text-align: center; }
-
 .toc .toggleNav .navGroup .navGroupSubcategoryTitle {
   color: #717171; }
+
+.algolia-autocomplete .algolia-docsearch-footer {
+  display: none; }
 
 pre code {
   max-height: 500px; }
