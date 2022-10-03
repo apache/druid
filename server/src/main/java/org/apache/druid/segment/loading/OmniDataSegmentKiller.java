@@ -44,8 +44,9 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
   )
   {
     this.killers = new HashMap<>();
-    for (String type : killers.keySet()) {
-      Provider<DataSegmentKiller> provider = killers.get(type);
+    for (Map.Entry<String, Provider<DataSegmentKiller>> entry : killers.entrySet()) {
+      String type = entry.getKey();
+      Provider<DataSegmentKiller> provider = entry.getValue();
       this.killers.put(type, Suppliers.memoize(provider::get));
     }
   }

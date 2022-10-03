@@ -21,10 +21,8 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.GuiceInjectors;
@@ -37,8 +35,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
-
-import java.io.IOException;
 
 public class OmniDataSegmentKillerTest
 {
@@ -80,7 +76,7 @@ public class OmniDataSegmentKillerTest
     final Injector injector = createInjector(null);
     final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertThrows(
-        "BadSegmentKiller should not have been initialized",
+        "BadSegmentKiller must not have been initialized",
         RuntimeException.class,
         () -> segmentKiller.kill(segment)
     );
@@ -90,13 +86,16 @@ public class OmniDataSegmentKillerTest
   {
     return GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.of(
-            (Module) binder -> {
+            binder -> {
               MapBinder<String, DataSegmentKiller> mapBinder = Binders.dataSegmentKillerBinder(binder);
               if (killer != null) {
                 mapBinder.addBinding("sane").toInstance(killer);
               }
             },
-            new BadSegmentKillerModule()
+            binder -> {
+              MapBinder<String, DataSegmentKiller> mapBinder = Binders.dataSegmentKillerBinder(binder);
+              mapBinder.addBinding("bad").to(BadSegmentKiller.class);
+            }
         )
     );
   }
@@ -120,39 +119,26 @@ public class OmniDataSegmentKillerTest
     segmentKiller.kill(tombstone);
   }
 
-  private static class BadSegmentKillerModule extends AbstractModule
-  {
-
-    @Override
-    protected void configure()
-    {
-      MapBinder<String, DataSegmentKiller> mapBinder = Binders.dataSegmentKillerBinder(binder());
-      mapBinder.addBinding("bad").to(BadSegmentKiller.class);
-    }
-  }
-
   @LazySingleton
   private static class BadSegmentKiller implements DataSegmentKiller
   {
     @Inject
     BadSegmentKiller()
     {
-      throw new RuntimeException("BadSegmentKiller should not have been initialized");
+      throw new RuntimeException("BadSegmentKiller must not have been initialized");
     }
 
     @Override
-    public void kill(DataSegment segment) throws SegmentLoadingException
+    public void kill(DataSegment segment)
     {
 
     }
 
     @Override
-    public void killAll() throws IOException
+    public void killAll()
     {
 
     }
   }
-
-
 
 }

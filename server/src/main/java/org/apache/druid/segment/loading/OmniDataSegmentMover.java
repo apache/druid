@@ -40,8 +40,9 @@ public class OmniDataSegmentMover implements DataSegmentMover
   )
   {
     this.movers = new HashMap<>();
-    for (String type : movers.keySet()) {
-      Provider<DataSegmentMover> provider = movers.get(type);
+    for (Map.Entry<String, Provider<DataSegmentMover>> entry : movers.entrySet()) {
+      String type = entry.getKey();
+      Provider<DataSegmentMover> provider = entry.getValue();
       this.movers.put(type, Suppliers.memoize(provider::get));
     }
   }

@@ -40,8 +40,9 @@ public class OmniDataSegmentArchiver implements DataSegmentArchiver
   )
   {
     this.archivers = new HashMap<>();
-    for (String type : archivers.keySet()) {
-      Provider<DataSegmentArchiver> provider = archivers.get(type);
+    for (Map.Entry<String, Provider<DataSegmentArchiver>> entry : archivers.entrySet()) {
+      String type = entry.getKey();
+      Provider<DataSegmentArchiver> provider = entry.getValue();
       this.archivers.put(type, Suppliers.memoize(provider::get));
     }
   }
