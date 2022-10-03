@@ -28,6 +28,7 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest.ResultsVerifier;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.http.SqlParameter;
@@ -59,8 +60,8 @@ public class QueryTestBuilder
 {
   /**
    * Implement to provide the execution framework that the tests require.
-   * The {@link analyze()} method builds up the classes that will run the
-   * test, since some verification depends on context, such as that
+   * The {@link #analyze(QueryTestBuilder)} method builds up the classes that
+   * will run the test, since some verification depends on context, such as that
    * provided by {@link BaseCalciteQueryTest}.
    */
   public interface QueryTestConfig
@@ -72,21 +73,21 @@ public class QueryTestBuilder
     SqlStatementFactory statementFactory(PlannerConfig plannerConfig, AuthConfig authConfig);
   }
 
-  final QueryTestConfig config;
-  PlannerConfig plannerConfig = BaseCalciteQueryTest.PLANNER_CONFIG_DEFAULT;
-  Map<String, Object> queryContext = BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT;
-  List<SqlParameter> parameters = BaseCalciteQueryTest.DEFAULT_PARAMETERS;
-  String sql;
-  AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
-  List<Query<?>> expectedQueries;
-  List<Object[]> expectedResults;
-  RowSignature expectedResultSignature;
-  List<ResourceAction> expectedResources;
-  ResultsVerifier expectedResultsVerifier;
-  @Nullable Consumer<ExpectedException> expectedExceptionInitializer;
-  boolean skipVectorize;
-  boolean queryCannotVectorize;
-  AuthConfig authConfig = new AuthConfig();
+  protected final QueryTestConfig config;
+  protected PlannerConfig plannerConfig = BaseCalciteQueryTest.PLANNER_CONFIG_DEFAULT;
+  protected Map<String, Object> queryContext = BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT;
+  protected List<SqlParameter> parameters = CalciteTestBase.DEFAULT_PARAMETERS;
+  protected String sql;
+  protected AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
+  protected List<Query<?>> expectedQueries;
+  protected List<Object[]> expectedResults;
+  protected RowSignature expectedResultSignature;
+  protected List<ResourceAction> expectedResources;
+  protected ResultsVerifier expectedResultsVerifier;
+  protected @Nullable Consumer<ExpectedException> expectedExceptionInitializer;
+  protected boolean skipVectorize;
+  protected boolean queryCannotVectorize;
+  protected AuthConfig authConfig = new AuthConfig();
 
   public QueryTestBuilder(final QueryTestConfig config)
   {
