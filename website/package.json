@@ -1,16 +1,16 @@
 {
   "license": "Apache-2.0",
   "scripts": {
-    "examples": "docusaurus-examples",
-    "start": "docusaurus-start",
-    "build": "npm run compile-scss && docusaurus-build && node script/do-redirects.js && node script/fix-docsearch.js",
-    "publish-gh-pages": "docusaurus-publish",
-    "write-translations": "docusaurus-write-translations",
-    "version": "docusaurus-version",
-    "rename-version": "docusaurus-rename-version",
-    "compile-scss": "node-sass scss/custom.scss > static/css/custom.css",
-    "link-lint": "docusaurus-build && node script/link-lint.js",
-    "spellcheck": "mdspell --en-us --ignore-numbers --report '../docs/**/*.md' || (./script/notify-spellcheck-issues && false)"
+    "examples": "./node_modules/.bin/docusaurus-examples",
+    "start": "./node_modules/.bin/docusaurus-start",
+    "build": "npm run compile-scss && ./node_modules/.bin/docusaurus-build && node script/do-redirects.js && node script/fix-docsearch.js",
+    "publish-gh-pages": "./node_modules/.bin/docusaurus-publish",
+    "write-translations": "./node_modules/.bin/docusaurus-write-translations",
+    "version": "./node_modules/.bin/docusaurus-version",
+    "rename-version": "./node_modules/.bin/docusaurus-rename-version",
+    "compile-scss": "./node_modules/.bin/node-sass scss/custom.scss > static/css/custom.css",
+    "link-lint": "npm run build && node script/link-lint.js",
+    "spellcheck": "./node_modules/.bin/mdspell --en-us --ignore-numbers --report '../docs/**/*.md' || (./script/notify-spellcheck-issues && false)"
   },
   "engines": {
     "node": ">=16"
