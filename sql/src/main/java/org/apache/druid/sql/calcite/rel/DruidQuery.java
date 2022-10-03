@@ -1298,15 +1298,6 @@ public class DruidQuery
         );
         return null;
       }
-      if (!dataSource.isConcrete()) {
-        // Cannot handle this ordering.
-        // Scan cannot ORDER BY non-time columns.
-        plannerContext.setPlanningError(
-            "SQL query is a scan and requires order by on a datasource[%s], which is not supported.",
-            dataSource
-        );
-        return null;
-      }
     }
 
     // Compute the list of columns to select, sorted and deduped.

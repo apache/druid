@@ -30,9 +30,11 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.DruidOuterQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
+import org.apache.druid.utils.Throwables;
 
 import java.util.List;
 import java.util.function.BiFunction;
@@ -223,7 +225,14 @@ public class DruidRules
                              .withSort(sort)
         );
         if (outerQueryRel.isValidDruidQuery()) {
-          call.transformTo(outerQueryRel);
+          try {
+            call.transformTo(outerQueryRel);
+          }
+          catch (Exception ex) {
+            if (Throwables.getCauseOfType(ex, CannotBuildQueryException.class) == null) {
+              throw ex;
+            }
+          }
         }
       }
     };
