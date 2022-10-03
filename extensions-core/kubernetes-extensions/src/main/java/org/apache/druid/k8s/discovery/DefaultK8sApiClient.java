@@ -65,7 +65,7 @@ public class DefaultK8sApiClient implements K8sApiClient
   public void patchPod(String podName, String podNamespace, String jsonPatchStr)
   {
     try {
-      coreV1Api.patchNamespacedPod(podName, podNamespace, new V1Patch(jsonPatchStr), "true", null, null, null);
+      coreV1Api.patchNamespacedPod(podName, podNamespace, new V1Patch(jsonPatchStr), "true", null, null, null, null);
     }
     catch (ApiException ex) {
       throw new RE(ex, "Failed to patch pod[%s/%s], code[%d], error[%s].", podNamespace, podName, ex.getCode(), ex.getResponseBody());
