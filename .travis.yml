@@ -398,10 +398,9 @@ jobs:
       before_script:
         - ./check_test_suite.py && travis_terminate 0 || echo 'Starting nvm install...'
         - nvm install 16.17.0
-        - (cd web-console && npm install)
+        - (cd website && npm install)
       script:
         - cd website
-        - node --version
         - npm run link-lint
         - npm run spellcheck
 
