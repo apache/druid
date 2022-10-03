@@ -108,13 +108,13 @@ public class OmniDataSegmentArchiverTest
     }
 
     @Override
-    public DataSegment archive(DataSegment segment) throws SegmentLoadingException
+    public DataSegment archive(DataSegment segment)
     {
       return null;
     }
 
     @Override
-    public DataSegment restore(DataSegment segment) throws SegmentLoadingException
+    public DataSegment restore(DataSegment segment)
     {
       return null;
     }

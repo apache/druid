@@ -110,7 +110,7 @@ public class OmniDataSegmentMoverTest
     }
 
     @Override
-    public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
+    public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)
     {
       return null;
     }
