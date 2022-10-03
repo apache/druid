@@ -1258,6 +1258,41 @@ public class TaskLockboxTest
     );
   }
 
+  @Test
+  public void testFailedToReacquireTaskLock() throws Exception
+  {
+    final Task task = NoopTask.create();
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+
+    TaskLockbox testLockBox = new NullLockPosseTaskLockBox(taskStorage, metadataStorageCoordinator);
+    testLockBox.add(task);
+    testLockBox.tryLock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+                                                       task,
+                                                       Intervals.of("2017-05-01/2017-06-01"),
+                                                       null)
+    );
+    testLockBox.tryLock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+                                                       task,
+                                                       Intervals.of("2017-06-01/2017-07-01"),
+                                                       null)
+    );
+    testLockBox.tryLock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+                                                       task,
+                                                       Intervals.of("2017-07-01/2017-08-01"),
+                                                       null)
+    );
+    Assert.assertEquals(1, taskStorage.getActiveTasks().size());
+    Assert.assertEquals(3, taskStorage.getLocks(task.getId()).size());
+
+    // Should not be able to create TaskLockPosse
+    testLockBox.syncFromStorage();
+
+    // Task should no longer be active and lock must not exist
+    Assert.assertTrue(taskStorage.getStatus(task.getId()).get().isFailure());
+    Assert.assertEquals(0, taskStorage.getActiveTasks().size());
+    Assert.assertEquals(0, taskStorage.getLocks(task.getId()).size());
+  }
+
   private Set<TaskLock> getAllLocks(List<Task> tasks)
   {
     return tasks.stream()
@@ -1381,6 +1416,23 @@ public class TaskLockboxTest
     public TaskStatus run(TaskToolbox toolbox)
     {
       return TaskStatus.failure("how?", "Dummy task status err msg");
+    }
+  }
+
+  private static class NullLockPosseTaskLockBox extends TaskLockbox
+  {
+    public NullLockPosseTaskLockBox(
+        TaskStorage taskStorage,
+        IndexerMetadataStorageCoordinator metadataStorageCoordinator
+    )
+    {
+      super(taskStorage, metadataStorageCoordinator);
+    }
+
+    @Override
+    protected TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
+    {
+      return null;
     }
   }
 }

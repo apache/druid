@@ -29,6 +29,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
@@ -139,6 +140,7 @@ public class TaskLockbox
       running.clear();
       activeTasks.clear();
       activeTasks.addAll(storedActiveTasks);
+      Set<Task> failedToReacquireLockTasks = new HashSet<>();
       // Bookkeeping for a log message at the end
       int taskLockCount = 0;
       for (final Pair<Task, TaskLock> taskAndLock : byVersionOrdering.sortedCopy(storedLocks)) {
@@ -147,6 +149,11 @@ public class TaskLockbox
         if (savedTaskLock.getInterval().toDurationMillis() <= 0) {
           // "Impossible", but you never know what crazy stuff can be restored from storage.
           log.warn("Ignoring lock[%s] with empty interval for task: %s", savedTaskLock, task.getId());
+          continue;
+        }
+
+        if (failedToReacquireLockTasks.contains(task)) {
+          log.info("Ignoring task[%s] as it failed to acquire at least one of its locks", task.getId());
           continue;
         }
 
@@ -183,8 +190,9 @@ public class TaskLockbox
             );
           }
         } else {
-          throw new ISE(
-              "Could not reacquire lock on interval[%s] version[%s] for task: %s",
+          failedToReacquireLockTasks.add(task);
+          log.error(
+              "Could not reacquire lock on interval[%s] version[%s] for task: %s.",
               savedTaskLockWithPriority.getInterval(),
               savedTaskLockWithPriority.getVersion(),
               task.getId()
@@ -197,17 +205,26 @@ public class TaskLockbox
           activeTasks.size(),
           storedLocks.size() - taskLockCount
       );
+
+      for (Task task : failedToReacquireLockTasks) {
+        for (TaskLock lock : taskStorage.getLocks(task.getId())) {
+          taskStorage.removeLock(task.getId(), lock);
+        }
+        taskStorage.setStatus(TaskStatus.failure(task.getId(), "Failed to reacquire lock"));
+      }
     }
+
     finally {
-      giant.unlock();
-    }
+    giant.unlock();
+  }
   }
 
   /**
    * This method is called only in {@link #syncFromStorage()} and verifies the given task and the taskLock have the same
    * groupId, dataSource, and priority.
    */
-  private TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
+  @VisibleForTesting
+  protected TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
   {
     giant.lock();
 
