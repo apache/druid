@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
@@ -107,12 +106,6 @@ public class LookupDataSource implements DataSource
   )
   {
     return Function.identity();
-  }
-
-  @Override
-  public byte[] getCacheKey(DataSourceAnalysis dataSourceAnalysis)
-  {
-    return new byte[]{};
   }
 
   @Override

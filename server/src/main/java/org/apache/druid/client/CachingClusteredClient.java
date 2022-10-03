@@ -837,7 +837,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
     {
       Preconditions.checkNotNull(strategy, "strategy cannot be null");
       if (dataSourceAnalysis.isJoin()) {
-        byte[] joinDataSourceCacheKey = dataSourceAnalysis.getDataSource().getCacheKey(dataSourceAnalysis);
+        byte[] joinDataSourceCacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis)
+                                                              .orElse(null);
         if (null == joinDataSourceCacheKey) {
           return null;    // A join operation that does not support caching
         }

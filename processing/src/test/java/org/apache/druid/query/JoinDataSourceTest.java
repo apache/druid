@@ -22,22 +22,12 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.TrueDimFilter;
-import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
-import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
-import org.apache.druid.segment.join.NoopDataSource;
-import org.apache.druid.segment.join.NoopJoinableFactory;
-import org.easymock.EasyMock;
 import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -45,9 +35,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.Optional;
 
 
 public class JoinDataSourceTest
@@ -190,33 +178,6 @@ public class JoinDataSourceTest
     );
 
     Assert.assertEquals(joinDataSource, deserialized);
-  }
-
-  @Test
-  public void test_computeJoinDataSourceCacheKey_noClauses()
-  {
-    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    JoinDataSource joinDataSource = JoinDataSource.create(
-        new TableDataSource("table1"),
-        new TableDataSource("table2"),
-        "j.",
-        "x == \"j.x\"",
-        JoinType.LEFT,
-        TrueDimFilter.instance(),
-        ExprMacroTable.nil(),
-        joinableFactoryWrapper
-    );
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.emptyList());
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.empty());
-    EasyMock.expect(analysis.getDataSource()).andReturn(joinDataSource);
-    EasyMock.replay(analysis);
-
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage(StringUtils.format(
-        "No join clauses to build the cache key for data source [%s]",
-        joinDataSource
-    ));
-   joinDataSource.getCacheKey(analysis);
   }
 
   @Test
