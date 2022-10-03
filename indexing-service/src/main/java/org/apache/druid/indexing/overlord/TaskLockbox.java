@@ -29,7 +29,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
@@ -109,8 +108,10 @@ public class TaskLockbox
 
   /**
    * Wipe out our current in-memory state and resync it from our bundled {@link TaskStorage}.
+   *
+   * @return SyncResult which needs to be processed by the caller
    */
-  public void syncFromStorage()
+  public SyncResult syncFromStorage()
   {
     giant.lock();
 
@@ -206,17 +207,21 @@ public class TaskLockbox
           storedLocks.size() - taskLockCount
       );
 
+      // unlock all TaskLockPosse created, and also remove lock entries from storage
       for (Task task : failedToReacquireLockTasks) {
+        unlockAll(task);
         for (TaskLock lock : taskStorage.getLocks(task.getId())) {
           taskStorage.removeLock(task.getId(), lock);
         }
-        taskStorage.setStatus(TaskStatus.failure(task.getId(), "Failed to reacquire lock"));
       }
+      return new SyncResult(
+          ImmutableList.copyOf(failedToReacquireLockTasks)
+      );
     }
 
     finally {
-    giant.unlock();
-  }
+      giant.unlock();
+    }
   }
 
   /**

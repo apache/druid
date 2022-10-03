@@ -26,6 +26,7 @@ import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.DruidLeaderSelector.Listener;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
@@ -113,8 +114,9 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
         log.info("By the power of Grayskull, I have the power!");
 
         try {
-          taskLockbox.syncFromStorage();
+          SyncResult syncResult = taskLockbox.syncFromStorage();
           taskRunner = runnerFactory.build();
+          processSyncResult(syncResult, taskStorage, taskRunner);
           taskQueue = new TaskQueue(
               taskLockConfig,
               taskQueueConfig,
@@ -414,6 +416,24 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       return taskRunner.get().getBlacklistedTaskSlotCount();
     } else {
       return null;
+    }
+  }
+
+  /**
+   * Process the results of synchronization from storage
+   *
+   * @param syncResult to be processed
+   * @param taskStorage stores tasks
+   * @param taskRunner runs tasks and holds state
+   */
+  private void processSyncResult(SyncResult syncResult, TaskStorage taskStorage, TaskRunner taskRunner)
+  {
+    String taskReacquisitionFailure = "Failed to reacquire lock";
+    for (Task task : syncResult.getTasksToFail()) {
+      // Shutdown task if it is running
+      taskRunner.shutdown(task.getId(), taskReacquisitionFailure);
+      // Mark as failed
+      taskStorage.setStatus(TaskStatus.failure(task.getId(), taskReacquisitionFailure));
     }
   }
 }

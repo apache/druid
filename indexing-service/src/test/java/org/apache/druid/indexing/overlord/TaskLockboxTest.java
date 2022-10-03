@@ -1264,19 +1264,19 @@ public class TaskLockboxTest
     final Task task = NoopTask.create();
     taskStorage.insert(task, TaskStatus.running(task.getId()));
 
-    TaskLockbox testLockBox = new NullLockPosseTaskLockBox(taskStorage, metadataStorageCoordinator);
-    testLockBox.add(task);
-    testLockBox.tryLock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+    TaskLockbox testLockbox = new NullLockPosseTaskLockbox(taskStorage, metadataStorageCoordinator);
+    testLockbox.add(task);
+    testLockbox.tryLock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
                                                        task,
                                                        Intervals.of("2017-05-01/2017-06-01"),
                                                        null)
     );
-    testLockBox.tryLock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+    testLockbox.tryLock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
                                                        task,
                                                        Intervals.of("2017-06-01/2017-07-01"),
                                                        null)
     );
-    testLockBox.tryLock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+    testLockbox.tryLock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
                                                        task,
                                                        Intervals.of("2017-07-01/2017-08-01"),
                                                        null)
@@ -1284,12 +1284,12 @@ public class TaskLockboxTest
     Assert.assertEquals(1, taskStorage.getActiveTasks().size());
     Assert.assertEquals(3, taskStorage.getLocks(task.getId()).size());
 
-    // Should not be able to create TaskLockPosse
-    testLockBox.syncFromStorage();
+    // The task must be marked for failure
+    SyncResult result = testLockbox.syncFromStorage();
+    Assert.assertEquals(1, result.getTasksToFail().size());
+    Assert.assertEquals(task, result.getTasksToFail().get(0));
 
-    // Task should no longer be active and lock must not exist
-    Assert.assertTrue(taskStorage.getStatus(task.getId()).get().isFailure());
-    Assert.assertEquals(0, taskStorage.getActiveTasks().size());
+    // Task must no longer have active locks
     Assert.assertEquals(0, taskStorage.getLocks(task.getId()).size());
   }
 
@@ -1419,9 +1419,9 @@ public class TaskLockboxTest
     }
   }
 
-  private static class NullLockPosseTaskLockBox extends TaskLockbox
+  private static class NullLockPosseTaskLockbox extends TaskLockbox
   {
-    public NullLockPosseTaskLockBox(
+    public NullLockPosseTaskLockbox(
         TaskStorage taskStorage,
         IndexerMetadataStorageCoordinator metadataStorageCoordinator
     )
