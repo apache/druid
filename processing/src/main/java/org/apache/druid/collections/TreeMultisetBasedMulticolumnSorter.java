@@ -62,7 +62,6 @@ public class TreeMultisetBasedMulticolumnSorter<T> implements MultiColumnSorter<
                          .iterator();
   }
 
-  @Override
   public Iterator<T> drain(int limit)
   {
     return sortedMultiset.stream().limit(limit).map(sorterElement -> sorterElement.getElement()).collect(Collectors.toList()).iterator();

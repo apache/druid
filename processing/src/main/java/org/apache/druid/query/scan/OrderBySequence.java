@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.scan;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -180,6 +181,7 @@ class OrderBySequence extends BaseSequence<ScanResultValue, Iterator<ScanResultV
           final Object value;
 
           if (legacy && allColumns.get(i).equals(ScanQueryEngine.LEGACY_TIMESTAMP_KEY)) {
+            Preconditions.checkNotNull(selector);
             value = DateTimes.utc((long) selector.getObject());
           } else {
             value = selector == null ? null : selector.getObject();

@@ -59,7 +59,6 @@ public class ListBasedMulticolumnSorter<T> implements MultiColumnSorter<T>
     return list.stream().map(sorterElement -> sorterElement.getElement()).collect(Collectors.toList()).iterator();
   }
 
-  @Override
   public Iterator<T> drain(int limit)
   {
     list.sort(comparator);

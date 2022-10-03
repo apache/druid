@@ -210,6 +210,7 @@ public class ListBaseMulticolumnSorterTests
     catch (ISE e) {
       ise = e;
     }
+    Assert.assertNotNull(ise);
     Assert.assertEquals("The sorted column cannot have different types of values.", ise.getMessage());
   }
 }
