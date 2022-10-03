@@ -26,6 +26,11 @@ import com.google.inject.Key;
 import com.google.inject.Provider;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.util.Config;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Collections;
+import java.util.List;
+import java.util.TimeZone;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
@@ -37,10 +42,6 @@ import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.server.DruidNode;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
 
 public class K8sDiscoveryModule implements DruidModule
 {
@@ -63,7 +64,10 @@ public class K8sDiscoveryModule implements DruidModule
                 try {
                   // Note: we can probably improve things here about figuring out how to find the K8S API server,
                   // HTTP client timeouts etc.
-                  return Config.defaultClient();
+                  final SimpleDateFormat dateFormat = new SimpleDateFormat(
+                      "yyyyMMdd'T'HHmmss.SSS'Z'");
+                  dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+                  return Config.defaultClient().setDateFormat(dateFormat);
                 }
                 catch (IOException ex) {
                   throw new RuntimeException("Failed to create K8s ApiClient instance", ex);
