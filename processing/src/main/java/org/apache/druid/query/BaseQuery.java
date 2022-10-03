@@ -37,8 +37,6 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -61,7 +59,7 @@ public abstract class BaseQuery<T> implements Query<T>
   public static final String SQL_QUERY_ID = "sqlQueryId";
   private final DataSource dataSource;
   private final boolean descending;
-  private final Map<String, Object> context;
+  private final QueryContext context;
   private final QuerySegmentSpec querySegmentSpec;
   private volatile Duration duration;
   private final Granularity granularity;
@@ -89,10 +87,7 @@ public abstract class BaseQuery<T> implements Query<T>
     Preconditions.checkNotNull(granularity, "Must specify a granularity");
 
     this.dataSource = dataSource;
-    // There is no semantic difference between an empty and a null context.
-    // Ensure that a context always exists to avoid the need to check for
-    // a null context. Jackson serialization will omit empty contexts.
-    this.context = context == null ? Collections.emptyMap() : context;
+    this.context = QueryContext.of(context);
     this.querySegmentSpec = querySegmentSpec;
     this.descending = descending;
     this.granularity = granularity;
@@ -175,7 +170,13 @@ public abstract class BaseQuery<T> implements Query<T>
   @JsonInclude(Include.NON_DEFAULT)
   public Map<String, Object> getContext()
   {
-    return context == null ? Collections.emptyMap() : context;
+    return context.asMap();
+  }
+
+  @Override
+  public QueryContext context()
+  {
+    return context;
   }
 
   /**

@@ -19,6 +19,10 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -30,20 +34,30 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+
 public class QueryContextTest
 {
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+
   @Test
   public void testEquals()
   {
@@ -55,18 +69,40 @@ public class QueryContextTest
                   .verify();
   }
 
+  /**
+   * Verify that a context with an null map is the same as a context with
+   * an empty map.
+   */
   @Test
-  public void testEmptyParam()
+  public void testEmptyContext()
   {
-    final QueryContext context = QueryContext.empty();
-    Assert.assertEquals(ImmutableMap.of(), context.getContext());
+    {
+      final QueryContext context = new QueryContext(null);
+      assertEquals(ImmutableMap.of(), context.asMap());
+    }
+    {
+      final QueryContext context = new QueryContext(new HashMap<>());
+      assertEquals(ImmutableMap.of(), context.asMap());
+    }
+    {
+      final QueryContext context = QueryContext.of(null);
+      assertEquals(ImmutableMap.of(), context.asMap());
+    }
+    {
+      final QueryContext context = QueryContext.of(new HashMap<>());
+      assertEquals(ImmutableMap.of(), context.asMap());
+    }
+    {
+      final QueryContext context = QueryContext.empty();
+      assertEquals(ImmutableMap.of(), context.asMap());
+    }
   }
 
   @Test
   public void testIsEmpty()
   {
-    Assert.assertTrue(QueryContext.empty().isEmpty());
-    Assert.assertFalse(QueryContext.of(ImmutableMap.of("k", "v")).isEmpty());
+    assertTrue(QueryContext.empty().isEmpty());
+    assertFalse(QueryContext.of(ImmutableMap.of("k", "v")).isEmpty());
   }
 
   @Test
@@ -77,12 +113,12 @@ public class QueryContextTest
                         "key2", 2)
     );
 
-    Assert.assertEquals("val", context.get("key"));
-    Assert.assertEquals("val", context.getString("key"));
-    Assert.assertNull(context.getString("non-exist"));
-    Assert.assertEquals("foo", context.getString("non-exist", "foo"));
+    assertEquals("val", context.get("key"));
+    assertEquals("val", context.getString("key"));
+    assertNull(context.getString("non-exist"));
+    assertEquals("foo", context.getString("non-exist", "foo"));
 
-    Assert.assertThrows(BadQueryContextException.class, () -> context.getString("key2"));
+    assertThrows(BadQueryContextException.class, () -> context.getString("key2"));
   }
 
   @Test
@@ -95,11 +131,11 @@ public class QueryContextTest
         )
     );
 
-    Assert.assertTrue(context.getBoolean("key1", false));
-    Assert.assertTrue(context.getBoolean("key2", false));
-    Assert.assertTrue(context.getBoolean("key1"));
-    Assert.assertFalse(context.getBoolean("non-exist", false));
-    Assert.assertNull(context.getBoolean("non-exist"));
+    assertTrue(context.getBoolean("key1", false));
+    assertTrue(context.getBoolean("key2", false));
+    assertTrue(context.getBoolean("key1"));
+    assertFalse(context.getBoolean("non-exist", false));
+    assertNull(context.getBoolean("non-exist"));
   }
 
   @Test
@@ -113,11 +149,11 @@ public class QueryContextTest
         )
     );
 
-    Assert.assertEquals(100, context.getInt("key1", 0));
-    Assert.assertEquals(100, context.getInt("key2", 0));
-    Assert.assertEquals(0, context.getInt("non-exist", 0));
+    assertEquals(100, context.getInt("key1", 0));
+    assertEquals(100, context.getInt("key2", 0));
+    assertEquals(0, context.getInt("non-exist", 0));
 
-    Assert.assertThrows(BadQueryContextException.class, () -> context.getInt("key3", 5));
+    assertThrows(BadQueryContextException.class, () -> context.getInt("key3", 5));
   }
 
   @Test
@@ -131,11 +167,121 @@ public class QueryContextTest
         )
     );
 
-    Assert.assertEquals(100L, context.getLong("key1", 0));
-    Assert.assertEquals(100L, context.getLong("key2", 0));
-    Assert.assertEquals(0L, context.getLong("non-exist", 0));
+    assertEquals(100L, context.getLong("key1", 0));
+    assertEquals(100L, context.getLong("key2", 0));
+    assertEquals(0L, context.getLong("non-exist", 0));
 
-    Assert.assertThrows(BadQueryContextException.class, () -> context.getLong("key3", 5));
+    assertThrows(BadQueryContextException.class, () -> context.getLong("key3", 5));
+  }
+
+  /**
+   * Tests the several ways that Druid code parses context strings into Long
+   * values. The desired behavior is that "x" is parsed exactly the same as Jackson
+   * would parse x (where x is a valid number.) The context methods must emulate
+   * Jackson. The dimension utility method is included because some code used that
+   * for long parsing, and we must maintain backward compatibility.
+   * <p>
+   * The exceptions in the {@code assertThrows} are not critical: the key thing is
+   * that we're documenting what works and what doesn't. If an exception changes,
+   * just update the tests. If something no longer throws an exception, we'll want
+   * to verify that we support the new use case consistently in all three paths.
+   */
+  @Test
+  public void testGetLongCompatibility() throws JsonProcessingException
+  {
+    {
+      String value = null;
+
+      // Only the context methods allow {"foo": null} to be parsed as a null Long.
+      assertNull(getContextLong(value));
+      // Nulls not legal on this path.
+      assertThrows(NullPointerException.class, () -> getDimensionLong(value));
+      // Nulls not legal on this path.
+      assertThrows(IllegalArgumentException.class, () -> getJsonLong(value));
+    }
+
+    {
+      String value = "";
+      // Blank string not legal on this path.
+      assertThrows(BadQueryContextException.class, () -> getContextLong(value));
+      assertNull(getDimensionLong(value));
+      // Blank string not allowed where a value is expected.
+      assertThrows(MismatchedInputException.class, () -> getJsonLong(value));
+    }
+
+    {
+      String value = "0";
+      assertEquals(0L, (long) getContextLong(value));
+      assertEquals(0L, (long) getDimensionLong(value));
+      assertEquals(0L, (long) getJsonLong(value));
+    }
+
+    {
+      String value = "+1";
+      assertEquals(1L, (long) getContextLong(value));
+      assertEquals(1L, (long) getDimensionLong(value));
+      assertThrows(JsonParseException.class, () -> getJsonLong(value));
+    }
+
+    {
+      String value = "-1";
+      assertEquals(-1L, (long) getContextLong(value));
+      assertEquals(-1L, (long) getDimensionLong(value));
+      assertEquals(-1L, (long) getJsonLong(value));
+    }
+
+    {
+      // Hexadecimal numbers are not supported in JSON. Druid also does not support
+      // them in strings.
+      String value = "0xabcd";
+      assertThrows(BadQueryContextException.class, () -> getContextLong(value));
+      // The dimension utils have a funny way of handling hex: they return null
+      assertNull(getDimensionLong(value));
+      assertThrows(JsonParseException.class, () -> getJsonLong(value));
+    }
+
+    {
+      // Leading zeros supported by Druid parsing, but not by JSON.
+      String value = "05";
+      assertEquals(5L, (long) getContextLong(value));
+      assertEquals(5L, (long) getDimensionLong(value));
+      assertThrows(JsonParseException.class, () -> getJsonLong(value));
+    }
+
+    {
+      // The dimension utils allow a float where a long is expected.
+      // Jackson can do this conversion. This test verifies that the context
+      // functions can handle the same conversion.
+      String value = "10.00";
+      assertEquals(10L, (long) getContextLong(value));
+      assertEquals(10L, (long) getDimensionLong(value));
+      assertEquals(10L, (long) getJsonLong(value));
+    }
+
+    {
+      // None of the conversion methods allow a (thousands) separator. The comma
+      // would be ambiguous in JSON. Java allows the underscore, but JSON does
+      // not support this syntax, and neither does Druid's string-to-long conversion.
+      String value = "1_234";
+      assertThrows(BadQueryContextException.class, () -> getContextLong(value));
+      assertNull(getDimensionLong(value));
+      assertThrows(JsonParseException.class, () -> getJsonLong(value));
+    }
+  }
+
+  private static Long getContextLong(String value)
+  {
+    return QueryContexts.getAsLong("dummy", value);
+  }
+
+  private static Long getJsonLong(String value) throws JsonProcessingException
+  {
+    return JSON_MAPPER.readValue(value, Long.class);
+  }
+
+  private static Long getDimensionLong(String value)
+  {
+    return DimensionHandlerUtils.getExactLongFromDecimalString(value);
   }
 
   @Test
@@ -150,11 +296,11 @@ public class QueryContextTest
         )
     );
 
-    Assert.assertEquals(0, Float.compare(500, context.getFloat("f1", 100)));
-    Assert.assertEquals(0, Float.compare(500, context.getFloat("f2", 100)));
-    Assert.assertEquals(0, Float.compare(500.1f, context.getFloat("f3", 100)));
+    assertEquals(0, Float.compare(500, context.getFloat("f1", 100)));
+    assertEquals(0, Float.compare(500, context.getFloat("f2", 100)));
+    assertEquals(0, Float.compare(500.1f, context.getFloat("f3", 100)));
 
-    Assert.assertThrows(BadQueryContextException.class, () -> context.getFloat("f4", 5));
+    assertThrows(BadQueryContextException.class, () -> context.getFloat("f4", 5));
   }
 
   @Test
@@ -170,20 +316,20 @@ public class QueryContextTest
                     .put("m6", "abc")
                     .build()
     );
-    Assert.assertEquals(500_000_000, context.getHumanReadableBytes("m1", HumanReadableBytes.ZERO).getBytes());
-    Assert.assertEquals(500_000_000, context.getHumanReadableBytes("m2", HumanReadableBytes.ZERO).getBytes());
-    Assert.assertEquals(500 * 1024 * 1024L, context.getHumanReadableBytes("m3", HumanReadableBytes.ZERO).getBytes());
-    Assert.assertEquals(500 * 1024 * 1024L, context.getHumanReadableBytes("m4", HumanReadableBytes.ZERO).getBytes());
-    Assert.assertEquals(500_000_000, context.getHumanReadableBytes("m5", HumanReadableBytes.ZERO).getBytes());
+    assertEquals(500_000_000, context.getHumanReadableBytes("m1", HumanReadableBytes.ZERO).getBytes());
+    assertEquals(500_000_000, context.getHumanReadableBytes("m2", HumanReadableBytes.ZERO).getBytes());
+    assertEquals(500 * 1024 * 1024L, context.getHumanReadableBytes("m3", HumanReadableBytes.ZERO).getBytes());
+    assertEquals(500 * 1024 * 1024L, context.getHumanReadableBytes("m4", HumanReadableBytes.ZERO).getBytes());
+    assertEquals(500_000_000, context.getHumanReadableBytes("m5", HumanReadableBytes.ZERO).getBytes());
 
-    Assert.assertThrows(BadQueryContextException.class, () -> context.getHumanReadableBytes("m6", HumanReadableBytes.ZERO));
+    assertThrows(BadQueryContextException.class, () -> context.getHumanReadableBytes("m6", HumanReadableBytes.ZERO));
   }
 
   @Test
   public void testDefaultEnableQueryDebugging()
   {
-    Assert.assertFalse(QueryContext.empty().isDebug());
-    Assert.assertTrue(QueryContext.of(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true)).isDebug());
+    assertFalse(QueryContext.empty().isDebug());
+    assertTrue(QueryContext.of(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true)).isDebug());
   }
 
   // This test is a bit silly. It is retained because another test uses the
@@ -193,7 +339,7 @@ public class QueryContextTest
   {
     Map<String, Object> context = ImmutableMap.of("foo", "bar");
     Query<?> legacy = new LegacyContextQuery(context);
-    Assert.assertEquals(context, legacy.getContext());
+    assertEquals(context, legacy.getContext());
   }
 
   @Test
@@ -206,7 +352,7 @@ public class QueryContextTest
                                 .aggregators(Collections.singletonList(new CountAggregatorFactory("theCount")))
                                 .context(ImmutableMap.of("foo", "bar"))
                                 .build();
-    Assert.assertNotNull(timeseries.getContext());
+    assertNotNull(timeseries.getContext());
   }
 
   public static class LegacyContextQuery implements Query<Integer>

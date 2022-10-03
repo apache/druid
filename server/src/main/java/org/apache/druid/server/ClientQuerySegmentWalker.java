@@ -59,7 +59,6 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;

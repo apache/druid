@@ -114,7 +114,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     QueryContext queryContext = plannerContext.queryContext();
     String msqMode = MultiStageQueryContext.getMSQMode(queryContext);
     if (msqMode != null) {
-      MSQMode.populateDefaultQueryContext(msqMode, plannerContext.getQueryContext());
+      MSQMode.populateDefaultQueryContext(msqMode, plannerContext.queryContextMap());
     }
 
     final String ctxDestination =
@@ -122,7 +122,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     Object segmentGranularity;
     try {
-      segmentGranularity = Optional.ofNullable(plannerContext.getQueryContext()
+      segmentGranularity = Optional.ofNullable(plannerContext.queryContext()
                                                              .get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY))
                                    .orElse(jsonMapper.writeValueAsString(DEFAULT_SEGMENT_GRANULARITY));
     }
@@ -154,7 +154,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(queryContext);
 
     final List<Interval> replaceTimeChunks =
-        Optional.ofNullable(plannerContext.getQueryContext().get(DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS))
+        Optional.ofNullable(plannerContext.queryContext().get(DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS))
                 .map(
                     s -> {
                       if (s instanceof String && "all".equals(StringUtils.toLowerCase((String) s))) {
@@ -256,7 +256,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         taskId,
         querySpec,
         plannerContext.getSql(),
-        plannerContext.getQueryContext(),
+        plannerContext.queryContextMap(),
         sqlTypeNames,
         null
     );

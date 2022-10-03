@@ -42,6 +42,9 @@ public class QueryContext
 
   public QueryContext(Map<String, Object> context)
   {
+    // There is no semantic difference between an empty and a null context.
+    // Ensure that a context always exists to avoid the need to check for
+    // a null context. Jackson serialization will omit empty contexts.
     this.context = context == null ? Collections.emptyMap() : Collections.unmodifiableMap(context);
   }
 
@@ -52,7 +55,7 @@ public class QueryContext
 
   public static QueryContext of(Map<String, Object> context)
   {
-    return new QueryContext(context == null ? Collections.emptyMap() : context);
+    return new QueryContext(context);
   }
 
   public boolean isEmpty()
@@ -60,7 +63,7 @@ public class QueryContext
     return context.isEmpty();
   }
 
-  public Map<String, Object> getContext()
+  public Map<String, Object> asMap()
   {
     return context;
   }
@@ -191,7 +194,7 @@ public class QueryContext
   }
 
   /**
-   * Return a value as an {@code long}, returning the default value if the
+   * Return a value as an {@code float}, returning the default value if the
    * context value is not set.
    *
    * @throws BadQueryContextException for an invalid value

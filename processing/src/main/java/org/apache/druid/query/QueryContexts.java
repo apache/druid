@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
-
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -243,7 +243,16 @@ public class QueryContexts
         return Numbers.parseInt(value);
       }
       catch (NumberFormatException ignored) {
-        throw badValueException(key, "in integer format", value);
+
+        // Attempt to handle trivial decimal values: 12.00, etc.
+        // This mimics how Jackson will convert "12.00" to a Integer on request.
+        try {
+          return new BigDecimal((String) value).intValueExact();
+        }
+        catch (Exception nfe) {
+          // That didn't work either. Give up.
+          throw badValueException(key, "in integer format", value);
+        }
       }
     }
 
@@ -276,7 +285,16 @@ public class QueryContexts
         return Numbers.parseLong(value);
       }
       catch (NumberFormatException ignored) {
-        throw badValueException(key, "in long format", value);
+
+        // Attempt to handle trivial decimal values: 12.00, etc.
+        // This mimics how Jackson will convert "12.00" to a Long on request.
+        try {
+          return new BigDecimal((String) value).longValueExact();
+        }
+        catch (Exception nfe) {
+          // That didn't work either. Give up.
+          throw badValueException(key, "in long format", value);
+        }
       }
     }
     throw badTypeException(key, "a Long", value);
@@ -349,6 +367,39 @@ public class QueryContexts
     throw badTypeException(key, "a human readable number", value);
   }
 
+  /**
+   * Insert, update or remove a single key to produce an overridden context.
+   * Leaves the original context unchanged.
+   *
+   * @param context context to override
+   * @param key     key to insert, update or remove
+   * @param value   if {@code null}, remove the key. Otherwise, inert or replace
+   *                the key.
+   * @return a new context map
+   */
+  public static Map<String, Object> override(
+      final Map<String, Object> context,
+      final String key,
+      final Object value
+  )
+  {
+    Map<String, Object> overridden = new TreeMap<>();
+    if (value == null) {
+      overridden.remove(key);
+    } else {
+      overridden.put(key, value);
+    }
+    return overridden;
+  }
+
+  /**
+   * Insert or replace multiple keys to produce an overridden context.
+   * Leaves the original context unchanged.
+   *
+   * @param context   context to override
+   * @param overrides map of values to insert or replace
+   * @return a new context map
+   */
   public static Map<String, Object> override(
       final Map<String, Object> context,
       final Map<String, Object> overrides

@@ -105,6 +105,9 @@ public interface Query<T>
    * Returns the query context as a {@link QueryContext}, which provides
    * convenience methods for accessing typed context values. The returned
    * instance is a view on top of the context provided by {@link #getContext()}.
+   * <p>
+   * The default implementation is for backward compatibility. Derived classes should
+   * store and return the {@link QueryContext} directly.
    */
   default QueryContext context()
   {

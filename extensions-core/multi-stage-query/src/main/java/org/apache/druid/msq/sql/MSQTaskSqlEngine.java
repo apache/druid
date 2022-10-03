@@ -166,7 +166,7 @@ public class MSQTaskSqlEngine implements SqlEngine
   {
     validateNoDuplicateAliases(fieldMappings);
 
-    if (plannerContext.getQueryContext().containsKey(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)) {
+    if (plannerContext.queryContext().containsKey(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)) {
       throw new ValidationException(
           StringUtils.format("Cannot use \"%s\" without INSERT", DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
       );
@@ -207,14 +207,14 @@ public class MSQTaskSqlEngine implements SqlEngine
 
     try {
       segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(
-          plannerContext.getQueryContext()
+          plannerContext.queryContextMap()
       );
     }
     catch (Exception e) {
       throw new ValidationException(
           StringUtils.format(
               "Invalid segmentGranularity: %s",
-              plannerContext.getQueryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
+              plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
           ),
           e
       );

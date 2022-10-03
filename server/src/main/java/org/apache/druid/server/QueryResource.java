@@ -46,6 +46,7 @@ import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.BadQueryException;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
@@ -77,7 +78,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -383,13 +383,19 @@ public class QueryResource implements QueryCountStatsProvider
     catch (JsonParseException e) {
       throw new BadJsonQueryException(e);
     }
-    String prevEtag = getPreviousEtag(req);
 
-    if (prevEtag != null) {
-      baseQuery.getContext().put(HEADER_IF_NONE_MATCH, prevEtag);
+    String prevEtag = getPreviousEtag(req);
+    if (prevEtag == null) {
+      return baseQuery;
     }
 
-    return baseQuery;
+    return baseQuery.withOverriddenContext(
+        QueryContexts.override(
+            baseQuery.getContext(),
+            HEADER_IF_NONE_MATCH,
+            prevEtag
+        )
+    );
   }
 
   private static String getPreviousEtag(final HttpServletRequest req)

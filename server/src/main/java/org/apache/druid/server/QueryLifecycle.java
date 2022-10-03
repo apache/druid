@@ -62,7 +62,6 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
