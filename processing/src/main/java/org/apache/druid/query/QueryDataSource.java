@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
@@ -98,6 +99,12 @@ public class QueryDataSource implements DataSource
   )
   {
     return Function.identity();
+  }
+
+  @Override
+  public byte[] getCacheKey(DataSourceAnalysis dataSourceAnalysis)
+  {
+    return new byte[]{};
   }
 
   @Override

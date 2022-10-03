@@ -33,7 +33,9 @@ import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -59,6 +61,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -86,6 +89,8 @@ public class JoinDataSource implements DataSource
   private final String rightPrefix;
   private final JoinConditionAnalysis conditionAnalysis;
   private final JoinType joinType;
+  private static final byte JOIN_OPERATION = 0x1;
+  private static final Logger log = new Logger(JoinDataSource.class);
   // An optional filter on the left side if left is direct table access
   @Nullable
   private final DimFilter leftFilter;
@@ -424,5 +429,33 @@ public class JoinDataSource implements DataSource
         analysis.getBaseQuery().orElse(query)
     );
     return segmentMapFn;
+  }
+
+  @Override
+  public byte[] getCacheKey(DataSourceAnalysis dataSourceAnalysis)
+  {
+    final List<PreJoinableClause> clauses = dataSourceAnalysis.getPreJoinableClauses();
+    if (clauses.isEmpty()) {
+      throw new IAE("No join clauses to build the cache key for data source [%s]", dataSourceAnalysis.getDataSource());
+    }
+
+    final CacheKeyBuilder keyBuilder;
+    keyBuilder = new CacheKeyBuilder(JOIN_OPERATION);
+    if (dataSourceAnalysis.getJoinBaseTableFilter().isPresent()) {
+      keyBuilder.appendCacheable(dataSourceAnalysis.getJoinBaseTableFilter().get());
+    }
+    for (PreJoinableClause clause : clauses) {
+      Optional<byte[]> bytes = joinableFactoryWrapper.getJoinableFactory().computeJoinCacheKey(clause.getDataSource(), clause.getCondition());
+      if (!bytes.isPresent()) {
+        // Encountered a data source which didn't support cache yet
+        log.debug("skipping caching for join since [%s] does not support caching", clause.getDataSource());
+        return new byte[]{};
+      }
+      keyBuilder.appendByteArray(bytes.get());
+      keyBuilder.appendString(clause.getCondition().getOriginalExpression());
+      keyBuilder.appendString(clause.getPrefix());
+      keyBuilder.appendString(clause.getJoinType().name());
+    }
+    return keyBuilder.build();
   }
 }

@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.List;
@@ -99,4 +100,12 @@ public interface DataSource
    * @return the segment function
    */
   Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc);
+
+  /**
+   *
+   * @return a non-empty byte array - If there is join datasource involved and caching is possible.
+   * NULL - There is a join but caching is not possible. It may happen if one of the participating datasource
+   * in the JOIN is not cacheable.
+   */
+  byte[] getCacheKey(DataSourceAnalysis dataSourceAnalysis);
 }
