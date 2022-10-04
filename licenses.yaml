@@ -5492,30 +5492,30 @@ license_file_path: licenses/bin/csstype.MIT
 name: "d3-array"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 2.3.3
-license_file_path: licenses/bin/d3-array.BSD3
+version: 3.2.0
+license_file_path: licenses/bin/d3-array.ISC
 
 ---
 
 name: "d3-axis"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 1.0.12
-license_file_path: licenses/bin/d3-axis.BSD3
+version: 3.0.0
+license_file_path: licenses/bin/d3-axis.ISC
 
 ---
 
 name: "d3-color"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 1.4.0
-license_file_path: licenses/bin/d3-color.BSD3
+version: 3.1.0
+license_file_path: licenses/bin/d3-color.ISC
 
 ---
 
@@ -5532,30 +5532,30 @@ license_file_path: licenses/bin/d3-format.BSD3
 name: "d3-interpolate"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 1.3.2
-license_file_path: licenses/bin/d3-interpolate.BSD3
+version: 3.0.1
+license_file_path: licenses/bin/d3-interpolate.ISC
 
 ---
 
 name: "d3-scale"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 3.2.0
-license_file_path: licenses/bin/d3-scale.BSD3
+version: 4.0.2
+license_file_path: licenses/bin/d3-scale.ISC
 
 ---
 
 name: "d3-selection"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 1.4.0
-license_file_path: licenses/bin/d3-selection.BSD3
+version: 3.0.0
+license_file_path: licenses/bin/d3-selection.ISC
 
 ---
 
@@ -5834,6 +5834,16 @@ license_name: MIT License
 copyright: Sindre Sorhus
 version: 3.3.0
 license_file_path: licenses/bin/import-fresh.MIT
+
+---
+
+name: "internmap"
+license_category: binary
+module: web-console
+license_name: ISC License
+copyright: Mike Bostock
+version: 2.0.3
+license_file_path: licenses/bin/internmap.ISC
 
 ---
 
