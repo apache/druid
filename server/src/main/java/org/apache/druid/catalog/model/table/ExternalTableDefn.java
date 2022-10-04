@@ -200,7 +200,7 @@ public abstract class ExternalTableDefn extends TableDefn
       Map<String, ParameterDefn> params = new HashMap<>();
       for (ParameterDefn param : parameters) {
         if (params.put(param.name(), param) != null) {
-          throw new ISE("Duplicate parameter: ", param.name());
+          throw new ISE("Duplicate parameter: %s", param.name());
         }
       }
       this.parameterMap = ImmutableMap.copyOf(params);

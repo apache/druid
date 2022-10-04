@@ -181,7 +181,10 @@ public class MeasureTypes
     if (Strings.isNullOrEmpty(argGroup)) {
       args = new String[] {};
     } else {
-      args = argGroup.trim().split("\\s*,\\s*");
+      args = argGroup.split(",");
+      for (int i = 0; i < args.length; i++) {
+        args[i] = args[i].trim();
+      }
     }
     List<MeasureType> candidates = TYPES.get(fnName);
     if (candidates == null) {

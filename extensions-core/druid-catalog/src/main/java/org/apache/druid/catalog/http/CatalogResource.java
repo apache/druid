@@ -189,13 +189,14 @@ public class CatalogResource
     }
 
     // The given table spec has to be valid for the given schema.
-    if (spec != null && !schema.accepts(spec.type())) {
+    if (!schema.accepts(spec.type())) {
       return Actions.badRequest(
           Actions.INVALID,
           StringUtils.format(
               "Cannot create tables of type %s in schema %s",
-              spec == null ? "null" : spec.getClass().getSimpleName(),
-                  tableId.schema())
+              spec.getClass().getSimpleName(),
+              tableId.schema()
+          )
       );
     }
 
