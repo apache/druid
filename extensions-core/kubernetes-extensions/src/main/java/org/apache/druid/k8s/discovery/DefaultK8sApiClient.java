@@ -134,16 +134,20 @@ public class DefaultK8sApiClient implements K8sApiClient
               if (item != null && item.type != null) {
                 DiscoveryDruidNodeAndResourceVersion result = null;
                 if (item.object != null && item.object.getMetadata() != null) {
-                  result = new DiscoveryDruidNodeAndResourceVersion(
-                    item.object.getMetadata().getResourceVersion(),
-                    getDiscoveryDruidNodeFromPodDef(nodeRole, item.object)
-                  );
+                  if (item.object.getMetadata().getAnnotations() != null) {
+                    result = new DiscoveryDruidNodeAndResourceVersion(
+                        item.object.getMetadata().getResourceVersion(),
+                        getDiscoveryDruidNodeFromPodDef(nodeRole, item.object)
+                    );
+                  } else {
+                    LOGGER.debug("item of type [%s] had NULL annotations when watching nodeRole [%s]", item.type, nodeRole);
+                  }
                 } else {
                   // The item's object, or the metadata it contains, can be null in some
                   // cases -- likely due to a blip in the k8s watch. Handle that by
                   // passing the null upwards. The caller needs to know that the object
                   // can be null.
-                  LOGGER.debug("item of type " + item.type + " was NULL or had NULL metadata when watching nodeRole [%s]", nodeRole);
+                  LOGGER.debug("item of type [%s] was NULL or had NULL metadata when watching nodeRole [%s]", item.type, nodeRole);
                 }
 
                 obj = new Watch.Response<DiscoveryDruidNodeAndResourceVersion>(
