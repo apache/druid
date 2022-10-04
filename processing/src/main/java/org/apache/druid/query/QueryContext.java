@@ -30,9 +30,24 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 
 /**
  * Immutable holder for query context parameters with typed access methods.
+ * Code builds up a map of context values from serialization or during
+ * planning. Once that map is handed to the {@code QueryContext}, that map
+ * is effectively immutable.
+ * <p>
+ * The implementation uses a {@link TreeMap} so that the serialized form of a query
+ * lists context values in a deterministic order. Jackson will call
+ * {@code getContext()} on the query, which will call {@link asMap()} here,
+ * which returns the sorted {@code TreeMap}.
+ * <p>
+ * The {@code TreeMap} is a mutable class. We'd prefer an immutable class, but
+ * we can choose either ordering or immutability. Since the semantics of the context
+ * is that it is immutable once it is placed in a query. Code should NEVER get the
+ * context map from a query and modify it, even if the actual implementation
+ * allows it.
  */
 public class QueryContext
 {
@@ -45,7 +60,7 @@ public class QueryContext
     // There is no semantic difference between an empty and a null context.
     // Ensure that a context always exists to avoid the need to check for
     // a null context. Jackson serialization will omit empty contexts.
-    this.context = context == null ? Collections.emptyMap() : Collections.unmodifiableMap(context);
+    this.context = context == null ? Collections.emptyMap() : new TreeMap<>(context);
   }
 
   public static QueryContext empty()

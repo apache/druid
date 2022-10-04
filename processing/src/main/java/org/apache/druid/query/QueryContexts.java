@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -373,7 +374,7 @@ public class QueryContexts
    *
    * @param context context to override
    * @param key     key to insert, update or remove
-   * @param value   if {@code null}, remove the key. Otherwise, inert or replace
+   * @param value   if {@code null}, remove the key. Otherwise, insert or replace
    *                the key.
    * @return a new context map
    */
@@ -383,7 +384,7 @@ public class QueryContexts
       final Object value
   )
   {
-    Map<String, Object> overridden = new TreeMap<>();
+    Map<String, Object> overridden = new HashMap<>(context);
     if (value == null) {
       overridden.remove(key);
     } else {
@@ -405,7 +406,7 @@ public class QueryContexts
       final Map<String, Object> overrides
   )
   {
-    Map<String, Object> overridden = new TreeMap<>();
+    Map<String, Object> overridden = new HashMap<>();
     if (context != null) {
       overridden.putAll(context);
     }
