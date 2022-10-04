@@ -40,7 +40,7 @@ an [UnknownError](./reference.md#error-codes) with a message including "No space
 - SELECT from a Druid datasource does not include unpublished real-time data.
 
 - GROUPING SETS and UNION ALL are not implemented. Queries using these features return a
-  [QueryNotSupported](reference.md#error-codes) error.
+  [QueryNotSupported](reference.md#error-codes) error. For some COUNT DISTINCT queries, the planner attempts to use GROUPING SETS, which causes the following exception: `Must not have 'subtotalsSpec'`.
 
 - The numeric varieties of the EARLIEST and LATEST aggregators do not work properly. Attempting to use the numeric
   varieties of these aggregators lead to an error like
