@@ -1,6 +1,6 @@
 ---
 id: rule-configuration
-title: "Retaining or automatically dropping data"
+title: "Using rules to drop and retain data"
 ---
 
 <!--
@@ -23,212 +23,242 @@ title: "Retaining or automatically dropping data"
   -->
 
 
-In Apache Druid, Coordinator processes use rules to determine what data should be loaded to or dropped from the cluster. Rules are used for data retention and query execution, and are set via the [web console](./web-console.md).
+In Apache Druid, [Coordinator processes](../design/coordinator.md) use rules to determine what data to retain or drop from the cluster. 
 
-There are three types of rules, i.e., load rules, drop rules, and broadcast rules. Load rules indicate how segments should be assigned to different historical process tiers and how many replicas of a segment should exist in each tier.
-Drop rules indicate when segments should be dropped entirely from the cluster. Finally, broadcast rules indicate how segments of different datasources should be co-located in Historical processes.
+There are three types of rules: [load](#load-rules), [drop](#drop-rules), and [broadcast](#broadcast-rules). See the sections below for more information on each type.
 
-The Coordinator loads a set of rules from the metadata storage. Rules may be specific to a certain datasource and/or a
-default set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The
-Coordinator will cycle through all used segments and match each segment with the first rule that applies. Each segment
-may only match a single rule.
+The Coordinator loads a set of rules from the metadata storage. You can configure a default set of rules to apply to all data sources, and/or you can set specific rules for specific data sources. 
 
-Note: It is recommended that the web console is used to configure rules. However, the Coordinator process does have HTTP endpoints to programmatically configure rules.
+## Set a rule
+
+To set a retention rule for a specific data source, send a POST request to the following API:
+
+`/druid/coordinator/v1/rules/_default`
+
+To set a retention rule for a specific data source, send a POST request to the following API:
+
+`/druid/coordinator/v1/rules/{dataSourceName}`
+
+The rules API accepts a list of rules. The payload you send in the API request for each rule is specific to the rules types outlined below.
+
+You can also set rules using the [web console](./web-console.md). Go into a data source and select **Actions** > **Edit retention rules**.
+
+### Rule order
+
+The order of rules is important. The Coordinator reads rules in the order in which they appear in the rules list. For example, in the following screenshot the Coordinator evaluates data against rule 1, then rule 2, then rule 3:
+
+![retention rules](../assets/retention-rules.png)
+
+In the web console you can use the up and down arrows on the right side of the interface to change the order of the rules.
+
+The Coordinator cycles through all used segments and matches each segment with the first rule that applies. Each segment can only match a single rule.
 
 ## Load rules
 
-Load rules indicate how many replicas of a segment should exist in a server tier. **Please note**: If a Load rule is used to retain only data from a certain interval or period, it must be accompanied by a Drop rule. If a Drop rule is not included, data not within the specified interval or period will be retained by the default rule (loadForever).
+Load rules define how Druid assigns segments to historical process tiers, and how many replicas of a segment exist in each tier.
 
-### Forever Load Rule
+If you want to use a load rule to retain only data from a defined period of time, you must also define a drop rule. If you don't define a drop rule, Druid retains data that doesn't lie within your defined period according to the default rule, `loadForever`.
 
-Forever load rules are of the form:
+### Forever load rule
+
+Forever load rules have type `loadForever` and the following example API payload:
 
 ```json
 {
-  "type" : "loadForever",
+  "type": "loadForever",
   "tieredReplicants": {
     "hot": 1,
-    "_default_tier" : 1
+    "_default_tier": 1
   }
 }
 ```
+Set the following property:
+- `tieredReplicants`: a JSON object containing tier names and the number of replicas for each tier.
 
-* `type` - this should always be "loadForever"
-* `tieredReplicants` - A JSON Object where the keys are the tier names and values are the number of replicas for that tier.
+The forever load rule is the default rule Druid applies to data sources.
 
+### Interval load rule
 
-### Interval Load Rule
+Interval load rules have type `loadByInterval` and the following example API payload:
 
-Interval load rules are of the form:
 
 ```json
 {
-  "type" : "loadByInterval",
+  "type": "loadByInterval",
   "interval": "2012-01-01/2013-01-01",
   "tieredReplicants": {
     "hot": 1,
-    "_default_tier" : 1
+    "_default_tier": 1
   }
 }
 ```
 
-* `type` - this should always be "loadByInterval"
-* `interval` - A JSON Object representing ISO-8601 Intervals
-* `tieredReplicants` - A JSON Object where the keys are the tier names and values are the number of replicas for that tier.
+Set the following properties:
+- `interval`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) intervals.
+- `tieredReplicants`: a JSON object containing tier names and the number of replicas for each tier.
 
-### Period Load Rule
+### Period load rule
 
-Period load rules are of the form:
+Period load rules have type `loadByPeriod` and the following example API payload:
 
 ```json
 {
-  "type" : "loadByPeriod",
-  "period" : "P1M",
-  "includeFuture" : true,
+  "type": "loadByPeriod",
+  "period": "P1M",
+  "includeFuture": true,
   "tieredReplicants": {
       "hot": 1,
-      "_default_tier" : 1
+      "_default_tier": 1
   }
 }
 ```
 
-* `type` - this should always be "loadByPeriod"
-* `period` - A JSON Object representing ISO-8601 Periods
-* `includeFuture` - A JSON Boolean indicating whether the load period should include the future. This property is optional, Default is true.
-* `tieredReplicants` - A JSON Object where the keys are the tier names and values are the number of replicas for that tier.
+Set the following properties:
+- `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the future or to the current time, depending on the `includeFuture` flag.
+- `includeFuture`: a boolean flag to indicate whether the load period includes the future. Defaults to `true`.
+- `tieredReplicants`: a JSON object containing tier names and the number of replicas for each tier.
 
-The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period *overlaps* the interval.
+Druid compares a segment's interval to the period you specify in the rule. The rule matches if the period overlaps the segment interval. 
 
-## Drop Rules
+## Drop rules
 
-Drop rules indicate when segments should be dropped from the cluster.
+Drop rules define when Druid drops segments from the cluster.
 
-### Forever Drop Rule
+### Forever drop rule
 
-Forever drop rules are of the form:
-
-```json
-{
-  "type" : "dropForever"
-}
-```
-
-* `type` - this should always be "dropForever"
-
-All segments that match this rule are dropped from the cluster.
-
-
-### Interval Drop Rule
-
-Interval drop rules are of the form:
+Forever drop rules have type `dropForever`:
 
 ```json
 {
-  "type" : "dropByInterval",
-  "interval" : "2012-01-01/2013-01-01"
+  "type": "dropForever",
 }
 ```
 
-* `type` - this should always be "dropByInterval"
-* `interval` - A JSON Object representing ISO-8601 Periods
+Druid drops all segments with this rule from the cluster. 
 
-A segment is dropped if the interval contains the interval of the segment.
+### Interval drop rule
 
-### Period Drop Rule
-
-Period drop rules are of the form:
+Interval drop rules have type `dropByInterval` and the following example API payload:
 
 ```json
 {
-  "type" : "dropByPeriod",
-  "period" : "P1M",
-  "includeFuture" : true
+  "type": "dropByInterval",
+  "interval": "2012-01-01/2013-01-01"
 }
 ```
 
-* `type` - this should always be "dropByPeriod"
-* `period` - A JSON Object representing ISO-8601 Periods
-* `includeFuture` - A JSON Boolean indicating whether the load period should include the future. This property is optional, Default is true.
+Set the following property:
+- `interval`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) intervals.
 
-The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period *contains* the interval. This drop rule always dropping recent data.
+Druid drops all segments that match the defined interval.
 
-### Period Drop Before Rule
+### Period drop rule
 
-Period drop before rules are of the form:
+Period drop rules have type `dropByPeriod` and the following example API payload:
 
 ```json
 {
-  "type" : "dropBeforeByPeriod",
-  "period" : "P1M"
+  "type": "dropByPeriod",
+  "period": "P1M",
+  "includeFuture": true,
 }
 ```
 
-* `type` - this should always be "dropBeforeByPeriod"
-* `period` - A JSON Object representing ISO-8601 Periods
+Set the following properties:
+- `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the future or to the current time, depending on the `includeFuture` flag.
+- `includeFuture`: a boolean flag to indicate whether the drop period includes the future. Defaults to `true`.
 
-The interval of a segment will be compared against the specified period. The period is from some time in the past to the current time. The rule matches if the interval before the period. If you just want to retain recent data, you can use this rule to drop the old data that before a specified period and add a `loadForever` rule to follow it. Notes, `dropBeforeByPeriod + loadForever` is equivalent to `loadByPeriod(includeFuture = true) + dropForever`.
+Druid compares a segment's interval to the period you specify in the rule. The rule matches if the period contains the segment interval. This rule always drops recent data.
 
-## Broadcast Rules
+### Period drop before rule
 
-Broadcast rules indicate that segments of a data source should be loaded by all servers of a cluster of the following types: historicals, brokers, tasks, and indexers.
-
-Note that the broadcast segments are only directly queryable through the historicals, but they are currently loaded on other server types to support join queries.
-
-### Forever Broadcast Rule
-
-Forever broadcast rules are of the form:
+Period drop rules have type `dropBeforeByPeriod` and the following example API payload:
 
 ```json
 {
-  "type" : "broadcastForever"
+  "type": "dropBeforeByPeriod",
+  "period": "P1M"
 }
 ```
 
-* `type` - this should always be "broadcastForever"
+Set the following property:
+- `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods.
 
-This rule applies to all segments of a datasource, covering all intervals.
+Druid compares a segment's interval to the period you specify in the rule. The rule matches if the segment interval is before the specified period. 
 
-### Interval Broadcast Rule
+If you only want to retain recent data, you can use this rule to drop old data before a specified period, and add a `loadForever` rule to retain the data that follows it. Note that the rule combination `dropBeforeByPeriod` + `loadForever` is equivalent to `loadByPeriod(includeFuture = true)` + `dropForever`.
 
-Interval broadcast rules are of the form:
+## Broadcast rules
+
+Broadcast rules instruct Druid to load segments of a data source in all brokers, historicals, tasks, and indexers in the cluster.
+
+Note that the broadcast segments are only directly queryable through the historicals, but Druid loads them on other server types to support join queries.
+
+### Forever broadcast rule
+
+Forever broadcast rules have type `broadcastForever`:
 
 ```json
 {
-  "type" : "broadcastByInterval",
-  "interval" : "2012-01-01/2013-01-01"
+  "type": "broadcastForever",
 }
 ```
 
-* `type` - this should always be "broadcastByInterval"
-* `interval` - A JSON Object representing ISO-8601 Periods. Only the segments of the interval will be broadcasted.
+This rule applies to all segments of a datasource, covering all intervals. 
 
-### Period Broadcast Rule
+### Interval broadcast rule
 
-Period broadcast rules are of the form:
+Interval broadcast rules have type `broadcastByInterval` and the following example API payload:
 
 ```json
 {
-  "type" : "broadcastByPeriod",
-  "period" : "P1M",
-  "includeFuture" : true
+  "type": "broadcastByInterval",
+  "interval": "2012-01-01/2013-01-01"
 }
 ```
 
-* `type` - this should always be "broadcastByPeriod"
-* `period` - A JSON Object representing ISO-8601 Periods
-* `includeFuture` - A JSON Boolean indicating whether the load period should include the future. This property is optional, Default is true.
+Set the following property:
 
-The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period *overlaps* the interval.
+- `interval`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) intervals.
 
-## Permanently deleting data
+Druid broadcasts all segments that match the defined interval.
 
-Druid can fully drop data from the cluster, wipe the metadata store entry, and remove the data from deep storage for any
-segments that are marked as unused (segments dropped from the cluster via rules are always marked as unused). You can
-submit a [kill task](../ingestion/tasks.md) to the [Overlord](../design/overlord.md) to do this.
+### Period broadcast rule
 
-## Reloading dropped data
+Period broadcast rules have type `broadcastByPeriod` and the following example API payload:
 
-Data that has been dropped from a Druid cluster cannot be reloaded using only rules. To reload dropped data in Druid,
-you must first set your retention period (i.e. changing the retention period from 1 month to 2 months), and then mark as
-used all segments belonging to the datasource in the web console, or through the Druid Coordinator
-endpoints.
+```json
+{
+  "type": "broadcastByPeriod",
+  "period": "P1M",
+  "includeFuture": true,
+}
+```
+
+Set the following properties:
+
+- `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the future or to the current time, depending on the `includeFuture` flag.
+- `includeFuture`: a boolean flag to indicate whether the broadcast period includes the future. Defaults to `true`.
+
+Druid compares a segment's interval to the period you specify in the rule. The rule matches if the period overlaps the segment interval.
+
+## Permanently delete data
+
+Druid can fully drop data from the cluster, wipe the metadata store entry, and remove the data from deep storage for any segments marked `unused`. Note that Druid always marks segments dropped from the cluster by rules as `unused`. You can submit a [kill task](./ingestion/tasks) to the [Overlord](./design/overlord) to do this.
+
+## Reload dropped data
+
+You can't use a single rule to reload data Druid has dropped from a cluster.
+
+To reload dropped data:
+
+1. Set your retention period&mdash;for example, change the retention period from one month to two months.
+2. Use the web console or the API to mark all segments belonging to the data source as `used`.
+
+## Learn more
+
+For more information about using retention rules in Druid, see the following topics:
+
+- [Tutorial: Configuring data retention](../tutorials/tutorial-retention.md)
+- [Configure Druid for mixed workloads](../operations/mixed-workloads.md)
+- [Router process](../design/router.md)
