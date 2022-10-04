@@ -139,9 +139,10 @@ public class DefaultK8sApiClient implements K8sApiClient
                     getDiscoveryDruidNodeFromPodDef(nodeRole, item.object)
                   );
                 } else {
-                  // The item's object can be null in some cases -- likely due to a blip
-                  // in the k8s watch. Handle that by passing the null upwards. The caller
-                  // needs to know that the object can be null.
+                  // The item's object, or the metadata it contains, can be null in some
+                  // cases -- likely due to a blip in the k8s watch. Handle that by
+                  // passing the null upwards. The caller needs to know that the object
+                  // can be null.
                   LOGGER.debug("item of type " + item.type + " was NULL or had NULL metadata when watching nodeRole [%s]", nodeRole);
                 }
 
