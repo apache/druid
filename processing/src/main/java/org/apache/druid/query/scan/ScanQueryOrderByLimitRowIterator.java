@@ -106,7 +106,7 @@ public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
       count++;
     }
     final List<Object> sortedElements = new ArrayList<>(multiColumnSorter.size());
-    Iterators.addAll(sortedElements, multiColumnSorter.drain());
+    Iterators.addAll(sortedElements, multiColumnSorter.drainElement());
     return new ScanResultValue(null, columns, sortedElements);
   }
 }

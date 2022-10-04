@@ -19,10 +19,12 @@
 
 package org.apache.druid.collections;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -31,11 +33,11 @@ import java.util.stream.Collectors;
  */
 public class TreeSetBasedMulticolumnSorter<T> implements MultiColumnSorter<T>
 {
-  private final TreeSet<MultiColumnSorterElement<T>> sortedMultiset;
+  private final TreeSet<MultiColumnSorterElement<T>> treeSet;
 
   public TreeSetBasedMulticolumnSorter(Comparator<MultiColumnSorter.MultiColumnSorterElement<T>> comparator)
   {
-    sortedMultiset = new TreeSet<>(comparator);
+    treeSet = new TreeSet<>(comparator);
   }
 
 
@@ -43,7 +45,7 @@ public class TreeSetBasedMulticolumnSorter<T> implements MultiColumnSorter<T>
   public void add(MultiColumnSorter.MultiColumnSorterElement<T> sorterElement)
   {
     try {
-      sortedMultiset.add(sorterElement);
+      treeSet.add(sorterElement);
     }
     catch (ClassCastException e) {
       throw new ISE("The sorted column cannot have different types of values.");
@@ -51,22 +53,31 @@ public class TreeSetBasedMulticolumnSorter<T> implements MultiColumnSorter<T>
   }
 
   @Override
-  public Iterator<T> drain()
+  public Iterator<T> drainElement()
   {
-    return sortedMultiset.stream()
-                         .map(sorterElement -> sorterElement.getElement())
-                         .collect(Collectors.toSet())
-                         .iterator();
+    return treeSet.stream()
+                  .map(sorterElement -> sorterElement.getElement())
+                  .collect(Collectors.toList())
+                  .iterator();
+  }
+
+  @Override
+  public Iterator<ImmutableMap<T, List<Comparable>>> drainOrderByColumValues()
+  {
+    return treeSet.stream()
+                  .map(sorterElement -> ImmutableMap.of(sorterElement.getElement(), sorterElement.getOrderByColumValues()))
+                  .collect(Collectors.toList())
+                  .iterator();
   }
 
   public Iterator<T> drain(int limit)
   {
-    return sortedMultiset.stream().limit(limit).map(sorterElement -> sorterElement.getElement()).collect(Collectors.toList()).iterator();
+    return treeSet.stream().limit(limit).map(sorterElement -> sorterElement.getElement()).collect(Collectors.toList()).iterator();
   }
 
   @Override
   public int size()
   {
-    return sortedMultiset.size();
+    return treeSet.size();
   }
 }

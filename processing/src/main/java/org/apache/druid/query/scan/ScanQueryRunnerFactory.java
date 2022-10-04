@@ -412,7 +412,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         doneScanning = yielder.isDone();
       }
       final List<ScanResultValue> sortedElements = new ArrayList<>(multiColumnSorter.size());
-      Iterators.addAll(sortedElements, multiColumnSorter.drain());
+      Iterators.addAll(sortedElements, multiColumnSorter.drainElement());
       return Sequences.simple(sortedElements);
     }
     catch (Exception e) {

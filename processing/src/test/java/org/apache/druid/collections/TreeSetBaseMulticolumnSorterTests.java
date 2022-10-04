@@ -185,11 +185,12 @@ public class TreeSetBaseMulticolumnSorterTests
     ISE ise = null;
     try {
       multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(3, ImmutableList.of(0, 0, 3L)));
-      multiColumnSorter.drain();
+      multiColumnSorter.drainElement();
     }
     catch (ISE e) {
       ise = e;
     }
+    Assert.assertNotNull(ise);
     Assert.assertEquals("The sorted column cannot have different types of values.", ise.getMessage());
   }
 }

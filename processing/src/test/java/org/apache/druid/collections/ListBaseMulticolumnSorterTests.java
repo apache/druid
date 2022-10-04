@@ -53,7 +53,7 @@ public class ListBaseMulticolumnSorterTests
     multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(1, ImmutableList.of(3)));
     multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(9, ImmutableList.of(6)));
     multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(11, ImmutableList.of(6)));
-    Iterator<Integer> it = multiColumnSorter.drain(5);
+    Iterator<Integer> it = multiColumnSorter.drainElement(5);
     List<Integer> expectedValues = ImmutableList.of(100, 1, 1, 2, 3);
     int i = 0;
     while (it.hasNext()) {
@@ -82,7 +82,7 @@ public class ListBaseMulticolumnSorterTests
     multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(1, ImmutableList.of(3)));
     multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(9, ImmutableList.of(6)));
     multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(11, ImmutableList.of(6)));
-    Iterator<Integer> it = multiColumnSorter.drain(5);
+    Iterator<Integer> it = multiColumnSorter.drainElement(5);
     List<Integer> expectedValues = ImmutableList.of(100, 1, 1, 2, 3);
     int i = 0;
     while (it.hasNext()) {
@@ -135,7 +135,7 @@ public class ListBaseMulticolumnSorterTests
     multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(1, ImmutableList.of(0, 0, 3)));
     multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(9, ImmutableList.of(0, 0, 6)));
     multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(11, ImmutableList.of(0, 0, 6)));
-    Iterator<Integer> it = multiColumnSorter.drain(5);
+    Iterator<Integer> it = multiColumnSorter.drainElement(5);
     List<Integer> expectedValues = ImmutableList.of(6, 5, 1, 7, 9);
     int i = 0;
     while (it.hasNext()) {
@@ -166,7 +166,7 @@ public class ListBaseMulticolumnSorterTests
     multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(1, ImmutableList.of(0, 0, 3)));
     multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(9, ImmutableList.of(0, 0, 6)));
     multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(11, ImmutableList.of(0, 0, 6)));
-    Iterator<Integer> it = multiColumnSorter.drain(4);
+    Iterator<Integer> it = multiColumnSorter.drainElement(4);
     List<Integer> expectedValues = ImmutableList.of(6, 5, 1, 7);
     int i = 0;
     while (it.hasNext()) {
@@ -205,7 +205,7 @@ public class ListBaseMulticolumnSorterTests
     ISE ise = null;
     try {
       multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(3, ImmutableList.of(0, 0, 3L)));
-      multiColumnSorter.drain();
+      multiColumnSorter.drainElement();
     }
     catch (ISE e) {
       ise = e;

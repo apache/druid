@@ -21,7 +21,7 @@ package org.apache.druid.query.scan;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.druid.collections.MultiColumnSorter;
 import org.apache.druid.collections.QueueBasedMultiColumnSorter;
@@ -47,12 +47,14 @@ import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -81,42 +83,7 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
       responseContext.putTimeoutTime(JodaUtils.MAX_INSTANT);
     }
     if (scanQuery.scanOrderByNonTime()) {
-      if (scanQuery.getContext().containsKey(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)) {
-        if (ListBasedOrderByQueryRunner.class.getSimpleName()
-                                             .equalsIgnoreCase(scanQuery.getContext()
-                                                                        .get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)
-                                                                        .toString())) {
-          return new ListBasedOrderByQueryRunner(engine, segment).process(
-              scanQuery,
-              segment,
-              responseContext,
-              queryPlus.getQueryMetrics()
-          );
-        } else if (TreeMultisetBasedOrderByQueryRunner.class.getSimpleName()
-                                                            .equalsIgnoreCase(scanQuery.getContext()
-                                                                                       .get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)
-                                                                                       .toString()
-                                                            )) {
-          return new TreeMultisetBasedOrderByQueryRunner(engine, segment).process(
-              scanQuery,
-              segment,
-              responseContext,
-              queryPlus.getQueryMetrics()
-          );
-        } else if (TreeSetBasedOrderByQueryRunner.class.getSimpleName()
-                                                       .equalsIgnoreCase(scanQuery.getContext()
-                                                                                  .get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)
-                                                                                  .toString()
-                                                       )) {
-          return new TreeSetBasedOrderByQueryRunner(engine, segment).process(
-              scanQuery,
-              segment,
-              responseContext,
-              queryPlus.getQueryMetrics()
-          );
-        }
-      }
-      return process(scanQuery, segment, responseContext, queryPlus.getQueryMetrics());
+      return getOrderByQueryRunner(scanQuery).process(scanQuery, segment, responseContext, queryPlus.getQueryMetrics());
     } else {
       return new ScanQueryRunnerFactory.ScanQueryRunner(engine, segment).run(queryPlus, responseContext);
     }
@@ -231,29 +198,10 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
                                          .map(orderBy -> orderBy.getOrder().toString())
                                          .collect(Collectors.toList());
     final int limit = Math.toIntExact(query.getScanRowsLimit());
-    Comparator<MultiColumnSorter.MultiColumnSorterElement<Long>> comparator = new Comparator<MultiColumnSorter.MultiColumnSorterElement<Long>>()
-    {
-      @Override
-      public int compare(
-          MultiColumnSorter.MultiColumnSorterElement<Long> o1,
-          MultiColumnSorter.MultiColumnSorterElement<Long> o2
-      )
-      {
-        for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
-          if (o1.getOrderByColumValues().get(i) != (o2.getOrderByColumValues().get(i))) {
-            if (ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))) {
-              return Comparators.<Comparable>naturalNullsFirst()
-                                .compare(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i));
-            } else {
-              return Comparators.<Comparable>naturalNullsFirst()
-                                .compare(o2.getOrderByColumValues().get(i), o1.getOrderByColumValues().get(i));
-            }
-          }
-        }
-        return 0;
-      }
-    };
-    MultiColumnSorter<Long> multiColumnSorter = new QueueBasedMultiColumnSorter<Long>(limit, comparator);
+    MultiColumnSorter<Long> multiColumnSorter = getMultiColumnSorter(
+        orderByDirection,
+        limit
+    );
 
     Sequence<Cursor> cursorSequence = adapter.makeCursors(
         filter,
@@ -265,6 +213,7 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
         queryMetrics
     );
 
+    //Materialize the data of topKOffsetSequences in advance
     cursorSequence.map(cursor -> new TopKOffsetSequence(
         new TopKOffsetSequence.TopKOffsetIteratorMaker(
             sortColumns,
@@ -280,9 +229,8 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
     )).forEach((s) -> {
       s.toList();
     });
-
-    final Set<Long> topKOffset = Sets.newHashSetWithExpectedSize(multiColumnSorter.size());
-    Iterators.addAll(topKOffset, multiColumnSorter.drain());
+    Map<Long, List<Comparable>> topKOffsetSortValueMap = Maps.newHashMapWithExpectedSize(multiColumnSorter.size());
+    multiColumnSorter.drainOrderByColumValues().forEachRemaining(d -> topKOffsetSortValueMap.putAll(d));
 
     return Sequences.concat(
         adapter
@@ -305,9 +253,65 @@ class OrderByQueryRunner implements QueryRunner<ScanResultValue>
                     segmentId,
                     allColumns,
                     responseContext,
-                    topKOffset
+                    topKOffsetSortValueMap,
+                    sortColumns
                 )
             ))
     );
+  }
+
+  @Nonnull
+  private MultiColumnSorter<Long> getMultiColumnSorter(List<String> orderByDirection, int limit)
+  {
+    Comparator<MultiColumnSorter.MultiColumnSorterElement<Long>> comparator = new Comparator<MultiColumnSorter.MultiColumnSorterElement<Long>>()
+    {
+      @Override
+      public int compare(
+          MultiColumnSorter.MultiColumnSorterElement<Long> o1,
+          MultiColumnSorter.MultiColumnSorterElement<Long> o2
+      )
+      {
+        for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
+          if (o1.getOrderByColumValues().get(i) != (o2.getOrderByColumValues().get(i))) {
+            if (ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))) {
+              return Comparators.<Comparable>naturalNullsFirst()
+                                .compare(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i));
+            } else {
+              return Comparators.<Comparable>naturalNullsFirst()
+                                .compare(o2.getOrderByColumValues().get(i), o1.getOrderByColumValues().get(i));
+            }
+          }
+        }
+        return 0;
+      }
+    };
+
+    MultiColumnSorter<Long> multiColumnSorter = new QueueBasedMultiColumnSorter<Long>(limit, comparator);
+    return multiColumnSorter;
+  }
+
+  private OrderByQueryRunner getOrderByQueryRunner(ScanQuery scanQuery)
+  {
+    if (scanQuery.getContext().containsKey(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)) {
+      if (ListBasedOrderByQueryRunner.class.getSimpleName()
+                                           .equalsIgnoreCase(scanQuery.getContext()
+                                                                      .get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)
+                                                                      .toString())) {
+        return new ListBasedOrderByQueryRunner(engine, segment);
+      } else if (TreeMultisetBasedOrderByQueryRunner.class.getSimpleName()
+                                                          .equalsIgnoreCase(scanQuery.getContext()
+                                                                                     .get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)
+                                                                                     .toString()
+                                                          )) {
+        return new TreeMultisetBasedOrderByQueryRunner(engine, segment);
+      } else if (TreeSetBasedOrderByQueryRunner.class.getSimpleName()
+                                                     .equalsIgnoreCase(scanQuery.getContext()
+                                                                                .get(ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE)
+                                                                                .toString()
+                                                     )) {
+        return new TreeSetBasedOrderByQueryRunner(engine, segment);
+      }
+    }
+    return this;
   }
 }

@@ -38,7 +38,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 class OrderBySequence extends BaseSequence<ScanResultValue, Iterator<ScanResultValue>>
 {
@@ -59,7 +58,8 @@ class OrderBySequence extends BaseSequence<ScanResultValue, Iterator<ScanResultV
     private final SegmentId segmentId;
     private final List<String> allColumns;
     private final ResponseContext responseContext;
-    private final Set<Long> topKOffset;
+    private final Map<Long, List<Comparable>> topKOffsetSortValueMap;
+    private final List<String> sortColumns;
 
     public OrderByIteratorMaker(
         boolean legacy,
@@ -70,7 +70,8 @@ class OrderBySequence extends BaseSequence<ScanResultValue, Iterator<ScanResultV
         SegmentId segmentId,
         List<String> allColumns,
         ResponseContext responseContext,
-        Set<Long> topKOffset
+        Map<Long, List<Comparable>> topKOffsetSortValueMap,
+        List<String> sortColumns
     )
     {
       this.legacy = legacy;
@@ -81,7 +82,8 @@ class OrderBySequence extends BaseSequence<ScanResultValue, Iterator<ScanResultV
       this.segmentId = segmentId;
       this.allColumns = allColumns;
       this.responseContext = responseContext;
-      this.topKOffset = topKOffset;
+      this.topKOffsetSortValueMap = topKOffsetSortValueMap;
+      this.sortColumns = sortColumns;
     }
 
     @Override
@@ -149,10 +151,10 @@ class OrderBySequence extends BaseSequence<ScanResultValue, Iterator<ScanResultV
         {
           final List<List<Object>> events = new ArrayList<>(batchSize);
           for (; !cursor.isDone(); cursor.advance(), offset++) {
-            if (topKOffset.contains(this.offset)) {
+            if (topKOffsetSortValueMap.containsKey(this.offset)) {
               final List<Object> theEvent = new ArrayList<>(allColumns.size());
               for (int j = 0; j < allColumns.size(); j++) {
-                theEvent.add(getColumnValue(j));
+                theEvent.add(getValue(j));
               }
               events.add(theEvent);
             }
@@ -160,14 +162,26 @@ class OrderBySequence extends BaseSequence<ScanResultValue, Iterator<ScanResultV
           return events;
         }
 
+        private Object getValue(int j)
+        {
+          Object value;
+          int idx = sortColumns.indexOf(allColumns.get(j));
+          if (idx != -1) {
+            value = topKOffsetSortValueMap.get(this.offset).get(idx);
+          } else {
+            value = getColumnValue(j);
+          }
+          return value;
+        }
+
         private List<Map<String, Object>> rowsToList()
         {
           List<Map<String, Object>> events = Lists.newArrayListWithCapacity(batchSize);
           for (; !cursor.isDone(); cursor.advance(), offset++) {
-            if (topKOffset.contains(this.offset)) {
+            if (topKOffsetSortValueMap.containsKey(this.offset)) {
               final Map<String, Object> theEvent = new LinkedHashMap<>();
               for (int j = 0; j < allColumns.size(); j++) {
-                theEvent.put(allColumns.get(j), getColumnValue(j));
+                theEvent.put(allColumns.get(j), getValue(j));
               }
               events.add(theEvent);
             }

@@ -54,7 +54,7 @@ public class QueueBasedMultiColumnSorterTests
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(1, ImmutableList.of(3)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(9, ImmutableList.of(6)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(11, ImmutableList.of(6)));
-    Iterator<Integer> it = queueBasedMultiColumnSorter.drain();
+    Iterator<Integer> it = queueBasedMultiColumnSorter.drainElement();
     List<Integer> expectedValues = ImmutableList.of(100, 1, 1, 2, 1);
     int i = 0;
     while (it.hasNext()) {
@@ -83,7 +83,7 @@ public class QueueBasedMultiColumnSorterTests
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(1, ImmutableList.of(3)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(9, ImmutableList.of(6)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(11, ImmutableList.of(6)));
-    Iterator<Integer> it = queueBasedMultiColumnSorter.drain();
+    Iterator<Integer> it = queueBasedMultiColumnSorter.drainElement();
     List<Integer> expectedValues = ImmutableList.of(100, 1, 1, 2, 1);
     int i = 0;
     while (it.hasNext()) {
@@ -136,7 +136,7 @@ public class QueueBasedMultiColumnSorterTests
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(1, ImmutableList.of(0, 0, 3)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(9, ImmutableList.of(0, 0, 6)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(11, ImmutableList.of(0, 0, 6)));
-    Iterator<Integer> it = queueBasedMultiColumnSorter.drain();
+    Iterator<Integer> it = queueBasedMultiColumnSorter.drainElement();
     List<Integer> expectedValues = ImmutableList.of(6, 5, 1, 7, 11);
     int i = 0;
     while (it.hasNext()) {
@@ -167,7 +167,7 @@ public class QueueBasedMultiColumnSorterTests
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(1, ImmutableList.of(0, 0, 3)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(9, ImmutableList.of(0, 0, 6)));
     queueBasedMultiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement(11, ImmutableList.of(0, 0, 6)));
-    Iterator<Integer> it = queueBasedMultiColumnSorter.drain();
+    Iterator<Integer> it = queueBasedMultiColumnSorter.drainElement();
     List<Integer> expectedValues = ImmutableList.of(6, 5, 1, 7);
     int i = 0;
     while (it.hasNext()) {

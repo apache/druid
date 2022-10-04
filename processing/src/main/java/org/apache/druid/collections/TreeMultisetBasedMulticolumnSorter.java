@@ -19,12 +19,14 @@
 
 package org.apache.druid.collections;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.SortedMultiset;
 import com.google.common.collect.TreeMultiset;
 import org.apache.druid.java.util.common.ISE;
 
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -54,11 +56,20 @@ public class TreeMultisetBasedMulticolumnSorter<T> implements MultiColumnSorter<
   }
 
   @Override
-  public Iterator<T> drain()
+  public Iterator<T> drainElement()
   {
     return sortedMultiset.stream()
                          .map(sorterElement -> sorterElement.getElement())
-                         .collect(Collectors.toSet())
+                         .collect(Collectors.toList())
+                         .iterator();
+  }
+
+  @Override
+  public Iterator<ImmutableMap<T, List<Comparable>>> drainOrderByColumValues()
+  {
+    return sortedMultiset.stream()
+                         .map(sorterElement -> ImmutableMap.of(sorterElement.getElement(), sorterElement.getOrderByColumValues()))
+                         .collect(Collectors.toList())
                          .iterator();
   }
 

@@ -127,7 +127,7 @@ abstract class BasedSorterIterator implements Iterator<ScanResultValue>
       }
       multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement<List<Object>>(theEvent, sortValues));
     }
-    return Lists.newArrayList(multiColumnSorter.drain());
+    return Lists.newArrayList(multiColumnSorter.drainElement());
   }
 
   protected List<Map<String, Object>> rowsToList()
@@ -147,7 +147,7 @@ abstract class BasedSorterIterator implements Iterator<ScanResultValue>
       }
       multiColumnSorter.add(new MultiColumnSorter.MultiColumnSorterElement<>(theEvent, sortValues));
     }
-    return Lists.newArrayList(multiColumnSorter.drain());
+    return Lists.newArrayList(multiColumnSorter.drainElement());
   }
 
   protected Object getColumnValue(int i)

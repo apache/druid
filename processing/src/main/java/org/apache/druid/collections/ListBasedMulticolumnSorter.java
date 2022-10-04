@@ -19,8 +19,10 @@
 
 package org.apache.druid.collections;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -30,11 +32,13 @@ import java.util.stream.Collectors;
 /**
  * This sorter is suitable for sorting full data
  */
+@NotThreadSafe
 public class ListBasedMulticolumnSorter<T> implements MultiColumnSorter<T>
 {
 
   private final Comparator<MultiColumnSorterElement<T>> comparator;
   private final List<MultiColumnSorterElement<T>> list = new ArrayList<>();
+  private boolean isSorted = false;
 
   public ListBasedMulticolumnSorter(Comparator<MultiColumnSorterElement<T>> comparator)
   {
@@ -45,23 +49,26 @@ public class ListBasedMulticolumnSorter<T> implements MultiColumnSorter<T>
   public void add(MultiColumnSorterElement<T> sorterElement)
   {
     list.add(sorterElement);
+    isSorted = false;
   }
 
   @Override
-  public Iterator<T> drain()
+  public Iterator<T> drainElement()
   {
-    try {
-      list.sort(comparator);
-    }
-    catch (ClassCastException e) {
-      throw new ISE("The sorted column cannot have different types of values.");
-    }
+    sort();
     return list.stream().map(sorterElement -> sorterElement.getElement()).collect(Collectors.toList()).iterator();
   }
 
-  public Iterator<T> drain(int limit)
+  @Override
+  public Iterator<ImmutableMap<T, List<Comparable>>> drainOrderByColumValues()
   {
-    list.sort(comparator);
+    sort();
+    return list.stream().map(sorterElement -> ImmutableMap.of(sorterElement.getElement(), sorterElement.getOrderByColumValues())).collect(Collectors.toList()).iterator();
+  }
+
+  public Iterator<T> drainElement(int limit)
+  {
+    sort();
     return list.stream().limit(limit).map(sorterElement -> sorterElement.getElement()).collect(Collectors.toList()).iterator();
   }
 
@@ -70,4 +77,18 @@ public class ListBasedMulticolumnSorter<T> implements MultiColumnSorter<T>
   {
     return list.size();
   }
+
+  private void sort()
+  {
+    try {
+      if (!isSorted) {
+        list.sort(comparator);
+        isSorted = true;
+      }
+    }
+    catch (ClassCastException e) {
+      throw new ISE("The sorted column cannot have different types of values.");
+    }
+  }
+
 }
