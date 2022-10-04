@@ -48,7 +48,12 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   private static final String BASIC_AUTHORIZER = "basic";
 
   private static final String EXPECTED_AVATICA_AUTH_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: User metadata store authentication failed.";
-  private static final String EXPECTED_AVATICA_AUTHZ_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: Authentication failed.";
+
+  // This error must match both authorization paths: initial prepare of
+  // the query, and checks of resources used by a query during execution.
+  // The two errors are raised in different points in the code, but should 
+  // look identical to users (and tests).
+  private static final String EXPECTED_AVATICA_AUTHZ_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: Unauthorized";
 
   private HttpClient druid99;
 
