@@ -246,7 +246,7 @@ FROM (
 PARTITIONED BY ALL
 ```
 
-## Ingest a JSON string as COMPLEX\<json>
+## Ingest a JSON string as COMPLEX<json\>
 
 If your source data uses a string representation of your JSON column, you can still ingest the data as `COMPLEX<JSON>` as follows:
 - During native batch ingestion, call the `parse_json` function in a `transform` object in the `transformSpec`.
@@ -271,7 +271,7 @@ WITH source AS (SELECT * FROM TABLE(
   EXTERN(
     '{"type":"inline","data":"{\"time\": \"2022-06-13T10:10:35Z\", \"product\": \"Bike\", \"department\":\"Sports\", \"shipTo\":\"{\\\"firstName\\\": \\\"Henry\\\",\\\"lastName\\\": \\\"Wuckert\\\",\\\"address\\\": {\\\"street\\\": \\\"5643 Jan Walk\\\",\\\"city\\\": \\\"Lake Bridget\\\",\\\"state\\\": \\\"HI\\\",\\\"country\\\":\\\"ME\\\",\\\"postalCode\\\": \\\"70204-2939\\\"},\\\"phoneNumbers\\\": [{\\\"type\\\":\\\"primary\\\",\\\"number\\\":\\\"593.475.0449 x86733\\\" },{\\\"type\\\":\\\"secondary\\\",\\\"number\\\":\\\"638-372-1210\\\"}]}\", \"details\":\"{\\\"color\\\":\\\"ivory\\\", \\\"price\\\":955.00}\"}\n"}',
     '{"type":"json"}',
-    '[{"name":"time","type":"string"},{"name":"product","type":"string"},{"name":"department","type":"string"},{"name":"shipTo","type":"string"},{"name":"details","type":"string"},{"name":"shipTo_parsed","type":"json"},{"name":"details_parsed","type":"json"}]'
+    '[{"name":"time","type":"string"},{"name":"product","type":"string"},{"name":"department","type":"string"},{"name":"shipTo","type":"string"},{"name":"details","type":"string"}]'
   )
 ))
 SELECT

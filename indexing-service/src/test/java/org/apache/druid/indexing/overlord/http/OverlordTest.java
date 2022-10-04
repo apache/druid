@@ -32,7 +32,7 @@ import org.apache.curator.retry.RetryOneTime;
 import org.apache.curator.test.TestingServer;
 import org.apache.curator.test.Timing;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
-import org.apache.druid.curator.discovery.NoopServiceAnnouncer;
+import org.apache.druid.curator.discovery.LatchableServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -180,22 +180,9 @@ public class OverlordTest
         taskStorage,
         taskActionClientFactory,
         druidNode,
-        new TaskRunnerFactory<MockTaskRunner>()
-        {
-          @Override
-          public MockTaskRunner build()
-          {
-            return new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
-          }
-        },
-        new NoopServiceAnnouncer()
-        {
-          @Override
-          public void announce(DruidNode node)
-          {
-            announcementLatch.countDown();
-          }
-        },
+        (TaskRunnerFactory<MockTaskRunner>) () ->
+            new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches),
+        new LatchableServiceAnnouncer(announcementLatch, null),
         new CoordinatorOverlordServiceConfig(null, null),
         serviceEmitter,
         supervisorManager,

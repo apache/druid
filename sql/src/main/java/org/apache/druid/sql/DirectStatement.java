@@ -98,7 +98,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
      * Do the actual execute step which allows subclasses to wrap the sequence,
      * as is sometimes needed for testing.
      */
-    public QueryResponse run()
+    public QueryResponse<Object[]> run()
     {
       try {
         // Check cancellation. Required for SqlResourceTest to work.
@@ -176,7 +176,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
    *
    * @return sequence which delivers query results
    */
-  public QueryResponse execute()
+  public QueryResponse<Object[]> execute()
   {
     return plan().run();
   }

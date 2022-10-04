@@ -59,7 +59,7 @@ public class BalanceSegmentsTester extends BalanceSegments
       try {
         final LoadQueuePeon loadPeon = params.getLoadManagementPeons().get(toServerName);
 
-        loadPeon.loadSegment(segment.getSegment(), () -> {});
+        loadPeon.loadSegment(segment.getSegment(), success -> {});
 
         final LoadQueuePeon dropPeon = params.getLoadManagementPeons().get(fromServerName);
         dropPeon.markSegmentToDrop(segment.getSegment());

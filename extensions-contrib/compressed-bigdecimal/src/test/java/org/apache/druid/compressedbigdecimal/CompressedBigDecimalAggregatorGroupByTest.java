@@ -72,7 +72,7 @@ public class CompressedBigDecimalAggregatorGroupByTest
   public CompressedBigDecimalAggregatorGroupByTest(GroupByQueryConfig config)
   {
     CompressedBigDecimalModule module = new CompressedBigDecimalModule();
-    module.configure(null);
+    CompressedBigDecimalModule.registerSerde();
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
   }

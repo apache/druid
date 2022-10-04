@@ -50,7 +50,7 @@ Druid is designed for workflows where fast queries and ingest really matter. Dru
 You can get started with Druid with our [local](https://druid.apache.org/docs/latest/tutorials/quickstart.html) or [Docker](http://druid.apache.org/docs/latest/tutorials/docker.html) quickstart.
 
 Druid provides a rich set of APIs (via HTTP and [JDBC](https://druid.apache.org/docs/latest/querying/sql.html#jdbc)) for loading, managing, and querying your data.
-You can also interact with Druid via the [built-in console](https://druid.apache.org/docs/latest/operations/druid-console.html) (shown below).
+You can also interact with Druid via the built-in [web console](https://druid.apache.org/docs/latest/operations/web-console.html) (shown below).
 
 #### Load data
 
@@ -72,11 +72,9 @@ Use the built-in query workbench to prototype [DruidSQL](https://druid.apache.or
 
 ### Documentation
 
-You can find the [documentation for the latest Druid release](https://druid.apache.org/docs/latest/) on
-the [project website](https://druid.apache.org).
+See the [latest documentation](https://druid.apache.org/docs/latest/) for the documentation for the current official release.  If you need information on a previous release, you can browse [previous releases documentation](https://druid.apache.org/docs/).
 
-If you would like to contribute documentation, please do so under
-`/docs` in this repository and submit a pull request.
+Make documentation and tutorials updates in [`/docs`](https://github.com/apache/druid/tree/master/docs) using [MarkDown](https://www.markdownguide.org/) and contribute them using a pull request.
 
 ### Community
 

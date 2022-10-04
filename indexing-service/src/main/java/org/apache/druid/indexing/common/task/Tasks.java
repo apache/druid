@@ -53,6 +53,8 @@ public class Tasks
   public static final String FORCE_TIME_CHUNK_LOCK_KEY = "forceTimeChunkLock";
   public static final String USE_SHARED_LOCK = "useSharedLock";
   public static final String STORE_EMPTY_COLUMNS_KEY = "storeEmptyColumns";
+  public static final String DYNAMIC_CONFIG_PROVIDER_KEY = "dynamicConfigProviderKey";
+
 
   /**
    * Context flag denoting if maximum possible values should be used to estimate

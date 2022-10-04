@@ -103,8 +103,6 @@ For more details and examples, see [multi-value dimensions](multi-value-dimensio
 
 ### Lookup DimensionSpecs
 
-> Lookups are an [experimental](../development/experimental.md) feature.
-
 You can use lookup dimension specs to define a lookup implementation as a dimension spec directly.
 Generally, there are two kinds of lookup implementations.
 The first kind is passed at the query time like `map` implementation.

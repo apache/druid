@@ -30,7 +30,6 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -277,9 +276,9 @@ public class BalanceSegmentsTest
     params = new BalanceSegmentsTester(coordinator).run(params);
     EasyMock.verify(strategy);
     Assert.assertEquals(3L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
-    Assert.assertThat(
-        peon3.getSegmentsToLoad(),
-        Matchers.is(Matchers.equalTo(ImmutableSet.of(segment1, segment3, segment4)))
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment3, segment4),
+        peon3.getSegmentsToLoad()
     );
   }
 
@@ -289,7 +288,7 @@ public class BalanceSegmentsTest
     DruidCoordinatorRuntimeParams params = setupParamsForDecommissioningMaxPercentOfMaxSegmentsToMove(0);
     params = new BalanceSegmentsTester(coordinator).run(params);
     Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
-    Assert.assertThat(peon3.getSegmentsToLoad(), Matchers.is(Matchers.equalTo(ImmutableSet.of(segment1))));
+    Assert.assertEquals(ImmutableSet.of(segment1), peon3.getSegmentsToLoad());
   }
 
   @Test
@@ -298,7 +297,7 @@ public class BalanceSegmentsTest
     DruidCoordinatorRuntimeParams params = setupParamsForDecommissioningMaxPercentOfMaxSegmentsToMove(10);
     params = new BalanceSegmentsTester(coordinator).run(params);
     Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
-    Assert.assertThat(peon3.getSegmentsToLoad(), Matchers.is(Matchers.equalTo(ImmutableSet.of(segment2))));
+    Assert.assertEquals(ImmutableSet.of(segment2), peon3.getSegmentsToLoad());
   }
 
   /**
@@ -347,9 +346,9 @@ public class BalanceSegmentsTest
     params = new BalanceSegmentsTester(coordinator).run(params);
     EasyMock.verify(strategy);
     Assert.assertEquals(3L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
-    Assert.assertThat(
-        peon3.getSegmentsToLoad(),
-        Matchers.is(Matchers.equalTo(ImmutableSet.of(segment2, segment3, segment4)))
+    Assert.assertEquals(
+        ImmutableSet.of(segment2, segment3, segment4),
+        peon3.getSegmentsToLoad()
     );
   }
 
@@ -603,10 +602,7 @@ public class BalanceSegmentsTest
     params = new BalanceSegmentsTester(coordinator).run(params);
     EasyMock.verify(strategy);
     Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
-    Assert.assertThat(
-        peon3.getSegmentsToLoad(),
-        Matchers.is(Matchers.equalTo(ImmutableSet.of(segment3)))
-    );
+    Assert.assertEquals(ImmutableSet.of(segment3), peon3.getSegmentsToLoad());
   }
 
   @Test

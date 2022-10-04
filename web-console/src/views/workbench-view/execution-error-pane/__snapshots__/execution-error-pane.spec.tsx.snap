@@ -8,7 +8,12 @@ exports[`ExecutionErrorPane matches snapshot 1`] = `
   <p
     className="error-message-text"
   >
-    TooManyWarnings: 
+    <Memo(ExternalLink)
+      href="https://druid.apache.org/docs/latest/multi-stage-query/concepts.html#error-codes"
+    >
+      TooManyWarnings
+    </Memo(ExternalLink)>
+    : 
     Too many warnings of type CannotParseExternalData generated (max = 10)
   </p>
   <div>
