@@ -31,7 +31,7 @@ The Coordinator loads a set of rules from the metadata storage. You can configur
 
 ## Set a rule
 
-To set a retention rule for a specific data source, send a POST request to the following API:
+To set a default retention rule for all data sources, send a POST request to the following API:
 
 `/druid/coordinator/v1/rules/_default`
 
