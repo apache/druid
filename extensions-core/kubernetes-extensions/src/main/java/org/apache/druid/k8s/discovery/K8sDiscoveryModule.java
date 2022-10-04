@@ -26,11 +26,6 @@ import com.google.inject.Key;
 import com.google.inject.Provider;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.util.Config;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Collections;
-import java.util.List;
-import java.util.TimeZone;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
@@ -42,6 +37,12 @@ import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.server.DruidNode;
+
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Collections;
+import java.util.List;
+import java.util.TimeZone;
 
 public class K8sDiscoveryModule implements DruidModule
 {
