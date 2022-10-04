@@ -3287,7 +3287,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     boolean idle;
     if (lagsVerifiedlastTime > 0
         && previousPartitionOffsetsSnapshot.equals(latestSequencesFromStream)
-        && computLags() == 0) {
+        && computeTotalLag() == 0) {
       idleTime += nowTime - lagsVerifiedlastTime;
       idle = true;
     } else {
@@ -3303,7 +3303,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private long computLags()
+  private long computeTotalLag()
   {
     LagStats lagStats = computeLagStats();
     return lagStats != null ? lagStats.getTotalLag() : 0;
