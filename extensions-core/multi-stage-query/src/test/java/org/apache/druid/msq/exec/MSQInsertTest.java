@@ -383,6 +383,54 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
+  public void testRollUpOnFoo1PostAggShouldFail()
+  {
+    testIngestQuery().setSql(
+                         "insert into foo1 select  __time , dim1 , count(dim2)/count(dim1) as ratio from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+                     .setExpectedDataSource("foo1")
+                     .setQueryContext(ROLLUP_CONTEXT)
+                     .setExpectedRollUp(true)
+                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+                         CoreMatchers.instanceOf(ISE.class),
+                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                             "Unable to run the statement in roll up mode. Please try disabling the rollup mode. Check SQL-based ingestion docs for instructions."))
+                     ))
+                     .verifyExecutionError();
+  }
+
+
+  @Test
+  public void testNonRollUpOnFoo1PostAgg()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("ratio", ColumnType.LONG)
+                                            .build();
+
+    List<Object[]> expectedRows = new ArrayList<>();
+    if (!useDefault) {
+      expectedRows.add(new Object[]{946684800000L, "", 1L});
+    }
+    expectedRows.addAll(ImmutableList.of(
+        new Object[]{946771200000L, "10.1", 0L},
+        new Object[]{946857600000L, "2", useDefault ? 0L : 1L},
+        new Object[]{978307200000L, "1", 1L},
+        new Object[]{978393600000L, "def", 1L},
+        new Object[]{978480000000L, "abc", 0L}
+    ));
+
+    testIngestQuery().setSql(
+                         "insert into foo1 select  __time , dim1 , count(dim2)/count(dim1) as ratio from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRollUp(false)
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedSegment(expectedFooSegments())
+                     .setExpectedResultRows(expectedRows)
+                     .verifyResults();
+  }
+
+  @Test
   public void testInsertNullTimestamp()
   {
     final RowSignature rowSignature =

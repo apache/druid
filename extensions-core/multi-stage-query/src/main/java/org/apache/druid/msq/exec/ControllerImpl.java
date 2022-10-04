@@ -1643,7 +1643,13 @@ public class ControllerImpl implements Controller
     if (isRollupQuery) {
       // Populate aggregators from the native query when doing an ingest in rollup mode.
       for (AggregatorFactory aggregatorFactory : ((GroupByQuery) query).getAggregatorSpecs()) {
-        String outputColumn = Iterables.getOnlyElement(columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName()));
+        List<String> outputColumns = columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName());
+        if (outputColumns == null || outputColumns.size() != 1) {
+          throw new ISE(
+              "Unable to run the statement in roll up mode. Please try disabling the rollup mode. Check SQL-based ingestion docs for instructions.");
+        }
+
+        String outputColumn = Iterables.getOnlyElement(outputColumns);
         if (outputColumnAggregatorFactories.containsKey(outputColumn)) {
           throw new ISE("There can only be one aggregator factory for column [%s].", outputColumn);
         } else {
