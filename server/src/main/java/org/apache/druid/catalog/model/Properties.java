@@ -44,7 +44,7 @@ import java.util.Set;
  */
 public interface Properties
 {
-  public interface PropertyDefn
+  interface PropertyDefn
   {
     String name();
     String typeName();

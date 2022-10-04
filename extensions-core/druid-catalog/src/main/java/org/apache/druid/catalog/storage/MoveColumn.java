@@ -113,4 +113,10 @@ public class MoveColumn
         && this.where == other.where
         && Objects.equals(this.anchor, other.anchor);
   }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(column, where, anchor);
+  }
 }

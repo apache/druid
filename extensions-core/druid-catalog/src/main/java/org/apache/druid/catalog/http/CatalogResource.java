@@ -100,7 +100,7 @@ public class CatalogResource
    * @param name The name of the table definition to modify. The user must
    *        have write access to the table.
    * @param spec The new table definition.
-   * @param action What to do if the table already exists.
+   * @param actionParam What to do if the table already exists.
    *        {@code ifNew} is the same as the SQL IF NOT EXISTS clause. If {@code new},
    *        then an error is raised if the table exists. If {@code ifNew}, then
    *        the action silently does nothing if the table exists. Primarily for

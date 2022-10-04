@@ -93,4 +93,10 @@ public class HideColumns
     return Objects.equals(this.hide, other.hide)
         && Objects.equals(this.unhide, other.unhide);
   }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(hide, unhide);
+  }
 }
