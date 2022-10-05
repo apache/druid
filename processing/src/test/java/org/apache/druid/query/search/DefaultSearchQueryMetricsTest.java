@@ -21,6 +21,7 @@ package org.apache.druid.query.search;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.CachingEmitter;
 import org.apache.druid.query.DefaultQueryMetricsTest;
@@ -86,6 +87,8 @@ public class DefaultSearchQueryMetricsTest
     // Metric
     Assert.assertEquals("query/time", actualEvent.get("metric"));
     Assert.assertEquals(0L, actualEvent.get("value"));
+
+    Assert.assertThrows(ISE.class, () -> queryMetrics.sqlQueryId("dummy"));
   }
 
   @Test

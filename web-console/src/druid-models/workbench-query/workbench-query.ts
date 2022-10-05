@@ -22,12 +22,12 @@ import {
   SqlFunction,
   SqlLiteral,
   SqlOrderByClause,
+  SqlOrderByExpression,
   SqlPartitionedByClause,
   SqlQuery,
   SqlRef,
   SqlTableRef,
 } from 'druid-query-toolkit';
-import { SqlOrderByExpression } from 'druid-query-toolkit/build/sql/sql-clause/sql-order-by-expression/sql-order-by-expression';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
@@ -576,10 +576,15 @@ export class WorkbenchQuery {
       apiQuery.query = queryPrepend + apiQuery.query + queryAppend;
     }
 
-    const m = /(--:context\s.+)(?:\n|$)/.exec(apiQuery.query);
+    const m = /--:ISSUE:(.+)(?:\n|$)/.exec(apiQuery.query);
     if (m) {
       throw new Error(
-        `This query contains a context comment '${m[1]}'. Context comments have been deprecated. Please rewrite the context comment as a context parameter. The context parameter editor is located in the "Engine" dropdown.`,
+        `This query contains an ISSUE comment: ${m[1]
+          .trim()
+          .replace(
+            /\.$/,
+            '',
+          )}. (Please resolve the issue in the comment, delete the ISSUE comment and re-run the query.)`,
       );
     }
 

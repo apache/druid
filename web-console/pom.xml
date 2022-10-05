@@ -21,9 +21,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>druid-console</artifactId>
-  <name>druid-console</name>
-  <description>Unified web console for a Druid cluster</description>
+  <artifactId>web-console</artifactId>
+  <name>web-console</name>
+  <description>Web console for Druid</description>
 
   <parent>
     <groupId>org.apache.druid</groupId>
@@ -33,9 +33,9 @@
 
   <properties>
     <resources.directory>${project.build.directory}/resources</resources.directory>
-    <druid.console.skip>false</druid.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
-    <node.version>v14.19.3</node.version>
-    <npm.version>6.14.16</npm.version>
+    <web.console.skip>false</web.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
+    <node.version>v16.17.0</node.version>
+    <npm.version>8.15.0</npm.version>
   </properties>
 
   <build>
@@ -44,7 +44,7 @@
         <groupId>com.github.eirslett</groupId>
         <artifactId>frontend-maven-plugin</artifactId>
         <configuration>
-          <skip>${druid.console.skip}</skip>
+          <skip>${web.console.skip}</skip>
           <skipTests>${skipUTs}</skipTests>
         </configuration>
         <executions>
@@ -108,7 +108,7 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <configuration>
-          <skip>${druid.console.skip}</skip>
+          <skip>${web.console.skip}</skip>
         </configuration>
         <executions>
           <execution>
@@ -152,7 +152,7 @@
         <artifactId>maven-resources-plugin</artifactId>
         <configuration>
           <outputDirectory>${project.build.outputDirectory}/org/apache/druid/console</outputDirectory>
-          <skip>${druid.console.skip}</skip>
+          <skip>${web.console.skip}</skip>
         </configuration>
       </plugin>
     </plugins>

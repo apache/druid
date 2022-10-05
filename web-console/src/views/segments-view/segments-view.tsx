@@ -485,7 +485,7 @@ END AS "time_span"`,
     });
   }
 
-  private renderFilterableCell(field: string, disableComparisons = false) {
+  private renderFilterableCell(field: string, enableComparisons = false) {
     const { segmentFilter } = this.state;
 
     return (row: { value: any }) => (
@@ -494,7 +494,7 @@ END AS "time_span"`,
         value={row.value}
         filters={segmentFilter}
         onFiltersChange={filters => this.setState({ segmentFilter: filters })}
-        disableComparisons={disableComparisons}
+        enableComparisons={enableComparisons}
       >
         {row.value}
       </TableFilterableCell>
@@ -582,21 +582,23 @@ END AS "time_span"`,
             Header: 'Start',
             show: visibleColumns.shown('Start'),
             accessor: 'start',
+            headerClassName: 'enable-comparisons',
             width: 160,
             sortable: hasSql,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: this.renderFilterableCell('start'),
+            Cell: this.renderFilterableCell('start', true),
           },
           {
             Header: 'End',
             show: visibleColumns.shown('End'),
             accessor: 'end',
+            headerClassName: 'enable-comparisons',
             width: 160,
             sortable: hasSql,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: this.renderFilterableCell('end'),
+            Cell: this.renderFilterableCell('end', true),
           },
           {
             Header: 'Version',
@@ -623,7 +625,6 @@ END AS "time_span"`,
             id: 'shard_type',
             width: 100,
             sortable: false,
-            headerClassName: 'disable-comparisons',
             accessor: d => {
               let v: any;
               try {

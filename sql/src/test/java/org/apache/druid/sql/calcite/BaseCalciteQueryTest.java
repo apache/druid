@@ -917,7 +917,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             .auth(authenticationResult)
             .build()
     );
-    Sequence<Object[]> results = stmt.execute();
+    Sequence<Object[]> results = stmt.execute().getResults();
     RelDataType rowType = stmt.prepareResult().getReturnedRowType();
     return new Pair<>(
         RowSignatures.fromRelDataType(rowType.getFieldNames(), rowType),

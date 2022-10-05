@@ -1,7 +1,7 @@
 ---
 id: native-batch-input-sources
 title: "Native batch input sources"
-sidebar_label: "Input sources"
+sidebar_label: "Native batch: input sources"
 ---
 
 <!--
@@ -359,8 +359,8 @@ Sample specs:
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |type|Set the value to `azure`.|None|yes|
-|uris|JSON array of URIs where the Azure objects to be ingested are located, in the form "azure://\<container>/\<path-to-file\>"|None|`uris` or `prefixes` or `objects` must be set|
-|prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form `azure://\<container>/\<prefix\>`. Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
+|uris|JSON array of URIs where the Azure objects to be ingested are located, in the form `azure://<container>/<path-to-file>`|None|`uris` or `prefixes` or `objects` must be set|
+|prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form `azure://<container>/<prefix>`. Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Azure objects to ingest.|None|`uris` or `prefixes` or `objects` must be set|
 |filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
 
@@ -462,9 +462,9 @@ in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security conf
 
 The HTTP input source is to support reading files directly from remote sites via HTTP.
 
-> **NOTE:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an `HTTPInputSource` at any location where the Druid process has permissions. For example, using `HTTPInputSource`, a console user has access to internal network locations where the they would be denied access otherwise.
-
-> **WARNING:** `HTTPInputSource` is not limited to the HTTP or HTTPS protocols. It uses the Java `URI` class that supports HTTP, HTTPS, FTP, file, and jar protocols by default. This means you should never run Druid under the `root` account, because a user can use the file protocol to access any files on the local disk.
+> **Security notes:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an input source referring to any location that the Druid process can access. For example, using `http` input source, users may have access to internal network servers.
+>
+> The `http` input source is not limited to the HTTP or HTTPS protocols. It uses the Java URI class that supports HTTP, HTTPS, FTP, file, and jar protocols by default.
 
 For more information about security best practices, see [Security overview](../operations/security-overview.md#best-practices).
 
@@ -632,9 +632,9 @@ want the output timestamp to be equivalent to the input timestamp. In this case,
 and the format to `auto` or `millis`.
 
 It is OK for the input and output datasources to be the same. In this case, newly generated data will overwrite the
-previous data for the intervals specified in the `granularitySpec`. Generally, if you are going to do this, it is a
-good idea to test out your reindexing by writing to a separate datasource before overwriting your main one.
-Alternatively, if your goals can be satisfied by [compaction](compaction.md), consider that instead as a simpler
+previous data for the intervals specified in the `granularitySpec`. Generally, if you are going to do this, it is a good
+idea to test out your reindexing by writing to a separate datasource before overwriting your main one. Alternatively, if
+your goals can be satisfied by [compaction](../data-management/compaction.md), consider that instead as a simpler
 approach.
 
 An example task spec is shown below. It reads from a hypothetical raw datasource `wikipedia_raw` and creates a new

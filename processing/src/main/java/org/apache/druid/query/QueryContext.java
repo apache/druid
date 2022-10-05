@@ -168,33 +168,66 @@ public class QueryContext
   @Nullable
   public String getAsString(String key)
   {
-    return (String) get(key);
+    Object val = get(key);
+    return val == null ? null : val.toString();
+  }
+
+  public String getAsString(String key, String defaultValue)
+  {
+    Object val = get(key);
+    return val == null ? defaultValue : val.toString();
+  }
+
+  @Nullable
+  public Boolean getAsBoolean(String key)
+  {
+    return QueryContexts.getAsBoolean(key, get(key));
   }
 
   public boolean getAsBoolean(
-      final String parameter,
+      final String key,
       final boolean defaultValue
   )
   {
-    return QueryContexts.getAsBoolean(parameter, get(parameter), defaultValue);
+    return QueryContexts.getAsBoolean(key, get(key), defaultValue);
+  }
+
+  public Integer getAsInt(final String key)
+  {
+    return QueryContexts.getAsInt(key, get(key));
   }
 
   public int getAsInt(
-      final String parameter,
+      final String key,
       final int defaultValue
   )
   {
-    return QueryContexts.getAsInt(parameter, get(parameter), defaultValue);
+    return QueryContexts.getAsInt(key, get(key), defaultValue);
   }
 
-  public long getAsLong(final String parameter, final long defaultValue)
+  public Long getAsLong(final String key)
   {
-    return QueryContexts.getAsLong(parameter, get(parameter), defaultValue);
+    return QueryContexts.getAsLong(key, get(key));
   }
 
-  public HumanReadableBytes getAsHumanReadableBytes(final String parameter, final HumanReadableBytes defaultValue)
+  public long getAsLong(final String key, final long defaultValue)
   {
-    return QueryContexts.getAsHumanReadableBytes(parameter, get(parameter), defaultValue);
+    return QueryContexts.getAsLong(key, get(key), defaultValue);
+  }
+
+  public HumanReadableBytes getAsHumanReadableBytes(final String key, final HumanReadableBytes defaultValue)
+  {
+    return QueryContexts.getAsHumanReadableBytes(key, get(key), defaultValue);
+  }
+
+  public float getAsFloat(final String key, final float defaultValue)
+  {
+    return QueryContexts.getAsFloat(key, get(key), defaultValue);
+  }
+
+  public <E extends Enum<E>> E getAsEnum(String key, Class<E> clazz, E defaultValue)
+  {
+    return QueryContexts.getAsEnum(key, get(key), clazz, defaultValue);
   }
 
   public Map<String, Object> getMergedParams()

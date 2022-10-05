@@ -136,7 +136,7 @@ public class CloudObjectInputSourceTest
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
         new MaxSizeSplitHintSpec(null, 1)
     );
 
@@ -157,7 +157,7 @@ public class CloudObjectInputSourceTest
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
         new MaxSizeSplitHintSpec(null, 1)
     );
 
@@ -178,7 +178,7 @@ public class CloudObjectInputSourceTest
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
         new MaxSizeSplitHintSpec(null, 1)
     );
 
@@ -199,7 +199,7 @@ public class CloudObjectInputSourceTest
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
         new MaxSizeSplitHintSpec(null, 1)
     );
 

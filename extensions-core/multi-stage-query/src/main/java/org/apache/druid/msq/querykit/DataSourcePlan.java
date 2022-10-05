@@ -229,7 +229,7 @@ public class DataSourcePlan
     return forExternal(
         new ExternalDataSource(
             dataString.isEmpty() ? NilInputSource.instance() : new InlineInputSource(dataString),
-            new JsonInputFormat(null, null, null),
+            new JsonInputFormat(null, null, null, null, null),
             signature
         ),
         broadcast

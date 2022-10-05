@@ -856,7 +856,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   {
     SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
         "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
         1,
         1,
         new Period("PT1H"),
@@ -927,7 +927,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     if (scaleOut) {
       return new SeekableStreamSupervisorIOConfig(
           "stream",
-          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
+          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
           1,
           taskCount,
           new Period("PT1H"),
@@ -944,7 +944,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     } else {
       return new SeekableStreamSupervisorIOConfig(
           "stream",
-          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
+          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
           1,
           taskCount,
           new Period("PT1H"),

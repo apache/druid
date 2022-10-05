@@ -23,7 +23,7 @@ title: "Segments"
   -->
 
 
-Apache Druid stores its data and indexes in *segment files* partitioned by time. Druid creates a segment for each segment interval that contains data. If an interval is empty—that is, containing no rows—no segment exists for that time interval. Druid may create multiple segments for the same interval if you ingest data for that period via different ingestion jobs. [Compaction](../ingestion/compaction.md) is the Druid process that attempts to combine these segments into a single segment per interval for optimal performance.
+Apache Druid stores its data and indexes in *segment files* partitioned by time. Druid creates a segment for each segment interval that contains data. If an interval is empty—that is, containing no rows—no segment exists for that time interval. Druid may create multiple segments for the same interval if you ingest data for that period via different ingestion jobs. [Compaction](../data-management/compaction.md) is the Druid process that attempts to combine these segments into a single segment per interval for optimal performance.
 
 The time interval is configurable in the `segmentGranularity` parameter of the [`granularitySpec`](../ingestion/ingestion-spec.md#granularityspec).
 

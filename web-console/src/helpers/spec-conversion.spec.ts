@@ -449,4 +449,262 @@ describe('spec conversion', () => {
       finalizeAggregations: false,
     });
   });
+
+  it('converts with issue when there is a __time transform', () => {
+    const converted = convertSpecToSql({
+      type: 'index_parallel',
+      spec: {
+        ioConfig: {
+          type: 'index_parallel',
+          inputSource: {
+            type: 'http',
+            uris: ['https://druid.apache.org/data/wikipedia.json.gz'],
+          },
+          inputFormat: {
+            type: 'json',
+          },
+        },
+        dataSchema: {
+          granularitySpec: {
+            segmentGranularity: 'hour',
+            queryGranularity: 'none',
+            rollup: false,
+          },
+          dataSource: 'wikipedia',
+          transformSpec: {
+            transforms: [{ name: '__time', expression: '_some_time_parse_expression_' }],
+          },
+          timestampSpec: {
+            column: 'timestamp',
+            format: 'auto',
+          },
+          dimensionsSpec: {
+            dimensions: [
+              'isRobot',
+              'channel',
+              'flags',
+              'isUnpatrolled',
+              'page',
+              'diffUrl',
+              {
+                type: 'long',
+                name: 'added',
+              },
+              'comment',
+              {
+                type: 'long',
+                name: 'commentLength',
+              },
+              'isNew',
+              'isMinor',
+              {
+                type: 'long',
+                name: 'delta',
+              },
+              'isAnonymous',
+              'user',
+              {
+                type: 'long',
+                name: 'deltaBucket',
+              },
+              {
+                type: 'long',
+                name: 'deleted',
+              },
+              'namespace',
+              'cityName',
+              'countryName',
+              'regionIsoCode',
+              'metroCode',
+              'countryIsoCode',
+              'regionName',
+            ],
+          },
+        },
+        tuningConfig: {
+          type: 'index_parallel',
+          partitionsSpec: {
+            type: 'single_dim',
+            partitionDimension: 'isRobot',
+            targetRowsPerSegment: 150000,
+          },
+          forceGuaranteedRollup: true,
+          maxNumConcurrentSubTasks: 4,
+          maxParseExceptions: 3,
+        },
+      },
+    });
+
+    expect(converted.queryString).toEqual(sane`
+      -- This SQL query was auto generated from an ingestion spec
+      REPLACE INTO wikipedia OVERWRITE ALL
+      WITH source AS (SELECT * FROM TABLE(
+        EXTERN(
+          '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+          '{"type":"json"}',
+          '[{"name":"isRobot","type":"string"},{"name":"channel","type":"string"},{"name":"flags","type":"string"},{"name":"isUnpatrolled","type":"string"},{"name":"page","type":"string"},{"name":"diffUrl","type":"string"},{"name":"added","type":"long"},{"name":"comment","type":"string"},{"name":"commentLength","type":"long"},{"name":"isNew","type":"string"},{"name":"isMinor","type":"string"},{"name":"delta","type":"long"},{"name":"isAnonymous","type":"string"},{"name":"user","type":"string"},{"name":"deltaBucket","type":"long"},{"name":"deleted","type":"long"},{"name":"namespace","type":"string"},{"name":"cityName","type":"string"},{"name":"countryName","type":"string"},{"name":"regionIsoCode","type":"string"},{"name":"metroCode","type":"string"},{"name":"countryIsoCode","type":"string"},{"name":"regionName","type":"string"}]'
+        )
+      ))
+      SELECT
+        --:ISSUE: The spec contained transforms that could not be automatically converted.
+        REWRITE_[_some_time_parse_expression_]_TO_SQL AS __time, --:ISSUE: Transform for __time could not be converted
+        "isRobot",
+        "channel",
+        "flags",
+        "isUnpatrolled",
+        "page",
+        "diffUrl",
+        "added",
+        "comment",
+        "commentLength",
+        "isNew",
+        "isMinor",
+        "delta",
+        "isAnonymous",
+        "user",
+        "deltaBucket",
+        "deleted",
+        "namespace",
+        "cityName",
+        "countryName",
+        "regionIsoCode",
+        "metroCode",
+        "countryIsoCode",
+        "regionName"
+      FROM source
+      PARTITIONED BY HOUR
+      CLUSTERED BY "isRobot"
+    `);
+  });
+
+  it('converts with issue when there is a dimension transform and strange filter', () => {
+    const converted = convertSpecToSql({
+      type: 'index_parallel',
+      spec: {
+        ioConfig: {
+          type: 'index_parallel',
+          inputSource: {
+            type: 'http',
+            uris: ['https://druid.apache.org/data/wikipedia.json.gz'],
+          },
+          inputFormat: {
+            type: 'json',
+          },
+        },
+        dataSchema: {
+          granularitySpec: {
+            segmentGranularity: 'hour',
+            queryGranularity: 'none',
+            rollup: false,
+          },
+          dataSource: 'wikipedia',
+          transformSpec: {
+            transforms: [{ name: 'comment', expression: '_some_expression_' }],
+            filter: {
+              type: 'strange',
+            },
+          },
+          timestampSpec: {
+            column: 'timestamp',
+            format: 'auto',
+          },
+          dimensionsSpec: {
+            dimensions: [
+              'isRobot',
+              'channel',
+              'flags',
+              'isUnpatrolled',
+              'page',
+              'diffUrl',
+              {
+                type: 'long',
+                name: 'added',
+              },
+              'comment',
+              {
+                type: 'long',
+                name: 'commentLength',
+              },
+              'isNew',
+              'isMinor',
+              {
+                type: 'long',
+                name: 'delta',
+              },
+              'isAnonymous',
+              'user',
+              {
+                type: 'long',
+                name: 'deltaBucket',
+              },
+              {
+                type: 'long',
+                name: 'deleted',
+              },
+              'namespace',
+              'cityName',
+              'countryName',
+              'regionIsoCode',
+              'metroCode',
+              'countryIsoCode',
+              'regionName',
+            ],
+          },
+        },
+        tuningConfig: {
+          type: 'index_parallel',
+          partitionsSpec: {
+            type: 'single_dim',
+            partitionDimension: 'isRobot',
+            targetRowsPerSegment: 150000,
+          },
+          forceGuaranteedRollup: true,
+          maxNumConcurrentSubTasks: 4,
+          maxParseExceptions: 3,
+        },
+      },
+    });
+
+    expect(converted.queryString).toEqual(sane`
+      -- This SQL query was auto generated from an ingestion spec
+      REPLACE INTO wikipedia OVERWRITE ALL
+      WITH source AS (SELECT * FROM TABLE(
+        EXTERN(
+          '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+          '{"type":"json"}',
+          '[{"name":"timestamp","type":"string"},{"name":"isRobot","type":"string"},{"name":"channel","type":"string"},{"name":"flags","type":"string"},{"name":"isUnpatrolled","type":"string"},{"name":"page","type":"string"},{"name":"diffUrl","type":"string"},{"name":"added","type":"long"},{"name":"comment","type":"string"},{"name":"commentLength","type":"long"},{"name":"isNew","type":"string"},{"name":"isMinor","type":"string"},{"name":"delta","type":"long"},{"name":"isAnonymous","type":"string"},{"name":"user","type":"string"},{"name":"deltaBucket","type":"long"},{"name":"deleted","type":"long"},{"name":"namespace","type":"string"},{"name":"cityName","type":"string"},{"name":"countryName","type":"string"},{"name":"regionIsoCode","type":"string"},{"name":"metroCode","type":"string"},{"name":"countryIsoCode","type":"string"},{"name":"regionName","type":"string"}]'
+        )
+      ))
+      SELECT
+        --:ISSUE: The spec contained transforms that could not be automatically converted.
+        CASE WHEN CAST("timestamp" AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST("timestamp" AS BIGINT)) ELSE TIME_PARSE("timestamp") END AS __time,
+        "isRobot",
+        "channel",
+        "flags",
+        "isUnpatrolled",
+        "page",
+        "diffUrl",
+        "added",
+        REWRITE_[_some_expression_]_TO_SQL AS "comment", --:ISSUE: Transform for dimension could not be converted
+        "commentLength",
+        "isNew",
+        "isMinor",
+        "delta",
+        "isAnonymous",
+        "user",
+        "deltaBucket",
+        "deleted",
+        "namespace",
+        "cityName",
+        "countryName",
+        "regionIsoCode",
+        "metroCode",
+        "countryIsoCode",
+        "regionName"
+      FROM source
+      WHERE REWRITE_[{"type":"strange"}]_TO_SQL --:ISSUE: The spec contained a filter that could not be automatically converted, please convert it manually
+      PARTITIONED BY HOUR
+      CLUSTERED BY "isRobot"
+    `);
+  });
 });
