@@ -35,12 +35,13 @@ public class QueryNGConfig
 
   /**
    * Whether the engine is enabled. It is disabled by default.
+   * Except in this commit, where it is enabled for testing.
    */
   @JsonProperty("enabled")
-  private boolean enabled;
+  private boolean enabled = true;
 
   @JsonProperty("requireContext")
-  private boolean requireContext = true;
+  private boolean requireContext = false;
 
   /**
    * Create an instance for testing.
