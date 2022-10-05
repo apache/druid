@@ -96,6 +96,7 @@ public class S3InputSource extends CloudObjectInputSource
    * @param uris                User provided uris to read input data
    * @param prefixes            User provided prefixes to read input data
    * @param objects             User provided cloud objects values to read input data
+   * @param objectGlob          User provided globbing rule to filter input data path
    * @param s3InputSourceConfig User provided properties for overriding the default S3 credentials
    * @param awsProxyConfig      User provided proxy information for the overridden s3 client
    * @param awsEndpointConfig   User provided s3 endpoint and region for overriding the default S3 endpoint
@@ -109,7 +110,7 @@ public class S3InputSource extends CloudObjectInputSource
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("filter") @Nullable String filter,
+      @JsonProperty("objectGlob") @Nullable String objectGlob,
       @JsonProperty("properties") @Nullable S3InputSourceConfig s3InputSourceConfig,
       @JsonProperty("proxyConfig") @Nullable AWSProxyConfig awsProxyConfig,
       @JsonProperty("endpointConfig") @Nullable AWSEndpointConfig awsEndpointConfig,
@@ -117,7 +118,7 @@ public class S3InputSource extends CloudObjectInputSource
       @JacksonInject AWSCredentialsProvider awsCredentialsProvider
   )
   {
-    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, filter);
+    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, objectGlob);
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "S3DataSegmentPusherConfig");
     Preconditions.checkNotNull(s3Client, "s3Client");
     this.s3InputSourceConfig = s3InputSourceConfig;
@@ -187,7 +188,7 @@ public class S3InputSource extends CloudObjectInputSource
       List<URI> uris,
       List<URI> prefixes,
       List<CloudObjectLocation> objects,
-      String filter,
+      String objectGlob,
       S3InputSourceConfig s3InputSourceConfig,
       AWSProxyConfig awsProxyConfig,
       AWSEndpointConfig awsEndpointConfig,
@@ -200,7 +201,7 @@ public class S3InputSource extends CloudObjectInputSource
          uris,
          prefixes,
          objects,
-         filter,
+         objectGlob,
          s3InputSourceConfig,
          awsProxyConfig,
          awsEndpointConfig,
@@ -217,7 +218,7 @@ public class S3InputSource extends CloudObjectInputSource
       List<URI> uris,
       List<URI> prefixes,
       List<CloudObjectLocation> objects,
-      String filter,
+      String objectGlob,
       S3InputSourceConfig s3InputSourceConfig,
       AWSProxyConfig awsProxyConfig,
       AWSEndpointConfig awsEndpointConfig,
@@ -232,7 +233,7 @@ public class S3InputSource extends CloudObjectInputSource
         uris,
         prefixes,
         objects,
-        filter,
+        objectGlob,
         s3InputSourceConfig,
         awsProxyConfig,
         awsEndpointConfig,
@@ -337,7 +338,7 @@ public class S3InputSource extends CloudObjectInputSource
         null,
         null,
         split.get(),
-        getFilter(),
+        getObjectGlob(),
         getS3InputSourceConfig(),
         getAwsProxyConfig(),
         getAwsEndpointConfig(),
@@ -378,7 +379,7 @@ public class S3InputSource extends CloudObjectInputSource
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
-           ", filter=" + getFilter() +
+           ", objectGlob=" + getObjectGlob() +
            ", s3InputSourceConfig=" + getS3InputSourceConfig() +
            ", awsProxyConfig=" + getAwsProxyConfig() +
            ", awsEndpointConfig=" + getAwsEndpointConfig() +
@@ -397,8 +398,8 @@ public class S3InputSource extends CloudObjectInputSource
       );
 
       // Skip files that didn't match filter.
-      if (org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
-        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filterWithoutProtocolAndBucket());
+      if (org.apache.commons.lang.StringUtils.isNotBlank(getObjectGlob())) {
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + objectGlobWithoutProtocolAndBucket());
 
         iterator = Iterators.filter(
             iterator,

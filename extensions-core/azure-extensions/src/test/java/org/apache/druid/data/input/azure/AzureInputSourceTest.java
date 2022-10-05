@@ -180,15 +180,15 @@ public class AzureInputSourceTest extends EasyMockSupport
   }
 
   @Test
-  public void test_getPrefixesSplitStream_withFilter_successfullyCreatesCloudLocation_returnsExpectedLocations()
+  public void test_getPrefixesSplitStream_withObjectGlob_successfullyCreatesCloudLocation_returnsExpectedLocations()
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
     List<List<CloudObjectLocation>> expectedCloudLocations = ImmutableList.of(ImmutableList.of(CLOUD_OBJECT_LOCATION_1));
     List<CloudBlobHolder> expectedCloudBlobs = ImmutableList.of(cloudBlobDruid1);
     Iterator<CloudBlobHolder> expectedCloudBlobsIterator = expectedCloudBlobs.iterator();
-    String filter = "**.csv";
+    String objectGlob = "**.csv";
 
-    PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filter);
+    PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + objectGlob);
 
     expectedCloudBlobsIterator = Iterators.filter(
         expectedCloudBlobsIterator,
@@ -215,7 +215,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
-        filter
+        objectGlob
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> cloudObjectStream = azureInputSource.getPrefixesSplitStream(
@@ -269,7 +269,7 @@ public class AzureInputSourceTest extends EasyMockSupport
     );
 
     String actualToString = azureInputSource.toString();
-    Assert.assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[], filter=null}", actualToString);
+    Assert.assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[], objectGlob=null}", actualToString);
   }
 
   @Test
@@ -283,7 +283,7 @@ public class AzureInputSourceTest extends EasyMockSupport
                   .withNonnullFields("azureCloudBlobIterableFactory")
                   .withNonnullFields("azureCloudBlobToLocationConverter")
                   .withNonnullFields("inputDataConfig")
-                  .withNonnullFields("filter")
+                  .withNonnullFields("objectGlob")
                   .withNonnullFields("scheme")
                   .verify();
   }

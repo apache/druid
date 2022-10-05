@@ -79,11 +79,11 @@ public class OssInputSource extends CloudObjectInputSource
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("filter") @Nullable String filter,
+      @JsonProperty("objectGlob") @Nullable String objectGlob,
       @JsonProperty("properties") @Nullable OssClientConfig inputSourceConfig
   )
   {
-    super(OssStorageDruidModule.SCHEME, uris, prefixes, objects, filter);
+    super(OssStorageDruidModule.SCHEME, uris, prefixes, objects, objectGlob);
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "inputDataConfig");
     Preconditions.checkNotNull(client, "client");
     this.inputSourceConfig = inputSourceConfig;
@@ -136,7 +136,7 @@ public class OssInputSource extends CloudObjectInputSource
         null,
         null,
         split.get(),
-        getFilter(),
+        getObjectGlob(),
         getOssInputSourceConfig()
     );
   }
@@ -170,7 +170,7 @@ public class OssInputSource extends CloudObjectInputSource
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
-           ", filter=" + getFilter() +
+           ", objectGlob=" + getObjectGlob() +
            ", ossInputSourceConfig=" + getOssInputSourceConfig() +
            '}';
   }
@@ -184,9 +184,9 @@ public class OssInputSource extends CloudObjectInputSource
           inputDataConfig.getMaxListingLength()
       );
 
-      // Skip files that didn't match filter.
-      if (StringUtils.isNotBlank(getFilter())) {
-        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filterWithoutProtocolAndBucket());
+      // Skip files that didn't match glob filter.
+      if (StringUtils.isNotBlank(getObjectGlob())) {
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + objectGlobWithoutProtocolAndBucket());
 
         iterator = Iterators.filter(
             iterator,

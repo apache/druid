@@ -74,10 +74,10 @@ public class AzureInputSource extends CloudObjectInputSource
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("filter") @Nullable String filter
+      @JsonProperty("objectGlob") @Nullable String objectGlob
   )
   {
-    super(SCHEME, uris, prefixes, objects, filter);
+    super(SCHEME, uris, prefixes, objects, objectGlob);
     this.storage = Preconditions.checkNotNull(storage, "AzureStorage");
     this.entityFactory = Preconditions.checkNotNull(entityFactory, "AzureEntityFactory");
     this.azureCloudBlobIterableFactory = Preconditions.checkNotNull(
@@ -103,7 +103,7 @@ public class AzureInputSource extends CloudObjectInputSource
         null,
         null,
         split.get(),
-        getFilter()
+        getObjectGlob()
     );
   }
 
@@ -133,9 +133,9 @@ public class AzureInputSource extends CloudObjectInputSource
     return () -> {
       Iterator<CloudBlobHolder> iterator = azureCloudBlobIterableFactory.create(getPrefixes(), inputDataConfig.getMaxListingLength()).iterator();
 
-      // Skip files that didn't match filter.
-      if (StringUtils.isNotBlank(getFilter())) {
-        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filterWithoutProtocolAndBucket());
+      // Skip files that didn't match glob filter.
+      if (StringUtils.isNotBlank(getObjectGlob())) {
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + objectGlobWithoutProtocolAndBucket());
 
         iterator = Iterators.filter(
             iterator,
@@ -187,7 +187,7 @@ public class AzureInputSource extends CloudObjectInputSource
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
-           ", filter=" + getFilter() +
+           ", objectGlob=" + getObjectGlob() +
            '}';
   }
 }

@@ -65,10 +65,10 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("filter") @Nullable String filter
+      @JsonProperty("objectGlob") @Nullable String objectGlob
   )
   {
-    super(GoogleStorageDruidModule.SCHEME_GS, uris, prefixes, objects, filter);
+    super(GoogleStorageDruidModule.SCHEME_GS, uris, prefixes, objects, objectGlob);
     this.storage = storage;
     this.inputDataConfig = inputDataConfig;
   }
@@ -117,7 +117,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
   @Override
   public SplittableInputSource<List<CloudObjectLocation>> withSplit(InputSplit<List<CloudObjectLocation>> split)
   {
-    return new GoogleCloudStorageInputSource(storage, inputDataConfig, null, null, split.get(), getFilter());
+    return new GoogleCloudStorageInputSource(storage, inputDataConfig, null, null, split.get(), getObjectGlob());
   }
 
   private CloudObjectLocation byteSourceFromStorageObject(final StorageObject storageObject)
@@ -134,9 +134,9 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
           inputDataConfig.getMaxListingLength()
       );
 
-      // Skip files that didn't match filter.
-      if (StringUtils.isNotBlank(getFilter())) {
-        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filterWithoutProtocolAndBucket());
+      // Skip files that didn't match glob filter.
+      if (StringUtils.isNotBlank(getObjectGlob())) {
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + objectGlobWithoutProtocolAndBucket());
 
         iterator = Iterators.filter(
             iterator,
@@ -155,7 +155,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
-           ", filter=" + getFilter() +
+           ", objectGlob=" + getObjectGlob() +
            '}';
   }
 }

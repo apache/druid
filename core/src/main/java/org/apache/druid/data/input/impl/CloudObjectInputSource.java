@@ -51,7 +51,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   private final List<URI> uris;
   private final List<URI> prefixes;
   private final List<CloudObjectLocation> objects;
-  private final String filter;
+  private final String objectGlob;
 
   public CloudObjectInputSource(
       String scheme,
@@ -64,7 +64,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     this.uris = uris;
     this.prefixes = prefixes;
     this.objects = objects;
-    this.filter = null;
+    this.objectGlob = null;
 
     illegalArgsChecker();
   }
@@ -74,14 +74,14 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       @Nullable List<URI> uris,
       @Nullable List<URI> prefixes,
       @Nullable List<CloudObjectLocation> objects,
-      @Nullable String filter
+      @Nullable String objectGlob
   )
   {
     this.scheme = scheme;
     this.uris = uris;
     this.prefixes = prefixes;
     this.objects = objects;
-    this.filter = filter;
+    this.objectGlob = objectGlob;
 
     illegalArgsChecker();
   }
@@ -107,40 +107,40 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
 
   @Nullable
   @JsonProperty
-  public String getFilter()
+  public String getObjectGlob()
   {
-    return filter;
+    return objectGlob;
   }
 
   /**
-   * Strips out blob store's protocol and bucket from {@link #getFilter}.
-   * This is to reduce user errors when crafting a filter.
+   * Strips out blob store's protocol and bucket from {@link #getObjectGlob}.
+   * This is to reduce user errors when crafting a objectGlob.
    */
-  protected String filterWithoutProtocolAndBucket()
+  protected String objectGlobWithoutProtocolAndBucket()
   {
-    // If filter is null, just return it.
-    if (filter == null) {
-      return filter;
+    // If objectGlob is null, just return it.
+    if (objectGlob == null) {
+      return objectGlob;
     }
 
     String prefix = scheme + "://";
 
-    // Don't do anything if we don't detect a protocol, simply returns the filter.
-    if (!filter.startsWith(prefix)) {
-      return filter;
+    // Don't do anything if we don't detect a protocol, simply returns the objectGlob.
+    if (!objectGlob.startsWith(prefix)) {
+      return objectGlob;
     }
 
     // Strip out the protocol
-    String filterWithoutProtocol = StringUtils.removeStart(filter, prefix);
+    String objectGlobWithoutProtocol = StringUtils.removeStart(objectGlob, prefix);
 
-    String[] filterWithoutProtocolChunkArray = filterWithoutProtocol.split("/");
+    String[] objectGlobWithoutProtocolChunkArray = objectGlobWithoutProtocol.split("/");
 
     // If there's only 1 element, just return it because we don't know if that's a file name or bucket name.
-    if (filterWithoutProtocolChunkArray.length == 1) {
-      return filterWithoutProtocolChunkArray[0];
+    if (objectGlobWithoutProtocolChunkArray.length == 1) {
+      return objectGlobWithoutProtocolChunkArray[0];
     }
 
-    return Arrays.stream(filterWithoutProtocolChunkArray).skip(1).collect(Collectors.joining("/"));
+    return Arrays.stream(objectGlobWithoutProtocolChunkArray).skip(1).collect(Collectors.joining("/"));
   }
 
   /**
@@ -155,8 +155,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
    * only if {@link #prefixes} is set, otherwise the splits are created directly from {@link #uris} or {@link #objects}.
    * Calling if {@link #prefixes} is not set is likely to either lead to an empty iterator or null pointer exception.
    *
-   * If {@link #filter} is set, the filter will be applied on {@link #uris} or {@link #objects}.
-   * {@link #filter} uses a glob notation, for example: "**.parquet".
+   * If {@link #objectGlob} is set, the objectGlob will be applied on {@link #uris} or {@link #objects}.
+   * {@link #objectGlob} uses a glob notation, for example: "**.parquet".
    */
   protected abstract Stream<InputSplit<List<CloudObjectLocation>>> getPrefixesSplitStream(SplitHintSpec splitHintSpec);
 
@@ -169,8 +169,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     if (!CollectionUtils.isNullOrEmpty(objects)) {
       Stream<CloudObjectLocation> objectStream = objects.stream();
 
-      if (StringUtils.isNotBlank(filter)) {
-        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filterWithoutProtocolAndBucket());
+      if (StringUtils.isNotBlank(objectGlob)) {
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + objectGlobWithoutProtocolAndBucket());
         objectStream = objectStream.filter(object -> m.matches(Paths.get(object.getPath())));
       }
 
@@ -180,8 +180,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     if (!CollectionUtils.isNullOrEmpty(uris)) {
       Stream<URI> uriStream = uris.stream();
 
-      if (StringUtils.isNotBlank(filter)) {
-        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + filterWithoutProtocolAndBucket());
+      if (StringUtils.isNotBlank(objectGlob)) {
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + objectGlobWithoutProtocolAndBucket());
         uriStream = uriStream.filter(uri -> m.matches(Paths.get(uri.toString())));
       }
 
@@ -240,13 +240,13 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
            Objects.equals(uris, that.uris) &&
            Objects.equals(prefixes, that.prefixes) &&
            Objects.equals(objects, that.objects) &&
-           Objects.equals(filter, that.filter);
+           Objects.equals(objectGlob, that.objectGlob);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(scheme, uris, prefixes, objects, filter);
+    return Objects.hash(scheme, uris, prefixes, objects, objectGlob);
   }
 
   private void illegalArgsChecker() throws IllegalArgumentException
