@@ -17,18 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.client;
+package org.apache.druid.msq.statistics;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.inject.Provider;
-
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = FilteredHttpServerInventoryViewProvider.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "batch", value = FilteredBatchServerInventoryViewProvider.class),
-    @JsonSubTypes.Type(name = "http", value = FilteredHttpServerInventoryViewProvider.class)
-})
-public interface FilteredServerInventoryViewProvider extends Provider<FilteredServerInventoryView>
+public class QuantilesSketchKeyCollectorSnapshotTest
 {
+  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
+
+  @Test
+  public void testSnapshotSerde() throws JsonProcessingException
+  {
+    QuantilesSketchKeyCollectorSnapshot snapshot = new QuantilesSketchKeyCollectorSnapshot("sketchString", 100);
+    String jsonStr = jsonMapper.writeValueAsString(snapshot);
+    Assert.assertEquals(snapshot, jsonMapper.readValue(jsonStr, QuantilesSketchKeyCollectorSnapshot.class));
+  }
 }
