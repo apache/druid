@@ -194,17 +194,19 @@ public class S3InputSource extends CloudObjectInputSource
       AWSClientConfig awsClientConfig
   )
   {
-    this(s3Client,
-         s3ClientBuilder,
-         inputDataConfig,
-         uris,
-         prefixes,
-         objects,
-         objectGlob,
-         s3InputSourceConfig,
-         awsProxyConfig,
-         awsEndpointConfig,
-         awsClientConfig
+    this(
+        s3Client,
+        s3ClientBuilder,
+        inputDataConfig,
+        null,
+        uris,
+        prefixes,
+        objects,
+        objectGlob,
+        s3InputSourceConfig,
+        awsProxyConfig,
+        awsEndpointConfig,
+        awsClientConfig
     );
   }
 
