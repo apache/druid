@@ -333,8 +333,6 @@ public abstract class IndexTaskClient implements AutoCloseable
       if (location.equals(TaskLocation.unknown())) {
         throw new NoTaskLocationException(StringUtils.format("No TaskLocation available for task [%s]", taskId));
       }
-      log.info("Request Port is " + location.getPort());
-      log.info("Request TLS Port is " + location.getTlsPort());
 
       final Request request = createRequest(
           taskId,
@@ -350,7 +348,6 @@ public abstract class IndexTaskClient implements AutoCloseable
       try {
         // Netty throws some annoying exceptions if a connection can't be opened, which happens relatively frequently
         // for tasks that happen to still be starting up, so test the connection first to keep the logs clean.
-        log.info("Request URL is" + request.getUrl());
         checkConnection(request.getUrl().getHost(), request.getUrl().getPort());
 
         response = submitRequest(request, responseHandler);
