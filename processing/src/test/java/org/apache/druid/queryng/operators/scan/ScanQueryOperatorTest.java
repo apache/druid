@@ -20,6 +20,7 @@
 package org.apache.druid.queryng.operators.scan;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -34,6 +35,7 @@ import org.apache.druid.queryng.operators.Operator;
 import org.apache.druid.queryng.operators.general.MockCursor;
 import org.apache.druid.queryng.operators.general.MockStorageAdapter;
 import org.apache.druid.queryng.operators.general.MockStorageAdapter.MockSegment;
+import org.apache.druid.queryng.operators.scan.ScanEngineOperator.CursorDefinition;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
@@ -58,7 +60,6 @@ public class ScanQueryOperatorTest
    */
   private static class MockDualCursorSegment extends MockSegment
   {
-
     public MockDualCursorSegment(int segmentSize)
     {
       super(segmentSize);
@@ -81,33 +82,44 @@ public class ScanQueryOperatorTest
           return Sequences.simple(Arrays.asList(
               new MockCursor(interval, segmentSize),
               new MockCursor(interval, segmentSize)
-              )
-          );
+          ));
         }
       };
     }
+  }
+
+  private CursorDefinition mockCursor(Segment segment)
+  {
+    return new CursorDefinition(
+        segment,
+        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
+        null, // No filter
+        VirtualColumns.EMPTY,
+        false,
+        Granularities.ALL,
+        null // No query metrics
+    );
+  }
+
+  private CursorDefinition mockCursor(int rowCount)
+  {
+    return mockCursor(new MockSegment(rowCount));
   }
 
   @Test
   public void testWildcard()
   {
     FragmentManager fragment = Fragments.defaultFragment();
-    Segment segment = new MockSegment(20); // 20 rows
     Operator<ScanResultValue> op = new ScanEngineOperator(
         fragment,
-        "dummy",
-        null, // No filter
+        mockCursor(20),
         10, // Batch size
         false, // Not legacy
         null, // No columns AKA "wildcard"
-        VirtualColumns.EMPTY,
         ScanEngineOperator.Order.NONE,
         Long.MAX_VALUE, // No limit
         ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
-        Long.MAX_VALUE, // No timeout
-        segment,
-        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
-        null // No query metrics
+        Long.MAX_VALUE // No timeout
     );
     fragment.registerRoot(op);
     List<ScanResultValue> results = fragment.toList();
@@ -145,23 +157,17 @@ public class ScanQueryOperatorTest
   public void testProjection()
   {
     FragmentManager fragment = Fragments.defaultFragment();
-    Segment segment = new MockSegment(5); // 5 rows
     Operator<ScanResultValue> op = new ScanEngineOperator(
         fragment,
-        "dummy",
-        null, // No filter
+        mockCursor(5),
         10, // Batch size
         false, // Not legacy
         // Projection, omit metrics, add unknown column
         Arrays.asList("page", ColumnHolder.TIME_COLUMN_NAME, "bogus"),
-        VirtualColumns.EMPTY,
         ScanEngineOperator.Order.NONE,
         Long.MAX_VALUE, // No limit
         ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
-        Long.MAX_VALUE, // No timeout
-        segment,
-        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
-        null // No query metrics
+        Long.MAX_VALUE // No timeout
     );
     fragment.registerRoot(op);
     List<ScanResultValue> results = fragment.toList();
@@ -190,22 +196,16 @@ public class ScanQueryOperatorTest
   public void testZeroRows()
   {
     FragmentManager fragment = Fragments.defaultFragment();
-    Segment segment = new MockSegment(0); // 0 rows
     Operator<ScanResultValue> op = new ScanEngineOperator(
         fragment,
-        "dummy",
-        null, // No filter
+        mockCursor(0),
         10, // Batch size
         false, // Not legacy
         null, // No columns AKA "wildcard"
-        VirtualColumns.EMPTY,
         ScanEngineOperator.Order.NONE,
         Long.MAX_VALUE, // No limit
         ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
-        Long.MAX_VALUE, // No timeout
-        segment,
-        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
-        null // No query metrics
+        Long.MAX_VALUE // No timeout
     );
     fragment.registerRoot(op);
     List<ScanResultValue> results = fragment.toList();
@@ -216,22 +216,16 @@ public class ScanQueryOperatorTest
   public void testNoSegment()
   {
     FragmentManager fragment = Fragments.defaultFragment();
-    Segment segment = new MockSegment(-1); // simulate no segment
     Operator<ScanResultValue> op = new ScanEngineOperator(
         fragment,
-        "dummy",
-        null, // No filter
+        mockCursor(-1), // simulate no segment
         10, // Batch size
         false, // Not legacy
         null, // No columns AKA "wildcard"
-        VirtualColumns.EMPTY,
         ScanEngineOperator.Order.NONE,
         Long.MAX_VALUE, // No limit
         ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
-        Long.MAX_VALUE, // No timeout
-        segment,
-        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
-        null // No query metrics
+        Long.MAX_VALUE // No timeout
     );
     fragment.registerRoot(op);
     assertThrows(ISE.class, () -> fragment.toList());
@@ -241,22 +235,16 @@ public class ScanQueryOperatorTest
   public void testTwoCursors()
   {
     FragmentManager fragment = Fragments.defaultFragment();
-    Segment segment = new MockDualCursorSegment(20); // 20 rows per cursor
     Operator<ScanResultValue> op = new ScanEngineOperator(
         fragment,
-        "dummy",
-        null, // No filter
+        mockCursor(new MockDualCursorSegment(20)),
         100, // Batch size
         false, // Not legacy
         null, // No columns AKA "wildcard"
-        VirtualColumns.EMPTY,
         ScanEngineOperator.Order.NONE,
         Long.MAX_VALUE, // No limit
         ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
-        Long.MAX_VALUE, // No timeout
-        segment,
-        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
-        null // No query metrics
+        Long.MAX_VALUE // No timeout
     );
     fragment.registerRoot(op);
     List<ScanResultValue> results = fragment.toList();
@@ -269,48 +257,35 @@ public class ScanQueryOperatorTest
   public void testMultipleCursorsZeroRows()
   {
     FragmentManager fragment = Fragments.defaultFragment();
-    Segment segment = new MockSegment(0); // 0 rows
     Operator<ScanResultValue> op = new ScanEngineOperator(
         fragment,
-        "dummy",
-        null, // No filter
+        mockCursor(new MockDualCursorSegment(0)),
         10, // Batch size
         false, // Not legacy
         null, // No columns AKA "wildcard"
-        VirtualColumns.EMPTY,
         ScanEngineOperator.Order.NONE,
         Long.MAX_VALUE, // No limit
         ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
-        Long.MAX_VALUE, // No timeout
-        segment,
-        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
-        null // No query metrics
+        Long.MAX_VALUE // No timeout
     );
     fragment.registerRoot(op);
     List<ScanResultValue> results = fragment.toList();
     assertTrue(results.isEmpty());
-
   }
 
   private List<ScanResultValue> opWithLimit(int limit)
   {
     FragmentManager fragment = Fragments.defaultFragment();
-    Segment segment = new MockSegment(20); // 20 rows
     Operator<ScanResultValue> op = new ScanEngineOperator(
         fragment,
-        "dummy",
-        null, // No filter
+        mockCursor(20),
         10, // Batch size
         false, // Not legacy
         null, // No columns AKA "wildcard"
-        VirtualColumns.EMPTY,
         ScanEngineOperator.Order.NONE,
         limit,
         ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
-        Long.MAX_VALUE, // No timeout
-        segment,
-        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
-        null // No query metrics
+        Long.MAX_VALUE // No timeout
     );
     fragment.registerRoot(op);
     return fragment.toList();
@@ -340,22 +315,16 @@ public class ScanQueryOperatorTest
   public void testLimitOnSecondCursor()
   {
     FragmentManager fragment = Fragments.defaultFragment();
-    Segment segment = new MockDualCursorSegment(20); // 20 rows per cursor
     Operator<ScanResultValue> op = new ScanEngineOperator(
         fragment,
-        "dummy",
-        null, // No filter
+        mockCursor(new MockDualCursorSegment(20)),
         10, // Batch size
         false, // Not legacy
         null, // No columns AKA "wildcard"
-        VirtualColumns.EMPTY,
         ScanEngineOperator.Order.NONE,
         25, // Limit in second cursor
         ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
-        Long.MAX_VALUE, // No timeout
-        segment,
-        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
-        null // No query metrics
+        Long.MAX_VALUE // No timeout
     );
     fragment.registerRoot(op);
     List<ScanResultValue> results = fragment.toList();
@@ -378,38 +347,27 @@ public class ScanQueryOperatorTest
   public void testLimitOnSecondScan()
   {
     FragmentManager fragment = Fragments.defaultFragment();
-    Segment segment = new MockSegment(20); // 20 rows per cursor
     Operator<ScanResultValue> op1 = new ScanEngineOperator(
         fragment,
-        "dummy",
-        null, // No filter
+        mockCursor(20),
         10, // Batch size
         false, // Not legacy
         null, // No columns AKA "wildcard"
-        VirtualColumns.EMPTY,
         ScanEngineOperator.Order.NONE,
         25, // Limit in second scan
         ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
-        Long.MAX_VALUE, // No timeout
-        segment,
-        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
-        null // No query metrics
+        Long.MAX_VALUE // No timeout
     );
     Operator<ScanResultValue> op2 = new ScanEngineOperator(
         fragment,
-        "dummy",
-        null, // No filter
+        mockCursor(20),
         10, // Batch size
         false, // Not legacy
         null, // No columns AKA "wildcard"
-        VirtualColumns.EMPTY,
         ScanEngineOperator.Order.NONE,
         25, // Limit in second scan
         ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
-        Long.MAX_VALUE, // No timeout
-        segment,
-        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
-        null // No query metrics
+        Long.MAX_VALUE // No timeout
     );
     ConcatOperator<ScanResultValue> concat = new ConcatOperator<>(
         fragment,
@@ -432,38 +390,27 @@ public class ScanQueryOperatorTest
   public void testLimitOnFirstScan()
   {
     FragmentManager fragment = Fragments.defaultFragment();
-    Segment segment = new MockSegment(20); // 20 rows per cursor
     Operator<ScanResultValue> op1 = new ScanEngineOperator(
         fragment,
-        "dummy",
-        null, // No filter
+        mockCursor(20),
         10, // Batch size
         false, // Not legacy
         null, // No columns AKA "wildcard"
-        VirtualColumns.EMPTY,
         ScanEngineOperator.Order.NONE,
         15, // Limit in second scan
         ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
-        Long.MAX_VALUE, // No timeout
-        segment,
-        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
-        null // No query metrics
+        Long.MAX_VALUE // No timeout
     );
     Operator<ScanResultValue> op2 = new ScanEngineOperator(
         fragment,
-        "dummy",
-        null, // No filter
+        mockCursor(20),
         10, // Batch size
         false, // Not legacy
         null, // No columns AKA "wildcard"
-        VirtualColumns.EMPTY,
         ScanEngineOperator.Order.NONE,
         15, // Limit in second scan
         ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
-        Long.MAX_VALUE, // No timeout
-        segment,
-        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
-        null // No query metrics
+        Long.MAX_VALUE // No timeout
     );
     ConcatOperator<ScanResultValue> concat = new ConcatOperator<>(
         fragment,
@@ -485,38 +432,27 @@ public class ScanQueryOperatorTest
   public void testLocalLimitWhenOrdered()
   {
     FragmentManager fragment = Fragments.defaultFragment();
-    Segment segment = new MockSegment(20); // 20 rows per cursor
     Operator<ScanResultValue> op1 = new ScanEngineOperator(
         fragment,
-        "dummy",
-        null, // No filter
+        mockCursor(20),
         10, // Batch size
         false, // Not legacy
         null, // No columns AKA "wildcard"
-        VirtualColumns.EMPTY,
         ScanEngineOperator.Order.ASCENDING,
         25, // Limit in second scan
         ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
-        Long.MAX_VALUE, // No timeout
-        segment,
-        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
-        null // No query metrics
+        Long.MAX_VALUE // No timeout
     );
     Operator<ScanResultValue> op2 = new ScanEngineOperator(
         fragment,
-        "dummy",
-        null, // No filter
+        mockCursor(20),
         10, // Batch size
         false, // Not legacy
         null, // No columns AKA "wildcard"
-        VirtualColumns.EMPTY,
         ScanEngineOperator.Order.ASCENDING,
         25, // Limit in second scan
         ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
-        Long.MAX_VALUE, // No timeout
-        segment,
-        MockStorageAdapter.MOCK_INTERVAL, // Whole segment
-        null // No query metrics
+        Long.MAX_VALUE // No timeout
     );
     ConcatOperator<ScanResultValue> concat = new ConcatOperator<>(
         fragment,

@@ -261,12 +261,12 @@ public class QueryPlanner
         )
     );
     final Query<T> query = queryPlus.getQuery();
-    final String newName = query.getType() + "_" + query.getDataSource() + "_" + query.getIntervals();
     Operator<T> op = Operators.toOperator(base, queryPlus);
     final boolean setName = input.getQuery().getContextBoolean(
         SpecificSegmentQueryRunner.CTX_SET_THREAD_NAME,
         true);
     if (setName) {
+      final String newName = query.getType() + "_" + query.getDataSource() + "_" + query.getIntervals();
       op = new ThreadLabelOperator<T>(
           queryPlus.fragment(),
           newName,

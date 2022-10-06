@@ -130,7 +130,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     return (queryPlus, responseContext) -> {
       if (QueryNGConfig.enabledFor(queryPlus)) {
         // A bit awkward: when using operators, we create the resultMergeQueryRunner, but
-        // don't us it. Reason: in the outer function, we don't have visibility to the query.
+        // don't use it. Reason: in the outer function, we don't have visibility to the query.
         return TimeSeriesPlanner.mergeResults(
             queryPlus,
             responseContext,

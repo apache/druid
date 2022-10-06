@@ -22,7 +22,7 @@ package org.apache.druid.queryng.operators.scan;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.Filter;
@@ -69,53 +69,98 @@ public class ScanEngineOperator implements Operator<ScanResultValue>
     DESCENDING
   }
 
+  // TODO: Unify this with the class of the same name for time series.
+  public static class CursorDefinition
+  {
+    private final Segment segment;
+    private final Interval queryInterval;
+    private final Filter filter;
+    private final VirtualColumns virtualColumns;
+    private final boolean descending;
+    private final Granularity granularity;
+    @Nullable private final QueryMetrics<?> queryMetrics;
+    private StorageAdapter adapter;
+
+    public CursorDefinition(
+        final Segment segment,
+        final Interval queryInterval,
+        @Nullable final Filter filter,
+        @Nullable final VirtualColumns virtualColumns,
+        final boolean descending,
+        final Granularity granularity,
+        @Nullable final QueryMetrics<?> queryMetrics
+    )
+    {
+      this.segment = segment;
+      this.queryInterval = queryInterval;
+      this.filter = filter;
+      this.virtualColumns = virtualColumns;
+      this.descending = descending;
+      this.granularity = granularity;
+      this.queryMetrics = queryMetrics;
+    }
+
+    private StorageAdapter adapter()
+    {
+      if (adapter == null) {
+        adapter = segment.asStorageAdapter();
+        if (adapter == null) {
+          throw new ISE(
+              "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+          );
+        }
+      }
+      return adapter;
+    }
+
+    public SequenceIterator<Cursor> cursors()
+    {
+      return SequenceIterator.of(
+          adapter().makeCursors(
+              filter,
+              queryInterval,
+              virtualColumns,
+              granularity,
+              descending,
+              queryMetrics
+          )
+      );
+    }
+  }
+
   /**
    * Inner class which holds the state for reading a cursor. Allows
    * some read state to be final.
    */
-  private class Impl implements ResultIterator<ScanResultValue>
+  private class ScanIterator implements ResultIterator<ScanResultValue>
   {
     private final SequenceIterator<Cursor> iter;
     private final List<String> selectedColumns;
     private final long limit;
     private CursorReader cursorReader;
 
-    private Impl(long limit)
+    private ScanIterator(long limit)
     {
       this.limit = limit;
-      final StorageAdapter adapter = segment.asStorageAdapter();
-      //final StorageAdapter adapter = new MockStorageAdapter();
-      if (adapter == null) {
-        throw new ISE(
-            "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
-        );
-      }
+      iter = cursorDefn.cursors();
       if (columns == null) {
-        selectedColumns = inferColumns(adapter);
+        selectedColumns = inferColumns();
       } else {
         selectedColumns = columns;
       }
-      iter = SequenceIterator.of(adapter.makeCursors(
-              filter,
-              interval,
-              virtualColumns,
-              Granularities.ALL,
-              order == Order.DESCENDING,
-              queryMetrics
-          ));
     }
 
-    protected List<String> inferColumns(StorageAdapter adapter)
+    protected List<String> inferColumns()
     {
       final Set<String> availableColumns = Sets.newLinkedHashSet(
           Iterables.concat(
               Collections.singleton(isLegacy ? LEGACY_TIMESTAMP_KEY : ColumnHolder.TIME_COLUMN_NAME),
               Iterables.transform(
-                  Arrays.asList(virtualColumns.getVirtualColumns()),
+                  Arrays.asList(cursorDefn.virtualColumns.getVirtualColumns()),
                   VirtualColumn::getOutputName
               ),
-              adapter.getAvailableDimensions(),
-              adapter.getAvailableMetrics()
+              cursorDefn.adapter.getAvailableDimensions(),
+              cursorDefn.adapter.getAvailableMetrics()
           )
       );
 
@@ -144,7 +189,7 @@ public class ScanEngineOperator implements Operator<ScanResultValue>
             batchCount++;
             rowCount += result.size();
             return new ScanResultValue(
-                segmentId,
+                cursorDefn.segment.getId().toString(),
                 selectedColumns,
                 result
             );
@@ -177,7 +222,7 @@ public class ScanEngineOperator implements Operator<ScanResultValue>
             resultFormat,
             isLegacy,
             timeoutAt,
-            queryId
+            context.queryId()
         );
         cursorCount++;
       }
@@ -199,53 +244,36 @@ public class ScanEngineOperator implements Operator<ScanResultValue>
   }
 
   protected final FragmentContext context;
-  private final String queryId;
-  private final Segment segment;
-  private final String segmentId;
-  private final Interval interval;
+  private final CursorDefinition cursorDefn;
   private final List<String> columns;
-  private final VirtualColumns virtualColumns;
-  private final Filter filter;
   private final boolean isLegacy;
   private final int batchSize;
   private final Order order;
   private final long scanLimit;
   private final ResultFormat resultFormat;
   private final long timeoutAt;
-  @Nullable final QueryMetrics<?> queryMetrics;
-  private Impl impl;
+  private ScanIterator impl;
   private int rowCount;
   private int batchCount;
   private int cursorCount;
 
   public ScanEngineOperator(
       final FragmentContext context,
-      final String queryId,
-      final Filter filter,
+      final CursorDefinition cursorDefn,
       final int batchSize,
       final boolean isLegacy,
       final List<String> columns,
-      final VirtualColumns virtualColumns,
       final Order order,
       final long scanLimit,
       final ResultFormat resultFormat,
-      final long timeoutAt,
-      final Segment segment,
-      final Interval interval,
-      @Nullable final QueryMetrics<?> queryMetrics
+      final long timeoutAt
   )
   {
     this.context = context;
-    this.queryId = queryId;
-    this.segment = segment;
-    this.segmentId = segment.getId().toString();
-    this.interval = interval;
-    this.filter = filter;
+    this.cursorDefn = cursorDefn;
     this.isLegacy = isLegacy;
     this.batchSize = batchSize;
-    this.queryMetrics = queryMetrics;
     this.columns = columns;
-    this.virtualColumns = virtualColumns;
     this.order = order;
     this.scanLimit = scanLimit;
     this.resultFormat = resultFormat;
@@ -272,7 +300,7 @@ public class ScanEngineOperator implements Operator<ScanResultValue>
     if (limit <= 0) {
       return Iterators.emptyIterator();
     } else {
-      impl = new Impl(limit);
+      impl = new ScanIterator(limit);
       return impl;
     }
   }

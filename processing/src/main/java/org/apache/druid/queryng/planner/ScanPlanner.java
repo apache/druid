@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -44,12 +45,14 @@ import org.apache.druid.queryng.operators.scan.GroupedScanResultLimitOperator;
 import org.apache.druid.queryng.operators.scan.ScanBatchToRowOperator;
 import org.apache.druid.queryng.operators.scan.ScanCompactListToArrayOperator;
 import org.apache.druid.queryng.operators.scan.ScanEngineOperator;
+import org.apache.druid.queryng.operators.scan.ScanEngineOperator.CursorDefinition;
 import org.apache.druid.queryng.operators.scan.ScanEngineOperator.Order;
 import org.apache.druid.queryng.operators.scan.ScanListToArrayOperator;
 import org.apache.druid.queryng.operators.scan.ScanResultOffsetOperator;
 import org.apache.druid.queryng.operators.scan.UngroupedScanResultLimitOperator;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
@@ -299,21 +302,25 @@ public class ScanPlanner
       order = Order.ASCENDING;
     }
 
+    CursorDefinition cursorDefn = new CursorDefinition(
+        segment,
+        interval(query),
+        filter,
+        query.getVirtualColumns(),
+        order == Order.DESCENDING,
+        Granularities.ALL,
+        queryMetrics
+    );
     return new ScanEngineOperator(
           context,
-          query.getId(),
-          filter,
+          cursorDefn,
           query.getBatchSize(),
           isLegacy,
           columns,
-          query.getVirtualColumns(),
           order,
           query.getScanRowsLimit(),
           query.getResultFormat(),
-          QueryContexts.hasTimeout(query) ? context.responseContext().getTimeoutTime() : Long.MAX_VALUE,
-          segment,
-          interval(query),
-          queryMetrics
+          QueryContexts.hasTimeout(query) ? context.responseContext().getTimeoutTime() : Long.MAX_VALUE
     );
   }
 
