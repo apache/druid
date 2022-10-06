@@ -301,10 +301,14 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       ScanQuery scanQuery
   ) throws IOException
   {
-
+    int limit;
+    if (scanQuery.getScanRowsLimit() > Integer.MAX_VALUE) {
+      limit = Integer.MAX_VALUE;
+    } else {
+      limit = Math.toIntExact(scanQuery.getScanRowsLimit());
+    }
     // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
     // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
-    int limit = Math.toIntExact(scanQuery.getScanRowsLimit());
     List<String> sortColumns = scanQuery.getOrderBys()
                                         .stream()
                                         .map(orderBy -> orderBy.getColumnName())

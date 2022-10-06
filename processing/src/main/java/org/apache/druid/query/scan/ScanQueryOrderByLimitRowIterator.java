@@ -60,7 +60,13 @@ public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
     if (ScanQuery.ResultFormat.RESULT_FORMAT_VALUE_VECTOR.equals(resultFormat)) {
       throw new UOE(ScanQuery.ResultFormat.RESULT_FORMAT_VALUE_VECTOR + " is not supported yet");
     }
-    final int limit = Math.toIntExact(query.getScanRowsLimit());
+    final int scanRowsLimit;
+    if (query.getScanRowsLimit() > Integer.MAX_VALUE) {
+      scanRowsLimit = Integer.MAX_VALUE;
+    } else {
+      scanRowsLimit = Math.toIntExact(query.getScanRowsLimit());
+    }
+
     List<String> sortColumns = query.getOrderBys().stream().map(orderBy -> orderBy.getColumnName()).collect(Collectors.toList());
     List<String> orderByDirection = query.getOrderBys().stream().map(orderBy -> orderBy.getOrder().toString()).collect(Collectors.toList());
 
@@ -80,7 +86,7 @@ public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
       }
       return 0;
     };
-    Sorter<Object> sorter = new QueueBasedSorter<Object>(limit, comparator);
+    Sorter<Object> sorter = new QueueBasedSorter<Object>(scanRowsLimit, comparator);
 
     List<String> columns = new ArrayList<>();
     while (!yielder.isDone()) {
