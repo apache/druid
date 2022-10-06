@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.run;
 
-import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 
 /**
@@ -33,5 +33,5 @@ public interface QueryMaker
    * created for. The returned arrays match the row type given by {@link SqlEngine#resultTypeForSelect} or
    * {@link SqlEngine#resultTypeForInsert}, depending on the nature of the statement.
    */
-  Sequence<Object[]> runQuery(DruidQuery druidQuery);
+  QueryResponse<Object[]> runQuery(DruidQuery druidQuery);
 }

@@ -97,7 +97,7 @@ public class DruidConnection
       final DruidJdbcStatement statement = new DruidJdbcStatement(
           connectionId,
           statementId,
-          context,
+          context.copy(),
           sqlStatementFactory
       );
 
@@ -109,7 +109,7 @@ public class DruidConnection
 
   public DruidJdbcPreparedStatement createPreparedStatement(
       SqlStatementFactory sqlStatementFactory,
-      SqlQueryPlus sqlRequest,
+      SqlQueryPlus sqlQueryPlus,
       final long maxRowCount)
   {
     final int statementId = statementCounter.incrementAndGet();
@@ -127,7 +127,7 @@ public class DruidConnection
 
       @SuppressWarnings("GuardedBy")
       final PreparedStatement statement = sqlStatementFactory.preparedStatement(
-          sqlRequest.withContext(context)
+          sqlQueryPlus.withContext(context.copy())
       );
       final DruidJdbcPreparedStatement jdbcStmt = new DruidJdbcPreparedStatement(
           connectionId,

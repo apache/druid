@@ -27,6 +27,7 @@ import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
 import io.prometheus.client.exporter.HTTPServer;
 import io.prometheus.client.exporter.PushGateway;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
@@ -36,6 +37,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /**
@@ -55,6 +58,7 @@ public class PrometheusEmitter implements Emitter
   private HTTPServer server;
   private PushGateway pushGateway;
   private String identifier;
+  private ScheduledExecutorService exec;
 
   static PrometheusEmitter of(PrometheusEmitterConfig config)
   {
@@ -91,6 +95,13 @@ public class PrometheusEmitter implements Emitter
       } else {
         pushGateway = new PushGateway(address);
       }
+      exec = ScheduledExecutors.fixed(1, "PrometheusPushGatewayEmitter-%s");
+      exec.scheduleAtFixedRate(
+          () -> flush(),
+          config.getFlushPeriod(),
+          config.getFlushPeriod(),
+          TimeUnit.SECONDS
+      );
     }
   }
 
@@ -190,6 +201,7 @@ public class PrometheusEmitter implements Emitter
         server.stop();
       }
     } else {
+      exec.shutdownNow();
       flush();
     }
   }

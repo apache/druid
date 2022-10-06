@@ -179,7 +179,7 @@ public class BloomFilterExpressionsTest extends InitializedNullHandlingTest
   public void testCreateWrongArgsCount()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[bloom_filter] must have 1 argument");
+    expectedException.expectMessage("Function[bloom_filter] requires 1 argument");
     Parser.parse("bloom_filter()", macroTable);
   }
 
@@ -187,7 +187,7 @@ public class BloomFilterExpressionsTest extends InitializedNullHandlingTest
   public void testAddWrongArgsCount()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[bloom_filter_add] must have 2 arguments");
+    expectedException.expectMessage("Function[bloom_filter_add] requires 2 arguments");
     Parser.parse("bloom_filter_add(1)", macroTable);
   }
 
@@ -212,7 +212,7 @@ public class BloomFilterExpressionsTest extends InitializedNullHandlingTest
   public void testTestWrongArgsCount()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[bloom_filter_test] must have 2 arguments");
+    expectedException.expectMessage("Function[bloom_filter_test] requires 2 arguments");
     Parser.parse("bloom_filter_test(1)", macroTable);
   }
 

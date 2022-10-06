@@ -38,9 +38,9 @@ import java.util.Comparator;
 public class QuantilesSketchKeyCollectorFactory
     implements KeyCollectorFactory<QuantilesSketchKeyCollector, QuantilesSketchKeyCollectorSnapshot>
 {
-  // smallest value with normalized rank error < 0.1%; retain up to ~86k elements
+  // Maximum value of K possible.
   @VisibleForTesting
-  static final int SKETCH_INITIAL_K = 1 << 12;
+  static final int SKETCH_INITIAL_K = 1 << 15;
 
   private final Comparator<RowKey> comparator;
 
@@ -57,7 +57,7 @@ public class QuantilesSketchKeyCollectorFactory
   @Override
   public QuantilesSketchKeyCollector newKeyCollector()
   {
-    return new QuantilesSketchKeyCollector(comparator, ItemsSketch.getInstance(SKETCH_INITIAL_K, comparator));
+    return new QuantilesSketchKeyCollector(comparator, ItemsSketch.getInstance(SKETCH_INITIAL_K, comparator), 0);
   }
 
   @Override
@@ -79,7 +79,7 @@ public class QuantilesSketchKeyCollectorFactory
   {
     final String encodedSketch =
         StringUtils.encodeBase64String(collector.getSketch().toByteArray(RowKeySerde.INSTANCE));
-    return new QuantilesSketchKeyCollectorSnapshot(encodedSketch);
+    return new QuantilesSketchKeyCollectorSnapshot(encodedSketch, collector.getAverageKeyLength());
   }
 
   @Override
@@ -89,7 +89,7 @@ public class QuantilesSketchKeyCollectorFactory
     final byte[] bytes = StringUtils.decodeBase64String(encodedSketch);
     final ItemsSketch<RowKey> sketch =
         ItemsSketch.getInstance(Memory.wrap(bytes), comparator, RowKeySerde.INSTANCE);
-    return new QuantilesSketchKeyCollector(comparator, sketch);
+    return new QuantilesSketchKeyCollector(comparator, sketch, snapshot.getAverageKeyLength());
   }
 
   private static class RowKeySerde extends ArrayOfItemsSerDe<RowKey>
@@ -106,7 +106,7 @@ public class QuantilesSketchKeyCollectorFactory
       int serializedSize = Integer.BYTES * items.length;
 
       for (final RowKey key : items) {
-        serializedSize += key.array().length;
+        serializedSize += key.getNumberOfBytes();
       }
 
       final byte[] serializedBytes = new byte[serializedSize];

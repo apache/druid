@@ -27,13 +27,10 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
@@ -43,7 +40,6 @@ import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
@@ -79,7 +75,6 @@ import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
-import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
@@ -137,14 +132,10 @@ public class DruidCoordinator
 
   private final Object lock = new Object();
   private final DruidCoordinatorConfig config;
-  private final ZkPathsConfig zkPaths;
   private final JacksonConfigManager configManager;
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final ServerInventoryView serverInventoryView;
   private final MetadataRuleManager metadataRuleManager;
-
-  @Nullable // Null if zk is disabled
-  private final CuratorFramework curator;
 
   private final ServiceEmitter emitter;
   private final IndexingServiceClient indexingServiceClient;
@@ -177,12 +168,10 @@ public class DruidCoordinator
   @Inject
   public DruidCoordinator(
       DruidCoordinatorConfig config,
-      ZkPathsConfig zkPaths,
       JacksonConfigManager configManager,
       SegmentsMetadataManager segmentsMetadataManager,
       ServerInventoryView serverInventoryView,
       MetadataRuleManager metadataRuleManager,
-      Provider<CuratorFramework> curatorProvider,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
@@ -195,18 +184,15 @@ public class DruidCoordinator
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
-      ObjectMapper objectMapper,
-      ZkEnablementConfig zkEnablementConfig
+      ObjectMapper objectMapper
   )
   {
     this(
         config,
-        zkPaths,
         configManager,
         segmentsMetadataManager,
         serverInventoryView,
         metadataRuleManager,
-        curatorProvider,
         emitter,
         scheduledExecutorFactory,
         indexingServiceClient,
@@ -220,19 +206,16 @@ public class DruidCoordinator
         factory,
         lookupCoordinatorManager,
         coordLeaderSelector,
-        objectMapper,
-        zkEnablementConfig
+        objectMapper
     );
   }
 
   DruidCoordinator(
       DruidCoordinatorConfig config,
-      ZkPathsConfig zkPaths,
       JacksonConfigManager configManager,
       SegmentsMetadataManager segmentsMetadataManager,
       ServerInventoryView serverInventoryView,
       MetadataRuleManager metadataRuleManager,
-      Provider<CuratorFramework> curatorProvider,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
@@ -246,22 +229,15 @@ public class DruidCoordinator
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       DruidLeaderSelector coordLeaderSelector,
-      ObjectMapper objectMapper,
-      ZkEnablementConfig zkEnablementConfig
+      ObjectMapper objectMapper
   )
   {
     this.config = config;
-    this.zkPaths = zkPaths;
     this.configManager = configManager;
 
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.serverInventoryView = serverInventoryView;
     this.metadataRuleManager = metadataRuleManager;
-    if (zkEnablementConfig.isEnabled()) {
-      this.curator = curatorProvider.get();
-    } else {
-      this.curator = null;
-    }
     this.emitter = emitter;
     this.indexingServiceClient = indexingServiceClient;
     this.taskMaster = taskMaster;
@@ -440,7 +416,7 @@ public class DruidCoordinator
     if (segment == null) {
       log.makeAlert(new IAE("Can not move null DataSegment"), "Exception moving null segment").emit();
       if (callback != null) {
-        callback.execute();
+        callback.execute(false);
       }
       throw new ISE("Cannot move null DataSegment");
     }
@@ -483,13 +459,10 @@ public class DruidCoordinator
         );
       }
 
-      final String toLoadQueueSegPath =
-          ZKPaths.makePath(zkPaths.getLoadQueuePath(), toServer.getName(), segmentId.toString());
-
-      final LoadPeonCallback loadPeonCallback = () -> {
+      final LoadPeonCallback loadPeonCallback = success -> {
         dropPeon.unmarkSegmentToDrop(segmentToLoad);
         if (callback != null) {
-          callback.execute();
+          callback.execute(success);
         }
       };
 
@@ -499,14 +472,23 @@ public class DruidCoordinator
       try {
         loadPeon.loadSegment(
             segmentToLoad,
-            () -> {
+            success -> {
+              // Drop segment only if:
+              // (1) segment load was successful on toServer
+              // AND (2) segment not already queued for drop on fromServer
+              // AND (3a) loading is http-based
+              //     OR (3b) inventory shows segment loaded on toServer
+
+              // Do not check the inventory with http loading as the HTTP
+              // response is enough to determine load success or failure
               try {
-                if (serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment) &&
-                    (curator == null || curator.checkExists().forPath(toLoadQueueSegPath) == null) &&
-                    !dropPeon.getSegmentsToDrop().contains(segment)) {
+                if (success
+                    && !dropPeon.getSegmentsToDrop().contains(segment)
+                    && (taskMaster.isHttpLoading()
+                     || serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment))) {
                   dropPeon.dropSegment(segment, loadPeonCallback);
                 } else {
-                  loadPeonCallback.execute();
+                  loadPeonCallback.execute(success);
                 }
               }
               catch (Exception e) {
@@ -523,7 +505,7 @@ public class DruidCoordinator
     catch (Exception e) {
       log.makeAlert(e, "Exception moving segment %s", segmentId).emit();
       if (callback != null) {
-        callback.execute();
+        callback.execute(false);
       }
     }
   }
@@ -972,6 +954,14 @@ public class DruidCoordinator
     public List<? extends CoordinatorDuty> getDuties()
     {
       return duties;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "DutiesRunnable{" +
+             "dutiesRunnableAlias='" + dutiesRunnableAlias + '\'' +
+             '}';
     }
   }
 

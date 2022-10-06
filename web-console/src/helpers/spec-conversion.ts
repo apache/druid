@@ -102,45 +102,55 @@ export function convertSpecToSql(spec: any): QueryWithContext {
     );
   }
 
+  const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
+  if (!Array.isArray(transforms)) {
+    throw new Error(`spec.dataSchema.transformSpec.transforms is not an array`);
+  }
+
   let timeExpression: string;
   const column = timestampSpec.column || 'timestamp';
   const columnRef = SqlRef.column(column);
   const format = timestampSpec.format || 'auto';
-  switch (format) {
-    case 'auto':
-      columns.unshift({ name: column, type: 'string' });
-      timeExpression = `CASE WHEN CAST(${columnRef} AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST(${columnRef} AS BIGINT)) ELSE TIME_PARSE(${columnRef}) END`;
-      break;
+  const timeTransform = transforms.find(t => t.name === '__time');
+  if (timeTransform) {
+    timeExpression = `REWRITE_[${timeTransform.expression}]_TO_SQL`;
+  } else {
+    switch (format) {
+      case 'auto':
+        columns.unshift({ name: column, type: 'string' });
+        timeExpression = `CASE WHEN CAST(${columnRef} AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST(${columnRef} AS BIGINT)) ELSE TIME_PARSE(${columnRef}) END`;
+        break;
 
-    case 'iso':
-      columns.unshift({ name: column, type: 'string' });
-      timeExpression = `TIME_PARSE(${columnRef})`;
-      break;
+      case 'iso':
+        columns.unshift({ name: column, type: 'string' });
+        timeExpression = `TIME_PARSE(${columnRef})`;
+        break;
 
-    case 'posix':
-      columns.unshift({ name: column, type: 'long' });
-      timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef} * 1000)`;
-      break;
+      case 'posix':
+        columns.unshift({ name: column, type: 'long' });
+        timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef} * 1000)`;
+        break;
 
-    case 'millis':
-      columns.unshift({ name: column, type: 'long' });
-      timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef})`;
-      break;
+      case 'millis':
+        columns.unshift({ name: column, type: 'long' });
+        timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef})`;
+        break;
 
-    case 'micro':
-      columns.unshift({ name: column, type: 'long' });
-      timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef} / 1000)`;
-      break;
+      case 'micro':
+        columns.unshift({ name: column, type: 'long' });
+        timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef} / 1000)`;
+        break;
 
-    case 'nano':
-      columns.unshift({ name: column, type: 'long' });
-      timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef} / 1000000)`;
-      break;
+      case 'nano':
+        columns.unshift({ name: column, type: 'long' });
+        timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef} / 1000000)`;
+        break;
 
-    default:
-      columns.unshift({ name: column, type: 'string' });
-      timeExpression = `TIME_PARSE(${columnRef}, ${SqlLiteral.create(format)})`;
-      break;
+      default:
+        columns.unshift({ name: column, type: 'string' });
+        timeExpression = `TIME_PARSE(${columnRef}, ${SqlLiteral.create(format)})`;
+        break;
+    }
   }
 
   if (timestampSpec.missingValue) {
@@ -238,19 +248,24 @@ export function convertSpecToSql(spec: any): QueryWithContext {
 
   lines.push(`SELECT`);
 
-  const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
-  if (!Array.isArray(transforms))
-    throw new Error(`spec.dataSchema.transformSpec.transforms is not an array`);
   if (transforms.length) {
-    lines.push(`  -- The spec contained transforms that could not be automatically converted.`);
+    lines.push(
+      `  --:ISSUE: The spec contained transforms that could not be automatically converted.`,
+    );
   }
 
-  const dimensionExpressions = [`  ${timeExpression} AS __time,`].concat(
+  const dimensionExpressions = [
+    `  ${timeExpression} AS __time,${
+      timeTransform ? ` --:ISSUE: Transform for __time could not be converted` : ''
+    }`,
+  ].concat(
     dimensions.flatMap((dimension: DimensionSpec) => {
       const dimensionName = dimension.name;
       const relevantTransform = transforms.find(t => t.name === dimensionName);
-      return `  ${SqlRef.columnWithQuotes(dimensionName)},${
-        relevantTransform ? ` -- Relevant transform: ${JSONBig.stringify(relevantTransform)}` : ''
+      return `  ${
+        relevantTransform ? `REWRITE_[${relevantTransform.expression}]_TO_SQL AS ` : ''
+      }${SqlRef.columnWithQuotes(dimensionName)},${
+        relevantTransform ? ` --:ISSUE: Transform for dimension could not be converted` : ''
       }`;
     }),
   );
@@ -275,9 +290,9 @@ export function convertSpecToSql(spec: any): QueryWithContext {
       lines.push(`WHERE ${convertFilter(filter)}`);
     } catch {
       lines.push(
-        `-- The spec contained a filter that could not be automatically converted: ${JSONBig.stringify(
+        `WHERE REWRITE_[${JSONBig.stringify(
           filter,
-        )}`,
+        )}]_TO_SQL --:ISSUE: The spec contained a filter that could not be automatically converted, please convert it manually`,
       );
     }
   }

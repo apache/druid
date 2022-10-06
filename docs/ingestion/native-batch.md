@@ -23,6 +23,8 @@ sidebar_label: "Native batch"
   ~ under the License.
   -->
 
+> This page describes native batch ingestion using [ingestion specs](ingestion-spec.md). Refer to the [ingestion
+> methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
 
 Apache Druid supports the following types of native batch indexing tasks:
 - Parallel task indexing (`index_parallel`) that can run multiple indexing tasks concurrently. Parallel task works well for production ingestion tasks.
@@ -31,15 +33,15 @@ Apache Druid supports the following types of native batch indexing tasks:
 This topic covers the configuration for `index_parallel` ingestion specs.
 
 For related information on batch indexing, see:
-- [Simple task indexing](./native-batch-simple-task.md) for `index` task configuration.
-- [Native batch input sources](./native-batch-input-source.md) for a reference for `inputSource` configuration.
-- [Hadoop-based vs. native batch comparison table](./index.md#batch) for a comparison of batch ingestion methods.
-- [Loading a file](../tutorials/tutorial-batch.md) for a tutorial on native batch ingestion.
+- [Batch ingestion method comparison table](./index.md#batch) for a comparison of batch ingestion methods.
+- [Tutorial: Loading a file](../tutorials/tutorial-batch.md) for a tutorial on native batch ingestion.
+- [Input sources](./native-batch-input-source.md) for possible input sources.
+- [Input formats](./data-formats.md#input-format) for possible input formats.
 
 ## Submit an indexing task
 
 To run either kind of native batch indexing task you can:
-- Use the **Load Data** UI in the Druid console to define and submit an ingestion spec.
+- Use the **Load Data** UI in the web console to define and submit an ingestion spec.
 - Define an ingestion spec in JSON based upon the [examples](#parallel-indexing-example) and reference topics for batch indexing. Then POST the ingestion spec to the [Indexer API endpoint](../operations/api-reference.md#tasks), 
 `/druid/indexer/v1/task`, the Overlord service. Alternatively you can use the indexing script included with Druid at `bin/post-index-task`.
 
@@ -86,7 +88,7 @@ You can set `dropExisting` flag in the `ioConfig` to true if you want the ingest
 
 The following examples demonstrate when to set the `dropExisting` property to true in the `ioConfig`:
 
-Consider an existing segment with an interval of 2020-01-01 to 2021-01-01 and `YEAR` `segmentGranularity`. You want to overwrite the whole interval of 2020-01-01 to 2021-01-01 with new data using the finer segmentGranularity of `MONTH`. If the replacement data does not have a record within every months from 2020-01-01 to 2021-01-01 Druid cannot drop the original `YEAR` segment even if it does include all the replacement data. Set `dropExisting` to true in this case to replace the original segment at `YEAR` `segmentGranularity` since you no longer need it.<br><br>
+Consider an existing segment with an interval of 2020-01-01 to 2021-01-01 and `YEAR` `segmentGranularity`. You want to overwrite the whole interval of 2020-01-01 to 2021-01-01 with new data using the finer segmentGranularity of `MONTH`. If the replacement data does not have a record within every months from 2020-01-01 to 2021-01-01 Druid cannot drop the original `YEAR` segment even if it does include all the replacement data. Set `dropExisting` to true in this case to replace the original segment at `YEAR` `segmentGranularity` since you no longer need it.<br /><br />
 Imagine you want to re-ingest or overwrite a datasource and the new data does not contain some time intervals that exist in the datasource. For example, a datasource contains the following data at `MONTH` segmentGranularity:  
 - **January**: 1 record  
 - **February**: 10 records  
@@ -235,7 +237,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |forceGuaranteedRollup|Forces [perfect rollup](rollup.md). The perfect rollup optimizes the total size of generated segments and querying time but increases indexing time. If true, specify `intervals` in the `granularitySpec` and use either `hashed` or `single_dim` for the `partitionsSpec`. You cannot use this flag in conjunction with `appendToExisting` of IOConfig. For more details, see [Segment pushing modes](#segment-pushing-modes).|false|no|
 |reportParseExceptions|If true, Druid throws exceptions encountered during parsing and halts ingestion. If false, Druid skips unparseable rows and fields.|false|no|
 |pushTimeout|Milliseconds to wait to push segments. Must be >= 0, where 0 means to wait forever.|0|no|
-|segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](./native-batch-simple-task.md#segmentwriteoutmediumfactory).|If not specified, uses the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` |no|
+|segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentwriteoutmediumfactory).|If not specified, uses the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` |no|
 |maxNumConcurrentSubTasks|Maximum number of worker tasks that can be run in parallel at the same time. The supervisor task spawns worker tasks up to `maxNumConcurrentSubTasks` regardless of the current available task slots. If this value is 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, the supervisor may create too many worker tasks that block other ingestion tasks. See [Capacity planning](#capacity-planning) for more details.|1|no|
 |maxRetry|Maximum number of retries on task failures.|3|no|
 |maxNumSegmentsToMerge|Max limit for the number of segments that a single task can merge at the same time in the second phase. Used only when `forceGuaranteedRollup` is true.|100|no|
@@ -433,8 +435,8 @@ For example, if you configure the following `range` partitioning during ingestio
 ```json
 "partitionsSpec": {
   "type": "range",
-  "partitionDimensions": ["coutryName", "cityName"],
-  "targetRowsPerSegment": 5000
+  "partitionDimensions": ["countryName", "cityName"],
+  "targetRowsPerSegment": 5000000
 }
 ```
 
@@ -711,11 +713,15 @@ For details on available input sources see:
 - [Azure input source](./native-batch-input-source.md#azure-input-source) (`azure`) reads data from Azure Blob Storage and Azure Data Lake.
 - [HDFS input source](./native-batch-input-source.md#hdfs-input-source) (`hdfs`) reads data from HDFS storage.
 - [HTTP input Source](./native-batch-input-source.md#http-input-source) (`http`) reads data from HTTP servers.
-- [Inline input Source](./native-batch-input-source.md#inline-input-source) reads data you paste into the Druid console.
+- [Inline input Source](./native-batch-input-source.md#inline-input-source) reads data you paste into the web console.
 - [Local input Source](./native-batch-input-source.md#local-input-source) (`local`) reads data from local storage.
 - [Druid input Source](./native-batch-input-source.md#druid-input-source) (`druid`) reads data from a Druid datasource.
 - [SQL input Source](./native-batch-input-source.md#sql-input-source) (`sql`) reads data from a RDBMS source.
 
 For information on how to combine input sources, see [Combining input source](./native-batch-input-source.md#combining-input-source).
 
+### `segmentWriteOutMediumFactory`
 
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|type|String|See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|yes|
