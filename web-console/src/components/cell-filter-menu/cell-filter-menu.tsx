@@ -54,14 +54,17 @@ function addToClause(clause: SqlExpression, newValue: SqlLiteral): SqlExpression
   switch (op) {
     case '=':
       if (!(rhs instanceof SqlLiteral)) return;
+      if (rhs.equals(newValue)) return;
       return lhs.in([rhs, newValue]);
 
     case '<>':
       if (!(rhs instanceof SqlLiteral)) return;
+      if (rhs.equals(newValue)) return;
       return lhs.notIn([rhs, newValue]);
 
     case 'IN':
       if (!(rhs instanceof SqlRecord)) return;
+      if (rhs.contains(newValue)) return;
       return clause.changeRhs(rhs.prepend(newValue));
 
     default:
