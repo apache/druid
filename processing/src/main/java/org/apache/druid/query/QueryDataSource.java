@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
@@ -98,6 +100,24 @@ public class QueryDataSource implements DataSource
   )
   {
     return Function.identity();
+  }
+
+  @Override
+  public Query withBaseDataSource(Query query, DataSource newBaseDataSource)
+  {
+    final Query retVal;
+    final DataSource theDataSource = query.getDataSource();
+    final Query<?> subQuery = ((QueryDataSource) theDataSource).getQuery();
+    retVal = query.withDataSource(subQuery.getDataSource());
+
+    // Verify postconditions, just in case.
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(retVal.getDataSource());
+
+    if (!newBaseDataSource.equals(analysis.getBaseDataSource())) {
+      throw new ISE("Unable to replace base dataSource");
+    }
+
+    return retVal;
   }
 
   @Override

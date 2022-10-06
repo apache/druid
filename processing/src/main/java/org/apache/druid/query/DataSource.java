@@ -99,4 +99,6 @@ public interface DataSource
    * @return the segment function
    */
   Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc);
+
+  Query withBaseDataSource(final Query query, final DataSource newBaseDataSource);
 }
