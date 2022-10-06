@@ -302,12 +302,6 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   ) throws IOException
   {
 
-    if (scanQuery.getScanRowsLimit() > Integer.MAX_VALUE) {
-      throw new UOE(
-          "Limit of %,d rows not supported for priority queue strategy of non-time-ordering scan results",
-          scanQuery.getScanRowsLimit()
-      );
-    }
     // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
     // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
     int limit = Math.toIntExact(scanQuery.getScanRowsLimit());
