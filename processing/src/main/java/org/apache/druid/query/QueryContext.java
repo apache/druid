@@ -40,7 +40,7 @@ import java.util.TreeMap;
  * <p>
  * The implementation uses a {@link TreeMap} so that the serialized form of a query
  * lists context values in a deterministic order. Jackson will call
- * {@code getContext()} on the query, which will call {@link asMap()} here,
+ * {@code getContext()} on the query, which will call {@link #asMap()} here,
  * which returns the sorted {@code TreeMap}.
  * <p>
  * The {@code TreeMap} is a mutable class. We'd prefer an immutable class, but
