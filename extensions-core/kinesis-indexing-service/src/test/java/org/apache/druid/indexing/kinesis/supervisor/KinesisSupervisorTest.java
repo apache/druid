@@ -122,6 +122,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
   private static final InputFormat INPUT_FORMAT = new JsonInputFormat(
       new JSONPathSpec(true, ImmutableList.of()),
       ImmutableMap.of(),
+      false,
+      false,
+      false,
       false
   );
   private static final String DATASOURCE = "testDS";

@@ -82,7 +82,7 @@ public class MSQWarningsTest extends MSQTestBase
                                            toRead.getAbsoluteFile()
                                        )
                                    ),
-                                   new JsonInputFormat(null, null, null),
+                                   new JsonInputFormat(null, null, null, null, null),
                                    RowSignature.builder()
                                                .add("timestamp", ColumnType.STRING)
                                                .add("page", ColumnType.STRING)

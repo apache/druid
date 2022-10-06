@@ -395,21 +395,14 @@ jobs:
 
     - name: "docs"
       stage: Tests - phase 1
-      install: ./check_test_suite.py && travis_terminate 0 || (cd website && nvm install 12.22.12 && npm install)
-      script: |-
-        (cd website && npm run lint && npm run spellcheck) || { echo "
-
-        If there are spell check errors:
-
-        1) Suppressing False Positives: Edit website/.spelling to add suppressions. Instructions
-        are at the top of the file and explain how to suppress false positives either globally or
-        within a particular file.
-
-        2) Running Spell Check Locally: cd website && npm install && npm run spellcheck
-
-        For more information, refer to: https://www.npmjs.com/package/markdown-spellcheck
-
-        " && false; }
+      before_script:
+        - ./check_test_suite.py && travis_terminate 0 || echo 'Starting nvm install...'
+        - nvm install 16.17.0
+        - (cd website && npm install)
+      script:
+        - cd website
+        - npm run link-lint
+        - npm run spellcheck
 
     - name: "Build and test on ARM64 CPU architecture (1)"
       stage: Tests - phase 2

@@ -98,7 +98,7 @@ This lookup is injective (assuming it contains all possible keys from your data)
 3 -> Billy
 ```
 
-But this one is not, since both "2" and "3" map to the same key:
+But this one is not, since both "2" and "3" map to the same value:
 
 ```
 1 -> Foo

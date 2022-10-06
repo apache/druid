@@ -67,7 +67,7 @@ public class CompressedBigDecimalAggregatorTimeseriesTest
   public CompressedBigDecimalAggregatorTimeseriesTest()
   {
     CompressedBigDecimalModule module = new CompressedBigDecimalModule();
-    module.configure(null);
+    CompressedBigDecimalModule.registerSerde();
     helper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
             module.getJacksonModules(), tempFolder);
   }

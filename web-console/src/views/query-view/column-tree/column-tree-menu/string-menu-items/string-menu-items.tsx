@@ -158,7 +158,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
 
     return (
       <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
-        {aggregateMenuItem(SqlFunction.decorated('COUNT', 'DISTINCT', [ref]), `dist_${columnName}`)}
+        {aggregateMenuItem(SqlFunction.countDistinct(ref), `dist_${columnName}`)}
         {aggregateMenuItem(
           SqlFunction.COUNT_STAR.addWhereExpression(ref.equal(EMPTY_LITERAL)),
           `filtered_dist_${columnName}`,

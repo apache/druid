@@ -62,7 +62,9 @@ public class JsonReaderTest
         ),
         null,
         null,
-        false //make sure JsonReader is used
+        false, //make sure JsonReader is used
+        false,
+        false
     );
 
     final ByteEntity source = new ByteEntity(
@@ -122,7 +124,9 @@ public class JsonReaderTest
         ),
         null,
         null,
-        false //make sure JsonReader is used
+        false, //make sure JsonReader is used
+        false,
+        false
     );
 
     final ByteEntity source = new ByteEntity(
@@ -189,7 +193,9 @@ public class JsonReaderTest
         ),
         null,
         null,
-        false //make sure JsonReader is used
+        false, //make sure JsonReader is used
+        false,
+        false
     );
 
     final ByteEntity source = new ByteEntity(
@@ -243,7 +249,9 @@ public class JsonReaderTest
         ),
         null,
         null,
-        false //make sure JsonReader is used
+        false, //make sure JsonReader is used
+        false,
+        false
     );
 
     final ByteEntity source = new ByteEntity(
@@ -309,7 +317,9 @@ public class JsonReaderTest
         ),
         null,
         null,
-        false //make sure JsonReader is used
+        false, //make sure JsonReader is used
+        false,
+        false
     );
 
     //2nd row is ill-formed
@@ -365,7 +375,9 @@ public class JsonReaderTest
         ),
         null,
         null,
-        false //make sure JsonReader is used
+        false, //make sure JsonReader is used
+        false,
+        false
     );
 
     //input is empty
@@ -421,7 +433,9 @@ public class JsonReaderTest
         ),
         null,
         null,
-        false //make sure JsonReader is used
+        false, //make sure JsonReader is used
+        false,
+        false
     );
 
     //input is empty

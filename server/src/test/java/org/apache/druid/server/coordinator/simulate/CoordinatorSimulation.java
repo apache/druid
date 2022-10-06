@@ -98,5 +98,10 @@ public interface CoordinatorSimulation
      * callbacks on the coordinator.
      */
     void loadQueuedSegments();
+
+    /**
+     * Removes the specified server from the cluster.
+     */
+    void removeServer(DruidServer server);
   }
 }
