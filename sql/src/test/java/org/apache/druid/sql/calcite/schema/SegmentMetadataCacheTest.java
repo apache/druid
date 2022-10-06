@@ -1047,7 +1047,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testLocalSegmentCacheSetsDataSourceAsBroadcastButNotJoinable() throws InterruptedException
   {
-    SegmentMetadataCache schema = buildSchema1();
+    SegmentMetadataCache schema = buildSchema3();
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     DatasourceTable.PhysicalDatasourceMetadata fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
@@ -1055,10 +1056,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     Assert.assertFalse(fooTable.isJoinable());
     Assert.assertFalse(fooTable.isBroadcast());
 
-    // wait for build twice
-    Assert.assertTrue(buildTableLatch.await(1, TimeUnit.SECONDS));
-
-    buildTableLatch = new CountDownLatch(1);
+    markDataSourceLatch = new CountDownLatch(1);
+    refreshLatch = new CountDownLatch(1);
     final DataSegment someNewBrokerSegment = new DataSegment(
         "foo",
         Intervals.of("2012/2013"),
@@ -1076,9 +1075,11 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
 
     Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    Assert.assertTrue(buildTableLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    // wait for build twice
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
-    Assert.assertTrue(getDatasourcesLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    refreshLatch = new CountDownLatch(1);
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
     fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
@@ -1091,16 +1092,16 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 
     // now remove it
     markDataSourceLatch = new CountDownLatch(1);
-    buildTableLatch = new CountDownLatch(1);
-    getDatasourcesLatch = new CountDownLatch(1);
+    refreshLatch = new CountDownLatch(1);
     segmentDataSourceNames.remove("foo");
     serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
 
     Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    // wait for build
-    Assert.assertTrue(buildTableLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    // wait for build twice
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
-    Assert.assertTrue(getDatasourcesLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    refreshLatch = new CountDownLatch(1);
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
     fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
