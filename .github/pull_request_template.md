@@ -43,7 +43,7 @@ In each section, please describe design decisions made, including:
 If your change doesn't have end user impact, you can skip this section.
 
 -->
-For tips about how to write a good release note, see [Release notes](../CONTRIBUTING.md#release-notes).
+For tips about how to write a good release note, see [Release notes](https://github.com/apache/druid/blob/master/CONTRIBUTING.md#release-notes).
 
 
 <hr>
