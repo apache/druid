@@ -101,4 +101,8 @@ public interface DataSource
   Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc);
 
   Query withBaseDataSource(final Query query, final DataSource newBaseDataSource);
+
+  DataSource withBaseDataSource(final DataSource newSource);
+
+  DataSourceAnalysis getAnalysis(Query<?> query);
 }

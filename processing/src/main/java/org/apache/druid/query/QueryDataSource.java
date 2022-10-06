@@ -102,11 +102,16 @@ public class QueryDataSource implements DataSource
     return Function.identity();
   }
 
+  public DataSource withBaseDataSource(DataSource newSource) {
+    return new QueryDataSource(query.withDataSource(query.getDataSource()).withDataSource(newSource));
+  }
+
   @Override
-  public Query withBaseDataSource(Query query, DataSource newBaseDataSource)
+  public Query
+  withBaseDataSource(Query query, DataSource newBaseDataSource)
   {
     final Query retVal;
-    final DataSource theDataSource = query.getDataSource();
+    final DataSource theDataSource = this.query.getDataSource().withBaseDataSource();
     final Query<?> subQuery = ((QueryDataSource) theDataSource).getQuery();
     retVal = query.withDataSource(subQuery.getDataSource());
 

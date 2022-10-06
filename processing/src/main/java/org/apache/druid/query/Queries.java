@@ -189,6 +189,10 @@ public class Queries
    */
   public static <T> Query<T> withBaseDataSource(final Query<T> query, final DataSource newBaseDataSource)
   {
+    if (true) {
+      return query.withDataSource(query.getDataSource().withBaseDataSource(newBaseDataSource));
+    }
+
     final Query<T> retVal;
 
     /*
