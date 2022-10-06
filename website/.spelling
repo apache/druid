@@ -217,6 +217,7 @@ aggregators
 ambari
 analytics
 arrayElement
+assumeNewlineDelimited
 assumeRoleArn
 assumeRoleExternalId
 async
@@ -346,6 +347,8 @@ memcached
 mergeable
 metadata
 millis
+microbatch
+microbatches
 misconfiguration
 misconfigured
 mostAvailableSize
@@ -382,6 +385,7 @@ pre-computation
 pre-compute
 pre-computing
 pre-configured
+pre-existing
 pre-filtered
 pre-filtering
 pre-generated
@@ -478,6 +482,8 @@ unmergeable
 unmerged
 UNNEST
 unnest
+unnested
+unnesting
 unnests
 unparseable
 unparsed
@@ -485,6 +491,7 @@ unsetting
 untrusted
 useFilterCNF
 useJqSyntax
+useJsonNodeReader
 useSSL
 uptime
 uris
@@ -748,7 +755,7 @@ v9
 DskipTests
 Papache-release
 Pdist
-Ddruid.console.skip
+Dweb.console.skip
 yaml
 Phadoop3
 dist-hadoop3
@@ -863,6 +870,7 @@ HTTPServer
 conversionFactor
 prometheus
 Pushgateway
+flushPeriod
  - ../docs/development/extensions-contrib/tdigestsketch-quantiles.md
 postAggregator
 quantileFromTDigestSketch
@@ -1241,7 +1249,7 @@ timestampColumnName
 timestampSpec
 urls
 valueFormat
- - ../docs/ingestion/data-management.md
+ - ../docs/data-management/compaction.md
 1GB
 IOConfig
 compactionTask
@@ -1717,13 +1725,10 @@ maxResults
 orderby
 orderbys
 outputName
-pre-existing
 pushdown
 row1
 subtotalsSpec
 tradeoff
-unnested
-unnesting
  - ../docs/querying/having.md
 HavingSpec
 HavingSpecs
@@ -2266,3 +2271,5 @@ KTable
 Aotearoa
 Czechia
 Zeelund
+ - ../docs/tutorials/docker.md
+ nano

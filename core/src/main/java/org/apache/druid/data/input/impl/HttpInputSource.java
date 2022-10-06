@@ -21,6 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.AbstractInputSource;
@@ -83,6 +84,7 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getHttpAuthenticationUsername()
   {
     return httpAuthenticationUsername;
@@ -90,6 +92,7 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
 
   @Nullable
   @JsonProperty("httpAuthenticationPassword")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public PasswordProvider getHttpAuthenticationPasswordProvider()
   {
     return httpAuthenticationPasswordProvider;

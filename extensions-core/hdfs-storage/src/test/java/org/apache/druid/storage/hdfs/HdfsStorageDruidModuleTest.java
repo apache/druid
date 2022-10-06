@@ -70,8 +70,8 @@ public class HdfsStorageDruidModuleTest
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertTrue(killer.getKillers().containsKey(HdfsStorageDruidModule.SCHEME));
     Assert.assertSame(
-        killer.getKillers().get(HdfsStorageDruidModule.SCHEME),
-        killer.getKillers().get(HdfsStorageDruidModule.SCHEME)
+        killer.getKillers().get(HdfsStorageDruidModule.SCHEME).get(),
+        killer.getKillers().get(HdfsStorageDruidModule.SCHEME).get()
     );
   }
 

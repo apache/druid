@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.indexing.ColumnMapping;
@@ -49,6 +48,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -105,7 +105,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   }
 
   @Override
-  public Sequence<Object[]> runQuery(final DruidQuery druidQuery)
+  public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
     String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
 
@@ -259,7 +259,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     );
 
     FutureUtils.getUnchecked(overlordClient.runTask(taskId, controllerTask), true);
-    return Sequences.simple(Collections.singletonList(new Object[]{taskId}));
+    return QueryResponse.withEmptyContext(Sequences.simple(Collections.singletonList(new Object[]{taskId})));
   }
 
   private static Map<String, ColumnType> buildAggregationIntermediateTypeMap(final DruidQuery druidQuery)

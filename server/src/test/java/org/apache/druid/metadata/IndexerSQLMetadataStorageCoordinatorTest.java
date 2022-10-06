@@ -1608,6 +1608,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         true
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version", identifier.toString());
+    // Since there are no used core partitions yet
+    Assert.assertEquals(0, identifier.getShardSpec().getNumCorePartitions());
 
     // simulate one more load using kafka streaming (as if previous segment was published, note different sequence name)
     final SegmentIdWithShardSpec identifier1 = coordinator.allocatePendingSegment(
@@ -1620,6 +1622,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         true
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_1", identifier1.toString());
+    // Since there are no used core partitions yet
+    Assert.assertEquals(0, identifier1.getShardSpec().getNumCorePartitions());
 
     // simulate one more load using kafka streaming (as if previous segment was published, note different sequence name)
     final SegmentIdWithShardSpec identifier2 = coordinator.allocatePendingSegment(
@@ -1632,6 +1636,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         true
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier2.toString());
+    // Since there are no used core partitions yet
+    Assert.assertEquals(0, identifier2.getShardSpec().getNumCorePartitions());
 
     // now simulate that one compaction was done (batch) ingestion for same interval (like reindex of the previous three):
     DataSegment segment = new DataSegment(
@@ -1641,7 +1647,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableMap.of(),
         ImmutableList.of("dim1"),
         ImmutableList.of("m1"),
-        new LinearShardSpec(0),
+        new NumberedShardSpec(0, 1),
         9,
         100
     );
@@ -1660,6 +1666,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         true
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_new_1", identifier3.toString());
+    // Used segment set has 1 core partition
+    Assert.assertEquals(1, identifier3.getShardSpec().getNumCorePartitions());
 
     // now drop the used segment previously loaded:
     markAllSegmentsUnused(ImmutableSet.of(segment));
@@ -1676,6 +1684,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         true
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_new_2", identifier4.toString());
+    // Since all core partitions have been dropped
+    Assert.assertEquals(0, identifier4.getShardSpec().getNumCorePartitions());
 
   }
 

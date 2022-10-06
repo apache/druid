@@ -221,7 +221,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     Granularity granularity = query.getGranularity();
     List<DimensionSpec> dimensionSpecs = query.getDimensions();
     // the CTX_TIMESTAMP_RESULT_FIELD is set in DruidQuery.java
-    final String timestampResultField = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
+    final String timestampResultField = query.getQueryContext().getAsString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
     final boolean hasTimestampResultField = (timestampResultField != null && !timestampResultField.isEmpty())
                                             && query.getContextBoolean(CTX_KEY_OUTERMOST, true)
                                             && !query.isApplyLimitPushDown();
@@ -258,7 +258,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       granularity = timestampResultFieldGranularity;
       // when timestampResultField is the last dimension, should set sortByDimsFirst=true,
       // otherwise the downstream is sorted by row's timestamp first which makes the final ordering not as expected
-      timestampResultFieldIndex = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
+      timestampResultFieldIndex = query.getQueryContext().getAsInt(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
       if (!query.getContextSortByDimsFirst() && timestampResultFieldIndex == query.getDimensions().size() - 1) {
         context.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true);
       }

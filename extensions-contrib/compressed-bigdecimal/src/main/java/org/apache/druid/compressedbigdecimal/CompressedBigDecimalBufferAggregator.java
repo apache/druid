@@ -32,26 +32,30 @@ public class CompressedBigDecimalBufferAggregator implements BufferAggregator
 
   //Cache will hold the aggregated value.
   //We are using ByteBuffer to hold the key to the aggregated value.
-  private final ColumnValueSelector<CompressedBigDecimal<?>> selector;
+  private final ColumnValueSelector<CompressedBigDecimal> selector;
   private final int size;
   private final int scale;
+  private boolean strictNumberParsing;
 
   /**
    * Constructor.
    *
-   * @param size     the size to allocate
-   * @param scale    the scale
-   * @param selector a ColumnSelector to retrieve incoming values
-   */
+   * @param size                the size to allocate
+   * @param scale               the scale
+   * @param selector            a ColumnSelector to retrieve incoming values
+   * @param strictNumberParsing true => NumberFormatExceptions thrown; false => NumberFormatException returns 0
+   * */
   public CompressedBigDecimalBufferAggregator(
       int size,
       int scale,
-      ColumnValueSelector<CompressedBigDecimal<?>> selector
+      ColumnValueSelector<CompressedBigDecimal> selector,
+      boolean strictNumberParsing
   )
   {
     this.selector = selector;
     this.size = size;
     this.scale = scale;
+    this.strictNumberParsing = strictNumberParsing;
   }
 
   /* (non-Javadoc)
@@ -71,7 +75,7 @@ public class CompressedBigDecimalBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    CompressedBigDecimal<?> addend = selector.getObject();
+    CompressedBigDecimal addend = Utils.objToCompressedBigDecimal(selector.getObject(), strictNumberParsing);
     if (addend != null) {
       Utils.accumulate(buf, position, size, scale, addend);
     }
@@ -83,7 +87,16 @@ public class CompressedBigDecimalBufferAggregator implements BufferAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return new ByteBufferCompressedBigDecimal(buf, position, size, scale);
+    ByteBufferCompressedBigDecimal byteBufferCompressedBigDecimal = new ByteBufferCompressedBigDecimal(
+        buf,
+        position,
+        size,
+        scale
+    );
+
+    CompressedBigDecimal heapCompressedBigDecimal = byteBufferCompressedBigDecimal.toHeap();
+
+    return heapCompressedBigDecimal;
   }
 
   /* (non-Javadoc)

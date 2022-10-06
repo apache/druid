@@ -19,20 +19,18 @@
 
 package org.apache.druid.compressedbigdecimal;
 
+import org.apache.druid.java.util.common.IAE;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.function.ToIntBiFunction;
 
 /**
- * Mutable big decimal value that can be used to accumulate values without losing precision or reallocating memory. 
+ * Mutable big decimal value that can be used to accumulate values without losing precision or reallocating memory.
  * This helps in revenue based calculations
- *
- * @param <T> Type of actual derived class that contains the underlying data
  */
-@SuppressWarnings("serial")
-public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> extends Number
-    implements Comparable<CompressedBigDecimal<T>>
+public abstract class CompressedBigDecimal extends Number implements Comparable<CompressedBigDecimal>
 {
 
   private static final long INT_MASK = 0x00000000ffffffffL;
@@ -59,11 +57,10 @@ public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> ex
    * than this value (the result), then the higher order bits are dropped, similar to
    * what happens when adding a long to an int and storing the result in an int.
    *
-   * @param <S> type of compressedbigdecimal to accumulate
    * @param rhs The object to accumulate
    * @return a reference to <b>this</b>
    */
-  public <S extends CompressedBigDecimal<S>> CompressedBigDecimal<T> accumulate(CompressedBigDecimal<S> rhs)
+  public CompressedBigDecimal accumulate(CompressedBigDecimal rhs)
   {
     if (rhs.scale != scale) {
       throw new IllegalArgumentException("Cannot accumulate MutableBigDecimals with differing scales");
@@ -72,7 +69,8 @@ public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> ex
       throw new IllegalArgumentException("Right hand side too big to fit in the result value");
     }
     internalAdd(getArraySize(), this, CompressedBigDecimal::getArrayEntry, CompressedBigDecimal::setArrayEntry,
-        rhs.getArraySize(), rhs, CompressedBigDecimal::getArrayEntry);
+                rhs.getArraySize(), rhs, CompressedBigDecimal::getArrayEntry
+    );
     return this;
   }
 
@@ -81,7 +79,7 @@ public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> ex
    *
    * @return this
    */
-  public CompressedBigDecimal<T> reset()
+  public CompressedBigDecimal reset()
   {
     for (int ii = 0; ii < getArraySize(); ++ii) {
       setArrayEntry(ii, 0);
@@ -105,8 +103,15 @@ public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> ex
    * @param rhs    the object containing the right array data
    * @param rhsGet method reference to get an underlying right value
    */
-  static <R, S> void internalAdd(int llen, R lhs, ToIntBiFunction<R, Integer> lhsGet, ObjBiIntConsumer<R> lhsSet,
-                                 int rlen, S rhs, ToIntBiFunction<S, Integer> rhsGet)
+  static <R, S> void internalAdd(
+      int llen,
+      R lhs,
+      ToIntBiFunction<R, Integer> lhsGet,
+      ObjBiIntConsumer<R> lhsSet,
+      int rlen,
+      S rhs,
+      ToIntBiFunction<S, Integer> rhsGet
+  )
   {
     int commonLen = Integer.min(llen, rlen);
     long carry = 0;
@@ -180,6 +185,11 @@ public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> ex
   }
 
   /**
+   * @return a version of this object that is on heap. Returns this if already on-heap
+   */
+  public abstract CompressedBigDecimal toHeap();
+
+  /**
    * Return the array size.
    *
    * @return the array size
@@ -233,12 +243,23 @@ public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> ex
     return signumInternal(getArraySize(), this, CompressedBigDecimal::getArrayEntry);
   }
 
+  public boolean isNegative()
+  {
+    return getArrayEntry(getArraySize() - 1) < 0;
+  }
+
+  public boolean isPositive()
+  {
+    return !isNegative();
+  }
+
   /**
    * Internal implementation if signum.
    * For the Provided Compressed big decimal value it checks and returns
    * -1 if Negative
    * 0 if Zero
    * 1 if Positive
+   *
    * @param <S>     type of object containing the array
    * @param size    the underlying array size
    * @param rhs     object that contains the underlying array
@@ -262,17 +283,91 @@ public abstract class CompressedBigDecimal<T extends CompressedBigDecimal<T>> ex
     }
   }
 
-  /* (non-Javadoc)
-   * @see java.lang.Comparable#compareTo(java.lang.Object)
-   */
   @Override
-  public int compareTo(CompressedBigDecimal<T> o)
+  public int compareTo(CompressedBigDecimal o)
   {
+    return compareTo(o, false);
+  }
 
-    if (this.equals(o)) {
+  public int compareTo(CompressedBigDecimal o, boolean expectOptimized)
+  {
+    if (super.equals(o)) {
       return 0;
+    } else if (getScale() == o.getScale()) {
+      return directCompareCompressedBigDecimal(this, o);
+    } else {
+      if (expectOptimized) {
+        throw new IAE("expected optimized path");
+      }
+
+      return this.toBigDecimal().compareTo(o.toBigDecimal());
     }
-    return this.toBigDecimal().compareTo(o.toBigDecimal());
+  }
+
+  /**
+   * performs a subtraction of lhs - rhs to compare elements
+   *
+   * @param lhs
+   * @param rhs
+   * @return
+   */
+  private static int directCompareCompressedBigDecimal(CompressedBigDecimal lhs, CompressedBigDecimal rhs)
+  {
+    // this short-circuit serves two functions: 1. it speeds up comparison in +/- cases 2. it avoids the case of
+    // overflow of positive - negative and negative - positive. p - p and n - n both fit in the given allotment of ints
+    if (lhs.isPositive() && rhs.isNegative()) {
+      return 1;
+    } else if (lhs.isNegative() && rhs.isPositive()) {
+      return -1;
+    }
+
+    int size = Math.max(lhs.getArraySize(), rhs.getArraySize());
+    int[] result = new int[size];
+    int borrow = 0;
+    // for each argument, if it's negative, our extension will be -1/INT_MASK (all 1s). else, all 0s
+    long lhsExtension = lhs.getArrayEntry(lhs.getArraySize() - 1) < 0 ? INT_MASK : 0;
+    long rhsExtension = rhs.getArrayEntry(rhs.getArraySize() - 1) < 0 ? INT_MASK : 0;
+    boolean nonZeroValues = false;
+
+    for (int i = 0; i < size; i++) {
+      // "dynamically" extend lhs/rhs if it's shorter than the other using extensions computed above
+      long leftElement = i < lhs.getArraySize() ? (INT_MASK & lhs.getArrayEntry(i)) : lhsExtension;
+      long rightElement = i < rhs.getArraySize() ? (INT_MASK & rhs.getArrayEntry(i)) : rhsExtension;
+      long resultElement = leftElement - rightElement - borrow;
+
+      borrow = 0;
+
+      if (resultElement < 0) {
+        borrow = 1;
+        resultElement += 1L << 32;
+      }
+
+      result[i] = (int) resultElement;
+
+      if (!nonZeroValues && resultElement != 0) {
+        nonZeroValues = true;
+      }
+    }
+
+    int signum = 0;
+
+    if (nonZeroValues) {
+      signum = result[size - 1] < 0 ? -1 : 1;
+    }
+
+    return signum;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return toBigDecimal().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    return obj instanceof CompressedBigDecimal && toBigDecimal().equals(((CompressedBigDecimal) obj).toBigDecimal());
   }
 
   /**

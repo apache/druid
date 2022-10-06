@@ -21,6 +21,7 @@ package org.apache.druid.data.input.avro;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.avro.Schema;
@@ -79,19 +80,23 @@ public class AvroOCFInputFormat extends NestedInputFormat
     return false;
   }
 
+  @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Map<String, Object> getSchema()
   {
     return schema;
   }
 
   @JsonProperty
-  public Boolean getBinaryAsString()
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean getBinaryAsString()
   {
     return binaryAsString;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public Boolean isExtractUnionsByType()
   {
     return extractUnionsByType;

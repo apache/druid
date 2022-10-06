@@ -998,6 +998,56 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testStringLatestGroupByWithAlwaysFalseCondition()
+  {
+    testQuery(
+        "SELECT LATEST(dim4, 10),dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN( 'something else') ) GROUP BY dim2",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(InlineDataSource.fromIterable(
+                    ImmutableList.of(),
+                    RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("dim2", ColumnType.STRING)
+                        .build()
+                ))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("EXPR$0", "dim2")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testStringLatestByGroupByWithAlwaysFalseCondition()
+  {
+    testQuery(
+        "SELECT LATEST_BY(dim4, __time, 10),dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN( 'something else') ) GROUP BY dim2",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(InlineDataSource.fromIterable(
+                    ImmutableList.of(),
+                    RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("dim2", ColumnType.STRING)
+                        .build()
+                ))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("EXPR$0", "dim2")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of()
+    );
+  }
+
   // This test the off-heap (buffer) version of the EarliestAggregator (Double/Float/Long)
   @Test
   public void testPrimitiveEarliestInSubquery()
@@ -7373,7 +7423,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         ))
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
-                                expressionPostAgg("p0", "((1 - (\"a1\" / \"a0\")) * 100)")
+                                expressionPostAgg("p0", "((1.0 - (\"a1\" / \"a0\")) * 100)")
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -13807,7 +13857,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .virtualColumns(
                                  expressionVirtualColumn("v0", "'none'", ColumnType.STRING),
                                  expressionVirtualColumn("v1", "0", ColumnType.LONG),
-                                 expressionVirtualColumn("v2", "0", ColumnType.DOUBLE)
+                                 expressionVirtualColumn("v2", "0.0", ColumnType.DOUBLE)
                              )
                              .dimension(
                                  new DefaultDimensionSpec("v0", "d0")

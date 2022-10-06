@@ -21,13 +21,15 @@ package org.apache.druid.java.util.metrics;
 
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class StubServiceEmitter extends ServiceEmitter
 {
-  private List<Event> events = new ArrayList<>();
+  private final List<Event> events = new ArrayList<>();
+  private final List<ServiceMetricEvent> metricEvents = new ArrayList<>();
 
   public StubServiceEmitter(String service, String host)
   {
@@ -37,12 +39,26 @@ public class StubServiceEmitter extends ServiceEmitter
   @Override
   public void emit(Event event)
   {
+    if (event instanceof ServiceMetricEvent) {
+      metricEvents.add((ServiceMetricEvent) event);
+    }
     events.add(event);
   }
 
+  /**
+   * Gets all the events emitted since the previous {@link #flush()}.
+   */
   public List<Event> getEvents()
   {
     return events;
+  }
+
+  /**
+   * Gets all the metric events emitted since the previous {@link #flush()}.
+   */
+  public List<ServiceMetricEvent> getMetricEvents()
+  {
+    return metricEvents;
   }
 
   @Override
@@ -53,6 +69,8 @@ public class StubServiceEmitter extends ServiceEmitter
   @Override
   public void flush()
   {
+    events.clear();
+    metricEvents.clear();
   }
 
   @Override

@@ -21,6 +21,7 @@ package org.apache.druid.compressedbigdecimal;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Objects;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -44,76 +45,79 @@ import java.util.List;
  * An aggregator factory to generate longSum aggregator object.
  */
 public class CompressedBigDecimalAggregatorFactory
-    extends NullableNumericAggregatorFactory<ColumnValueSelector<CompressedBigDecimal<?>>>
+    extends NullableNumericAggregatorFactory<ColumnValueSelector<CompressedBigDecimal>>
 {
 
   public static final int DEFAULT_SCALE = 9;
-  public static final int DEFAULT_SIZE = 3;
+  public static final int DEFAULT_SIZE = 6;
+  public static final boolean DEFAULT_STRICT_NUMBER_PARSING = false;
+
   private static final byte CACHE_TYPE_ID = 0x37;
 
-  public static final Comparator<CompressedBigDecimal<?>> COMPARATOR = new Comparator<CompressedBigDecimal<?>>()
-  {
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    @Override
-    public int compare(CompressedBigDecimal lhs, CompressedBigDecimal rhs)
-    {
-      return lhs.compareTo(rhs);
-    }
-  };
+  public static final Comparator<CompressedBigDecimal> COMPARATOR = CompressedBigDecimal::compareTo;
 
   private final String name;
   private final String fieldName;
   private final int size;
   private final int scale;
+  private final boolean strictNumberParsing;
 
   /**
    * Constructor.
    *
-   * @param name      metric field name
-   * @param fieldName fieldName metric field name
-   * @param size      size of the int array used for calculations
-   * @param scale     scale of the number
+   * @param name                metric field name
+   * @param fieldName           fieldName metric field name
+   * @param size                size of the int array used for calculations
+   * @param scale               scale of the number
+   * @param strictNumberParsing if true, failure to parse strings to numbers throws an exception. otherwise 0 is
+   *                            returned
    */
   @JsonCreator
   public CompressedBigDecimalAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
       @JsonProperty(value = "size", required = false) Integer size,
-      @JsonProperty(value = "scale", required = false) Integer scale
+      @JsonProperty(value = "scale", required = false) Integer scale,
+      @JsonProperty(value = "strictNumberParsing", required = false) Boolean strictNumberParsing
   )
   {
     this.name = name;
     this.fieldName = fieldName;
     this.size = size == null ? DEFAULT_SIZE : size;
     this.scale = scale == null ? DEFAULT_SCALE : scale;
+    this.strictNumberParsing = strictNumberParsing == null ? DEFAULT_STRICT_NUMBER_PARSING : strictNumberParsing;
   }
 
   @SuppressWarnings("unchecked")
   @Override
-  protected ColumnValueSelector<CompressedBigDecimal<?>> selector(ColumnSelectorFactory metricFactory)
+  protected ColumnValueSelector<CompressedBigDecimal> selector(ColumnSelectorFactory metricFactory)
   {
-    return (ColumnValueSelector<CompressedBigDecimal<?>>) metricFactory.makeColumnValueSelector(fieldName);
+    return (ColumnValueSelector<CompressedBigDecimal>) metricFactory.makeColumnValueSelector(fieldName);
   }
 
   @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory,
-                                 @Nonnull ColumnValueSelector<CompressedBigDecimal<?>> selector)
+  protected Aggregator factorize(
+      ColumnSelectorFactory metricFactory,
+      @Nonnull ColumnValueSelector<CompressedBigDecimal> selector
+  )
   {
-    return new CompressedBigDecimalAggregator(size, scale, selector);
+    return new CompressedBigDecimalAggregator(size, scale, selector, strictNumberParsing);
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory,
-                                               @Nonnull ColumnValueSelector<CompressedBigDecimal<?>> selector)
+  protected BufferAggregator factorizeBuffered(
+      ColumnSelectorFactory metricFactory,
+      @Nonnull ColumnValueSelector<CompressedBigDecimal> selector
+  )
   {
-    return new CompressedBigDecimalBufferAggregator(size, scale, selector);
+    return new CompressedBigDecimalBufferAggregator(size, scale, selector, strictNumberParsing);
   }
 
   /* (non-Javadoc)
    * @see org.apache.druid.query.aggregation.AggregatorFactory#getComparator()
    */
   @Override
-  public Comparator<CompressedBigDecimal<?>> getComparator()
+  public Comparator<CompressedBigDecimal> getComparator()
   {
     return COMPARATOR;
   }
@@ -137,9 +141,9 @@ public class CompressedBigDecimalAggregatorFactory
       // due to truncation when the deserialized objects aren't big enough to hold the accumlated result.
       // The most common case this avoids is deserializing 0E-9 into a CompressedBigDecimal with array
       // size 1 and then accumulating a larger value into it.
-      CompressedBigDecimal<?> retVal = ArrayCompressedBigDecimal.allocate(size, scale);
-      CompressedBigDecimal<?> left = (CompressedBigDecimal<?>) lhs;
-      CompressedBigDecimal<?> right = (CompressedBigDecimal<?>) rhs;
+      CompressedBigDecimal retVal = ArrayCompressedBigDecimal.allocate(size, scale);
+      CompressedBigDecimal left = (CompressedBigDecimal) lhs;
+      CompressedBigDecimal right = (CompressedBigDecimal) rhs;
       if (left.signum() != 0) {
         retVal.accumulate(left);
       }
@@ -156,11 +160,11 @@ public class CompressedBigDecimalAggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new CompressedBigDecimalAggregatorFactory(name, name, size, scale);
+    return new CompressedBigDecimalAggregatorFactory(name, name, size, scale, strictNumberParsing);
   }
 
   @Override
-  public AggregateCombiner<CompressedBigDecimal<?>> makeAggregateCombiner()
+  public AggregateCombiner<CompressedBigDecimal> makeAggregateCombiner()
   {
     return new CompressedBigDecimalAggregateCombiner();
   }
@@ -175,7 +179,8 @@ public class CompressedBigDecimalAggregatorFactory
         fieldName,
         fieldName,
         size,
-        scale
+        scale,
+        strictNumberParsing
     ));
   }
 
@@ -214,7 +219,7 @@ public class CompressedBigDecimalAggregatorFactory
   {
     return ValueType.COMPLEX;
   }
-  
+
   /* (non-Javadoc)
    * @see org.apache.druid.query.aggregation.AggregatorFactory#getTypeName()
    */
@@ -223,7 +228,7 @@ public class CompressedBigDecimalAggregatorFactory
   {
     return CompressedBigDecimalModule.COMPRESSED_BIG_DECIMAL;
   }
- 
+
   /* (non-Javadoc)
    * @see org.apache.druid.query.aggregation.AggregatorFactory#getCacheKey()
    */
@@ -240,7 +245,7 @@ public class CompressedBigDecimalAggregatorFactory
   @Override
   public Object finalizeComputation(Object object)
   {
-    CompressedBigDecimal<?> compressedBigDecimal = (CompressedBigDecimal<?>) object;
+    CompressedBigDecimal compressedBigDecimal = (CompressedBigDecimal) object;
     BigDecimal bigDecimal = compressedBigDecimal.toBigDecimal();
     return bigDecimal.compareTo(BigDecimal.ZERO) == 0 ? 0 : bigDecimal;
   }
@@ -278,6 +283,12 @@ public class CompressedBigDecimalAggregatorFactory
     return size;
   }
 
+  @JsonProperty
+  public boolean getStrictNumberParsing()
+  {
+    return strictNumberParsing;
+  }
+
   /* (non-Javadoc)
    * @see org.apache.druid.query.aggregation.AggregatorFactory#getMaxIntermediateSize()
    */
@@ -288,15 +299,39 @@ public class CompressedBigDecimalAggregatorFactory
   }
 
   @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    CompressedBigDecimalAggregatorFactory that = (CompressedBigDecimalAggregatorFactory) o;
+    return size == that.size
+           && scale == that.scale
+           && Objects.equal(name, that.name)
+           && Objects.equal(fieldName, that.fieldName)
+           && Objects.equal(strictNumberParsing, that.strictNumberParsing);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(name, fieldName, size, scale, strictNumberParsing);
+  }
+
+  @Override
   public String toString()
   {
-    return "CompressedBigDecimalAggregatorFactory{" +
-        "name='" + getName() + '\'' +
-        ", type='" + getComplexTypeName() + '\'' +
-        ", fieldName='" + getFieldName() + '\'' +
-        ", requiredFields='" + requiredFields() + '\'' +
-        ", size='" + getSize() + '\'' +
-        ", scale='" + getScale() + '\'' +
-        '}';
+    return "CompressedBigDecimalSumAggregatorFactory{" +
+           "name='" + getName() + '\'' +
+           ", type='" + getComplexTypeName() + '\'' +
+           ", fieldName='" + getFieldName() + '\'' +
+           ", requiredFields='" + requiredFields() + '\'' +
+           ", size='" + getSize() + '\'' +
+           ", scale='" + getScale() + '\'' +
+           ", strictNumberParsing='" + getStrictNumberParsing() + '\'' +
+           '}';
   }
 }
