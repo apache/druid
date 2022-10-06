@@ -513,13 +513,13 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=kafka-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=kafka-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/custom-coordinator-duties'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
     - <<: *integration_kafka_index
       name: "(Compile=openjdk8, Run=openjdk8) kafka index, transactional kafka index integration test with Indexer"
-      env: TESTNG_GROUPS='-Dgroups=kafka-index,kafka-transactional-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+      env: TESTNG_GROUPS='-Dgroups=kafka-index,kafka-transactional-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/custom-coordinator-duties'
 
     - <<: *integration_kafka_index
       name: "(Compile=openjdk8, Run=openjdk8) custom coordinator duties integration test"
