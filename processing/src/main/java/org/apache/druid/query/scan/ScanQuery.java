@@ -441,7 +441,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
 
     Ordering<Comparable>[] orderings = new Ordering[orderByDirection.size()];
     for (int i = 0; i < orderByDirection.size(); i++) {
-      orderings[i] = ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i))) ? Comparators.<Comparable>naturalNullsFirst() : Comparators.<Comparable>naturalNullsFirst().reverse();
+      orderings[i] = ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))
+                     ? Comparators.naturalNullsFirst()
+                     : Comparators.<Comparable>naturalNullsFirst().reverse();
     }
 
     Comparator<Sorter.SorterElement<ScanResultValue>> comparator = new Comparator<Sorter.SorterElement<ScanResultValue>>()

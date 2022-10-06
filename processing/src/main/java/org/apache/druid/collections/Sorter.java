@@ -20,7 +20,6 @@
 package org.apache.druid.collections;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 
 import java.util.Iterator;
 import java.util.List;
@@ -36,11 +35,6 @@ public interface Sorter<T>
    * Drain elements in sorted order (least first).
    */
   Iterator<T> drainElement();
-
-  /**
-   * Drain orderByColumValues in sorted order (least first).
-   */
-  Iterator<ImmutableMap<T, List<Comparable>>> drainOrderByColumValues();
 
   /**
    * Size of elements

@@ -19,14 +19,12 @@
 
 package org.apache.druid.collections;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.ISE;
 
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * This sorter is applicable to two cases:
@@ -80,32 +78,6 @@ public class QueueBasedSorter<T> implements Sorter<T>
       public T next()
       {
         return queue.poll().getElement();
-      }
-
-      @Override
-      public void remove()
-      {
-        throw new UnsupportedOperationException();
-      }
-    };
-  }
-
-  @Override
-  public Iterator<ImmutableMap<T, List<Comparable>>> drainOrderByColumValues()
-  {
-    return new Iterator<ImmutableMap<T, List<Comparable>>>()
-    {
-      @Override
-      public boolean hasNext()
-      {
-        return !queue.isEmpty();
-      }
-
-      @Override
-      public ImmutableMap<T, List<Comparable>> next()
-      {
-        SorterElement<T> sorterElement = queue.poll();
-        return ImmutableMap.of(sorterElement.getElement(), sorterElement.getOrderByColumValues());
       }
 
       @Override

@@ -66,25 +66,19 @@ public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
 
     Ordering<Comparable>[] orderings = new Ordering[orderByDirection.size()];
     for (int i = 0; i < orderByDirection.size(); i++) {
-      orderings[i] = ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i))) ? Comparators.<Comparable>naturalNullsFirst() : Comparators.<Comparable>naturalNullsFirst().reverse();
+      orderings[i] = ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))
+                     ? Comparators.naturalNullsFirst()
+                     : Comparators.<Comparable>naturalNullsFirst().reverse();
     }
 
-    Comparator<Sorter.SorterElement<Object>> comparator = new Comparator<Sorter.SorterElement<Object>>()
-    {
-      @Override
-      public int compare(
-          Sorter.SorterElement<Object> o1,
-          Sorter.SorterElement<Object> o2
-      )
-      {
-        for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
-          int compare = orderings[i].compare(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i));
-          if (compare != 0) {
-            return compare;
-          }
+    Comparator<Sorter.SorterElement<Object>> comparator = (o1, o2) -> {
+      for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
+        int compare = orderings[i].compare(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i));
+        if (compare != 0) {
+          return compare;
         }
-        return 0;
       }
+      return 0;
     };
     Sorter<Object> sorter = new QueueBasedSorter<Object>(limit, comparator);
 
