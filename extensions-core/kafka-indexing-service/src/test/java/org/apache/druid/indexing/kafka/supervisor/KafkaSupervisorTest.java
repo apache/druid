@@ -2117,7 +2117,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.updateCurrentAndLatestOffsets();
     supervisor.runInternal();
 
-    Assert.assertEquals(supervisor.getState(), SupervisorStateManager.BasicState.IDLE);
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
   }
 
   @Test

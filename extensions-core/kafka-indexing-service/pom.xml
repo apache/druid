@@ -134,6 +134,11 @@
       <artifactId>validation-api</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-client</artifactId>
+      <scope>provided</scope>
+    </dependency>
 
     <!-- Tests -->
     <dependency>

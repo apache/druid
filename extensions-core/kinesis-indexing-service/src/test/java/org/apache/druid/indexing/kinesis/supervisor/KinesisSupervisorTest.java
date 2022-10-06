@@ -369,7 +369,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScale);
-    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getStateManager().getSupervisorState());
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
   }
 
   @Test
@@ -453,7 +453,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountAfterScale);
-    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getStateManager().getSupervisorState());
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
   }
 
   @Test
@@ -2679,7 +2679,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
     supervisorStateManagerConfig.put("enableIdleBehaviour", true);
 
-    KinesisSupervisor supervisor = new TestableKinesisSupervisor(
+    supervisor = new TestableKinesisSupervisor(
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
@@ -2847,7 +2847,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
     verifyAll();
 
-    Assert.assertEquals(supervisor.getState(), SupervisorStateManager.BasicState.IDLE);
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
   }
 
   @Test
