@@ -398,7 +398,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScale);
-    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getStateManager().getSupervisorState());
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
 
 
     KafkaIndexTask task = captured.getValue();
@@ -2006,7 +2006,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         ),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of( 1, Long.MAX_VALUE)
+            ImmutableMap.of(1, Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2089,7 +2089,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Thread.sleep(1000);
     supervisor.updateCurrentAndLatestOffsets();
     supervisor.runInternal();
-    Assert.assertNotEquals(supervisor.getStateManager().getSupervisorState(), SupervisorStateManager.BasicState.IDLE);
+    Assert.assertNotEquals(supervisor.getState(), SupervisorStateManager.BasicState.IDLE);
 
     EasyMock.reset(taskClient);
     EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
@@ -2115,7 +2115,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.updateCurrentAndLatestOffsets();
     supervisor.runInternal();
 
-    Assert.assertEquals(supervisor.getStateManager().getSupervisorState(), SupervisorStateManager.BasicState.IDLE);
+    Assert.assertEquals(supervisor.getState(), SupervisorStateManager.BasicState.IDLE);
   }
 
   @Test

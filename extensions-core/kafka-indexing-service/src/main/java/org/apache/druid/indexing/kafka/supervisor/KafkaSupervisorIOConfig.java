@@ -144,6 +144,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", lateMessageRejectionPeriod=" + getLateMessageRejectionPeriod() +
            ", lateMessageRejectionStartDateTime=" + getLateMessageRejectionStartDateTime() +
            ", configOverrides=" + getConfigOverrides() +
+           ", enableIdleBehaviour=" + isEnableIdleBehaviour() +
+           ", idleSupervisorForStreamIdleMillis=" + getIdleSupervisorForStreamIdleMillis() +
            '}';
   }
 

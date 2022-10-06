@@ -169,6 +169,8 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
            ", awsExternalId='" + awsExternalId + '\'' +
            ", deaggregate=" + deaggregate +
+           ", enableIdleBehaviour=" + isEnableIdleBehaviour() +
+           ", idleSupervisorForStreamIdleMillis=" + getIdleSupervisorForStreamIdleMillis() +
            '}';
   }
 }

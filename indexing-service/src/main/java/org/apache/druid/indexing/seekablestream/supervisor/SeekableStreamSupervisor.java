@@ -744,7 +744,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final ServiceEmitter emitter;
 
   protected final ConcurrentHashMap<PartitionIdType, SequenceOffsetType> previousPartitionOffsetsSnapshot = new ConcurrentHashMap<>();
-  private long lagsVerifiedlastTime;
+  private long activeLastTime;
   private long idleTime;
 
   public SeekableStreamSupervisor(
@@ -3285,14 +3285,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequences();
     long nowTime = Instant.now().toEpochMilli();
     boolean idle;
-    if (lagsVerifiedlastTime > 0
+    if (activeLastTime > 0
         && previousPartitionOffsetsSnapshot.equals(latestSequencesFromStream)
         && computeTotalLag() == 0) {
-      idleTime += nowTime - lagsVerifiedlastTime;
+      idleTime = nowTime - activeLastTime;
       idle = true;
     } else {
       idleTime = 0L;
-      lagsVerifiedlastTime = nowTime;
+      activeLastTime = nowTime;
       idle = false;
     }
 
