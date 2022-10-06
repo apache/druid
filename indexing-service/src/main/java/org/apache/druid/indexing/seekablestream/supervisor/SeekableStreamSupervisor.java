@@ -743,6 +743,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean lifecycleStarted = false;
   private final ServiceEmitter emitter;
 
+  // snapshots latest sequences from stream to be verified in next run cycle
   protected final ConcurrentHashMap<PartitionIdType, SequenceOffsetType> previousPartitionOffsetsSnapshot = new ConcurrentHashMap<>();
   private long activeLastTime;
   private long idleTime;
@@ -2343,8 +2344,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private boolean updatePartitionDataFromStream()
   {
-    previousPartitionOffsetsSnapshot.clear();
-    previousPartitionOffsetsSnapshot.putAll(getLatestSequences());
     List<PartitionIdType> previousPartitionIds = new ArrayList<>(partitionIds);
     Set<PartitionIdType> partitionIdsFromSupplier;
     recordSupplierLock.lock();
@@ -3296,6 +3295,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       idle = false;
     }
 
+    previousPartitionOffsetsSnapshot.clear();
+    previousPartitionOffsetsSnapshot.putAll(latestSequencesFromStream);
     if (!idle) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.RUNNING);
     } else if (!isIdle() && idleTime > spec.getSpec().getIOConfig().getIdleSupervisorForStreamIdleMillis()) {
