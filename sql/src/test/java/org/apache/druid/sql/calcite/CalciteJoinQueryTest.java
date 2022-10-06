@@ -199,7 +199,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .context(context)
                 .build()
         ),
-        ImmutableList.of(
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{946684800000L},
+            new Object[]{946684800000L},
+            new Object[]{946857600000L},
+            new Object[]{978307200000L},
+            new Object[]{978307200000L},
+            new Object[]{978393600000L}
+        )
+        : ImmutableList.of(
             new Object[]{946684800000L},
             new Object[]{946684800000L},
             new Object[]{978307200000L},
