@@ -33,12 +33,12 @@ import java.util.List;
  * 1.Result Set Merge
  * 2.Sort the internal data of segment in the way of delayed materialization
  */
-public class QueueBasedMultiColumnSorter<T> implements MultiColumnSorter<T>
+public class QueueBasedSorter<T> implements Sorter<T>
 {
 
-  private final MinMaxPriorityQueue<MultiColumnSorter.MultiColumnSorterElement<T>> queue;
+  private final MinMaxPriorityQueue<SorterElement<T>> queue;
 
-  public QueueBasedMultiColumnSorter(int limit, Comparator<MultiColumnSorter.MultiColumnSorterElement<T>> comparator)
+  public QueueBasedSorter(int limit, Comparator<SorterElement<T>> comparator)
   {
     this.queue = MinMaxPriorityQueue
         .orderedBy(Ordering.from(comparator))
@@ -46,7 +46,7 @@ public class QueueBasedMultiColumnSorter<T> implements MultiColumnSorter<T>
         .create();
   }
 
-  public QueueBasedMultiColumnSorter(int limit, Ordering<MultiColumnSorter.MultiColumnSorterElement<T>> ordering)
+  public QueueBasedSorter(int limit, Ordering<SorterElement<T>> ordering)
   {
     this.queue = MinMaxPriorityQueue
         .orderedBy(ordering)
@@ -55,7 +55,7 @@ public class QueueBasedMultiColumnSorter<T> implements MultiColumnSorter<T>
   }
 
   @Override
-  public void add(MultiColumnSorter.MultiColumnSorterElement<T> sorterElement)
+  public void add(SorterElement<T> sorterElement)
   {
     try {
       queue.offer(sorterElement);
@@ -104,7 +104,7 @@ public class QueueBasedMultiColumnSorter<T> implements MultiColumnSorter<T>
       @Override
       public ImmutableMap<T, List<Comparable>> next()
       {
-        MultiColumnSorter.MultiColumnSorterElement<T> sorterElement = queue.poll();
+        SorterElement<T> sorterElement = queue.poll();
         return ImmutableMap.of(sorterElement.getElement(), sorterElement.getOrderByColumValues());
       }
 

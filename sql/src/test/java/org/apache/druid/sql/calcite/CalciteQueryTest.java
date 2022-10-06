@@ -5458,48 +5458,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testScanOrderByLimit()
-  {
-    //Note: set parameters -Ddruid.generic.useDefaultValueForNull=true/false
-    List<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{""},
-        new Object[]{"1"},
-        new Object[]{"10.1"},
-        new Object[]{"2"},
-        new Object[]{"abc"},
-        new Object[]{"def"}
-    );
-
-    if ("true".equals(System.getProperty("druid.generic.useDefaultValueForNull", "true"))) {
-      expectedResults = ImmutableList.of(
-          new Object[]{"1"},
-          new Object[]{"10.1"},
-          new Object[]{"2"},
-          new Object[]{"abc"},
-          new Object[]{"def"}
-      );
-    }
-
-    testQuery(
-        "SELECT dim1 FROM druid.foo where dim1 IS NOT NULL ORDER BY dim1 limit 100",
-        ImmutableList.of(
-            Druids.newScanQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .columns("dim1")
-                  .orderBy(ImmutableList.of(new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)))
-                  .filters(new NotDimFilter(new SelectorDimFilter("dim1", null, null)))
-                  .limit(100)
-                  .legacy(false)
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .build()
-        ),
-        expectedResults
-    );
-  }
-
-  @Test
   public void testCountStarWithBoundFilterSimplifyOnMetric()
   {
     testQuery(

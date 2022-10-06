@@ -21,6 +21,7 @@ package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.DateTimes;
@@ -182,6 +183,40 @@ public class ScanQueryResultOrderingTest
     ).stream().map(args -> args.toArray(new Object[0])).collect(Collectors.toList());
   }
 
+  public static Iterable<Object[]> constructorFeeder1()
+  {
+    /*
+    // Set number of server equal to number of segments, then try all possible distributions of segments to servers.
+    final int numServers = SEGMENTS.size();
+
+    final Set<List<Integer>> segmentToServerMaps = Sets.cartesianProduct(
+        IntStream.range(0, SEGMENTS.size())
+                 .mapToObj(i -> IntStream.range(0, numServers).boxed().collect(Collectors.toSet()))
+                 .collect(Collectors.toList())
+    );
+
+    // Try every limit up to one past the total number of rows.
+    final Set<Integer> limits = new TreeSet<>();
+    final int totalNumRows = SEGMENTS.stream().mapToInt(s -> s.asStorageAdapter().getNumRows()).sum();
+    for (int i = 0; i <= totalNumRows + 1; i++) {
+      limits.add(i);
+    }
+
+    // Try various batch sizes.
+    final Set<Integer> batchSizes = ImmutableSortedSet.of(1, 2, 100);
+    final Set<Integer> maxRowsQueuedForOrderings = ImmutableSortedSet.of(1, 7, 100000);
+
+    //orderByQueryRunnerType
+    final Set<String> orderByQueryRunnerTypes = ImmutableSortedSet.of("listBasedOrderByQueryRunner", "treeMultisetBasedOrderByQueryRunner", "treeSetBasedOrderByQueryRunner", "orderByQueryRunner");*/
+
+    return Sets.cartesianProduct(
+        ImmutableSet.of(ImmutableList.of(0, 0, 0)),
+        ImmutableSet.of(1),
+        ImmutableSet.of(1),
+        ImmutableSet.of(1),
+        ImmutableSet.of("")
+    ).stream().map(args -> args.toArray(new Object[0])).collect(Collectors.toList());
+  }
   public ScanQueryResultOrderingTest(
       final List<Integer> segmentToServerMap,
       final int limit,

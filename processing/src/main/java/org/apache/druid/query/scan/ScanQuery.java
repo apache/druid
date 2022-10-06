@@ -27,7 +27,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
-import org.apache.druid.collections.MultiColumnSorter;
+import org.apache.druid.collections.Sorter;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -44,6 +44,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -432,28 +433,30 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     );
   }
 
-  public Ordering<MultiColumnSorter.MultiColumnSorterElement<ScanResultValue>> getOrderByNoneTimeResultOrdering()
+  public Ordering<Sorter.SorterElement<ScanResultValue>> getOrderByNoneTimeResultOrdering()
   {
     List<String> orderByDirection = getOrderBys().stream()
                                                  .map(orderBy -> orderBy.getOrder().toString())
                                                  .collect(Collectors.toList());
-    Comparator<MultiColumnSorter.MultiColumnSorterElement<ScanResultValue>> comparator = new Comparator<MultiColumnSorter.MultiColumnSorterElement<ScanResultValue>>()
+
+    Ordering<Comparable>[] orderings = new Ordering[orderByDirection.size()];
+    for (int i = 0; i < orderByDirection.size(); i++) {
+      orderings[i] = ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i))) ? Comparators.<Comparable>naturalNullsFirst() : Comparators.<Comparable>naturalNullsFirst().reverse();
+    }
+
+    Comparator<Sorter.SorterElement<ScanResultValue>> comparator = new Comparator<Sorter.SorterElement<ScanResultValue>>()
     {
+
       @Override
       public int compare(
-          MultiColumnSorter.MultiColumnSorterElement<ScanResultValue> o1,
-          MultiColumnSorter.MultiColumnSorterElement<ScanResultValue> o2
+          Sorter.SorterElement<ScanResultValue> o1,
+          Sorter.SorterElement<ScanResultValue> o2
       )
       {
         for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
-          if (!Objects.equals(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i))) {
-            if (ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))) {
-              return Comparators.<Comparable>naturalNullsFirst()
-                                .compare(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i));
-            } else {
-              return Comparators.<Comparable>naturalNullsFirst()
-                                .compare(o2.getOrderByColumValues().get(i), o1.getOrderByColumValues().get(i));
-            }
+          int compare = orderings[i].compare(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i));
+          if (compare != 0) {
+            return compare;
           }
         }
         return 0;
@@ -488,6 +491,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   public ScanQuery withLimit(final long newLimit)
   {
     return Druids.ScanQueryBuilder.copy(this).limit(newLimit).build();
+  }
+
+  public ScanQuery withNoneOrderByLimit()
+  {
+    return Druids.ScanQueryBuilder.copy(this).limit(Long.MAX_VALUE).orderBy(new ArrayList<>()).order(Order.NONE).build();
   }
 
   public ScanQuery withNonNullLegacy(final ScanQueryConfig scanQueryConfig)

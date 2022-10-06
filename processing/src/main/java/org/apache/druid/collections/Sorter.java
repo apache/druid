@@ -25,12 +25,12 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Iterator;
 import java.util.List;
 
-public interface MultiColumnSorter<T>
+public interface Sorter<T>
 {
   /**
    * Offer an element to the sorter.If there are multiple values of different types in the same column, a CalssCastException will be thrown
    */
-  void add(MultiColumnSorterElement<T> sorterElement);
+  void add(SorterElement<T> sorterElement);
 
   /**
    * Drain elements in sorted order (least first).
@@ -48,12 +48,12 @@ public interface MultiColumnSorter<T>
   int size();
 
   @VisibleForTesting
-  class MultiColumnSorterElement<T>
+  class SorterElement<T>
   {
     private final T element;
     private final List<Comparable> orderByColumValues;
 
-    public MultiColumnSorterElement(T element, List<Comparable> orderByColums)
+    public SorterElement(T element, List<Comparable> orderByColums)
     {
       this.element = element;
       this.orderByColumValues = orderByColums;
