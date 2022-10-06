@@ -188,24 +188,32 @@ public class CatalogResource
       return Actions.badRequest(Actions.INVALID, "Table name cannot start or end with spaces");
     }
 
-    // The given table spec has to be valid for the given schema.
-    if (!schema.accepts(spec.type())) {
-      return Actions.badRequest(
-          Actions.INVALID,
-          StringUtils.format(
-              "Cannot create tables of type %s in schema %s",
-              spec.getClass().getSimpleName(),
-              tableId.schema()
-          )
-      );
-    }
-
     // The user has to have permission to modify the table.
     try {
       catalog.authorizer().authorizeTable(schema, tableId.name(), Action.WRITE, req);
     }
     catch (ForbiddenException e) {
       return Actions.forbidden(e);
+    }
+
+    // Validate the spec, if provided.
+    if (spec != null) {
+
+      // The given table spec has to be valid for the given schema.
+      if (Strings.isNullOrEmpty(spec.type())) {
+        return Actions.badRequest(Actions.INVALID, "Table type is required");
+      }
+
+      if (!schema.accepts(spec.type())) {
+        return Actions.badRequest(
+            Actions.INVALID,
+            StringUtils.format(
+                "Cannot create tables of type %s in schema %s",
+                spec.getClass().getSimpleName(),
+                tableId.schema()
+            )
+        );
+      }
     }
 
     // Everything checks out, let the request proceed.
