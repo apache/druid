@@ -152,7 +152,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   @Config(value = "${base_path}.fifo")
   public boolean isFifo()
   {
-    return false;
+    return true;
   }
 
   @Config(value = "${base_path}.tmpDir")

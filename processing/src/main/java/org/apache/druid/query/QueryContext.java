@@ -19,6 +19,8 @@
 
 package org.apache.druid.query;
 
+import org.apache.druid.java.util.common.HumanReadableBytes;
+
 import javax.annotation.Nullable;
 
 import java.util.Collections;
@@ -62,10 +64,23 @@ public class QueryContext
 
   public QueryContext(@Nullable Map<String, Object> userParams)
   {
-    this.defaultParams = new TreeMap<>();
-    this.userParams = userParams == null ? new TreeMap<>() : new TreeMap<>(userParams);
-    this.systemParams = new TreeMap<>();
-    invalidateMergedParams();
+    this(
+        new TreeMap<>(),
+        userParams == null ? new TreeMap<>() : new TreeMap<>(userParams),
+        new TreeMap<>()
+    );
+  }
+
+  private QueryContext(
+      final Map<String, Object> defaultParams,
+      final Map<String, Object> userParams,
+      final Map<String, Object> systemParams
+  )
+  {
+    this.defaultParams = defaultParams;
+    this.userParams = userParams;
+    this.systemParams = systemParams;
+    this.mergedParams = null;
   }
 
   private void invalidateMergedParams()
@@ -125,6 +140,7 @@ public class QueryContext
         QueryContexts.DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT
     );
   }
+
   @SuppressWarnings("unused")
   public boolean containsKey(String key)
   {
@@ -152,28 +168,66 @@ public class QueryContext
   @Nullable
   public String getAsString(String key)
   {
-    return (String) get(key);
+    Object val = get(key);
+    return val == null ? null : val.toString();
+  }
+
+  public String getAsString(String key, String defaultValue)
+  {
+    Object val = get(key);
+    return val == null ? defaultValue : val.toString();
+  }
+
+  @Nullable
+  public Boolean getAsBoolean(String key)
+  {
+    return QueryContexts.getAsBoolean(key, get(key));
   }
 
   public boolean getAsBoolean(
-      final String parameter,
+      final String key,
       final boolean defaultValue
   )
   {
-    return QueryContexts.getAsBoolean(parameter, get(parameter), defaultValue);
+    return QueryContexts.getAsBoolean(key, get(key), defaultValue);
+  }
+
+  public Integer getAsInt(final String key)
+  {
+    return QueryContexts.getAsInt(key, get(key));
   }
 
   public int getAsInt(
-      final String parameter,
+      final String key,
       final int defaultValue
   )
   {
-    return QueryContexts.getAsInt(parameter, get(parameter), defaultValue);
+    return QueryContexts.getAsInt(key, get(key), defaultValue);
   }
 
-  public long getAsLong(final String parameter, final long defaultValue)
+  public Long getAsLong(final String key)
   {
-    return QueryContexts.getAsLong(parameter, get(parameter), defaultValue);
+    return QueryContexts.getAsLong(key, get(key));
+  }
+
+  public long getAsLong(final String key, final long defaultValue)
+  {
+    return QueryContexts.getAsLong(key, get(key), defaultValue);
+  }
+
+  public HumanReadableBytes getAsHumanReadableBytes(final String key, final HumanReadableBytes defaultValue)
+  {
+    return QueryContexts.getAsHumanReadableBytes(key, get(key), defaultValue);
+  }
+
+  public float getAsFloat(final String key, final float defaultValue)
+  {
+    return QueryContexts.getAsFloat(key, get(key), defaultValue);
+  }
+
+  public <E extends Enum<E>> E getAsEnum(String key, Class<E> clazz, E defaultValue)
+  {
+    return QueryContexts.getAsEnum(key, get(key), clazz, defaultValue);
   }
 
   public Map<String, Object> getMergedParams()
@@ -185,6 +239,15 @@ public class QueryContext
       mergedParams = Collections.unmodifiableMap(merged);
     }
     return mergedParams;
+  }
+
+  public QueryContext copy()
+  {
+    return new QueryContext(
+        new TreeMap<>(defaultParams),
+        new TreeMap<>(userParams),
+        new TreeMap<>(systemParams)
+    );
   }
 
   @Override

@@ -29,6 +29,7 @@ import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
@@ -98,6 +99,59 @@ abstract class ConstantExpr<T> implements Expr
   public String stringify()
   {
     return toString();
+  }
+}
+
+/**
+ * Even though expressions don't generally support BigInteger, we need this object so we can represent
+ * {@link Long#MIN_VALUE} as a {@link UnaryMinusExpr} applied to {@link ConstantExpr}. Antlr cannot parse negative
+ * longs directly, due to ambiguity between negative numbers and unary minus.
+ */
+class BigIntegerExpr extends ConstantExpr<BigInteger>
+{
+  public BigIntegerExpr(BigInteger value)
+  {
+    super(ExpressionType.LONG, Preconditions.checkNotNull(value, "value"));
+  }
+
+  @Override
+  public String toString()
+  {
+    return value.toString();
+  }
+
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    // Eval succeeds if the BigInteger is in long range.
+    // Callers that need to process out-of-long-range values, like UnaryMinusExpr, must use getLiteralValue().
+    return ExprEval.ofLong(value.longValueExact());
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingInspector inspector)
+  {
+    // No vectorization needed: Parser.flatten converts BigIntegerExpr to LongExpr at parse time.
+    return false;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    BigIntegerExpr otherExpr = (BigIntegerExpr) o;
+    return value.equals(otherExpr.value);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return value.hashCode();
   }
 }
 
@@ -324,7 +378,7 @@ class ArrayExpr extends ConstantExpr<Object[]>
   public ArrayExpr(ExpressionType outputType, @Nullable Object[] value)
   {
     super(outputType, value);
-    Preconditions.checkArgument(outputType.isArray());
+    Preconditions.checkArgument(outputType.isArray(), "Output type %s is not an array", outputType);
     ExpressionType.checkNestedArrayAllowed(outputType);
   }
 

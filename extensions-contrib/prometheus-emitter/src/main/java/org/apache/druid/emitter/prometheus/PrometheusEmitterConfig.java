@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
@@ -54,6 +55,10 @@ public class PrometheusEmitterConfig
   private final String pushGatewayAddress;
 
   @JsonProperty
+  @Nullable
+  private final Integer flushPeriod;
+
+  @JsonProperty
   private final boolean addHostAsLabel;
 
   @JsonProperty
@@ -67,19 +72,27 @@ public class PrometheusEmitterConfig
       @JsonProperty("port") @Nullable Integer port,
       @JsonProperty("pushGatewayAddress") @Nullable String pushGatewayAddress,
       @JsonProperty("addHostAsLabel") boolean addHostAsLabel,
-      @JsonProperty("addServiceAsLabel") boolean addServiceAsLabel
+      @JsonProperty("addServiceAsLabel") boolean addServiceAsLabel,
+      @JsonProperty("flushPeriod") Integer flushPeriod
   )
   {
-
     this.strategy = strategy != null ? strategy : Strategy.exporter;
     this.namespace = namespace != null ? namespace : "druid";
     Preconditions.checkArgument(PATTERN.matcher(this.namespace).matches(), "Invalid namespace " + this.namespace);
+    if (strategy == Strategy.exporter) {
+      Preconditions.checkArgument(port != null, "For `exporter` strategy, port must be specified.");
+    } else if (this.strategy == Strategy.pushgateway) {
+      Preconditions.checkArgument(pushGatewayAddress != null, "For `pushgateway` strategy, pushGatewayAddress must be specified.");
+      if (Objects.nonNull(flushPeriod)) {
+        Preconditions.checkArgument(flushPeriod > 0, "flushPeriod must be greater than 0.");
+      } else {
+        flushPeriod = 15;
+      }
+    }
     this.dimensionMapPath = dimensionMapPath;
     this.port = port;
-    if (this.strategy == Strategy.pushgateway) {
-      Preconditions.checkNotNull(pushGatewayAddress, "Invalid pushGateway address");
-    }
     this.pushGatewayAddress = pushGatewayAddress;
+    this.flushPeriod = flushPeriod;
     this.addHostAsLabel = addHostAsLabel;
     this.addServiceAsLabel = addServiceAsLabel;
   }
@@ -102,6 +115,12 @@ public class PrometheusEmitterConfig
   public String getPushGatewayAddress()
   {
     return pushGatewayAddress;
+  }
+
+  @Nullable
+  public Integer getFlushPeriod()
+  {
+    return flushPeriod;
   }
 
   public Strategy getStrategy()

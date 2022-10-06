@@ -47,6 +47,7 @@ public abstract class StructuredDataProcessor
   public ProcessResults processFields(Object raw)
   {
     Queue<Field> toProcess = new ArrayDeque<>();
+    raw = StructuredData.unwrap(raw);
     if (raw instanceof Map) {
       toProcess.add(new MapField("", (Map<String, ?>) raw));
     } else if (raw instanceof List) {
@@ -76,15 +77,16 @@ public abstract class StructuredDataProcessor
       // add estimated size of string key
       processResults.addSize(estimateStringSize(entry.getKey()));
       final String fieldName = map.getName() + ".\"" + entry.getKey() + "\"";
+      Object value = StructuredData.unwrap(entry.getValue());
       // lists and maps go back in the queue
-      if (entry.getValue() instanceof List) {
-        List<?> theList = (List<?>) entry.getValue();
+      if (value instanceof List) {
+        List<?> theList = (List<?>) value;
         toProcess.add(new ListField(fieldName, theList));
-      } else if (entry.getValue() instanceof Map) {
-        toProcess.add(new MapField(fieldName, (Map<String, ?>) entry.getValue()));
+      } else if (value instanceof Map) {
+        toProcess.add(new MapField(fieldName, (Map<String, ?>) value));
       } else {
         // literals get processed
-        processResults.addLiteralField(fieldName, processLiteralField(fieldName, entry.getValue()));
+        processResults.addLiteralField(fieldName, processLiteralField(fieldName, value));
       }
     }
     return processResults;
@@ -97,7 +99,7 @@ public abstract class StructuredDataProcessor
     final List<?> theList = list.getList();
     for (int i = 0; i < theList.size(); i++) {
       final String listFieldName = list.getName() + "[" + i + "]";
-      final Object element = theList.get(i);
+      final Object element = StructuredData.unwrap(theList.get(i));
       // maps and lists go back into the queue
       if (element instanceof Map) {
         toProcess.add(new MapField(listFieldName, (Map<String, ?>) element));

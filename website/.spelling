@@ -18,6 +18,7 @@
 # global dictionary is at the start, file overrides afterwards
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
+1M
 32-bit
 500MiB
 64-bit
@@ -38,6 +39,7 @@ BCP
 Base64
 Base64-encoded
 ByteBuffer
+bottlenecked
 concat
 CIDR
 CORS
@@ -60,6 +62,7 @@ DimensionSpec
 DimensionSpecs
 Dockerfile
 DogStatsD
+DOCTYPE
 Double.NEGATIVE_INFINITY
 Double.NEGATIVE_INFINITY.
 Double.POSITIVE_INFINITY
@@ -95,6 +98,7 @@ HDFSFirehose
 HLL
 HashSet
 Homebrew
+html
 HyperLogLog
 IAM
 IANA
@@ -125,6 +129,7 @@ JRE
 JS
 JSON
 JsonPath
+JSONPath
 JSSE
 JVM
 JVMs
@@ -152,6 +157,7 @@ MariaDB
 MiddleManager
 MiddleManagers
 Montréal
+MSQ
 Murmur3
 MVCC
 NFS
@@ -209,6 +215,8 @@ aggregator
 aggregators
 ambari
 analytics
+arrayElement
+assumeNewlineDelimited
 assumeRoleArn
 assumeRoleExternalId
 async
@@ -225,6 +233,7 @@ backfills
 backpressure
 base64
 big-endian
+bigint
 blobstore
 boolean
 breakpoint
@@ -261,6 +270,7 @@ dequeued
 deserialization
 deserialize
 deserialized
+deserializes
 downtimes
 druid
 druid–kubernetes-extensions
@@ -269,6 +279,7 @@ encodings
 endian
 endpointConfig
 enum
+expectedType
 expr
 failover
 featureSpec
@@ -296,14 +307,21 @@ https
 idempotency
 i.e.
 influxdb
+ingestions
 ingestionSpec
 injective
 inlined
 inSubQueryThreshold
 interruptible
+isAllowList
 jackson-jq
 javadoc
 joinable
+json_keys
+json_object
+json_paths
+json_query
+json_value
 kerberos
 keystore
 keytool
@@ -319,6 +337,7 @@ lookback
 lookups
 mapreduce
 masse
+maxBytes
 maxNumericInFilters
 maxNumFiles
 maxNumSegments
@@ -327,6 +346,8 @@ memcached
 mergeable
 metadata
 millis
+microbatch
+microbatches
 misconfiguration
 misconfigured
 mostAvailableSize
@@ -338,15 +359,18 @@ namespaced
 namespaces
 natively
 netflow
+nonfinalized
 non-nullable
 noop
 numerics
 numShards
 parameterized
+parse_json
 parseable
 partitioner
 partitionFunction
 partitionsSpec
+pathParts
 performant
 plaintext
 pluggable
@@ -360,6 +384,7 @@ pre-computation
 pre-compute
 pre-computing
 pre-configured
+pre-existing
 pre-filtered
 pre-filtering
 pre-generated
@@ -377,6 +402,7 @@ prepopulated
 preprocessing
 priori
 procs
+processFromRaw
 programmatically
 proto
 proxied
@@ -432,12 +458,15 @@ subtask
 subtasks
 supervisorTaskId
 symlink
+syntaxes
 tiering
 timeseries
 timestamp
 timestamps
+to_json_string
 tradeoffs
 transformSpec
+try_parse_json
 tsv
 ulimit
 unannounce
@@ -451,11 +480,17 @@ unioned
 unmergeable
 unmerged
 UNNEST
+unnest
+unnested
+unnesting
+unnests
 unparseable
 unparsed
 unsetting
 untrusted
 useFilterCNF
+useJqSyntax
+useJsonNodeReader
 useSSL
 uptime
 uris
@@ -465,11 +500,14 @@ v1
 v2
 vCPUs
 validator
+varchar
 vectorizable
 vectorize
 vectorizeVirtualColumns
 versioning
+virtualColumns
 w.r.t.
+walkthrough
 whitelist
 whitelisted
 whitespace
@@ -507,6 +545,8 @@ NUMERIC_PRECISION_RADIX
 NUMERIC_SCALE
 ORDINAL_POSITION
 POSIX
+P1M
+P1Y
 PT1M
 PT5M
 SCHEMA_NAME
@@ -534,8 +574,9 @@ druid.server.tier
 druid.sql.planner.maxSemiJoinRowsInMemory
 druid.sql.planner.sqlTimeZone
 druid.sql.planner.useApproximateCountDistinct
-druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useApproximateTopN
+druid.sql.planner.useGroupingSetForExactDistinct
+druid.sql.planner.useNativeQueryExplain
 error_msg
 exprs
 group_id
@@ -560,6 +601,7 @@ segment_id
 server_type
 shard_spec
 sqlTimeZone
+sql-msq-task
 supervisor_id
 sys
 sys.segments
@@ -571,10 +613,96 @@ useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
 wikipedia
+your-table
 enableTimeBoundaryPlanning
 TimeBoundary
 druid.query.default.context.enableTimeBoundaryPlanning
 IEC
+# MSQ general
+SegmentGenerator
+granularity_string
+QueryKit
+# MSQ report fields
+taskId
+multiStageQuery.taskId
+multiStageQuery.payload.status
+multiStageQuery.payload.status.status
+multiStageQuery.payload.status.startTime 
+multiStageQuery.payload.status.durationMs
+multiStageQuery.payload.status.errorReport
+multiStageQuery.payload.status.errorReport.taskId
+multiStageQuery.payload.status.errorReport.host
+multiStageQuery.payload.status.errorReport.stageNumber
+multiStageQuery.payload.status.errorReport.error
+multiStageQuery.payload.status.errorReport.error.errorCode
+multiStageQuery.payload.status.errorReport.error.errorMessage
+multiStageQuery.payload.status.errorReport.exceptionStackTrace
+multiStageQuery.payload.stages stages
+multiStageQuery.payload.stages[].stageNumber
+definition.id
+definition.input
+definition.broadcast
+definition.processor
+definition.signature
+stageNumber
+startTime
+multiStageQuery.payload.stages
+READING_INPUT
+POST_READING
+RESULTS_COMPLETE
+workerCount
+partitionCount
+startCount
+# MSQ errors and limits
+BroadcastTablesTooLarge  
+CannotParseExternalData 
+ColumnNameRestricted
+ColumnTypeNotSupported
+DurableStorageConfiguration  
+ColumnTypeNotSupported 
+InsertCannotAllocateSegment
+InsertCannotBeEmpty 
+InsertCannotOrderByDescending  
+InsertCannotReplaceExistingSegment 
+InsertLockPreempted  
+InsertTimeNull
+CURRENT_TIMESTAMP  
+InsertTimeOutOfBounds
+UnknownError
+TaskStartTimeout
+OutOfMemoryError
+SegmentGenerator
+maxFrameSize
+InvalidNullByte  
+QueryNotSupported   
+QueryNotSupported   
+RowTooLarge  
+TooManyBuckets  
+TooManyInputFiles 
+TooManyPartitions   
+TooManyColumns 
+TooManyWarnings 
+TooManyWorkers 
+NotEnoughMemory  
+WorkerFailed  
+WorkerRpcFailed  
+# MSQ context parameters
+maxNumTasks 
+taskAssignment 
+finalizeAggregations 
+rowsInMemory 
+segmentSortOrder 
+rowsPerSegment 
+durableShuffleStorage
+# Aggregations
+groupByEnableMultiValueUnnesting
+APPROX_COUNT_DISTINCT_DS_HLL
+APPROX_COUNT_DISTINCT_DS_THETA
+APPROX_QUANTILE_DS
+DS_QUANTILES_SKETCH
+APPROX_QUANTILE_FIXED_BUCKETS
+
+# File specific overrides
  - ../docs/comparisons/druid-vs-elasticsearch.md
 100x
  - ../docs/configuration/logging.md
@@ -626,7 +754,7 @@ v9
 DskipTests
 Papache-release
 Pdist
-Ddruid.console.skip
+Dweb.console.skip
 yaml
 Phadoop3
 dist-hadoop3
@@ -741,6 +869,7 @@ HTTPServer
 conversionFactor
 prometheus
 Pushgateway
+flushPeriod
  - ../docs/development/extensions-contrib/tdigestsketch-quantiles.md
 postAggregator
 quantileFromTDigestSketch
@@ -883,7 +1012,11 @@ gcs-connector
 hadoop2
 hdfs
  - ../docs/development/extensions-core/kafka-extraction-namespace.md
+Aotearoa
+Czechia
+KTable
 LookupExtractorFactory
+Zeelund
 zookeeper.connect
  - ../docs/development/extensions-core/kafka-ingestion.md
 0.11.x.
@@ -1040,6 +1173,7 @@ com.example
 common.runtime.properties
 druid-aws-rds-extensions
 druid-cassandra-storage
+druid-compressed-bigdecimal
 druid-distinctcount
 druid-ec2-extensions
 druid-kafka-extraction-namespace
@@ -1114,7 +1248,7 @@ timestampColumnName
 timestampSpec
 urls
 valueFormat
- - ../docs/ingestion/data-management.md
+ - ../docs/data-management/compaction.md
 1GB
 IOConfig
 compactionTask
@@ -1326,6 +1460,8 @@ expm1
 expr
 expr1
 expr2
+expr3
+expr4
 fromIndex
 getExponent
 hypot
@@ -1588,13 +1724,10 @@ maxResults
 orderby
 orderbys
 outputName
-pre-existing
 pushdown
 row1
 subtotalsSpec
 tradeoff
-unnested
-unnesting
  - ../docs/querying/having.md
 HavingSpec
 HavingSpecs
@@ -1648,6 +1781,7 @@ enableParallelMerge
 enableJoinLeftTableScanDirect
 enableJoinFilterPushDown
 enableJoinFilterRewrite
+enableRewriteJoinToFilter
 enableJoinFilterRewriteValueColumnFilters
 floatSum
 joinFilterRewriteMaxSize
@@ -1771,6 +1905,12 @@ keytabs
 dsql
  - ../docs/tutorials/tutorial-retention.md
 2015-09-12T12
+ - ../docs/tutorials/tutorial-sketches-theta.md
+clickstreams
+uid
+_k_
+Bridgerton
+Hellmar
  - ../docs/tutorials/tutorial-update-data.md
 bear-111
  - ../docs/configuration/index.md
@@ -2027,7 +2167,23 @@ protobuf
 Golang
 multiValueHandling
 _n_
+KLL
+KllFloatsSketch
+KllDoublesSketch
+PMF
+CDF
+maxStreamLength
+toString
 100TB
+- ../docs/development/extensions-contrib/compressed-big-decimal.md
+compressedBigDecimal
+limitSpec
+metricsSpec
+postAggregations
+SaleAmount
+IngestionSpec
+druid-compressed-bigdecimal
+doubleSum
  - ../docs/querying/sql-functions.md
 ANY_VALUE 
 APPROX_COUNT_DISTINCT_DS_HLL 
@@ -2110,3 +2266,9 @@ TIMESTAMPDIFF
 TRUNC 
 VAR_POP 
 VAR_SAMP
+KTable
+Aotearoa
+Czechia
+Zeelund
+ - ../docs/tutorials/docker.md
+ nano

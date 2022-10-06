@@ -18,7 +18,9 @@
 
 import { ResizeEntry } from '@blueprintjs/core';
 import { ResizeSensor2 } from '@blueprintjs/popover2';
-import ace, { Ace } from 'ace-builds';
+import type { Ace } from 'ace-builds';
+import ace from 'ace-builds';
+import { SqlRef, SqlTableRef } from 'druid-query-toolkit';
 import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
@@ -30,16 +32,14 @@ import {
   SQL_KEYWORDS,
 } from '../../../../lib/keywords';
 import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../../../lib/sql-docs';
-import { RowColumn, uniq } from '../../../utils';
-import { ColumnMetadata } from '../../../utils/column-metadata';
+import { ColumnMetadata, RowColumn, uniq } from '../../../utils';
 
 import './query-input.scss';
-import Completion = Ace.Completion;
 
 const langTools = ace.require('ace/ext/language_tools');
 
 const COMPLETER = {
-  insertMatch: (editor: any, data: Completion) => {
+  insertMatch: (editor: any, data: Ace.Completion) => {
     editor.completer.insertMatch({ value: data.name });
   },
 };
@@ -80,7 +80,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
       SQL_EXPRESSION_PARTS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
       SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 0, meta: 'constant' })),
       SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 0, meta: 'dynamic' })),
-      SQL_DATA_TYPES.map(([name, runtime, description]) => ({
+      Object.entries(SQL_DATA_TYPES).map(([name, [runtime, description]]) => ({
         name,
         value: name,
         score: 0,
@@ -109,8 +109,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
   static addFunctionAutoCompleter(): void {
     if (!langTools) return;
 
-    const functionList: any[] = Object.keys(SQL_FUNCTIONS).flatMap(name => {
-      const versions = SQL_FUNCTIONS[name];
+    const functionList: any[] = Object.entries(SQL_FUNCTIONS).flatMap(([name, versions]) => {
       return versions.map(([args, description]) => ({
         name: name,
         value: versions.length > 1 ? `${name}(${args})` : name,
@@ -152,7 +151,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     ) {
       const completions = ([] as any[]).concat(
         uniq(columnMetadata.map(d => d.TABLE_SCHEMA)).map(v => ({
-          value: v,
+          value: SqlTableRef.create(v).toString(),
           score: 10,
           meta: 'schema',
         })),
@@ -161,7 +160,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
             .filter(d => (currentSchema ? d.TABLE_SCHEMA === currentSchema : true))
             .map(d => d.TABLE_NAME),
         ).map(v => ({
-          value: v,
+          value: SqlTableRef.create(v).toString(),
           score: 49,
           meta: 'datasource',
         })),
@@ -174,7 +173,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
             )
             .map(d => d.COLUMN_NAME),
         ).map(v => ({
-          value: v,
+          value: SqlRef.column(v).toString(),
           score: 50,
           meta: 'column',
         })),

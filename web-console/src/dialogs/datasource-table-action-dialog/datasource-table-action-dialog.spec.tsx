@@ -25,7 +25,7 @@ describe('Datasource table action dialog', () => {
   it('matches snapshot', () => {
     const datasourceTableActionDialog = (
       <DatasourceTableActionDialog
-        datasourceId="test"
+        datasource="test"
         actions={[{ title: 'test', onAction: () => null }]}
         onClose={() => {}}
       />

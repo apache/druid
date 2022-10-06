@@ -161,22 +161,28 @@ public abstract class ExprEval<T>
       }
 
       if (coercedType == Long.class || coercedType == Integer.class) {
-        return new NonnullPair<>(
-            ExpressionType.LONG_ARRAY,
-            val.stream().map(x -> x != null ? ExprEval.ofType(ExpressionType.LONG, x).value() : null).toArray()
-        );
+        Object[] array = new Object[val.size()];
+        int i = 0;
+        for (Object o : val) {
+          array[i++] = o == null ? null : ExprEval.ofType(ExpressionType.LONG, o).value();
+        }
+        return new NonnullPair<>(ExpressionType.LONG_ARRAY, array);
       }
       if (coercedType == Float.class || coercedType == Double.class) {
-        return new NonnullPair<>(
-            ExpressionType.DOUBLE_ARRAY,
-            val.stream().map(x -> x != null ? ExprEval.ofType(ExpressionType.DOUBLE, x).value() : null).toArray()
-        );
+        Object[] array = new Object[val.size()];
+        int i = 0;
+        for (Object o : val) {
+          array[i++] = o == null ? null : ExprEval.ofType(ExpressionType.DOUBLE, o).value();
+        }
+        return new NonnullPair<>(ExpressionType.DOUBLE_ARRAY, array);
       }
       // default to string
-      return new NonnullPair<>(
-          ExpressionType.STRING_ARRAY,
-          val.stream().map(x -> x != null ? ExprEval.ofType(ExpressionType.STRING, x).value() : null).toArray()
-      );
+      Object[] array = new Object[val.size()];
+      int i = 0;
+      for (Object o : val) {
+        array[i++] = o == null ? null : ExprEval.ofType(ExpressionType.STRING, o).value();
+      }
+      return new NonnullPair<>(ExpressionType.STRING_ARRAY, array);
     }
     if (homogenizeMultiValueStrings) {
       return new NonnullPair<>(ExpressionType.STRING_ARRAY, new Object[]{null});
@@ -297,7 +303,7 @@ public abstract class ExprEval<T>
     return new DoubleExprEval(doubleValue);
   }
 
-  public static ExprEval ofLongArray(@Nullable Long[] longValue)
+  public static ExprEval ofLongArray(@Nullable Object[] longValue)
   {
     if (longValue == null) {
       return ArrayExprEval.OF_NULL_LONG;
@@ -305,7 +311,7 @@ public abstract class ExprEval<T>
     return new ArrayExprEval(ExpressionType.LONG_ARRAY, longValue);
   }
 
-  public static ExprEval ofDoubleArray(@Nullable Double[] doubleValue)
+  public static ExprEval ofDoubleArray(@Nullable Object[] doubleValue)
   {
     if (doubleValue == null) {
       return ArrayExprEval.OF_NULL_DOUBLE;
@@ -313,7 +319,7 @@ public abstract class ExprEval<T>
     return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, doubleValue);
   }
 
-  public static ExprEval ofStringArray(@Nullable String[] stringValue)
+  public static ExprEval ofStringArray(@Nullable Object[] stringValue)
   {
     if (stringValue == null) {
       return ArrayExprEval.OF_NULL_STRING;
@@ -324,7 +330,7 @@ public abstract class ExprEval<T>
 
   public static ExprEval ofArray(ExpressionType outputType, Object[] value)
   {
-    Preconditions.checkArgument(outputType.isArray());
+    Preconditions.checkArgument(outputType.isArray(), "Output type %s is not an array", outputType);
     return new ArrayExprEval(outputType, value);
   }
 
@@ -388,16 +394,60 @@ public abstract class ExprEval<T>
       return new StringExprEval(String.valueOf(val));
     }
     if (val instanceof Long[]) {
-      return new ArrayExprEval(ExpressionType.LONG_ARRAY, (Long[]) val);
+      final Long[] inputArray = (Long[]) val;
+      final Object[] array = new Object[inputArray.length];
+      for (int i = 0; i < inputArray.length; i++) {
+        array[i] = inputArray[i];
+      }
+      return new ArrayExprEval(ExpressionType.LONG_ARRAY, array);
+    }
+    if (val instanceof long[]) {
+      final long[] longArray = (long[]) val;
+      final Object[] array = new Object[longArray.length];
+      for (int i = 0; i < longArray.length; i++) {
+        array[i] = longArray[i];
+      }
+      return new ArrayExprEval(ExpressionType.LONG_ARRAY, array);
     }
     if (val instanceof Double[]) {
-      return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, (Double[]) val);
+      final Double[] inputArray = (Double[]) val;
+      final Object[] array = new Object[inputArray.length];
+      for (int i = 0; i < inputArray.length; i++) {
+        array[i] = inputArray[i];
+      }
+      return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, array);
+    }
+    if (val instanceof double[]) {
+      final double[] inputArray = (double[]) val;
+      final Object[] array = new Object[inputArray.length];
+      for (int i = 0; i < inputArray.length; i++) {
+        array[i] = inputArray[i];
+      }
+      return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, array);
     }
     if (val instanceof Float[]) {
-      return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, Arrays.stream((Float[]) val).map(Float::doubleValue).toArray());
+      final Float[] inputArray = (Float[]) val;
+      final Object[] array = new Object[inputArray.length];
+      for (int i = 0; i < inputArray.length; i++) {
+        array[i] = inputArray[i] != null ? inputArray[i].doubleValue() : null;
+      }
+      return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, array);
+    }
+    if (val instanceof float[]) {
+      final float[] inputArray = (float[]) val;
+      final Object[] array = new Object[inputArray.length];
+      for (int i = 0; i < inputArray.length; i++) {
+        array[i] = inputArray[i];
+      }
+      return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, array);
     }
     if (val instanceof String[]) {
-      return new ArrayExprEval(ExpressionType.STRING_ARRAY, (String[]) val);
+      final String[] inputArray = (String[]) val;
+      final Object[] array = new Object[inputArray.length];
+      for (int i = 0; i < inputArray.length; i++) {
+        array[i] = inputArray[i];
+      }
+      return new ArrayExprEval(ExpressionType.STRING_ARRAY, array);
     }
 
     if (val instanceof List || val instanceof Object[]) {
@@ -429,7 +479,12 @@ public abstract class ExprEval<T>
       case STRING:
         // not all who claim to be "STRING" are always a String, prepare ourselves...
         if (value instanceof String[]) {
-          return new ArrayExprEval(ExpressionType.STRING_ARRAY, (String[]) value);
+          final String[] inputArray = (String[]) value;
+          final Object[] array = new Object[inputArray.length];
+          for (int i = 0; i < inputArray.length; i++) {
+            array[i] = inputArray[i];
+          }
+          return new ArrayExprEval(ExpressionType.STRING_ARRAY, array);
         }
         if (value instanceof Object[]) {
           return bestEffortOf(value);
@@ -437,10 +492,7 @@ public abstract class ExprEval<T>
         if (value instanceof List) {
           return bestEffortOf(value);
         }
-        if (value == null) {
-          return of(null);
-        }
-        return of(String.valueOf(value));
+        return of(Evals.asString(value));
       case LONG:
         if (value instanceof Number) {
           return ofLong((Number) value);
@@ -571,12 +623,7 @@ public abstract class ExprEval<T>
   public String asString()
   {
     if (!stringValueCached) {
-      if (value == null) {
-        stringValue = null;
-      } else {
-        stringValue = String.valueOf(value);
-      }
-
+      stringValue = Evals.asString(value);
       stringValueCached = true;
     }
 
@@ -630,15 +677,6 @@ public abstract class ExprEval<T>
   @Nullable
   public abstract Object[] asArray();
 
-  @Nullable
-  public abstract String[] asStringArray();
-
-  @Nullable
-  public abstract Long[] asLongArray();
-
-  @Nullable
-  public abstract Double[] asDoubleArray();
-
   public abstract ExprEval castTo(ExpressionType castTo);
 
   public abstract Expr toExpr();
@@ -666,27 +704,6 @@ public abstract class ExprEval<T>
     public final double asDouble()
     {
       return value.doubleValue();
-    }
-
-    @Nullable
-    @Override
-    public String[] asStringArray()
-    {
-      return isNumericNull() ? null : new String[] {value.toString()};
-    }
-
-    @Nullable
-    @Override
-    public Long[] asLongArray()
-    {
-      return isNumericNull() ? null : new Long[] {value.longValue()};
-    }
-
-    @Nullable
-    @Override
-    public Double[] asDoubleArray()
-    {
-      return isNumericNull() ? null : new Double[] {value.doubleValue()};
     }
 
     @Override
@@ -721,7 +738,7 @@ public abstract class ExprEval<T>
     @Override
     public Object[] asArray()
     {
-      return asDoubleArray();
+      return isNumericNull() ? null : new Object[] {value.doubleValue()};
     }
 
     @Override
@@ -741,11 +758,11 @@ public abstract class ExprEval<T>
         case ARRAY:
           switch (castTo.getElementType().getType()) {
             case DOUBLE:
-              return ExprEval.ofDoubleArray(asDoubleArray());
+              return ExprEval.ofDoubleArray(asArray());
             case LONG:
-              return ExprEval.ofLongArray(asLongArray());
+              return ExprEval.ofLongArray(value == null ? null : new Object[] {value.longValue()});
             case STRING:
-              return ExprEval.ofStringArray(asStringArray());
+              return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
           }
       }
       throw new IAE("invalid type " + castTo);
@@ -786,14 +803,7 @@ public abstract class ExprEval<T>
     @Override
     public Object[] asArray()
     {
-      return asLongArray();
-    }
-
-    @Nullable
-    @Override
-    public Long[] asLongArray()
-    {
-      return isNumericNull() ? null : new Long[]{value.longValue()};
+      return isNumericNull() ? null : new Object[] {value.longValue()};
     }
 
     @Override
@@ -813,11 +823,11 @@ public abstract class ExprEval<T>
         case ARRAY:
           switch (castTo.getElementType().getType()) {
             case DOUBLE:
-              return ExprEval.ofDoubleArray(asDoubleArray());
+              return ExprEval.ofDoubleArray(value == null ? null : new Object[] {value.doubleValue()});
             case LONG:
-              return ExprEval.ofLongArray(asLongArray());
+              return ExprEval.ofLongArray(asArray());
             case STRING:
-              return ExprEval.ofStringArray(asStringArray());
+              return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
           }
       }
       throw new IAE("invalid type " + castTo);
@@ -905,7 +915,7 @@ public abstract class ExprEval<T>
     @Override
     public Object[] asArray()
     {
-      return asStringArray();
+      return value == null ? null : new Object[] {value};
     }
 
     private int computeInt()
@@ -969,27 +979,6 @@ public abstract class ExprEval<T>
       return booleanValue;
     }
 
-    @Nullable
-    @Override
-    public String[] asStringArray()
-    {
-      return value == null ? null : new String[] {value};
-    }
-
-    @Nullable
-    @Override
-    public Long[] asLongArray()
-    {
-      return value == null ? null : new Long[] {computeLong()};
-    }
-
-    @Nullable
-    @Override
-    public Double[] asDoubleArray()
-    {
-      return value == null ? null : new Double[] {computeDouble()};
-    }
-
     @Override
     public final ExprEval castTo(ExpressionType castTo)
     {
@@ -1003,11 +992,11 @@ public abstract class ExprEval<T>
         case ARRAY:
           switch (castTo.getElementType().getType()) {
             case DOUBLE:
-              return ExprEval.ofDoubleArray(asDoubleArray());
+              return ExprEval.ofDoubleArray(value == null ? null : new Object[] {computeDouble()});
             case LONG:
-              return ExprEval.ofLongArray(asLongArray());
+              return ExprEval.ofLongArray(value == null ? null : new Object[] {computeLong()});
             case STRING:
-              return ExprEval.ofStringArray(asStringArray());
+              return ExprEval.ofStringArray(value == null ? null : new Object[] {value});
           }
       }
       throw new IAE("invalid type " + castTo);
@@ -1032,7 +1021,7 @@ public abstract class ExprEval<T>
     {
       super(value);
       this.arrayType = arrayType;
-      Preconditions.checkArgument(arrayType.isArray());
+      Preconditions.checkArgument(arrayType.isArray(), "Output type %s is not an array", arrayType);
       ExpressionType.checkNestedArrayAllowed(arrayType);
     }
 
@@ -1050,11 +1039,7 @@ public abstract class ExprEval<T>
         if (value == null) {
           cacheStringValue(null);
         } else if (value.length == 1) {
-          if (value[0] == null) {
-            cacheStringValue(null);
-          } else {
-            cacheStringValue(String.valueOf(value[0]));
-          }
+          cacheStringValue(Evals.asString(value[0]));
         } else {
           cacheStringValue(Arrays.toString(value));
         }
@@ -1164,68 +1149,6 @@ public abstract class ExprEval<T>
     public Object[] asArray()
     {
       return value;
-    }
-
-    @Nullable
-    @Override
-    public String[] asStringArray()
-    {
-      if (value != null) {
-        if (arrayType.getElementType().is(ExprType.STRING)) {
-          return Arrays.stream(value).map(v -> (String) v).toArray(String[]::new);
-        } else if (arrayType.getElementType().isNumeric()) {
-          return Arrays.stream(value).map(x -> x != null ? x.toString() : null).toArray(String[]::new);
-        }
-      }
-      return null;
-    }
-
-    @Nullable
-    @Override
-    public Long[] asLongArray()
-    {
-      if (arrayType.getElementType().is(ExprType.LONG)) {
-        return Arrays.stream(value).map(v -> (Long) v).toArray(Long[]::new);
-      } else if (arrayType.getElementType().is(ExprType.DOUBLE)) {
-        return value == null ? null : Arrays.stream(value).map(v -> ((Double) v).longValue()).toArray(Long[]::new);
-      } else if (arrayType.getElementType().is(ExprType.STRING)) {
-        return Arrays.stream(value).map(v -> {
-          if (v == null) {
-            return null;
-          }
-          Long lv = GuavaUtils.tryParseLong((String) v);
-          if (lv == null) {
-            Double d = Doubles.tryParse((String) v);
-            if (d != null) {
-              lv = d.longValue();
-            }
-          }
-          return lv;
-        }).toArray(Long[]::new);
-      }
-      return null;
-    }
-
-    @Nullable
-    @Override
-    public Double[] asDoubleArray()
-    {
-      if (arrayType.getElementType().is(ExprType.DOUBLE)) {
-        return Arrays.stream(value).map(v -> (Double) v).toArray(Double[]::new);
-      } else if (arrayType.getElementType().is(ExprType.LONG)) {
-        return value == null ? null : Arrays.stream(value).map(v -> ((Long) v).doubleValue()).toArray(Double[]::new);
-      } else if (arrayType.getElementType().is(ExprType.STRING)) {
-        if (value == null) {
-          return null;
-        }
-        return Arrays.stream(value).map(val -> {
-          if (val == null) {
-            return null;
-          }
-          return Doubles.tryParse((String) val);
-        }).toArray(Double[]::new);
-      }
-      return new Double[0];
     }
 
     @Override
@@ -1344,27 +1267,6 @@ public abstract class ExprEval<T>
     public Object[] asArray()
     {
       return new Object[0];
-    }
-
-    @Nullable
-    @Override
-    public String[] asStringArray()
-    {
-      return new String[0];
-    }
-
-    @Nullable
-    @Override
-    public Long[] asLongArray()
-    {
-      return new Long[0];
-    }
-
-    @Nullable
-    @Override
-    public Double[] asDoubleArray()
-    {
-      return new Double[0];
     }
 
     @Override

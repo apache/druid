@@ -24,6 +24,7 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.expression.ArrayQuantileExprMacro;
 import org.apache.druid.query.expression.CaseInsensitiveContainsExprMacro;
 import org.apache.druid.query.expression.ContainsExprMacro;
 import org.apache.druid.query.expression.GuiceExprMacroTable;
@@ -49,6 +50,7 @@ public class ExpressionModule implements Module
 {
   public static final List<Class<? extends ExprMacroTable.ExprMacro>> EXPR_MACROS =
       ImmutableList.<Class<? extends ExprMacroTable.ExprMacro>>builder()
+                   .add(ArrayQuantileExprMacro.class)
                    .add(IPv4AddressMatchExprMacro.class)
                    .add(IPv4AddressParseExprMacro.class)
                    .add(IPv4AddressStringifyExprMacro.class)
@@ -70,18 +72,14 @@ public class ExpressionModule implements Module
                    .add(HyperUniqueExpressions.HllAddExprMacro.class)
                    .add(HyperUniqueExpressions.HllEstimateExprMacro.class)
                    .add(HyperUniqueExpressions.HllRoundEstimateExprMacro.class)
-                   .add(NestedDataExpressions.StructExprMacro.class)
                    .add(NestedDataExpressions.JsonObjectExprMacro.class)
-                   .add(NestedDataExpressions.GetPathExprMacro.class)
-                   .add(NestedDataExpressions.ListKeysExprMacro.class)
-                   .add(NestedDataExpressions.ListPathsExprMacro.class)
                    .add(NestedDataExpressions.JsonKeysExprMacro.class)
                    .add(NestedDataExpressions.JsonPathsExprMacro.class)
                    .add(NestedDataExpressions.JsonValueExprMacro.class)
                    .add(NestedDataExpressions.JsonQueryExprMacro.class)
-                   .add(NestedDataExpressions.ToJsonExprMacro.class)
                    .add(NestedDataExpressions.ToJsonStringExprMacro.class)
                    .add(NestedDataExpressions.ParseJsonExprMacro.class)
+                   .add(NestedDataExpressions.TryParseJsonExprMacro.class)
                    .build();
 
   @Override

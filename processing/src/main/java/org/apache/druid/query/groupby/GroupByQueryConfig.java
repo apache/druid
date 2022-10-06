@@ -21,6 +21,7 @@ package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
@@ -31,6 +32,8 @@ import org.apache.druid.utils.JvmUtils;
  */
 public class GroupByQueryConfig
 {
+  private static final Logger logger = new Logger(GroupByQueryConfig.class);
+
   public static final long AUTOMATIC = 0;
 
   public static final String CTX_KEY_STRATEGY = "groupByStrategy";
@@ -100,7 +103,10 @@ public class GroupByQueryConfig
 
   @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
-  private long maxOnDiskStorage = 0L;
+  private HumanReadableBytes maxOnDiskStorage = HumanReadableBytes.valueOf(0);
+
+  @JsonProperty
+  private HumanReadableBytes defaultOnDiskStorage = HumanReadableBytes.valueOf(-1);
 
   @JsonProperty
   private boolean forcePushDownLimit = false;
@@ -258,9 +264,22 @@ public class GroupByQueryConfig
     );
   }
 
-  public long getMaxOnDiskStorage()
+  public HumanReadableBytes getMaxOnDiskStorage()
   {
     return maxOnDiskStorage;
+  }
+
+  /**
+   * Mirror maxOnDiskStorage if defaultOnDiskStorage's default is not overridden by cluster operator.
+   *
+   * This mirroring is done to maintain continuity in behavior between Druid versions. If an operator wants to use
+   * defaultOnDiskStorage, they have to explicitly override it.
+   *
+   * @return The working value for defaultOnDiskStorage
+   */
+  public HumanReadableBytes getDefaultOnDiskStorage()
+  {
+    return defaultOnDiskStorage.getBytes() < 0L ? getMaxOnDiskStorage() : defaultOnDiskStorage;
   }
 
   public boolean isForcePushDownLimit()
@@ -316,31 +335,36 @@ public class GroupByQueryConfig
   public GroupByQueryConfig withOverrides(final GroupByQuery query)
   {
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();
-    newConfig.defaultStrategy = query.getContextValue(CTX_KEY_STRATEGY, getDefaultStrategy());
-    newConfig.singleThreaded = query.getContextBoolean(CTX_KEY_IS_SINGLE_THREADED, isSingleThreaded());
+    newConfig.defaultStrategy = query.getQueryContext().getAsString(CTX_KEY_STRATEGY, getDefaultStrategy());
+    newConfig.singleThreaded = query.getQueryContext().getAsBoolean(CTX_KEY_IS_SINGLE_THREADED, isSingleThreaded());
     newConfig.maxIntermediateRows = Math.min(
-        query.getContextValue(CTX_KEY_MAX_INTERMEDIATE_ROWS, getMaxIntermediateRows()),
+        query.getQueryContext().getAsInt(CTX_KEY_MAX_INTERMEDIATE_ROWS, getMaxIntermediateRows()),
         getMaxIntermediateRows()
     );
     newConfig.maxResults = Math.min(
-        query.getContextValue(CTX_KEY_MAX_RESULTS, getMaxResults()),
+        query.getQueryContext().getAsInt(CTX_KEY_MAX_RESULTS, getMaxResults()),
         getMaxResults()
     );
     newConfig.bufferGrouperMaxSize = Math.min(
-        query.getContextValue(CTX_KEY_BUFFER_GROUPER_MAX_SIZE, getBufferGrouperMaxSize()),
+        query.getQueryContext().getAsInt(CTX_KEY_BUFFER_GROUPER_MAX_SIZE, getBufferGrouperMaxSize()),
         getBufferGrouperMaxSize()
     );
-    newConfig.bufferGrouperMaxLoadFactor = query.getContextValue(
+    newConfig.bufferGrouperMaxLoadFactor = query.getQueryContext().getAsFloat(
         CTX_KEY_BUFFER_GROUPER_MAX_LOAD_FACTOR,
         getBufferGrouperMaxLoadFactor()
     );
-    newConfig.bufferGrouperInitialBuckets = query.getContextValue(
+    newConfig.bufferGrouperInitialBuckets = query.getQueryContext().getAsInt(
         CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS,
         getBufferGrouperInitialBuckets()
     );
-    newConfig.maxOnDiskStorage = Math.min(
-        ((Number) query.getContextValue(CTX_KEY_MAX_ON_DISK_STORAGE, getMaxOnDiskStorage())).longValue(),
-        getMaxOnDiskStorage()
+    // If the client overrides do not provide "maxOnDiskStorage" context key, the server side "defaultOnDiskStorage"
+    // value is used in the calculation of the newConfig value of maxOnDiskStorage. This allows the operator to
+    // choose a default value lower than the max allowed when the context key is missing in the client query.
+    newConfig.maxOnDiskStorage = HumanReadableBytes.valueOf(
+        Math.min(
+            query.getContextAsHumanReadableBytes(CTX_KEY_MAX_ON_DISK_STORAGE, getDefaultOnDiskStorage()).getBytes(),
+            getMaxOnDiskStorage().getBytes()
+        )
     );
     newConfig.maxSelectorDictionarySize = maxSelectorDictionarySize; // No overrides
     newConfig.maxMergingDictionarySize = maxMergingDictionarySize; // No overrides
@@ -354,11 +378,11 @@ public class GroupByQueryConfig
         CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY,
         isForcePushDownNestedQuery()
     );
-    newConfig.intermediateCombineDegree = query.getContextValue(
+    newConfig.intermediateCombineDegree = query.getQueryContext().getAsInt(
         CTX_KEY_INTERMEDIATE_COMBINE_DEGREE,
         getIntermediateCombineDegree()
     );
-    newConfig.numParallelCombineThreads = query.getContextValue(
+    newConfig.numParallelCombineThreads = query.getQueryContext().getAsInt(
         CTX_KEY_NUM_PARALLEL_COMBINE_THREADS,
         getNumParallelCombineThreads()
     );
@@ -368,6 +392,8 @@ public class GroupByQueryConfig
         CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
         isMultiValueUnnestingEnabled()
     );
+
+    logger.debug("Override config for GroupBy query %s - %s", query.getId(), newConfig.toString());
     return newConfig;
   }
 
@@ -383,7 +409,8 @@ public class GroupByQueryConfig
            ", bufferGrouperMaxLoadFactor=" + bufferGrouperMaxLoadFactor +
            ", bufferGrouperInitialBuckets=" + bufferGrouperInitialBuckets +
            ", maxMergingDictionarySize=" + maxMergingDictionarySize +
-           ", maxOnDiskStorage=" + maxOnDiskStorage +
+           ", maxOnDiskStorage=" + maxOnDiskStorage.getBytes() +
+           ", defaultOnDiskStorage=" + getDefaultOnDiskStorage().getBytes() + // use the getter because of special behavior for mirroring maxOnDiskStorage if defaultOnDiskStorage not explicitly set.
            ", forcePushDownLimit=" + forcePushDownLimit +
            ", forceHashAggregation=" + forceHashAggregation +
            ", intermediateCombineDegree=" + intermediateCombineDegree +

@@ -60,4 +60,16 @@ public class DoublesSketchMergeAggregatorFactoryTest
     );
     Assert.assertEquals(factory, fromJson);
   }
+
+  @Test
+  public void testWithName()
+  {
+    final DoublesSketchMergeAggregatorFactory factory = new DoublesSketchMergeAggregatorFactory(
+        "myFactory",
+        1024,
+        1000L
+    );
+    Assert.assertEquals(factory, factory.withName("myFactory"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
 }

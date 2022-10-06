@@ -31,10 +31,10 @@ public final class Throwables
    * @return null if not found otherwise the cause exception that is of same type as searchFor
    */
   @Nullable
-  public static Throwable getCauseOfType(Throwable t, Class<? extends Throwable> searchFor)
+  public static <T extends Throwable> T getCauseOfType(Throwable t, Class<T> searchFor)
   {
     if (searchFor.isAssignableFrom(t.getClass())) {
-      return t;
+      return (T) t;
     } else {
       if (t.getCause() != null) {
         return getCauseOfType(t.getCause(), searchFor);

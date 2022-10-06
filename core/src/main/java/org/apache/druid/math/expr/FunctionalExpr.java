@@ -56,7 +56,7 @@ class LambdaExpr implements Expr
   @Nullable
   public String getIdentifier()
   {
-    Preconditions.checkState(args.size() < 2, "LambdaExpr has multiple arguments");
+    Preconditions.checkState(args.size() < 2, "LambdaExpr has multiple arguments, use getIdentifiers");
     if (args.size() == 1) {
       return args.get(0).toString();
     }

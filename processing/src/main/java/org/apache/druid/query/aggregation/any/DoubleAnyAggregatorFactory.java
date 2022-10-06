@@ -227,6 +227,12 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new DoubleAnyAggregatorFactory(newName, getFieldName());
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

@@ -21,11 +21,12 @@ package org.apache.druid.indexing.common.tasklogs;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 /**
@@ -33,37 +34,93 @@ import java.util.List;
  */
 public class SwitchingTaskLogStreamer implements TaskLogStreamer
 {
-  private final List<TaskLogStreamer> providers;
+  private final TaskLogStreamer taskRunnerTaskLogStreamer;
+  private final List<TaskLogStreamer> deepStorageStreamers;
 
   @Inject
-  public SwitchingTaskLogStreamer(List<TaskLogStreamer> providers)
+  public SwitchingTaskLogStreamer(
+      @Named("taskstreamer") TaskLogStreamer taskRunnerTaskLogStreamer,
+      List<TaskLogStreamer> deepStorageStreamer
+  )
   {
-    this.providers = ImmutableList.copyOf(providers);
+    this.taskRunnerTaskLogStreamer = taskRunnerTaskLogStreamer;
+    this.deepStorageStreamers = ImmutableList.copyOf(deepStorageStreamer);
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(String taskid, long offset) throws IOException
+  public Optional<InputStream> streamTaskLog(String taskid, long offset) throws IOException
   {
-    for (TaskLogStreamer provider : providers) {
-      final Optional<ByteSource> stream = provider.streamTaskLog(taskid, offset);
+    IOException deferIOException = null;
+    try {
+      final Optional<InputStream> stream = taskRunnerTaskLogStreamer.streamTaskLog(taskid, offset);
       if (stream.isPresent()) {
         return stream;
       }
     }
+    catch (IOException e) {
+      // defer first IO exception due to race in the way tasks update their exit status in the overlord
+      // It may happen that the task sent the log to deep storage but is still running with http chat handlers unregistered
+      // In such a case, catch and ignore the 1st IOException and try deepStorage for the log. If the log is still not found, return the caught exception
+      deferIOException = e;
+    }
 
+    for (TaskLogStreamer provider : deepStorageStreamers) {
+      try {
+        final Optional<InputStream> stream = provider.streamTaskLog(taskid, offset);
+        if (stream.isPresent()) {
+          return stream;
+        }
+      }
+      catch (IOException e) {
+        if (deferIOException != null) {
+          e.addSuppressed(deferIOException);
+        }
+        throw e;
+      }
+    }
+    // Could not find any InputStream. Throw deferred exception if exists
+    if (deferIOException != null) {
+      throw deferIOException;
+    }
     return Optional.absent();
   }
 
   @Override
-  public Optional<ByteSource> streamTaskReports(String taskid) throws IOException
+  public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
-    for (TaskLogStreamer provider : providers) {
-      final Optional<ByteSource> stream = provider.streamTaskReports(taskid);
+    IOException deferIOException = null;
+
+    try {
+      final Optional<InputStream> stream = taskRunnerTaskLogStreamer.streamTaskReports(taskid);
       if (stream.isPresent()) {
         return stream;
       }
     }
+    catch (IOException e) {
+      // defer first IO exception due to race in the way tasks update their exit status in the overlord
+      // It may happen that the task sent the report to deep storage but the task is still running with http chat handlers unregistered
+      // In such a case, catch and ignore the 1st IOException and try deepStorage for the report. If the report is still not found, return the caught exception
+      deferIOException = e;
+    }
 
+    for (TaskLogStreamer provider : deepStorageStreamers) {
+      try {
+        final Optional<InputStream> stream = provider.streamTaskReports(taskid);
+        if (stream.isPresent()) {
+          return stream;
+        }
+      }
+      catch (IOException e) {
+        if (deferIOException != null) {
+          e.addSuppressed(deferIOException);
+        }
+        throw e;
+      }
+    }
+    // Could not find any InputStream. Throw deferred exception if exists
+    if (deferIOException != null) {
+      throw deferIOException;
+    }
     return Optional.absent();
   }
 }

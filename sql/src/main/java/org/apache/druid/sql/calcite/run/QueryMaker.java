@@ -19,24 +19,19 @@
 
 package org.apache.druid.sql.calcite.run;
 
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 
 /**
- * Interface for executing Druid queries. Each one is created by a {@link QueryMakerFactory} and is tied to a
- * specific SQL query. Extends {@link QueryFeatureInspector}, so calling code can tell what this executor supports.
+ * Interface for executing Druid queries. Each one is created by a {@link SqlEngine} and is tied to a
+ * specific SQL query.
  */
-public interface QueryMaker extends QueryFeatureInspector
+public interface QueryMaker
 {
   /**
-   * Returns the SQL row type for this query.
-   */
-  RelDataType getResultType();
-
-  /**
    * Executes a given Druid query, which is expected to correspond to the SQL query that this QueryMaker was originally
-   * created for. The returned arrays match the row type given by {@link #getResultType()}.
+   * created for. The returned arrays match the row type given by {@link SqlEngine#resultTypeForSelect} or
+   * {@link SqlEngine#resultTypeForInsert}, depending on the nature of the statement.
    */
-  Sequence<Object[]> runQuery(DruidQuery druidQuery);
+  QueryResponse<Object[]> runQuery(DruidQuery druidQuery);
 }

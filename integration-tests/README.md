@@ -360,7 +360,9 @@ For Google Cloud Storage, in addition to the above, you will also have to:
 
 For example, to run integration test for Google Cloud Storage:
 ```bash
-mvn verify -P integration-tests -Dgroups=gcs-deep-storage -Doverride.config.path=<PATH_TO_FILE> -Dresource.file.dir.path=<PATH_TO_FOLDER> -Ddruid.test.config.cloudBucket=test-bucket -Ddruid.test.config.cloudPath=test-data-folder/
+mvn verify -P integration-tests -Dgroups=gcs-deep-storage -Doverride.config.path=<PATH_TO_FILE> \
+           -Dresource.file.dir.path=<PATH_TO_FOLDER> -Ddruid.test.config.cloudBucket=test-bucket \
+           -Ddruid.test.config.cloudPath=test-data-folder/
 ```
 
 
@@ -372,7 +374,8 @@ of the integration test run discussed above.  This is because druid
 test clusters might not, in general, have access to hadoop.
 This also applies to integration test that uses Hadoop HDFS as an inputSource or as a deep storage.
 To run integration test that uses Hadoop, you will have to run a Hadoop cluster. This can be done in two ways:
-1) Run Druid Docker test clusters with Hadoop container by passing -Dstart.hadoop.docker=true to the mvn command. If you have not already built the hadoop image, you will also need to add -Ddocker.build.hadoop=true to the mvn command.
+1) Run Druid Docker test clusters with Hadoop container by passing -Dstart.hadoop.docker=true to the mvn command.
+   If you have not already built the hadoop image, you will also need to add -Ddocker.build.hadoop=true to the mvn command.
 2) Run your own Druid + Hadoop cluster and specified Hadoop configs in the configuration file (CONFIG_FILE).
 
 Currently, hdfs-deep-storage and other <cloud>-deep-storage integration test groups can only be run with
@@ -393,17 +396,20 @@ When running the Hadoop tests, you must set `-Dextra.datasource.name.suffix=''`,
 
 Option 1: Run the test using mvn (using the bundled Docker-based Hadoop cluster and building docker images at runtime):
 ```bash
-mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Dstart.hadoop.docker=true -Ddocker.build.hadoop=true -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
+mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Dstart.hadoop.docker=true -Ddocker.build.hadoop=true \
+           -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
 ```
 
 Option 2: Run the test using mvn (using the bundled Docker-based hadoop cluster and not building images at runtime):
 ```bash
-mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Dstart.hadoop.docker=true -Ddocker.build.skip=true -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
+mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Dstart.hadoop.docker=true -Ddocker.build.skip=true \
+           -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
 ```
 
 Option 3: Run the test using mvn (using the bundled Docker-based hadoop cluster and when you have already started all containers)
 ```bash
-mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Ddocker.run.skip=true -Ddocker.build.skip=true -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
+mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Ddocker.run.skip=true -Ddocker.build.skip=true \
+           -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
 ```
 
 Option 4: Run the test using mvn (using config file for existing Hadoop cluster):
@@ -441,7 +447,9 @@ export CLASSPATH=$TDIR/dependency/*:$TDIR/druid-integration-tests-$VER.jar:$TDIR
 ### Run the test
 
 ```bash
-java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.test.config.type=configFile -Ddruid.test.config.configFile=<pathname of configuration file> org.testng.TestNG -testrunfactory org.testng.DruidTestRunnerFactory -testclass org.apache.druid.tests.hadoop.ITHadoopIndexTest
+java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.test.config.type=configFile \
+     -Ddruid.test.config.configFile=<pathname of configuration file> org.testng.TestNG \
+     -testrunfactory org.testng.DruidTestRunnerFactory -testclass org.apache.druid.tests.hadoop.ITHadoopIndexTest
 ```
 
 Writing a New Test

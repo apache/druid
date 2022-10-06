@@ -53,11 +53,17 @@ public class VectorProcessors
   {
     final ExpressionType leftType = left.getOutputType(inspector);
 
+    // if type is null, it means the input is all nulls
     if (leftType == null) {
       return right.buildVectorized(inspector);
     }
 
-    Preconditions.checkArgument(inspector.areSameTypes(left, right));
+    Preconditions.checkArgument(
+        inspector.areSameTypes(left, right),
+        "%s and %s are not the same type",
+        leftType,
+        right.getOutputType(inspector)
+    );
 
     ExprVectorProcessor<?> processor = null;
     if (Types.is(leftType, ExprType.STRING)) {

@@ -225,6 +225,12 @@ public class GroupingAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new GroupingAggregatorFactory(newName, groupings, keyDimensions);
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     CacheKeyBuilder keyBuilder = new CacheKeyBuilder(AggregatorUtil.GROUPING_CACHE_TYPE_ID)
