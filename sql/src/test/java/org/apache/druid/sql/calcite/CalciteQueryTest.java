@@ -11258,6 +11258,47 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testOrderByAlongWithInternalScanQueryNoDistinct()
+  {
+    testQuery(
+        "select __time, m1 from druid.foo where (m1 in (select m1 from druid.foo)) order by __time DESC limit 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dataSource(
+                    JoinDataSource.create(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(querySegmentSpec(Intervals.of(
+                                            "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                                        .setDimensions(new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT))
+                                        .build()
+                        ),
+                        "j0.",
+                        "(\"m1\" == \"j0.d0\")",
+                        JoinType.INNER,
+                        null,
+                        ExprMacroTable.nil()
+                    )
+                )
+                .context(QUERY_CONTEXT_DEFAULT)
+                .intervals(querySegmentSpec(Intervals.of(
+                    "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                .limit(1)
+                .columns(ImmutableList.of("__time", "m1"))
+                .order(ScanQuery.Order.DESCENDING)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{978480000000L, 6.0f}
+        )
+    );
+  }
+
+  @Test
   public void testOrderByAlongWithAliasOrderByTimeGroupByOneCol()
   {
     testQuery(
