@@ -68,7 +68,9 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -105,6 +107,9 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   private ObjectMapper mapper;
   private DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private SupervisorStateManagerConfig supervisorStateManagerConfig;
+
+  @Rule
+  public ExpectedException exceptionRule = ExpectedException.none();
 
   @Before
   public void setUp()
@@ -910,6 +915,194 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     autoScaler.reset();
     autoScaler.stop();
+  }
+
+  @Test
+  public void testEnablingIdleBeviourPerSupervisorWithOverlordConfigDisabled()
+  {
+    SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
+        1,
+        1,
+        new Period("PT1H"),
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        true,
+        null
+    ){
+    };
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+
+    exceptionRule.expect(IllegalArgumentException.class);
+    exceptionRule.expectMessage("Idle behaviour is disabled on Overlord. It cannot be enabled per Supervisor.");
+
+    EasyMock.replay(ingestionSchema);
+    createSupervisorSpecForIdleBehaviourConfigTest(new SupervisorStateManagerConfig());
+    verifyAll();
+  }
+
+  @Test
+  public void testEnablingIdleBeviourPerSupervisorWithOverlordConfigEnabled()
+  {
+    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
+    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
+
+    SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
+        1,
+        1,
+        new Period("PT1H"),
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        true,
+        null
+    ){
+    };
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+
+    EasyMock.replay(ingestionSchema);
+
+    spec = createSupervisorSpecForIdleBehaviourConfigTest(
+        OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class)
+    );
+    verifyAll();
+
+    Assert.assertTrue(spec.getIoConfig().isEnableIdleBehaviour());
+    Assert.assertEquals(60000L, spec.getIoConfig().getAwaitStreamInactiveMillis());
+  }
+
+  @Test
+  public void testDisablingIdleBeviourPerSupervisorWithOverlordConfigEnabled()
+  {
+    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
+    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
+
+    SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
+        1,
+        1,
+        new Period("PT1H"),
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        1000L
+    ){
+    };
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+
+    EasyMock.replay(ingestionSchema);
+
+    spec = createSupervisorSpecForIdleBehaviourConfigTest(
+        OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class)
+    );
+    verifyAll();
+
+    Assert.assertFalse(spec.getIoConfig().isEnableIdleBehaviour());
+    Assert.assertEquals(1000L, spec.getIoConfig().getAwaitStreamInactiveMillis());
+  }
+
+  @Test
+  public void testDisablingIdleBeviourPerSupervisorWithOverlordConfigDisabled()
+  {
+    SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
+        1,
+        1,
+        new Period("PT1H"),
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        false,
+        null
+    ){
+    };
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+
+    EasyMock.replay(ingestionSchema);
+
+    createSupervisorSpecForIdleBehaviourConfigTest(
+        new SupervisorStateManagerConfig()
+    );
+    verifyAll();
+  }
+
+  private SeekableStreamSupervisorSpec createSupervisorSpecForIdleBehaviourConfigTest(
+      SupervisorStateManagerConfig supervisorStateManagerConfig
+  )
+  {
+    return new SeekableStreamSupervisorSpec(
+        ingestionSchema,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        supervisorStateManagerConfig
+    )
+    {
+      @Override
+      public Supervisor createSupervisor()
+      {
+        return null;
+      }
+
+      @Override
+      protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend)
+      {
+        return null;
+      }
+
+      @Override
+      public String getType()
+      {
+        return null;
+      }
+
+      @Override
+      public String getSource()
+      {
+        return null;
+      }
+    };
   }
 
   private static DataSchema getDataSchema()
