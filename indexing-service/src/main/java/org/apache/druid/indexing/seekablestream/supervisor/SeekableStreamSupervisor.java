@@ -3289,7 +3289,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     previousPartitionOffsetsSnapshot.putAll(latestSequencesFromStream);
     if (!idle) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.RUNNING);
-    } else if (!isIdle() && idleTime > spec.getSpec().getIOConfig().getAwaitStreamInactiveMillis()) {
+    } else if (!isIdle() && idleTime > spec.getIoConfig().getAwaitStreamInactiveMillis()) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
     }
   }
