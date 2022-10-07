@@ -3899,7 +3899,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
       boolean suspended,
-      long idleSupervisorForInactiveStreamMillis
+      long awaitStreamInactiveMillis
   )
   {
     Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
@@ -3916,7 +3916,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         suspended,
         kafkaHost,
         true,
-        idleSupervisorForInactiveStreamMillis,
+        awaitStreamInactiveMillis,
         OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class)
     );
   }
@@ -3932,7 +3932,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       boolean suspended,
       String kafkaHost,
       boolean enableIdleBehaviour,
-      long idleSupervisorForInactiveStreamMillis,
+      long awaitStreamInactiveMillis,
       SupervisorStateManagerConfig supervisorStateManagerConfig
   )
   {
@@ -3957,7 +3957,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         enableIdleBehaviour,
-        idleSupervisorForInactiveStreamMillis
+        awaitStreamInactiveMillis
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(

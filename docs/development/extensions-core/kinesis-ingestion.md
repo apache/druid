@@ -145,8 +145,6 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|no|
 |`awsExternalId`|String|The AWS external id to use for additional permissions.|no|
 |`deaggregate`|Boolean|Whether to use the de-aggregate function of the KCL. See below for details.|no|
-|`enableIdleBehaviour`|Boolean|If enabled, Kinesis supervisor will become idle if there is no data on input stream/topic for some time. This can only be enabled if Overlord config `druid.supervisor.enableIdleBehaviour` is enabled.|no (default == false)|
-|`idleSupervisorForInactiveStreamMillis`|Long|Minimum time interval to wait before a topic is considered idle. (i.e. all existing data has been read from the stream and the topic is not getting new data). (i.e. all existing data is caught up and no new data arrives).| no (default == 60000) |
 |`autoScalerConfig`|Object|Defines auto scaling behavior for Kinesis ingest tasks. See [Tasks Autoscaler Properties](#task-autoscaler-properties).|no (default == null)|
 
 #### Task Autoscaler Properties
@@ -249,8 +247,7 @@ The following example demonstrates a supervisor spec with `lagBased` autoScaler 
     "replicas": 1,
     "taskDuration": "PT1H",
     "recordsPerFetch": 4000,
-    "fetchDelayMillis": 0,
-    "idleSupervisorForInactiveStreamMillis": 60000
+    "fetchDelayMillis": 0
   },
   "tuningConfig": {
     "type": "kinesis",
@@ -444,7 +441,6 @@ The list of `detailedState` values and their corresponding `state` mapping is as
 |DISCOVERING_INITIAL_TASKS (first iteration only)|RUNNING|The supervisor is discovering already-running tasks|
 |CREATING_TASKS (first iteration only)|RUNNING|The supervisor is creating tasks and discovering state|
 |RUNNING|RUNNING|The supervisor has started tasks and is waiting for taskDuration to elapse|
-|IDLE|IDLE|The supervisor is not creating tasks any longer since stream is idle|
 |SUSPENDED|SUSPENDED|The supervisor has been suspended|
 |STOPPING|STOPPING|The supervisor is stopping|
 
@@ -457,14 +453,14 @@ On each iteration of the supervisor's run loop, the supervisor completes the fol
   4) Handle tasks that have exceeded `taskDuration` and should transition from the reading to publishing state.
   5) Handle tasks that have finished publishing and signal redundant replica tasks to stop.
   6) Handle tasks that have failed and clean up the supervisor's internal state.
-  7) Compare the list of healthy tasks to the requested `taskCount` and `replicas` configurations and create additional tasks if required in case supervisor is not idle.
+  7) Compare the list of healthy tasks to the requested `taskCount` and `replicas` configurations and create additional tasks if required.
 
 The `detailedState` field will show additional values (those marked with "first iteration only") the first time the
 supervisor executes this run loop after startup or after resuming from a suspension. This is intended to surface
 initialization-type issues, where the supervisor is unable to reach a stable state (perhaps because it can't connect to
 Kinesis, it can't read from the stream, or it can't communicate with existing tasks). Once the supervisor is stable -
 that is, once it has completed a full execution without encountering any issues - `detailedState` will show a `RUNNING`
-state until it is idle, stopped, suspended, or hits a failure threshold and transitions to an unhealthy state.
+state until it is stopped, suspended, or hits a failure threshold and transitions to an unhealthy state.
 
 ### Updating Existing Supervisors
 
