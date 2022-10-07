@@ -301,6 +301,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       ScanQuery scanQuery
   ) throws IOException
   {
+    //In some databases, the final result set size is set to 65535 without setting the limit. We can set the maximum value of Integer here
     int limit;
     if (scanQuery.getScanRowsLimit() > Integer.MAX_VALUE) {
       limit = Integer.MAX_VALUE;
