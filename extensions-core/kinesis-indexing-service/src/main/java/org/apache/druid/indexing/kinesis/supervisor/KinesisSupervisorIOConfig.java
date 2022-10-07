@@ -74,9 +74,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
       @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
-      @JsonProperty("deaggregate") boolean deaggregate,
-      @JsonProperty("enableIdleBehaviour") Boolean enableIdleBehaviour,
-      @JsonProperty("idleSupervisorForInactiveStreamMillis") Long idleSupervisorForInactiveStreamMillis
+      @JsonProperty("deaggregate") boolean deaggregate
   )
   {
     super(
@@ -93,8 +91,8 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         earlyMessageRejectionPeriod,
         autoScalerConfig,
         lateMessageRejectionStartDateTime,
-        enableIdleBehaviour,
-        idleSupervisorForInactiveStreamMillis
+        false,
+        null
     );
 
     this.endpoint = endpoint != null
@@ -169,8 +167,6 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
            ", awsExternalId='" + awsExternalId + '\'' +
            ", deaggregate=" + deaggregate +
-           ", enableIdleBehaviour=" + isEnableIdleBehaviour() +
-           ", idleSupervisorForInactiveStreamMillis=" + getIdleSupervisorForInactiveStreamMillis() +
            '}';
   }
 }

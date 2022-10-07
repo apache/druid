@@ -153,9 +153,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
             null,
             null,
             null,
-            false,
-            null,
-            null
+            false
         ),
         null,
         null,

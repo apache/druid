@@ -304,16 +304,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
     autoScalerConfigMap.put("scaleInThreshold", 1000000);
     autoScalerConfigMap.put("triggerScaleInFractionThreshold", 0.8);
     autoScalerConfigMap.put("scaleActionStartDelayMillis", 0);
-    autoScalerConfigMap.put("scaleActionPeriodMillis", 600);
+    autoScalerConfigMap.put("scaleActionPeriodMillis", 100);
     autoScalerConfigMap.put("taskCountMax", 2);
     autoScalerConfigMap.put("taskCountMin", 1);
     autoScalerConfigMap.put("scaleInStep", 1);
     autoScalerConfigMap.put("scaleOutStep", 2);
     autoScalerConfigMap.put("minTriggerScaleActionFrequencyMillis", 1200000);
-
-    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
-    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
-    supervisorConfig = OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class);
 
     AutoScalerConfig autoScalerConfig = OBJECT_MAPPER.convertValue(autoScalerConfigMap, AutoScalerConfig.class);
     supervisor = getTestableSupervisor(
@@ -354,7 +350,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
                     null
             )
     ).anyTimes();
-    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
 
@@ -365,11 +361,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisor.runInternal();
     verifyAll();
-    Thread.sleep(1000);
-    supervisor.runInternal();
+    Thread.sleep(1 * 1000);
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScale);
-    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
   }
 
   @Test
@@ -384,16 +378,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
     autoScalerConfigMap.put("scaleInThreshold", 0);
     autoScalerConfigMap.put("triggerScaleInFractionThreshold", 0.0);
     autoScalerConfigMap.put("scaleActionStartDelayMillis", 0);
-    autoScalerConfigMap.put("scaleActionPeriodMillis", 600);
+    autoScalerConfigMap.put("scaleActionPeriodMillis", 100);
     autoScalerConfigMap.put("taskCountMax", 2);
     autoScalerConfigMap.put("taskCountMin", 1);
     autoScalerConfigMap.put("scaleInStep", 1);
     autoScalerConfigMap.put("scaleOutStep", 2);
     autoScalerConfigMap.put("minTriggerScaleActionFrequencyMillis", 1200000);
-
-    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
-    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
-    supervisorConfig = OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class);
 
     AutoScalerConfig autoScalerConfig = OBJECT_MAPPER.convertValue(autoScalerConfigMap, AutoScalerConfig.class);
     supervisor = getTestableSupervisor(
@@ -449,11 +439,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisor.runInternal();
     verifyAll();
-    Thread.sleep(1000);
-    supervisor.runInternal();
+    Thread.sleep(1 * 1000);
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountAfterScale);
-    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
   }
 
   @Test
@@ -479,9 +467,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false,
-        null,
-        null
+        false
     );
     KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, OBJECT_MAPPER);
     KinesisSupervisor supervisor = new KinesisSupervisor(
@@ -545,9 +531,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            false,
-            null,
-            null
+            false
     );
 
     AutoScalerConfig autoscalerConfigNull = kinesisSupervisorIOConfigWithNullAutoScalerConfig.getAutoScalerConfig();
@@ -574,9 +558,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             null,
              OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
-            false,
-            null,
-            null
+            false
     );
 
     AutoScalerConfig autoscalerConfig = kinesisSupervisorIOConfigWithEmptyAutoScalerConfig.getAutoScalerConfig();
@@ -2625,229 +2607,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisor.gracefulShutdownInternal();
     verifyAll();
-  }
-
-  @Test
-  public void testIsSupervisorIdle() throws InterruptedException
-  {
-    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
-        STREAM,
-        INPUT_FORMAT,
-        "awsEndpoint",
-        null,
-        1,
-        2,
-        new Period("PT10S"),
-        new Period("P1D"),
-        new Period("PT1S"),
-        true,
-        new Period("PT10S"),
-        null,
-        null,
-        null,
-        100,
-        1000,
-        null,
-        null,
-        null,
-        false,
-        true,
-        2000L
-    );
-
-    KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
-        null,
-        null
-    )
-    {
-      @Override
-      public KinesisIndexTaskClient build(
-          TaskInfoProvider taskInfoProvider,
-          String dataSource,
-          int numThreads,
-          Duration httpTimeout,
-          long numRetries
-      )
-      {
-        Assert.assertEquals(TEST_CHAT_THREADS, numThreads);
-        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), httpTimeout);
-        Assert.assertEquals(TEST_CHAT_RETRIES, numRetries);
-        return taskClient;
-      }
-    };
-
-    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
-    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
-
-    supervisor = new TestableKinesisSupervisor(
-        taskStorage,
-        taskMaster,
-        indexerMetadataStorageCoordinator,
-        taskClientFactory,
-        OBJECT_MAPPER,
-        new KinesisSupervisorSpec(
-            null,
-            dataSchema,
-            tuningConfig,
-            kinesisSupervisorIOConfig,
-            null,
-            false,
-            taskStorage,
-            taskMaster,
-            indexerMetadataStorageCoordinator,
-            taskClientFactory,
-            OBJECT_MAPPER,
-            new NoopServiceEmitter(),
-            new DruidMonitorSchedulerConfig(),
-            rowIngestionMetersFactory,
-            null,
-            OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class)
-        ),
-        rowIngestionMetersFactory
-    );
-
-    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-    final TaskLocation location2 = new TaskLocation("testHost", 234, -1);
-
-    Task id1 = createKinesisIndexTask(
-        "id1",
-        DATASOURCE,
-        0,
-        new SeekableStreamStartSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID0, "0", SHARD_ID2, "0"), ImmutableSet.of()),
-        new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID0, "12", SHARD_ID2, "12")),
-        null,
-        null
-    );
-
-    Task id2 = createKinesisIndexTask(
-        "id2",
-        DATASOURCE,
-        0,
-        new SeekableStreamStartSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "0"), ImmutableSet.of()),
-        new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "12")),
-        null,
-        null
-    );
-
-    List<Task> existingTasks = ImmutableList.of(id1, id2);
-
-    Collection workItems = new ArrayList<>();
-    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
-    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
-
-    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(existingTasks).anyTimes();
-    EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
-    EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
-    EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
-    EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
-    EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
-            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
-            .times(2);
-    EasyMock.expect(supervisorRecordSupplier.getPartitionIds(STREAM))
-            .andReturn(ImmutableSet.of(SHARD_ID0, SHARD_ID1, SHARD_ID2))
-            .anyTimes();
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
-        new KinesisDataSourceMetadata(
-            null
-        )
-    ).anyTimes();
-    replayAll();
-
-    supervisor.start();
-    supervisor.setPartitionIdsForTests(
-        ImmutableList.of(SHARD_ID0, SHARD_ID1, SHARD_ID2)
-    );
-    supervisor.addTaskGroupToActivelyReadingTaskGroup(
-        supervisor.getTaskGroupIdForPartition(SHARD_ID0),
-        ImmutableMap.of(SHARD_ID0, "0", SHARD_ID2, "0"),
-        Optional.absent(),
-        Optional.absent(),
-        ImmutableSet.of("id1"),
-        ImmutableSet.of()
-    );
-    supervisor.addTaskGroupToActivelyReadingTaskGroup(
-        supervisor.getTaskGroupIdForPartition(SHARD_ID1),
-        ImmutableMap.of(SHARD_ID1, "0"),
-        Optional.absent(),
-        Optional.absent(),
-        ImmutableSet.of("id2"),
-        ImmutableSet.of()
-    );
-    supervisor.updateCurrentAndLatestOffsets();
-    supervisor.runInternal();
-    verifyAll();
-
-    EasyMock.reset(taskClient, supervisorRecordSupplier);
-    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
-            .andReturn(Futures.immediateFuture(ImmutableMap.of(SHARD_ID0, "6", SHARD_ID2, "6"))).times(1);
-    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
-            .andReturn(Futures.immediateFuture(ImmutableMap.of(SHARD_ID1, "6"))).times(1);
-    EasyMock.expect(supervisorRecordSupplier.getPartitionIds(STREAM))
-            .andReturn(ImmutableSet.of(SHARD_ID0, SHARD_ID1, SHARD_ID2))
-            .anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject(StreamPartition.class)))
-            .andReturn("12")
-            .anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionsTimeLag(EasyMock.anyString(), EasyMock.anyObject()))
-            .andReturn(ImmutableMap.of(SHARD_ID0, 6L, SHARD_ID1, 6L, SHARD_ID2, 6L))
-            .anyTimes();
-
-    EasyMock.replay(taskClient, supervisorRecordSupplier);
-
-    Thread.sleep(1000);
-    supervisor.updateCurrentAndLatestOffsets();
-    supervisor.runInternal();
-    verifyAll();
-
-    EasyMock.reset(taskClient, supervisorRecordSupplier);
-    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
-            .andReturn(Futures.immediateFuture(ImmutableMap.of(SHARD_ID0, "12", SHARD_ID2, "12"))).times(1);
-    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
-            .andReturn(Futures.immediateFuture(ImmutableMap.of(SHARD_ID1, "12"))).times(1);
-    EasyMock.expect(supervisorRecordSupplier.getPartitionIds(STREAM))
-            .andReturn(ImmutableSet.of(SHARD_ID0, SHARD_ID1, SHARD_ID2))
-            .anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject(StreamPartition.class)))
-            .andReturn("12")
-            .anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionsTimeLag(EasyMock.anyString(), EasyMock.anyObject()))
-            .andReturn(ImmutableMap.of(SHARD_ID0, 0L, SHARD_ID1, 0L, SHARD_ID2, 0L))
-            .anyTimes();
-
-    EasyMock.replay(taskClient, supervisorRecordSupplier);
-
-    Thread.sleep(1000);
-    supervisor.updateCurrentAndLatestOffsets();
-    supervisor.runInternal();
-    verifyAll();
-
-    EasyMock.reset(taskClient, supervisorRecordSupplier);
-    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
-            .andReturn(Futures.immediateFuture(ImmutableMap.of(SHARD_ID0, "12", SHARD_ID2, "12"))).times(1);
-    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
-            .andReturn(Futures.immediateFuture(ImmutableMap.of(SHARD_ID1, "12"))).times(1);
-    EasyMock.expect(supervisorRecordSupplier.getPartitionIds(STREAM))
-            .andReturn(ImmutableSet.of(SHARD_ID0, SHARD_ID1, SHARD_ID2))
-            .anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject(StreamPartition.class)))
-            .andReturn("12")
-            .anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionsTimeLag(EasyMock.anyString(), EasyMock.anyObject()))
-            .andReturn(ImmutableMap.of(SHARD_ID0, 0L, SHARD_ID1, 0L, SHARD_ID2, 0L))
-            .anyTimes();
-
-    EasyMock.replay(taskClient, supervisorRecordSupplier);
-
-    Thread.sleep(1000);
-    supervisor.updateCurrentAndLatestOffsets();
-    supervisor.runInternal();
-    verifyAll();
-
-    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
   }
 
   @Test
@@ -5270,9 +5029,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false,
-        null,
-        null
+        false
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5417,9 +5174,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
          autoScalerConfig,
-        false,
-        true,
-        1000L
+        false
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5507,9 +5262,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false,
-        null,
-        null
+        false
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5599,9 +5352,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false,
-        null,
-        null
+        false
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
