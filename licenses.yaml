@@ -178,7 +178,7 @@ name: AWS SDK for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12.264
+version: 1.12.265
 libraries:
   - com.amazonaws: aws-java-sdk-core
   - com.amazonaws: aws-java-sdk-ec2
@@ -3986,7 +3986,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 3.11.0
+version: 3.21.7
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3
