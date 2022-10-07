@@ -371,8 +371,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
     return currentPartitionTimeLag;
   }
 
-  @Override
-  protected Map<String, Long> getPartitionTimeLagForOffsets(Map<String, String> offsets)
+  private Map<String, Long> getPartitionTimeLagForOffsets(Map<String, String> offsets)
   {
     KinesisRecordSupplier supplier = (KinesisRecordSupplier) recordSupplier;
     // this recordSupplier method is thread safe, so does not need to acquire the recordSupplierLock

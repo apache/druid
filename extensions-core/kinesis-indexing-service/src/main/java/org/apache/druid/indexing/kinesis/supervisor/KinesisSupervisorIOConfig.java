@@ -76,7 +76,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
       @JsonProperty("deaggregate") boolean deaggregate,
       @JsonProperty("enableIdleBehaviour") Boolean enableIdleBehaviour,
-      @JsonProperty("idleSupervisorForStreamIdleMillis") Long idleSupervisorForStreamIdleMillis
+      @JsonProperty("idleSupervisorForInactiveStreamMillis") Long idleSupervisorForInactiveStreamMillis
   )
   {
     super(
@@ -94,7 +94,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         autoScalerConfig,
         lateMessageRejectionStartDateTime,
         enableIdleBehaviour,
-        idleSupervisorForStreamIdleMillis
+        idleSupervisorForInactiveStreamMillis
     );
 
     this.endpoint = endpoint != null
@@ -170,7 +170,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", awsExternalId='" + awsExternalId + '\'' +
            ", deaggregate=" + deaggregate +
            ", enableIdleBehaviour=" + isEnableIdleBehaviour() +
-           ", idleSupervisorForStreamIdleMillis=" + getIdleSupervisorForStreamIdleMillis() +
+           ", idleSupervisorForInactiveStreamMillis=" + getIdleSupervisorForInactiveStreamMillis() +
            '}';
   }
 }

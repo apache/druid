@@ -743,7 +743,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean lifecycleStarted = false;
   private final ServiceEmitter emitter;
 
-  // snapshots latest sequences from stream to be verified in next run cycle
+  // snapshots latest sequences from stream to be verified in next run cycle of inactive stream check
   protected final ConcurrentHashMap<PartitionIdType, SequenceOffsetType> previousPartitionOffsetsSnapshot = new ConcurrentHashMap<>();
   private long activeLastTime;
   private long idleTime;
@@ -2511,17 +2511,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return true;
   }
 
-  public boolean areLatestOffsetsConstant()
-  {
-    Map<PartitionIdType, SequenceOffsetType> latestSequenceFromStream = getLatestSequences();
-    return latestSequenceFromStream.equals(previousPartitionOffsetsSnapshot);
-  }
-
-  protected Map<PartitionIdType, Long> getPartitionTimeLagForOffsets(Map<PartitionIdType, SequenceOffsetType> offsets)
-  {
-    return null;
-  }
-
   protected Map<PartitionIdType, SequenceOffsetType> getLatestSequences()
   {
     return new HashMap<>();
@@ -3300,7 +3289,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     previousPartitionOffsetsSnapshot.putAll(latestSequencesFromStream);
     if (!idle) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.RUNNING);
-    } else if (!isIdle() && idleTime > spec.getSpec().getIOConfig().getIdleSupervisorForStreamIdleMillis()) {
+    } else if (!isIdle() && idleTime > spec.getSpec().getIOConfig().getIdleSupervisorForInactiveStreamMillis()) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
     }
   }
@@ -3732,12 +3721,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         partitionIds.forEach(partitionId -> currentOffsets.putIfAbsent(partitionId, offsetsFromMetadataStorage.get(partitionId)));
         return currentOffsets;
       }
-      // nothing is running but we are not suspended, so lets just hang out in case we get called while things start up
-      return ImmutableMap.of();
-    } else {
-      // if supervisor is suspended, no tasks are likely running so use offsets in metadata, if exist
-      return getOffsetsFromMetadataStorage();
     }
+    // if supervisor is suspended or is idle and nothing is running, use offsets in metadata, if exist
+    return offsetsFromMetadataStorage;
   }
 
   private OrderedSequenceNumber<SequenceOffsetType> makeSequenceNumber(SequenceOffsetType seq)
@@ -4048,25 +4034,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected void emitLag()
   {
-    log.info(stateManager.getSupervisorState().getBasicState().toString());
-    log.info("!isIdle: %s, spec.isSuspended: %s, !statemanager.isSteadyState %s", !isIdle(), spec.isSuspended(), !stateManager.isSteadyState());
     if (spec.isSuspended() || !stateManager.isSteadyState() && !isIdle()) {
       // don't emit metrics if supervisor is suspended or not in a healthy running state
       // (lag should still available in status report)
       return;
     }
     try {
-      Map<PartitionIdType, SequenceOffsetType> offsetsFromMetadatStorage = getOffsetsFromMetadataStorage();
-      Map<PartitionIdType, Long> partitionRecordLags;
-      Map<PartitionIdType, Long> partitionTimeLags;
-
-      if (isIdle()) {
-        partitionRecordLags = getRecordLagPerPartition(offsetsFromMetadatStorage);
-        partitionTimeLags = getPartitionTimeLagForOffsets(offsetsFromMetadatStorage);
-      } else {
-        partitionRecordLags = getPartitionRecordLag();
-        partitionTimeLags = getPartitionTimeLag();
-      }
+      Map<PartitionIdType, Long> partitionRecordLags = getPartitionRecordLag();
+      Map<PartitionIdType, Long> partitionTimeLags = getPartitionTimeLag();
 
       if (partitionRecordLags == null && partitionTimeLags == null) {
         throw new ISE("Latest offsets have not been fetched");

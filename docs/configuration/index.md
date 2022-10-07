@@ -1152,7 +1152,7 @@ There are additional configs for autoscaling (if it is enabled):
 |`druid.supervisor.taskUnhealthinessThreshold`|The number of consecutive task failures before the supervisor is considered unhealthy.|3|
 |`druid.supervisor.storeStackTrace`|Whether full stack traces of supervisor exceptions should be stored and returned by the supervisor `/status` endpoint.|false|
 |`druid.supervisor.maxStoredExceptionEvents`|The maximum number of exception events that can be returned through the supervisor `/status` endpoint.|`max(healthinessThreshold, unhealthinessThreshold)`|
-|`druid.supervisor.enableIdleBehaviour`|Whether supervisor should be turned idle if stream is idle for configured time.|false|
+|`druid.supervisor.enableIdleBehaviour`|If enabled, Supervisor can become idle if there is no data on input stream/topic for some time. This time can be configured via `idleSupervisorForInactiveStreamMillis`. It can also be turned off per Supervisor.|false|
 
 #### Overlord Dynamic Configuration
 

@@ -55,6 +55,6 @@
     "%%USE_EARLIEST_KEY%%": true,
     "inputFormat" : %%INPUT_FORMAT%%,
     "enableIdleBehaviour": true,
-    "idleSupervisorForStreamIdleMillis": 10000
+    "idleSupervisorForInactiveStreamMillis": 10000
   }
 }

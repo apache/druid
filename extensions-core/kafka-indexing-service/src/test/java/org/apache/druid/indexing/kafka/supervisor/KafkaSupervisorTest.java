@@ -1863,115 +1863,17 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testIsSupervisorIdleIfStreamInactive() throws Exception
+  public void testSupervisorIsIdleIfStreamInactive() throws Exception
   {
-    KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
-        null,
-        null
-    )
-    {
-      @Override
-      public KafkaIndexTaskClient build(
-          TaskInfoProvider taskInfoProvider,
-          String dataSource,
-          int numThreads,
-          Duration httpTimeout,
-          long numRetries
-      )
-      {
-        Assert.assertEquals(TEST_CHAT_THREADS, numThreads);
-        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), httpTimeout);
-        Assert.assertEquals(TEST_CHAT_RETRIES, numRetries);
-        return taskClient;
-      }
-    };
-
-    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
-    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
-
-    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
-    consumerProperties.put("bootstrap.servers", kafkaHost);
-
-    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
-        topic,
-        INPUT_FORMAT,
+    supervisor = getTestableSupervisorForIdleBehaviour(
         1,
         2,
-        new Period("PT10S"),
-        consumerProperties,
-        null,
-        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-        new Period("P1D"),
-        new Period("PT1S"),
         true,
-        new Period("PT10S"),
+        "PT10S",
         null,
         null,
-        null,
-        null,
-        true,
+        false,
         2000L
-    );
-
-    final KafkaSupervisorTuningConfig tuningConfigOri = new KafkaSupervisorTuningConfig(
-        null,
-        1000,
-        null,
-        null,
-        50000,
-        null,
-        new Period("P1Y"),
-        new File("/test"),
-        null,
-        null,
-        null,
-        false,
-        null,
-        false,
-        null,
-        numThreads,
-        TEST_CHAT_THREADS,
-        TEST_CHAT_RETRIES,
-        TEST_HTTP_TIMEOUT,
-        TEST_SHUTDOWN_TIMEOUT,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
-
-    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(kafkaSupervisorIOConfig).anyTimes();
-    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
-    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(tuningConfigOri).anyTimes();
-    EasyMock.replay(ingestionSchema);
-
-    SeekableStreamSupervisorSpec testableSupervisorSpec = new KafkaSupervisorSpec(
-        ingestionSchema,
-        dataSchema,
-        tuningConfigOri,
-        kafkaSupervisorIOConfig,
-        null,
-        false,
-        taskStorage,
-        taskMaster,
-        indexerMetadataStorageCoordinator,
-        taskClientFactory,
-        OBJECT_MAPPER,
-        new NoopServiceEmitter(),
-        new DruidMonitorSchedulerConfig(),
-        rowIngestionMetersFactory,
-        OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class)
-    );
-
-    supervisor = new TestableKafkaSupervisor(
-        taskStorage,
-        taskMaster,
-        indexerMetadataStorageCoordinator,
-        taskClientFactory,
-        OBJECT_MAPPER,
-        (KafkaSupervisorSpec) testableSupervisorSpec,
-        rowIngestionMetersFactory
     );
 
     addSomeEvents(100);
@@ -2118,6 +2020,101 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
 
     Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
+  }
+
+  @Test
+  public void testSupervisorIsIdleIfStreamInactiveAndNoActiveTasks() throws Exception
+  {
+    supervisor = getTestableSupervisorForIdleBehaviour(
+        1,
+        2,
+        true,
+        "PT10S",
+        null,
+        null,
+        false,
+        2000L
+    );
+    addSomeEvents(1);
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            new SeekableStreamEndSequenceNumbers<Integer, Long>(topic, ImmutableMap.of(0, 2L, 1, 2L, 2, 2L))
+        )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+    verifyAll();
+
+    Thread.sleep(1000);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(1000);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(1000);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
+  }
+
+  @Test
+  public void testSupervisorNotIdleIfSuspended() throws Exception
+  {
+    supervisor = getTestableSupervisorForIdleBehaviour(
+        1,
+        2,
+        true,
+        "PT10S",
+        null,
+        null,
+        true,
+        2000L
+    );
+    addSomeEvents(1);
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            new SeekableStreamEndSequenceNumbers<Integer, Long>(topic, ImmutableMap.of(0, 2L, 1, 2L, 2, 2L))
+        )
+    ).anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+    verifyAll();
+
+    Thread.sleep(1000);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(1000);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(1000);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Assert.assertEquals(SupervisorStateManager.BasicState.SUSPENDED, supervisor.getState());
   }
 
   @Test
@@ -3860,7 +3857,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         false,
-        kafkaHost
+        kafkaHost,
+        false,
+        0L,
+        new SupervisorStateManagerConfig()
     );
   }
 
@@ -3884,7 +3884,40 @@ public class KafkaSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         suspended,
-        kafkaHost
+        kafkaHost,
+        false,
+        0L,
+        new SupervisorStateManagerConfig()
+    );
+  }
+
+  private TestableKafkaSupervisor getTestableSupervisorForIdleBehaviour(
+      int replicas,
+      int taskCount,
+      boolean useEarliestOffset,
+      String duration,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod,
+      boolean suspended,
+      long idleSupervisorForInactiveStreamMillis
+  )
+  {
+    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
+    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
+
+    return getTestableSupervisor(
+        replicas,
+        taskCount,
+        useEarliestOffset,
+        false,
+        duration,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        suspended,
+        kafkaHost,
+        true,
+        idleSupervisorForInactiveStreamMillis,
+        OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class)
     );
   }
 
@@ -3897,7 +3930,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
       boolean suspended,
-      String kafkaHost
+      String kafkaHost,
+      boolean enableIdleBehaviour,
+      long idleSupervisorForInactiveStreamMillis,
+      SupervisorStateManagerConfig supervisorStateManagerConfig
   )
   {
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
@@ -3920,8 +3956,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         null,
         null,
-        null,
-        null
+        enableIdleBehaviour,
+        idleSupervisorForInactiveStreamMillis
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
@@ -3994,7 +4030,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
-            new SupervisorStateManagerConfig()
+            supervisorStateManagerConfig
         ),
         rowIngestionMetersFactory
     );
