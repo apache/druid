@@ -57,7 +57,7 @@ public class KafkaSupervisorSpecTest
             .addValue(ServiceEmitter.class, new NoopServiceEmitter())
             .addValue(DruidMonitorSchedulerConfig.class, null)
             .addValue(RowIngestionMetersFactory.class, null)
-            .addValue(SupervisorStateManagerConfig.class, null)
+            .addValue(SupervisorStateManagerConfig.class, new SupervisorStateManagerConfig())
             .addValue(ExprMacroTable.class.getName(), LookupEnabledTestExprMacroTable.INSTANCE)
     );
     mapper.registerModules((Iterable<Module>) new KafkaIndexTaskModule().getJacksonModules());
