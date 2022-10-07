@@ -604,6 +604,9 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoScalerConfig())
             .andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class))
             .anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.isEnableIdleBehaviour())
+            .andReturn(false)
+            .anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
@@ -675,6 +678,9 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
                                                            "taskCountMin",
                                                            "1"
             ), AutoScalerConfig.class))
+            .anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.isEnableIdleBehaviour())
+            .andReturn(false)
             .anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
