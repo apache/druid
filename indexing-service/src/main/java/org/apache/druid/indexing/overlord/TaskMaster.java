@@ -115,8 +115,8 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
         try {
           SyncResult syncResult = taskLockbox.syncFromStorage();
+          processSyncResult(syncResult, taskStorage, taskLockbox);
           taskRunner = runnerFactory.build();
-          processSyncResult(syncResult, taskStorage, taskRunner);
           taskQueue = new TaskQueue(
               taskLockConfig,
               taskQueueConfig,
@@ -420,20 +420,33 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   /**
+   *
    * Process the results of synchronization from storage
    *
    * @param syncResult to be processed
-   * @param taskStorage stores tasks
-   * @param taskRunner runs tasks and holds state
+   * @param taskStorage stores tasks and related entities
+   * @param taskLockbox manages task locking
    */
-  private void processSyncResult(SyncResult syncResult, TaskStorage taskStorage, TaskRunner taskRunner)
+  private void processSyncResult(SyncResult syncResult, TaskStorage taskStorage, TaskLockbox taskLockbox)
   {
     String taskReacquisitionFailure = "Failed to reacquire lock";
     for (Task task : syncResult.getTasksToFail()) {
-      // Shutdown task if it is running
-      taskRunner.shutdown(task.getId(), taskReacquisitionFailure);
-      // Mark as failed
-      taskStorage.setStatus(TaskStatus.failure(task.getId(), taskReacquisitionFailure));
+      // Mark as failed all tasks
+      try {
+        taskStorage.setStatus(TaskStatus.failure(task.getId(), taskReacquisitionFailure));
+      }
+      catch (Throwable e) {
+        log.warn(e, "Failed to mark task [%s] as failed", task.getId());
+      }
+    }
+    for (Task task : syncResult.getTasksToFail()) {
+      // Mark as failed all tasks
+      try {
+        taskLockbox.unlockAll(task);
+      }
+      catch (Throwable e) {
+        log.warn(e, "Failed to unlock all locks for task [%s]", task.getId());
+      }
     }
   }
 }

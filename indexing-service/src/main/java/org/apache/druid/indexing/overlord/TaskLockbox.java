@@ -117,10 +117,8 @@ public class TaskLockbox
 
     try {
       // Load stuff from taskStorage first. If this fails, we don't want to lose all our locks.
-      final Set<String> storedActiveTasks = new HashSet<>();
       final List<Pair<Task, TaskLock>> storedLocks = new ArrayList<>();
       for (final Task task : taskStorage.getActiveTasks()) {
-        storedActiveTasks.add(task.getId());
         for (final TaskLock taskLock : taskStorage.getLocks(task.getId())) {
           storedLocks.add(Pair.of(task, taskLock));
         }
@@ -140,8 +138,7 @@ public class TaskLockbox
       };
       running.clear();
       activeTasks.clear();
-      activeTasks.addAll(storedActiveTasks);
-      Set<Task> failedToReacquireLockTasks = new HashSet<>();
+      final Set<String> failedToReacquireLockTaskGroups = new HashSet<>();
       // Bookkeeping for a log message at the end
       int taskLockCount = 0;
       for (final Pair<Task, TaskLock> taskAndLock : byVersionOrdering.sortedCopy(storedLocks)) {
@@ -150,11 +147,6 @@ public class TaskLockbox
         if (savedTaskLock.getInterval().toDurationMillis() <= 0) {
           // "Impossible", but you never know what crazy stuff can be restored from storage.
           log.warn("Ignoring lock[%s] with empty interval for task: %s", savedTaskLock, task.getId());
-          continue;
-        }
-
-        if (failedToReacquireLockTasks.contains(task)) {
-          log.info("Ignoring task[%s] as it failed to acquire at least one of its locks", task.getId());
           continue;
         }
 
@@ -191,7 +183,7 @@ public class TaskLockbox
             );
           }
         } else {
-          failedToReacquireLockTasks.add(task);
+          failedToReacquireLockTaskGroups.add(task.getGroupId());
           log.error(
               "Could not reacquire lock on interval[%s] version[%s] for task: %s.",
               savedTaskLockWithPriority.getInterval(),
@@ -200,6 +192,16 @@ public class TaskLockbox
           );
         }
       }
+
+      Set<Task> tasksToFail = new HashSet<>();
+      for (Task task : taskStorage.getActiveTasks()) {
+        if (failedToReacquireLockTaskGroups.contains(task.getGroupId())) {
+          tasksToFail.add(task);
+        } else {
+          activeTasks.add(task.getId());
+        }
+      }
+
       log.info(
           "Synced %,d locks for %,d activeTasks from storage (%,d locks ignored).",
           taskLockCount,
@@ -207,18 +209,8 @@ public class TaskLockbox
           storedLocks.size() - taskLockCount
       );
 
-      // unlock all TaskLockPosse created, and also remove lock entries from storage
-      for (Task task : failedToReacquireLockTasks) {
-        unlockAll(task);
-        for (TaskLock lock : taskStorage.getLocks(task.getId())) {
-          taskStorage.removeLock(task.getId(), lock);
-        }
-      }
-      return new SyncResult(
-          ImmutableList.copyOf(failedToReacquireLockTasks)
-      );
+      return new SyncResult(tasksToFail);
     }
-
     finally {
       giant.unlock();
     }
@@ -232,6 +224,10 @@ public class TaskLockbox
   protected TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
   {
     giant.lock();
+
+    if (task.getGroupId().contains("zzz")) {
+      return null;
+    }
 
     try {
       Preconditions.checkArgument(

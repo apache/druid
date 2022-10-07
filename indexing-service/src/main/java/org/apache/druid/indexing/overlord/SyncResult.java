@@ -21,16 +21,17 @@ package org.apache.druid.indexing.overlord;
 
 import org.apache.druid.indexing.common.task.Task;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * Result of TaskLockbox#syncFromStorage()
+ * Contains tasks which need to be forcefully failed to let the overlord become the leader
  */
 class SyncResult
 {
-  private final List<Task> tasksToFail;
+  private final Set<Task> tasksToFail;
 
-  SyncResult(List<Task> tasksToFail)
+  SyncResult(Set<Task> tasksToFail)
   {
     this.tasksToFail = tasksToFail;
   }
@@ -38,7 +39,7 @@ class SyncResult
   /**
    * Return list of tasks whose status needs to be set to failed due to lock re-acquisition failure
    */
-  List<Task> getTasksToFail()
+  Set<Task> getTasksToFail()
   {
     return tasksToFail;
   }
