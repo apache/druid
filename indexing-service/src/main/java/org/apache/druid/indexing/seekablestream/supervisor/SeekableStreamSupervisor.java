@@ -3717,6 +3717,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 Entry::getValue,
                 (v1, v2) -> makeSequenceNumber(v1).compareTo(makeSequenceNumber(v2)) > 0 ? v1 : v2
             ));
+        Map<PartitionIdType, SequenceOffsetType> currentOffsetsOfPublishingTasks = pendingCompletionTaskGroups
+            .values()
+            .stream()
+            .flatMap(taskGroups -> taskGroups.stream().flatMap(taskGroup -> taskGroup.tasks.entrySet().stream()))
+            .flatMap(taskData -> taskData.getValue().currentSequences.entrySet().stream())
+            .collect(Collectors.toMap(
+                Entry::getKey,
+                Entry::getValue,
+                (v1, v2) -> makeSequenceNumber(v1).compareTo(makeSequenceNumber(v2)) > 0 ? v1 : v2
+            ));
+
+        // placing current offsets of partitions read by publishing tasks incase no active tasks exist for those partitions
+        currentOffsetsOfPublishingTasks.forEach(currentOffsets::putIfAbsent);
 
         partitionIds.forEach(partitionId -> currentOffsets.putIfAbsent(partitionId, offsetsFromMetadataStorage.get(partitionId)));
         return currentOffsets;
