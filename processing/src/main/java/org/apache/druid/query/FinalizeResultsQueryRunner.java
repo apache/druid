@@ -54,6 +54,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
     this.toolChest = toolChest;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, ResponseContext responseContext)
   {

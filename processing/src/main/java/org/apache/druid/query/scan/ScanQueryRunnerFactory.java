@@ -294,7 +294,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     // segment descriptors need to be present for a 1:1 matching of intervals with query runners.
     // The other types of segment spec condense the intervals (i.e. merge neighbouring intervals), eliminating
     // the 1:1 relationship between intervals and query runners.
-    List<Interval> descriptorsOrdered;
+    final List<Interval> descriptorsOrdered;
 
     if (spec instanceof MultipleSpecificSegmentSpec) {
       // Ascending time order for both descriptors and query runners by default
@@ -388,7 +388,12 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       if (timeoutAt == null || timeoutAt == 0L) {
         responseContext.putTimeoutTime(JodaUtils.MAX_INSTANT);
       }
-      return engine.process((ScanQuery) query, segment, responseContext, queryPlus.getQueryMetrics());
+      return engine.process(
+          (ScanQuery) query,
+          segment,
+          responseContext,
+          queryPlus.getQueryMetrics()
+      );
     }
   }
 }

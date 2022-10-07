@@ -74,6 +74,7 @@ public class FragmentManager implements FragmentContext, Closeable
   public static class OperatorTracker
   {
     public final Operator<?> operator;
+    @SuppressWarnings("unused") // Needed in future steps
     public final int operatorId;
     public final List<OperatorChild> children = new ArrayList<>();
     public OperatorProfile profile;
@@ -145,6 +146,7 @@ public class FragmentManager implements FragmentContext, Closeable
     return responseContext;
   }
 
+  @SuppressWarnings("unused") // Needed in future steps
   public void setTimeout(long timeoutMs)
   {
     this.timeoutMs = timeoutMs;
@@ -347,18 +349,6 @@ public class FragmentManager implements FragmentContext, Closeable
           StringUtils.nonStrictFormat("Query [%s] timed out after [%d] ms",
               queryId, timeoutMs));
     }
-  }
-
-  protected void recordRunTime()
-  {
-    if (timeoutAt == 0) {
-      return;
-    }
-    // This is very likely wrong
-    responseContext.put(
-        ResponseContext.Keys.TIMEOUT_AT,
-        timeoutAt - (System.currentTimeMillis() - startTimeMillis)
-    );
   }
 
   @Override

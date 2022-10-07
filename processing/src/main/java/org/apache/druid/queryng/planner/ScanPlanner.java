@@ -52,7 +52,6 @@ import org.apache.druid.queryng.operators.scan.ScanResultOffsetOperator;
 import org.apache.druid.queryng.operators.scan.UngroupedScanResultLimitOperator;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 

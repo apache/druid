@@ -74,7 +74,7 @@ public class TimeGroupVectorIterator
   private final Iterator<Interval> intervalIter;
   private final boolean includeEmptyGroups;
   private Interval interval;
-  private State state = State.START;
+  private State state;
 
   public TimeGroupVectorIterator(
       final StorageAdapter storageAdapter,

@@ -30,18 +30,6 @@ package org.apache.druid.queryng.operators;
 public interface ResultIterator<T>
 {
   /**
-   * Result iterator that can be closed. Generally the operator handles
-   * closing, but an iterator may hold resources that are to be closed.
-   * The {@code cascade} parameter exists for the case in which the
-   * iterator wraps a child operator: its meaning is the same as for
-   * the operator itself.
-   */
-  interface CloseableResultIterator<T> extends ResultIterator<T>
-  {
-    void close(boolean cascade);
-  }
-
-  /**
    * Exception thrown at EOF.
    */
   class EofException extends Exception

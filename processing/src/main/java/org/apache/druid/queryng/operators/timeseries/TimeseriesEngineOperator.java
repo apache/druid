@@ -372,7 +372,7 @@ public class TimeseriesEngineOperator implements Operator<Result<TimeseriesResul
       }
       closer.register(cursor);
 
-      return new VectorizedResultIterator(
+      resultIter = new VectorizedResultIterator(
           cursorDefinition,
           cursor,
           skipEmptyBuckets,
@@ -380,6 +380,7 @@ public class TimeseriesEngineOperator implements Operator<Result<TimeseriesResul
           aggregatorSpecs,
           closer
       );
+      return resultIter;
     }
     catch (RuntimeException t1) {
       try {
@@ -394,11 +395,12 @@ public class TimeseriesEngineOperator implements Operator<Result<TimeseriesResul
 
   private BaseResultIterator makeNonVectorizedIterator()
   {
-    return new NonVectorizedResultIterator(
+    resultIter = new NonVectorizedResultIterator(
         cursorDefinition.cursors(),
         aggregatorSpecs,
         skipEmptyBuckets
     );
+    return resultIter;
   }
 
   @Override

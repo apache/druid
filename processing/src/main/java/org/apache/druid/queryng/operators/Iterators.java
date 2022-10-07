@@ -79,26 +79,6 @@ public class Iterators
     }
   }
 
-  public static class IteratorResultIterator<T> extends CountingResultIterator<T>
-  {
-    private final Iterator<T> iter;
-
-    public IteratorResultIterator(Iterator<T> iter)
-    {
-      this.iter = iter;
-    }
-
-    @Override
-    public T next() throws ResultIterator.EofException
-    {
-      if (iter.hasNext()) {
-        rowCount++;
-        return iter.next();
-      }
-      throw Operators.eof();
-    }
-  }
-
   public static class MappingResultIterator<FROM, TO> extends CountingResultIterator<TO>
   {
     private final Iterator<FROM> iter;
@@ -205,11 +185,7 @@ public class Iterators
     };
   }
 
-  public static <T> CountingResultIterator<T> wrap(Iterator<T> iter)
-  {
-    return new IteratorResultIterator<T>(iter);
-  }
-
+  @SuppressWarnings("unused") // Keep IntelliJ happy
   public static <FROM, TO> CountingResultIterator<TO> map(
       Iterator<FROM> iter,
       Function<FROM, TO> mapper

@@ -23,7 +23,7 @@ import com.google.common.collect.Ordering;
 
 import java.util.PriorityQueue;
 
-public class MergeResultIterator<T> implements ResultIterator.CloseableResultIterator<T>
+public class MergeResultIterator<T> implements ResultIterator<T>
 {
   public interface Input<T>
   {
@@ -66,7 +66,6 @@ public class MergeResultIterator<T> implements ResultIterator.CloseableResultIte
     return row;
   }
 
-  @Override
   public void close(boolean cascade)
   {
     while (!pQueue.isEmpty()) {

@@ -40,8 +40,9 @@ import java.util.function.Supplier;
  * keys. Handles special cases such as no rows (can return a 0-like value for
  * each aggregation in this case.)
  *
- * @see TimeseriesQueryQueryToolChest#mergeResults
- * @see ResultMergeQueryRunner
+ * @see {@link org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest#mergeResults
+ * TimeseriesQueryQueryToolChest.mergeResults}
+ * @see {@link org.apache.druid.query.ResultMergeQueryRunner ResultMergeQueryRunner}
  */
 public class IntermediateAggOperator implements IterableOperator<Result<TimeseriesResultValue>>
 {

@@ -29,11 +29,11 @@ import java.util.Map;
 
 /**
  * Converts individual scan query rows with the
- * {@link org.apache.druid.query.scan.ScanQuery.ResultFormat.RESULT_FORMAT_LIST
+ * {@link org.apache.druid.query.scan.ScanQuery.ResultFormat#RESULT_FORMAT_LIST
  * ResultFormat.RESULT_FORMAT_LIST} format into an object array with fields
  * in the order given by the output schema.
  *
- * @See {@link org.apache.druid.query.scan.ScanQueryQueryToolChest.resultsAsArrays
+ * @see {@link org.apache.druid.query.scan.ScanQueryQueryToolChest#resultsAsArrays
  * ScanQueryQueryToolChest.resultsAsArrays}
  */
 public class ScanListToArrayOperator extends MappingOperator<Map<String, Object>, Object[]>

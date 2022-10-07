@@ -31,8 +31,10 @@ public class TestQueryManagerFactory implements QueryManagerFactory
 {
   private static final String ENABLED_KEY = QueryNGConfig.CONFIG_ROOT + ".enabled";
 
-  private boolean enabled;
+  // Temporary for testing
+  private boolean enabled = true;
 
+  @SuppressWarnings("unused") // Used, but IntelliJ doesn't think so.
   public TestQueryManagerFactory()
   {
     this.enabled = Boolean.parseBoolean(System.getProperty(ENABLED_KEY));

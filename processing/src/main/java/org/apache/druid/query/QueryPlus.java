@@ -97,6 +97,7 @@ public final class QueryPlus<T>
     if (queryMetrics != null) {
       return this;
     } else {
+      @SuppressWarnings("unchecked")
       final QueryMetrics<?> metrics = ((QueryToolChest) queryToolChest).makeMetrics(query);
 
       if (identity != null) {
@@ -124,20 +125,21 @@ public final class QueryPlus<T>
    */
   public QueryPlus<T> withoutThreadUnsafeState()
   {
-    return withoutQueryMetrics().withFragment(null);
+    if (queryMetrics == null && fragmentManager == null) {
+      return this;
+    } else {
+      return new QueryPlus<>(query, null, identity, null);
+    }
   }
 
   /**
-   * Returns the same QueryPlus object, if it doesn't have {@link QueryMetrics} ({@link #getQueryMetrics()} returns
-   * null), or returns a new QueryPlus object with {@link Query} from this QueryPlus and null as QueryMetrics.
+   * Reset the query: replace the query and remove metrics. Done in spots where we'd
+   * otherwise create a new {@code QueryPlus}. This version preserves the fragment
+   * manager and identity.
    */
-  private QueryPlus<T> withoutQueryMetrics()
+  public <U> QueryPlus<U> resetQuery(Query<U> replacementQuery)
   {
-    if (queryMetrics == null) {
-      return this;
-    } else {
-      return new QueryPlus<>(query, null, identity, fragmentManager);
-    }
+    return new QueryPlus<>(replacementQuery, null, identity, fragmentManager);
   }
 
   /**

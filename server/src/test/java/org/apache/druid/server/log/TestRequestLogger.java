@@ -71,7 +71,7 @@ public class TestRequestLogger implements RequestLogger
     }
   }
 
-  public List<RequestLogLine> getNativeQuerylogs()
+  public List<RequestLogLine> getNativeQueryLogs()
   {
     synchronized (nativeQuerylogs) {
       return ImmutableList.copyOf(nativeQuerylogs);

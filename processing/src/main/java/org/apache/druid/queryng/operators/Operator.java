@@ -66,7 +66,7 @@ package org.apache.druid.queryng.operators;
  * Operators are assumed to be stateful since most data transform operations
  * involve some kind of state.
  * <p>
- * The {@link #open()} and {@link #close()} methods provide a well-defined way
+ * The {@link #open()} and {@link #close(boolean)} methods provide a well-defined way
  * to handle resources. Operators are created as a DAG. Unlike a simple iterator,
  * operators should <i>not</i> obtain resources in their constructors. Instead,
  * they should obtain resources, open files or otherwise start things whirring in
@@ -150,7 +150,7 @@ public interface Operator<T>
   /**
    * Convenience interface for an operator which is its own iterator.
    */
-  public interface IterableOperator<T> extends Operator<T>, ResultIterator<T>
+  interface IterableOperator<T> extends Operator<T>, ResultIterator<T>
   {
   }
 

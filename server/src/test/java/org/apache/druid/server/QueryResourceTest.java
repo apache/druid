@@ -299,11 +299,11 @@ public class QueryResourceTest
     Assert.assertNotNull(response);
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
     Assert.assertEquals(0, responses.size());
-    Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
-    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery());
-    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext());
-    Assert.assertTrue(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().containsKey(overrideConfigKey));
-    Assert.assertEquals(overrideConfigValue, testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey));
+    Assert.assertEquals(1, testRequestLogger.getNativeQueryLogs().size());
+    Assert.assertNotNull(testRequestLogger.getNativeQueryLogs().get(0).getQuery());
+    Assert.assertNotNull(testRequestLogger.getNativeQueryLogs().get(0).getQuery().getContext());
+    Assert.assertTrue(testRequestLogger.getNativeQueryLogs().get(0).getQuery().getContext().containsKey(overrideConfigKey));
+    Assert.assertEquals(overrideConfigValue, testRequestLogger.getNativeQueryLogs().get(0).getQuery().getContext().get(overrideConfigKey));
   }
 
   @Test
@@ -353,11 +353,11 @@ public class QueryResourceTest
     Assert.assertNotNull(response);
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
     Assert.assertEquals(0, responses.size());
-    Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
-    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery());
-    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext());
-    Assert.assertTrue(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().containsKey(overrideConfigKey));
-    Assert.assertEquals(-1, testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey));
+    Assert.assertEquals(1, testRequestLogger.getNativeQueryLogs().size());
+    Assert.assertNotNull(testRequestLogger.getNativeQueryLogs().get(0).getQuery());
+    Assert.assertNotNull(testRequestLogger.getNativeQueryLogs().get(0).getQuery().getContext());
+    Assert.assertTrue(testRequestLogger.getNativeQueryLogs().get(0).getQuery().getContext().containsKey(overrideConfigKey));
+    Assert.assertEquals(-1, testRequestLogger.getNativeQueryLogs().get(0).getQuery().getContext().get(overrideConfigKey));
   }
 
   @Test
@@ -748,14 +748,14 @@ public class QueryResourceTest
 
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
     Assert.assertEquals(0, responses.size());
-    Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
+    Assert.assertEquals(1, testRequestLogger.getNativeQueryLogs().size());
     Assert.assertEquals(
         true,
-        testRequestLogger.getNativeQuerylogs().get(0).getQueryStats().getStats().get("success")
+        testRequestLogger.getNativeQueryLogs().get(0).getQueryStats().getStats().get("success")
     );
     Assert.assertEquals(
         "druid",
-        testRequestLogger.getNativeQuerylogs().get(0).getQueryStats().getStats().get("identity")
+        testRequestLogger.getNativeQueryLogs().get(0).getQueryStats().getStats().get("identity")
     );
   }
 

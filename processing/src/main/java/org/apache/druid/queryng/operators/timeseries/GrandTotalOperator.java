@@ -37,7 +37,8 @@ import java.util.Map;
  * Implement a time-series grand total: emit all input rows followed
  * by a final row with totals for aggregations.
  *
- * @see TimeseriesQueryQueryToolChest#mergeResults
+ * @see {@link org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest#mergeResults
+ * TimeseriesQueryQueryToolChest.mergeResults}
  */
 public class GrandTotalOperator implements IterableOperator<Result<TimeseriesResultValue>>
 {

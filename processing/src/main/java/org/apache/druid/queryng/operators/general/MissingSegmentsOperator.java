@@ -25,6 +25,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.queryng.fragment.FragmentContext;
 import org.apache.druid.queryng.operators.Iterators;
 import org.apache.druid.queryng.operators.Operator;
+import org.apache.druid.queryng.operators.OperatorProfile;
 import org.apache.druid.queryng.operators.ResultIterator;
 
 import java.util.Collections;
@@ -58,7 +59,7 @@ public class MissingSegmentsOperator<T> implements Operator<T>
   @Override
   public ResultIterator<T> open()
   {
-    LOG.debug("Reporting a missing segments[%s] for query[%s]", descriptors, context.queryId());
+    LOG.debug("Reporting missing segments [%s] for query [%s]", descriptors, context.queryId());
     context.responseContext().add(ResponseContext.Keys.MISSING_SEGMENTS, descriptors);
     return Iterators.emptyIterator();
   }
@@ -66,5 +67,6 @@ public class MissingSegmentsOperator<T> implements Operator<T>
   @Override
   public void close(boolean cascade)
   {
+    context.updateProfile(this, OperatorProfile.silentOperator(this));
   }
 }

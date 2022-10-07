@@ -47,6 +47,11 @@ public class MockOperator<T> implements IterableOperator<T>
     return new MockOperator<Integer>(context, rowCount, rid -> rid);
   }
 
+  public static MockOperator<Integer> ints(FragmentContext context, int rowCount, int offset)
+  {
+    return new MockOperator<Integer>(context, rowCount, rid -> offset + rid);
+  }
+
   public static MockOperator<String> strings(FragmentContext context, int rowCount)
   {
     return new MockOperator<String>(context, rowCount, rid -> "Mock row " + rid);

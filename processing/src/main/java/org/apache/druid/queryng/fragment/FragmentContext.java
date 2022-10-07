@@ -34,6 +34,7 @@ import org.apache.druid.queryng.operators.OperatorProfile;
  */
 public interface FragmentContext
 {
+  @SuppressWarnings("unused") // Needed in the future
   long NO_TIMEOUT = -1;
 
   enum State
@@ -41,8 +42,26 @@ public interface FragmentContext
     START, RUN, FAILED, CLOSED
   }
 
+  /**
+   * State of the fragment. Generally of interest to the top-level fragment
+   * runner. A fragment enters the run state when it starts running, the
+   * failed state when the top-level runner calls {@link #failed(), and
+   * the closed state after a successful run.
+   */
   State state();
+
+  /**
+   * The native query ID associated with the native query that gave rise
+   * to the fragment's operator DAG. There is one query ID per fragment.
+   * Nested queries provide a separate slice (which executes as a fragment)
+   * for each of the subqueries.
+   */
   String queryId();
+
+  /**
+   * Return the response context shared by all operators within this fragment.
+   */
+  @SuppressWarnings("unused") // Stop IntelliJ from complaining
   ResponseContext responseContext();
 
   /**
@@ -59,8 +78,24 @@ public interface FragmentContext
    */
   void register(Operator<?> op);
 
+  /**
+   * Register a generic parent-child relationship. Used for single children,
+   * or when child order is unimportant.
+   */
   void registerChild(Operator<?> parent, Operator<?> child);
+
+  /**
+   * Register a parent-child relationship for a specific child position, as
+   * in joins where the 0 (left) position has a distinct meaning from the
+   * 1 (right) position.
+   */
+  @SuppressWarnings("unused") // Needed in future work
   void registerChild(Operator<?> parent, int posn, Operator<?> child);
+
+  /**
+   * Register a parent-child relationship between an operator and a slice
+   * of this query.
+   */
   void registerChild(Operator<?> parent, int posn, int sliceID);
 
   /**
@@ -71,8 +106,22 @@ public interface FragmentContext
    */
   void checkTimeout();
 
+  /**
+   * Record a missing segment into the response context for this fragment.
+   */
   void missingSegment(SegmentDescriptor descriptor);
 
+  /**
+   * Mark the fragment as failed. Generally set at the top of the operator
+   * DAG in response to an exception. Operators just throw an exception to
+   * indicate failure.
+   */
   boolean failed();
+
+  /**
+   * Provide an update of the profile (statistics) for a specific
+   * operator. Can be done while the fragment runs, or at close time.
+   * The last update wins, so metrics must be cummulative.
+   */
   void updateProfile(Operator<?> op, OperatorProfile profile);
 }

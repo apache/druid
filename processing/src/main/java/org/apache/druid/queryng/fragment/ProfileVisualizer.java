@@ -32,8 +32,8 @@ import java.util.Map.Entry;
  */
 public class ProfileVisualizer
 {
-  private final String INDENT = "| ";
-  private final String METRIC_INDENT = "  ";
+  private static final String INDENT = "| ";
+  private static final String METRIC_INDENT = "  ";
 
   private final QueryProfile profile;
   private final StringBuilder buf = new StringBuilder();

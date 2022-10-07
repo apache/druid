@@ -19,7 +19,6 @@
 
 package org.apache.druid.queryng.fragment;
 
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.queryng.fragment.FragmentManager.OperatorChild;
@@ -209,11 +208,10 @@ public class QueryProfile
         for (int i = 0; i < orderedChildren.size(); i++) {
           if (orderedChildren.get(i).position != i) {
             log.warn(
-                StringUtils.format("Operator [%]: child at index %d has position %d",
-                    root.getClass(),
-                    i,
-                    orderedChildren.get(i).position
-                )
+                "Operator %s: child at index %d has position %d",
+                root.getClass().getSimpleName(),
+                i,
+                orderedChildren.get(i).position
             );
           }
         }

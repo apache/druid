@@ -39,7 +39,6 @@ import org.apache.druid.queryng.operators.AbstractMergeOperator.OperatorInput;
 import org.apache.druid.queryng.operators.ConcatOperator;
 import org.apache.druid.queryng.operators.DeferredMergeOperator;
 import org.apache.druid.queryng.operators.MergeResultIterator;
-import org.apache.druid.queryng.operators.MergeResultIterator.Input;
 import org.apache.druid.queryng.operators.NullOperator;
 import org.apache.druid.queryng.operators.Operator;
 import org.apache.druid.queryng.operators.OperatorProfile;
@@ -94,7 +93,6 @@ public class RetryOperator<T> implements Operator<T>
   private final FragmentContext context;
   private final QueryPlus<T> queryPlus;
   private final Operator<T> baseOperator;
-  private final List<Operator<T>> inputs = new ArrayList<>();
   private final List<OperatorInput<T>> mergeInputs = new ArrayList<>();
   private final Ordering<? super T> ordering;
   private final BiFunction<Query<T>, List<SegmentDescriptor>, QueryRunner<T>> retryRunnerCreateFn;
@@ -117,7 +115,7 @@ public class RetryOperator<T> implements Operator<T>
       final FragmentContext context,
       final QueryPlus<T> queryPlus,
       final Operator<T> baseOperator,
-      Ordering<? super T> ordering,
+      final Ordering<? super T> ordering,
       final BiFunction<Query<T>, List<SegmentDescriptor>, QueryRunner<T>> retryRunnerCreateFn,
       final BiFunction<String, ResponseContext, List<SegmentDescriptor>> missingSegmentFn,
       final int maxRetries,
@@ -149,6 +147,55 @@ public class RetryOperator<T> implements Operator<T>
     context.registerChild(this, mergeOp);
     state = State.RUN;
     return mergeOp.open();
+  }
+
+  private Operator<T> launchRound(Operator<T> inputOp)
+  {
+    // Create a merge input. Doing so runs the base operator and fetches
+    // the first row. That causes the missing segments to be available.
+    try {
+      ResultIterator<T> iter = inputOp.open();
+      mergeInputs.add(new OperatorInput<T>(inputOp, iter, iter.next()));
+    }
+    catch (ResultIterator.EofException e) {
+      inputOp.close(true);
+      // Ignore this input
+    }
+    if (tryCount == 1) {
+      // runnableAfterFirstAttempt is only for testing, it must be no-op for production code.
+      runnableAfterFirstAttempt.run();
+    }
+
+    // Any missing segments?
+    List<SegmentDescriptor> missingSegments = missingSegmentFn.apply(
+        queryPlus.getQuery().getMostSpecificId(),
+        context.responseContext());
+
+    if (missingSegments.isEmpty()) {
+      return null;
+    }
+
+    missingSegmentCount += missingSegments.size();
+
+    // Too many retries?
+    if (tryCount - 1 >= maxRetries) {
+      if (!allowPartialResults) {
+        throw new SegmentMissingException("No results found for segments [%s]", missingSegments);
+      } else {
+        return null;
+      }
+    }
+
+    // Retry
+    LOG.info("%,d missing segments found. Retry attempt %,d", missingSegments.size(), tryCount - 1);
+
+    ResponseContext context = this.context.responseContext();
+    context.initializeMissingSegments();
+    final QueryPlus<T> retryQueryPlus = queryPlus.withQuery(
+        Queries.withSpecificSegments(queryPlus.getQuery(), missingSegments)
+    );
+    Sequence<T> sequence = retryRunnerCreateFn.apply(retryQueryPlus.getQuery(), missingSegments).run(retryQueryPlus, context);
+    return Operators.toOperator(this.context, sequence);
   }
 
   private Operator<T> chooseMerge()
@@ -184,56 +231,6 @@ public class RetryOperator<T> implements Operator<T>
         mergeInputs.size(),
         mergeInputs
     );
-  }
-
-  private Operator<T> launchRound(Operator<T> inputOp)
-  {
-    // Create a merge input. Doing so runs the base operator and fetches
-    // the first row. That causes the missing segments to be available.
-    inputs.add(inputOp);
-    try {
-      ResultIterator<T> iter = inputOp.open();
-      mergeInputs.add(new OperatorInput<T>(inputOp, iter, iter.next()));
-    }
-    catch (ResultIterator.EofException e) {
-      inputOp.close(true);
-      // Ignore this input
-    }
-    if (tryCount == 1) {
-      // runnableAfterFirstAttempt is only for testing, it must be no-op for production code.
-      runnableAfterFirstAttempt.run();
-    }
-
-    // Any missing segments?
-    List<SegmentDescriptor> missingSegments = missingSegmentFn.apply(
-        queryPlus.getQuery().getMostSpecificId(),
-        context.responseContext());
-
-    if (missingSegments.isEmpty()) {
-      return null;
-    }
-
-    missingSegmentCount += missingSegments.size();
-
-    // Too many retries?
-    if (tryCount - 1 >= maxRetries) {
-      if (!allowPartialResults) {
-        throw new SegmentMissingException("No results found for segments [%s]", missingSegments);
-      } else {
-        return null;
-      }
-    }
-
-    // Retry
-    LOG.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), tryCount - 1);
-
-    ResponseContext context = this.context.responseContext();
-    context.initializeMissingSegments();
-    final QueryPlus<T> retryQueryPlus = queryPlus.withQuery(
-        Queries.withSpecificSegments(queryPlus.getQuery(), missingSegments)
-    );
-    Sequence<T> sequence = retryRunnerCreateFn.apply(retryQueryPlus.getQuery(), missingSegments).run(retryQueryPlus, context);
-    return Operators.toOperator(this.context, sequence);
   }
 
   @Override

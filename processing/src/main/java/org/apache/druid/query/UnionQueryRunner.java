@@ -57,56 +57,56 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
 
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
 
-    if (analysis.isConcreteTableBased() && analysis.getBaseUnionDataSource().isPresent()) {
-      // Union of tables.
-
-      final UnionDataSource unionDataSource = analysis.getBaseUnionDataSource().get();
-
-      if (unionDataSource.getDataSources().isEmpty()) {
-        // Shouldn't happen, because UnionDataSource doesn't allow empty unions.
-        throw new ISE("Unexpectedly received empty union");
-      } else if (unionDataSource.getDataSources().size() == 1) {
-        // Single table. Run as a normal query.
-        return baseRunner.run(
-            queryPlus.withQuery(
-                Queries.withBaseDataSource(
-                    query,
-                    Iterables.getOnlyElement(unionDataSource.getDataSources())
-                )
-            ),
-            responseContext
-        );
-      } else {
-        // Split up the tables and merge their results.
-        return new MergeSequence<>(
-            query.getResultOrdering(),
-            Sequences.simple(
-                Lists.transform(
-                    IntStream.range(0, unionDataSource.getDataSources().size())
-                             .mapToObj(i -> new Pair<>(unionDataSource.getDataSources().get(i), i + 1))
-                             .collect(Collectors.toList()),
-                    (Function<Pair<TableDataSource, Integer>, Sequence<T>>) singleSourceWithIndex ->
-                        baseRunner.run(
-                            queryPlus.withQuery(
-                                Queries.withBaseDataSource(query, singleSourceWithIndex.lhs)
-                                       // assign the subqueryId. this will be used to validate that every query servers
-                                       // have responded per subquery in RetryQueryRunner
-                                       .withSubQueryId(generateSubqueryId(
-                                           query.getSubQueryId(),
-                                           singleSourceWithIndex.lhs.getName(),
-                                           singleSourceWithIndex.rhs
-                                       ))
-                            ),
-                            responseContext
-                        )
-                )
-            )
-
-        );
-      }
-    } else {
+    if (!analysis.isConcreteTableBased() || !analysis.getBaseUnionDataSource().isPresent()) {
       // Not a union of tables. Do nothing special.
       return baseRunner.run(queryPlus, responseContext);
+    }
+
+    // Union of tables.
+
+    final UnionDataSource unionDataSource = analysis.getBaseUnionDataSource().get();
+
+    if (unionDataSource.getDataSources().isEmpty()) {
+      // Shouldn't happen, because UnionDataSource doesn't allow empty unions.
+      throw new ISE("Unexpectedly received empty union");
+    } else if (unionDataSource.getDataSources().size() == 1) {
+      // Single table. Run as a normal query.
+      return baseRunner.run(
+          queryPlus.withQuery(
+              Queries.withBaseDataSource(
+                  query,
+                  Iterables.getOnlyElement(unionDataSource.getDataSources())
+              )
+          ),
+          responseContext
+      );
+    } else {
+      // Split up the tables and merge their results.
+      return new MergeSequence<>(
+          query.getResultOrdering(),
+          Sequences.simple(
+              Lists.transform(
+                  IntStream.range(0, unionDataSource.getDataSources().size())
+                           .mapToObj(i -> new Pair<>(unionDataSource.getDataSources().get(i), i + 1))
+                           .collect(Collectors.toList()),
+                  (Function<Pair<TableDataSource, Integer>, Sequence<T>>) singleSourceWithIndex ->
+                      baseRunner.run(
+                          queryPlus.withQuery(
+                              Queries.withBaseDataSource(query, singleSourceWithIndex.lhs)
+                                     // assign the subqueryId. this will be used to validate that every query servers
+                                     // have responded per subquery in RetryQueryRunner
+                                     .withSubQueryId(generateSubqueryId(
+                                         query.getSubQueryId(),
+                                         singleSourceWithIndex.lhs.getName(),
+                                         singleSourceWithIndex.rhs
+                                     ))
+                          ),
+                          responseContext
+                      )
+              )
+          )
+
+      );
     }
   }
 

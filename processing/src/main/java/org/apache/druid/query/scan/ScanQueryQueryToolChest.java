@@ -83,7 +83,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         newLimit = Long.MAX_VALUE;
       } else if (originalQuery.getScanRowsLimit() > Long.MAX_VALUE - originalQuery.getScanRowsOffset()) {
         throw new ISE(
-            "Cannot apply limit[%d] with offset[%d] due to overflow",
+            "Cannot apply limit %d with offset %d due to overflow",
             originalQuery.getScanRowsLimit(),
             originalQuery.getScanRowsOffset()
         );
@@ -165,30 +165,29 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       // array-based results: the standard results will detect and return _all_ columns, whereas the array-based results
       // will include none of them.
       return RowSignature.empty();
-    } else {
-      final RowSignature.Builder builder = RowSignature.builder();
-
-      if (query.withNonNullLegacy(scanQueryConfig).isLegacy()) {
-        builder.add(ScanQueryEngine.LEGACY_TIMESTAMP_KEY, null);
-      }
-
-      for (String columnName : query.getColumns()) {
-        // With the Scan query we only know the columnType for virtual columns. Let's report those, at least.
-        final ColumnType columnType;
-
-        final VirtualColumn virtualColumn = query.getVirtualColumns().getVirtualColumn(columnName);
-        if (virtualColumn != null) {
-          columnType = virtualColumn.capabilities(columnName).toColumnType();
-        } else {
-          // Unknown type. In the future, it would be nice to have a way to fill these in.
-          columnType = null;
-        }
-
-        builder.add(columnName, columnType);
-      }
-
-      return builder.build();
     }
+    final RowSignature.Builder builder = RowSignature.builder();
+
+    if (query.withNonNullLegacy(scanQueryConfig).isLegacy()) {
+      builder.add(ScanQueryEngine.LEGACY_TIMESTAMP_KEY, null);
+    }
+
+    for (String columnName : query.getColumns()) {
+      // With the Scan query we only know the columnType for virtual columns. Let's report those, at least.
+      final ColumnType columnType;
+
+      final VirtualColumn virtualColumn = query.getVirtualColumns().getVirtualColumn(columnName);
+      if (virtualColumn != null) {
+        columnType = virtualColumn.capabilities(columnName).toColumnType();
+      } else {
+        // Unknown type. In the future, it would be nice to have a way to fill these in.
+        columnType = null;
+      }
+
+      builder.add(columnName, columnType);
+    }
+
+    return builder.build();
   }
 
   @Override
@@ -219,7 +218,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
             // Uh oh... mismatch in expected and actual field count. I don't think this should happen, so let's
             // throw an exception. If this really does happen, and there's a good reason for it, then we should remap
             // the result row here.
-            throw new ISE("Mismatch in expected [%d] vs actual [%s] field count", fields.size(), row.size());
+            throw new ISE("Mismatch in expected %d vs actual [%s] field count", fields.size(), row.size());
           }
         };
         break;

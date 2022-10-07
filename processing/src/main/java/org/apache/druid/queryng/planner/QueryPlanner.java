@@ -56,14 +56,18 @@ import org.apache.druid.queryng.operators.NullOperator;
 import org.apache.druid.queryng.operators.Operator;
 import org.apache.druid.queryng.operators.Operators;
 import org.apache.druid.queryng.operators.TransformOperator;
+import org.apache.druid.queryng.operators.general.BySegmentOperator;
 import org.apache.druid.queryng.operators.general.CpuMetricOperator;
 import org.apache.druid.queryng.operators.general.MergeOperator;
 import org.apache.druid.queryng.operators.general.MetricsOperator;
+import org.apache.druid.queryng.operators.general.MissingSegmentsOperator;
 import org.apache.druid.queryng.operators.general.QueryRunnerFactoryOperator;
 import org.apache.druid.queryng.operators.general.SegmentLockOperator;
 import org.apache.druid.queryng.operators.general.ThreadLabelOperator;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.JvmUtils;
+import org.joda.time.DateTime;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -113,11 +117,6 @@ import java.util.function.ObjLongConsumer;
  */
 public class QueryPlanner
 {
-  protected static <T> Operator<T> concat(FragmentContext context, List<Operator<T>> children)
-  {
-    return ConcatOperator.concatOrNot(context, children);
-  }
-
   /**
    * @see {org.apache.druid.query.CPUTimeMetricQueryRunner}
    */
@@ -136,11 +135,11 @@ public class QueryPlanner
     if (!report || !JvmUtils.isThreadCpuTimeEnabled()) {
       return delegate.run(queryWithMetrics, responseContext);
     }
-    Operator<T> inputOp = Operators.toOperator(
+    final Operator<T> inputOp = Operators.toOperator(
         delegate,
         queryWithMetrics
     );
-    CpuMetricOperator<T> op = new CpuMetricOperator<T>(
+    final CpuMetricOperator<T> op = new CpuMetricOperator<T>(
         queryPlus.fragment(),
         cpuTimeAccumulator,
         queryWithMetrics.getQueryMetrics(),
@@ -185,7 +184,7 @@ public class QueryPlanner
     final Function<T, T> baseFinalizer = toolChest.makePostComputeManipulatorFn(
         query,
         metricManipulationFn
-        );
+    );
     final Function<T, ?> finalizerFn;
     if (QueryContexts.isBySegment(query)) {
       finalizerFn = new Function<T, Result<BySegmentResultValue<T>>>()
@@ -220,12 +219,13 @@ public class QueryPlanner
       finalizerFn = baseFinalizer;
     }
 
-    QueryPlus<T> queryPlusToRun = queryPlus.withQuery(queryToRun);
-    Operator<T> inputOp = Operators.toOperator(
+    final QueryPlus<T> queryPlusToRun = queryPlus.withQuery(queryToRun);
+    final Operator<T> inputOp = Operators.toOperator(
         baseRunner,
-        queryPlusToRun);
+        queryPlusToRun
+    );
     @SuppressWarnings("unchecked")
-    TransformOperator<T, T> op = new TransformOperator<>(
+    final TransformOperator<T, T> op = new TransformOperator<>(
         queryPlus.fragment(),
         inputOp,
         (Function<T, T>) finalizerFn,
@@ -245,13 +245,12 @@ public class QueryPlanner
    * {@code TimeseriesQueryEngine} and {@code TopNQueryEngine}. Those
    * should be caught by the corresponding operators.
    *
-   * @see {@link org.apache.druid.query.spec.SpecificSegmentQueryRunner}
+   * @see {@link SpecificSegmentQueryRunner}
    */
   public static <T> Sequence<T> runSpecificSegment(
       final QueryRunner<T> base,
       final SpecificSegmentSpec specificSpec,
-      final QueryPlus<T> input,
-      final ResponseContext responseContext
+      final QueryPlus<T> input
   )
   {
     final QueryPlus<T> queryPlus = input.withQuery(
@@ -264,13 +263,15 @@ public class QueryPlanner
     Operator<T> op = Operators.toOperator(base, queryPlus);
     final boolean setName = input.getQuery().getContextBoolean(
         SpecificSegmentQueryRunner.CTX_SET_THREAD_NAME,
-        true);
+        true
+    );
     if (setName) {
       final String newName = query.getType() + "_" + query.getDataSource() + "_" + query.getIntervals();
       op = new ThreadLabelOperator<T>(
           queryPlus.fragment(),
           newName,
-          op);
+          op
+      );
     }
     return Operators.toSequence(op);
   }
@@ -295,16 +296,18 @@ public class QueryPlanner
     if (queryMetrics == null) {
       return queryRunner.run(queryWithMetrics, responseContext);
     }
-    Operator<T> inputOp = Operators.toOperator(
+    final Operator<T> inputOp = Operators.toOperator(
         queryRunner,
-        queryWithMetrics);
-    MetricsOperator<T> op = new MetricsOperator<>(
+        queryWithMetrics
+    );
+    final MetricsOperator<T> op = new MetricsOperator<>(
         queryPlus.fragment(),
         emitter,
         queryMetrics,
         reportMetric,
         creationTimeNs == 0 ? null : Timer.createAt(creationTimeNs),
-        inputOp);
+        inputOp
+    );
     return Operators.toSequence(op);
   }
 
@@ -318,14 +321,16 @@ public class QueryPlanner
   {
     // The factory operator defers creating the runner until
     // after the lock operator has obtained a segment lock.
-    Operator<T> inputOp = new QueryRunnerFactoryOperator<T>(
+    final Operator<T> inputOp = new QueryRunnerFactoryOperator<T>(
         () -> factory.createRunner(segment),
-        queryPlus);
-    SegmentLockOperator<T> op = new SegmentLockOperator<>(
+        queryPlus
+    );
+    final SegmentLockOperator<T> op = new SegmentLockOperator<>(
         queryPlus.fragment(),
         segment,
         descriptor,
-        inputOp);
+        inputOp
+    );
     return Operators.toSequence(op);
   }
 
@@ -384,5 +389,41 @@ public class QueryPlanner
       mergeOp = new MergeOperator<T>(fragmentContext, ordering, inputs);
     }
     return Operators.toSequence(mergeOp);
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T> Sequence<T> runBySegment(
+      final QueryPlus<T> queryPlus,
+      final SegmentId segmentId,
+      final DateTime timestamp,
+      final QueryRunner<T> base,
+      final ResponseContext responseContext
+  )
+  {
+    if (!QueryContexts.isBySegment(queryPlus.getQuery())) {
+      return base.run(queryPlus, responseContext);
+    }
+    final Operator<T> inputOp = Operators.toOperator(
+        base,
+        queryPlus
+    );
+    final Operator<Result<T>> op = new BySegmentOperator<T>(
+        queryPlus.fragment(),
+        segmentId,
+        timestamp,
+        queryPlus.getQuery().getIntervals().get(0),
+        inputOp
+    );
+    // Yes, we change the type. See BySegmentOperator.
+    return (Sequence<T>) Operators.toSequence(op);
+  }
+
+  public static <T> Sequence<T> missingSegments(QueryPlus<T> queryPlus, List<SegmentDescriptor> descriptors)
+  {
+    final Operator<T> op = new MissingSegmentsOperator<T>(
+        queryPlus.fragment(),
+        descriptors
+    );
+    return Operators.toSequence(op);
   }
 }

@@ -538,7 +538,7 @@ public class VectorCursorGranularizerTest
   {
     long base = MockStorageAdapter.MOCK_INTERVAL.getStartMillis();
     long oneMin = 60 * 1000;
-    long times[] = {
+    long[] times = {
         base,
         base,
         base + oneMin,
@@ -587,7 +587,7 @@ public class VectorCursorGranularizerTest
   {
     long base = MockStorageAdapter.MOCK_INTERVAL.getStartMillis();
     long oneMin = 60 * 1000;
-    long times[] = {
+    long[] times = {
         base,
         base,
         base + oneMin,
@@ -629,7 +629,7 @@ public class VectorCursorGranularizerTest
   {
     long base = MockStorageAdapter.MOCK_INTERVAL.getStartMillis();
     long oneMin = 60 * 1000;
-    long times[] = {
+    long[] times = {
         base,
         base,
         base + oneMin,
@@ -680,7 +680,7 @@ public class VectorCursorGranularizerTest
   {
     long base = MockStorageAdapter.MOCK_INTERVAL.getStartMillis();
     long oneMin = 60 * 1000;
-    long times[] = {
+    long[] times = {
         base,
         base,
         base + oneMin,
@@ -735,7 +735,7 @@ public class VectorCursorGranularizerTest
   {
     long base = MockStorageAdapter.MOCK_INTERVAL.getStartMillis();
     long oneMin = 60 * 1000;
-    long times[] = {
+    long[] times = {
         base,
         base,
         base + oneMin,
@@ -786,7 +786,7 @@ public class VectorCursorGranularizerTest
   {
     long base = MockStorageAdapter.MOCK_INTERVAL.getStartMillis();
     long oneMin = 60 * 1000;
-    long times[] = {
+    long[] times = {
         // Empty at start
         base + oneMin,
         base + oneMin,
@@ -841,7 +841,7 @@ public class VectorCursorGranularizerTest
   {
     long base = MockStorageAdapter.MOCK_INTERVAL.getStartMillis();
     long oneMin = 60 * 1000;
-    long times[] = {
+    long[] times = {
         // Empty at start
         base + oneMin,
         base + oneMin,

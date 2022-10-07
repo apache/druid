@@ -110,8 +110,8 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           ResponseContext context
       )
       {
-        SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) queryPlus.getQuery()).withFinalizedAnalysisTypes(
-            config);
+        SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) queryPlus.getQuery())
+            .withFinalizedAnalysisTypes(config);
         QueryPlus<SegmentAnalysis> updatedQueryPlus = queryPlus.withQuery(updatedQuery);
         return new MappedSequence<>(
             CombiningSequence.create(

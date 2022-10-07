@@ -41,9 +41,9 @@ public abstract class BySegmentSkippingQueryRunner<T> implements QueryRunner<T>
   {
     if (QueryContexts.isBySegment(queryPlus.getQuery())) {
       return baseRunner.run(queryPlus, responseContext);
+    } else {
+      return doRun(baseRunner, queryPlus, responseContext);
     }
-
-    return doRun(baseRunner, queryPlus, responseContext);
   }
 
   protected abstract Sequence<T> doRun(QueryRunner<T> baseRunner, QueryPlus<T> queryPlus, ResponseContext context);

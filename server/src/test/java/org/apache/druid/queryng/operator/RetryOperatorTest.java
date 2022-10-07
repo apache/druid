@@ -38,7 +38,6 @@ import org.apache.druid.segment.SegmentMissingException;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -126,7 +125,7 @@ public class RetryOperatorTest
     Operator<ScanResultValue> scan2 = new MockScanResultReader(fragment, 3, 5, 4, MockScanResultReader.interval(0));
     QueryRunner<ScanResultValue> runner2 = (qp, qc) -> Operators.toSequence(scan2);
     AtomicInteger counter = new AtomicInteger();
-    List<SegmentDescriptor> dummySegs = Arrays.asList(
+    List<SegmentDescriptor> dummySegs = Collections.singletonList(
         new SegmentDescriptor(MockScanResultReader.interval(0), "vers", 1));
     Operator<ScanResultValue> op = new RetryOperator<ScanResultValue>(
         fragment,
@@ -162,7 +161,7 @@ public class RetryOperatorTest
         .build();
     QueryPlus<ScanResultValue> queryPlus = QueryPlus.wrap(query.withId("dummy"));
     Operator<ScanResultValue> scan = new MockScanResultReader(fragment, 3, 10, 4, MockScanResultReader.interval(0));
-    List<SegmentDescriptor> dummySegs = Arrays.asList(
+    List<SegmentDescriptor> dummySegs = Collections.singletonList(
         new SegmentDescriptor(MockScanResultReader.interval(0), "vers", 1));
     Operator<ScanResultValue> op = new RetryOperator<ScanResultValue>(
         fragment,
@@ -195,7 +194,7 @@ public class RetryOperatorTest
         .build();
     QueryPlus<ScanResultValue> queryPlus = QueryPlus.wrap(query.withId("dummy"));
     Operator<ScanResultValue> scan = new MockScanResultReader(fragment, 3, 10, 4, MockScanResultReader.interval(0));
-    List<SegmentDescriptor> dummySegs = Arrays.asList(
+    List<SegmentDescriptor> dummySegs = Collections.singletonList(
         new SegmentDescriptor(MockScanResultReader.interval(0), "vers", 1));
     Operator<ScanResultValue> op = new RetryOperator<ScanResultValue>(
         fragment,

@@ -201,7 +201,7 @@ public class ProjectResultsOperatorTest
     List<Object[]> data = Arrays.asList(new Object[] {"foo"}, new Object[] {"bar"});
     new TestFixture()
         .withInput(data)
-        .toTypes(Arrays.asList(SqlTypeName.VARCHAR))
+        .toTypes(Collections.singletonList(SqlTypeName.VARCHAR))
         .expect(data)
         .run();
   }
@@ -240,7 +240,7 @@ public class ProjectResultsOperatorTest
   {
     new TestFixture()
       .withInput(toRows(input))
-      .toTypes(Arrays.asList(toType))
+      .toTypes(Collections.singletonList(toType))
       .expect(toRows(expected))
       .run();
   }
@@ -310,7 +310,7 @@ public class ProjectResultsOperatorTest
         .withInput(
             toRows(
                 Arrays.asList(null, "foo", 10, 20L, 30.25F, 40.5D, new long[] {50, 60})))
-        .toTypes(Arrays.asList(SqlTypeName.ARRAY))
+        .toTypes(Collections.singletonList(SqlTypeName.ARRAY))
         .expect(
             toRows(
                 Arrays.asList(null, "foo", "10", "20", "30.25", "40.5", "[50,60]")));
@@ -331,7 +331,7 @@ public class ProjectResultsOperatorTest
                     new Long[] {10L, 20L},
                     new Double[] {10.25D, 20.5D},
                     new Object[] {"bar", 20})))
-        .toTypes(Arrays.asList(SqlTypeName.ARRAY))
+        .toTypes(Collections.singletonList(SqlTypeName.ARRAY))
         .expect(
             toRows(
                 Arrays.asList(

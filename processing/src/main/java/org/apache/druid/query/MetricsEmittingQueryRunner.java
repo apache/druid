@@ -97,7 +97,8 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
           reportMetric,
           applyCustomDimensions,
           queryPlus,
-          responseContext);
+          responseContext
+      );
     }
     QueryPlus<T> queryWithMetrics = queryPlus.withQueryMetrics(queryToolChest);
     final QueryMetrics<?> queryMetrics = queryWithMetrics.getQueryMetrics();

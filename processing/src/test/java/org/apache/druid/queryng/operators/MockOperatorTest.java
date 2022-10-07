@@ -36,7 +36,7 @@ import static org.junit.Assert.assertEquals;
 public class MockOperatorTest
 {
   @Test
-  public void testMockStringOperator() throws ResultIterator.EofException
+  public void testMockStringOperator()
   {
     FragmentManager fragment = Fragments.defaultFragment();
     MockOperator<String> op = MockOperator.strings(fragment, 2);

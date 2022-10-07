@@ -48,7 +48,7 @@ public class SubqueryQueryRunner<T> implements QueryRunner<T>
     if (dataSource instanceof QueryDataSource && !forcePushDownNestedQuery) {
       return run(queryPlus.withQuery((Query<T>) ((QueryDataSource) dataSource).getQuery()), responseContext);
     } else {
-      QueryPlus newQuery = queryPlus;
+      QueryPlus<T> newQuery = queryPlus;
       if (forcePushDownNestedQuery) {
         // Disable any more push downs before firing off the query. But do let the historical know
         // that it is executing the complete nested query and not just the inner most part of it

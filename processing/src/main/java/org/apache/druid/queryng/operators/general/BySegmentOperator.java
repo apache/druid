@@ -26,13 +26,14 @@ import org.apache.druid.query.Result;
 import org.apache.druid.queryng.fragment.FragmentContext;
 import org.apache.druid.queryng.operators.Iterators;
 import org.apache.druid.queryng.operators.Operator;
+import org.apache.druid.queryng.operators.OperatorProfile;
 import org.apache.druid.queryng.operators.Operators;
 import org.apache.druid.queryng.operators.ResultIterator;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.List;
-import java.util.function.Supplier;
 
 /**
  * Operator that consumes a base single-segment query operator, and wraps its results in a
@@ -52,23 +53,25 @@ import java.util.function.Supplier;
  */
 public class BySegmentOperator<T> implements Operator<Result<T>>
 {
-  private final String segmentId;
+  private final FragmentContext context;
+  private final SegmentId segmentId;
   private final DateTime timestamp;
   private final Interval interval;
-  private final Supplier<Operator<T>> inputSupplier;
+  private final Operator<T> input;
 
   public BySegmentOperator(
       final FragmentContext context,
-      final String segmentId,
+      final SegmentId segmentId,
       final DateTime timestamp,
       final Interval interval,
-      final Supplier<Operator<T>> inputSupplier
+      final Operator<T> input
   )
   {
+    this.context = context;
     this.segmentId = segmentId;
     this.timestamp = timestamp;
     this.interval = interval;
-    this.inputSupplier = inputSupplier;
+    this.input = input;
     context.register(this);
   }
 
@@ -76,11 +79,7 @@ public class BySegmentOperator<T> implements Operator<Result<T>>
   public ResultIterator<Result<T>> open()
   {
     // Read the entire input result set into a list
-    Operator<T> child = inputSupplier.get();
-    List<T> results = Operators.toList(child);
-
-    // The child is now done, close it.
-    child.close(true);
+    List<T> results = Operators.toList(input);
 
     // If no results, return an empty result set.
     // TODO: Seems reasonable, but is different than original code.
@@ -96,7 +95,7 @@ public class BySegmentOperator<T> implements Operator<Result<T>>
         timestamp,
         new BySegmentResultValueClass<>(
             results,
-            segmentId,
+            segmentId.toString(),
             interval
         )
     );
@@ -106,5 +105,6 @@ public class BySegmentOperator<T> implements Operator<Result<T>>
   @Override
   public void close(boolean cascade)
   {
+    context.updateProfile(this, OperatorProfile.silentOperator(this));
   }
 }

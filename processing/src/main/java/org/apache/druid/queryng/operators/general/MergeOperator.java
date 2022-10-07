@@ -20,7 +20,6 @@
 package org.apache.druid.queryng.operators.general;
 
 import com.google.common.collect.Ordering;
-import org.apache.druid.query.Query;
 import org.apache.druid.queryng.fragment.FragmentContext;
 import org.apache.druid.queryng.operators.AbstractMergeOperator;
 import org.apache.druid.queryng.operators.Operator;
@@ -41,14 +40,6 @@ import java.util.List;
 */
 public class MergeOperator<T> extends AbstractMergeOperator<T>
 {
-  public static <T> MergeOperator<T> forQuery(
-      FragmentContext context,
-      Query<T> query,
-      List<Operator<T>> children)
-  {
-    return new MergeOperator<T>(context, query.getResultOrdering(), children);
-  }
-
   private final List<Operator<T>> children;
 
   public MergeOperator(

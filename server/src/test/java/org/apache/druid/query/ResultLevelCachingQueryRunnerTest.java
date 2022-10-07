@@ -57,7 +57,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
 
   private <T> Sequence<T> runQuery(QueryRunner<T> runner, Query<T> query, ResponseContext responseContext)
   {
-    final QueryManager queryManager = QUERY_MANAGER_FACTORY.create(query);
+    final QueryManager queryManager = new QueryManager(query);
     final FragmentManager fragment = queryManager == null
         ? null
         : queryManager.createRootFragment(responseContext);

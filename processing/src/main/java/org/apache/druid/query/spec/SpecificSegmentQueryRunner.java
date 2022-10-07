@@ -67,8 +67,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
       return QueryPlanner.runSpecificSegment(
           base,
           specificSpec,
-          input,
-          responseContext
+          input
       );
     }
     final QueryPlus<T> queryPlus = input.withQuery(

@@ -30,8 +30,10 @@ public class OperatorProfile
   public static final String CURSOR_COUNT_METRIC = "cursor-count";
   public static final String ROW_COUNT_METRIC = "row-count";
   public static final String BATCH_COUNT_METRIC = "batch-count";
-  public static final String ELAPSED_MS_METRIC = "elapsed-ms";
-  public static final String ACTIVE_MS_METRIC = "active-ms";
+  // To be used later.
+  //public static final String ELAPSED_MS_METRIC = "elapsed-ms";
+  // To be used later.
+  //public static final String ACTIVE_MS_METRIC = "active-ms";
   public static final String CPU_TIME_NS = "cpu-time-ns";
 
   public static final String VECTORIZED_ATTRIB = "vectorized";

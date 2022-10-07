@@ -30,6 +30,7 @@ import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.js.JavaScriptConfig;
+import org.apache.druid.query.aggregation.JavaScriptAggregator.ScriptAggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -70,7 +71,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
    * @see <a href="https://github.com/apache/druid/pull/6662#discussion_r237013157">
    *     https://github.com/apache/druid/pull/6662#discussion_r237013157</a>
    */
-  private volatile JavaScriptAggregator.@MonotonicNonNull ScriptAggregator compiledScript;
+  private volatile @MonotonicNonNull ScriptAggregator compiledScript;
 
   @JsonCreator
   public JavaScriptAggregatorFactory(

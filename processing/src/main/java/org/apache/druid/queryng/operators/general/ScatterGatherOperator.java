@@ -116,7 +116,7 @@ public abstract class ScatterGatherOperator<T> implements Operator<T>
     return futures;
   }
 
-  protected abstract ResultIterator.CloseableResultIterator<T> gather(List<ListenableFuture<Iterable<T>>> children);
+  protected abstract ResultIterator<T> gather(List<ListenableFuture<Iterable<T>>> children);
 
   public static class OrderedScatterGatherOperator<T> extends ScatterGatherOperator<T>
   {
@@ -136,7 +136,7 @@ public abstract class ScatterGatherOperator<T> implements Operator<T>
     }
 
     @Override
-    protected ResultIterator.CloseableResultIterator<T> gather(List<ListenableFuture<Iterable<T>>> children)
+    protected ResultIterator<T> gather(List<ListenableFuture<Iterable<T>>> children)
     {
       List<Iterable<T>> results = materializeChildren(children);
       resultIter = new MergeResultIterator<T>(ordering, results.size());
@@ -195,16 +195,6 @@ public abstract class ScatterGatherOperator<T> implements Operator<T>
     }
   }
 
-  //  public static class UnorderedScatterGatherOperator<T> extends ScatterGatherOperator<T>
-  //  {
-  //
-  //    @Override
-  //    protected Operator<T> gather(List<ListenableFuture<Iterable<T>>> children)
-  //    {
-  //
-  //    }
-  //  }
-
   private static class ChildFragmentCallable<T> extends AbstractPrioritizedQueryRunnerCallable<Iterable<T>, T>
   {
     private final QueryPlus<T> queryPlus;
@@ -220,7 +210,7 @@ public abstract class ScatterGatherOperator<T> implements Operator<T>
     }
 
     @Override
-    public Iterable<T> call() throws Exception
+    public Iterable<T> call()
     {
       FragmentManager fragment = queryPlus.fragment();
       try {

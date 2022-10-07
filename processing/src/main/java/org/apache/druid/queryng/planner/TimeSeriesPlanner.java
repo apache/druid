@@ -32,7 +32,6 @@ import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -65,50 +64,6 @@ import java.util.function.Supplier;
  */
 public class TimeSeriesPlanner
 {
-  private static class MergeShimQueryRunner implements QueryRunner<Result<TimeseriesResultValue>>
-  {
-    private QueryRunner<Result<TimeseriesResultValue>> inputQueryRunner;
-    private Function<Query<Result<TimeseriesResultValue>>, Comparator<Result<TimeseriesResultValue>>> comparatorGenerator;
-    private Function<Query<Result<TimeseriesResultValue>>, BinaryOperator<Result<TimeseriesResultValue>>> mergeFnGenerator;
-
-    private MergeShimQueryRunner(
-        QueryRunner<Result<TimeseriesResultValue>> inputQueryRunner,
-        Function<Query<Result<TimeseriesResultValue>>, Comparator<Result<TimeseriesResultValue>>> comparatorGenerator,
-        Function<Query<Result<TimeseriesResultValue>>, BinaryOperator<Result<TimeseriesResultValue>>> mergeFnGenerator
-    )
-    {
-      this.inputQueryRunner = inputQueryRunner;
-      this.comparatorGenerator = comparatorGenerator;
-      this.mergeFnGenerator = mergeFnGenerator;
-    }
-
-    @Override
-    public Sequence<Result<TimeseriesResultValue>> run(QueryPlus<Result<TimeseriesResultValue>> queryPlus,
-        ResponseContext responseContext)
-    {
-      return mergeResults(
-          queryPlus,
-          responseContext,
-          inputQueryRunner,
-          comparatorGenerator,
-          mergeFnGenerator
-      );
-    }
-  }
-
-  public QueryRunner<Result<TimeseriesResultValue>> mergeResultsShim(
-      QueryRunner<Result<TimeseriesResultValue>> inputQueryRunner,
-      Function<Query<Result<TimeseriesResultValue>>, Comparator<Result<TimeseriesResultValue>>> comparatorGenerator,
-      Function<Query<Result<TimeseriesResultValue>>, BinaryOperator<Result<TimeseriesResultValue>>> mergeFnGenerator
-  )
-  {
-    return new MergeShimQueryRunner(
-        inputQueryRunner,
-        comparatorGenerator,
-        mergeFnGenerator
-    );
-  }
-
   /**
    * Plan a time-series grand merge: combine per-segment values to create
    * totals (if requested), limit (if requested), and create grand totals
@@ -118,15 +73,14 @@ public class TimeSeriesPlanner
    */
   public static Sequence<Result<TimeseriesResultValue>> mergeResults(
       QueryPlus<Result<TimeseriesResultValue>> queryPlus,
-      ResponseContext responseContext,
       QueryRunner<Result<TimeseriesResultValue>> inputQueryRunner,
       Function<Query<Result<TimeseriesResultValue>>, Comparator<Result<TimeseriesResultValue>>> comparatorGenerator,
       Function<Query<Result<TimeseriesResultValue>>, BinaryOperator<Result<TimeseriesResultValue>>> mergeFnGenerator
   )
   {
-    FragmentContext fragmentContext = queryPlus.fragment();
+    final FragmentContext fragmentContext = queryPlus.fragment();
     final TimeseriesQuery query = (TimeseriesQuery) queryPlus.getQuery();
-    Operator<Result<TimeseriesResultValue>> inputOp = Operators.toOperator(inputQueryRunner, queryPlus);
+    final Operator<Result<TimeseriesResultValue>> inputOp = Operators.toOperator(inputQueryRunner, queryPlus);
 
     Operator<Result<TimeseriesResultValue>> op;
     if (QueryContexts.isBySegment(queryPlus.getQuery())) {
@@ -160,7 +114,7 @@ public class TimeSeriesPlanner
     }
 
     // Apply limit to the aggregated values.
-    int limit = query.getLimit();
+    final int limit = query.getLimit();
     if (limit < Integer.MAX_VALUE) {
       op = new LimitOperator<Result<TimeseriesResultValue>>(fragmentContext, op, limit);
     }
@@ -184,7 +138,7 @@ public class TimeSeriesPlanner
       final QueryWatcher queryWatcher
   )
   {
-    Operator<T> op = new OrderedScatterGatherOperator<T>(
+    final Operator<T> op = new OrderedScatterGatherOperator<T>(
         queryPlus,
         queryProcessingPool,
         queryables,
@@ -200,7 +154,7 @@ public class TimeSeriesPlanner
       final RowSignature signature
   )
   {
-    Operator<Object[]> op = new ToArrayOperator(
+    final Operator<Object[]> op = new ToArrayOperator(
         queryPlus.fragment(),
         Operators.unwrapOperator(resultSequence),
         signature.getColumnNames()
@@ -214,7 +168,7 @@ public class TimeSeriesPlanner
       final NonBlockingPool<ByteBuffer> bufferPool
   )
   {
-    Query<Result<TimeseriesResultValue>> input = queryPlus.getQuery();
+    final Query<Result<TimeseriesResultValue>> input = queryPlus.getQuery();
     if (!(input instanceof TimeseriesQuery)) {
       throw new ISE("Got a [%s] which isn't a %s", input.getClass(), TimeseriesQuery.class);
     }

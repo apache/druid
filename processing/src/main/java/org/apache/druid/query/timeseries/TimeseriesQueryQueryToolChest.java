@@ -133,7 +133,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         // don't use it. Reason: in the outer function, we don't have visibility to the query.
         return TimeSeriesPlanner.mergeResults(
             queryPlus,
-            responseContext,
             queryRunner,
             this::createResultComparator,
             this::createMergeFn

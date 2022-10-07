@@ -30,11 +30,11 @@ import java.util.List;
 
 /**
  * Converts individual scan query rows with the
- * {@link org.apache.druid.query.scan.ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST
+ * {@link org.apache.druid.query.scan.ScanQuery.ResultFormat#RESULT_FORMAT_COMPACTED_LIST
  * ResultFormat.RESULT_FORMAT_COMPACTED_LIST} format into an object array with fields
  * in the order given by the output schema.
  *
- * @See {@link org.apache.druid.query.scan.ScanQueryQueryToolChest.resultsAsArrays
+ * @see {@link org.apache.druid.query.scan.ScanQueryQueryToolChest#resultsAsArrays
  * ScanQueryQueryToolChest.resultsAsArrays}
  */
 public class ScanCompactListToArrayOperator extends MappingOperator<List<Object>, Object[]>
@@ -64,7 +64,7 @@ public class ScanCompactListToArrayOperator extends MappingOperator<List<Object>
       // Uh oh... mismatch in expected and actual field count. I don't think this should happen, so let's
       // throw an exception. If this really does happen, and there's a good reason for it, then we should remap
       // the result row here.
-      throw new ISE("Mismatch in expected [%d] vs actual [%s] field count", fields.size(), row.size());
+      throw new ISE("Mismatch in expected %d vs actual %d field count", fields.size(), row.size());
     }
   }
 

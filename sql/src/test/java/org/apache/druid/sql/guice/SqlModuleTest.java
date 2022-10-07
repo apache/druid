@@ -49,6 +49,7 @@ import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.queryng.guice.QueryNGModule;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.server.QueryScheduler;
@@ -206,7 +207,8 @@ public class SqlModuleTest
               binder.bind(ResponseContextConfig.class).toInstance(SqlResourceTest.TEST_RESPONSE_CONTEXT_CONFIG);
             },
             sqlModule,
-            new TestViewManagerModule()
+            new TestViewManagerModule(),
+            new QueryNGModule()
         )
     );
   }

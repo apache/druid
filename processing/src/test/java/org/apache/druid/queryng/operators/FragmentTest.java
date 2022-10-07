@@ -41,12 +41,6 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-/**
- * Test the various fragment-level classes: {@code FragmentBuilder},
- * {@link FragmentHandle} and {@link FragmentRun}. Since the second two
- * are convenience wrappers around the first, each test uses the wrappers
- * to indirectly test the builder.
- */
 @Category(OperatorTest.class)
 public class FragmentTest
 {

@@ -308,25 +308,13 @@ public class QueryLifecycle
                                   .run(texasRanger, responseContext);
 
     if (fragment == null) {
-      Sequence<T> wrapped = Sequences.wrap(
-          res,
-          new SequenceWrapper()
-          {
-            @Override
-            public void after(final boolean isDone, final Throwable thrown)
-            {
-              emitLogsAndMetrics(thrown, null, -1);
-            }
-          }
-      );
-      return new QueryResponse.SequenceResponse<T>(wrapped, responseContext);
-    } else {
-      fragment.onClose(f -> {
-        Fragments.logProfile(f);
-      });
-      fragment.registerRoot(res);
-      return new QueryResponse.FragmentResponse<T>(fragment, responseContext);
+      return new QueryResponse.SequenceResponse<T>(res, responseContext);
     }
+    fragment.onClose(f -> {
+      Fragments.logProfile(f);
+    });
+    fragment.registerRoot(res);
+    return new QueryResponse.FragmentResponse<T>(fragment, responseContext);
   }
 
   /**

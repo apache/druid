@@ -28,6 +28,7 @@ import org.apache.druid.queryng.operators.Operator;
 import org.apache.druid.queryng.operators.Operator.State;
 import org.apache.druid.queryng.operators.OperatorTest;
 import org.apache.druid.queryng.operators.ResultIterator;
+import org.apache.druid.queryng.operators.ResultIterator.EofException;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -35,6 +36,7 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 @Category(OperatorTest.class)
@@ -113,27 +115,36 @@ public class MergeOperatorTest
     assertEquals(Arrays.asList(0, 0, 1, 1), fragment.toList());
 
     // Inputs are closed as exhausted.
-    assertTrue(input1.state == State.CLOSED);
-    assertTrue(input2.state == State.CLOSED);
+    assertEquals(State.CLOSED, input1.state);
+    assertEquals(State.CLOSED, input2.state);
     op.close(true);
   }
 
   @Test
-  public void testEarlyClose() throws ResultIterator.EofException
+  public void testEarlyClose() throws EofException
   {
     FragmentManager fragment = Fragments.defaultFragment();
     MockOperator<Integer> input1 = MockOperator.ints(fragment, 2);
-    MockOperator<Integer> input2 = MockOperator.ints(fragment, 2);
+    MockOperator<Integer> input2 = MockOperator.ints(fragment, 2, 10);
     Operator<Integer> op = new MergeOperator<>(
         fragment,
         Ordering.natural(),
         Arrays.asList(input1, input2)
     );
     fragment.registerRoot(op);
-    assertTrue(fragment.toList().isEmpty());
+    ResultIterator<Integer> iter = fragment.run();
+    assertNotEquals(State.CLOSED, input1.state);
+    assertEquals(0, (int) iter.next());
+    assertEquals(1, (int) iter.next());
 
     // Inputs are closed as exhausted.
-    assertTrue(input1.state == State.CLOSED);
-    assertTrue(input2.state == State.CLOSED);
+    assertEquals(State.CLOSED, input1.state);
+    assertNotEquals(State.CLOSED, input2.state);
+
+    assertEquals(10, (int) iter.next());
+    assertEquals(11, (int) iter.next());
+    assertEquals(State.CLOSED, input2.state);
+
+    fragment.close();
   }
 }

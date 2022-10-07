@@ -50,7 +50,7 @@ import java.util.Iterator;
  * This operator is omitted from the stack if no cache read or write is
  * required.
  *
- * @see org.apache.druid.query.ResultLevelCachingQueryRunner
+ * @see ResultLevelCachingQueryRunner
  */
 public class ResultLevelCacheOperator<T> implements Operator<T>
 {
