@@ -177,6 +177,11 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
       extends BaseGenericIndexedDictionaryEncodedIndex<ByteBuffer> implements StringValueSetIndex, Utf8ValueSetIndex
   {
     private static final int SIZE_WORTH_CHECKING_MIN = 8;
+    // This determines the cut-off point to swtich the merging algorithm from doing binary-search per element in the value
+    // set to doing a sorted merge algorithm between value set and dictionary. The ratio here represents the ratio b/w
+    // the number of elements in value set and the number of elements in the dictionary. The number has been derived
+    // using benchmark in https://github.com/apache/druid/pull/13133. If the ratio is higher than the threshold, we use
+    // sorted merge instead of binary-search based algorithm.
     private static final double SORTED_MERGE_RATIO_THRESHOLD = 0.12D;
     private final GenericIndexed<ByteBuffer> genericIndexedDictionary;
 
@@ -249,6 +254,67 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
      */
     private BitmapColumnIndex getBitmapColumnIndexForSortedIterableUtf8(Iterable<ByteBuffer> valuesUtf8, int size)
     {
+      // for large number of in-filter values in comparison to the dictionary size, use the sorted merge algorithm.
+      if (size > SORTED_MERGE_RATIO_THRESHOLD * dictionary.size()) {
+        return new SimpleImmutableBitmapIterableIndex()
+        {
+          @Override
+          public Iterable<ImmutableBitmap> getBitmapIterable()
+          {
+            return () -> new Iterator<ImmutableBitmap>()
+            {
+              final PeekingIterator<ByteBuffer> valuesIterator = Iterators.peekingIterator(valuesUtf8.iterator());
+              final PeekingIterator<ByteBuffer> dictionaryIterator =
+                  Iterators.peekingIterator(genericIndexedDictionary.iterator());
+              int next = -1;
+              int idx = 0;
+
+              @Override
+              public boolean hasNext()
+              {
+                if (next < 0) {
+                  findNext();
+                }
+                return next >= 0;
+              }
+
+              @Override
+              public ImmutableBitmap next()
+              {
+                if (next < 0) {
+                  findNext();
+                  if (next < 0) {
+                    throw new NoSuchElementException();
+                  }
+                }
+                final int swap = next;
+                next = -1;
+                return getBitmap(swap);
+              }
+
+              private void findNext()
+              {
+                while (next < 0 && valuesIterator.hasNext() && dictionaryIterator.hasNext()) {
+                  ByteBuffer nextValue = valuesIterator.peek();
+                  ByteBuffer nextDictionaryKey = dictionaryIterator.peek();
+                  int comparison = genericIndexedDictionary.compare(nextValue, nextDictionaryKey);
+                  if (comparison == 0) {
+                    next = idx;
+                    valuesIterator.next();
+                    break;
+                  } else if (comparison < 0) {
+                    valuesIterator.next();
+                  } else {
+                    dictionaryIterator.next();
+                    idx++;
+                  }
+                }
+              }
+            };
+          }
+        };
+      }
+
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
@@ -257,8 +323,6 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
           return () -> new Iterator<ImmutableBitmap>()
           {
             final PeekingIterator<ByteBuffer> valuesIterator = Iterators.peekingIterator(valuesUtf8.iterator());
-            final PeekingIterator<GenericIndexed<ByteBuffer>.ValueWithIndex> dictionaryIterator =
-                Iterators.peekingIterator(genericIndexedDictionary.iteratorWithIndexId());
             final int dictionarySize = dictionary.size();
             int next = -1;
 
@@ -289,33 +353,15 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
             {
               // if the size of in-filter values is less than the threshold percentage of dictionary size, then use binary search
               // based lookup per value. The algorithm works well for smaller number of values.
-              if (size < SORTED_MERGE_RATIO_THRESHOLD * dictionary.size()) {
-                while (next < 0 && valuesIterator.hasNext()) {
-                  ByteBuffer nextValue = valuesIterator.next();
-                  next = dictionary.indexOf(nextValue);
+              while (next < 0 && valuesIterator.hasNext()) {
+                ByteBuffer nextValue = valuesIterator.next();
+                next = dictionary.indexOf(nextValue);
 
-                  if (next == -dictionarySize - 1) {
-                    // nextValue is past the end of the dictionary.
-                    // Note: we can rely on indexOf returning (-(insertion point) - 1), even though Indexed doesn't
-                    // guarantee it, because "dictionary" comes from GenericIndexed singleThreaded().
-                    break;
-                  }
-                }
-              } else {
-                // for large number of in-filter values in comparison to the dictionary size, use the sorted merge algorithm.
-                while (next < 0 && valuesIterator.hasNext() && dictionaryIterator.hasNext()) {
-                  ByteBuffer nextValue = valuesIterator.peek();
-                  GenericIndexed<ByteBuffer>.ValueWithIndex nextDictionaryKey = dictionaryIterator.peek();
-                  int comparison = genericIndexedDictionary.compare(nextValue, nextDictionaryKey.getValue());
-                  if (comparison == 0) {
-                    next = nextDictionaryKey.getIdx();
-                    valuesIterator.next();
-                    break;
-                  } else if (comparison < 0) {
-                    valuesIterator.next();
-                  } else {
-                    dictionaryIterator.next();
-                  }
+                if (next == -dictionarySize - 1) {
+                  // nextValue is past the end of the dictionary.
+                  // Note: we can rely on indexOf returning (-(insertion point) - 1), even though Indexed doesn't
+                  // guarantee it, because "dictionary" comes from GenericIndexed singleThreaded().
+                  break;
                 }
               }
             }
