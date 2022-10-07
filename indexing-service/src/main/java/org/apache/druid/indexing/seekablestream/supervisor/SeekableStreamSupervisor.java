@@ -3277,7 +3277,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private void checkIfStreamInactiveAndTurnSupervisorIdle()
   {
     if (!spec.getSupervisorStateManagerConfig().isEnableIdleBehaviour()
-        || !spec.getIoConfig().isEnableIdleBehaviour()) {
+        || !spec.getIoConfig().isEnableIdleBehaviour()
+        || spec.isSuspended()) {
       return;
     }
 
