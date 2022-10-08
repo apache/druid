@@ -957,6 +957,16 @@ libraries:
 
 ---
 
+name: io.swagger swagger-annotations
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 2.8.6
+libraries:
+  - com.google.code.gson: gson
+
+---
+
 name: io.prometheus simpleclient_httpserver
 license_category: binary
 module: extensions/druid-kubernetes-extensions
