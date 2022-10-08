@@ -95,7 +95,7 @@ public class S3TaskLogs implements TaskLogs
         }
 
         final GetObjectRequest request = new GetObjectRequest(config.getS3Bucket(), taskKey)
-            .withMatchingETagConstraint(objectMetadata.getETag())
+            .withMatchingETagConstraint("\"" + objectMetadata.getETag() + "\"")
             .withRange(start, end);
 
         return Optional.of(service.getObject(request).getObjectContent());

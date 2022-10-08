@@ -335,7 +335,7 @@ public class S3TaskLogsTest extends EasyMockSupport
     s3Object.setObjectContent(new ByteArrayInputStream(LOG_CONTENTS.getBytes(StandardCharsets.UTF_8)));
     GetObjectRequest getObjectRequest = new GetObjectRequest(TEST_BUCKET, logPath);
     getObjectRequest.setRange(0, LOG_CONTENTS.length() - 1);
-    getObjectRequest.withMatchingETagConstraint(objectMetadata.getETag());
+    getObjectRequest.withMatchingETagConstraint("\"" + objectMetadata.getETag() + "\"");
     EasyMock.expect(s3Client.getObject(getObjectRequest)).andReturn(s3Object);
     EasyMock.replay(s3Client);
 
@@ -363,7 +363,7 @@ public class S3TaskLogsTest extends EasyMockSupport
     s3Object.setObjectContent(new ByteArrayInputStream(LOG_CONTENTS.substring(1).getBytes(StandardCharsets.UTF_8)));
     GetObjectRequest getObjectRequest = new GetObjectRequest(TEST_BUCKET, logPath);
     getObjectRequest.setRange(1, LOG_CONTENTS.length() - 1);
-    getObjectRequest.withMatchingETagConstraint(objectMetadata.getETag());
+    getObjectRequest.withMatchingETagConstraint("\"" + objectMetadata.getETag() + "\"");
     EasyMock.expect(s3Client.getObject(getObjectRequest)).andReturn(s3Object);
     EasyMock.replay(s3Client);
 
@@ -391,7 +391,7 @@ public class S3TaskLogsTest extends EasyMockSupport
     s3Object.setObjectContent(new ByteArrayInputStream(LOG_CONTENTS.substring(1).getBytes(StandardCharsets.UTF_8)));
     GetObjectRequest getObjectRequest = new GetObjectRequest(TEST_BUCKET, logPath);
     getObjectRequest.setRange(1, LOG_CONTENTS.length() - 1);
-    getObjectRequest.withMatchingETagConstraint(objectMetadata.getETag());
+    getObjectRequest.withMatchingETagConstraint("\"" + objectMetadata.getETag() + "\"");
     EasyMock.expect(s3Client.getObject(getObjectRequest)).andReturn(s3Object);
     EasyMock.replay(s3Client);
 
@@ -419,7 +419,7 @@ public class S3TaskLogsTest extends EasyMockSupport
     s3Object.setObjectContent(new ByteArrayInputStream(REPORT_CONTENTS.getBytes(StandardCharsets.UTF_8)));
     GetObjectRequest getObjectRequest = new GetObjectRequest(TEST_BUCKET, logPath);
     getObjectRequest.setRange(0, REPORT_CONTENTS.length() - 1);
-    getObjectRequest.withMatchingETagConstraint(objectMetadata.getETag());
+    getObjectRequest.withMatchingETagConstraint("\"" + objectMetadata.getETag() + "\"");
     EasyMock.expect(s3Client.getObject(getObjectRequest)).andReturn(s3Object);
     EasyMock.replay(s3Client);
 
