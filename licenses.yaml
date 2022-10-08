@@ -3869,9 +3869,19 @@ name: Gson
 license_category: binary
 module: extensions/protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.8.6
+version: 2.8.9
 libraries:
   - com.google.code.gson: gson
+
+---
+
+name: j2objc
+license_category: binary
+module: extensions/protobuf-extensions
+license_name: Apache License version 2.0
+version: 1.3
+libraries:
+  - com.google.j2objc: j2objc-annotations
 
 ---
 
