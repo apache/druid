@@ -68,9 +68,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -107,9 +105,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   private ObjectMapper mapper;
   private DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private SupervisorStateManagerConfig supervisorStateManagerConfig;
-
-  @Rule
-  public ExpectedException exceptionRule = ExpectedException.none();
 
   @Before
   public void setUp()
@@ -609,9 +604,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoScalerConfig())
             .andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class))
             .anyTimes();
-    EasyMock.expect(seekableStreamSupervisorIOConfig.isEnableIdleBehaviour())
-            .andReturn(false)
-            .anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
@@ -683,9 +675,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
                                                            "taskCountMin",
                                                            "1"
             ), AutoScalerConfig.class))
-            .anyTimes();
-    EasyMock.expect(seekableStreamSupervisorIOConfig.isEnableIdleBehaviour())
-            .andReturn(false)
             .anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
@@ -918,38 +907,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   }
 
   @Test
-  public void testEnablingIdleBeviourPerSupervisorWithOverlordConfigDisabled()
-  {
-    SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
-        "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
-        1,
-        new Period("PT1H"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        null,
-        true,
-        null
-    ){
-    };
-
-    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
-
-    exceptionRule.expect(IllegalArgumentException.class);
-    exceptionRule.expectMessage("Idle behaviour is disabled on Overlord. It cannot be enabled per Supervisor.");
-
-    EasyMock.replay(ingestionSchema);
-    createSupervisorSpecForIdleBehaviourConfigTest(new SupervisorStateManagerConfig());
-    verifyAll();
-  }
-
-  @Test
   public void testEnablingIdleBeviourPerSupervisorWithOverlordConfigEnabled()
   {
     Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
@@ -976,95 +933,9 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
     EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
-
     EasyMock.replay(ingestionSchema);
 
-    spec = createSupervisorSpecForIdleBehaviourConfigTest(
-        OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class)
-    );
-    verifyAll();
-
-    Assert.assertTrue(spec.getIoConfig().isEnableIdleBehaviour());
-    Assert.assertEquals(60000L, spec.getIoConfig().getAwaitStreamInactiveMillis());
-  }
-
-  @Test
-  public void testDisablingIdleBeviourPerSupervisorWithOverlordConfigEnabled()
-  {
-    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
-    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
-
-    SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
-        "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
-        1,
-        new Period("PT1H"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        1000L
-    ){
-    };
-
-    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
-    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
-
-    EasyMock.replay(ingestionSchema);
-
-    spec = createSupervisorSpecForIdleBehaviourConfigTest(
-        OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class)
-    );
-    verifyAll();
-
-    Assert.assertFalse(spec.getIoConfig().isEnableIdleBehaviour());
-    Assert.assertEquals(1000L, spec.getIoConfig().getAwaitStreamInactiveMillis());
-  }
-
-  @Test
-  public void testDisablingIdleBeviourPerSupervisorWithOverlordConfigDisabled()
-  {
-    SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
-        "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
-        1,
-        new Period("PT1H"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        null,
-        false,
-        null
-    ){
-    };
-
-    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
-    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
-
-    EasyMock.replay(ingestionSchema);
-
-    createSupervisorSpecForIdleBehaviourConfigTest(
-        new SupervisorStateManagerConfig()
-    );
-    verifyAll();
-  }
-
-  private SeekableStreamSupervisorSpec createSupervisorSpecForIdleBehaviourConfigTest(
-      SupervisorStateManagerConfig supervisorStateManagerConfig
-  )
-  {
-    return new SeekableStreamSupervisorSpec(
+    spec = new SeekableStreamSupervisorSpec(
         ingestionSchema,
         null,
         null,
@@ -1076,7 +947,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         null,
         null,
         null,
-        supervisorStateManagerConfig
+        OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class)
     )
     {
       @Override
@@ -1103,6 +974,9 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         return null;
       }
     };
+
+    Assert.assertTrue(spec.getIoConfig().isEnableIdleBehaviour());
+    Assert.assertEquals(60000L, spec.getIoConfig().getAwaitStreamInactiveMillis());
   }
 
   private static DataSchema getDataSchema()

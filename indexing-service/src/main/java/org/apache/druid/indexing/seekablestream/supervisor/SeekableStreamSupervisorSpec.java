@@ -88,9 +88,6 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig
   )
   {
-    Preconditions.checkArgument(supervisorStateManagerConfig.isEnableIdleBehaviour()
-                                || !ingestionSchema.getIOConfig().isEnableIdleBehaviour(),
-                                "Idle behaviour is disabled on Overlord. It cannot be enabled per Supervisor.");
     this.ingestionSchema = checkIngestionSchema(ingestionSchema);
     this.context = context;
 

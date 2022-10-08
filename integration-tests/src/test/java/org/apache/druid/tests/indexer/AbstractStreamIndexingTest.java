@@ -398,6 +398,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       // Start supervisor
       generatedTestConfig.setSupervisorId(indexer.submitSupervisor(taskSpec));
       LOG.info("Submitted supervisor");
+      String dataSource = generatedTestConfig.getFullDatasourceName();
       // Start generating half of the data
       int secondsToGenerateRemaining = TOTAL_NUMBER_OF_SECOND;
       int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 2;
@@ -432,7 +433,9 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
 
       // wait for no more creation of indexing tasks.
       ITRetryUtil.retryUntil(
-          () -> indexer.getRunningTasks().size() == 0,
+          () -> indexer.getRunningTasks()
+                       .stream()
+                       .noneMatch(taskResponseObject -> taskResponseObject.getId().contains(dataSource)),
           true,
           10000,
           50,
