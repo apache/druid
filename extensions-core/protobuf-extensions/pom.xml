@@ -65,14 +65,6 @@
           <groupId>com.google.guava</groupId>
           <artifactId>protobuf-java</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>com.google.code.gson</groupId>
-          <artifactId>gson</artifactId>
-        </exclusion>
-        <exclusion>
-          <artifactId>j2objc-annotations</artifactId>
-          <groupId>com.google.j2objc</groupId>
-        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
