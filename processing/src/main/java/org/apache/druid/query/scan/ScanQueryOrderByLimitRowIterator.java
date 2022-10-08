@@ -46,6 +46,9 @@ public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
   )
   {
     super(baseRunner, queryPlus, responseContext);
+    if (ScanQuery.ResultFormat.RESULT_FORMAT_VALUE_VECTOR.equals(resultFormat)) {
+      throw new UOE(ScanQuery.ResultFormat.RESULT_FORMAT_VALUE_VECTOR + " is not supported yet");
+    }
   }
 
   @Override
@@ -57,10 +60,7 @@ public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
   @Override
   public ScanResultValue next()
   {
-    if (ScanQuery.ResultFormat.RESULT_FORMAT_VALUE_VECTOR.equals(resultFormat)) {
-      throw new UOE(ScanQuery.ResultFormat.RESULT_FORMAT_VALUE_VECTOR + " is not supported yet");
-    }
-    //In some databases, the final result set size is set to 65535 without setting the limit. We can set the maximum value of Integer here
+
     final int scanRowsLimit;
     if (query.getScanRowsLimit() > Integer.MAX_VALUE) {
       scanRowsLimit = Integer.MAX_VALUE;

@@ -523,21 +523,29 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return Druids.ScanQueryBuilder.copy(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
   }
 
-  public boolean scanOrderByNonTime()
+  /**
+   * Report whether the sort can be pushed into the Cursor, or must be done as a
+   * separate sort step.
+   */
+  public boolean canPushSort()
   {
-
-    if (orderBys.size() > 1 || (orderBys.size() == 1 && !ColumnHolder.TIME_COLUMN_NAME.equals(orderBys.get(0).getColumnName()))) {
-      //order by Ordinary column
+    // Can push non-existent sort.
+    if (orderBys.size() == 0) {
       return true;
     }
-
-    if (orderBys.size() == 1 && ColumnHolder.TIME_COLUMN_NAME.equals(orderBys.get(0).getColumnName()) && getDataSource() instanceof InlineDataSource) {
-      //The type of datasource is inlineDataSource and order by __time
-      return true;
+    // Cursor can sort by only one column.
+    if (orderBys.size() > 1) {
+      return false;
     }
-
-    return false;
+    // Inline datasources can't sort
+    if (getDataSource() instanceof InlineDataSource) {
+      return false;
+    }
+    // Cursor can't sort by the __time column
+    return ColumnHolder.TIME_COLUMN_NAME.equals(orderBys.get(0).getColumnName());
   }
+
+
 
   @Override
   public boolean equals(Object o)

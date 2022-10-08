@@ -98,7 +98,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());
       responseContext.putTimeoutTime(timeoutAt);
 
-      if (query.scanOrderByNonTime()) {
+      if (!query.canPushSort()) {
         try {
           return multiColumnSort(
               Sequences.concat(Sequences.map(
@@ -301,7 +301,6 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       ScanQuery scanQuery
   ) throws IOException
   {
-    //In some databases, the final result set size is set to 65535 without setting the limit. We can set the maximum value of Integer here
     int limit;
     if (scanQuery.getScanRowsLimit() > Integer.MAX_VALUE) {
       limit = Integer.MAX_VALUE;
@@ -453,7 +452,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       if (timeoutAt == null || timeoutAt == 0L) {
         responseContext.putTimeoutTime(JodaUtils.MAX_INSTANT);
       }
-      if (((ScanQuery) query).scanOrderByNonTime()) {
+      if (!((ScanQuery) query).canPushSort()) {
         query = ((ScanQuery) query).withNoneOrderByLimit();
       }
       return engine.process((ScanQuery) query, segment, responseContext, queryPlus.getQueryMetrics());

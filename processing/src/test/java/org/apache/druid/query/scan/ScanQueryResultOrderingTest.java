@@ -528,9 +528,7 @@ public class ScanQueryResultOrderingTest
                                            .withOverriddenContext(
                                                ImmutableMap.of(
                                                    ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING,
-                                                   maxRowsQueuedForOrdering,
-                                                   ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE,
-                                                   orderByQueryRunnerType
+                                                   maxRowsQueuedForOrdering
                                                )
                                            ),
         brokerRunner
@@ -623,9 +621,7 @@ public class ScanQueryResultOrderingTest
                                            .withOverriddenContext(
                                                ImmutableMap.of(
                                                    ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING,
-                                                   maxRowsQueuedForOrdering,
-                                                   ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE,
-                                                   orderByQueryRunnerType
+                                                   maxRowsQueuedForOrdering
                                                )
                                            ),
         brokerRunner
@@ -712,9 +708,7 @@ public class ScanQueryResultOrderingTest
                                            .withOverriddenContext(
                                                ImmutableMap.of(
                                                    ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING,
-                                                   maxRowsQueuedForOrdering,
-                                                   ScanQueryConfig.CTX_KEY_QUERY_RUNNER_TYPE,
-                                                   orderByQueryRunnerType
+                                                   maxRowsQueuedForOrdering
                                                )
                                            ),
         brokerRunner
