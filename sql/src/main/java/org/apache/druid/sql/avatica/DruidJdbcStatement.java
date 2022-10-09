@@ -25,6 +25,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 
 /**
  * Represents Druid's version of the JDBC {@code Statement} class:
@@ -40,10 +41,11 @@ public class DruidJdbcStatement extends AbstractDruidJdbcStatement
       final String connectionId,
       final int statementId,
       final QueryContext queryContext,
-      final SqlStatementFactory lifecycleFactory
+      final SqlStatementFactory lifecycleFactory,
+      final ResultFetcherFactory fetcherFactory
   )
   {
-    super(connectionId, statementId);
+    super(connectionId, statementId, fetcherFactory);
     this.queryContext = queryContext;
     this.lifecycleFactory = Preconditions.checkNotNull(lifecycleFactory, "lifecycleFactory");
   }
@@ -53,7 +55,7 @@ public class DruidJdbcStatement extends AbstractDruidJdbcStatement
     closeResultSet();
     queryPlus = queryPlus.withContext(queryContext);
     DirectStatement stmt = lifecycleFactory.directStatement(queryPlus);
-    resultSet = new DruidJdbcResultSet(this, stmt, Long.MAX_VALUE);
+    resultSet = new DruidJdbcResultSet(this, stmt, Long.MAX_VALUE, fetcherFactory);
     try {
       resultSet.execute();
     }

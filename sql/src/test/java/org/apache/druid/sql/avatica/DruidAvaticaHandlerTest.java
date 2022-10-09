@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -67,6 +68,9 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
+import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcher;
+import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -90,11 +94,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.sql.Array;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -117,30 +119,27 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Tests the Avatica-based JDBC implementation using JSON serialization. See
  * {@link DruidAvaticaProtobufHandlerTest} for a subclass which runs
  * this same set of tests using Protobuf serialization.
+ * To run this in an IDE, set {@code -Duser.timezone=UTC}.
  */
 public class DruidAvaticaHandlerTest extends CalciteTestBase
 {
-  private static final AvaticaServerConfig AVATICA_CONFIG = new AvaticaServerConfig()
-  {
-    @Override
-    public int getMaxConnections()
-    {
-      // This must match the number of Connection objects created in testTooManyStatements()
-      return 4;
-    }
+  private static final int CONNECTION_LIMIT = 4;
+  private static final int STATEMENT_LIMIT = 4;
 
-    @Override
-    public int getMaxStatementsPerConnection()
-    {
-      return 4;
-    }
-  };
+  private static final AvaticaServerConfig AVATICA_CONFIG;
+
+  static {
+    AVATICA_CONFIG = new AvaticaServerConfig();
+    // This must match the number of Connection objects created in testTooManyStatements()
+    AVATICA_CONFIG.maxConnections = CONNECTION_LIMIT;
+    AVATICA_CONFIG.maxStatementsPerConnection = STATEMENT_LIMIT;
+  }
+
   private static final String DUMMY_SQL_QUERY_ID = "dummy";
 
   private static QueryRunnerFactoryConglomerate conglomerate;
@@ -163,34 +162,89 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
 
+  private final PlannerConfig plannerConfig = new PlannerConfig();
+  private final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
+  private final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
   private SpecificSegmentsQuerySegmentWalker walker;
-  private Server server;
+  private ServerWrapper server;
   private Connection client;
   private Connection clientNoTrailingSlash;
   private Connection superuserClient;
   private Connection clientLosAngeles;
-  private DruidMeta druidMeta;
-  private String url;
   private Injector injector;
   private TestRequestLogger testRequestLogger;
+
+  private DruidSchemaCatalog makeRootSchema()
+  {
+    return CalciteTests.createMockRootSchema(
+        conglomerate,
+        walker,
+        plannerConfig,
+        CalciteTests.TEST_AUTHORIZER_MAPPER
+    );
+  }
+
+  private class ServerWrapper
+  {
+    final DruidMeta druidMeta;
+    final Server server;
+    final String url;
+
+    ServerWrapper(final DruidMeta druidMeta) throws Exception
+    {
+      this.druidMeta = druidMeta;
+      server = new Server(0);
+      server.setHandler(getAvaticaHandler(druidMeta));
+      server.start();
+      url = StringUtils.format(
+          "jdbc:avatica:remote:url=%s%s",
+          server.getURI().toString(),
+          StringUtils.maybeRemoveLeadingSlash(getJdbcUrlTail())
+      );
+    }
+
+    public Connection getConnection(String user, String password) throws SQLException
+    {
+      return DriverManager.getConnection(url, user, password);
+    }
+
+    public Connection getConnection() throws SQLException
+    {
+      return DriverManager.getConnection(url);
+    }
+
+    public void close() throws Exception
+    {
+      druidMeta.closeAllConnections();
+      server.stop();
+    }
+  }
+
+  protected String getJdbcUrlTail()
+  {
+    return DruidAvaticaJsonHandler.AVATICA_PATH;
+  }
+
+  // Default implementation is for JSON to allow debugging of tests.
+  protected AbstractAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
+  {
+    return new DruidAvaticaJsonHandler(
+            druidMeta,
+            new DruidNode("dummy", "dummy", false, 1, null, true, false),
+            new AvaticaMonitor()
+    );
+  }
 
   @Before
   public void setUp() throws Exception
   {
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
-    final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
-    final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
-    final DruidSchemaCatalog rootSchema =
-        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, CalciteTests.TEST_AUTHORIZER_MAPPER);
+    final DruidSchemaCatalog rootSchema = makeRootSchema();
     testRequestLogger = new TestRequestLogger();
 
     injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build())
@@ -227,37 +281,34 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
          )
         .build();
 
-    druidMeta = injector.getInstance(DruidMeta.class);
-    final AbstractAvaticaHandler handler = this.getAvaticaHandler(druidMeta);
-    final int port = ThreadLocalRandom.current().nextInt(9999) + 10000;
-    server = new Server(new InetSocketAddress("127.0.0.1", port));
-    server.setHandler(handler);
-    server.start();
-    url = this.getJdbcConnectionString(port);
-    client = DriverManager.getConnection(url, "regularUser", "druid");
-    superuserClient = DriverManager.getConnection(url, CalciteTests.TEST_SUPERUSER_NAME, "druid");
-    clientNoTrailingSlash = DriverManager.getConnection(StringUtils.maybeRemoveTrailingSlash(url), CalciteTests.TEST_SUPERUSER_NAME, "druid");
+    DruidMeta druidMeta = injector.getInstance(DruidMeta.class);
+    server = new ServerWrapper(druidMeta);
+    client = server.getConnection("regularUser", "druid");
+    superuserClient = server.getConnection(CalciteTests.TEST_SUPERUSER_NAME, "druid");
+    clientNoTrailingSlash = DriverManager.getConnection(StringUtils.maybeRemoveTrailingSlash(server.url), CalciteTests.TEST_SUPERUSER_NAME, "druid");
 
     final Properties propertiesLosAngeles = new Properties();
     propertiesLosAngeles.setProperty("sqlTimeZone", "America/Los_Angeles");
     propertiesLosAngeles.setProperty("user", "regularUserLA");
     propertiesLosAngeles.setProperty(BaseQuery.SQL_QUERY_ID, DUMMY_SQL_QUERY_ID);
-    clientLosAngeles = DriverManager.getConnection(url, propertiesLosAngeles);
+    clientLosAngeles = DriverManager.getConnection(server.url, propertiesLosAngeles);
   }
 
   @After
   public void tearDown() throws Exception
   {
-    client.close();
-    clientLosAngeles.close();
-    clientNoTrailingSlash.close();
-    server.stop();
+    if (server != null) {
+      client.close();
+      clientLosAngeles.close();
+      clientNoTrailingSlash.close();
+      server.close();
+      client = null;
+      clientLosAngeles = null;
+      clientNoTrailingSlash = null;
+      server = null;
+    }
     walker.close();
     walker = null;
-    client = null;
-    clientLosAngeles = null;
-    clientNoTrailingSlash = null;
-    server = null;
   }
 
   @Test
@@ -772,19 +823,21 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   @Test
   public void testTooManyStatements() throws SQLException
   {
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < STATEMENT_LIMIT; i++) {
       client.createStatement();
     }
 
-    expectedException.expect(AvaticaClientRuntimeException.class);
-    expectedException.expectMessage("Too many open statements, limit is [4]");
-    client.createStatement();
+    AvaticaClientRuntimeException ex = Assert.assertThrows(
+        AvaticaClientRuntimeException.class,
+        () -> client.createStatement()
+    );
+    Assert.assertTrue(ex.getMessage().contains("Too many open statements, limit is [4]"));
   }
 
   @Test
   public void testNotTooManyStatementsWhenYouCloseThem() throws SQLException
   {
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < STATEMENT_LIMIT * 2; i++) {
       client.createStatement().close();
     }
   }
@@ -863,7 +916,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
           ImmutableList.of(ImmutableMap.of("cnt", 6L)),
           getRows(resultSet)
       );
-      druidMeta.closeAllConnections();
+      server.druidMeta.closeAllConnections();
     }
   }
 
@@ -875,70 +928,56 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     superuserClient.createStatement();
     clientNoTrailingSlash.createStatement();
 
-    expectedException.expect(AvaticaClientRuntimeException.class);
-    expectedException.expectMessage("Too many connections");
-
-    DriverManager.getConnection(url);
+    AvaticaClientRuntimeException ex = Assert.assertThrows(
+        AvaticaClientRuntimeException.class,
+        () -> server.getConnection()
+    );
+    Assert.assertTrue(ex.getMessage().contains("Too many connections"));
   }
 
   @Test
-  public void testNotTooManyConnectionsWhenTheyAreEmpty() throws SQLException
+  public void testNotTooManyConnectionsWhenTheyAreClosed() throws SQLException
   {
-    for (int i = 0; i < 4; i++) {
-      try (Connection connection = DriverManager.getConnection(url)) {
+    for (int i = 0; i < CONNECTION_LIMIT * 2; i++) {
+      try (Connection connection = server.getConnection()) {
       }
     }
+  }
+
+  private SqlStatementFactory makeStatementFactory()
+  {
+    return CalciteTests.createSqlStatementFactory(
+        CalciteTests.createMockSqlEngine(walker, conglomerate),
+        new PlannerFactory(
+            makeRootSchema(),
+            operatorTable,
+            macroTable,
+            plannerConfig,
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            CalciteTests.getJsonMapper(),
+            CalciteTests.DRUID_SCHEMA_NAME,
+            new CalciteRulesManager(ImmutableSet.of())
+        )
+    );
   }
 
   @Test
   public void testMaxRowsPerFrame() throws Exception
   {
-    final AvaticaServerConfig smallFrameConfig = new AvaticaServerConfig()
-    {
-      @Override
-      public int getMaxConnections()
-      {
-        return 2;
-      }
+    final AvaticaServerConfig config = new AvaticaServerConfig();
+    config.maxConnections = 2;
+    config.maxStatementsPerConnection = STATEMENT_LIMIT;
+    config.maxRowsPerFrame = 2;
 
-      @Override
-      public int getMaxStatementsPerConnection()
-      {
-        return 4;
-      }
-
-      @Override
-      public int getMaxRowsPerFrame()
-      {
-        return 2;
-      }
-    };
-
-    final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
-    final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final List<Meta.Frame> frames = new ArrayList<>();
     final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testMaxRowsPerFrame");
-    DruidSchemaCatalog rootSchema =
-        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
-        CalciteTests.createSqlStatementFactory(
-            CalciteTests.createMockSqlEngine(walker, conglomerate),
-            new PlannerFactory(
-                rootSchema,
-                operatorTable,
-                macroTable,
-                plannerConfig,
-                AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-                CalciteTests.getJsonMapper(),
-                CalciteTests.DRUID_SCHEMA_NAME,
-                new CalciteRulesManager(ImmutableSet.of())
-            )
-        ),
-        smallFrameConfig,
+        makeStatementFactory(),
+        config,
         new ErrorHandler(new ServerConfig()),
         exec,
-        injector.getInstance(AuthenticatorMapper.class).getAuthenticatorChain()
+        injector.getInstance(AuthenticatorMapper.class).getAuthenticatorChain(),
+        new ResultFetcherFactory(config.fetchTimeoutMs)
     )
     {
       @Override
@@ -955,13 +994,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       }
     };
 
-    final AbstractAvaticaHandler handler = this.getAvaticaHandler(smallFrameDruidMeta);
-    final int port = ThreadLocalRandom.current().nextInt(9999) + 20000;
-    Server smallFrameServer = new Server(new InetSocketAddress("127.0.0.1", port));
-    smallFrameServer.setHandler(handler);
-    smallFrameServer.start();
-    String smallFrameUrl = this.getJdbcConnectionString(port);
-    Connection smallFrameClient = DriverManager.getConnection(smallFrameUrl, "regularUser", "druid");
+    ServerWrapper server = new ServerWrapper(smallFrameDruidMeta);
+    Connection smallFrameClient = server.getConnection("regularUser", "druid");
 
     final ResultSet resultSet = smallFrameClient.createStatement().executeQuery(
         "SELECT dim1 FROM druid.foo"
@@ -980,59 +1014,29 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         rows
     );
 
+    resultSet.close();
+    smallFrameClient.close();
     exec.shutdown();
+    server.close();
   }
 
   @Test
   public void testMinRowsPerFrame() throws Exception
   {
-    final int minFetchSize = 1000;
-    final AvaticaServerConfig smallFrameConfig = new AvaticaServerConfig()
-    {
-      @Override
-      public int getMaxConnections()
-      {
-        return 2;
-      }
+    final AvaticaServerConfig config = new AvaticaServerConfig();
+    config.maxConnections = 2;
+    config.maxStatementsPerConnection = STATEMENT_LIMIT;
+    config.minRowsPerFrame = 1000;
 
-      @Override
-      public int getMaxStatementsPerConnection()
-      {
-        return 4;
-      }
-
-      @Override
-      public int getMinRowsPerFrame()
-      {
-        return minFetchSize;
-      }
-    };
-
-    final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
-    final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final List<Meta.Frame> frames = new ArrayList<>();
     final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testMaxRowsPerFrame");
-    DruidSchemaCatalog rootSchema =
-        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
-        CalciteTests.createSqlStatementFactory(
-            CalciteTests.createMockSqlEngine(walker, conglomerate),
-            new PlannerFactory(
-                rootSchema,
-                operatorTable,
-                macroTable,
-                plannerConfig,
-                AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-                CalciteTests.getJsonMapper(),
-                CalciteTests.DRUID_SCHEMA_NAME,
-                new CalciteRulesManager(ImmutableSet.of())
-            )
-        ),
-        smallFrameConfig,
+        makeStatementFactory(),
+        config,
         new ErrorHandler(new ServerConfig()),
         exec,
-        injector.getInstance(AuthenticatorMapper.class).getAuthenticatorChain()
+        injector.getInstance(AuthenticatorMapper.class).getAuthenticatorChain(),
+        new ResultFetcherFactory(config.fetchTimeoutMs)
     )
     {
       @Override
@@ -1043,20 +1047,15 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       ) throws NoSuchStatementException, MissingResultsException
       {
         // overriding fetch allows us to track how many frames are processed after the first frame, and also fetch size
-        Assert.assertEquals(minFetchSize, fetchMaxRowCount);
+        Assert.assertEquals(config.minRowsPerFrame, fetchMaxRowCount);
         Frame frame = super.fetch(statement, offset, fetchMaxRowCount);
         frames.add(frame);
         return frame;
       }
     };
 
-    final AbstractAvaticaHandler handler = this.getAvaticaHandler(smallFrameDruidMeta);
-    final int port = ThreadLocalRandom.current().nextInt(9999) + 20000;
-    Server smallFrameServer = new Server(new InetSocketAddress("127.0.0.1", port));
-    smallFrameServer.setHandler(handler);
-    smallFrameServer.start();
-    String smallFrameUrl = this.getJdbcConnectionString(port);
-    Connection smallFrameClient = DriverManager.getConnection(smallFrameUrl, "regularUser", "druid");
+    ServerWrapper server = new ServerWrapper(smallFrameDruidMeta);
+    Connection smallFrameClient = server.getConnection("regularUser", "druid");
 
     // use a prepared statement because Avatica currently ignores fetchSize on the initial fetch of a Statement
     PreparedStatement statement = smallFrameClient.prepareStatement("SELECT dim1 FROM druid.foo");
@@ -1078,7 +1077,10 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         rows
     );
 
+    resultSet.close();
+    smallFrameClient.close();
     exec.shutdown();
+    server.close();
   }
 
   @Test
@@ -1546,24 +1548,93 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     Assert.fail("Test failed, did not get SQLException");
   }
 
-  // Default implementation is for JSON to allow debugging of tests.
-  protected String getJdbcConnectionString(final int port)
+  private static class TestResultFetcher extends ResultFetcher
   {
-    return StringUtils.format(
-            "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
-            port,
-            DruidAvaticaJsonHandler.AVATICA_PATH
-    );
+    public TestResultFetcher(int limit, Yielder<Object[]> yielder)
+    {
+      super(limit, yielder);
+    }
+
+    @Override
+    public Meta.Frame call()
+    {
+      try {
+        if (offset() == 0) {
+          Thread.sleep(3000);
+        }
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      return super.call();
+    }
   }
 
-  // Default implementation is for JSON to allow debugging of tests.
-  protected AbstractAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
+  /**
+   * Test the async aspect of the Avatica implementation. The fetch of the
+   * first batch takes 3 seconds (due to a sleep). However, the client will
+   * wait only 1 second. So, we should get ~3 empty batches before we get
+   * the first batch with rows.
+   */
+  @Test
+  public void testAsync() throws Exception
   {
-    return new DruidAvaticaJsonHandler(
-            druidMeta,
-            new DruidNode("dummy", "dummy", false, 1, null, true, false),
-            new AvaticaMonitor()
+    final AvaticaServerConfig config = new AvaticaServerConfig();
+    config.maxConnections = CONNECTION_LIMIT;
+    config.maxStatementsPerConnection = STATEMENT_LIMIT;
+    config.maxRowsPerFrame = 2;
+    config.fetchTimeoutMs = 1000;
+
+    final List<Meta.Frame> frames = new ArrayList<>();
+    final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testMaxRowsPerFrame");
+    DruidMeta druidMeta = new DruidMeta(
+        makeStatementFactory(),
+        config,
+        new ErrorHandler(new ServerConfig()),
+        exec,
+        injector.getInstance(AuthenticatorMapper.class).getAuthenticatorChain(),
+        new ResultFetcherFactory(config.fetchTimeoutMs) {
+          @Override
+          public ResultFetcher newFetcher(
+              final int limit,
+              final Yielder<Object[]> yielder
+          )
+          {
+            return new TestResultFetcher(limit, yielder);
+          }
+        }
+    )
+    {
+      @Override
+      public Frame fetch(
+          final StatementHandle statement,
+          final long offset,
+          final int fetchMaxRowCount
+      ) throws NoSuchStatementException, MissingResultsException
+      {
+        Frame frame = super.fetch(statement, offset, fetchMaxRowCount);
+        frames.add(frame);
+        return frame;
+      }
+    };
+
+    ServerWrapper server = new ServerWrapper(druidMeta);
+    Connection conn = server.getConnection("regularUser", "druid");
+
+    final ResultSet resultSet = conn.createStatement().executeQuery(
+        "SELECT dim1 FROM druid.foo"
     );
+    List<Map<String, Object>> rows = getRows(resultSet);
+    Assert.assertEquals(6, rows.size());
+    Assert.assertTrue(frames.size() > 3);
+
+    // There should be at least one empty frame due to timeout
+    Assert.assertFalse(frames.get(0).rows.iterator().hasNext());
+
+    resultSet.close();
+    conn.close();
+    exec.shutdown();
+    server.close();
   }
 
   private static List<Map<String, Object>> getRows(final ResultSet resultSet) throws SQLException

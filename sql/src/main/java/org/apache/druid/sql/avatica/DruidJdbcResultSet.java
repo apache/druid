@@ -34,8 +34,13 @@ import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Druid's server-side representation of a JDBC result set. At most one
@@ -56,6 +61,104 @@ import java.util.concurrent.ExecutorService;
 public class DruidJdbcResultSet implements Closeable
 {
   /**
+   * Asynchronous result fetcher. JDBC operates via REST, which is subject to
+   * timeouts if a query takes to long to respond. Fortunately, JDBC uses a
+   * batched API, and is perfectly happy to get an empty batch. This class
+   * runs in a separate thread to fetch a batch. If the fetch takes too long,
+   * the JDBC request thread will time out waiting, will return an empty batch
+   * to the client, and will remember the fetch for use in the next fetch
+   * request. The result is that the time it takes to produce results for long
+   * running queries is decoupled from the HTTP timeout.
+   */
+  public static class ResultFetcher implements Callable<Meta.Frame>
+  {
+    private final int limit;
+    private int batchSize;
+    private int offset;
+    private Yielder<Object[]> yielder;
+
+    public ResultFetcher(
+        final int limit,
+        final Yielder<Object[]> yielder
+    )
+    {
+      this.limit = limit;
+      this.yielder = yielder;
+    }
+
+    /**
+     * In an ideal world, the batch size would be a constructor parameter. But, JDBC,
+     * oddly, allows a different batch size per request. Hence, we set the size using
+     * this method before each fetch attempt.
+     */
+    public void setBatchSize(int batchSize)
+    {
+      this.batchSize = batchSize;
+    }
+
+    /**
+     * Result is only valid between executions, which turns out to be
+     * the only time it is called.
+     */
+    public int offset()
+    {
+      return offset;
+    }
+
+    /**
+     * Fetch the next batch up to the batch size or EOF. Return
+     * the resulting frame. Exceptions are handled by the executor
+     * framework.
+     */
+    @Override
+    public Meta.Frame call()
+    {
+      Preconditions.checkState(batchSize > 0);
+      int rowCount = 0;
+      final int batchLimit = Math.min(limit - offset, batchSize);
+      Yielder<Object[]> yielder = this.yielder;
+      final List<Object> rows = new ArrayList<>();
+      while (!yielder.isDone() && rowCount < batchLimit) {
+        rows.add(yielder.get());
+        yielder = yielder.next(null);
+        rowCount++;
+      }
+
+      final Meta.Frame result = new Meta.Frame(offset, yielder.isDone(), rows);
+      offset += rowCount;
+      return result;
+    }
+  }
+
+  /**
+   * Creates the result fetcher and holds config. Rather overkill for production,
+   * but handy for testing.
+   */
+  public static class ResultFetcherFactory
+  {
+    final int fetchTimeoutMs;
+
+    public ResultFetcherFactory(int fetchTimeoutMs)
+    {
+      // To prevent server hammering, the timeout must be at least 1 second.
+      this.fetchTimeoutMs = Math.max(1000, fetchTimeoutMs);
+    }
+
+    public int fetchTimeoutMs()
+    {
+      return fetchTimeoutMs;
+    }
+
+    public ResultFetcher newFetcher(
+        final int limit,
+        final Yielder<Object[]> yielder
+    )
+    {
+      return new ResultFetcher(limit, yielder);
+    }
+  }
+
+  /**
    * Query metrics can only be used within a single thread. Because results can
    * be paginated into multiple JDBC frames (each frame being processed by a
    * potentially different thread), the thread that closes the yielder
@@ -73,25 +176,46 @@ public class DruidJdbcResultSet implements Closeable
    * https://github.com/apache/druid/pull/4288
    * https://github.com/apache/druid/pull/4415
    */
-  private final ExecutorService yielderOpenCloseExecutor;
+  private final ExecutorService queryExecutor;
   private final DirectStatement stmt;
   private final long maxRowCount;
+  private final ResultFetcherFactory fetcherFactory;
   private State state = State.NEW;
   private Meta.Signature signature;
-  private Yielder<Object[]> yielder;
-  private int offset;
+
+  /**
+   * The fetcher to use to read batches of rows. Holds onto the yielder for a
+   * query. Maintains the current read offset.
+   */
+  private ResultFetcher fetcher;
+
+  /**
+   * Future for a fetch that timed out waiting, and should be use again on
+   * the next fetch request.
+   */
+  private Future<Meta.Frame> fetchFuture;
+
+  /**
+   * Cached version of the read offset in case the caller asks for the offset
+   * concurrently with a fetch which may update its own offset. This offset
+   * is that for the last batch that the client fetched: the fetcher itself
+   * may be moving to a new offset.
+   */
+  private int nextFetchOffset;
 
   public DruidJdbcResultSet(
       final AbstractDruidJdbcStatement jdbcStatement,
-      DirectStatement stmt,
-      final long maxRowCount
+      final DirectStatement stmt,
+      final long maxRowCount,
+      final ResultFetcherFactory fetcherFactory
   )
   {
     this.stmt = stmt;
     this.maxRowCount = maxRowCount;
-    this.yielderOpenCloseExecutor = Execs.singleThreaded(
+    this.fetcherFactory = fetcherFactory;
+    this.queryExecutor = Execs.singleThreaded(
         StringUtils.format(
-            "JDBCYielderOpenCloseExecutor-connection-%s-statement-%d",
+            "JDBCQueryExecutor-connection-%s-statement-%d",
             StringUtils.encodeForFormat(jdbcStatement.getConnectionId()),
             jdbcStatement.getStatementId()
         )
@@ -103,15 +227,12 @@ public class DruidJdbcResultSet implements Closeable
     ensure(State.NEW);
     try {
       state = State.RUNNING;
-      final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(stmt::execute).get().getResults();
-
-      // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
-      final Sequence<Object[]> retSequence =
-          maxRowCount >= 0 && maxRowCount <= Integer.MAX_VALUE
-          ? baseSequence.limit((int) maxRowCount)
-          : baseSequence;
-
-      yielder = Yielders.each(retSequence);
+      final Sequence<Object[]> sequence = queryExecutor.submit(stmt::execute).get().getResults();
+      fetcher = fetcherFactory.newFetcher(
+          // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
+          maxRowCount >= 0 && maxRowCount <= Integer.MAX_VALUE ? (int) maxRowCount : Integer.MAX_VALUE,
+          Yielders.each(sequence)
+      );
       signature = AbstractDruidJdbcStatement.createSignature(
           stmt.prepareResult(),
           stmt.query().sql()
@@ -139,34 +260,52 @@ public class DruidJdbcResultSet implements Closeable
   public synchronized Meta.Frame nextFrame(final long fetchOffset, final int fetchMaxRowCount)
   {
     ensure(State.RUNNING, State.DONE);
-    Preconditions.checkState(fetchOffset == offset, "fetchOffset [%,d] != offset [%,d]", fetchOffset, offset);
+    Preconditions.checkState(fetchOffset == nextFetchOffset, "fetchOffset [%,d] != offset [%,d]", fetchOffset, nextFetchOffset);
     if (state == State.DONE) {
-      return new Meta.Frame(fetchOffset, true, Collections.emptyList());
+      return new Meta.Frame(fetcher.offset(), true, Collections.emptyList());
     }
 
+    final Future<Meta.Frame> future;
+    if (fetchFuture == null) {
+      // Not waiting on a batch. Request one now.
+      fetcher.setBatchSize(fetchMaxRowCount);
+      future = queryExecutor.submit(fetcher);
+    } else {
+      // Last batch took too long. Continue waiting for it.
+      future = fetchFuture;
+      fetchFuture = null;
+    }
     try {
-      final List<Object> rows = new ArrayList<>();
-      while (!yielder.isDone() && (fetchMaxRowCount < 0 || offset < fetchOffset + fetchMaxRowCount)) {
-        rows.add(yielder.get());
-        yielder = yielder.next(null);
-        offset++;
-      }
-
-      if (yielder.isDone()) {
+      Meta.Frame result = future.get(fetcherFactory.fetchTimeoutMs(), TimeUnit.MILLISECONDS);
+      if (result.done) {
         state = State.DONE;
       }
-
-      return new Meta.Frame(fetchOffset, state == State.DONE, rows);
+      nextFetchOffset = fetcher.offset;
+      return result;
     }
-    catch (Throwable t) {
-      throw closeAndPropagateThrowable(t);
+    catch (CancellationException | InterruptedException e) {
+      // Consider this a failure.
+      throw closeAndPropagateThrowable(e);
+    }
+    catch (ExecutionException e) {
+      // Fetch threw an error. Unwrap it.
+      throw closeAndPropagateThrowable(e.getCause());
+    }
+    catch (TimeoutException e) {
+      fetchFuture = future;
+      // Wait timed out. Return 0 rows: the client will try again later.
+      // We'll wait again on this same fetch next time.
+      // Note that when the next fetch request comes, it will use the batch
+      // size set here: any change in size will be ignored for the in-flight batch.
+      // Changing batch size mid-query is an odd case: it will probably never happen.
+      return new Meta.Frame(nextFetchOffset, false, Collections.emptyList());
     }
   }
 
   public synchronized long getCurrentOffset()
   {
     ensure(State.RUNNING, State.DONE);
-    return offset;
+    return fetcher.offset;
   }
 
   @GuardedBy("this")
@@ -213,12 +352,25 @@ public class DruidJdbcResultSet implements Closeable
     }
     state = State.CLOSED;
     try {
-      if (yielder != null) {
-        Yielder<Object[]> theYielder = this.yielder;
-        this.yielder = null;
+      // If a fetch is in progress, wait for it to complete.
+      if (fetchFuture != null) {
+        try {
+          fetchFuture.cancel(true);
+          fetchFuture.get();
+        }
+        catch (Exception e) {
+          // Ignore, we're shutting down anyway.
+        }
+        finally {
+          fetchFuture = null;
+        }
+      }
+      if (fetcher != null) {
+        Yielder<Object[]> theYielder = fetcher.yielder;
+        fetcher = null;
 
         // Put the close last, so any exceptions it throws are after we did the other cleanup above.
-        yielderOpenCloseExecutor.submit(
+        queryExecutor.submit(
             () -> {
               theYielder.close();
               // makes this a Callable instead of Runnable so we don't need to catch exceptions inside the lambda
@@ -226,7 +378,7 @@ public class DruidJdbcResultSet implements Closeable
             }
         ).get();
 
-        yielderOpenCloseExecutor.shutdownNow();
+        queryExecutor.shutdownNow();
       }
     }
     catch (RuntimeException e) {

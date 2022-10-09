@@ -29,6 +29,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.PreparedStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -78,7 +79,10 @@ public class DruidConnection
     return connectionId;
   }
 
-  public DruidJdbcStatement createStatement(SqlStatementFactory sqlStatementFactory)
+  public DruidJdbcStatement createStatement(
+      final SqlStatementFactory sqlStatementFactory,
+      final ResultFetcherFactory fetcherFactory
+  )
   {
     final int statementId = statementCounter.incrementAndGet();
 
@@ -98,7 +102,8 @@ public class DruidConnection
           connectionId,
           statementId,
           context.copy(),
-          sqlStatementFactory
+          sqlStatementFactory,
+          fetcherFactory
       );
 
       statements.put(statementId, statement);
@@ -108,9 +113,11 @@ public class DruidConnection
   }
 
   public DruidJdbcPreparedStatement createPreparedStatement(
-      SqlStatementFactory sqlStatementFactory,
-      SqlQueryPlus sqlQueryPlus,
-      final long maxRowCount)
+      final SqlStatementFactory sqlStatementFactory,
+      final SqlQueryPlus sqlQueryPlus,
+      final long maxRowCount,
+      final ResultFetcherFactory fetcherFactory
+  )
   {
     final int statementId = statementCounter.incrementAndGet();
 
@@ -133,7 +140,8 @@ public class DruidConnection
           connectionId,
           statementId,
           statement,
-          maxRowCount
+          maxRowCount,
+          fetcherFactory
       );
 
       statements.put(statementId, jdbcStmt);
