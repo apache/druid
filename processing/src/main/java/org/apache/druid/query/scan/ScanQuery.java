@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
-import org.apache.druid.collections.Sorter;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -433,11 +432,29 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     );
   }
 
-  public Ordering<Sorter.SorterElement<ScanResultValue>> getOrderByNoneTimeResultOrdering()
+  public List<Integer> getSortColumnIdxs()
+  {
+    List<String> allColumns;
+    if (legacy && !getColumns().contains(ScanQueryEngine.LEGACY_TIMESTAMP_KEY)) {
+      allColumns = new ArrayList<>(getColumns().size() + 1);
+      allColumns.add(ScanQueryEngine.LEGACY_TIMESTAMP_KEY);
+    } else {
+      allColumns = new ArrayList<>(getColumns().size());
+    }
+
+    allColumns.addAll(getColumns());
+    return getOrderBys()
+        .stream()
+        .map(orderBy -> allColumns.indexOf(orderBy.getColumnName()))
+        .collect(Collectors.toList());
+  }
+
+  public Ordering<List<Object>> getOrderByNoneTimeResultOrdering()
   {
     List<String> orderByDirection = getOrderBys().stream()
                                                  .map(orderBy -> orderBy.getOrder().toString())
                                                  .collect(Collectors.toList());
+
 
     Ordering<Comparable>[] orderings = new Ordering[orderByDirection.size()];
     for (int i = 0; i < orderByDirection.size(); i++) {
@@ -446,17 +463,22 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
                      : Comparators.<Comparable>naturalNullsFirst().reverse();
     }
 
-    Comparator<Sorter.SorterElement<ScanResultValue>> comparator = new Comparator<Sorter.SorterElement<ScanResultValue>>()
+    Comparator<List<Object>> comparator = new Comparator<List<Object>>()
     {
+
+      List<Integer> sortColumnIdxs = getSortColumnIdxs();
 
       @Override
       public int compare(
-          Sorter.SorterElement<ScanResultValue> o1,
-          Sorter.SorterElement<ScanResultValue> o2
+          List<Object> o1,
+          List<Object> o2
       )
       {
-        for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
-          int compare = orderings[i].compare(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i));
+        for (int i = 0; i < sortColumnIdxs.size(); i++) {
+          int compare = orderings[i].compare(
+              (Comparable) o1.get(sortColumnIdxs.get(i)),
+              (Comparable) o2.get(sortColumnIdxs.get(i))
+          );
           if (compare != 0) {
             return compare;
           }
@@ -497,7 +519,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
 
   public ScanQuery withNoneOrderByLimit()
   {
-    return Druids.ScanQueryBuilder.copy(this).limit(Long.MAX_VALUE).orderBy(new ArrayList<>()).order(Order.NONE).build();
+    return Druids.ScanQueryBuilder.copy(this).limit(Long.MAX_VALUE).orderBy(new ArrayList<>()).order(Order.NONE).resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST).build();
   }
 
   public ScanQuery withNonNullLegacy(final ScanQueryConfig scanQueryConfig)

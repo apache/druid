@@ -19,8 +19,6 @@
 
 package org.apache.druid.collections;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.util.Iterator;
 import java.util.List;
 
@@ -29,40 +27,17 @@ public interface Sorter<T>
   /**
    * Offer an element to the sorter.If there are multiple values of different types in the same column, a CalssCastException will be thrown
    */
-  void add(SorterElement<T> sorterElement);
+  void add(List<T> sorterElement);
 
   /**
    * Drain elements in sorted order (least first).
    */
-  Iterator<T> drainElement();
+  Iterator<List<T>> drainElement();
 
   /**
    * Size of elements
    */
   int size();
 
-  @VisibleForTesting
-  class SorterElement<T>
-  {
-    private final T element;
-    private final List<Comparable> orderByColumValues;
-
-    public SorterElement(T element, List<Comparable> orderByColums)
-    {
-      this.element = element;
-      this.orderByColumValues = orderByColums;
-    }
-
-    public T getElement()
-    {
-      return element;
-    }
-
-    public List<Comparable> getOrderByColumValues()
-    {
-      return orderByColumValues;
-    }
-
-  }
 
 }

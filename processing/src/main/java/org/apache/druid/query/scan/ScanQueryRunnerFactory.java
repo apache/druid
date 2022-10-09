@@ -20,6 +20,7 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
@@ -307,44 +308,29 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     } else {
       limit = Math.toIntExact(scanQuery.getScanRowsLimit());
     }
-    // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
-    // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
-    List<String> sortColumns = scanQuery.getOrderBys()
-                                        .stream()
-                                        .map(orderBy -> orderBy.getColumnName())
-                                        .collect(Collectors.toList());
-    Sorter<ScanResultValue> sorter = new QueueBasedSorter<>(limit, scanQuery.getOrderByNoneTimeResultOrdering());
+
+    Sorter<Object> sorter = new QueueBasedSorter<>(limit, scanQuery.getOrderByNoneTimeResultOrdering());
     Yielder<ScanResultValue> yielder = Yielders.each(inputSequence);
+    List<String> columns = new ArrayList<>();
     try {
       boolean doneScanning = yielder.isDone();
-      // We need to scan limit elements and anything else in the last segment
       while (!doneScanning) {
         ScanResultValue next = yielder.get();
         List<ScanResultValue> singleEventScanResultValues = next.toSingleEventScanResultValues();
         for (ScanResultValue srv : singleEventScanResultValues) {
-          // Using an intermediate unbatched ScanResultValue is not that great memory-wise, but the column list
-          // needs to be preserved for queries using the compactedList result format
+          columns = columns.isEmpty() ? srv.getColumns() : columns;
           List events = (List) (srv.getEvents());
           for (Object event : events) {
-            List<Comparable> sortValues;
-            if (event instanceof LinkedHashMap) {
-              sortValues = sortColumns.stream()
-                                      .map(c -> ((LinkedHashMap<Object, Comparable>) event).get(c))
-                                      .collect(Collectors.toList());
-            } else {
-              sortValues = sortColumns.stream()
-                                      .map(c -> ((List<Comparable>) event).get(srv.getColumns().indexOf(c)))
-                                      .collect(Collectors.toList());
-            }
-            sorter.add(new Sorter.SorterElement<>(srv, sortValues));
+            sorter.add((List<Object>) event);
           }
         }
         yielder = yielder.next(null);
         doneScanning = yielder.isDone();
       }
-      final List<ScanResultValue> sortedElements = new ArrayList<>(sorter.size());
+      final List<List<Object>> sortedElements = new ArrayList<>(sorter.size());
       Iterators.addAll(sortedElements, sorter.drainElement());
-      return Sequences.simple(sortedElements);
+      List<String> finalColumns = columns;
+      return Sequences.simple(ImmutableList.of(new ScanResultValue(null, finalColumns, sortedElements)));
     }
     catch (Exception e) {
       throw new ISE(e.getMessage());

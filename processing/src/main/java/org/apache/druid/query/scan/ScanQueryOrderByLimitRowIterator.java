@@ -28,12 +28,15 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.utils.CollectionUtils;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
@@ -68,8 +71,11 @@ public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
       scanRowsLimit = Math.toIntExact(query.getScanRowsLimit());
     }
 
-    List<String> sortColumns = query.getOrderBys().stream().map(orderBy -> orderBy.getColumnName()).collect(Collectors.toList());
-    List<String> orderByDirection = query.getOrderBys().stream().map(orderBy -> orderBy.getOrder().toString()).collect(Collectors.toList());
+    List<String> orderByDirection = query.getOrderBys()
+                                         .stream()
+                                         .map(orderBy -> orderBy.getOrder().toString())
+                                         .collect(Collectors.toList());
+    List<Integer> sortColumnIdxs = query.getSortColumnIdxs();
 
     Ordering<Comparable>[] orderings = new Ordering[orderByDirection.size()];
     for (int i = 0; i < orderByDirection.size(); i++) {
@@ -78,9 +84,12 @@ public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
                      : Comparators.<Comparable>naturalNullsFirst().reverse();
     }
 
-    Comparator<Sorter.SorterElement<Object>> comparator = (o1, o2) -> {
-      for (int i = 0; i < o1.getOrderByColumValues().size(); i++) {
-        int compare = orderings[i].compare(o1.getOrderByColumValues().get(i), o2.getOrderByColumValues().get(i));
+    Comparator<List<Object>> comparator = (o1, o2) -> {
+      for (int i = 0; i < sortColumnIdxs.size(); i++) {
+        int compare = orderings[i].compare(
+            (Comparable) o1.get(sortColumnIdxs.get(i)),
+            (Comparable) o2.get(sortColumnIdxs.get(i))
+        );
         if (compare != 0) {
           return compare;
         }
@@ -88,29 +97,35 @@ public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
       return 0;
     };
     Sorter<Object> sorter = new QueueBasedSorter<Object>(scanRowsLimit, comparator);
-
     List<String> columns = new ArrayList<>();
     while (!yielder.isDone()) {
       ScanResultValue srv = yielder.get();
-      // Only replace once using the columns from the first event
       columns = columns.isEmpty() ? srv.getColumns() : columns;
-      List events = (List) (srv.getEvents());
+      List<List<Object>> events = (List<List<Object>>) srv.getEvents();
       for (Object event : events) {
-        List<Comparable> sortValues;
         if (event instanceof LinkedHashMap) {
-          sortValues = sortColumns.stream().map(c -> ((LinkedHashMap<Object, Comparable>) event).get(c)).collect(Collectors.toList());
+          sorter.add(Arrays.asList(((LinkedHashMap) event).values().toArray()));
         } else {
-          sortValues = sortColumns.stream().map(c -> ((List<Comparable>) event).get(srv.getColumns().indexOf(c))).collect(Collectors.toList());
+          sorter.add((List<Object>) event);
         }
-
-        sorter.add(new Sorter.SorterElement<>(event, sortValues));
       }
-
       yielder = yielder.next(null);
       count++;
     }
-    final List<Object> sortedElements = new ArrayList<>(sorter.size());
+    final List<List<Object>> sortedElements = new ArrayList<>(sorter.size());
     Iterators.addAll(sortedElements, sorter.drainElement());
+
+    if (ScanQuery.ResultFormat.RESULT_FORMAT_LIST.equals(resultFormat)) {
+      List<Map<String, Object>> events = new ArrayList<>(sortedElements.size());
+      for (List<Object> event : sortedElements) {
+        Map<String, Object> eventMap = CollectionUtils.newLinkedHashMapWithExpectedSize(columns.size());
+        events.add(eventMap);
+        for (int j = 0; j < columns.size(); j++) {
+          eventMap.put(columns.get(j), event.get(j));
+        }
+      }
+      return new ScanResultValue(null, columns, events);
+    }
     return new ScanResultValue(null, columns, sortedElements);
   }
 }

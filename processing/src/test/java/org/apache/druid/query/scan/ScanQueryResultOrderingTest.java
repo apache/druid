@@ -21,7 +21,6 @@ package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.DateTimes;
@@ -143,12 +142,11 @@ public class ScanQueryResultOrderingTest
   private final int limit;
   private final int batchSize;
   private final int maxRowsQueuedForOrdering;
-  private final String orderByQueryRunnerType;
 
   private ScanQueryRunnerFactory queryRunnerFactory;
   private List<QueryRunner<ScanResultValue>> segmentRunners;
 
-  @Parameterized.Parameters(name = "Segment-to-server map[{0}], limit[{1}], batchSize[{2}], maxRowsQueuedForOrdering[{3}],orderByQueryRunnerTypes[{4}]")
+  @Parameterized.Parameters(name = "Segment-to-server map[{0}], limit[{1}], batchSize[{2}], maxRowsQueuedForOrdering[{3}]")
   public static Iterable<Object[]> constructorFeeder()
   {
     // Set number of server equal to number of segments, then try all possible distributions of segments to servers.
@@ -171,65 +169,25 @@ public class ScanQueryResultOrderingTest
     final Set<Integer> batchSizes = ImmutableSortedSet.of(1, 2, 100);
     final Set<Integer> maxRowsQueuedForOrderings = ImmutableSortedSet.of(1, 7, 100000);
 
-    //orderByQueryRunnerType
-    final Set<String> orderByQueryRunnerTypes = ImmutableSortedSet.of("listBasedOrderByQueryRunner", "treeMultisetBasedOrderByQueryRunner", "treeSetBasedOrderByQueryRunner", "orderByQueryRunner");
-
     return Sets.cartesianProduct(
         segmentToServerMaps,
         limits,
         batchSizes,
-        maxRowsQueuedForOrderings,
-        orderByQueryRunnerTypes
+        maxRowsQueuedForOrderings
     ).stream().map(args -> args.toArray(new Object[0])).collect(Collectors.toList());
   }
 
-  public static Iterable<Object[]> constructorFeeder1()
-  {
-    /*
-    // Set number of server equal to number of segments, then try all possible distributions of segments to servers.
-    final int numServers = SEGMENTS.size();
-
-    final Set<List<Integer>> segmentToServerMaps = Sets.cartesianProduct(
-        IntStream.range(0, SEGMENTS.size())
-                 .mapToObj(i -> IntStream.range(0, numServers).boxed().collect(Collectors.toSet()))
-                 .collect(Collectors.toList())
-    );
-
-    // Try every limit up to one past the total number of rows.
-    final Set<Integer> limits = new TreeSet<>();
-    final int totalNumRows = SEGMENTS.stream().mapToInt(s -> s.asStorageAdapter().getNumRows()).sum();
-    for (int i = 0; i <= totalNumRows + 1; i++) {
-      limits.add(i);
-    }
-
-    // Try various batch sizes.
-    final Set<Integer> batchSizes = ImmutableSortedSet.of(1, 2, 100);
-    final Set<Integer> maxRowsQueuedForOrderings = ImmutableSortedSet.of(1, 7, 100000);
-
-    //orderByQueryRunnerType
-    final Set<String> orderByQueryRunnerTypes = ImmutableSortedSet.of("listBasedOrderByQueryRunner", "treeMultisetBasedOrderByQueryRunner", "treeSetBasedOrderByQueryRunner", "orderByQueryRunner");*/
-
-    return Sets.cartesianProduct(
-        ImmutableSet.of(ImmutableList.of(0, 0, 0)),
-        ImmutableSet.of(1),
-        ImmutableSet.of(1),
-        ImmutableSet.of(1),
-        ImmutableSet.of("")
-    ).stream().map(args -> args.toArray(new Object[0])).collect(Collectors.toList());
-  }
   public ScanQueryResultOrderingTest(
       final List<Integer> segmentToServerMap,
       final int limit,
       final int batchSize,
-      final int maxRowsQueuedForOrdering,
-      final String orderByQueryRunnerType
+      final int maxRowsQueuedForOrdering
   )
   {
     this.segmentToServerMap = segmentToServerMap;
     this.limit = limit;
     this.batchSize = batchSize;
     this.maxRowsQueuedForOrdering = maxRowsQueuedForOrdering;
-    this.orderByQueryRunnerType = orderByQueryRunnerType;
   }
 
   @Before
@@ -355,7 +313,7 @@ public class ScanQueryResultOrderingTest
     assertOrderByIdResultsEquals(
         Druids.newScanQueryBuilder()
               .dataSource("ds")
-              .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P10D"))))
+              .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P1D"))))
               .columns(ColumnHolder.TIME_COLUMN_NAME, ID_COLUMN)
               .orderBy(ImmutableList.of(new ScanQuery.OrderBy(ID_COLUMN, ScanQuery.Order.ASCENDING)))
               .build(),

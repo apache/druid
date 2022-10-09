@@ -31,18 +31,19 @@ import java.util.List;
 
 public class QueueBasedSorterTests extends SorterTests
 {
+
   @Test
   public void singleColumnAscSort()
   {
     List<String> orderByDirection = ImmutableList.of("ASCENDING");
-    Comparator<Sorter.SorterElement<Integer>> comparator = getMultiColumnSorterElementComparator(orderByDirection);
+    Comparator<List<Integer>> comparator = getMultiColumnSorterElementComparator(orderByDirection, ImmutableList.of(1));
     QueueBasedSorter queueBasedMultiColumnSorter = new QueueBasedSorter(5, comparator);
     singleColumnAscSortDatas(queueBasedMultiColumnSorter, new ArrayList<>());
-    Iterator<Integer> it = queueBasedMultiColumnSorter.drainElement();
+    Iterator<List<Integer>> it = queueBasedMultiColumnSorter.drainElement();
     List<Integer> expectedValues = ImmutableList.of(100, 1, 1, 2, 1);
     int i = 0;
     while (it.hasNext()) {
-      Assert.assertEquals(expectedValues.get(i++), it.next());
+      Assert.assertEquals(expectedValues.get(i++), it.next().get(0));
     }
   }
 
@@ -50,14 +51,14 @@ public class QueueBasedSorterTests extends SorterTests
   public void singleColumnAscSortNaturalNullsFirst()
   {
     List<String> orderByDirection = ImmutableList.of("ASCENDING");
-    Comparator<Sorter.SorterElement<Integer>> comparator = getMultiColumnSorterElementComparator(orderByDirection);
+    Comparator<List<Integer>> comparator = getMultiColumnSorterElementComparator(orderByDirection, ImmutableList.of(1));
     QueueBasedSorter queueBasedMultiColumnSorter = new QueueBasedSorter(5, comparator);
     singleColumnAscSortNaturalNullsFirstDatas(queueBasedMultiColumnSorter, new ArrayList<>());
-    Iterator<Integer> it = queueBasedMultiColumnSorter.drainElement();
+    Iterator<List<Integer>> it = queueBasedMultiColumnSorter.drainElement();
     List<Integer> expectedValues = ImmutableList.of(100, 1, 1, 2, 1);
     int i = 0;
     while (it.hasNext()) {
-      Assert.assertEquals(expectedValues.get(i++), it.next());
+      Assert.assertEquals(expectedValues.get(i++), it.next().get(0));
     }
   }
 
@@ -65,14 +66,17 @@ public class QueueBasedSorterTests extends SorterTests
   public void multiColumnSort()
   {
     List<String> orderByDirection = ImmutableList.of("ASCENDING", "DESCENDING", "DESCENDING");
-    Comparator<Sorter.SorterElement<Integer>> comparator = getMultiColumnSorterElementComparator(orderByDirection);
+    Comparator<List<Integer>> comparator = getMultiColumnSorterElementComparator(
+        orderByDirection,
+        ImmutableList.of(1, 2, 3)
+    );
     QueueBasedSorter queueBasedMultiColumnSorter = new QueueBasedSorter(5, comparator);
     multiColumnSortDatas(queueBasedMultiColumnSorter, new ArrayList<>());
-    Iterator<Integer> it = queueBasedMultiColumnSorter.drainElement();
+    Iterator<List<Integer>> it = queueBasedMultiColumnSorter.drainElement();
     List<Integer> expectedValues = ImmutableList.of(6, 5, 1, 7, 11);
     int i = 0;
     while (it.hasNext()) {
-      Assert.assertEquals(expectedValues.get(i++), it.next());
+      Assert.assertEquals(expectedValues.get(i++), it.next().get(0));
     }
   }
 
@@ -81,13 +85,19 @@ public class QueueBasedSorterTests extends SorterTests
   public void multiColumnSorWithNull()
   {
     List<String> orderByDirection = ImmutableList.of("ASCENDING", "DESCENDING", "DESCENDING");
-    QueueBasedSorter queueBasedMultiColumnSorter = new QueueBasedSorter(4, getMultiColumnSorterElementComparator(orderByDirection));
-    multiColumnSortDatas(queueBasedMultiColumnSorter, new ArrayList<>());
-    Iterator<Integer> it = queueBasedMultiColumnSorter.drainElement();
+    QueueBasedSorter queueBasedMultiColumnSorter = new QueueBasedSorter(
+        4,
+        getMultiColumnSorterElementComparator(
+            orderByDirection,
+            ImmutableList.of(1, 2, 3)
+        )
+    );
+    multiColumnSorWithNullDatas(queueBasedMultiColumnSorter, new ArrayList<>());
+    Iterator<List<Integer>> it = queueBasedMultiColumnSorter.drainElement();
     List<Integer> expectedValues = ImmutableList.of(6, 5, 1, 7);
     int i = 0;
     while (it.hasNext()) {
-      Assert.assertEquals(expectedValues.get(i++), it.next());
+      Assert.assertEquals(expectedValues.get(i++), it.next().get(0));
     }
   }
 
@@ -96,7 +106,13 @@ public class QueueBasedSorterTests extends SorterTests
   public void multiColumnSortCalssCastException()
   {
     List<String> orderByDirection = ImmutableList.of("ASCENDING", "DESCENDING", "DESCENDING");
-    QueueBasedSorter queueBasedMultiColumnSorter = new QueueBasedSorter(5, getMultiColumnSorterElementComparator(orderByDirection));
+    QueueBasedSorter queueBasedMultiColumnSorter = new QueueBasedSorter(
+        5,
+        getMultiColumnSorterElementComparator(
+            orderByDirection,
+            ImmutableList.of(1, 2, 3)
+        )
+    );
     ISE ise = null;
     try {
       multiColumnSortCalssCastExceptionDatas(queueBasedMultiColumnSorter);

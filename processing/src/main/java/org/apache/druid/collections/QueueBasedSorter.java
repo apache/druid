@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.ISE;
 
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * This sorter is applicable to two cases:
@@ -34,9 +35,9 @@ import java.util.Iterator;
 public class QueueBasedSorter<T> implements Sorter<T>
 {
 
-  private final MinMaxPriorityQueue<SorterElement<T>> queue;
+  private final MinMaxPriorityQueue<List<T>> queue;
 
-  public QueueBasedSorter(int limit, Comparator<SorterElement<T>> comparator)
+  public QueueBasedSorter(int limit, Comparator<List<T>> comparator)
   {
     this.queue = MinMaxPriorityQueue
         .orderedBy(Ordering.from(comparator))
@@ -44,7 +45,7 @@ public class QueueBasedSorter<T> implements Sorter<T>
         .create();
   }
 
-  public QueueBasedSorter(int limit, Ordering<SorterElement<T>> ordering)
+  public QueueBasedSorter(int limit, Ordering<List<T>> ordering)
   {
     this.queue = MinMaxPriorityQueue
         .orderedBy(ordering)
@@ -53,7 +54,7 @@ public class QueueBasedSorter<T> implements Sorter<T>
   }
 
   @Override
-  public void add(SorterElement<T> sorterElement)
+  public void add(List<T> sorterElement)
   {
     try {
       queue.offer(sorterElement);
@@ -64,9 +65,9 @@ public class QueueBasedSorter<T> implements Sorter<T>
   }
 
   @Override
-  public Iterator<T> drainElement()
+  public Iterator<List<T>> drainElement()
   {
-    return new Iterator<T>()
+    return new Iterator<List<T>>()
     {
       @Override
       public boolean hasNext()
@@ -75,16 +76,11 @@ public class QueueBasedSorter<T> implements Sorter<T>
       }
 
       @Override
-      public T next()
+      public List<T> next()
       {
-        return queue.poll().getElement();
+        return queue.poll();
       }
 
-      @Override
-      public void remove()
-      {
-        throw new UnsupportedOperationException();
-      }
     };
   }
 
