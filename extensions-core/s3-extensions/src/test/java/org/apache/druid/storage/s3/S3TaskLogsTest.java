@@ -55,6 +55,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -335,7 +336,12 @@ public class S3TaskLogsTest extends EasyMockSupport
     s3Object.setObjectContent(new ByteArrayInputStream(LOG_CONTENTS.getBytes(StandardCharsets.UTF_8)));
     GetObjectRequest getObjectRequest = new GetObjectRequest(TEST_BUCKET, logPath);
     getObjectRequest.setRange(0, LOG_CONTENTS.length() - 1);
-    getObjectRequest.withMatchingETagConstraint("\"" + objectMetadata.getETag() + "\"");
+    getObjectRequest.withMatchingETagConstraint(objectMetadata.getETag());
+    if (objectMetadata.getETag() != null) {
+      if (!objectMetadata.getETag().startsWith("\"") && !objectMetadata.getETag().endsWith("\"")) {
+        getObjectRequest.setMatchingETagConstraints(Collections.singletonList("\"" + objectMetadata.getETag() + "\""));
+      }
+    }
     EasyMock.expect(s3Client.getObject(getObjectRequest)).andReturn(s3Object);
     EasyMock.replay(s3Client);
 
@@ -363,7 +369,12 @@ public class S3TaskLogsTest extends EasyMockSupport
     s3Object.setObjectContent(new ByteArrayInputStream(LOG_CONTENTS.substring(1).getBytes(StandardCharsets.UTF_8)));
     GetObjectRequest getObjectRequest = new GetObjectRequest(TEST_BUCKET, logPath);
     getObjectRequest.setRange(1, LOG_CONTENTS.length() - 1);
-    getObjectRequest.withMatchingETagConstraint("\"" + objectMetadata.getETag() + "\"");
+    getObjectRequest.withMatchingETagConstraint(objectMetadata.getETag());
+    if (objectMetadata.getETag() != null) {
+      if (!objectMetadata.getETag().startsWith("\"") && !objectMetadata.getETag().endsWith("\"")) {
+        getObjectRequest.setMatchingETagConstraints(Collections.singletonList("\"" + objectMetadata.getETag() + "\""));
+      }
+    }
     EasyMock.expect(s3Client.getObject(getObjectRequest)).andReturn(s3Object);
     EasyMock.replay(s3Client);
 
@@ -391,7 +402,12 @@ public class S3TaskLogsTest extends EasyMockSupport
     s3Object.setObjectContent(new ByteArrayInputStream(LOG_CONTENTS.substring(1).getBytes(StandardCharsets.UTF_8)));
     GetObjectRequest getObjectRequest = new GetObjectRequest(TEST_BUCKET, logPath);
     getObjectRequest.setRange(1, LOG_CONTENTS.length() - 1);
-    getObjectRequest.withMatchingETagConstraint("\"" + objectMetadata.getETag() + "\"");
+    getObjectRequest.withMatchingETagConstraint(objectMetadata.getETag());
+    if (objectMetadata.getETag() != null) {
+      if (!objectMetadata.getETag().startsWith("\"") && !objectMetadata.getETag().endsWith("\"")) {
+        getObjectRequest.setMatchingETagConstraints(Collections.singletonList("\"" + objectMetadata.getETag() + "\""));
+      }
+    }
     EasyMock.expect(s3Client.getObject(getObjectRequest)).andReturn(s3Object);
     EasyMock.replay(s3Client);
 
@@ -419,7 +435,12 @@ public class S3TaskLogsTest extends EasyMockSupport
     s3Object.setObjectContent(new ByteArrayInputStream(REPORT_CONTENTS.getBytes(StandardCharsets.UTF_8)));
     GetObjectRequest getObjectRequest = new GetObjectRequest(TEST_BUCKET, logPath);
     getObjectRequest.setRange(0, REPORT_CONTENTS.length() - 1);
-    getObjectRequest.withMatchingETagConstraint("\"" + objectMetadata.getETag() + "\"");
+    getObjectRequest.withMatchingETagConstraint(objectMetadata.getETag());
+    if (objectMetadata.getETag() != null) {
+      if (!objectMetadata.getETag().startsWith("\"") && !objectMetadata.getETag().endsWith("\"")) {
+        getObjectRequest.setMatchingETagConstraints(Collections.singletonList("\"" + objectMetadata.getETag() + "\""));
+      }
+    }
     EasyMock.expect(s3Client.getObject(getObjectRequest)).andReturn(s3Object);
     EasyMock.replay(s3Client);
 
