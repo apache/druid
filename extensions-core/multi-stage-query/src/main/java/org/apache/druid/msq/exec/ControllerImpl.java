@@ -637,26 +637,19 @@ public class ControllerImpl implements Controller
     taskCountersForLiveReports.putAll(snapshotsTree);
     Optional<Pair<String, Long>> warningsExceeded =
         faultsExceededChecker.addFaultsAndCheckIfExceeded(taskCountersForLiveReports);
-    log.warn("Executing the new changes");
 
     if (warningsExceeded.isPresent()) {
       // Present means the warning limit was exceeded, and warnings have therefore turned into an error.
       String errorCode = warningsExceeded.get().lhs;
       Long limit = warningsExceeded.get().rhs;
+
       if (limit == 0L) {
-        workerWarnings.forEach(
-            workerWarning -> {
-              if (workerWarning.getFault().getErrorCode().equalsIgnoreCase(errorCode)) {
-                workerError(workerWarning);
-              }
-            }
-        );
-//        for (MSQErrorReport errorReport1 : workerWarnings) {
-//          if (errorReport1.getFault().getErrorCode().equalsIgnoreCase(errorCode)) {
-//            workerError(errorReport1);
-//            break;
-//          }
-//        }
+        for (MSQErrorReport errorReport1 : workerWarnings) {
+          if (errorReport1.getFault().getErrorCode().equalsIgnoreCase(errorCode)) {
+            workerError(errorReport1);
+            break;
+          }
+        }
       } else {
         workerError(MSQErrorReport.fromFault(
             id(),
