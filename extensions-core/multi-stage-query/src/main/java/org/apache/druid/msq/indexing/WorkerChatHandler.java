@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
@@ -47,6 +48,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.ExecutionException;
 
 public class WorkerChatHandler implements ChatHandler
 {
@@ -177,6 +179,33 @@ public class WorkerChatHandler implements ChatHandler
     } else {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
+  }
+
+  @POST
+  @Path("/keyStatistics/{queryId}/{stageNumber}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response httpFetchKeyStatistics(
+      @PathParam("queryId") final String queryId,
+      @PathParam("stageNumber") final int stageNumber,
+      @Context final HttpServletRequest req
+  )
+  {
+    ChatHandlers.authorizationCheck(req, Action.READ, task.getDataSource(), toolbox.getAuthorizerMapper());
+    ClusterByStatisticsSnapshot clusterByStatisticsSnapshot;
+    try {
+      StageId stageId = new StageId(queryId, stageNumber);
+      clusterByStatisticsSnapshot = worker.fetchStatisticsSnapshot(stageId);
+    }
+    catch (ExecutionException | InterruptedException e) {
+      return Response
+          .status(Response.Status.INTERNAL_SERVER_ERROR)
+          .build();
+
+    }
+    return Response.status(Response.Status.ACCEPTED)
+                   .entity(clusterByStatisticsSnapshot)
+                   .build();
   }
 
   /**

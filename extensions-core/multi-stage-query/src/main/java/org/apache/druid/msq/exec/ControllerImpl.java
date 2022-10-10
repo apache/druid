@@ -62,6 +62,7 @@ import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -104,6 +105,7 @@ import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
+import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
@@ -146,7 +148,7 @@ import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
-import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
@@ -198,6 +200,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
@@ -256,6 +259,7 @@ public class ControllerImpl implements Controller
   // For live reports. Written by the main controller thread, read by HTTP threads.
   private final ConcurrentHashMap<Integer, Integer> stagePartitionCountsForLiveReports = new ConcurrentHashMap<>();
 
+  private WorkerSketchFetcher workerSketchFetcher;
   // Time at which the query started.
   // For live reports. Written by the main controller thread, read by HTTP threads.
   private volatile DateTime queryStartTime = null;
@@ -515,6 +519,7 @@ public class ControllerImpl implements Controller
     context.registerController(this, closer);
 
     this.netClient = new ExceptionWrappingWorkerClient(context.taskClientFor(this));
+    this.workerSketchFetcher = new WorkerSketchFetcher(netClient);
     closer.register(netClient::close);
 
     final boolean isDurableStorageEnabled =
@@ -558,10 +563,10 @@ public class ControllerImpl implements Controller
   }
 
   /**
-   * Provide a {@link ClusterByStatisticsSnapshot} for shuffling stages.
+   * Provide a {@link ClusterByStatisticsWorkerReport} for shuffling stages.
    */
   @Override
-  public void updateStatus(int stageNumber, int workerNumber, Object keyStatisticsObject)
+  public void updateWorkerReportStatus(int stageNumber, int workerNumber, Object workerReportObject)
   {
     addToKernelManipulationQueue(
         queryKernel -> {
@@ -575,9 +580,9 @@ public class ControllerImpl implements Controller
               stageDef.getShuffleSpec().get().doesAggregateByClusterKey()
           );
 
-          final ClusterByStatisticsSnapshot keyStatistics;
+          final ClusterByStatisticsWorkerReport workerReport;
           try {
-            keyStatistics = mapper.convertValue(keyStatisticsObject, ClusterByStatisticsSnapshot.class);
+            workerReport = mapper.convertValue(workerReportObject, ClusterByStatisticsWorkerReport.class);
           }
           catch (IllegalArgumentException e) {
             throw new IAE(
@@ -588,7 +593,34 @@ public class ControllerImpl implements Controller
             );
           }
 
-          queryKernel.addResultKeyStatisticsForStageAndWorker(stageId, workerNumber, keyStatistics);
+          queryKernel.addResultStatisticsReportForStageAndWorker(stageId, workerNumber, workerReport);
+
+          if (queryKernel.getStagePhase(stageId).equals(ControllerStagePhase.MERGING_STATISTICS)) {
+            List<String> workerTaskIds = workerTaskLauncher.getTaskList();
+            ClusterByStatisticsWorkerReport finalWorkerReport = queryKernel.getClusterByStatisticsWorkerReport(stageId);
+
+            // Queue the sketch fetching task into the worker sketch fetcher.
+            CompletableFuture<Either<Long, ClusterByPartitions>> clusterByPartitionsCompletableFuture =
+                workerSketchFetcher.submitFetcherTask(
+                    finalWorkerReport,
+                    workerTaskIds,
+                    stageDef
+                );
+
+            // Add the listener to handle completion.
+            clusterByPartitionsCompletableFuture.whenComplete((clusterByPartitionsEither, throwable) -> {
+              if (throwable != null) {
+                queryKernel.failStageForReason(stageId, UnknownFault.forException(throwable));
+              } else if (clusterByPartitionsEither.isError()) {
+                queryKernel.failStageForReason(stageId, new TooManyPartitionsFault(stageDef.getMaxPartitionCount()));
+              } else {
+                queryKernel.setClusterByPartitionBoundaries(stageId, clusterByPartitionsEither.valueOrThrow());
+              }
+              kernelManipulationQueue.add(holder -> {
+                holder.transitionStageKernel(stageId, queryKernel.getStagePhase(stageId));
+              });
+            });
+          }
         }
     );
   }

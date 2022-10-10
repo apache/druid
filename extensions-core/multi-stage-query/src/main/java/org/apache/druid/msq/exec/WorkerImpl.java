@@ -129,8 +129,10 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -326,10 +328,10 @@ public class WorkerImpl implements Worker
 
         if (kernel.getPhase() == WorkerStagePhase.READING_INPUT && kernel.hasResultKeyStatisticsSnapshot()) {
           if (controllerAlive) {
-            controllerClient.postKeyStatistics(
+            controllerClient.postWorkerReport(
                 stageDefinition.getId(),
                 kernel.getWorkOrder().getWorkerNumber(),
-                kernel.getResultKeyStatisticsSnapshot()
+                kernel.getResultKeyStatisticsSnapshot().workerReport(task().getWorkerNumber())
             );
           }
           kernel.startPreshuffleWaitingForResultPartitionBoundaries();
@@ -521,6 +523,17 @@ public class WorkerImpl implements Worker
   public void postFinish()
   {
     kernelManipulationQueue.add(KernelHolder::setDone);
+  }
+
+  @Override
+  public ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId)
+      throws ExecutionException, InterruptedException
+  {
+    CompletableFuture<ClusterByStatisticsSnapshot> future = new CompletableFuture<>();
+    kernelManipulationQueue.add(kernelHolder -> {
+      future.complete(kernelHolder.stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot());
+    });
+    return future.get();
   }
 
   @Override

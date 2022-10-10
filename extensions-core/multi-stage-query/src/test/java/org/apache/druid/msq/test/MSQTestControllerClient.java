@@ -25,7 +25,7 @@ import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -40,17 +40,17 @@ public class MSQTestControllerClient implements ControllerClient
   }
 
   @Override
-  public void postKeyStatistics(
+  public void postWorkerReport(
       StageId stageId,
       int workerNumber,
-      ClusterByStatisticsSnapshot keyStatistics
+      ClusterByStatisticsWorkerReport workerReport
   )
   {
     try {
-      controller.updateStatus(stageId.getStageNumber(), workerNumber, keyStatistics);
+      controller.updateWorkerReportStatus(stageId.getStageNumber(), workerNumber, workerReport);
     }
     catch (Exception e) {
-      throw new ISE(e, "unable to post key statistics");
+      throw new ISE(e, "unable to post worker report");
     }
   }
 

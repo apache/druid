@@ -22,7 +22,7 @@ package org.apache.druid.msq.exec;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -34,13 +34,13 @@ import java.util.List;
 public interface ControllerClient extends AutoCloseable
 {
   /**
-   * Client side method to update the controller with key statistics for a particular stage and worker.
-   * Controller's implementation collates all the key statistics for a stage to generate the partition boundaries.
+   * Client side method to update the controller with worker reports for a particular stage and worker.
+   * Controller's implementation collates all the reports for a stage to fetch cluster by statistics from workers.
    */
-  void postKeyStatistics(
+  void postWorkerReport(
       StageId stageId,
       int workerNumber,
-      ClusterByStatisticsSnapshot keyStatistics
+      ClusterByStatisticsWorkerReport workerReport
   ) throws IOException;
 
   /**

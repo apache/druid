@@ -29,10 +29,12 @@ import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 public class MSQTestWorkerClient implements WorkerClient
 {
@@ -48,6 +50,14 @@ public class MSQTestWorkerClient implements WorkerClient
   {
     inMemoryWorkers.get(workerTaskId).postWorkOrder(workOrder);
     return Futures.immediateFuture(null);
+  }
+
+  @Override
+  public ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshot(String workerTaskId, String queryId, int stageNumber)
+      throws ExecutionException, InterruptedException
+  {
+    StageId stageId = new StageId(queryId, stageNumber);
+    return inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshot(stageId);
   }
 
   @Override

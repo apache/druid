@@ -41,6 +41,7 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
@@ -59,6 +60,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 public class IndexerWorkerClient implements WorkerClient
@@ -100,6 +102,26 @@ public class IndexerWorkerClient implements WorkerClient
         new RequestBuilder(HttpMethod.POST, "/workOrder")
             .jsonContent(jsonMapper, workOrder),
         IgnoreHttpResponseHandler.INSTANCE
+    );
+  }
+
+  @Override
+  public ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshot(
+      String workerTaskId,
+      String queryId,
+      int stageNumber
+  ) throws ExecutionException, InterruptedException
+  {
+    String path = StringUtils.format("/keyStatistics/%s/%d",
+                                     StringUtils.urlEncode(queryId),
+                                     stageNumber);
+
+    return deserialize(
+        getClient(workerTaskId).request(
+            new RequestBuilder(HttpMethod.POST, path),
+            new BytesFullResponseHandler()
+        ),
+        new TypeReference<ClusterByStatisticsSnapshot>() {}
     );
   }
 

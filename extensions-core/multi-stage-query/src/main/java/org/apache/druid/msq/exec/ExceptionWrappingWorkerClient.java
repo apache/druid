@@ -31,9 +31,11 @@ import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Wrapper around any {@link WorkerClient} that converts exceptions into {@link MSQException}
@@ -53,6 +55,14 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
   public ListenableFuture<Void> postWorkOrder(String workerTaskId, WorkOrder workOrder)
   {
     return wrap(workerTaskId, client, c -> c.postWorkOrder(workerTaskId, workOrder));
+  }
+
+  @Override
+  public ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshot(String workerTaskId, String queryId, int stageNumber)
+      throws ExecutionException, InterruptedException
+  {
+    // TODO: check
+    return client.fetchClusterByStatisticsSnapshot(workerTaskId, queryId, stageNumber);
   }
 
   @Override

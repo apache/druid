@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.frame.key.RowKey;
 
 import javax.annotation.Nullable;
@@ -62,6 +63,11 @@ public class ClusterByStatisticsSnapshot
   Set<Integer> getHasMultipleValues()
   {
     return hasMultipleValues;
+  }
+
+  public ClusterByStatisticsWorkerReport workerReport(int workerNumber)
+  {
+    return new ClusterByStatisticsWorkerReport(ImmutableSet.of(workerNumber), !getHasMultipleValues().isEmpty());
   }
 
   @Override

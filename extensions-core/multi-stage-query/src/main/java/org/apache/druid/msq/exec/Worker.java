@@ -25,10 +25,12 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.ExecutionException;
 
 public interface Worker
 {
@@ -105,4 +107,9 @@ public interface Worker
    * Called when the work required for the query has been finished
    */
   void postFinish();
+
+  /**
+   * Returns the statistics snapshot for the given stageId
+   */
+  ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId) throws ExecutionException, InterruptedException;
 }

@@ -27,7 +27,7 @@ import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
-import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -81,9 +81,9 @@ public interface Controller
   // Worker-to-controller messages
 
   /**
-   * Provide a {@link ClusterByStatisticsSnapshot} for shuffling stages.
+   * Accepts a {@link ClusterByStatisticsWorkerReport} for generating fetching sketches.
    */
-  void updateStatus(int stageNumber, int workerNumber, Object keyStatisticsObject);
+  void updateWorkerReportStatus(int stageNumber, int workerNumber, Object workerReport);
 
   /**
    * System error reported by a subtask. Note that the errors are organized by
