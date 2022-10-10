@@ -35,7 +35,6 @@ import org.apache.druid.tasklogs.TaskLogs;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collections;
 import java.util.Date;
 
 /**
@@ -96,14 +95,8 @@ public class S3TaskLogs implements TaskLogs
         }
 
         final GetObjectRequest request = new GetObjectRequest(config.getS3Bucket(), taskKey)
-            .withMatchingETagConstraint(objectMetadata.getETag())
+            .withMatchingETagConstraint(ensureQuotated(objectMetadata.getETag()))
             .withRange(start, end);
-
-        if (objectMetadata.getETag() != null) {
-          if (!objectMetadata.getETag().startsWith("\"") && !objectMetadata.getETag().endsWith("\"")) {
-            request.setMatchingETagConstraints(Collections.singletonList("\"" + objectMetadata.getETag() + "\""));
-          }
-        }
 
         return Optional.of(service.getObject(request).getObjectContent());
       }
@@ -120,6 +113,16 @@ public class S3TaskLogs implements TaskLogs
         throw new IOE(e, "Failed to stream logs from: %s", taskKey);
       }
     }
+  }
+
+  static String ensureQuotated(String eTag)
+  {
+    if (eTag != null) {
+      if (!eTag.startsWith("\"") && !eTag.endsWith("\"")) {
+        return "\"" + eTag + "\"";
+      }
+    }
+    return eTag;
   }
 
   @Override
