@@ -158,7 +158,6 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
     String successfulTaskId;
 
     try (InputStream is = storageConnector.read(successfulFilePath)) {
-      // TODO: Check if this call can block indefinitely
       successfulTaskId = IOUtils.toString(is, StandardCharsets.UTF_8);
     }
     if (successfulTaskId == null) {

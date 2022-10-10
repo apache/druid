@@ -25,7 +25,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.ColumnMapping;
@@ -61,9 +60,10 @@ import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import java.io.File;
@@ -73,8 +73,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MSQSelectTest extends MSQTestBase
 {
@@ -1092,28 +1090,12 @@ public class MSQSelectTest extends MSQTestBase
   }
 
   @Test
-  public void testGroupByOnFooWithDurableStoragePathAssertions()
+  public void testGroupByOnFooWithDurableStoragePathAssertions() throws IOException
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("cnt", ColumnType.LONG)
                                             .add("cnt1", ColumnType.LONG)
                                             .build();
-
-    ExecutorService executorService = Execs.singleThreaded("path-verifier");
-    final AtomicBoolean existsOnce = new AtomicBoolean(false);
-    executorService.submit(() -> {
-      while (true) {
-        File successFile = new File(
-            localFileStorageDir,
-            DurableStorageUtils.getSuccessFilePath("query-test-query", 0, 0)
-        );
-        if (successFile.exists()) {
-          existsOnce.set(true);
-          break;
-        }
-      }
-    });
-
 
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo group by cnt")
@@ -1145,8 +1127,13 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
         .verifyResults();
-    executorService.shutdownNow();
-    Assert.assertTrue(existsOnce.get());
+    File successFile = new File(
+        localFileStorageDir,
+        DurableStorageUtils.getSuccessFilePath("query-test-query", 0, 0)
+    );
+
+    Mockito.verify(localFileStorageConnector, Mockito.times(2))
+               .write(ArgumentMatchers.endsWith("__success"));
   }
 
 

@@ -143,7 +143,7 @@ import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
-import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
+import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentId;
@@ -221,6 +221,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public final boolean useDefault = NullHandling.replaceWithDefault();
 
   protected File localFileStorageDir;
+  protected LocalFileStorageConnector localFileStorageConnector;
   private static final Logger log = new Logger(MSQTestBase.class);
   private ObjectMapper objectMapper;
   private MSQTestOverlordServiceClient indexingServiceClient;
@@ -326,8 +327,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   MultiStageQuery.class
               );
               localFileStorageDir = tmpFolder.newFolder("fault");
+              localFileStorageConnector = Mockito.spy(
+                  new LocalFileStorageConnector(localFileStorageDir)
+              );
               binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
-                    .toProvider(new LocalFileStorageConnectorProvider(localFileStorageDir));
+                    .toProvider(() -> localFileStorageConnector);
             }
             catch (IOException e) {
               throw new ISE(e, "Unable to create setup storage connector");
