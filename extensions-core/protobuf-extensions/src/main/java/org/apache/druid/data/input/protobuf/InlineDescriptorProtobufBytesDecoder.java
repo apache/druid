@@ -22,24 +22,17 @@ package org.apache.druid.data.input.protobuf;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.os72.protobuf.dynamic.DynamicSchema;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ByteString;
+import com.google.common.base.Preconditions;
 import com.google.protobuf.Descriptors;
-import com.google.protobuf.DynamicMessage;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Objects;
-import java.util.Set;
 
-public class InlineDescriptorProtobufBytesDecoder implements ProtobufBytesDecoder
+public class InlineDescriptorProtobufBytesDecoder extends DescriptorBasedProtobufBytesDecoder
 {
   private final String descriptorString;
-  private final String protoMessageType;
-  private Descriptors.Descriptor descriptor;
-
 
   @JsonCreator
   public InlineDescriptorProtobufBytesDecoder(
@@ -47,8 +40,9 @@ public class InlineDescriptorProtobufBytesDecoder implements ProtobufBytesDecode
       @JsonProperty("protoMessageType") String protoMessageType
   )
   {
+    super(protoMessageType);
+    Preconditions.checkNotNull(descriptorString);
     this.descriptorString = descriptorString;
-    this.protoMessageType = protoMessageType;
     initDescriptor();
   }
 
@@ -58,38 +52,12 @@ public class InlineDescriptorProtobufBytesDecoder implements ProtobufBytesDecode
     return descriptorString;
   }
 
-  @JsonProperty
-  public String getProtoMessageType()
-  {
-    return protoMessageType;
-  }
-
-  @VisibleForTesting
-  void initDescriptor()
-  {
-    if (this.descriptor == null) {
-      this.descriptor = getDescriptor(descriptorString);
-    }
-  }
-
   @Override
-  public DynamicMessage parse(ByteBuffer bytes)
+  protected DynamicSchema getDynamicSchema()
   {
-    try {
-      DynamicMessage message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(bytes));
-      return message;
-    }
-    catch (Exception e) {
-      throw new ParseException(null, e, "Fail to decode protobuf message!");
-    }
-  }
-
-  private Descriptors.Descriptor getDescriptor(String descriptorString)
-  {
-    DynamicSchema dynamicSchema;
     try {
       byte[] decodedDesc = StringUtils.decodeBase64String(descriptorString);
-      dynamicSchema = DynamicSchema.parseFrom(decodedDesc);
+      return DynamicSchema.parseFrom(decodedDesc);
     }
     catch (Descriptors.DescriptorValidationException e) {
       throw new ParseException(null, e, "Invalid descriptor string: " + descriptorString);
@@ -97,25 +65,6 @@ public class InlineDescriptorProtobufBytesDecoder implements ProtobufBytesDecode
     catch (IOException e) {
       throw new ParseException(null, e, "Cannot read descriptor string: " + descriptorString);
     }
-
-    Set<String> messageTypes = dynamicSchema.getMessageTypes();
-    if (messageTypes.size() == 0) {
-      throw new ParseException(null, "No message types found in the descriptor: " + descriptorString);
-    }
-
-    String messageType = protoMessageType == null ? (String) messageTypes.toArray()[0] : protoMessageType;
-    Descriptors.Descriptor desc = dynamicSchema.getMessageDescriptor(messageType);
-    if (desc == null) {
-      throw new ParseException(
-          null,
-          StringUtils.format(
-              "Protobuf message type %s not found in the specified descriptor.  Available messages types are %s",
-              protoMessageType,
-              messageTypes
-          )
-      );
-    }
-    return desc;
   }
 
   @Override
@@ -139,5 +88,4 @@ public class InlineDescriptorProtobufBytesDecoder implements ProtobufBytesDecode
   {
     return Objects.hash(descriptorString, protoMessageType);
   }
-
 }
