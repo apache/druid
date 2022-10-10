@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.os72.protobuf.dynamic.DynamicSchema;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.Descriptors;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
@@ -58,6 +59,9 @@ public class InlineDescriptorProtobufBytesDecoder extends DescriptorBasedProtobu
     try {
       byte[] decodedDesc = StringUtils.decodeBase64String(descriptorString);
       return DynamicSchema.parseFrom(decodedDesc);
+    }
+    catch (IllegalArgumentException e) {
+      throw new IAE("Descriptor string was did not have valid Base64 encoding.");
     }
     catch (Descriptors.DescriptorValidationException e) {
       throw new ParseException(null, e, "Invalid descriptor string: " + descriptorString);
