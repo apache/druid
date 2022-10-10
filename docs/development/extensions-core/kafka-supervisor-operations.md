@@ -56,7 +56,7 @@ The list of `detailedState` values and their corresponding `state` mapping is as
 |DISCOVERING_INITIAL_TASKS (first iteration only)|RUNNING|The supervisor is discovering already-running tasks|
 |CREATING_TASKS (first iteration only)|RUNNING|The supervisor is creating tasks and discovering state|
 |RUNNING|RUNNING|The supervisor has started tasks and is waiting for taskDuration to elapse|
-|IDLE|IDLE|The supervisor is not creating tasks any longer since stream is idle|
+|IDLE|IDLE|The supervisor is not creating tasks since the input stream has not received any new data and all the existing data is read.|
 |SUSPENDED|SUSPENDED|The supervisor has been suspended|
 |STOPPING|STOPPING|The supervisor is stopping|
 

@@ -46,7 +46,7 @@ public class SupervisorStateManagerTest
     supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
     supervisorStateManager.markRunFinished();
 
-    Assert.assertTrue(supervisorStateManager.isEnableIdleBehavior());
+    Assert.assertTrue(supervisorStateManager.isEnableIdleBehaviour());
     Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisorStateManager.getSupervisorState());
   }
 
@@ -60,7 +60,7 @@ public class SupervisorStateManagerTest
 
     supervisorStateManager.markRunFinished();
 
-    Assert.assertFalse(supervisorStateManager.isEnableIdleBehavior());
+    Assert.assertFalse(supervisorStateManager.isEnableIdleBehaviour());
     Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, supervisorStateManager.getSupervisorState());
   }
 }

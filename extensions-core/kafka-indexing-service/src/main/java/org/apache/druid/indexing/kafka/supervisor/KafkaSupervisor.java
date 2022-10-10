@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.common.task.Task;
@@ -252,7 +251,15 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
     if (latestSequenceFromStream == null) {
       return null;
     }
-    validateWithLatestOffsets(highestCurrentOffsets);
+
+    if (!latestSequenceFromStream.keySet().equals(highestCurrentOffsets.keySet())) {
+      log.warn(
+          "Lag metric: Kafka partitions %s do not match task partitions %s",
+          latestSequenceFromStream.keySet(),
+          highestCurrentOffsets.keySet()
+      );
+    }
+
     return getRecordLagPerPartition(highestCurrentOffsets);
   }
 
@@ -270,7 +277,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
   protected Map<Integer, Long> getRecordLagPerPartition(Map<Integer, Long> currentOffsets)
   {
     if (latestSequenceFromStream == null) {
-      return ImmutableMap.of();
+      return Collections.emptyMap();
     }
 
     return latestSequenceFromStream
@@ -381,20 +388,9 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
   }
 
   @Override
-  protected Map<Integer, Long> getLatestSequences()
+  protected Map<Integer, Long> getLatestSequencesFromStream()
   {
     return latestSequenceFromStream != null ? latestSequenceFromStream : new HashMap<>();
-  }
-
-  private void validateWithLatestOffsets(Map<Integer, Long> offsets)
-  {
-    if (!latestSequenceFromStream.keySet().equals(offsets.keySet())) {
-      log.warn(
-          "Lag metric: Kafka partitions %s do not match task partitions %s",
-          latestSequenceFromStream.keySet(),
-          offsets.keySet()
-      );
-    }
   }
 
   @Override
