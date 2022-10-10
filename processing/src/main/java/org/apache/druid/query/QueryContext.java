@@ -60,7 +60,9 @@ public class QueryContext
     // There is no semantic difference between an empty and a null context.
     // Ensure that a context always exists to avoid the need to check for
     // a null context. Jackson serialization will omit empty contexts.
-    this.context = context == null ? Collections.emptyMap() : new TreeMap<>(context);
+    this.context = context == null
+        ? Collections.emptyMap()
+        : Collections.unmodifiableMap(new TreeMap<>(context));
   }
 
   public static QueryContext empty()

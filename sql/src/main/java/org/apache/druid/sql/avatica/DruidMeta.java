@@ -100,6 +100,12 @@ public class DruidMeta extends MetaImpl
   }
 
   private static final Logger LOG = new Logger(DruidMeta.class);
+
+  /**
+   * Items passed in via the connection context which are not query
+   * context values. Instead, these are used at connection time to validate
+   * the user.
+   */
   private static final Set<String> SENSITIVE_CONTEXT_FIELDS = ImmutableSet.of(
       "user", "password"
   );
@@ -162,29 +168,32 @@ public class DruidMeta extends MetaImpl
   @Override
   public void openConnection(final ConnectionHandle ch, final Map<String, String> info)
   {
-    try {
-      // Build connection context.
-      final Map<String, Object> secret = new HashMap<>();
-      final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
-      if (info != null) {
-        for (Map.Entry<String, String> entry : info.entrySet()) {
-          if (SENSITIVE_CONTEXT_FIELDS.contains(entry.getKey())) {
-            secret.put(entry.getKey(), entry.getValue());
-          } else {
-            context.put(entry.getKey(), entry.getValue());
-          }
+    // Build connection context. The session query context is built
+    // mutable here. It becomes immutable when attached to the connection.
+    final Map<String, Object> secret = new HashMap<>();
+    final Map<String, Object> contextMap = new HashMap<>();
+    if (info != null) {
+      for (Map.Entry<String, String> entry : info.entrySet()) {
+        if (SENSITIVE_CONTEXT_FIELDS.contains(entry.getKey())) {
+          secret.put(entry.getKey(), entry.getValue());
+        } else {
+          contextMap.put(entry.getKey(), entry.getValue());
         }
       }
-      // we don't want to stringify arrays for JDBC ever because Avatica needs to handle this
-      context.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
-      openDruidConnection(ch.id, secret, context.build());
+    }
+    // Don't stringify arrays for JDBC because Avatica needs to handle arrays.
+    // When using query context security, all JDBC users must have permission on
+    // this context key.
+    contextMap.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
+    try {
+      openDruidConnection(ch.id, secret, contextMap);
     }
     catch (NoSuchConnectionException e) {
+      // Avoid sanitizing Avatica specific exceptions so that the Avatica code
+      // can rely on them to handle issues in a JDBC-specific way.
       throw e;
     }
     catch (Throwable t) {
-      // we want to avoid sanitizing Avatica specific exceptions as the Avatica code can rely on them to handle issues
-      // differently
       throw mapException(t);
     }
   }
@@ -257,16 +266,17 @@ public class DruidMeta extends MetaImpl
   {
     try {
       final DruidConnection druidConnection = getDruidConnection(ch.id);
-      SqlQueryPlus sqlReq = new SqlQueryPlus(
+      final SqlQueryPlus sqlReq = new SqlQueryPlus(
           sql,
-          null, // Context provided by connection
+          druidConnection.sessionContext(),
           null, // No parameters in this path
           doAuthenticate(druidConnection)
       );
-      DruidJdbcPreparedStatement stmt = getDruidConnection(ch.id).createPreparedStatement(
+      final DruidJdbcPreparedStatement stmt = getDruidConnection(ch.id).createPreparedStatement(
           sqlStatementFactory,
           sqlReq,
-          maxRowCount);
+          maxRowCount
+      );
       stmt.prepare();
       LOG.debug("Successfully prepared statement [%s] for execution", stmt.getStatementId());
       return new StatementHandle(ch.id, stmt.getStatementId(), stmt.getSignature());
@@ -281,7 +291,7 @@ public class DruidMeta extends MetaImpl
 
   private AuthenticationResult doAuthenticate(final DruidConnection druidConnection)
   {
-    AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
+    final AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
     if (authenticationResult == null) {
       throw logFailure(
           new ForbiddenException("Authentication failed."),
@@ -324,6 +334,7 @@ public class DruidMeta extends MetaImpl
       AuthenticationResult authenticationResult = doAuthenticate(druidConnection);
       SqlQueryPlus sqlRequest = SqlQueryPlus.builder(sql)
           .auth(authenticationResult)
+          .context(druidConnection.sessionContext())
           .build();
       druidStatement.execute(sqlRequest, maxRowCount);
       ExecuteResult result = doFetch(druidStatement, maxRowsInFirstFrame);
@@ -411,7 +422,7 @@ public class DruidMeta extends MetaImpl
   {
     try {
       final int maxRows = getEffectiveMaxRowsPerFrame(fetchMaxRowCount);
-      LOG.debug("Fetching next frame from offset[%s] with [%s] rows for statement[%s]", offset, maxRows, statement.id);
+      LOG.debug("Fetching next frame from offset %,d with %,d rows for statement [%s]", offset, maxRows, statement.id);
       return getDruidStatement(statement, AbstractDruidJdbcStatement.class).nextFrame(offset, maxRows);
     }
     catch (NoSuchConnectionException e) {
@@ -447,7 +458,7 @@ public class DruidMeta extends MetaImpl
       druidStatement.execute(parameterValues);
       ExecuteResult result = doFetch(druidStatement, maxRowsInFirstFrame);
       LOG.debug(
-          "Successfully started execution of statement[%s]",
+          "Successfully started execution of statement [%s]",
           druidStatement.getStatementId());
       return result;
     }
@@ -503,7 +514,7 @@ public class DruidMeta extends MetaImpl
       final long currentOffset = druidStatement.getCurrentOffset();
       if (currentOffset != offset) {
         throw logFailure(new ISE(
-            "Requested offset[%,d] does not match currentOffset[%,d]",
+            "Requested offset %,d does not match currentOffset %,d",
             offset,
             currentOffset
         ));
@@ -757,11 +768,11 @@ public class DruidMeta extends MetaImpl
   {
     Map<String, Object> context = connection.userSecret();
     for (Authenticator authenticator : authenticators) {
-      LOG.debug("Attempting authentication with authenticator[%s]", authenticator.getClass());
+      LOG.debug("Attempting authentication with authenticator [%s]", authenticator.getClass());
       AuthenticationResult authenticationResult = authenticator.authenticateJDBCContext(context);
       if (authenticationResult != null) {
         LOG.debug(
-            "Authenticated identity[%s] for connection[%s]",
+            "Authenticated identity [%s] for connection [%s]",
             authenticationResult.getIdentity(),
             connection.getConnectionId()
         );
@@ -798,7 +809,7 @@ public class DruidMeta extends MetaImpl
         connectionCount.decrementAndGet();
         throw logFailure(
             new ISE("Too many connections"),
-            "Too many connections, limit is[%,d] per broker",
+            "Too many connections, limit is %,d per broker",
             config.getMaxConnections()
         );
       }
@@ -812,10 +823,10 @@ public class DruidMeta extends MetaImpl
     if (putResult != null) {
       // Didn't actually insert the connection.
       connectionCount.decrementAndGet();
-      throw logFailure(new ISE("Connection[%s] already open.", connectionId));
+      throw logFailure(new ISE("Connection [%s] already open.", connectionId));
     }
 
-    LOG.debug("Connection[%s] opened.", connectionId);
+    LOG.debug("Connection [%s] opened.", connectionId);
 
     // Call getDruidConnection to start the timeout timer.
     return getDruidConnection(connectionId);
@@ -901,7 +912,7 @@ public class DruidMeta extends MetaImpl
    * checked against if any additional frames are required (which means one of the input or maximum was set to a value
    * other than -1).
    */
-  private int getEffectiveMaxRowsPerFrame(int clientMaxRowsPerFrame)
+  private int getEffectiveMaxRowsPerFrame(final int clientMaxRowsPerFrame)
   {
     // no configured row limit, use the client provided limit
     if (config.getMaxRowsPerFrame() < 0) {
@@ -917,13 +928,12 @@ public class DruidMeta extends MetaImpl
   /**
    * coerce fetch size to be, at minimum, {@link AvaticaServerConfig#minRowsPerFrame}
    */
-  private int adjustForMinumumRowsPerFrame(int rowsPerFrame)
+  private int adjustForMinumumRowsPerFrame(final int rowsPerFrame)
   {
-    final int adjustedRowsPerFrame = Math.max(config.getMinRowsPerFrame(), rowsPerFrame);
-    return adjustedRowsPerFrame;
+    return Math.max(config.getMinRowsPerFrame(), rowsPerFrame);
   }
 
-  private static String withEscapeClause(String toEscape)
+  private static String withEscapeClause(final String toEscape)
   {
     return Calcites.escapeStringLiteral(toEscape) + " ESCAPE '\\'";
   }

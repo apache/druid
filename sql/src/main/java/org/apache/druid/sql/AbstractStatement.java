@@ -31,9 +31,9 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.io.Closeable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -59,23 +59,23 @@ public abstract class AbstractStatement implements Closeable
   protected final SqlExecutionReporter reporter;
 
   /**
-   * Copy of the query context modified during planning. Modifications are
-   * valid in tasks that run in the request thread. Once the query forks
-   * child threads, then concurrent modifications to the query context will
-   * result in an undefined muddle of race conditions.
+   * Copy of the query context provided by the user. This copy is modified during
+   * planning. Modifications are possible up to the point where the context is passed
+   * to a native query. At that point, the context becomes immutable and can be changed
+   * only by copying the entire native query.
    */
   protected final Map<String, Object> queryContext;
   protected PlannerContext plannerContext;
 
   /**
    * Resource actions used with authorizing a cancellation request. These actions
-   * include only the data-level actions (i.e. the datasource.)
+   * include only the data-level actions (e.g. the datasource.)
    */
-  protected Set<ResourceAction> cancellationResourceActions;
+  protected Set<ResourceAction> cancelationResourceActions;
 
   /**
    * Full resource actions authorized as part of this request. Used when logging
-   * resource actions. Includes the query context, if query context authorization
+   * resource actions. Includes query context keys, if query context authorization
    * is enabled.
    */
   protected Set<ResourceAction> fullResourceActions;
@@ -89,9 +89,7 @@ public abstract class AbstractStatement implements Closeable
     this.sqlToolbox = sqlToolbox;
     this.reporter = new SqlExecutionReporter(this, remoteAddress);
     this.queryPlus = queryPlus;
-
-    // TreeMap is required to get consistent ordering of keys, as needed by tests.
-    this.queryContext = new TreeMap<>(queryPlus.context());
+    this.queryContext = new HashMap<>(queryPlus.context());
 
     // "bySegment" results are never valid to use with SQL because the result format is incompatible
     // so, overwrite any user specified context to avoid exceptions down the line
@@ -164,7 +162,7 @@ public abstract class AbstractStatement implements Closeable
     // to cancel the query, and includes only the query-level resources. The second
     // is used to report the resources actually authorized and includes the
     // query context variables, if we are authorizing them.
-    cancellationResourceActions = planner.resourceActions(false);
+    cancelationResourceActions = planner.resourceActions(false);
     fullResourceActions = planner.resourceActions(authorizeContextParams);
   }
 
@@ -188,7 +186,7 @@ public abstract class AbstractStatement implements Closeable
    */
   public Set<ResourceAction> resources()
   {
-    return cancellationResourceActions;
+    return cancelationResourceActions;
   }
 
   public Set<ResourceAction> allResources()

@@ -138,7 +138,6 @@ public class DruidStatementTest extends CalciteTestBase
     return new DruidJdbcStatement(
         "",
         0,
-        Collections.emptyMap(),
         sqlStatementFactory
     );
   }

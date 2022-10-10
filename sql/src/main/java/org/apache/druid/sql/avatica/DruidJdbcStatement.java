@@ -25,34 +25,31 @@ import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 
-import java.util.Map;
-
 /**
  * Represents Druid's version of the JDBC {@code Statement} class:
  * can be executed multiple times, one after another, producing a
- * {@link DruidJdbcResultSet} for each execution.
+ * {@link DruidJdbcResultSet} for each execution. Thread safe, but
+ * only when accessed sequentially by different request threads:
+ * not designed for concurrent access as JDBC does not support
+ * concurrent actions on the same statement.
  */
 public class DruidJdbcStatement extends AbstractDruidJdbcStatement
 {
   private final SqlStatementFactory lifecycleFactory;
-  protected final Map<String, Object> queryContext;
 
   public DruidJdbcStatement(
       final String connectionId,
       final int statementId,
-      final Map<String, Object> queryContext,
       final SqlStatementFactory lifecycleFactory
   )
   {
     super(connectionId, statementId);
-    this.queryContext = queryContext;
     this.lifecycleFactory = Preconditions.checkNotNull(lifecycleFactory, "lifecycleFactory");
   }
 
   public synchronized void execute(SqlQueryPlus queryPlus, long maxRowCount)
   {
     closeResultSet();
-    queryPlus = queryPlus.withContext(queryContext);
     DirectStatement stmt = lifecycleFactory.directStatement(queryPlus);
     resultSet = new DruidJdbcResultSet(this, stmt, Long.MAX_VALUE);
     try {

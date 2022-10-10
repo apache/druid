@@ -40,11 +40,12 @@ import java.util.Map;
  * the {@link Builder} class to create an instance from the information
  * available at each point in the code.
  * <p>
- * The query context has a complex lifecycle. The copy here should remain
- * unchanged: this is the set of values which the user requested. Planning will
+ * The query context has a complex lifecycle. The copy here is immutable:
+ * it is the set of values which the user requested. Planning will
  * add (and sometimes remove) values: that work should be done on a copy of the
  * context so that we have a clean record of the user's original requested
- * values.
+ * values. This original record is required to perform security on the set
+ * of user-provided context keys.
  */
 public class SqlQueryPlus
 {
@@ -63,7 +64,7 @@ public class SqlQueryPlus
     this.sql = Preconditions.checkNotNull(sql);
     this.queryContext = queryContext == null
         ? Collections.emptyMap()
-        : new HashMap<>(queryContext);
+        : Collections.unmodifiableMap(new HashMap<>(queryContext));
     this.parameters = parameters == null
         ? Collections.emptyList()
         : parameters;
