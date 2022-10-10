@@ -54,7 +54,7 @@ public class InlineDescriptorProtobufBytesDecoder extends DescriptorBasedProtobu
   }
 
   @Override
-  protected DynamicSchema getDynamicSchema()
+  protected DynamicSchema generateDynamicSchema()
   {
     try {
       byte[] decodedDesc = StringUtils.decodeBase64String(descriptorString);
@@ -80,16 +80,16 @@ public class InlineDescriptorProtobufBytesDecoder extends DescriptorBasedProtobu
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
+    if (!super.equals(o)) {
+      return false;
+    }
     InlineDescriptorProtobufBytesDecoder that = (InlineDescriptorProtobufBytesDecoder) o;
-
-    return Objects.equals(descriptorString, that.descriptorString) &&
-           Objects.equals(protoMessageType, that.protoMessageType);
+    return Objects.equals(getDescriptorString(), that.getDescriptorString());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(descriptorString, protoMessageType);
+    return Objects.hash(super.hashCode(), getDescriptorString());
   }
 }

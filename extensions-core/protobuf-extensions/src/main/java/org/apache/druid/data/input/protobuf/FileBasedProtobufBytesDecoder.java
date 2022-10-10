@@ -48,14 +48,14 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
     initDescriptor();
   }
 
-  @JsonProperty
-  public String getDescriptor()
+  @JsonProperty("descriptor")
+  public String getDescriptorFilePath()
   {
     return descriptorFilePath;
   }
 
   @Override
-  protected DynamicSchema getDynamicSchema()
+  protected DynamicSchema generateDynamicSchema()
   {
     InputStream fin;
 
@@ -100,17 +100,16 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
+    if (!super.equals(o)) {
+      return false;
+    }
     FileBasedProtobufBytesDecoder that = (FileBasedProtobufBytesDecoder) o;
-
-    return Objects.equals(descriptorFilePath, that.descriptorFilePath) &&
-           Objects.equals(protoMessageType, that.protoMessageType);
+    return Objects.equals(descriptorFilePath, that.descriptorFilePath);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(descriptorFilePath, protoMessageType);
+    return Objects.hash(super.hashCode(), descriptorFilePath);
   }
-
 }

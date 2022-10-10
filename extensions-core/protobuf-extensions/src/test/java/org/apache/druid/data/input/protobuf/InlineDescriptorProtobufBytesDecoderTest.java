@@ -20,6 +20,8 @@
 package org.apache.druid.data.input.protobuf;
 
 import com.google.common.io.Files;
+import com.google.protobuf.Descriptors;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -33,7 +35,8 @@ public class InlineDescriptorProtobufBytesDecoderTest
   private String descString;
 
   @Before
-  public void initDescriptorString() throws Exception {
+  public void initDescriptorString() throws Exception
+  {
     File descFile = new File(this.getClass()
                                  .getClassLoader()
                                  .getResource("prototest.desc")
@@ -45,7 +48,10 @@ public class InlineDescriptorProtobufBytesDecoderTest
   public void testShortMessageType()
   {
     @SuppressWarnings("unused") // expected to create parser without exception
-    InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(descString, "ProtoTestEvent");
+    InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(
+        descString,
+        "ProtoTestEvent"
+    );
     decoder.initDescriptor();
   }
 
@@ -53,7 +59,10 @@ public class InlineDescriptorProtobufBytesDecoderTest
   public void testLongMessageType()
   {
     @SuppressWarnings("unused") // expected to create parser without exception
-    InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(descString, "prototest.ProtoTestEvent");
+    InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(
+        descString,
+        "prototest.ProtoTestEvent"
+    );
     decoder.initDescriptor();
   }
 
@@ -77,7 +86,10 @@ public class InlineDescriptorProtobufBytesDecoderTest
   public void testMalformedDescriptorValidBase64InvalidDescriptor()
   {
     @SuppressWarnings("unused") // expected exception
-    InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder("aGVsbG8gd29ybGQ=", "BadName");
+    InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(
+        "aGVsbG8gd29ybGQ=",
+        "BadName"
+    );
     decoder.initDescriptor();
   }
 
@@ -89,4 +101,23 @@ public class InlineDescriptorProtobufBytesDecoderTest
     InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(descString, null);
     decoder.initDescriptor();
   }
+
+  @Test
+  public void testEquals()
+  {
+    InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(descString, "ProtoTestEvent");
+    decoder.initDescriptor();
+    Descriptors.Descriptor descriptorA = decoder.getDescriptor();
+
+    decoder = new InlineDescriptorProtobufBytesDecoder(descString, "ProtoTestEvent.Foo");
+    decoder.initDescriptor();
+    Descriptors.Descriptor descriptorB = decoder.getDescriptor();
+
+    EqualsVerifier.forClass(InlineDescriptorProtobufBytesDecoder.class)
+                  .usingGetClass()
+                  .withIgnoredFields("descriptor")
+                  .withPrefabValues(Descriptors.Descriptor.class, descriptorA, descriptorB)
+                  .verify();
+  }
+
 }
