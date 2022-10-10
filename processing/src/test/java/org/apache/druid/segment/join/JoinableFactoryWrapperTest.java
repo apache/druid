@@ -862,7 +862,7 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
 
     Assert.assertEquals(
         Pair.of(
-            ImmutableList.of(),
+            ImmutableList.of(new InDimFilter("x", TEST_LOOKUP_KEYS)),
             clauses
         ),
         conversion
