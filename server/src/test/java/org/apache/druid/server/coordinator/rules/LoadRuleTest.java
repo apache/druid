@@ -46,6 +46,7 @@ import org.apache.druid.server.coordinator.DruidClusterBuilder;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.Metrics;
 import org.apache.druid.server.coordinator.SegmentAction;
 import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
@@ -61,6 +62,7 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -168,8 +170,8 @@ public class LoadRuleTest
 
     CoordinatorStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
-    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
-    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, DruidServer.DEFAULT_TIER));
+    Assert.assertEquals(1L, stats.getTieredStat(Metrics.ASSIGNED_COUNT, "hot"));
+    Assert.assertEquals(1L, stats.getTieredStat(Metrics.ASSIGNED_COUNT, DruidServer.DEFAULT_TIER));
 
     EasyMock.verify(mockPeon, mockBalancerStrategy);
   }
@@ -251,7 +253,7 @@ public class LoadRuleTest
         .build();
 
     CoordinatorStats stats = runRuleAndGetStats(rule, segment, druidCluster);
-    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
+    Assert.assertEquals(1L, stats.getTieredStat(Metrics.ASSIGNED_COUNT, "hot"));
 
     // ensure multiple runs don't assign primary segment again if at replication count
     final LoadQueuePeon loadingPeon = createLoadingPeon(segment, false);
@@ -264,7 +266,7 @@ public class LoadRuleTest
 
     CoordinatorStats statsAfterLoadPrimary = runRuleAndGetStats(rule, segment, afterLoad);
 
-    Assert.assertTrue(statsAfterLoadPrimary.getTiers(LoadRule.ASSIGNED_COUNT).isEmpty());
+    Assert.assertTrue(statsAfterLoadPrimary.getTiers(Metrics.ASSIGNED_COUNT).isEmpty());
 
     EasyMock.verify(mockPeon, mockBalancerStrategy);
   }
@@ -304,7 +306,7 @@ public class LoadRuleTest
     );
 
     // Ensure that the segment is assigned to one of the historicals
-    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
+    Assert.assertEquals(1L, stats.getTieredStat(Metrics.ASSIGNED_COUNT, "hot"));
 
     // Ensure that the primary segment is assigned again in case the peon timed out on loading the segment
     final LoadQueuePeon slowLoadingPeon = createLoadingPeon(segment, true);
@@ -321,7 +323,7 @@ public class LoadRuleTest
         makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(withLoadTimeout, segment)
     );
 
-    Assert.assertEquals(1L, statsAfterLoadPrimary.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
+    Assert.assertEquals(1L, statsAfterLoadPrimary.getTieredStat(Metrics.ASSIGNED_COUNT, "hot"));
 
     EasyMock.verify(emptyPeon, mockBalancerStrategy);
   }
@@ -357,7 +359,7 @@ public class LoadRuleTest
     CoordinatorStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     // Ensure that the segment is assigned to one of the historicals
-    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
+    Assert.assertEquals(1L, stats.getTieredStat(Metrics.ASSIGNED_COUNT, "hot"));
 
     // Add the segment to the timed out list to simulate peon timeout on loading the segment
     final LoadQueuePeon slowLoadingPeon = createLoadingPeon(segment, true);
@@ -371,7 +373,7 @@ public class LoadRuleTest
     // Default behavior is to not replicate the timed out segments on other servers
     CoordinatorStats statsAfterLoadPrimary = runRuleAndGetStats(rule, segment, withLoadTimeout);
 
-    Assert.assertTrue(statsAfterLoadPrimary.getTiers(LoadRule.ASSIGNED_COUNT).isEmpty());
+    Assert.assertTrue(statsAfterLoadPrimary.getTiers(Metrics.ASSIGNED_COUNT).isEmpty());
 
     EasyMock.verify(emptyPeon, mockBalancerStrategy);
   }
@@ -415,12 +417,13 @@ public class LoadRuleTest
         makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(druidCluster, segment0, segment1)
     );
 
-    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "tier1"));
+    Assert.assertEquals(1L, stats.getTieredStat(Metrics.ASSIGNED_COUNT, "tier1"));
 
     EasyMock.verify(loadingPeon, mockBalancerStrategy);
   }
 
   @Test
+  @Ignore("Segment should be quickly available on all target tiers irrespective of priority")
   public void testLoadPriority()
   {
     final LoadQueuePeon mockPeon1 = createEmptyPeon();
@@ -466,8 +469,8 @@ public class LoadRuleTest
 
     final CoordinatorStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
-    Assert.assertEquals(0L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "tier1"));
-    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "tier2"));
+    Assert.assertEquals(0L, stats.getTieredStat(Metrics.ASSIGNED_COUNT, "tier1"));
+    Assert.assertEquals(1L, stats.getTieredStat(Metrics.ASSIGNED_COUNT, "tier2"));
 
     EasyMock.verify(mockPeon1, mockPeon2, mockBalancerStrategy);
   }
@@ -559,7 +562,7 @@ public class LoadRuleTest
     final DataSegment segment = createDataSegment("foo");
     CoordinatorStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
-    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
+    Assert.assertEquals(1L, stats.getTieredStat(Metrics.ASSIGNED_COUNT, "hot"));
 
     EasyMock.verify(mockPeon, mockBalancerStrategy);
   }
@@ -639,9 +642,9 @@ public class LoadRuleTest
     CoordinatorStats stats2 = runRuleAndGetStats(rule, dataSegment2, params);
     CoordinatorStats stats3 = runRuleAndGetStats(rule, dataSegment3, params);
 
-    Assert.assertEquals(1L, stats1.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
-    Assert.assertEquals(1L, stats2.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
-    Assert.assertEquals(0L, stats3.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
+    Assert.assertEquals(1L, stats1.getTieredStat(Metrics.ASSIGNED_COUNT, "hot"));
+    Assert.assertEquals(1L, stats2.getTieredStat(Metrics.ASSIGNED_COUNT, "hot"));
+    Assert.assertEquals(0L, stats3.getTieredStat(Metrics.ASSIGNED_COUNT, "hot"));
 
     EasyMock.verify(mockBalancerStrategy);
   }
@@ -674,7 +677,7 @@ public class LoadRuleTest
 
     CoordinatorStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
-    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "tier2"));
+    Assert.assertEquals(1L, stats.getTieredStat(Metrics.ASSIGNED_COUNT, "tier2"));
     EasyMock.verify(mockPeon1, mockPeon2, mockBalancerStrategy);
   }
 
@@ -714,8 +717,8 @@ public class LoadRuleTest
         .build();
     CoordinatorStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
-    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "tier1"));
-    Assert.assertEquals(2L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "tier2"));
+    Assert.assertEquals(1L, stats.getTieredStat(Metrics.ASSIGNED_COUNT, "tier1"));
+    Assert.assertEquals(2L, stats.getTieredStat(Metrics.ASSIGNED_COUNT, "tier2"));
 
     EasyMock.verify(mockPeon1, mockPeon2, mockPeon3, mockPeon4, mockBalancerStrategy);
   }

@@ -126,7 +126,7 @@ public class BalanceSegmentsProfiler
         .addTier("normal", serverHolderList.toArray(new ServerHolder[0]))
         .build();
     final ReplicationThrottler replicationThrottler = new ReplicationThrottler();
-    replicationThrottler.resetParams(2, 500, 4);
+    replicationThrottler.updateReplicationState(2, 500, 4);
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder(druidCluster)
         .withLoadManagementPeons(peonMap)

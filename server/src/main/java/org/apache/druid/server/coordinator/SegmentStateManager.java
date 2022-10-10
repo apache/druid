@@ -23,12 +23,10 @@ import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Manages state of segments being loaded.
@@ -42,10 +40,8 @@ public class SegmentStateManager
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final ReplicationThrottler replicationThrottler = new ReplicationThrottler();
 
-  // This should be merged with currently replicating segments as they use the
-  // same lifetime expiration logic
-  private final Map<String, ConcurrentHashMap<SegmentId, BalancerSegmentHolder>>
-      currentlyMovingSegments = new HashMap<>();
+  private final ConcurrentHashMap<String, TierLoadingState> currentlyMovingSegments =
+      new ConcurrentHashMap<>();
 
   public SegmentStateManager(
       ServerInventoryView serverInventoryView,
@@ -65,12 +61,11 @@ public class SegmentStateManager
   public void prepareForRun(DruidCoordinatorRuntimeParams runtimeParams)
   {
     final CoordinatorDynamicConfig dynamicConfig = runtimeParams.getCoordinatorDynamicConfig();
-    replicationThrottler.resetParams(
+    replicationThrottler.updateReplicationState(
         dynamicConfig.getReplicationThrottleLimit(),
         dynamicConfig.getReplicantLifetime(),
         dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
     );
-    replicationThrottler.updateReplicationState();
     updateMovingSegmentLifetimes();
   }
 
@@ -122,19 +117,19 @@ public class SegmentStateManager
       ServerHolder toServer
   )
   {
-    final ConcurrentMap<SegmentId, BalancerSegmentHolder> segmentsMovingInTier = currentlyMovingSegments
-        .computeIfAbsent(toServer.getServer().getTier(), t -> new ConcurrentHashMap<>());
+    final TierLoadingState segmentsMovingInTier = currentlyMovingSegments
+        .computeIfAbsent(toServer.getServer().getTier(), t -> new TierLoadingState(15));
     final LoadQueuePeon fromServerPeon = fromServer.getPeon();
     final LoadPeonCallback moveFinishCallback = success -> {
       fromServerPeon.unmarkSegmentToDrop(segment);
-      segmentsMovingInTier.remove(segment.getId());
+      segmentsMovingInTier.removeSegment(segment.getId());
     };
 
     // mark segment to drop before it is actually loaded on server
     // to be able to account for this information in BalancerStrategy immediately
     toServer.startOperation(segment, SegmentState.MOVING_TO);
     fromServerPeon.markSegmentToDrop(segment);
-    segmentsMovingInTier.put(segment.getId(), new BalancerSegmentHolder(fromServer, segment));
+    segmentsMovingInTier.addSegment(segment.getId(), fromServer.getServer().getHost());
 
     final LoadQueuePeon toServerPeon = toServer.getPeon();
     final String toServerName = toServer.getServer().getName();
@@ -184,9 +179,8 @@ public class SegmentStateManager
    */
   public int getNumMovingSegments(String tier)
   {
-    ConcurrentHashMap<SegmentId, BalancerSegmentHolder> segmentsMovingInTier
-        = currentlyMovingSegments.get(tier);
-    return segmentsMovingInTier == null ? 0 : segmentsMovingInTier.size();
+    TierLoadingState segmentsMovingInTier = currentlyMovingSegments.get(tier);
+    return segmentsMovingInTier == null ? 0 : segmentsMovingInTier.getNumProcessingSegments();
   }
 
   /**
@@ -220,17 +214,22 @@ public class SegmentStateManager
    */
   private void updateMovingSegmentLifetimes()
   {
-    for (String tier : currentlyMovingSegments.keySet()) {
-      for (BalancerSegmentHolder holder : currentlyMovingSegments.get(tier).values()) {
-        holder.reduceLifetime();
-        if (holder.getLifetime() <= 0) {
-          log.makeAlert("[%s]: Balancer move segments queue has a segment stuck", tier)
-             .addData("segment", holder.getSegment().getId())
-             .addData("server", holder.getFromServer().getServer().getMetadata())
-             .emit();
-        }
+    final Set<String> inactiveTiers = new HashSet<>();
+    currentlyMovingSegments.forEach((tier, holder) -> {
+      if (holder.getNumProcessingSegments() == 0) {
+        inactiveTiers.add(tier);
       }
-    }
+
+      holder.reduceLifetime();
+      if (holder.getLifetime() <= 0) {
+        log.makeAlert("[%s]: Balancer move segments queue has a segment stuck", tier)
+           .addData("segments", holder.getCurrentlyProcessingSegmentsAndHosts())
+           .emit();
+      }
+    });
+
+    // Reset state for inactive tiers
+    inactiveTiers.forEach(currentlyMovingSegments::remove);
   }
 
 }

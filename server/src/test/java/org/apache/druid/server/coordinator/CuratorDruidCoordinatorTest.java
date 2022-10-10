@@ -321,10 +321,10 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(srcCountdown));
     Assert.assertTrue(timing.forWaiting().awaitLatch(destCountdown));
 
-
+    sourceSegments.forEach(source::addDataSegment);
+    destinationSegments.forEach(dest::addDataSegment);
     loadManagementPeons.put("localhost:1", sourceLoadQueuePeon);
     loadManagementPeons.put("localhost:2", destinationLoadQueuePeon);
-
 
     segmentRemovedLatch = new CountDownLatch(1);
     segmentAddedLatch = new CountDownLatch(1);
@@ -335,18 +335,22 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(EasyMock.anyString()))
             .andReturn(druidDataSource);
     EasyMock.expect(coordinatorRuntimeParams.getDataSourcesSnapshot()).andReturn(dataSourcesSnapshot).anyTimes();
+    EasyMock.expect(coordinatorRuntimeParams.getCoordinatorDynamicConfig())
+            .andReturn(CoordinatorDynamicConfig.builder().build()).anyTimes();
     EasyMock.replay(segmentsMetadataManager, coordinatorRuntimeParams);
 
     EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString())).andReturn(druidDataSource).anyTimes();
     EasyMock.replay(dataSourcesSnapshot);
 
-    /*TODO: coordinator.moveSegment(
-        coordinatorRuntimeParams,
-        source.toImmutableDruidServer(),
-        dest.toImmutableDruidServer(),
-        sourceSegments.get(2),
-        null
-    );*/
+    // Move the segment from source to dest
+    SegmentStateManager stateManager = new SegmentStateManager(baseView, segmentsMetadataManager, false);
+    stateManager.prepareForRun(coordinatorRuntimeParams);
+    SegmentLoader segmentLoader = new SegmentLoader(stateManager, coordinatorRuntimeParams);
+    segmentLoader.moveSegment(
+        segmentToMove,
+        new ServerHolder(source.toImmutableDruidServer(), sourceLoadQueuePeon),
+        new ServerHolder(dest.toImmutableDruidServer(), destinationLoadQueuePeon)
+    );
 
     // wait for destination server to load segment
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));

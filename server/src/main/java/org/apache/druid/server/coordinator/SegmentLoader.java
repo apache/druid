@@ -105,12 +105,10 @@ public class SegmentLoader
   public void updateReplicas(DataSegment segment, Map<String, Integer> tierToReplicaCount)
   {
     // Handle every target tier
-    final Set<String> targetTiers = tierToReplicaCount.keySet();
-    for (String tier : targetTiers) {
-      int numReplicas = tierToReplicaCount.get(tier);
-      stats.addToTieredStat(Metrics.REQUIRED_CAPACITY, tier, segment.getSize() * numReplicas);
+    tierToReplicaCount.forEach((tier, numReplicas) -> {
       updateReplicasOnTier(segment, tier, tierToReplicaCount.get(tier));
-    }
+      stats.addToTieredStat(Metrics.REQUIRED_CAPACITY, tier, segment.getSize() * numReplicas);
+    });
 
     // Find the minimum number of segments required for fault tolerance
     final int totalTargetReplicas = tierToReplicaCount.values().stream()
@@ -119,6 +117,7 @@ public class SegmentLoader
 
     // Drop segment from unneeded tiers if requirement is met across target tiers
     int loadedTargetReplicas = 0;
+    final Set<String> targetTiers = tierToReplicaCount.keySet();
     for (String tier : targetTiers) {
       loadedTargetReplicas += replicantLookup.getLoadedReplicants(segment.getId(), tier);
     }
@@ -197,12 +196,11 @@ public class SegmentLoader
     boolean dropCancelled = state == SegmentState.DROPPING
                             && stateManager.cancelOperation(SegmentState.DROPPING, segment, server);
 
-    final String tier = server.getServer().getTier();
     if (dropCancelled) {
-      stats.addToTieredStat(Metrics.CANCELLED_DROPS, tier, 1);
+      stats.addToGlobalStat(Metrics.CANCELLED_DROPS, 1);
     } else if (canLoadSegment(server, segment)
                && stateManager.loadSegment(segment, server, false)) {
-      stats.addToTieredStat(Metrics.QUEUED_LOADS, tier, 1);
+      stats.addToGlobalStat(Metrics.ASSIGNED_COUNT, 1);
     } else {
       log.makeAlert("Failed to broadcast segment for [%s]", segment.getDataSource())
          .addData("segmentId", segment.getId())
@@ -226,11 +224,10 @@ public class SegmentLoader
     boolean loadCancelled = state == SegmentState.LOADING
                             && stateManager.cancelOperation(SegmentState.LOADING, segment, server);
 
-    final String tier = server.getServer().getTier();
     if (loadCancelled) {
-      stats.addToTieredStat(Metrics.CANCELLED_LOADS, tier, 1);
+      stats.addToGlobalStat(Metrics.CANCELLED_LOADS, 1);
     } else if (stateManager.dropSegment(segment, server)) {
-      stats.addToTieredStat(Metrics.QUEUED_DROPS, tier, 1);
+      stats.addToGlobalStat(Metrics.DROPPED_COUNT, 1);
     } else {
       return false;
     }
@@ -297,8 +294,10 @@ public class SegmentLoader
     stats.addToTieredStat(Metrics.CANCELLED_DROPS, tier, cancelledDrops);
 
     numReplicasToLoad -= cancelledDrops;
-    int numLoaded = serversByState.get(SegmentState.LOADED).size();
-    boolean primaryExists = numLoaded + cancelledDrops > 0;
+    int totalReplicas = serversByState.get(SegmentState.LOADED).size()
+                        + serversByState.get(SegmentState.LOADING).size()
+                        + cancelledDrops;
+    boolean primaryExists = totalReplicas > 0;
     if (numReplicasToLoad > 0) {
       int successfulLoadsQueued = loadReplicas(
           numReplicasToLoad,
@@ -307,7 +306,7 @@ public class SegmentLoader
           primaryExists
       );
 
-      stats.addToTieredStat(Metrics.QUEUED_LOADS, tier, successfulLoadsQueued);
+      stats.addToTieredStat(Metrics.ASSIGNED_COUNT, tier, successfulLoadsQueued);
       if (numReplicasToLoad > successfulLoadsQueued) {
         log.warn(
             "Queued %d of %d loads of segment [%s] on tier [%s].",
@@ -343,7 +342,7 @@ public class SegmentLoader
           serversByState.get(SegmentState.LOADED)
       );
 
-      stats.addToTieredStat(Metrics.QUEUED_DROPS, tier, successfulDropsQueued);
+      stats.addToTieredStat(Metrics.DROPPED_COUNT, tier, successfulDropsQueued);
       if (numReplicasToDrop > successfulDropsQueued) {
         log.warn(
             "Queued %d of %d loads of segment [%s] on tier [%s].",

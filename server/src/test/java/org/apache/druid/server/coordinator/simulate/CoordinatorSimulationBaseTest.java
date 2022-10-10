@@ -275,6 +275,7 @@ public abstract class CoordinatorSimulationBaseTest
     static final String MOVED_COUNT = "segment/moved/count";
     static final String DROPPED_COUNT = "segment/dropped/count";
     static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
+    static final String UNDER_REPLICATED_COUNT = "segment/underReplicated/count";
   }
 
   static class Segments

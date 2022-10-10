@@ -30,6 +30,7 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
+import org.apache.druid.server.coordinator.Metrics;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.timeline.DataSegment;
@@ -270,7 +271,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
                   }
               ));
 
-    emitTieredStats(emitter, "tier/required/capacity", stats, LoadRule.REQUIRED_CAPACITY);
+    emitTieredStats(emitter, "tier/required/capacity", stats, Metrics.REQUIRED_CAPACITY);
     emitTieredStats(emitter, "tier/total/capacity", stats, TOTAL_CAPACITY);
 
     emitTieredStats(emitter, "tier/replication/factor", stats, MAX_REPLICATION_FACTOR);

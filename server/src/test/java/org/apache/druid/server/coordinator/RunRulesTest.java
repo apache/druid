@@ -38,7 +38,6 @@ import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
-import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -1382,7 +1381,7 @@ public class RunRulesTest
     CoordinatorStats stats = afterParams.getCoordinatorStats();
     Assert.assertEquals(
         dataSegment.getSize() * numReplicants,
-        stats.getTieredStat(LoadRule.REQUIRED_CAPACITY, DruidServer.DEFAULT_TIER)
+        stats.getTieredStat(Metrics.REQUIRED_CAPACITY, DruidServer.DEFAULT_TIER)
     );
     Assert.assertEquals(0L, stats.getTieredStat("assignedCount", DruidServer.DEFAULT_TIER)); // since primary assignment failed
     Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
@@ -1446,7 +1445,7 @@ public class RunRulesTest
     CoordinatorStats stats = afterParams.getCoordinatorStats();
     Assert.assertEquals(
         dataSegment.getSize() * numReplicants,
-        stats.getTieredStat(LoadRule.REQUIRED_CAPACITY, DruidServer.DEFAULT_TIER)
+        stats.getTieredStat(Metrics.REQUIRED_CAPACITY, DruidServer.DEFAULT_TIER)
     );
     Assert.assertEquals(0L, stats.getTieredStat("assignedCount", DruidServer.DEFAULT_TIER)); // since primary assignment should fail
     Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());

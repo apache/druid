@@ -39,7 +39,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   private int segmentsQueuedForLoad;
   private long sizeOfLoadingSegments;
 
-  private final ConcurrentMap<SegmentId, SegmentState> segmentStates = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentId, SegmentState> queuedSegments = new ConcurrentHashMap<>();
 
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
   {
@@ -56,24 +56,24 @@ public class ServerHolder implements Comparable<ServerHolder>
     this.peon = peon;
     this.isDecommissioning = isDecommissioning;
 
-    peon.getSegmentsInQueue().forEach((segment, action) -> {
-      segmentStates.put(segment.getId(), toState(action));
-      sizeOfLoadingSegments += action == SegmentAction.DROP ? 0L : segment.getSize();
-    });
+    peon.getSegmentsInQueue().forEach(this::initializeSegmentState);
   }
 
-  private static SegmentState toState(SegmentAction action)
+  private void initializeSegmentState(DataSegment segment, SegmentAction action)
   {
     switch (action) {
       case DROP:
-        return SegmentState.DROPPING;
+        startOperation(segment, SegmentState.DROPPING);
+        break;
       case LOAD_AS_PRIMARY:
       case LOAD_AS_REPLICA:
-        return SegmentState.LOADING;
+        startOperation(segment, SegmentState.LOADING);
+        break;
       case MOVE_TO:
-        return SegmentState.MOVING_TO;
+        startOperation(segment, SegmentState.MOVING_TO);
+        break;
       default:
-        return SegmentState.NONE;
+        break;
     }
   }
 
@@ -140,7 +140,7 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public SegmentState getSegmentState(DataSegment segment)
   {
-    SegmentState state = segmentStates.get(segment.getId());
+    SegmentState state = queuedSegments.get(segment.getId());
     if (state != null) {
       return state;
     }
@@ -170,7 +170,7 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public boolean startOperation(DataSegment segment, SegmentState newState)
   {
-    if (segmentStates.containsKey(segment.getId())) {
+    if (queuedSegments.containsKey(segment.getId())) {
       return false;
     }
 
@@ -178,13 +178,13 @@ public class ServerHolder implements Comparable<ServerHolder>
       ++segmentsQueuedForLoad;
       sizeOfLoadingSegments += segment.getSize();
     }
-    segmentStates.put(segment.getId(), newState);
+    queuedSegments.put(segment.getId(), newState);
     return true;
   }
 
   public boolean cancelOperation(DataSegment segment, SegmentState currentState)
   {
-    SegmentState observedState = segmentStates.get(segment.getId());
+    SegmentState observedState = queuedSegments.get(segment.getId());
     if (observedState != currentState) {
       return false;
     }
@@ -193,7 +193,7 @@ public class ServerHolder implements Comparable<ServerHolder>
       --segmentsQueuedForLoad;
       sizeOfLoadingSegments -= segment.getSize();
     }
-    segmentStates.remove(segment.getId());
+    queuedSegments.remove(segment.getId());
     return true;
   }
 

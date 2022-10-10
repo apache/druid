@@ -54,6 +54,11 @@ public class BalanceSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    if (params.getUsedSegments().isEmpty()) {
+      log.info("Skipping balance as there are no used segments.");
+      return params;
+    }
+
     final CoordinatorStats stats = new CoordinatorStats();
     final SegmentLoader loader = new SegmentLoader(stateManager, params);
     params.getDruidCluster().getHistoricals().forEach((String tier, NavigableSet<ServerHolder> servers) -> {
@@ -72,17 +77,10 @@ public class BalanceSegments implements CoordinatorDuty
       SegmentLoader loader
   )
   {
-    log.info("Balancing segments in tier [%s]", tier);
-    if (params.getUsedSegments().size() == 0) {
-      log.info("Metadata segments are not available. Cannot balance.");
-      // suppress emit zero stats
-      return;
-    }
-
     final int numSegmentsMovingInTier = stateManager.getNumMovingSegments(tier);
     if (numSegmentsMovingInTier > 0) {
       log.info(
-          "[%s]: Still waiting on %,d segments to be moved. Skipping balance.",
+          "Skipping balance for tier [%s] as there are still %,d segments in balancing queue.",
           tier,
           numSegmentsMovingInTier
       );
@@ -99,13 +97,14 @@ public class BalanceSegments implements CoordinatorDuty
     final List<ServerHolder> decommissioningServers = partitions.get(true);
     final List<ServerHolder> activeServers = partitions.get(false);
     log.info(
-        "Found %d active servers, %d decommissioning servers",
+        "Balancing segments in tier [%s] with %d active servers, %d decommissioning servers",
+        tier,
         activeServers.size(),
         decommissioningServers.size()
     );
 
     if ((decommissioningServers.isEmpty() && activeServers.size() <= 1) || activeServers.isEmpty()) {
-      log.warn("[%s]: insufficient active servers. Cannot balance.", tier);
+      log.warn("Skipping balance for tier [%s] as there are insufficient active servers.", tier);
       // suppress emit zero stats
       return;
     }
@@ -116,7 +115,7 @@ public class BalanceSegments implements CoordinatorDuty
     }
 
     if (numSegments == 0) {
-      log.info("No segments found. Cannot balance.");
+      log.info("Skipping balance for tier [%s] as there are no served segments.", tier);
       // suppress emit zero stats
       return;
     }

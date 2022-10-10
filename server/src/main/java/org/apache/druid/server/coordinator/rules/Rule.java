@@ -23,10 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
-import org.apache.druid.server.coordinator.DruidCoordinator;
-import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.timeline.DataSegment;
@@ -94,20 +91,6 @@ public interface Rule
   {
     Preconditions.checkArgument(!canLoadSegments());
   }
-
-  /**
-   * {@link DruidCoordinatorRuntimeParams#getUsedSegments()} must not be called in Rule's code, because the used
-   * segments are not specified for the {@link DruidCoordinatorRuntimeParams} passed into Rule's code. This is because
-   * {@link DruidCoordinatorRuntimeParams} entangles two slightly different (nonexistent yet) abstractions:
-   * "CoordinatorDutyParams" and "RuleParams" which contain params that only {@link
-   * org.apache.druid.server.coordinator.duty.CoordinatorDuty} objects and Rules need, respectively. For example,
-   * {@link org.apache.druid.server.coordinator.ReplicationThrottler} needs to belong only to "RuleParams", but not to
-   * "CoordinatorDutyParams". The opposite for the collection of used segments and {@link
-   * org.apache.druid.client.DataSourcesSnapshot}.
-   *
-   * See https://github.com/apache/druid/issues/7228
-   */
-  CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment);
 
   void run(DataSegment segment, SegmentLoader loader);
 }

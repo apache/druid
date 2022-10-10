@@ -114,15 +114,15 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   }
 
   @Test
-  public void testDropHappensAfterTargetReplicationOnEveryTier()
+  public void testDropHappensAfterTwoReplicas()
   {
-    // replicationThrottleLimit = 5 ensures that all target replicas (total 4)
-    // are assigned for some segments in the first run itself (pigeon-hole)
+    // load queue size = 3,
+    // maxNonPrimaryReplicas = 0, each tier can load only one replica of a segment
     CoordinatorDynamicConfig dynamicConfig =
         CoordinatorDynamicConfig.builder()
                                 .withMaxSegmentsToMove(0)
-                                .withReplicationThrottleLimit(2)
-                                //.withMaxNonPrimaryReplicantsToLoad(33)
+                                .withMaxSegmentsInNodeLoadingQueue(3)
+                                .withMaxNonPrimaryReplicantsToLoad(0)
                                 .build();
 
     // historicals = 1(in T1) + 2(in T2) + 2(in T3)
@@ -151,42 +151,38 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     verifyNoEvent(Metric.DROPPED_COUNT);
-    int totalAssignedInRun1
-        = getValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2)).intValue()
-          + getValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T3)).intValue();
-    Assert.assertTrue(totalAssignedInRun1 > 0 && totalAssignedInRun1 < 40);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 6L);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T3), 6L);
 
-    // Run 2: Segments still queued, nothing is dropped from T1
+    // Run 2: Segments still queued
+    // nothing new is assigned to T2 or T3, nothing is dropped from T1
     runCoordinatorCycle();
-    loadQueuedSegments();
 
     verifyNoEvent(Metric.DROPPED_COUNT);
-    int totalLoadedAfterRun2
-        = historicalT21.getTotalSegments() + historicalT22.getTotalSegments()
-          + historicalT31.getTotalSegments() + historicalT32.getTotalSegments();
-    Assert.assertEquals(totalAssignedInRun1, totalLoadedAfterRun2);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 0L);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T3), 0L);
+
+    loadQueuedSegments();
+    Assert.assertEquals(6, getNumLoadedSegments(historicalT21, historicalT22));
+    Assert.assertEquals(6, getNumLoadedSegments(historicalT31, historicalT32));
 
     // Run 3: Some segments have been loaded
-    // segments fully replicated on T2 and T3 will now be dropped from T1
+    // All segments with atleast 2 replicas will now be dropped from T1
     runCoordinatorCycle();
+
+    verifyValue(Metric.DROPPED_COUNT, 6L);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 4L);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T3), 4L);
+
     loadQueuedSegments();
 
-    int totalDroppedInRun3
-        = getValue(Metric.DROPPED_COUNT, filter(DruidMetrics.TIER, Tier.T1)).intValue();
-    Assert.assertTrue(totalDroppedInRun3 > 0 && totalDroppedInRun3 < 10);
-    int totalLoadedAfterRun3
-        = historicalT21.getTotalSegments() + historicalT22.getTotalSegments()
-          + historicalT31.getTotalSegments() + historicalT32.getTotalSegments();
-    Assert.assertEquals(40, totalLoadedAfterRun3);
-
-    // Run 4: All segments are fully replicated on T2 and T3
+    // Run 4: All segments now have 2 loaded target replicas
+    // all segments will be dropped from T1
     runCoordinatorCycle();
+
+    verifyValue(Metric.DROPPED_COUNT, filter(DruidMetrics.TIER, Tier.T1), 4L);
+
     loadQueuedSegments();
-
-    int totalDroppedInRun4
-        = getValue(Metric.DROPPED_COUNT, filter(DruidMetrics.TIER, Tier.T1)).intValue();
-
-    Assert.assertEquals(10, totalDroppedInRun3 + totalDroppedInRun4);
     Assert.assertEquals(0, historicalT11.getTotalSegments());
     verifyDatasourceIsFullyLoaded(datasource);
   }
@@ -299,6 +295,15 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
         filter(DruidMetrics.SERVER, historicalT12.getName()),
         0
     );
+  }
+
+  private int getNumLoadedSegments(DruidServer... servers)
+  {
+    int numLoaded = 0;
+    for (DruidServer server : servers) {
+      numLoaded += server.getTotalSegments();
+    }
+    return numLoaded;
   }
 
 }

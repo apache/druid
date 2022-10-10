@@ -43,6 +43,7 @@ import org.joda.time.Interval;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Collections;
 import java.util.List;
 
 @RunWith(JUnitParamsRunner.class)
@@ -88,8 +89,8 @@ public class MarkAsUnusedOvershadowedSegmentsTest
     usedSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2);
 
     // Dummy values for comparisons in TreeSet
-    EasyMock.expect(mockPeon.getLoadQueueSize())
-            .andReturn(0L)
+    EasyMock.expect(mockPeon.getSegmentsInQueue())
+            .andReturn(Collections.emptyMap())
             .anyTimes();
     EasyMock.expect(druidServer.getMaxSize())
             .andReturn(0L)

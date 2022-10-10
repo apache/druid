@@ -766,7 +766,9 @@ public class DruidCoordinator
     public void run()
     {
       try {
+        log.info("Starting coordinator run for group [%s]", dutiesRunnableAlias);
         final long globalStart = System.nanoTime();
+
         synchronized (lock) {
           if (!coordLeaderSelector.isLeader()) {
             log.info("LEGGO MY EGGO. [%s] is leader.", coordLeaderSelector.getCurrentLeader());
@@ -810,7 +812,7 @@ public class DruidCoordinator
             && coordLeaderSelector.isLeader()
             && startingLeaderCounter == coordLeaderSelector.localTerm()) {
 
-          log.debug(
+          log.info(
               "Coordination is paused via dynamic configs! I will not be running Coordination Duties at this time"
           );
         }
@@ -834,11 +836,13 @@ public class DruidCoordinator
           }
         }
         // Emit the runtime of the full DutiesRunnable
+        final long runMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - globalStart);
         params.getEmitter().emit(
             new ServiceMetricEvent.Builder()
                 .setDimension(DruidMetrics.DUTY_GROUP, dutiesRunnableAlias)
-                .build("coordinator/global/time", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - globalStart))
+                .build("coordinator/global/time", runMillis)
         );
+        log.info("Finished coordinator run for group [%s] in [%d ms]", dutiesRunnableAlias, runMillis);
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
