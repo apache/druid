@@ -297,7 +297,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
                 while (next < 0 && valuesIterator.hasNext() && dictionaryIterator.hasNext()) {
                   ByteBuffer nextValue = valuesIterator.peek();
                   ByteBuffer nextDictionaryKey = dictionaryIterator.peek();
-                  int comparison = genericIndexedDictionary.compare(nextValue, nextDictionaryKey);
+                  int comparison = GenericIndexed.BYTE_BUFFER_STRATEGY.compare(nextValue, nextDictionaryKey);
                   if (comparison == 0) {
                     next = idx;
                     valuesIterator.next();

@@ -373,11 +373,6 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     return -(minIndex + 1);
   }
 
-  public int compare(@Nullable T b1, @Nullable T b2)
-  {
-    return strategy.compare(b1, b2);
-  }
-
   @Override
   public Iterator<T> iterator()
   {
