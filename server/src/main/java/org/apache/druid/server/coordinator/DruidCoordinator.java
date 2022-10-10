@@ -47,8 +47,6 @@ import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
 import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -78,7 +76,6 @@ import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -142,6 +139,7 @@ public class DruidCoordinator
   private final ScheduledExecutorService exec;
   private final LoadQueueTaskMaster taskMaster;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
+  private final SegmentStateManager segmentStateManager;
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
   private final Set<CoordinatorDuty> indexingServiceDuties;
@@ -255,6 +253,8 @@ public class DruidCoordinator
     this.coordLeaderSelector = coordLeaderSelector;
     this.objectMapper = objectMapper;
     this.compactSegments = initializeCompactSegmentsDuty();
+    this.segmentStateManager =
+        new SegmentStateManager(serverInventoryView, segmentsMetadataManager, taskMaster.isHttpLoading());
   }
 
   public boolean isLeader()
@@ -403,111 +403,6 @@ public class DruidCoordinator
   public String getCurrentLeader()
   {
     return coordLeaderSelector.getCurrentLeader();
-  }
-
-  public void moveSegment(
-      DruidCoordinatorRuntimeParams params,
-      ImmutableDruidServer fromServer,
-      ImmutableDruidServer toServer,
-      DataSegment segment,
-      final LoadPeonCallback callback
-  )
-  {
-    if (segment == null) {
-      log.makeAlert(new IAE("Can not move null DataSegment"), "Exception moving null segment").emit();
-      if (callback != null) {
-        callback.execute(false);
-      }
-      throw new ISE("Cannot move null DataSegment");
-    }
-    SegmentId segmentId = segment.getId();
-    try {
-      if (fromServer.getMetadata().equals(toServer.getMetadata())) {
-        throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentId, fromServer.getName());
-      }
-
-      ImmutableDruidDataSource dataSource = params.getDataSourcesSnapshot().getDataSource(segment.getDataSource());
-      if (dataSource == null) {
-        throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentId);
-      }
-
-      // get segment information from SegmentsMetadataManager instead of getting it from fromServer's.
-      // This is useful when SegmentsMetadataManager and fromServer DataSegment's are different for same
-      // identifier (say loadSpec differs because of deep storage migration).
-      final DataSegment segmentToLoad = dataSource.getSegment(segment.getId());
-      if (segmentToLoad == null) {
-        throw new IAE("No segment metadata found for segment Id [%s]", segment.getId());
-      }
-      final LoadQueuePeon loadPeon = loadManagementPeons.get(toServer.getName());
-      if (loadPeon == null) {
-        throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", toServer.getName());
-      }
-
-      final LoadQueuePeon dropPeon = loadManagementPeons.get(fromServer.getName());
-      if (dropPeon == null) {
-        throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", fromServer.getName());
-      }
-
-      final ServerHolder toHolder = new ServerHolder(toServer, loadPeon);
-      if (toHolder.getAvailableSize() < segmentToLoad.getSize()) {
-        throw new IAE(
-            "Not enough capacity on server [%s] for segment [%s]. Required: %,d, available: %,d.",
-            toServer.getName(),
-            segmentToLoad,
-            segmentToLoad.getSize(),
-            toHolder.getAvailableSize()
-        );
-      }
-
-      final LoadPeonCallback loadPeonCallback = success -> {
-        dropPeon.unmarkSegmentToDrop(segmentToLoad);
-        if (callback != null) {
-          callback.execute(success);
-        }
-      };
-
-      // mark segment to drop before it is actually loaded on server
-      // to be able to account this information in DruidBalancerStrategy immediately
-      dropPeon.markSegmentToDrop(segmentToLoad);
-      try {
-        loadPeon.loadSegment(
-            segmentToLoad,
-            success -> {
-              // Drop segment only if:
-              // (1) segment load was successful on toServer
-              // AND (2) segment not already queued for drop on fromServer
-              // AND (3a) loading is http-based
-              //     OR (3b) inventory shows segment loaded on toServer
-
-              // Do not check the inventory with http loading as the HTTP
-              // response is enough to determine load success or failure
-              try {
-                if (success
-                    && !dropPeon.getSegmentsToDrop().contains(segment)
-                    && (taskMaster.isHttpLoading()
-                     || serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment))) {
-                  dropPeon.dropSegment(segment, loadPeonCallback);
-                } else {
-                  loadPeonCallback.execute(success);
-                }
-              }
-              catch (Exception e) {
-                throw new RuntimeException(e);
-              }
-            }
-        );
-      }
-      catch (Exception e) {
-        dropPeon.unmarkSegmentToDrop(segmentToLoad);
-        throw new RuntimeException(e);
-      }
-    }
-    catch (Exception e) {
-      log.makeAlert(e, "Exception moving segment %s", segmentId).emit();
-      if (callback != null) {
-        callback.execute(false);
-      }
-    }
   }
 
   @VisibleForTesting
@@ -744,10 +639,10 @@ public class DruidCoordinator
     return ImmutableList.of(
         new LogUsedSegments(),
         new UpdateCoordinatorStateAndPrepareCluster(),
-        new RunRules(DruidCoordinator.this),
+        new RunRules(segmentStateManager),
         new UnloadUnusedSegments(),
         new MarkAsUnusedOvershadowedSegments(DruidCoordinator.this),
-        new BalanceSegments(DruidCoordinator.this)
+        new BalanceSegments(segmentStateManager)
     );
   }
 
@@ -986,6 +881,7 @@ public class DruidCoordinator
 
       stopPeonsForDisappearedServers(currentServers);
 
+      segmentStateManager.prepareForRun(params);
       return params.buildFromExisting()
                    .withDruidCluster(cluster)
                    .withLoadManagementPeons(loadManagementPeons)

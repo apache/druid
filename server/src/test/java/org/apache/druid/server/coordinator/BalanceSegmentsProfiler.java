@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -50,7 +51,7 @@ import java.util.Map;
 public class BalanceSegmentsProfiler
 {
   private static final int MAX_SEGMENTS_TO_MOVE = 5;
-  private DruidCoordinator coordinator;
+  private SegmentStateManager stateManager;
   private ImmutableDruidServer druidServer1;
   private ImmutableDruidServer druidServer2;
   List<DataSegment> segments = new ArrayList<>();
@@ -62,7 +63,7 @@ public class BalanceSegmentsProfiler
   @Before
   public void setUp()
   {
-    coordinator = EasyMock.createMock(DruidCoordinator.class);
+    stateManager = new SegmentStateManager(null, null, true);
     druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
     emitter = EasyMock.createMock(ServiceEmitter.class);
@@ -79,16 +80,6 @@ public class BalanceSegmentsProfiler
     EasyMock.expect(manager.getRules(EasyMock.anyObject())).andReturn(rules).anyTimes();
     EasyMock.expect(manager.getRulesWithDefault(EasyMock.anyObject())).andReturn(rules).anyTimes();
     EasyMock.replay(manager);
-
-    coordinator.moveSegment(
-        EasyMock.anyObject(),
-        EasyMock.anyObject(),
-        EasyMock.anyObject(),
-        EasyMock.anyObject(),
-        EasyMock.anyObject()
-    );
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.replay(coordinator);
 
     Map<String, LoadQueuePeon> peonMap = new HashMap<>();
     List<ServerHolder> serverHolderList = new ArrayList<>();
@@ -134,6 +125,8 @@ public class BalanceSegmentsProfiler
         .newBuilder()
         .addTier("normal", serverHolderList.toArray(new ServerHolder[0]))
         .build();
+    final ReplicationThrottler replicationThrottler = new ReplicationThrottler();
+    replicationThrottler.resetParams(2, 500, 4);
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder(druidCluster)
         .withLoadManagementPeons(peonMap)
@@ -148,11 +141,10 @@ public class BalanceSegmentsProfiler
         )
         .withEmitter(emitter)
         .withDatabaseRuleManager(manager)
-        .withReplicationManager(new ReplicationThrottler(2, 500, false))
         .build();
 
-    BalanceSegmentsTester tester = new BalanceSegmentsTester(coordinator);
-    RunRules runner = new RunRules(coordinator);
+    BalanceSegments tester = new BalanceSegments(stateManager);
+    RunRules runner = new RunRules(stateManager);
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     DruidCoordinatorRuntimeParams assignParams = runner.run(params);
@@ -181,16 +173,6 @@ public class BalanceSegmentsProfiler
     EasyMock.expect(druidServer2.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer2);
 
-    coordinator.moveSegment(
-        EasyMock.anyObject(),
-        EasyMock.anyObject(),
-        EasyMock.anyObject(),
-        EasyMock.anyObject(),
-        EasyMock.anyObject()
-    );
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.replay(coordinator);
-
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(
@@ -207,7 +189,7 @@ public class BalanceSegmentsProfiler
         .withUsedSegmentsInTest(segments)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
         .build();
-    BalanceSegmentsTester tester = new BalanceSegmentsTester(coordinator);
+    BalanceSegments tester = new BalanceSegments(stateManager);
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     System.out.println(watch.stop());

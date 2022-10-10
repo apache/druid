@@ -26,24 +26,20 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 public class RandomBalancerStrategy implements BalancerStrategy
 {
   @Override
-  public ServerHolder findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders)
+  public Iterator<ServerHolder> findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders)
   {
     // filter out servers whose avaialable size is less than required for this segment and those already serving this segment
-    final List<ServerHolder> usableServerHolders = serverHolders.stream().filter(
-        serverHolder -> serverHolder.getAvailableSize() >= proposalSegment.getSize() && !serverHolder.isServingSegment(
-            proposalSegment)
-    ).collect(Collectors.toList());
-    if (usableServerHolders.size() == 0) {
-      return null;
-    } else {
-      return usableServerHolders.get(ThreadLocalRandom.current().nextInt(usableServerHolders.size()));
-    }
+    final List<ServerHolder> usableServerHolders =
+        serverHolders.stream()
+                     .filter(server -> server.canLoadSegment(proposalSegment))
+                     .collect(Collectors.toList());
+    Collections.shuffle(usableServerHolders);
+    return usableServerHolders.iterator();
   }
 
   @Override

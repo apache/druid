@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -62,22 +61,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
       final ServiceEmitter emitter,
       final String metricName,
       final String tier,
-      final double value
-  )
-  {
-    emitter.emit(
-        new ServiceMetricEvent.Builder()
-            .setDimension(DruidMetrics.TIER, tier)
-            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
-            .build(metricName, value)
-    );
-  }
-
-  private void emitTieredStat(
-      final ServiceEmitter emitter,
-      final String metricName,
-      final String tier,
-      final long value
+      final Number value
   )
   {
     emitter.emit(
@@ -234,35 +218,39 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         }
     );
 
+    // Log load queue status of all replication or broadcast targets
     log.info("Load Queues:");
-    for (Iterable<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
-      for (ServerHolder serverHolder : serverHolders) {
-        ImmutableDruidServer server = serverHolder.getServer();
-        LoadQueuePeon queuePeon = serverHolder.getPeon();
-        log.info(
-            "Server[%s, %s, %s] has %,d left to load, %,d left to drop, %,d served, %,d bytes queued, %,d bytes served.",
-            server.getName(),
-            server.getType().toString(),
-            server.getTier(),
-            queuePeon.getSegmentsToLoad().size(),
-            queuePeon.getSegmentsToDrop().size(),
-            server.getNumSegments(),
-            queuePeon.getLoadQueueSize(),
-            server.getCurrSize()
-        );
-        if (log.isDebugEnabled()) {
-          for (DataSegment segment : queuePeon.getSegmentsToLoad()) {
-            log.debug("Segment to load[%s]", segment);
-          }
-          for (DataSegment segment : queuePeon.getSegmentsToDrop()) {
-            log.debug("Segment to drop[%s]", segment);
-          }
+    for (ServerHolder serverHolder : cluster.getAllServers()) {
+      ImmutableDruidServer server = serverHolder.getServer();
+      LoadQueuePeon queuePeon = serverHolder.getPeon();
+      log.info(
+          "Server[%s, %s, %s] has %,d left to load, %,d left to drop, %,d served, %,d bytes queued, %,d bytes served.",
+          server.getName(),
+          server.getType().toString(),
+          server.getTier(),
+          queuePeon.getSegmentsToLoad().size(),
+          queuePeon.getSegmentsToDrop().size(),
+          server.getNumSegments(),
+          queuePeon.getLoadQueueSize(),
+          server.getCurrSize()
+      );
+      if (log.isDebugEnabled()) {
+        for (DataSegment segment : queuePeon.getSegmentsToLoad()) {
+          log.debug("Segment to load[%s]", segment);
         }
+        for (DataSegment segment : queuePeon.getSegmentsToDrop()) {
+          log.debug("Segment to drop[%s]", segment);
+        }
+      }
+    }
+
+    for (Iterable<ServerHolder> historicalTier : cluster.getSortedHistoricalsByTier()) {
+      for (ServerHolder historical : historicalTier) {
+        final ImmutableDruidServer server = historical.getServer();
         stats.addToTieredStat(TOTAL_CAPACITY, server.getTier(), server.getMaxSize());
         stats.addToTieredStat(TOTAL_HISTORICAL_COUNT, server.getTier(), 1);
       }
     }
-
 
     params.getDatabaseRuleManager()
           .getAllRules()
@@ -322,18 +310,14 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           );
         });
 
-    coordinator.computeNumsUnavailableUsedSegmentsPerDataSource().object2IntEntrySet().forEach(
-        (final Object2IntMap.Entry<String> entry) -> {
-          final String dataSource = entry.getKey();
-          final int numUnavailableUsedSegmentsInDataSource = entry.getIntValue();
-          emitter.emit(
-              new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
-                  .setDimension(DruidMetrics.DATASOURCE, dataSource).build(
-                  "segment/unavailable/count", numUnavailableUsedSegmentsInDataSource
-              )
-          );
-        }
+    coordinator.computeNumsUnavailableUsedSegmentsPerDataSource().forEach(
+        (dataSource, numUnavailableSegments) ->
+            emitter.emit(
+                new ServiceMetricEvent.Builder()
+                    .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+                    .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                    .build("segment/unavailable/count", numUnavailableSegments)
+            )
     );
 
     coordinator.computeUnderReplicationCountsPerDataSourcePerTier().forEach(

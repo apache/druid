@@ -20,31 +20,61 @@
 package org.apache.druid.server.coordinator;
 
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
+ *
  */
 public class ServerHolder implements Comparable<ServerHolder>
 {
-  private static final Logger log = new Logger(ServerHolder.class);
   private final ImmutableDruidServer server;
   private final LoadQueuePeon peon;
   private final boolean isDecommissioning;
+
+  private int segmentsQueuedForLoad;
+  private long sizeOfLoadingSegments;
+
+  private final ConcurrentMap<SegmentId, SegmentState> segmentStates = new ConcurrentHashMap<>();
 
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
   {
     this(server, peon, false);
   }
 
-  public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon, boolean isDecommissioning)
+  public ServerHolder(
+      ImmutableDruidServer server,
+      LoadQueuePeon peon,
+      boolean isDecommissioning
+  )
   {
     this.server = server;
     this.peon = peon;
     this.isDecommissioning = isDecommissioning;
+
+    peon.getSegmentsInQueue().forEach((segment, action) -> {
+      segmentStates.put(segment.getId(), toState(action));
+      sizeOfLoadingSegments += action == SegmentAction.DROP ? 0L : segment.getSize();
+    });
+  }
+
+  private static SegmentState toState(SegmentAction action)
+  {
+    switch (action) {
+      case DROP:
+        return SegmentState.DROPPING;
+      case LOAD_AS_PRIMARY:
+      case LOAD_AS_REPLICA:
+        return SegmentState.LOADING;
+      case MOVE_TO:
+        return SegmentState.MOVING_TO;
+      default:
+        return SegmentState.NONE;
+    }
   }
 
   public ImmutableDruidServer getServer()
@@ -74,7 +104,7 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public long getSizeUsed()
   {
-    return getCurrServerSize() + getLoadQueueSize();
+    return getCurrServerSize() + sizeOfLoadingSegments;
   }
 
   public double getPercentUsed()
@@ -87,6 +117,7 @@ public class ServerHolder implements Comparable<ServerHolder>
    * the percent of move operations diverted from normal balancer moves for this purpose by
    * {@link CoordinatorDynamicConfig#getDecommissioningMaxPercentOfMaxSegmentsToMove()}. The mechanism allows draining
    * segments from nodes which are planned for replacement.
+   *
    * @return true if the node is decommissioning
    */
   public boolean isDecommissioning()
@@ -96,21 +127,30 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public long getAvailableSize()
   {
-    long maxSize = getMaxSize();
-    long sizeUsed = getSizeUsed();
-    long availableSize = maxSize - sizeUsed;
+    return getMaxSize() - getSizeUsed();
+  }
 
-    log.debug(
-        "Server[%s], MaxSize[%,d], CurrSize[%,d], QueueSize[%,d], SizeUsed[%,d], AvailableSize[%,d]",
-        server.getName(),
-        maxSize,
-        getCurrServerSize(),
-        getLoadQueueSize(),
-        sizeUsed,
-        availableSize
-    );
+  public boolean canLoadSegment(DataSegment segment)
+  {
+    final SegmentState state = getSegmentState(segment);
+    return !isDecommissioning
+           && getAvailableSize() >= segment.getSize()
+           && state == SegmentState.NONE;
+  }
 
-    return availableSize;
+  public SegmentState getSegmentState(DataSegment segment)
+  {
+    SegmentState state = segmentStates.get(segment.getId());
+    if (state != null) {
+      return state;
+    }
+
+    return isServingSegment(segment) ? SegmentState.LOADED : SegmentState.NONE;
+  }
+
+  public int getSegmentsQueuedForLoad()
+  {
+    return segmentsQueuedForLoad;
   }
 
   public boolean isServingSegment(DataSegment segment)
@@ -120,12 +160,41 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public boolean isLoadingSegment(DataSegment segment)
   {
-    return peon.getSegmentsToLoad().contains(segment);
+    return getSegmentState(segment) == SegmentState.LOADING;
   }
 
   public boolean isDroppingSegment(DataSegment segment)
   {
-    return peon.getSegmentsToDrop().contains(segment);
+    return getSegmentState(segment) == SegmentState.DROPPING;
+  }
+
+  public boolean startOperation(DataSegment segment, SegmentState newState)
+  {
+    if (segmentStates.containsKey(segment.getId())) {
+      return false;
+    }
+
+    if (newState == SegmentState.LOADING || newState == SegmentState.MOVING_TO) {
+      ++segmentsQueuedForLoad;
+      sizeOfLoadingSegments += segment.getSize();
+    }
+    segmentStates.put(segment.getId(), newState);
+    return true;
+  }
+
+  public boolean cancelOperation(DataSegment segment, SegmentState currentState)
+  {
+    SegmentState observedState = segmentStates.get(segment.getId());
+    if (observedState != currentState) {
+      return false;
+    }
+
+    if (currentState == SegmentState.LOADING || currentState == SegmentState.MOVING_TO) {
+      --segmentsQueuedForLoad;
+      sizeOfLoadingSegments -= segment.getSize();
+    }
+    segmentStates.remove(segment.getId());
+    return true;
   }
 
   public int getNumberOfSegmentsInQueue()

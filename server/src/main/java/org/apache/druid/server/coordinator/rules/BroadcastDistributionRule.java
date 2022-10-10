@@ -27,7 +27,9 @@ import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
+import org.apache.druid.server.coordinator.SegmentState;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
@@ -39,6 +41,12 @@ import java.util.stream.Collectors;
 public abstract class BroadcastDistributionRule implements Rule
 {
   private static final EmittingLogger log = new EmittingLogger(BroadcastDistributionRule.class);
+
+  @Override
+  public void run(DataSegment segment, SegmentLoader loader)
+  {
+    loader.broadcastSegment(segment);
+  }
 
   @Override
   public CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment)
@@ -89,7 +97,8 @@ public abstract class BroadcastDistributionRule implements Rule
       DataSegment segment
   )
   {
-    Object2LongMap<String> underReplicatedBroadcastTiers = segmentReplicantLookup.getBroadcastUnderReplication(segment.getId());
+    Object2LongMap<String> underReplicatedBroadcastTiers =
+        segmentReplicantLookup.getBroadcastUnderReplication(segment.getId());
     for (final Object2LongMap.Entry<String> entry : underReplicatedBroadcastTiers.object2LongEntrySet()) {
       final String tier = entry.getKey();
       final long underReplicatedCount = entry.getLongValue();
@@ -140,6 +149,7 @@ public abstract class BroadcastDistributionRule implements Rule
            .emit();
       } else {
         if (!holder.isLoadingSegment(segment)) {
+          holder.startOperation(segment, SegmentState.LOADING);
           holder.getPeon().loadSegment(
               segment,
               null

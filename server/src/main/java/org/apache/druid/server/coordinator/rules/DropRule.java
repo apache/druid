@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.rules;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.timeline.DataSegment;
 
 /**
@@ -29,6 +30,12 @@ import org.apache.druid.timeline.DataSegment;
  */
 public abstract class DropRule implements Rule
 {
+  @Override
+  public void run(DataSegment segment, SegmentLoader loader)
+  {
+    loader.deleteSegment(segment);
+  }
+
   @Override
   public CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment)
   {

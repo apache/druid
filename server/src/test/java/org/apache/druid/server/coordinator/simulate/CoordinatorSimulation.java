@@ -103,5 +103,10 @@ public interface CoordinatorSimulation
      * Removes the specified server from the cluster.
      */
     void removeServer(DruidServer server);
+
+    /**
+     * Adds the specified server to the cluster.
+     */
+    void addServer(DruidServer server);
   }
 }

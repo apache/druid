@@ -130,6 +130,12 @@ public abstract class CoordinatorSimulationBaseTest
   }
 
   @Override
+  public void addServer(DruidServer server)
+  {
+    sim.cluster().addServer(server);
+  }
+
+  @Override
   public double getLoadPercentage(String datasource)
   {
     return sim.coordinator().getLoadPercentage(datasource);

@@ -24,11 +24,10 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
-import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.ReplicationThrottler;
+import org.apache.druid.server.coordinator.SegmentLoader;
+import org.apache.druid.server.coordinator.SegmentStateManager;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
@@ -46,38 +45,16 @@ public class RunRules implements CoordinatorDuty
   private static final EmittingLogger log = new EmittingLogger(RunRules.class);
   private static final int MAX_MISSING_RULES = 10;
 
-  private final ReplicationThrottler replicatorThrottler;
+  private final SegmentStateManager stateManager;
 
-  private final DruidCoordinator coordinator;
-
-  public RunRules(DruidCoordinator coordinator)
+  public RunRules(SegmentStateManager stateManager)
   {
-    this(
-        new ReplicationThrottler(
-            coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
-            coordinator.getDynamicConfigs().getReplicantLifetime(),
-            false
-        ),
-        coordinator
-    );
-  }
-
-  public RunRules(ReplicationThrottler replicatorThrottler, DruidCoordinator coordinator)
-  {
-    this.replicatorThrottler = replicatorThrottler;
-    this.coordinator = coordinator;
+    this.stateManager = stateManager;
   }
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    replicatorThrottler.updateParams(
-        coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
-        coordinator.getDynamicConfigs().getReplicantLifetime(),
-        false
-    );
-
-    CoordinatorStats stats = new CoordinatorStats();
     DruidCluster cluster = params.getDruidCluster();
 
     if (cluster.isEmpty()) {
@@ -91,18 +68,9 @@ public class RunRules implements CoordinatorDuty
     // to unload such segments in UnloadUnusedSegments.
     Set<SegmentId> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
 
-    for (String tier : cluster.getTierNames()) {
-      replicatorThrottler.updateReplicationState(tier);
-    }
-
-    DruidCoordinatorRuntimeParams paramsWithReplicationManager = params
-        .buildFromExistingWithoutSegmentsMetadata()
-        .withReplicationManager(replicatorThrottler)
-        .build();
-
     // Run through all matched rules for used segments
     DateTime now = DateTimes.nowUtc();
-    MetadataRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
+    MetadataRuleManager databaseRuleManager = params.getDatabaseRuleManager();
 
     final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
     int missingRules = 0;
@@ -121,6 +89,7 @@ public class RunRules implements CoordinatorDuty
       }
     }
 
+    final SegmentLoader segmentLoader = new SegmentLoader(stateManager, params);
     for (DataSegment segment : params.getUsedSegments()) {
       if (overshadowed.contains(segment.getId())) {
         // Skipping overshadowed segments
@@ -130,19 +99,7 @@ public class RunRules implements CoordinatorDuty
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {
-          if (
-              stats.getGlobalStat(
-                  "totalNonPrimaryReplicantsLoaded") >= paramsWithReplicationManager.getCoordinatorDynamicConfig()
-                                                                                   .getMaxNonPrimaryReplicantsToLoad()
-              && !paramsWithReplicationManager.getReplicationManager().isLoadPrimaryReplicantsOnly()
-          ) {
-            log.info(
-                "Maximum number of non-primary replicants [%d] have been loaded for the current RunRules execution. Only loading primary replicants from here on for this coordinator run cycle.",
-                paramsWithReplicationManager.getCoordinatorDynamicConfig().getMaxNonPrimaryReplicantsToLoad()
-            );
-            paramsWithReplicationManager.getReplicationManager().setLoadPrimaryReplicantsOnly(true);
-          }
-          stats.accumulate(rule.run(coordinator, paramsWithReplicationManager, segment));
+          rule.run(segment, segmentLoader);
           foundMatchingRule = true;
           break;
         }
@@ -164,7 +121,7 @@ public class RunRules implements CoordinatorDuty
     }
 
     return params.buildFromExisting()
-                 .withCoordinatorStats(stats)
+                 .withCoordinatorStats(segmentLoader.getStats())
                  .withBroadcastDatasources(broadcastDatasources)
                  .build();
   }

@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -36,8 +37,6 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.coordination.DataSegmentChangeCallback;
 import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
-import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
-import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -51,6 +50,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -65,7 +66,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
-public class HttpLoadQueuePeon extends LoadQueuePeon
+public class HttpLoadQueuePeon implements LoadQueuePeon
 {
   public static final TypeReference<List<DataSegmentChangeRequest>> REQUEST_ENTITY_TYPE_REF =
       new TypeReference<List<DataSegmentChangeRequest>>()
@@ -82,15 +83,16 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
   private final AtomicLong queuedSize = new AtomicLong(0);
   private final AtomicInteger failedAssignCount = new AtomicInteger(0);
 
-  private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentSkipListMap<>(
+  private final ConcurrentSkipListMap<DataSegment, QueuedSegment> segmentsToLoad = new ConcurrentSkipListMap<>(
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
-  private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentSkipListMap<>(
+  private final ConcurrentSkipListMap<DataSegment, QueuedSegment> segmentsToDrop = new ConcurrentSkipListMap<>(
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
   private final ConcurrentSkipListSet<DataSegment> segmentsMarkedToDrop = new ConcurrentSkipListSet<>(
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
+  private final Set<DataSegment> activeRequestSegments = new HashSet<>();
 
   private final ScheduledExecutorService processingExecutor;
 
@@ -153,18 +155,21 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
     final List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
 
     synchronized (lock) {
-      Iterator<Map.Entry<DataSegment, SegmentHolder>> iter = Iterators.concat(
+      Iterator<Map.Entry<DataSegment, QueuedSegment>> iter = Iterators.concat(
           segmentsToDrop.entrySet().iterator(),
           segmentsToLoad.entrySet().iterator()
       );
 
+      activeRequestSegments.clear();
       while (newRequests.size() < batchSize && iter.hasNext()) {
-        Map.Entry<DataSegment, SegmentHolder> entry = iter.next();
-        if (entry.getValue().hasTimedOut()) {
-          entry.getValue().requestFailed("timed out");
+        Map.Entry<DataSegment, QueuedSegment> entry = iter.next();
+        QueuedSegment queuedItem = entry.getValue();
+        if (hasRequestTimedOut(queuedItem)) {
+          onRequestFailed(queuedItem, "timed out");
           iter.remove();
         } else {
-          newRequests.add(entry.getValue().getChangeRequest());
+          newRequests.add(queuedItem.getChangeRequest());
+          activeRequestSegments.add(entry.getKey());
         }
       }
     }
@@ -230,6 +235,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
                             log.error("Server[%s] returned unknown state in status[%s].", serverId, e.getStatus());
                         }
                       }
+                      activeRequestSegments.clear();
                     }
                   }
                   catch (Exception ex) {
@@ -298,16 +304,16 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
             updateSuccessOrFailureInHolder(segmentsToDrop.remove(segment), status);
           }
 
-          private void updateSuccessOrFailureInHolder(SegmentHolder holder, SegmentLoadDropHandler.Status status)
+          private void updateSuccessOrFailureInHolder(QueuedSegment holder, SegmentLoadDropHandler.Status status)
           {
             if (holder == null) {
               return;
             }
 
             if (status.getState() == SegmentLoadDropHandler.Status.STATE.FAILED) {
-              holder.requestFailed(status.getFailureCause());
+              onRequestFailed(holder, status.getFailureCause());
             } else {
-              holder.requestSucceeded();
+              onRequestSucceeded(holder);
             }
           }
         }, null
@@ -350,12 +356,12 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
 
       stopped = true;
 
-      for (SegmentHolder holder : segmentsToDrop.values()) {
-        holder.requestFailed("Stopping load queue peon.");
+      for (QueuedSegment holder : segmentsToDrop.values()) {
+        onRequestFailed(holder, "Stopping load queue peon.");
       }
 
-      for (SegmentHolder holder : segmentsToLoad.values()) {
-        holder.requestFailed("Stopping load queue peon.");
+      for (QueuedSegment holder : segmentsToLoad.values()) {
+        onRequestFailed(holder, "Stopping load queue peon.");
       }
 
       segmentsToDrop.clear();
@@ -366,8 +372,9 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
   }
 
   @Override
-  public void loadSegment(DataSegment segment, LoadPeonCallback callback)
+  public void loadSegment(DataSegment segment, SegmentAction action, LoadPeonCallback callback)
   {
+    Preconditions.checkArgument(action != SegmentAction.DROP);
     synchronized (lock) {
       if (stopped) {
         log.warn(
@@ -379,16 +386,22 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
         return;
       }
 
-      SegmentHolder holder = segmentsToLoad.get(segment);
-
+      QueuedSegment holder = segmentsToLoad.get(segment);
       if (holder == null) {
         log.trace("Server[%s] to load segment[%s] queued.", serverId, segment.getId());
-        segmentsToLoad.put(segment, new LoadSegmentHolder(segment, callback));
+        queuedSize.addAndGet(segment.getSize());
+        segmentsToLoad.put(segment, new QueuedSegment(segment, action, callback));
         processingExecutor.execute(this::doSegmentManagement);
       } else {
         holder.addCallback(callback);
       }
     }
+  }
+
+  @Override
+  public void loadSegment(DataSegment segment, LoadPeonCallback callback)
+  {
+    loadSegment(segment, SegmentAction.LOAD_AS_REPLICA, callback);
   }
 
   @Override
@@ -404,11 +417,11 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
         callback.execute(false);
         return;
       }
-      SegmentHolder holder = segmentsToDrop.get(segment);
+      QueuedSegment holder = segmentsToDrop.get(segment);
 
       if (holder == null) {
         log.trace("Server[%s] to drop segment[%s] queued.", serverId, segment.getId());
-        segmentsToDrop.put(segment, new DropSegmentHolder(segment, callback));
+        segmentsToDrop.put(segment, new QueuedSegment(segment, SegmentAction.DROP, callback));
         processingExecutor.execute(this::doSegmentManagement);
       } else {
         holder.addCallback(callback);
@@ -432,6 +445,15 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
   public Set<DataSegment> getTimedOutSegments()
   {
     return Collections.emptySet();
+  }
+
+  @Override
+  public Map<DataSegment, SegmentAction> getSegmentsInQueue()
+  {
+    final Map<DataSegment, SegmentAction> segmentsInQueue = new HashMap<>();
+    segmentsToLoad.values().forEach(s -> segmentsInQueue.put(s.getSegment(), s.getAction()));
+    segmentsToDrop.values().forEach(s -> segmentsInQueue.put(s.getSegment(), s.getAction()));
+    return segmentsInQueue;
   }
 
   @Override
@@ -470,134 +492,98 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
     return Collections.unmodifiableSet(segmentsMarkedToDrop);
   }
 
-  private abstract class SegmentHolder
+  /**
+   * A request is considered to have timed out if the time elapsed since it was
+   * first sent to the server is greater than the configured load timeout.
+   *
+   * @see DruidCoordinatorConfig#getLoadTimeoutDelay()
+   */
+  private boolean hasRequestTimedOut(QueuedSegment holder)
   {
-    private final DataSegment segment;
-    private final DataSegmentChangeRequest changeRequest;
-    private final List<LoadPeonCallback> callbacks = new ArrayList<>();
-
-    // Time when this request was sent to target server the first time.
-    private volatile long scheduleTime = -1;
-
-    private SegmentHolder(
-        DataSegment segment,
-        DataSegmentChangeRequest changeRequest,
-        LoadPeonCallback callback
-    )
-    {
-      this.segment = segment;
-      this.changeRequest = changeRequest;
-
-      if (callback != null) {
-        this.callbacks.add(callback);
-      }
-    }
-
-    public void addCallback(LoadPeonCallback newCallback)
-    {
-      synchronized (callbacks) {
-        if (newCallback != null) {
-          callbacks.add(newCallback);
-        }
-      }
-    }
-
-    public DataSegment getSegment()
-    {
-      return segment;
-    }
-
-    public DataSegmentChangeRequest getChangeRequest()
-    {
-      return changeRequest;
-    }
-
-    public boolean hasTimedOut()
-    {
-      if (scheduleTime < 0) {
-        scheduleTime = System.currentTimeMillis();
-        return false;
-      } else if (System.currentTimeMillis() - scheduleTime > config.getLoadTimeoutDelay().getMillis()) {
-        return true;
-      } else {
-        return false;
-      }
-    }
-
-    public void requestSucceeded()
-    {
-      log.trace(
-          "Server[%s] Successfully processed segment[%s] request[%s].",
-          serverId,
-          segment.getId(),
-          changeRequest.getClass().getSimpleName()
-      );
-
-      callBackExecutor.execute(() -> {
-        for (LoadPeonCallback callback : callbacks) {
-          if (callback != null) {
-            callback.execute(true);
-          }
-        }
-      });
-    }
-
-    public void requestFailed(String failureCause)
-    {
-      log.error(
-          "Server[%s] Failed segment[%s] request[%s] with cause [%s].",
-          serverId,
-          segment.getId(),
-          changeRequest.getClass().getSimpleName(),
-          failureCause
-      );
-
-      failedAssignCount.getAndIncrement();
-
-      callBackExecutor.execute(() -> {
-        for (LoadPeonCallback callback : callbacks) {
-          if (callback != null) {
-            callback.execute(false);
-          }
-        }
-      });
-    }
-
-    @Override
-    public String toString()
-    {
-      return changeRequest.toString();
-    }
+    return System.currentTimeMillis() - holder.getFirstRequestTimeMillis()
+           > config.getLoadTimeoutDelay().getMillis();
   }
 
-  private class LoadSegmentHolder extends SegmentHolder
+  private void onRequestSucceeded(QueuedSegment holder)
   {
-    public LoadSegmentHolder(DataSegment segment, LoadPeonCallback callback)
-    {
-      super(segment, new SegmentChangeRequestLoad(segment), callback);
-      queuedSize.addAndGet(segment.getSize());
-    }
+    log.trace(
+        "Server[%s] Successfully processed segment[%s] request[%s].",
+        serverId,
+        holder.getSegment().getId(),
+        holder.getAction()
+    );
 
-    @Override
-    public void requestSucceeded()
-    {
-      queuedSize.addAndGet(-getSegment().getSize());
-      super.requestSucceeded();
+    if (holder.isLoad()) {
+      queuedSize.addAndGet(-holder.getSegment().getSize());
     }
-
-    @Override
-    public void requestFailed(String failureCause)
-    {
-      queuedSize.addAndGet(-getSegment().getSize());
-      super.requestFailed(failureCause);
-    }
+    executeCallbacks(holder, true);
   }
 
-  private class DropSegmentHolder extends SegmentHolder
+  private void onRequestFailed(QueuedSegment holder, String failureCause)
   {
-    public DropSegmentHolder(DataSegment segment, LoadPeonCallback callback)
-    {
-      super(segment, new SegmentChangeRequestDrop(segment), callback);
+    log.error(
+        "Server[%s] Failed segment[%s] request[%s] with cause [%s].",
+        serverId,
+        holder.getSegment().getId(),
+        holder.getAction(),
+        failureCause
+    );
+
+    failedAssignCount.getAndIncrement();
+    if (holder.isLoad()) {
+      queuedSize.addAndGet(-holder.getSegment().getSize());
+    }
+    executeCallbacks(holder, false);
+  }
+
+  private void onRequestCancelled(QueuedSegment holder)
+  {
+    if (holder.isLoad()) {
+      queuedSize.addAndGet(-holder.getSegment().getSize());
+    }
+    executeCallbacks(holder, false);
+  }
+
+  private void executeCallbacks(QueuedSegment holder, boolean success)
+  {
+    callBackExecutor.execute(() -> {
+      for (LoadPeonCallback callback : holder.getCallbacks()) {
+        callback.execute(success);
+      }
+    });
+  }
+
+  @Override
+  public boolean cancelDrop(DataSegment segment)
+  {
+    return cancelOperation(segment, false);
+  }
+
+  @Override
+  public boolean cancelLoad(DataSegment segment)
+  {
+    return cancelOperation(segment, true);
+  }
+
+  /**
+   * Tries to cancel a load/drop operation. An load/drop request can be cancelled
+   * only if it has not already been sent to the corresponding server.
+   */
+  private boolean cancelOperation(DataSegment segment, boolean isLoad)
+  {
+    synchronized (lock) {
+      if (activeRequestSegments.contains(segment)) {
+        return false;
+      }
+
+      final QueuedSegment holder = isLoad ? segmentsToLoad.remove(segment)
+                                          : segmentsToDrop.remove(segment);
+      if (holder == null) {
+        return false;
+      }
+
+      onRequestCancelled(holder);
+      return true;
     }
   }
 

@@ -138,7 +138,7 @@ public class DruidCluster
     return brokers;
   }
 
-  public Iterable<String> getTierNames()
+  public Set<String> getTierNames()
   {
     return historicals.keySet();
   }

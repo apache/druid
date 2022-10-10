@@ -35,6 +35,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.PriorityQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -48,6 +49,14 @@ public class CostBalancerStrategy implements BalancerStrategy
 
   private static final double MILLIS_IN_HOUR = 3_600_000.0;
   private static final double MILLIS_FACTOR = MILLIS_IN_HOUR / LAMBDA;
+
+  /**
+   * Comparator that prioritizes servers by cost. Cheaper servers come before
+   * costlier servers. Servers with the same cost may appear in a random order.
+   */
+  private static final Comparator<Pair<Double, ServerHolder>> CHEAPEST_SERVERS_FIRST
+      = Comparator.<Pair<Double, ServerHolder>, Double>comparing(pair -> pair.lhs)
+      .thenComparing(pair -> ThreadLocalRandom.current().nextInt());
 
   /**
    * This defines the unnormalized cost function between two segments.
@@ -184,20 +193,17 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public ServerHolder findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders)
+  public Iterator<ServerHolder> findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders)
   {
-    ServerHolder holder = chooseBestServer(proposalSegment, serverHolders, false).rhs;
-    if (holder != null && !holder.isServingSegment(proposalSegment)) {
-      return holder;
-    }
-    return null;
+    return chooseBestServers(proposalSegment, serverHolders, false);
   }
 
 
   @Override
   public ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders)
   {
-    return chooseBestServer(proposalSegment, serverHolders, true).rhs;
+    Iterator<ServerHolder> servers = chooseBestServers(proposalSegment, serverHolders, true);
+    return servers.hasNext() ? servers.next() : null;
   }
 
   static double computeJointSegmentsCost(final DataSegment segment, final Iterable<DataSegment> segmentSet)
@@ -349,18 +355,13 @@ public class CostBalancerStrategy implements BalancerStrategy
    *
    * @return A ServerHolder with the new home for a segment.
    */
-
-  protected Pair<Double, ServerHolder> chooseBestServer(
+  protected Iterator<ServerHolder> chooseBestServers(
       final DataSegment proposalSegment,
       final Iterable<ServerHolder> serverHolders,
       final boolean includeCurrentServer
   )
   {
-    final Pair<Double, ServerHolder> noServer = Pair.of(Double.POSITIVE_INFINITY, null);
-    Pair<Double, ServerHolder> bestServer = noServer;
-
-    List<ListenableFuture<Pair<Double, ServerHolder>>> futures = new ArrayList<>();
-
+    final List<ListenableFuture<Pair<Double, ServerHolder>>> futures = new ArrayList<>();
     for (final ServerHolder server : serverHolders) {
       futures.add(
           exec.submit(
@@ -369,30 +370,21 @@ public class CostBalancerStrategy implements BalancerStrategy
       );
     }
 
-    final ListenableFuture<List<Pair<Double, ServerHolder>>> resultsFuture = Futures.allAsList(futures);
-    final List<Pair<Double, ServerHolder>> bestServers = new ArrayList<>();
-    bestServers.add(bestServer);
+    final PriorityQueue<Pair<Double, ServerHolder>> costPrioritizedServers =
+        new PriorityQueue<>(CHEAPEST_SERVERS_FIRST);
     try {
-      for (Pair<Double, ServerHolder> server : resultsFuture.get()) {
-        if (server.lhs <= bestServers.get(0).lhs) {
-          if (server.lhs < bestServers.get(0).lhs) {
-            bestServers.clear();
-          }
-          bestServers.add(server);
-        }
-      }
-      // If the best server list contains server whose cost of serving the segment is INFINITE then this means
-      // no usable servers are found so return a null server so that segment assignment does not happen
-      if (bestServers.get(0).lhs.isInfinite()) {
-        return noServer;
-      }
-      // Randomly choose a server from the best servers
-      bestServer = bestServers.get(ThreadLocalRandom.current().nextInt(bestServers.size()));
+      costPrioritizedServers.addAll(Futures.allAsList(futures).get());
     }
     catch (Exception e) {
       log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
     }
-    return bestServer;
+
+    // Include current server only if specified
+    return costPrioritizedServers.stream()
+                      .filter(pair -> includeCurrentServer || !pair.rhs.isServingSegment(proposalSegment))
+                      .map(pair -> pair.rhs).iterator();
   }
+
+
 }
 

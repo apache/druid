@@ -185,7 +185,7 @@ public class TestServerInventoryView implements ServerInventoryView
       server.removeDataSegment(segment.getId());
       segmentCallbacks.forEach(
           (segmentCallback, executor) -> executor.execute(
-              () -> segmentCallback.segmentAdded(server.getMetadata(), segment)
+              () -> segmentCallback.segmentRemoved(server.getMetadata(), segment)
           )
       );
     }

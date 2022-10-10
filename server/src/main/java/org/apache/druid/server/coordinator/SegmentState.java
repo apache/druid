@@ -19,44 +19,14 @@
 
 package org.apache.druid.server.coordinator;
 
-import org.apache.druid.timeline.DataSegment;
-
 /**
+ * Represents the state of a segment on a server.
  */
-public class BalancerSegmentHolder
+public enum SegmentState
 {
-  private final ServerHolder fromServer;
-  private final DataSegment segment;
-
-  // This is a pretty fugly hard coding of the maximum lifetime
-  private int lifetime = 15;
-
-  public BalancerSegmentHolder(
-      ServerHolder fromServer,
-      DataSegment segment
-  )
-  {
-    this.fromServer = fromServer;
-    this.segment = segment;
-  }
-
-  public ServerHolder getFromServer()
-  {
-    return fromServer;
-  }
-
-  public DataSegment getSegment()
-  {
-    return segment;
-  }
-
-  public int getLifetime()
-  {
-    return lifetime;
-  }
-
-  public void reduceLifetime()
-  {
-    lifetime--;
-  }
+  NONE,
+  LOADING,
+  MOVING_TO,
+  LOADED,
+  DROPPING
 }

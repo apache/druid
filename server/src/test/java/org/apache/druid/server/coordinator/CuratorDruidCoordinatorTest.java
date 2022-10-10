@@ -340,13 +340,13 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString())).andReturn(druidDataSource).anyTimes();
     EasyMock.replay(dataSourcesSnapshot);
 
-    coordinator.moveSegment(
+    /*TODO: coordinator.moveSegment(
         coordinatorRuntimeParams,
         source.toImmutableDruidServer(),
         dest.toImmutableDruidServer(),
         sourceSegments.get(2),
         null
-    );
+    );*/
 
     // wait for destination server to load segment
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));

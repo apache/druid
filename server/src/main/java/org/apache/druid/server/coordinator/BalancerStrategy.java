@@ -46,13 +46,18 @@ public interface BalancerStrategy
   ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders);
 
   /**
-   * Find the best server on which to place a {@link DataSegment} replica according to the balancing strategy
+   * Finds the best servers on which to place a replica of the {@code proposalSegment}
+   * according to the balancing strategy.
+   *
    * @param proposalSegment segment to replicate
-   * @param serverHolders servers to consider as replica holders
-   * @return The server to replicate to, or null if no suitable server is found
+   * @param serverHolders   servers to consider as replica holders
+   * @return Iterator over the best servers (in order) on which the replica(s)
+   * can be placed.
    */
-  @Nullable
-  ServerHolder findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders);
+  Iterator<ServerHolder> findNewSegmentHomeReplicator(
+      DataSegment proposalSegment,
+      List<ServerHolder> serverHolders
+  );
 
   /**
    * Pick the best segments to move from one of the supplied set of servers according to the balancing strategy.

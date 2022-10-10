@@ -321,14 +321,6 @@ public class UnloadUnusedSegmentsTest
 
   private static void mockCoordinator(DruidCoordinator coordinator)
   {
-    coordinator.moveSegment(
-        EasyMock.anyObject(),
-        EasyMock.anyObject(),
-        EasyMock.anyObject(),
-        EasyMock.anyObject(),
-        EasyMock.anyObject()
-    );
-    EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
   }
 

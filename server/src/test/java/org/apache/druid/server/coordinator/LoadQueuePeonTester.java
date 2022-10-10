@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 public class LoadQueuePeonTester extends CuratorLoadQueuePeon
@@ -51,6 +52,12 @@ public class LoadQueuePeonTester extends CuratorLoadQueuePeon
       DataSegment segment,
       LoadPeonCallback callback
   )
+  {
+    segmentsToLoad.add(segment);
+  }
+
+  @Override
+  public void loadSegment(DataSegment segment, SegmentAction action, @Nullable LoadPeonCallback callback)
   {
     segmentsToLoad.add(segment);
   }

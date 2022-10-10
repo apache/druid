@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -28,30 +29,40 @@ import java.util.Set;
  * has been verified enough in production, CuratorLoadQueuePeon and this interface would be removed.
  */
 @Deprecated
-public abstract class LoadQueuePeon
+public interface LoadQueuePeon
 {
-  public abstract void start();
-  public abstract void stop();
+  void start();
 
-  public abstract Set<DataSegment> getSegmentsToLoad();
+  void stop();
 
-  public abstract Set<DataSegment> getSegmentsToDrop();
+  Set<DataSegment> getSegmentsToLoad();
 
-  public abstract Set<DataSegment> getTimedOutSegments();
+  Map<DataSegment, SegmentAction> getSegmentsInQueue();
 
-  public abstract void unmarkSegmentToDrop(DataSegment segmentToLoad);
+  Set<DataSegment> getSegmentsToDrop();
 
+  Set<DataSegment> getTimedOutSegments();
 
-  public abstract void markSegmentToDrop(DataSegment segmentToLoad);
+  void markSegmentToDrop(DataSegment segmentToLoad);
 
-  public abstract void loadSegment(DataSegment segment, LoadPeonCallback callback);
-  public abstract void dropSegment(DataSegment segment, LoadPeonCallback callback);
+  void unmarkSegmentToDrop(DataSegment segmentToLoad);
 
-  public abstract long getLoadQueueSize();
+  Set<DataSegment> getSegmentsMarkedToDrop();
 
-  public abstract int getAndResetFailedAssignCount();
+  void loadSegment(DataSegment segment, LoadPeonCallback callback);
 
-  public abstract int getNumberOfSegmentsInQueue();
-  public abstract Set<DataSegment> getSegmentsMarkedToDrop();
+  void loadSegment(DataSegment segment, SegmentAction action, LoadPeonCallback callback);
+
+  void dropSegment(DataSegment segment, LoadPeonCallback callback);
+
+  long getLoadQueueSize();
+
+  int getAndResetFailedAssignCount();
+
+  int getNumberOfSegmentsInQueue();
+
+  boolean cancelLoad(DataSegment segment);
+
+  boolean cancelDrop(DataSegment segment);
 
 }

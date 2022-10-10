@@ -347,6 +347,12 @@ public class CoordinatorSimulationBuilder
       env.inventory.removeServer(server);
     }
 
+    @Override
+    public void addServer(DruidServer server)
+    {
+      env.inventory.addServer(server);
+    }
+
     private void verifySimulationRunning()
     {
       if (!running.get()) {

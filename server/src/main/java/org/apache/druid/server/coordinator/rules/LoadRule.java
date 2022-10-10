@@ -32,6 +32,7 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
+import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
@@ -65,6 +66,12 @@ public abstract class LoadRule implements Rule
 
   // Cache to hold unused results from strategy call in assignPrimary
   private final Map<String, ServerHolder> strategyCache = new HashMap<>();
+
+  @Override
+  public void run(DataSegment segment, SegmentLoader loader)
+  {
+    loader.updateReplicas(segment, getTieredReplicants());
+  }
 
   @Override
   public CoordinatorStats run(
@@ -256,7 +263,9 @@ public abstract class LoadRule implements Rule
         continue;
       }
 
-      final ServerHolder candidate = params.getBalancerStrategy().findNewSegmentHomeReplicator(segment, holders);
+      final Iterator<ServerHolder> candidates = params.getBalancerStrategy()
+                                                      .findNewSegmentHomeReplicator(segment, holders);
+      final ServerHolder candidate = candidates.hasNext() ? candidates.next() : null;
       if (candidate == null) {
         log.warn(noAvailability);
       } else {
@@ -348,6 +357,7 @@ public abstract class LoadRule implements Rule
     }
 
     final ReplicationThrottler throttler = params.getReplicationManager();
+    Iterator<ServerHolder> candidateServers = null;
     for (int numAssigned = 0; numAssigned < numToAssign; numAssigned++) {
       if (!throttler.canCreateReplicant(tier)) {
         log.info("Throttling replication for segment [%s] in tier [%s]. %s", segment.getId(), tier, getReplicationLogString());
@@ -355,17 +365,20 @@ public abstract class LoadRule implements Rule
       }
 
       // Retrieves from cache if available
-      ServerHolder holder = strategyCache.remove(tier);
-      // Does strategy call if not in cache
-      if (holder == null) {
-        holder = params.getBalancerStrategy().findNewSegmentHomeReplicator(segment, holders);
+      final ServerHolder holder;
+      if (strategyCache.containsKey(tier)) {
+        holder = strategyCache.remove(tier);
+      } else {
+        if (candidateServers == null) {
+          candidateServers = params.getBalancerStrategy().findNewSegmentHomeReplicator(segment, holders);
+        }
+        holder = candidateServers.hasNext() ? candidateServers.next() : null;
       }
 
       if (holder == null) {
         log.warn(noAvailability);
         return numAssigned;
       }
-      holders.remove(holder);
 
       final SegmentId segmentId = segment.getId();
       final String holderHost = holder.getServer().getHost();

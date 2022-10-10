@@ -54,13 +54,13 @@ final class ReservoirSegmentSampler
         }
 
         if (numSoFar < k) {
-          holders.add(new BalancerSegmentHolder(server.getServer(), segment));
+          holders.add(new BalancerSegmentHolder(server, segment));
           numSoFar++;
           continue;
         }
         int randNum = ThreadLocalRandom.current().nextInt(numSoFar + 1);
         if (randNum < k) {
-          holders.set(randNum, new BalancerSegmentHolder(server.getServer(), segment));
+          holders.set(randNum, new BalancerSegmentHolder(server, segment));
         }
         numSoFar++;
       }
@@ -150,7 +150,7 @@ final class ReservoirSegmentSampler
       }
     }
     if (fromServerHolder != null) {
-      return new BalancerSegmentHolder(fromServerHolder.getServer(), proposalSegment);
+      return new BalancerSegmentHolder(fromServerHolder, proposalSegment);
     } else {
       return null;
     }

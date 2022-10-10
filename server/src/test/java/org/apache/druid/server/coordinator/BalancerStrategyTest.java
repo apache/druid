@@ -84,29 +84,32 @@ public class BalancerStrategyTest
         new LoadQueuePeonTester());
     serverHolders = new ArrayList<>();
     serverHolders.add(serverHolder);
-    final ServerHolder foundServerHolder = balancerStrategy.findNewSegmentHomeReplicator(proposedDataSegment, serverHolders);
     // since there is not enough space on server having available size 10L to host a segment of size 11L, it should be null
-    Assert.assertNull(foundServerHolder);
+    Assert.assertFalse(
+        balancerStrategy.findNewSegmentHomeReplicator(proposedDataSegment, serverHolders)
+                        .hasNext()
+    );
   }
 
   @Test(timeout = 5000L)
   public void findNewSegmentHomeReplicatorNotEnoughNodesForReplication()
   {
     final ServerHolder serverHolder1 = new ServerHolder(
-        new DruidServer("server1", "host1", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).addDataSegment(proposedDataSegment).toImmutableDruidServer(),
+        new DruidServer("server1", "host1", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
+            .addDataSegment(proposedDataSegment).toImmutableDruidServer(),
         new LoadQueuePeonTester());
 
     final ServerHolder serverHolder2 = new ServerHolder(
-        new DruidServer("server2", "host2", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).addDataSegment(proposedDataSegment).toImmutableDruidServer(),
+        new DruidServer("server2", "host2", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
+            .addDataSegment(proposedDataSegment).toImmutableDruidServer(),
         new LoadQueuePeonTester());
 
     serverHolders = new ArrayList<>();
     serverHolders.add(serverHolder1);
     serverHolders.add(serverHolder2);
 
-    final ServerHolder foundServerHolder = balancerStrategy.findNewSegmentHomeReplicator(proposedDataSegment, serverHolders);
     // since there is not enough nodes to load 3 replicas of segment
-    Assert.assertNull(foundServerHolder);
+    Assert.assertFalse(balancerStrategy.findNewSegmentHomeReplicator(proposedDataSegment, serverHolders).hasNext());
   }
 
   @Test
@@ -117,7 +120,8 @@ public class BalancerStrategyTest
         new LoadQueuePeonTester());
     serverHolders = new ArrayList<>();
     serverHolders.add(serverHolder);
-    final ServerHolder foundServerHolder = balancerStrategy.findNewSegmentHomeReplicator(proposedDataSegment, serverHolders);
+    final ServerHolder foundServerHolder = balancerStrategy
+        .findNewSegmentHomeReplicator(proposedDataSegment, serverHolders).next();
     // since there is enough space on server it should be selected
     Assert.assertEquals(serverHolder, foundServerHolder);
   }

@@ -19,44 +19,15 @@
 
 package org.apache.druid.server.coordinator;
 
-import org.apache.druid.timeline.DataSegment;
-
 /**
+ * Represents actions that can be performed on a server for a single segment.
+ * <p>
+ * The different action types can be used to prioritize items in a LoadQueuePeon.
  */
-public class BalancerSegmentHolder
+public enum SegmentAction
 {
-  private final ServerHolder fromServer;
-  private final DataSegment segment;
-
-  // This is a pretty fugly hard coding of the maximum lifetime
-  private int lifetime = 15;
-
-  public BalancerSegmentHolder(
-      ServerHolder fromServer,
-      DataSegment segment
-  )
-  {
-    this.fromServer = fromServer;
-    this.segment = segment;
-  }
-
-  public ServerHolder getFromServer()
-  {
-    return fromServer;
-  }
-
-  public DataSegment getSegment()
-  {
-    return segment;
-  }
-
-  public int getLifetime()
-  {
-    return lifetime;
-  }
-
-  public void reduceLifetime()
-  {
-    lifetime--;
-  }
+  DROP,
+  LOAD_AS_PRIMARY,
+  LOAD_AS_REPLICA,
+  MOVE_TO,
 }

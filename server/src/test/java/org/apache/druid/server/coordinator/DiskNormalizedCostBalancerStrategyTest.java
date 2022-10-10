@@ -134,7 +134,7 @@ public class DiskNormalizedCostBalancerStrategyTest
     BalancerStrategy strategy = new DiskNormalizedCostBalancerStrategy(
         MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(4))
     );
-    ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
+    ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList).next();
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
   }
@@ -148,7 +148,7 @@ public class DiskNormalizedCostBalancerStrategyTest
     BalancerStrategy strategy = new DiskNormalizedCostBalancerStrategy(
         MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1))
     );
-    ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
+    ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList).next();
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
   }

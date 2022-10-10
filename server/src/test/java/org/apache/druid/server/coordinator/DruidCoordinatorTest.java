@@ -34,7 +34,6 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
-import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.CuratorUtils;
@@ -49,7 +48,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
@@ -65,8 +63,6 @@ import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
-import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.junit.After;
@@ -116,13 +112,16 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Before
   public void setUp() throws Exception
   {
-    druidServer = EasyMock.createMock(DruidServer.class);
+    druidServer = new DruidServer("from", "from", null, 5L, ServerType.HISTORICAL, "tier1", 0);
     serverInventoryView = EasyMock.createMock(BatchServerInventoryView.class);
     segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
     dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
     coordinatorRuntimeParams = EasyMock.createNiceMock(DruidCoordinatorRuntimeParams.class);
     metadataRuleManager = EasyMock.createNiceMock(MetadataRuleManager.class);
     loadQueueTaskMaster = EasyMock.createMock(LoadQueueTaskMaster.class);
+    EasyMock.expect(loadQueueTaskMaster.isHttpLoading()).andReturn(false).anyTimes();
+    EasyMock.replay(loadQueueTaskMaster);
+
     JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
         configManager.watch(
@@ -201,101 +200,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     loadQueuePeon.stop();
     pathChildrenCache.close();
     tearDownServerAndCurator();
-  }
-
-  @Test
-  public void testMoveSegment()
-  {
-    final DataSegment segment = EasyMock.createNiceMock(DataSegment.class);
-    EasyMock.expect(segment.getId()).andReturn(SegmentId.dummy("dummySegment"));
-    EasyMock.expect(segment.getDataSource()).andReturn("dummyDataSource");
-    EasyMock.replay(segment);
-
-    loadQueuePeon = EasyMock.createNiceMock(LoadQueuePeon.class);
-    EasyMock.expect(loadQueuePeon.getLoadQueueSize()).andReturn(new Long(1));
-    loadQueuePeon.markSegmentToDrop(segment);
-    EasyMock.expectLastCall().once();
-    Capture<LoadPeonCallback> loadCallbackCapture = Capture.newInstance();
-    Capture<LoadPeonCallback> dropCallbackCapture = Capture.newInstance();
-    loadQueuePeon.loadSegment(EasyMock.anyObject(DataSegment.class), EasyMock.capture(loadCallbackCapture));
-    EasyMock.expectLastCall().once();
-    loadQueuePeon.dropSegment(EasyMock.anyObject(DataSegment.class), EasyMock.capture(dropCallbackCapture));
-    EasyMock.expectLastCall().once();
-    loadQueuePeon.unmarkSegmentToDrop(segment);
-    EasyMock.expectLastCall().once();
-    EasyMock.expect(loadQueuePeon.getSegmentsToDrop()).andReturn(new HashSet<>()).once();
-    EasyMock.replay(loadQueuePeon);
-
-    ImmutableDruidDataSource druidDataSource = EasyMock.createNiceMock(ImmutableDruidDataSource.class);
-    EasyMock.expect(druidDataSource.getSegment(EasyMock.anyObject(SegmentId.class))).andReturn(segment);
-    EasyMock.replay(druidDataSource);
-    EasyMock
-        .expect(segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(EasyMock.anyString()))
-        .andReturn(druidDataSource);
-    EasyMock.replay(segmentsMetadataManager);
-    EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString())).andReturn(druidDataSource).anyTimes();
-    EasyMock.replay(dataSourcesSnapshot);
-    scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
-    EasyMock.replay(scheduledExecutorFactory);
-    EasyMock.replay(metadataRuleManager);
-    ImmutableDruidDataSource dataSource = EasyMock.createMock(ImmutableDruidDataSource.class);
-    EasyMock.expect(dataSource.getSegments()).andReturn(Collections.singletonList(segment)).anyTimes();
-    EasyMock.replay(dataSource);
-    EasyMock.expect(druidServer.toImmutableDruidServer()).andReturn(
-        new ImmutableDruidServer(
-            new DruidServerMetadata("from", null, null, 5L, ServerType.HISTORICAL, null, 0),
-            1L,
-            ImmutableMap.of("dummyDataSource", dataSource),
-            1
-        )
-    ).atLeastOnce();
-    EasyMock.replay(druidServer);
-
-    DruidServer druidServer2 = EasyMock.createMock(DruidServer.class);
-
-    EasyMock.expect(druidServer2.toImmutableDruidServer()).andReturn(
-        new ImmutableDruidServer(
-            new DruidServerMetadata("to", null, null, 5L, ServerType.HISTORICAL, null, 0),
-            1L,
-            ImmutableMap.of("dummyDataSource", dataSource),
-            1
-        )
-    ).atLeastOnce();
-    EasyMock.replay(druidServer2);
-
-    loadManagementPeons.put("from", loadQueuePeon);
-    loadManagementPeons.put("to", loadQueuePeon);
-
-    EasyMock.expect(serverInventoryView.isSegmentLoadedByServer("to", segment)).andReturn(true).once();
-    EasyMock.replay(serverInventoryView);
-
-    EasyMock.expect(loadQueueTaskMaster.isHttpLoading()).andReturn(false).anyTimes();
-    EasyMock.replay(loadQueueTaskMaster);
-
-    mockCoordinatorRuntimeParams();
-
-    coordinator.moveSegment(
-        coordinatorRuntimeParams,
-        druidServer.toImmutableDruidServer(),
-        druidServer2.toImmutableDruidServer(),
-        segment,
-        null
-    );
-
-    LoadPeonCallback loadCallback = loadCallbackCapture.getValue();
-    loadCallback.execute(true);
-
-    LoadPeonCallback dropCallback = dropCallbackCapture.getValue();
-    dropCallback.execute(true);
-
-    EasyMock.verify(druidServer, druidServer2, loadQueuePeon, serverInventoryView, metadataRuleManager);
-    EasyMock.verify(coordinatorRuntimeParams);
-  }
-
-  private void mockCoordinatorRuntimeParams()
-  {
-    EasyMock.expect(coordinatorRuntimeParams.getDataSourcesSnapshot()).andReturn(this.dataSourcesSnapshot).anyTimes();
-    EasyMock.replay(coordinatorRuntimeParams);
   }
 
   @Test(timeout = 60_000L)
@@ -517,7 +421,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     final String coldTierName = "cold";
     final String tierName1 = "tier1";
     final String tierName2 = "tier2";
-    final Rule broadcastDistributionRule = new ForeverBroadcastDistributionRule();
     final String loadPathCold = "/druid/loadqueue/cold:1234";
     final String loadPathBroker1 = "/druid/loadqueue/broker1:1234";
     final String loadPathBroker2 = "/druid/loadqueue/broker2:1234";
@@ -622,6 +525,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     setupSegmentsMetadataMock(druidDataSources[0]);
 
+    final Rule broadcastDistributionRule = new ForeverBroadcastDistributionRule();
     EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
             .andReturn(ImmutableList.of(broadcastDistributionRule)).atLeastOnce();
     EasyMock.expect(metadataRuleManager.getAllRules())
@@ -692,7 +596,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
             EasyMock.anyObject(Class.class),
             EasyMock.anyObject()
         )
-    ).andReturn(new AtomicReference(dynamicConfig)).anyTimes();
+    ).andReturn(new AtomicReference<>(dynamicConfig)).anyTimes();
 
     ScheduledExecutorFactory scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
     EasyMock.replay(configManager, dynamicConfig, scheduledExecutorFactory);
@@ -706,7 +610,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         scheduledExecutorFactory,
         null,
-        null,
+        loadQueueTaskMaster,
         null,
         null,
         null,
@@ -725,7 +629,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     // first initialization
     duty.initBalancerExecutor();
-    System.out.println("c.getCachedBalancerThreadNumber(): " + c.getCachedBalancerThreadNumber());
     Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
     ListeningExecutorService firstExec = c.getBalancerExec();
     Assert.assertNotNull(firstExec);
@@ -735,15 +638,15 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
     ListeningExecutorService secondExec = c.getBalancerExec();
     Assert.assertNotNull(secondExec);
-    Assert.assertTrue(firstExec == secondExec);
+    Assert.assertSame(firstExec, secondExec);
 
     // third initialization, expect executor recreated as cachedBalancerThreadNumber is changed to 10
     duty.initBalancerExecutor();
     Assert.assertEquals(10, c.getCachedBalancerThreadNumber());
     ListeningExecutorService thirdExec = c.getBalancerExec();
     Assert.assertNotNull(thirdExec);
-    Assert.assertFalse(secondExec == thirdExec);
-    Assert.assertFalse(firstExec == thirdExec);
+    Assert.assertNotSame(secondExec, thirdExec);
+    Assert.assertNotSame(firstExec, thirdExec);
   }
 
   @Test
@@ -759,7 +662,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         serviceEmitter,
         scheduledExecutorFactory,
         null,
-        null,
+        loadQueueTaskMaster,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         loadManagementPeons,
@@ -799,7 +702,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         serviceEmitter,
         scheduledExecutorFactory,
         null,
-        null,
+        loadQueueTaskMaster,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         loadManagementPeons,
@@ -848,7 +751,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         serviceEmitter,
         scheduledExecutorFactory,
         null,
-        null,
+        loadQueueTaskMaster,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         loadManagementPeons,
@@ -957,7 +860,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         serviceEmitter,
         scheduledExecutorFactory,
         null,
-        null,
+        loadQueueTaskMaster,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         loadManagementPeons,
