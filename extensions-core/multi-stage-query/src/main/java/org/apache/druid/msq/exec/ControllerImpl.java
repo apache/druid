@@ -644,11 +644,19 @@ public class ControllerImpl implements Controller
       Long limit = warningsExceeded.get().rhs;
 
       if (limit == 0L) {
-        for (MSQErrorReport errorReport1 : workerWarnings) {
-          if (errorReport1.getFault().getErrorCode().equalsIgnoreCase(errorCode)) {
-            workerError(errorReport1);
+        boolean foundWarningReport = false;
+        for (MSQErrorReport warningReport : workerWarnings) {
+          if (warningReport.getFault().getErrorCode().equalsIgnoreCase(errorCode)) {
+            foundWarningReport = true;
+            workerError(warningReport);
             break;
           }
+        }
+        if (!foundWarningReport) {
+          throw new ISE(
+              "Warnings of type %s exceed the limit but the controller is unable to find the warning report.",
+              errorCode
+          );
         }
       } else {
         workerError(MSQErrorReport.fromFault(
