@@ -102,28 +102,12 @@ public class QueryDataSource implements DataSource
     return Function.identity();
   }
 
-  public DataSource withBaseDataSource(DataSource newSource) {
+  @Override
+  public DataSource withUpdatedDataSource(DataSource newSource)
+  {
     return new QueryDataSource(query.withDataSource(query.getDataSource()).withDataSource(newSource));
   }
 
-  @Override
-  public Query
-  withBaseDataSource(Query query, DataSource newBaseDataSource)
-  {
-    final Query retVal;
-    final DataSource theDataSource = this.query.getDataSource().withBaseDataSource();
-    final Query<?> subQuery = ((QueryDataSource) theDataSource).getQuery();
-    retVal = query.withDataSource(subQuery.getDataSource());
-
-    // Verify postconditions, just in case.
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(retVal.getDataSource());
-
-    if (!newBaseDataSource.equals(analysis.getBaseDataSource())) {
-      throw new ISE("Unable to replace base dataSource");
-    }
-
-    return retVal;
-  }
 
   @Override
   public String toString()

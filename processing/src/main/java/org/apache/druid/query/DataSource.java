@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.List;
@@ -100,9 +101,6 @@ public interface DataSource
    */
   Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc);
 
-  Query withBaseDataSource(final Query query, final DataSource newBaseDataSource);
+  DataSource withUpdatedDataSource(final DataSource newSource);
 
-  DataSource withBaseDataSource(final DataSource newSource);
-
-  DataSourceAnalysis getAnalysis(Query<?> query);
 }

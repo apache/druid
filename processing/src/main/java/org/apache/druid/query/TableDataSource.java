@@ -106,6 +106,12 @@ public class TableDataSource implements DataSource
   }
 
   @Override
+  public DataSource withUpdatedDataSource(DataSource newSource)
+  {
+    return newSource;
+  }
+
+  @Override
   public String toString()
   {
     return name;
