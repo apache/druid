@@ -28,7 +28,6 @@ import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -6952,6 +6951,85 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{12L, 4L}
         )
+    );
+  }
+
+  @Test
+  public void testUseTimeFloorInsteadOfGranularityOnJoinResult()
+  {
+    cannotVectorize();
+
+    testQuery(
+        "WITH main AS (SELECT * FROM foo LIMIT 2)\n"
+        + "SELECT TIME_FLOOR(__time, 'PT1H') AS \"time\", dim1, COUNT(*)\n"
+        + "FROM main\n"
+        + "WHERE dim1 IN (SELECT dim1 FROM main GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 5)\n"
+        + "GROUP BY 1, 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new QueryDataSource(
+                                    newScanQueryBuilder()
+                                        .dataSource(CalciteTests.DATASOURCE1)
+                                        .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                        .columns("__time", "dim1")
+                                        .limit(2)
+                                        .build()
+                                ),
+                                new QueryDataSource(
+                                    GroupByQuery.builder()
+                                                .setDataSource(
+                                                    new QueryDataSource(
+                                                        newScanQueryBuilder()
+                                                            .dataSource(CalciteTests.DATASOURCE1)
+                                                            .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                                            .columns("dim1")
+                                                            .limit(2)
+                                                            .build()
+                                                    )
+                                                )
+                                                .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                                                .setGranularity(Granularities.ALL)
+                                                .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                                                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                                .setLimitSpec(
+                                                    new DefaultLimitSpec(
+                                                        ImmutableList.of(
+                                                            new OrderByColumnSpec(
+                                                                "a0",
+                                                                Direction.DESCENDING,
+                                                                StringComparators.NUMERIC
+                                                            )
+                                                        ),
+                                                        5
+                                                    )
+                                                )
+                                                .build()
+                                ),
+                                "j0.",
+                                "(\"dim1\" == \"j0.d0\")",
+                                JoinType.INNER
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "timestamp_floor(\"__time\",'PT1H',null,'UTC')",
+                                ColumnType.LONG
+                            )
+                        )
+                        .setDimensions(dimensions(
+                            new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
+                            new DefaultDimensionSpec("dim1", "d1")
+                        ))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(new Object[]{946771200000L, "10.1", 1L})
     );
   }
 
@@ -14177,29 +14255,47 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // the SQL query contains an always FALSE filter ('bar' = 'baz'), which optimizes the query to also remove time
     // filter. the converted query hence contains ETERNITY interval but still a MONTH granularity due to the grouping.
-    // Such a query should fail since it will create a huge amount of time grains which can lead to OOM or a very very
-    // high query time.
-    Assert.assertThrows(IAE.class, () ->
-        testQuery(
-            "SELECT TIME_FLOOR(__time, 'P1m'), max(m1) from \"foo\"\n"
-            + "WHERE __time > CURRENT_TIMESTAMP - INTERVAL '3' MONTH  AND 'bar'='baz'\n"
-            + "GROUP BY 1\n"
-            + "ORDER BY 1 DESC",
-            ImmutableList.of(
-                Druids.newTimeseriesQueryBuilder()
-                      .dataSource(
-                          InlineDataSource.fromIterable(
-                              ImmutableList.of(),
-                              RowSignature.builder().addTimeColumn().add("m1", ColumnType.STRING).build()
-                          ))
-                      .intervals(ImmutableList.of(Intervals.ETERNITY))
-                      .descending(true)
-                      .granularity(Granularities.MONTH)
-                      .aggregators(new LongMaxAggregatorFactory("a0", "m1"))
-                      .build()
-            ),
-            ImmutableList.of()
-        )
+    // Such a query should plan into a GroupBy query with a timestamp_floor function, instead of a timeseries
+    // with granularity MONTH, to avoid excessive materialization of time grains.
+    //
+    // See DruidQuery#canUseQueryGranularity for the relevant check.
+
+    cannotVectorize();
+
+    testQuery(
+        "SELECT TIME_FLOOR(__time, 'P1m'), max(m1) from \"foo\"\n"
+        + "WHERE __time > CURRENT_TIMESTAMP - INTERVAL '3' MONTH  AND 'bar'='baz'\n"
+        + "GROUP BY 1\n"
+        + "ORDER BY 1 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(InlineDataSource.fromIterable(
+                            ImmutableList.of(),
+                            RowSignature.builder()
+                                        .addTimeColumn()
+                                        .add("m1", ColumnType.FLOAT)
+                                        .build()
+                        ))
+                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "timestamp_floor(\"__time\",'P1m',null,'UTC')",
+                            ColumnType.LONG
+                        ))
+                        .setGranularity(Granularities.ALL)
+                        .addDimension(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG))
+                        .addAggregator(new FloatMaxAggregatorFactory("a0", "m1"))
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec("d0", Direction.DESCENDING, StringComparators.NUMERIC)
+                                ),
+                                null
+                            )
+                        )
+                        .build()
+        ),
+        ImmutableList.of()
     );
   }
 }

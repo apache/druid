@@ -1275,7 +1275,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     Map<String, Object> output = new HashMap<>(input);
     output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField);
-    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, granularity);
+
+    try {
+      output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, queryJsonMapper.writeValueAsString(granularity));
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+
     output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, timestampResultFieldIndex);
     return output;
   }
