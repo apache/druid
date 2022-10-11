@@ -321,7 +321,7 @@ public class DruidMeta extends MetaImpl
   }
 
   /**
-   * Prepares and executes a JDBC {@code Statement}
+   * Prepares and executes a JDBC {@code Statement}.
    */
   @Override
   public ExecuteResult prepareAndExecute(
@@ -332,19 +332,23 @@ public class DruidMeta extends MetaImpl
       final PrepareCallback callback
   ) throws NoSuchStatementException
   {
-
     try {
       // Ignore "callback", this class is designed for use with LocalService which doesn't use it.
       final DruidJdbcStatement druidStatement = getDruidStatement(statement, DruidJdbcStatement.class);
       final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
-      AuthenticationResult authenticationResult = doAuthenticate(druidConnection);
-      SqlQueryPlus sqlRequest = SqlQueryPlus.builder(sql)
-          .auth(authenticationResult)
-          .build();
-      druidStatement.execute(sqlRequest, maxRowCount);
-      ExecuteResult result = doFetch(druidStatement, maxRowsInFirstFrame);
-      LOG.debug("Successfully prepared statement [%s] and started execution", druidStatement.getStatementId());
-      return result;
+
+      // This method is called directly from the Avatica server: it does not go
+      // through the connection first. We must lock the connection here to prevent race conditions.
+      synchronized (druidConnection) {
+        final AuthenticationResult authenticationResult = doAuthenticate(druidConnection);
+        final SqlQueryPlus sqlRequest = SqlQueryPlus.builder(sql)
+            .auth(authenticationResult)
+            .build();
+        druidStatement.execute(sqlRequest, maxRowCount);
+        final ExecuteResult result = doFetch(druidStatement, maxRowsInFirstFrame);
+        LOG.debug("Successfully prepared statement [%s] and started execution", druidStatement.getStatementId());
+        return result;
+      }
     }
     // Cannot affect these exceptions as Avatica handles them.
     catch (NoSuchConnectionException | NoSuchStatementException e) {

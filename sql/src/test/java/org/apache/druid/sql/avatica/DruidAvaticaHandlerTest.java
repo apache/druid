@@ -95,6 +95,9 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.ResultIterator;
 
 import java.io.IOException;
 import java.sql.Array;
@@ -213,10 +216,19 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       return DriverManager.getConnection(url, user, password);
     }
 
-    public Connection getConnection() throws SQLException
+    public Connection getUserConnection() throws SQLException
     {
-      return DriverManager.getConnection(url);
+      return getConnection("regularUser", "druid");
     }
+
+    // Note: though the URL-only form is OK in general, but it will cause tests
+    // to crash as the mock auth test code needs the user name.
+    // Use getUserConnection() instead, or create a URL that includes the
+    // user name and password.
+    //public Connection getConnection() throws SQLException
+    //{
+    //  return DriverManager.getConnection(url);
+    //}
 
     public void close() throws Exception
     {
@@ -283,7 +295,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     DruidMeta druidMeta = injector.getInstance(DruidMeta.class);
     server = new ServerWrapper(druidMeta);
-    client = server.getConnection("regularUser", "druid");
+    client = server.getUserConnection();
     superuserClient = server.getConnection(CalciteTests.TEST_SUPERUSER_NAME, "druid");
     clientNoTrailingSlash = DriverManager.getConnection(StringUtils.maybeRemoveTrailingSlash(server.url), CalciteTests.TEST_SUPERUSER_NAME, "druid");
 
@@ -930,7 +942,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     AvaticaClientRuntimeException ex = Assert.assertThrows(
         AvaticaClientRuntimeException.class,
-        () -> server.getConnection()
+        () -> server.getUserConnection()
     );
     Assert.assertTrue(ex.getMessage().contains("Too many connections"));
   }
@@ -939,7 +951,23 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testNotTooManyConnectionsWhenTheyAreClosed() throws SQLException
   {
     for (int i = 0; i < CONNECTION_LIMIT * 2; i++) {
-      try (Connection connection = server.getConnection()) {
+      try (Connection connection = server.getUserConnection()) {
+      }
+    }
+  }
+
+  @Test
+  public void testConnectionsCloseStatements() throws SQLException
+  {
+    for (int i = 0; i < CONNECTION_LIMIT * 2; i++) {
+      try (Connection connection = server.getUserConnection()) {
+        // Note: NOT in a try-catch block. Let the connection close the statement
+        final Statement statement = connection.createStatement();
+
+        // Again, NOT in a try-catch block: let the statement close the
+        // result set.
+        final ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+        Assert.assertTrue(resultSet.next());
       }
     }
   }
@@ -995,7 +1023,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     };
 
     ServerWrapper server = new ServerWrapper(smallFrameDruidMeta);
-    Connection smallFrameClient = server.getConnection("regularUser", "druid");
+    Connection smallFrameClient = server.getUserConnection();
 
     final ResultSet resultSet = smallFrameClient.createStatement().executeQuery(
         "SELECT dim1 FROM druid.foo"
@@ -1055,7 +1083,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     };
 
     ServerWrapper server = new ServerWrapper(smallFrameDruidMeta);
-    Connection smallFrameClient = server.getConnection("regularUser", "druid");
+    Connection smallFrameClient = server.getUserConnection();
 
     // use a prepared statement because Avatica currently ignores fetchSize on the initial fetch of a Statement
     PreparedStatement statement = smallFrameClient.prepareStatement("SELECT dim1 FROM druid.foo");
@@ -1560,6 +1588,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     {
       try {
         if (offset() == 0) {
+          System.out.println("Taking a nap now...");
           Thread.sleep(3000);
         }
       }
@@ -1619,22 +1648,52 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     };
 
     ServerWrapper server = new ServerWrapper(druidMeta);
-    Connection conn = server.getConnection("regularUser", "druid");
+    try (Connection conn = server.getUserConnection()) {
 
-    final ResultSet resultSet = conn.createStatement().executeQuery(
-        "SELECT dim1 FROM druid.foo"
-    );
-    List<Map<String, Object>> rows = getRows(resultSet);
-    Assert.assertEquals(6, rows.size());
-    Assert.assertTrue(frames.size() > 3);
+      // Test with plain JDBC
+      try (ResultSet resultSet = conn.createStatement().executeQuery(
+          "SELECT dim1 FROM druid.foo")) {
+        List<Map<String, Object>> rows = getRows(resultSet);
+        Assert.assertEquals(6, rows.size());
+        Assert.assertTrue(frames.size() > 3);
 
-    // There should be at least one empty frame due to timeout
-    Assert.assertFalse(frames.get(0).rows.iterator().hasNext());
+        // There should be at least one empty frame due to timeout
+        Assert.assertFalse(frames.get(0).rows.iterator().hasNext());
+      }
+    }
 
-    resultSet.close();
-    conn.close();
+    testWithJDBI(server.url);
+
     exec.shutdown();
     server.close();
+  }
+
+  // Test the async feature using DBI, as used internally in Druid.
+  // Ensures that DBI knows how to handle empty batches (which should,
+  // in reality, but handled at the JDBC level below DBI.)
+  private void testWithJDBI(String baseUrl)
+  {
+    String url = baseUrl + "?user=regularUser&password=druid";
+    System.out.println(url);
+    DBI dbi = new DBI(url);
+    Handle handle = dbi.open();
+    try {
+      ResultIterator<Pair<Long, String>> iter = handle
+          .createQuery("SELECT __time, dim1 FROM druid.foo")
+          .map((index, row, ctx) -> new Pair<>(row.getLong(1), row.getString(2)))
+          .iterator();
+      int count = 0;
+      while (iter.hasNext()) {
+        Pair<Long, String> row = iter.next();
+        Assert.assertNotNull(row.lhs);
+        Assert.assertNotNull(row.rhs);
+        count++;
+      }
+      Assert.assertEquals(6, count);
+    }
+    finally {
+      handle.close();
+    }
   }
 
   private static List<Map<String, Object>> getRows(final ResultSet resultSet) throws SQLException

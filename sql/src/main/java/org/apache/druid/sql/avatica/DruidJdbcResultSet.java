@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.DirectStatement;
 
 import java.io.Closeable;
@@ -60,6 +61,8 @@ import java.util.concurrent.TimeoutException;
  */
 public class DruidJdbcResultSet implements Closeable
 {
+  private static final Logger LOG = new Logger(DruidJdbcResultSet.class);
+
   /**
    * Asynchronous result fetcher. JDBC operates via REST, which is subject to
    * timeouts if a query takes to long to respond. Fortunately, JDBC uses a
@@ -227,7 +230,12 @@ public class DruidJdbcResultSet implements Closeable
     ensure(State.NEW);
     try {
       state = State.RUNNING;
+
+      // Execute the first step: plan the query and return a sequence to use
+      // to get values.
       final Sequence<Object[]> sequence = queryExecutor.submit(stmt::execute).get().getResults();
+
+      // Subsequent fetch steps are done via the async "fetcher".
       fetcher = fetcherFactory.newFetcher(
           // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
           maxRowCount >= 0 && maxRowCount <= Integer.MAX_VALUE ? (int) maxRowCount : Integer.MAX_VALUE,
@@ -237,6 +245,7 @@ public class DruidJdbcResultSet implements Closeable
           stmt.prepareResult(),
           stmt.query().sql()
       );
+      LOG.debug("Opened result set [%s]", stmt.sqlQueryId());
     }
     catch (ExecutionException e) {
       throw closeAndPropagateThrowable(e.getCause());
@@ -260,8 +269,9 @@ public class DruidJdbcResultSet implements Closeable
   public synchronized Meta.Frame nextFrame(final long fetchOffset, final int fetchMaxRowCount)
   {
     ensure(State.RUNNING, State.DONE);
-    Preconditions.checkState(fetchOffset == nextFetchOffset, "fetchOffset [%,d] != offset [%,d]", fetchOffset, nextFetchOffset);
+    Preconditions.checkState(fetchOffset == nextFetchOffset, "fetchOffset %,d != offset %,d", fetchOffset, nextFetchOffset);
     if (state == State.DONE) {
+      LOG.debug("EOF at offset %,d for result set [%s]", fetchOffset, stmt.sqlQueryId());
       return new Meta.Frame(fetcher.offset(), true, Collections.emptyList());
     }
 
@@ -277,6 +287,7 @@ public class DruidJdbcResultSet implements Closeable
     }
     try {
       Meta.Frame result = future.get(fetcherFactory.fetchTimeoutMs(), TimeUnit.MILLISECONDS);
+      LOG.debug("Fetched batch at offset %,d for result set [%s]", fetchOffset, stmt.sqlQueryId());
       if (result.done) {
         state = State.DONE;
       }
@@ -292,6 +303,7 @@ public class DruidJdbcResultSet implements Closeable
       throw closeAndPropagateThrowable(e.getCause());
     }
     catch (TimeoutException e) {
+      LOG.debug("Timeout of batch at offset %,d for result set [%s]", fetchOffset, stmt.sqlQueryId());
       fetchFuture = future;
       // Wait timed out. Return 0 rows: the client will try again later.
       // We'll wait again on this same fetch next time.
@@ -350,6 +362,7 @@ public class DruidJdbcResultSet implements Closeable
     if (state == State.CLOSED || state == State.FAILED) {
       return;
     }
+    LOG.debug("Closing result set [%s]", stmt.sqlQueryId());
     state = State.CLOSED;
     try {
       // If a fetch is in progress, wait for it to complete.
