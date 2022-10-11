@@ -108,8 +108,14 @@ public class NestedFieldLiteralColumnIndexSupplier implements ColumnIndexSupplie
   public <T> T as(Class<T> clazz)
   {
     if (clazz.equals(NullValueIndex.class)) {
-      // null index is always 0 in the global dictionary, even if there are no null rows in any of the literal columns
-      return (T) (NullValueIndex) () -> new SimpleImmutableBitmapIndex(bitmaps.get(0));
+      final BitmapColumnIndex nullIndex;
+      if (dictionary.get(0) == 0) {
+        // null index is always 0 in the global dictionary, even if there are no null rows in any of the literal columns
+        nullIndex = new SimpleImmutableBitmapIndex(bitmaps.get(0));
+      } else {
+        nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
+      }
+      return (T) (NullValueIndex) () -> nullIndex;
     } else if (clazz.equals(DictionaryEncodedStringValueIndex.class) || clazz.equals(DictionaryEncodedValueIndex.class)) {
       return (T) new NestedLiteralDictionaryEncodedStringValueIndex();
     }
