@@ -164,7 +164,7 @@ public class ITQueryRetryTestOnMissingSegments
             result,
             queryWithResult.getExpectedResults(),
             queryWithResult.getFieldsToTest()
-        )) {
+        ).isSuccess()) {
           if (expectation != Expectation.INCORRECT_RESULT) {
             throw new ISE(
                 "Incorrect query results for query %s \n expectedResults: %s \n actualResults : %s",

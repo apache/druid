@@ -620,4 +620,26 @@
     <cve>CVE-2022-31197</cve>
   </suppress>
 
+  <suppress>
+    <!-- avatica-server-1.17.0.jar -->
+    <notes><![CDATA[
+   file name: avatica-server-1.17.0.jar
+   ]]></notes>
+    <!--
+    We do not expose any of the SQL operators that were found vulnerable in this CVE.
+    -->
+    <cve>CVE-2022-39135</cve>
+  </suppress>
+
+  <suppress>
+    <!-- calcite-core-1.21.0.jar -->
+    <notes><![CDATA[
+   file name: calcite-core-1.21.0.jar
+   ]]></notes>
+    <!--
+    We do not expose any of the SQL operators that were found vulnerable in this CVE.
+    -->
+    <cve>CVE-2022-39135</cve>
+  </suppress>
+
 </suppressions>

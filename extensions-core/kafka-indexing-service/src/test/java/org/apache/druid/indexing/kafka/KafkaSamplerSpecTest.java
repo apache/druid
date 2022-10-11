@@ -130,7 +130,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         new KafkaSupervisorIOConfig(
             TOPIC,
-            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
             null,
             null,
             null,
@@ -303,7 +303,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         new KafkaSupervisorIOConfig(
             TOPIC,
-            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
             null,
             null,
             null,

@@ -35,23 +35,27 @@ public class CompressedBigDecimalBufferAggregator implements BufferAggregator
   private final ColumnValueSelector<CompressedBigDecimal> selector;
   private final int size;
   private final int scale;
+  private boolean strictNumberParsing;
 
   /**
    * Constructor.
    *
-   * @param size     the size to allocate
-   * @param scale    the scale
-   * @param selector a ColumnSelector to retrieve incoming values
-   */
+   * @param size                the size to allocate
+   * @param scale               the scale
+   * @param selector            a ColumnSelector to retrieve incoming values
+   * @param strictNumberParsing true => NumberFormatExceptions thrown; false => NumberFormatException returns 0
+   * */
   public CompressedBigDecimalBufferAggregator(
       int size,
       int scale,
-      ColumnValueSelector<CompressedBigDecimal> selector
+      ColumnValueSelector<CompressedBigDecimal> selector,
+      boolean strictNumberParsing
   )
   {
     this.selector = selector;
     this.size = size;
     this.scale = scale;
+    this.strictNumberParsing = strictNumberParsing;
   }
 
   /* (non-Javadoc)
@@ -71,7 +75,7 @@ public class CompressedBigDecimalBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    CompressedBigDecimal addend = Utils.objToCompressedBigDecimal(selector.getObject());
+    CompressedBigDecimal addend = Utils.objToCompressedBigDecimal(selector.getObject(), strictNumberParsing);
     if (addend != null) {
       Utils.accumulate(buf, position, size, scale, addend);
     }

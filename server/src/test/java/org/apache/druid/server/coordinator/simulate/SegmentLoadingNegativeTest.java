@@ -217,44 +217,4 @@ public class SegmentLoadingNegativeTest extends CoordinatorSimulationBaseTest
     );
   }
 
-  /**
-   * Correct behaviour: Balancing should never cause over-replication, even when
-   * the inventory view is not updated.
-   * <p>
-   * Fix Apache #12881 to fix this test.
-   */
-  @Test
-  public void testBalancingWithStaleInventoryCausesOverReplication()
-  {
-    // maxSegmentsToMove = 10, unlimited load queue, replicationThrottleLimit = 10
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(10, 0, 10);
-
-    // historicals = 2(T1), replicas = 1(T1)
-    final CoordinatorSimulation sim =
-        CoordinatorSimulation.builder()
-                             .withSegments(segments)
-                             .withServers(historicalT11, historicalT12)
-                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
-                             .withDynamicConfig(dynamicConfig)
-                             .withAutoInventorySync(false)
-                             .build();
-
-    // Put all the segments on histT11
-    segments.forEach(historicalT11::addDataSegment);
-
-    startSimulation(sim);
-    syncInventoryView();
-    runCoordinatorCycle();
-
-    // Verify that segments have been chosen for balancing
-    verifyValue(Metric.MOVED_COUNT, 5L);
-
-    loadQueuedSegments();
-
-    // Verify that segments have now been balanced out
-    Assert.assertEquals(10, historicalT11.getTotalSegments());
-    Assert.assertEquals(5, historicalT12.getTotalSegments());
-    verifyDatasourceIsFullyLoaded(datasource);
-  }
-
 }
