@@ -47,15 +47,24 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class CompressedBigDecimalSqlAggregator implements SqlAggregator
+public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new CompressedBigDecimalSqlAggFunction();
-  private static final String NAME = "BIG_SUM";
+  private final SqlAggFunction sqlAggFunction;
+  private final CompressedBigDecimalAggregatorFactoryCreator factoryCreator;
+
+  protected CompressedBigDecimalSqlAggregatorBase(
+      String name,
+      CompressedBigDecimalAggregatorFactoryCreator factoryCreator
+  )
+  {
+    this.sqlAggFunction = new CompressedBigDecimalSqlAggFunction(name);
+    this.factoryCreator = factoryCreator;
+  }
 
   @Override
   public SqlAggFunction calciteFunction()
   {
-    return FUNCTION_INSTANCE;
+    return sqlAggFunction;
   }
 
   @Nullable
@@ -139,7 +148,7 @@ public class CompressedBigDecimalSqlAggregator implements SqlAggregator
     }
 
     // create the factory
-    AggregatorFactory aggregatorFactory = new CompressedBigDecimalAggregatorFactory(
+    AggregatorFactory aggregatorFactory = factoryCreator.create(
         StringUtils.format("%s:agg", name),
         sumColumnName,
         size,
@@ -152,28 +161,28 @@ public class CompressedBigDecimalSqlAggregator implements SqlAggregator
 
   private static class CompressedBigDecimalSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE2 = "'" + NAME + "'(column, size)";
-    private static final String SIGNATURE3 = "'" + NAME + "'(column, size, scale)";
-    private static final String SIGNATURE4 = "'" + NAME + "'(column, size, scale, strictNumberParsing)";
-
-    CompressedBigDecimalSqlAggFunction()
+    private CompressedBigDecimalSqlAggFunction(String name)
     {
       super(
-          NAME,
+          name,
           null,
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.OTHER),
+          ReturnTypes.explicit(SqlTypeName.VARCHAR),
           null,
           OperandTypes.or(
               // first signature is the colum only, BIG_SUM(column)
               OperandTypes.and(OperandTypes.ANY, OperandTypes.family(SqlTypeFamily.ANY)),
               OperandTypes.and(
-                  OperandTypes.sequence(SIGNATURE2, OperandTypes.ANY, OperandTypes.POSITIVE_INTEGER_LITERAL),
+                  OperandTypes.sequence(
+                      "'" + name + "'(column, size)",
+                      OperandTypes.ANY,
+                      OperandTypes.POSITIVE_INTEGER_LITERAL
+                  ),
                   OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC)
               ),
               OperandTypes.and(
                   OperandTypes.sequence(
-                      SIGNATURE3,
+                      "'" + name + "'(column, size, scale)",
                       OperandTypes.ANY,
                       OperandTypes.POSITIVE_INTEGER_LITERAL,
                       OperandTypes.POSITIVE_INTEGER_LITERAL
@@ -182,7 +191,7 @@ public class CompressedBigDecimalSqlAggregator implements SqlAggregator
               ),
               OperandTypes.and(
                   OperandTypes.sequence(
-                      SIGNATURE4,
+                      "'" + name + "'(column, size, scale, strictNumberParsing)",
                       OperandTypes.ANY,
                       OperandTypes.POSITIVE_INTEGER_LITERAL,
                       OperandTypes.POSITIVE_INTEGER_LITERAL,

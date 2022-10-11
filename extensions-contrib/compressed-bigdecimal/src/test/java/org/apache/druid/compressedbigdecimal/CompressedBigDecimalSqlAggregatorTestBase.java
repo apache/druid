@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -32,6 +31,7 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -57,7 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class CompressedBigDecimalSqlAggregatorTest extends BaseCalciteQueryTest
+public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalciteQueryTest
 {
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
@@ -118,12 +118,6 @@ public class CompressedBigDecimalSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Override
-  public DruidOperatorTable createOperatorTable()
-  {
-    return new DruidOperatorTable(ImmutableSet.of(new CompressedBigDecimalSqlAggregator()), ImmutableSet.of());
-  }
-
-  @Override
   public ObjectMapper createQueryJsonMapper()
   {
     ObjectMapper objectMapper = super.createQueryJsonMapper();
@@ -132,132 +126,162 @@ public class CompressedBigDecimalSqlAggregatorTest extends BaseCalciteQueryTest
     return objectMapper;
   }
 
+  @Override
+  public abstract DruidOperatorTable createOperatorTable();
+
   @Test
-  public void testCompressedBigDecimalAggWithNumberParse1()
-  {
-    cannotVectorize();
-    testQuery(
-        "SELECT big_sum(m1, 9, 9), big_sum(m2, 9, 9), big_sum(dim1, 9, 9, false) FROM foo",
-        Collections.singletonList(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                  .granularity(Granularities.ALL)
-                  .aggregators(
-                      new CompressedBigDecimalAggregatorFactory("a0:agg", "m1", 9, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a1:agg", "m2", 9, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a2:agg", "dim1", 9, 9, false)
-                  )
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(new Object[]{
-            "21.000000000",
-            "21.000000000",
-            "13.100000000",
-            })
-    );
-  }
+  public abstract void testCompressedBigDecimalAggWithNumberParse();
 
   @Test(expected = NumberFormatException.class)
-  public void testCompressedBigDecimalAggWithNumberParse2()
+  public abstract void testCompressedBigDecimalAggWithStrictNumberParse();
+
+  @Test
+  public abstract void testCompressedBigDecimalAggDefaultNumberParseAndCustomSizeAndScale();
+
+  @Test
+  public abstract void testCompressedBigDecimalAggDefaultScale();
+
+  @Test
+  public abstract void testCompressedBigDecimalAggDefaultSizeAndScale();
+
+  protected void testCompressedBigDecimalAggWithNumberParseHelper(
+      String functionName,
+      Object[] expectedResults,
+      CompressedBigDecimalAggregatorFactoryCreator factoryCreator
+  )
   {
     cannotVectorize();
     testQuery(
-        "SELECT big_sum(dim1, 9, 9, true) FROM foo",
+        StringUtils.format(
+            "SELECT %s(m1, 9, 9), %s(m2, 9, 9), %s(dim1, 9, 9, false) FROM foo",
+            functionName,
+            functionName,
+            functionName
+        ),
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      new CompressedBigDecimalAggregatorFactory("a0:agg", "dim1", 9, 9, true)
+                      factoryCreator.create("a0:agg", "m1", 9, 9, false),
+                      factoryCreator.create("a1:agg", "m2", 9, 9, false),
+                      factoryCreator.create("a2:agg", "dim1", 9, 9, false)
+
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(new Object[]{"13.100000000"})
+        ImmutableList.of(expectedResults)
     );
   }
 
-  @Test
-  public void testCompressedBigDecimalAggDefaultNumberParse()
+  protected void testCompressedBigDecimalAggWithStrictNumberParseHelper(
+      String functionName,
+      CompressedBigDecimalAggregatorFactoryCreator factoryCreator
+  )
   {
     cannotVectorize();
     testQuery(
-        "SELECT big_sum(m1, 9, 9), big_sum(m2, 9, 9), big_sum(dim1, 9, 9) FROM foo",
+        StringUtils.format("SELECT %s(dim1, 9, 9, true) FROM foo", functionName),
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .aggregators(
-                      new CompressedBigDecimalAggregatorFactory("a0:agg", "m1", 9, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a1:agg", "m2", 9, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a2:agg", "dim1", 9, 9, false)
-                  )
+                  .aggregators(factoryCreator.create("a0:agg", "dim1", 9, 9, true))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(new Object[]{
-            "21.000000000",
-            "21.000000000",
-            "13.100000000",
-            })
+        ImmutableList.of(new Object[]{"unused"})
     );
   }
 
-  @Test
-  public void testCompressedBigDecimalAggDefaultScale()
+  public void testCompressedBigDecimalAggDefaultNumberParseAndCustomSizeAndScaleHelper(
+      String functionName,
+      Object[] expectedResults,
+      CompressedBigDecimalAggregatorFactoryCreator factoryCreator
+  )
   {
     cannotVectorize();
     testQuery(
-        "SELECT big_sum(m1, 9), big_sum(m2, 9), big_sum(dim1, 9) FROM foo",
+        StringUtils.format(
+            "SELECT %s(m1, 9, 3), %s(m2, 9, 3), %s(dim1, 9, 3) FROM foo",
+            functionName,
+            functionName,
+            functionName
+        ),
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      new CompressedBigDecimalAggregatorFactory("a0:agg", "m1", 9, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a1:agg", "m2", 9, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a2:agg", "dim1", 9, 9, false)
+                      factoryCreator.create("a0:agg", "m1", 9, 3, false),
+                      factoryCreator.create("a1:agg", "m2", 9, 3, false),
+                      factoryCreator.create("a2:agg", "dim1", 9, 3, false)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(new Object[]{
-            "21.000000000",
-            "21.000000000",
-            "13.100000000"
-        })
+        ImmutableList.of(expectedResults)
     );
   }
 
-  @Test
-  public void testCompressedBigDecimalAggDefaultSizeAndScale()
+  public void testCompressedBigDecimalAggDefaultScaleHelper(
+      String functionName,
+      Object[] expectedResults,
+      CompressedBigDecimalAggregatorFactoryCreator factoryCreator
+  )
   {
     cannotVectorize();
     testQuery(
-        "SELECT big_sum(m1), big_sum(m2), big_sum(dim1) FROM foo",
+        StringUtils.format(
+            "SELECT %s(m1, 9), %s(m2, 9), %s(dim1, 9) FROM foo",
+            functionName,
+            functionName,
+            functionName
+        ),
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      new CompressedBigDecimalAggregatorFactory("a0:agg", "m1", 6, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a1:agg", "m2", 6, 9, false),
-                      new CompressedBigDecimalAggregatorFactory("a2:agg", "dim1", 6, 9, false)
+                      factoryCreator.create("a0:agg", "m1", 9, 9, false),
+                      factoryCreator.create("a1:agg", "m2", 9, 9, false),
+                      factoryCreator.create("a2:agg", "dim1", 9, 9, false)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(new Object[]{
-            "21.000000000",
-            "21.000000000",
-            "13.100000000"
-        })
+        ImmutableList.of(expectedResults)
+    );
+  }
+
+  public void testCompressedBigDecimalAggDefaultSizeAndScaleHelper(
+      String functionName,
+      Object[] expectedResults,
+      CompressedBigDecimalAggregatorFactoryCreator factoryCreator
+  )
+  {
+    cannotVectorize();
+    testQuery(
+        StringUtils.format("SELECT %s(m1), %s(m2), %s(dim1) FROM foo", functionName, functionName, functionName),
+        Collections.singletonList(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      factoryCreator.create("a0:agg", "m1", 6, 9, false),
+                      factoryCreator.create("a1:agg", "m2", 6, 9, false),
+                      factoryCreator.create("a2:agg", "dim1", 6, 9, false)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(expectedResults)
     );
   }
 

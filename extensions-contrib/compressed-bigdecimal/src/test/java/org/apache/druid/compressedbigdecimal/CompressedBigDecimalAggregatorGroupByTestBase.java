@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.hamcrest.collection.IsCollectionWithSize;
 import org.hamcrest.collection.IsMapContaining;
@@ -46,51 +45,38 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
 
-/**
- * Unit tests for AccumulatingDecimalAggregator.
- */
 @RunWith(Parameterized.class)
-public class CompressedBigDecimalAggregatorGroupByTest
+public abstract class CompressedBigDecimalAggregatorGroupByTestBase
 {
   private final AggregationTestHelper helper;
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder(new File("target"));
 
+  private final CompressedBigDecimalGroupByQueryConfig cbdGroupByQueryConfig;
+
   /**
    * Constructor.
    *
    * @param config config object
    */
-  public CompressedBigDecimalAggregatorGroupByTest(GroupByQueryConfig config)
+  public CompressedBigDecimalAggregatorGroupByTestBase(
+      GroupByQueryConfig config,
+      CompressedBigDecimalGroupByQueryConfig cbdGroupByQueryConfig
+  )
   {
+    this.cbdGroupByQueryConfig = cbdGroupByQueryConfig;
     CompressedBigDecimalModule module = new CompressedBigDecimalModule();
     CompressedBigDecimalModule.registerSerde();
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
   }
 
-  /**
-   * Constructor feeder.
-   *
-   * @return constructors
-   */
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<?> constructorFeeder()
-  {
-    final List<Object[]> constructors = new ArrayList<>();
-    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      constructors.add(new Object[]{config});
-    }
-    return constructors;
-  }
 
   /**
    * Default setup of UTC timezone.
@@ -112,7 +98,7 @@ public class CompressedBigDecimalAggregatorGroupByTest
   {
 
     String groupByQueryJson = Resources.asCharSource(
-        this.getClass().getResource("/" + "bd_test_groupby_query.json"),
+        this.getClass().getResource("/" + cbdGroupByQueryConfig.getJsonQueryFile()),
         StandardCharsets.UTF_8
     ).read();
 
@@ -124,7 +110,7 @@ public class CompressedBigDecimalAggregatorGroupByTest
             StandardCharsets.UTF_8
         ).read(),
         Resources.asCharSource(
-            this.getClass().getResource("/" + "bd_test_aggregators.json"),
+            this.getClass().getResource("/" + cbdGroupByQueryConfig.getJsonAggregatorsFile()),
             StandardCharsets.UTF_8
         ).read(),
         0,
@@ -147,17 +133,26 @@ public class CompressedBigDecimalAggregatorGroupByTest
     Assert.assertThat(event, IsMapWithSize.aMapWithSize(3));
     Assert.assertThat(
         event,
-        IsMapContaining.hasEntry("cbdRevenueFromString", new BigDecimal("15000000010.000000005"))
+        IsMapContaining.hasEntry(
+            "cbdRevenueFromString",
+            new ArrayCompressedBigDecimal(new BigDecimal(cbdGroupByQueryConfig.getStringRevenue()))
+        )
     );
     // long conversion of 5000000000.000000005 results in null/0 value
     Assert.assertThat(
         event,
-        IsMapContaining.hasEntry("cbdRevenueFromLong", new BigDecimal("10000000010.000000000"))
+        IsMapContaining.hasEntry(
+            "cbdRevenueFromLong",
+            new ArrayCompressedBigDecimal(new BigDecimal(cbdGroupByQueryConfig.getLongRevenue()))
+        )
     );
     // double input changes 5000000000.000000005 to 5000000000.5 to fit in double mantissa space
     Assert.assertThat(
         event,
-        IsMapContaining.hasEntry("cbdRevenueFromDouble", new BigDecimal("15000000010.500000000"))
+        IsMapContaining.hasEntry(
+            "cbdRevenueFromDouble",
+            new ArrayCompressedBigDecimal(new BigDecimal(cbdGroupByQueryConfig.getDoubleRevenue()))
+        )
     );
   }
 }

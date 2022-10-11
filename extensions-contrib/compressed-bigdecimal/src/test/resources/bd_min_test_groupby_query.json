@@ -6,21 +6,21 @@
     ],
     "aggregations": [
         {
-            "type": "compressedBigDecimal",
+            "type": "compressedBigDecimalMin",
             "name": "cbdRevenueFromString",
             "fieldName": "revenue",
             "scale": 9,
             "size": 3
         },
         {
-            "type": "compressedBigDecimal",
+            "type": "compressedBigDecimalMin",
             "name": "cbdRevenueFromLong",
             "fieldName": "longRevenue",
             "scale": 9,
             "size": 3
         },
         {
-            "type": "compressedBigDecimal",
+            "type": "compressedBigDecimalMin",
             "name": "cbdRevenueFromDouble",
             "fieldName": "doubleRevenue",
             "scale": 9,
