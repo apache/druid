@@ -29,6 +29,7 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.testng.annotations.BeforeMethod;
@@ -46,6 +47,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Test(groups = {TestNGGroup.COMPACTION, TestNGGroup.QUICKSTART_COMPATIBLE})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -297,9 +299,11 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   {
     ITRetryUtil.retryUntilTrue(
         () -> {
-          int metadataSegmentCount = coordinator.getSegments(fullDatasourceName).size();
-          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
-          return metadataSegmentCount == numExpectedSegments;
+          List<DataSegment> metadataSegments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
+          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegments.size(), numExpectedSegments);
+          LOG.info("Current metadata segments are %s",
+                   metadataSegments.stream().map(DataSegment::toString).collect(Collectors.joining(", ")));
+          return metadataSegments.size() == numExpectedSegments;
         },
         "Segment count check"
     );
