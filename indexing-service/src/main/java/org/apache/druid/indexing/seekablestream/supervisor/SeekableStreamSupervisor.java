@@ -3262,9 +3262,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private void checkIfStreamInactiveAndTurnSupervisorIdle()
   {
-    if (!spec.getSupervisorStateManagerConfig().isEnableIdleBehaviour()
-        || !spec.getIoConfig().isEnableIdleBehaviour()
-        || spec.isSuspended()) {
+    IdleConfig idleConfig = spec.getIoConfig().getIdleConfig();
+    if ((idleConfig == null || !idleConfig.isEnabled()) || spec.isSuspended()) {
       return;
     }
 
@@ -3288,7 +3287,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     previousSequencesFromStream.putAll(latestSequencesFromStream);
     if (!idle) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.RUNNING);
-    } else if (!stateManager.isIdle() && idleTime > spec.getIoConfig().getAwaitStreamInactiveMillis()) {
+    } else if (!stateManager.isIdle() && idleTime > idleConfig.getInactiveAfterMillis()) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
     }
   }

@@ -249,11 +249,6 @@ public class SupervisorStateManager
     return supervisorStateManagerConfig.isStoreStackTrace();
   }
 
-  public boolean isEnableIdleBehaviour()
-  {
-    return supervisorStateManagerConfig.isEnableIdleBehaviour();
-  }
-
   protected State getSpecificUnhealthySupervisorState()
   {
     return BasicState.UNHEALTHY_SUPERVISOR;

@@ -48,8 +48,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   private final Optional<Duration> earlyMessageRejectionPeriod;
   private final Optional<DateTime> lateMessageRejectionStartDateTime;
   @Nullable private final AutoScalerConfig autoScalerConfig;
-  private final boolean enableIdleBehaviour;
-  private final long awaitStreamInactiveMillis;
+  @Nullable private final IdleConfig idleConfig;
 
   public SeekableStreamSupervisorIOConfig(
       String stream,
@@ -65,8 +64,7 @@ public abstract class SeekableStreamSupervisorIOConfig
       Period earlyMessageRejectionPeriod,
       @Nullable AutoScalerConfig autoScalerConfig,
       DateTime lateMessageRejectionStartDateTime,
-      Boolean enableIdleBehaviour,
-      Long awaitStreamInactiveMillis
+      @Nullable IdleConfig idleConfig
   )
   {
     this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
@@ -102,12 +100,7 @@ public abstract class SeekableStreamSupervisorIOConfig
           + "and lateMessageRejectionPeriod.");
     }
 
-    this.enableIdleBehaviour = enableIdleBehaviour != null && enableIdleBehaviour;
-    this.awaitStreamInactiveMillis = awaitStreamInactiveMillis != null
-                                     ? awaitStreamInactiveMillis
-                                     : 60000;
-    Preconditions.checkArgument(this.awaitStreamInactiveMillis > 0,
-                                "awaitStreamInactiveMillis should be a postive number");
+    this.idleConfig = idleConfig;
   }
 
   private static Duration defaultDuration(final Period period, final String theDefault)
@@ -200,15 +193,10 @@ public abstract class SeekableStreamSupervisorIOConfig
     return lateMessageRejectionStartDateTime;
   }
 
+  @Nullable
   @JsonProperty
-  public boolean isEnableIdleBehaviour()
+  public IdleConfig getIdleConfig()
   {
-    return enableIdleBehaviour;
-  }
-
-  @JsonProperty
-  public long getAwaitStreamInactiveMillis()
-  {
-    return awaitStreamInactiveMillis;
+    return idleConfig;
   }
 }

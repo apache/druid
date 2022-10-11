@@ -91,7 +91,6 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         earlyMessageRejectionPeriod,
         autoScalerConfig,
         lateMessageRejectionStartDateTime,
-        false,
         null
     );
 

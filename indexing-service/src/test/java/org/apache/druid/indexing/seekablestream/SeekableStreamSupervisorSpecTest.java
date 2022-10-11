@@ -40,6 +40,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIngestionSpec;
@@ -77,6 +78,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -868,7 +870,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         null,
         null,
         null,
-        false,
         null
     )
     {
@@ -909,9 +910,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   @Test
   public void testEnablingIdleBeviourPerSupervisorWithOverlordConfigEnabled()
   {
-    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
-    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
-
     SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
         "stream",
         new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
@@ -926,8 +924,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         null,
         null,
         null,
-        true,
-        null
+        new IdleConfig(true, null)
     ){
     };
 
@@ -947,7 +944,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         null,
         null,
         null,
-        OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class)
+        supervisorStateManagerConfig
     )
     {
       @Override
@@ -975,8 +972,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
       }
     };
 
-    Assert.assertTrue(spec.getIoConfig().isEnableIdleBehaviour());
-    Assert.assertEquals(60000L, spec.getIoConfig().getAwaitStreamInactiveMillis());
+    Assert.assertTrue(Objects.requireNonNull(spec.getIoConfig().getIdleConfig()).isEnabled());
+    Assert.assertEquals(600000L, spec.getIoConfig().getIdleConfig().getInactiveAfterMillis());
   }
 
   private static DataSchema getDataSchema()
@@ -1016,7 +1013,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           null,
           mapper.convertValue(getScaleOutProperties(2), AutoScalerConfig.class),
           null,
-          null,
           null
       )
       {
@@ -1034,7 +1030,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           new Period("PT30M"),
           null,
           null,
-          mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class), null,
+          mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class),
           null,
           null
       )

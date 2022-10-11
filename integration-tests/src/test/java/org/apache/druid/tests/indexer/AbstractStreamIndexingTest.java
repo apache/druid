@@ -336,6 +336,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       // Start supervisor
       generatedTestConfig.setSupervisorId(indexer.submitSupervisor(taskSpec));
       LOG.info("Submitted supervisor");
+      String dataSource = generatedTestConfig.getFullDatasourceName();
       // Start generating half of the data
       int secondsToGenerateRemaining = TOTAL_NUMBER_OF_SECOND;
       int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 2;
@@ -362,7 +363,10 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
 
       // wait for autoScaling task numbers from 1 to 2.
       ITRetryUtil.retryUntil(
-          () -> indexer.getRunningTasks().size() == 2,
+          () -> indexer.getRunningTasks()
+                       .stream()
+                       .filter(taskResponseObject -> taskResponseObject.getId().contains(dataSource))
+                       .count() == 2,
               true,
               10000,
               50,
@@ -382,7 +386,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     }
   }
 
-  protected void doTestIndexDataWithIdleBehaviourEnabled(@Nullable Boolean transactionEnabled) throws Exception
+  protected void doTestIndexDataWithIdleConfigEnabled(@Nullable Boolean transactionEnabled) throws Exception
   {
     final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(
         INPUT_FORMAT,

@@ -38,7 +38,6 @@ import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorSpec;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.overlord.sampler.SamplerTestUtils;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -167,7 +166,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
         null,
         null,
         null,
-        new SupervisorStateManagerConfig()
+        null
     );
 
     KinesisSamplerSpec samplerSpec = new TestableKinesisSamplerSpec(

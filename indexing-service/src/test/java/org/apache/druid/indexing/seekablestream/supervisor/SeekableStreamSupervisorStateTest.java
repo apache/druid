@@ -468,9 +468,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   @Test
   public void testIdleStateTransition() throws Exception
   {
-    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
-    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
-
     EasyMock.reset(spec);
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
@@ -488,8 +485,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
-        true,
-        200L
+        new IdleConfig(true, 200L)
     )
     {
     }).anyTimes();
@@ -503,9 +499,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       }
     }).anyTimes();
     EasyMock.expect(spec.getType()).andReturn("test").anyTimes();
-    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(
-        OBJECT_MAPPER.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class)
-    ).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
@@ -1004,7 +998,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
-        null,
         null
     )
     {
@@ -1063,7 +1056,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class),
-        null,
         null,
         null
     )

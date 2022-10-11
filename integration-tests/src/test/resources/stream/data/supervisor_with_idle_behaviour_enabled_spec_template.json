@@ -54,7 +54,9 @@
     "taskDuration": "PT120S",
     "%%USE_EARLIEST_KEY%%": true,
     "inputFormat" : %%INPUT_FORMAT%%,
-    "enableIdleBehaviour": true,
-    "awaitStreamInactiveMillis": 10000
+    "idleConfig": {
+      "enabled": true,
+      "inactiveAfterMillis": 10000
+    }
   }
 }

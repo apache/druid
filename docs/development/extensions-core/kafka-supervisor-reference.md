@@ -51,9 +51,8 @@ This topic contains configuration reference information for the Apache Kafka sup
 |`lateMessageRejectionStartDateTime`|ISO8601 DateTime|Configure tasks to reject messages with timestamps earlier than this date time; for example if this is set to `2016-01-01T11:00Z` and the supervisor creates a task at *2016-01-01T12:00Z*, Druid drops messages with timestamps earlier than *2016-01-01T11:00Z*. This can prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline).|no (default == none)|
 |`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline). Please note that only one of `lateMessageRejectionPeriod` or `lateMessageRejectionStartDateTime` can be specified.|no (default == none)|
 |`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting earlyMessageRejectionPeriod too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
-|`enableIdleBehaviour`|Boolean|If enabled, Kafka supervisor will become idle if there is no data on input stream/topic for some time. This can only be enabled if Overlord config `druid.supervisor.enableIdleBehaviour` is enabled.|no (default == false)|
-|`awaitStreamInactiveMillis`|Long|Minimum time interval to wait after the topic has become inactive before marking the supervisor as idle. A topic is considered to be inactive if all existing data has been read from it and no new data is being published to it.| no (default == 60000) |
 |`autoScalerConfig`|Object|Defines auto scaling behavior for Kafka ingest tasks. See [Tasks Autoscaler Properties](#task-autoscaler-properties).|no (default == null)|
+|`idleConfig`|Object|Defines how and when Kafka Supervisor can become idle. See [Idle Supervisor Configuration](#idle-supervisor-configuration) for more details.|no (default == null)|
 
 ## Task Autoscaler Properties
 
@@ -81,7 +80,16 @@ This topic contains configuration reference information for the Apache Kafka sup
 | `scaleInStep` | How many tasks to reduce at a time | no (default == 1) |
 | `scaleOutStep` | How many tasks to add at a time | no (default == 2) |
 
-The following example demonstrates supervisor spec with `lagBased` autoScaler enabled:
+## Idle Supervisor Configuration
+
+> Note that Idle state transitioning is currently designated as experimental.
+
+| Property | Description | Required |
+| ------------- | ------------- | ------------- |
+| `enabled` | If `true`, Kafka supervisor will become idle if there is no data on input stream/topic for some time. | no (default == false) |
+| `inactiveAfterMillis` | Supervisor is marked as idle if all existing data has been read from input topic and no new data has been published for `inactiveAfterMillis` milliseconds. | no (default == 600000) |
+
+The following example demonstrates supervisor spec with `lagBased` autoScaler and idle config enabled:
 ```json
 {
     "type": "kafka",
@@ -117,8 +125,10 @@ The following example demonstrates supervisor spec with `lagBased` autoScaler en
          "taskCount":1,
          "replicas":1,
          "taskDuration":"PT1H",
-         "enableIdleBehaviour": true,
-         "awaitStreamInactiveMillis": 60000
+         "idleConfig": {
+           "enabled": true,
+           "inactiveAfterMillis": 600000 
+         }
       },
      "tuningConfig":{
         ...

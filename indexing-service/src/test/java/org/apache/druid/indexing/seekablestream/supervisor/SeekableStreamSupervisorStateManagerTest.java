@@ -36,7 +36,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -50,12 +49,9 @@ public class SeekableStreamSupervisorStateManagerTest
   @Before
   public void setupTest()
   {
-    defaultMapper = new DefaultObjectMapper();
-    Map<String, Object> supervisorStateManagerConfig = new HashMap<>();
-    supervisorStateManagerConfig.put("enableIdleBehaviour", true);
-    supervisorStateManagerConfig.put("maxStoredExceptionEvents", 10);
-    config = defaultMapper.convertValue(supervisorStateManagerConfig, SupervisorStateManagerConfig.class);
+    config = new SupervisorStateManagerConfig(10);
     stateManager = new SeekableStreamSupervisorStateManager(config, false);
+    defaultMapper = new DefaultObjectMapper();
   }
 
   @Test

@@ -37,7 +37,6 @@ import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.overlord.sampler.SamplerTestUtils;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -146,7 +145,6 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            null,
             null
         ),
         null,
@@ -159,7 +157,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        new SupervisorStateManagerConfig()
+        null
     );
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
@@ -324,7 +322,6 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            null,
             null
         ),
         null,
@@ -337,7 +334,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        new SupervisorStateManagerConfig()
+        null
     );
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(

@@ -63,9 +63,9 @@ public class ITKafkaIndexingServiceNonTransactionalParallelizedTest extends Abst
   }
 
   @Test
-  public void testIndexDataWithIdleBehaviourEnabled() throws Exception
+  public void testIndexDataWithIdleConfigEnabled() throws Exception
   {
-    doTestIndexDataWithIdleBehaviourEnabled(false);
+    doTestIndexDataWithIdleConfigEnabled(false);
   }
 
   /**

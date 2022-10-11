@@ -19,40 +19,13 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class SupervisorStateManagerTest
 {
-  private final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
-
   @Test
   public void testMarkRunFinishedIfSupervisorIsIdle()
-  {
-    Map<String, Object> config = new HashMap<>();
-    config.put("enableIdleBehaviour", true);
-    SupervisorStateManagerConfig supervisorStateManagerConfig =
-        OBJECT_MAPPER.convertValue(config, SupervisorStateManagerConfig.class);
-    SupervisorStateManager supervisorStateManager = new SupervisorStateManager(
-        supervisorStateManagerConfig,
-        false
-    );
-
-    supervisorStateManager.markRunFinished();
-    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
-    supervisorStateManager.markRunFinished();
-
-    Assert.assertTrue(supervisorStateManager.isEnableIdleBehaviour());
-    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisorStateManager.getSupervisorState());
-  }
-
-  @Test
-  public void testMarkRunFinishedIfSupervisorNotIdle()
   {
     SupervisorStateManager supervisorStateManager = new SupervisorStateManager(
         new SupervisorStateManagerConfig(),
@@ -61,7 +34,11 @@ public class SupervisorStateManagerTest
 
     supervisorStateManager.markRunFinished();
 
-    Assert.assertFalse(supervisorStateManager.isEnableIdleBehaviour());
     Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, supervisorStateManager.getSupervisorState());
+
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
+    supervisorStateManager.markRunFinished();
+
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisorStateManager.getSupervisorState());
   }
 }
