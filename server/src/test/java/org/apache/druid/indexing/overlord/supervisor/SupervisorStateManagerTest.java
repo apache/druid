@@ -43,6 +43,7 @@ public class SupervisorStateManagerTest
         false
     );
 
+    supervisorStateManager.markRunFinished();
     supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
     supervisorStateManager.markRunFinished();
 

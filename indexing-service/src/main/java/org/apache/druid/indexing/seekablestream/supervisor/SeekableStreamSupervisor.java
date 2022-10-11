@@ -4046,7 +4046,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected void emitLag()
   {
-    if (spec.isSuspended() || (!stateManager.isSteadyState() && stateManager.isIdle())) {
+    if (spec.isSuspended() || !(stateManager.isSteadyState() || stateManager.isIdle())) {
       // don't emit metrics if supervisor is suspended or not in a healthy running state
       // (lag should still available in status report)
       return;

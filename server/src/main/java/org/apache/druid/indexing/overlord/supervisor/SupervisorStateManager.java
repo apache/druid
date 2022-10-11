@@ -236,7 +236,7 @@ public class SupervisorStateManager
 
   public boolean isIdle()
   {
-    return SupervisorStateManager.BasicState.IDLE.equals(getSupervisorState());
+    return SupervisorStateManager.BasicState.IDLE.equals(supervisorState);
   }
 
   protected Deque<ExceptionEvent> getRecentEventsQueue()

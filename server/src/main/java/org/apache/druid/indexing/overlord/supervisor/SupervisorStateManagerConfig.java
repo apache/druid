@@ -46,7 +46,7 @@ public class SupervisorStateManagerConfig
   @JsonProperty
   private int maxStoredExceptionEvents = Math.max(unhealthinessThreshold, healthinessThreshold);
 
-  //
+  // To enable idle behaviour on the supervisor
   @JsonProperty
   private boolean enableIdleBehaviour = false;
 
