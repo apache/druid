@@ -24,70 +24,50 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.os72.protobuf.dynamic.DynamicSchema;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.Descriptors;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Objects;
 
-public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesDecoder
+public class InlineDescriptorProtobufBytesDecoder extends DescriptorBasedProtobufBytesDecoder
 {
-  private final String descriptorFilePath;
+  private final String descriptorString;
 
   @JsonCreator
-  public FileBasedProtobufBytesDecoder(
-      @JsonProperty("descriptor") String descriptorFilePath,
+  public InlineDescriptorProtobufBytesDecoder(
+      @JsonProperty("descriptorString") String descriptorString,
       @JsonProperty("protoMessageType") String protoMessageType
   )
   {
     super(protoMessageType);
-    Preconditions.checkNotNull(descriptorFilePath);
-    this.descriptorFilePath = descriptorFilePath;
+    Preconditions.checkNotNull(descriptorString);
+    this.descriptorString = descriptorString;
     initDescriptor();
   }
 
-  @JsonProperty("descriptor")
-  public String getDescriptorFilePath()
+  @JsonProperty
+  public String getDescriptorString()
   {
-    return descriptorFilePath;
+    return descriptorString;
   }
 
   @Override
   protected DynamicSchema generateDynamicSchema()
   {
-    InputStream fin;
-
-    fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFilePath);
-    if (fin == null) {
-      URL url;
-      try {
-        url = new URL(descriptorFilePath);
-      }
-      catch (MalformedURLException e) {
-        throw new ParseException(
-            descriptorFilePath,
-            e,
-            "Descriptor not found in class path or malformed URL:" + descriptorFilePath
-        );
-      }
-      try {
-        fin = url.openConnection().getInputStream();
-      }
-      catch (IOException e) {
-        throw new ParseException(url.toString(), e, "Cannot read descriptor file: " + url);
-      }
-    }
-
     try {
-      return DynamicSchema.parseFrom(fin);
+      byte[] decodedDesc = StringUtils.decodeBase64String(descriptorString);
+      return DynamicSchema.parseFrom(decodedDesc);
+    }
+    catch (IllegalArgumentException e) {
+      throw new IAE("Descriptor string does not have valid Base64 encoding.");
     }
     catch (Descriptors.DescriptorValidationException e) {
-      throw new ParseException(null, e, "Invalid descriptor file: " + descriptorFilePath);
+      throw new ParseException(null, e, "Invalid descriptor string: " + descriptorString);
     }
     catch (IOException e) {
-      throw new ParseException(null, e, "Cannot read descriptor file: " + descriptorFilePath);
+      throw new ParseException(null, e, "Cannot read descriptor string: " + descriptorString);
     }
   }
 
@@ -103,13 +83,13 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
     if (!super.equals(o)) {
       return false;
     }
-    FileBasedProtobufBytesDecoder that = (FileBasedProtobufBytesDecoder) o;
-    return Objects.equals(descriptorFilePath, that.descriptorFilePath);
+    InlineDescriptorProtobufBytesDecoder that = (InlineDescriptorProtobufBytesDecoder) o;
+    return Objects.equals(getDescriptorString(), that.getDescriptorString());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), descriptorFilePath);
+    return Objects.hash(super.hashCode(), getDescriptorString());
   }
 }
