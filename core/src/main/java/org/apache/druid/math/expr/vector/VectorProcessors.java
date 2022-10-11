@@ -169,7 +169,7 @@ public class VectorProcessors
       public void processIndex(Object[] strings, long[] longs, boolean[] outputNulls, int i)
       {
         try {
-          final String input = Evals.asString(strings[i]);
+          final String input = (String) strings[i];
           if (input == null) {
             longs[i] = 0L;
             outputNulls[i] = NullHandling.sqlCompatible();
@@ -535,7 +535,7 @@ public class VectorProcessors
         {
           outputNulls[i] = strings[i] == null;
           if (!outputNulls[i]) {
-            longs[i] = Evals.asLong(!Evals.asBoolean(Evals.asString(strings[i])));
+            longs[i] = Evals.asLong(!Evals.asBoolean((String) strings[i]));
           }
         }
       };
