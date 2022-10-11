@@ -61,7 +61,7 @@ public class InlineDescriptorProtobufBytesDecoder extends DescriptorBasedProtobu
       return DynamicSchema.parseFrom(decodedDesc);
     }
     catch (IllegalArgumentException e) {
-      throw new IAE("Descriptor string was did not have valid Base64 encoding.");
+      throw new IAE("Descriptor string does not have valid Base64 encoding.");
     }
     catch (Descriptors.DescriptorValidationException e) {
       throw new ParseException(null, e, "Invalid descriptor string: " + descriptorString);
