@@ -47,6 +47,12 @@ public abstract class DoubleOutDoubleInFunctionVectorValueProcessor
   }
 
   @Override
+  final void processNull(int i)
+  {
+    outValues[i] = 0.0;
+  }
+
+  @Override
   final ExprEvalVector<double[]> asEval()
   {
     return new ExprEvalDoubleVector(outValues, outNulls);

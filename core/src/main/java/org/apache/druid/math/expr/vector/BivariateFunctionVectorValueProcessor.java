@@ -70,6 +70,8 @@ public abstract class BivariateFunctionVectorValueProcessor<TLeftInput, TRightIn
         outNulls[i] = (hasLeftNulls && leftNulls[i]) || (hasRightNulls && rightNulls[i]);
         if (!outNulls[i]) {
           processIndex(leftInput, rightInput, i);
+        } else {
+          processNull(i);
         }
       }
     } else {
@@ -82,6 +84,8 @@ public abstract class BivariateFunctionVectorValueProcessor<TLeftInput, TRightIn
   }
 
   abstract void processIndex(TLeftInput leftInput, TRightInput rightInput, int i);
+
+  abstract void processNull(int i);
 
   abstract ExprEvalVector<TOutput> asEval();
 }

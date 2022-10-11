@@ -46,6 +46,12 @@ public abstract class LongOutLongInFunctionVectorValueProcessor extends Univaria
   }
 
   @Override
+  final void processNull(int i)
+  {
+    outValues[i] = 0L;
+  }
+
+  @Override
   final ExprEvalVector<long[]> asEval()
   {
     return new ExprEvalLongVector(outValues, outNulls);

@@ -61,6 +61,8 @@ public abstract class UnivariateFunctionVectorValueProcessor<TInput, TOutput> im
         outNulls[i] = inputNulls[i];
         if (!outNulls[i]) {
           processIndex(input, i);
+        } else {
+          processNull(i);
         }
       }
     } else {
@@ -73,6 +75,8 @@ public abstract class UnivariateFunctionVectorValueProcessor<TInput, TOutput> im
   }
 
   abstract void processIndex(TInput input, int i);
+
+  abstract void processNull(int i);
 
   abstract ExprEvalVector<TOutput> asEval();
 }
