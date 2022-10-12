@@ -29,7 +29,6 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidClusterBuilder;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeonTester;
-import org.apache.druid.server.coordinator.Metrics;
 import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.SegmentStateManager;
@@ -59,12 +58,14 @@ public class BroadcastDistributionRuleTest
   private ServerHolder decommissioningServer2;
   private SegmentStateManager stateManager;
 
+  private static final String DS_SMALL = "small_source";
+
   @Before
   public void setUp()
   {
     stateManager = new SegmentStateManager(null, null, true);
     smallSegment = new DataSegment(
-        "small_source",
+        DS_SMALL,
         Intervals.of("0/1000"),
         DateTimes.nowUtc().toString(),
         new HashMap<>(),
@@ -289,7 +290,7 @@ public class BroadcastDistributionRuleTest
         )
     );
 
-    Assert.assertEquals(5L, stats.getGlobalStat(Metrics.ASSIGNED_COUNT));
+    Assert.assertEquals(5L, stats.getDataSourceStat(CoordinatorStats.BROADCAST_LOADS, DS_SMALL));
     Assert.assertFalse(stats.hasPerTierStats());
 
     Assert.assertTrue(
@@ -348,7 +349,7 @@ public class BroadcastDistributionRuleTest
         )
     );
 
-    Assert.assertEquals(1L, stats.getGlobalStat(Metrics.ASSIGNED_COUNT));
+    Assert.assertEquals(1L, stats.getDataSourceStat(CoordinatorStats.BROADCAST_LOADS, DS_SMALL));
     Assert.assertFalse(stats.hasPerTierStats());
 
     Assert.assertEquals(1, activeServer.getPeon().getSegmentsToLoad().size());
@@ -375,7 +376,7 @@ public class BroadcastDistributionRuleTest
         )
     );
 
-    Assert.assertEquals(5L, stats.getGlobalStat(Metrics.ASSIGNED_COUNT));
+    Assert.assertEquals(5L, stats.getDataSourceStat(CoordinatorStats.BROADCAST_LOADS, DS_SMALL));
     Assert.assertFalse(stats.hasPerTierStats());
 
     Assert.assertTrue(
@@ -410,7 +411,7 @@ public class BroadcastDistributionRuleTest
         )
     );
 
-    Assert.assertEquals(5L, stats.getGlobalStat(Metrics.ASSIGNED_COUNT));
+    Assert.assertEquals(5L, stats.getDataSourceStat(CoordinatorStats.BROADCAST_LOADS, DS_SMALL));
     Assert.assertFalse(stats.hasPerTierStats());
 
     Assert.assertTrue(

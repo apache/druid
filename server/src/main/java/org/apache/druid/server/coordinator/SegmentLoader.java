@@ -107,7 +107,7 @@ public class SegmentLoader
     // Handle every target tier
     tierToReplicaCount.forEach((tier, numReplicas) -> {
       updateReplicasOnTier(segment, tier, tierToReplicaCount.get(tier));
-      stats.addToTieredStat(Metrics.REQUIRED_CAPACITY, tier, segment.getSize() * numReplicas);
+      stats.addToTieredStat(CoordinatorStats.REQUIRED_CAPACITY, tier, segment.getSize() * numReplicas);
     });
 
     // Find the minimum number of segments required for fault tolerance
@@ -138,25 +138,26 @@ public class SegmentLoader
    */
   public void broadcastSegment(DataSegment segment)
   {
-    int broadcastLoadCount = 0;
-    int broadcastDropCount = 0;
+    int assignedCount = 0;
+    int droppedCount = 0;
     for (ServerHolder server : cluster.getAllServers()) {
+      // Ignore servers which are not broadcast targets
       if (!server.getServer().getType().isSegmentBroadcastTarget()) {
-        // ignore this server
-      } else if (server.isDecommissioning()) {
-        broadcastDropCount += dropBroadcastSegment(segment, server) ? 1 : 0;
+        continue;
+      }
+
+      if (server.isDecommissioning()) {
+        droppedCount += dropBroadcastSegment(segment, server) ? 1 : 0;
       } else {
-        broadcastLoadCount += loadBroadcastSegment(segment, server) ? 1 : 0;
+        assignedCount += loadBroadcastSegment(segment, server) ? 1 : 0;
       }
     }
 
-    if (broadcastLoadCount > 0) {
-      stats.addToDataSourceStat(Metrics.BROADCAST_LOADS, segment.getDataSource(), broadcastLoadCount);
-      log.debug("Broadcast load of segment [%s] to [%d] servers.", segment.getId(), broadcastLoadCount);
+    if (assignedCount > 0) {
+      stats.addToDataSourceStat(CoordinatorStats.BROADCAST_LOADS, segment.getDataSource(), assignedCount);
     }
-    if (broadcastDropCount > 0) {
-      stats.addToDataSourceStat(Metrics.BROADCAST_DROPS, segment.getDataSource(), broadcastDropCount);
-      log.debug("Broadcast drop of segment [%s] to [%d] servers.", segment.getId(), broadcastDropCount);
+    if (droppedCount > 0) {
+      stats.addToDataSourceStat(CoordinatorStats.BROADCAST_DROPS, segment.getDataSource(), droppedCount);
     }
   }
 
@@ -166,7 +167,7 @@ public class SegmentLoader
   public void deleteSegment(DataSegment segment)
   {
     stateManager.deleteSegment(segment);
-    stats.addToGlobalStat(Metrics.DELETED_SEGMENTS, 1);
+    stats.addToGlobalStat(CoordinatorStats.DELETED_SEGMENTS, 1);
   }
 
   /**
@@ -186,6 +187,10 @@ public class SegmentLoader
            && (maxLoadQueueSize == 0 || maxLoadQueueSize > server.getSegmentsQueuedForLoad());
   }
 
+  /**
+   * Loads the broadcast segment if it is not loaded on the given server.
+   * Returns true only if the segment was successfully queued for load on the server.
+   */
   private boolean loadBroadcastSegment(DataSegment segment, ServerHolder server)
   {
     final SegmentState state = server.getSegmentState(segment);
@@ -193,14 +198,15 @@ public class SegmentLoader
       return false;
     }
 
-    boolean dropCancelled = state == SegmentState.DROPPING
-                            && stateManager.cancelOperation(SegmentState.DROPPING, segment, server);
-
+    // Cancel drop if it is in progress
+    boolean dropCancelled = stateManager.cancelOperation(SegmentState.DROPPING, segment, server);
     if (dropCancelled) {
-      stats.addToGlobalStat(Metrics.CANCELLED_DROPS, 1);
-    } else if (canLoadSegment(server, segment)
-               && stateManager.loadSegment(segment, server, false)) {
-      stats.addToGlobalStat(Metrics.ASSIGNED_COUNT, 1);
+      return false;
+    }
+
+    if (canLoadSegment(server, segment)
+        && stateManager.loadSegment(segment, server, true)) {
+      return true;
     } else {
       log.makeAlert("Failed to broadcast segment for [%s]", segment.getDataSource())
          .addData("segmentId", segment.getId())
@@ -210,10 +216,12 @@ public class SegmentLoader
          .emit();
       return false;
     }
-
-    return true;
   }
 
+  /**
+   * Drops the broadcast segment if it is loaded on the given server.
+   * Returns true only if the segment was successfully queued for drop on the server.
+   */
   private boolean dropBroadcastSegment(DataSegment segment, ServerHolder server)
   {
     final SegmentState state = server.getSegmentState(segment);
@@ -221,18 +229,13 @@ public class SegmentLoader
       return false;
     }
 
-    boolean loadCancelled = state == SegmentState.LOADING
-                            && stateManager.cancelOperation(SegmentState.LOADING, segment, server);
-
+    // Cancel load if it is in progress
+    boolean loadCancelled = stateManager.cancelOperation(SegmentState.LOADING, segment, server);
     if (loadCancelled) {
-      stats.addToGlobalStat(Metrics.CANCELLED_LOADS, 1);
-    } else if (stateManager.dropSegment(segment, server)) {
-      stats.addToGlobalStat(Metrics.DROPPED_COUNT, 1);
-    } else {
       return false;
     }
 
-    return true;
+    return stateManager.dropSegment(segment, server);
   }
 
   private void updateReplicasOnTier(DataSegment segment, String tier, int targetCount)
@@ -241,7 +244,7 @@ public class SegmentLoader
     Arrays.stream(SegmentState.values())
           .forEach(state -> serversByState.put(state, new ArrayList<>()));
 
-    Set<ServerHolder> historicals = cluster.getHistoricalsByTier(tier);
+    final Set<ServerHolder> historicals = cluster.getHistoricalsByTier(tier);
     if (historicals == null || historicals.isEmpty()) {
       log.makeAlert("Tier [%s] has no servers! Check your cluster configuration.", tier).emit();
       return;
@@ -268,7 +271,7 @@ public class SegmentLoader
           serversByState.get(SegmentState.MOVING_TO),
           movingCount
       );
-      stats.addToTieredStat(Metrics.CANCELLED_MOVES, tier, cancelledMoves);
+      stats.addToTieredStat(CoordinatorStats.CANCELLED_MOVES, tier, cancelledMoves);
     }
 
     if (targetCount > currentCount) {
@@ -291,7 +294,6 @@ public class SegmentLoader
         serversByState.get(SegmentState.DROPPING),
         numReplicasToLoad
     );
-    stats.addToTieredStat(Metrics.CANCELLED_DROPS, tier, cancelledDrops);
 
     numReplicasToLoad -= cancelledDrops;
     int totalReplicas = serversByState.get(SegmentState.LOADED).size()
@@ -306,7 +308,7 @@ public class SegmentLoader
           primaryExists
       );
 
-      stats.addToTieredStat(Metrics.ASSIGNED_COUNT, tier, successfulLoadsQueued);
+      stats.addToTieredStat(CoordinatorStats.ASSIGNED_COUNT, tier, successfulLoadsQueued);
       if (numReplicasToLoad > successfulLoadsQueued) {
         log.warn(
             "Queued %d of %d loads of segment [%s] on tier [%s].",
@@ -326,13 +328,16 @@ public class SegmentLoader
       Map<SegmentState, List<ServerHolder>> serversByState
   )
   {
-    final int cancelledLoads = cancelOperations(
-        SegmentState.LOADING,
-        segment,
-        serversByState.get(SegmentState.LOADING),
-        numReplicasToDrop
-    );
-    stats.addToTieredStat(Metrics.CANCELLED_LOADS, tier, cancelledLoads);
+    // Try to cancel in-progress loads
+    final int cancelledLoads;
+    final List<ServerHolder> loadingServers = serversByState.get(SegmentState.LOADING);
+    if (loadingServers != null && !loadingServers.isEmpty()) {
+      cancelledLoads =
+          cancelOperations(SegmentState.LOADING, segment, loadingServers, numReplicasToDrop);
+      stats.addToTieredStat(CoordinatorStats.CANCELLED_LOADS, tier, cancelledLoads);
+    } else {
+      cancelledLoads = 0;
+    }
 
     numReplicasToDrop -= cancelledLoads;
     if (numReplicasToDrop > 0) {
@@ -342,7 +347,7 @@ public class SegmentLoader
           serversByState.get(SegmentState.LOADED)
       );
 
-      stats.addToTieredStat(Metrics.DROPPED_COUNT, tier, successfulDropsQueued);
+      stats.addToTieredStat(CoordinatorStats.DROPPED_COUNT, tier, successfulDropsQueued);
       if (numReplicasToDrop > successfulDropsQueued) {
         log.warn(
             "Queued %d of %d loads of segment [%s] on tier [%s].",

@@ -148,6 +148,12 @@ public class DruidCluster
     return historicals.get(tier);
   }
 
+  public int getNumHistoricalsInTier(String tier)
+  {
+    Set<ServerHolder> historicals = getHistoricalsByTier(tier);
+    return historicals == null ? 0 : historicals.size();
+  }
+
   public Collection<ServerHolder> getAllServers()
   {
     final int historicalSize = historicals.values().stream().mapToInt(Collection::size).sum();

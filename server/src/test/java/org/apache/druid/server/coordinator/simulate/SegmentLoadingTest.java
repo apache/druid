@@ -289,12 +289,37 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     runCoordinatorCycle();
 
-    // Verify that the segments have been removed from the load queue
+    // Verify that the loading of the extra replicas is cancelled
+    verifyValue(Metric.CANCELLED_LOADS, 10L);
     verifyValue(
         Metric.LOAD_QUEUE_COUNT,
         filter(DruidMetrics.SERVER, historicalT12.getName()),
         0
     );
+  }
+
+  @Test
+  public void testBroadcastIsNotThrottled()
+  {
+    // disable balancing, unlimited load queue, replicationThrottleLimit = 1
+    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 0);
+
+    // historicals = 3(in T1)
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(segments)
+                             .withServers(historicalT11, historicalT12, historicalT13)
+                             .withDynamicConfig(dynamicConfig)
+                             .withRules(datasource, Broadcast.forever())
+                             .build();
+
+    startSimulation(sim);
+    runCoordinatorCycle();
+
+    // Verify that all the segments are broadcast to all historicals
+    // irrespective of throttle limit
+    verifyValue(Metric.BROADCAST_LOADS, filter(DruidMetrics.DATASOURCE, DS.WIKI), 30L);
+    verifyNoEvent(Metric.BROADCAST_DROPS);
   }
 
   private int getNumLoadedSegments(DruidServer... servers)

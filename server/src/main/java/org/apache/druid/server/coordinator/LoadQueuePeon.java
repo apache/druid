@@ -49,8 +49,6 @@ public interface LoadQueuePeon
 
   Set<DataSegment> getSegmentsMarkedToDrop();
 
-  void loadSegment(DataSegment segment, LoadPeonCallback callback);
-
   void loadSegment(DataSegment segment, SegmentAction action, LoadPeonCallback callback);
 
   void dropSegment(DataSegment segment, LoadPeonCallback callback);

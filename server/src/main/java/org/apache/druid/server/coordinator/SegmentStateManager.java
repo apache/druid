@@ -184,8 +184,8 @@ public class SegmentStateManager
   }
 
   /**
-   * Cancels the segment operation being performed on a server if the state of
-   * the segment on this server matches the given currentState.
+   * Cancels the segment operation being performed on a server if the actual
+   * state of the segment on the server matches the given currentState.
    */
   public boolean cancelOperation(
       SegmentState currentState,

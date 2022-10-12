@@ -197,12 +197,6 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public void loadSegment(DataSegment segment, LoadPeonCallback callback)
-  {
-    loadSegment(segment, SegmentAction.LOAD_AS_PRIMARY, callback);
-  }
-
-  @Override
   public void dropSegment(final DataSegment segment, @Nullable final LoadPeonCallback callback)
   {
     QueuedSegment segmentHolder = new QueuedSegment(segment, SegmentAction.DROP, callback);

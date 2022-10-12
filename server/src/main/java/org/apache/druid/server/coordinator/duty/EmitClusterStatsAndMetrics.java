@@ -30,7 +30,6 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
-import org.apache.druid.server.coordinator.Metrics;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.timeline.DataSegment;
@@ -43,23 +42,28 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
 {
   private static final Logger log = new Logger(EmitClusterStatsAndMetrics.class);
 
-  public static final String TOTAL_CAPACITY = "totalCapacity";
   public static final String TOTAL_HISTORICAL_COUNT = "totalHistoricalCount";
   public static final String MAX_REPLICATION_FACTOR = "maxReplicationFactor";
 
   private final DruidCoordinator coordinator;
   private final String groupName;
   private final boolean isContainCompactSegmentDuty;
+  private final ServiceEmitter emitter;
 
-  public EmitClusterStatsAndMetrics(DruidCoordinator coordinator, String groupName, boolean isContainCompactSegmentDuty)
+  public EmitClusterStatsAndMetrics(
+      DruidCoordinator coordinator,
+      String groupName,
+      boolean isContainCompactSegmentDuty,
+      ServiceEmitter emitter
+  )
   {
     this.coordinator = coordinator;
     this.groupName = groupName;
     this.isContainCompactSegmentDuty = isContainCompactSegmentDuty;
+    this.emitter = emitter;
   }
 
-  private void emitTieredStat(
-      final ServiceEmitter emitter,
+  private void emitMetricWithTierName(
       final String metricName,
       final String tier,
       final Number value
@@ -74,7 +78,6 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
   }
 
   private void emitTieredStats(
-      final ServiceEmitter emitter,
       final String metricName,
       final CoordinatorStats stats,
       final String statName
@@ -82,9 +85,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
   {
     stats.forEachTieredStat(
         statName,
-        (final String tier, final long count) -> {
-          emitTieredStat(emitter, metricName, tier, count);
-        }
+        (tier, count) -> emitMetricWithTierName(metricName, tier, count)
     );
   }
 
@@ -104,7 +105,6 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
   }
 
   private void emitDutyStats(
-      final ServiceEmitter emitter,
       final String metricName,
       final CoordinatorStats stats,
       final String statName
@@ -118,68 +118,110 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     );
   }
 
+  private void emitMetricWithDimension(
+      String metricName,
+      Number metricValue,
+      String dimensionName,
+      String dimensionValue
+  )
+  {
+    emitter.emit(
+        new ServiceMetricEvent.Builder()
+            .setDimension(dimensionName, dimensionValue)
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+            .build(metricName, metricValue)
+    );
+  }
+
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     DruidCluster cluster = params.getDruidCluster();
     CoordinatorStats stats = params.getCoordinatorStats();
-    ServiceEmitter emitter = params.getEmitter();
 
     if (DruidCoordinator.HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP.equals(groupName)) {
-      emitStatsForHistoricalManagementDuties(cluster, stats, emitter, params);
+      emitStatsForHistoricalManagementDuties(cluster, stats, params);
     }
     if (isContainCompactSegmentDuty) {
-      emitStatsForCompactSegments(cluster, stats, emitter);
+      emitStatsForCompactSegments(stats);
     }
 
     // Emit coordinator runtime stats
-    emitDutyStats(emitter, "coordinator/time", stats, "runtime");
+    emitDutyStats("coordinator/time", stats, "runtime");
 
     return params;
   }
 
-  private void emitStatsForHistoricalManagementDuties(DruidCluster cluster, CoordinatorStats stats, ServiceEmitter emitter, DruidCoordinatorRuntimeParams params)
+  private void emitStatsForHistoricalManagementDuties(
+      DruidCluster cluster,
+      CoordinatorStats stats,
+      DruidCoordinatorRuntimeParams params
+  )
   {
     stats.forEachTieredStat(
-        "assignedCount",
+        CoordinatorStats.ASSIGNED_COUNT,
         (final String tier, final long count) -> {
           log.info(
               "[%s] : Assigned %s segments among %,d servers",
               tier,
               count,
-              cluster.getHistoricalsByTier(tier).size()
+              cluster.getNumHistoricalsInTier(tier)
           );
 
-          emitTieredStat(emitter, "segment/assigned/count", tier, count);
+          emitMetricWithTierName("segment/assigned/count", tier, count);
         }
     );
 
     stats.forEachTieredStat(
-        "droppedCount",
+        CoordinatorStats.DROPPED_COUNT,
         (final String tier, final long count) -> {
           log.info(
               "[%s] : Dropped %s segments among %,d servers",
               tier,
               count,
-              cluster.getHistoricalsByTier(tier).size()
+              cluster.getNumHistoricalsInTier(tier)
           );
 
-          emitTieredStat(emitter, "segment/dropped/count", tier, count);
+          emitMetricWithTierName("segment/dropped/count", tier, count);
         }
     );
 
-    emitTieredStats(emitter, "segment/cost/raw", stats, "initialCost");
+    // Emit broadcast metrics
+    stats.forEachDataSourceStat(
+        CoordinatorStats.BROADCAST_LOADS,
+        (datasource, count) ->
+            emitMetricWithDimension("segment/broadcastLoad/count", count, DruidMetrics.DATASOURCE, datasource)
+    );
+    stats.forEachDataSourceStat(
+        CoordinatorStats.BROADCAST_DROPS,
+        (datasource, count) ->
+            emitMetricWithDimension("segment/broadcastDrop/count", count, DruidMetrics.DATASOURCE, datasource)
+    );
 
-    emitTieredStats(emitter, "segment/cost/normalization", stats, "normalization");
+    // Emit cancellation metrics
+    stats.forEachTieredStat(
+        CoordinatorStats.CANCELLED_LOADS,
+        (tier, count) ->
+            emitMetricWithDimension("segment/cancelLoad/count", count, DruidMetrics.TIER, tier)
+    );
+    stats.forEachTieredStat(
+        CoordinatorStats.CANCELLED_MOVES,
+        (tier, count) ->
+            emitMetricWithDimension("segment/cancelMove/count", count, DruidMetrics.TIER, tier)
+    );
 
-    emitTieredStats(emitter, "segment/moved/count", stats, "movedCount");
+    emitTieredStats("segment/cost/raw", stats, "initialCost");
 
-    emitTieredStats(emitter, "segment/deleted/count", stats, "deletedCount");
+    emitTieredStats("segment/cost/normalization", stats, "normalization");
+
+    emitTieredStats("segment/moved/count", stats, "movedCount");
+
+    emitTieredStats("segment/deleted/count", stats, "deletedCount");
 
     stats.forEachTieredStat(
         "normalizedInitialCostTimesOneThousand",
         (final String tier, final long count) -> {
-          emitTieredStat(emitter, "segment/cost/normalized", tier, count / 1000d);
+          emitMetricWithTierName("segment/cost/normalized", tier, count / 1000d);
         }
     );
 
@@ -190,9 +232,9 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
               "[%s] : Removed %s unneeded segments among %,d servers",
               tier,
               count,
-              cluster.getHistoricalsByTier(tier).size()
+              cluster.getNumHistoricalsInTier(tier)
           );
-          emitTieredStat(emitter, "segment/unneeded/count", tier, count);
+          emitMetricWithTierName("segment/unneeded/count", tier, count);
         }
     );
 
@@ -248,7 +290,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     for (Iterable<ServerHolder> historicalTier : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder historical : historicalTier) {
         final ImmutableDruidServer server = historical.getServer();
-        stats.addToTieredStat(TOTAL_CAPACITY, server.getTier(), server.getMaxSize());
+        stats.addToTieredStat(CoordinatorStats.TOTAL_CAPACITY, server.getTier(), server.getMaxSize());
         stats.addToTieredStat(TOTAL_HISTORICAL_COUNT, server.getTier(), 1);
       }
     }
@@ -271,11 +313,11 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
                   }
               ));
 
-    emitTieredStats(emitter, "tier/required/capacity", stats, Metrics.REQUIRED_CAPACITY);
-    emitTieredStats(emitter, "tier/total/capacity", stats, TOTAL_CAPACITY);
+    emitTieredStats("tier/required/capacity", stats, CoordinatorStats.REQUIRED_CAPACITY);
+    emitTieredStats("tier/total/capacity", stats, CoordinatorStats.TOTAL_CAPACITY);
 
-    emitTieredStats(emitter, "tier/replication/factor", stats, MAX_REPLICATION_FACTOR);
-    emitTieredStats(emitter, "tier/historical/count", stats, TOTAL_HISTORICAL_COUNT);
+    emitTieredStats("tier/replication/factor", stats, MAX_REPLICATION_FACTOR);
+    emitTieredStats("tier/historical/count", stats, TOTAL_HISTORICAL_COUNT);
 
     // Emit coordinator metrics
     params
@@ -363,7 +405,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     );
   }
 
-  private void emitStatsForCompactSegments(DruidCluster cluster, CoordinatorStats stats, ServiceEmitter emitter)
+  private void emitStatsForCompactSegments(CoordinatorStats stats)
   {
     emitter.emit(
         new ServiceMetricEvent.Builder()

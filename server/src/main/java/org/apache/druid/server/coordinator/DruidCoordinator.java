@@ -723,7 +723,9 @@ public class DruidCoordinator
       if (duties.stream().noneMatch(duty -> duty instanceof EmitClusterStatsAndMetrics)) {
         boolean isContainCompactSegmentDuty = duties.stream().anyMatch(duty -> duty instanceof CompactSegments);
         List<CoordinatorDuty> allDuties = new ArrayList<>(duties);
-        allDuties.add(new EmitClusterStatsAndMetrics(DruidCoordinator.this, alias, isContainCompactSegmentDuty));
+        allDuties.add(
+            new EmitClusterStatsAndMetrics(DruidCoordinator.this, alias, isContainCompactSegmentDuty, emitter)
+        );
         this.duties = allDuties;
       } else {
         this.duties = duties;

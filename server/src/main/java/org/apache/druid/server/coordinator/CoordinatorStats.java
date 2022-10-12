@@ -33,6 +33,21 @@ import java.util.function.ObjLongConsumer;
  */
 public class CoordinatorStats
 {
+  // List of stat names
+  public static final String CANCELLED_MOVES = "cancelMoveCount";
+  public static final String CANCELLED_LOADS = "cancelLoadCount";
+
+  public static final String ASSIGNED_COUNT = "assignedCount";
+  public static final String DROPPED_COUNT = "droppedCount";
+
+  public static final String BROADCAST_LOADS = "broadcastLoadCount";
+  public static final String BROADCAST_DROPS = "broadcastDropCount";
+
+  public static final String DELETED_SEGMENTS = "deletedCount";
+
+  public static final String REQUIRED_CAPACITY = "requiredCapacity";
+  public static final String TOTAL_CAPACITY = "totalCapacity";
+
   private final Map<String, Object2LongOpenHashMap<String>> perTierStats;
   private final Map<String, Object2LongOpenHashMap<String>> perDataSourceStats;
   private final Map<String, Object2LongOpenHashMap<String>> perDutyStats;

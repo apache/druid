@@ -399,12 +399,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public void loadSegment(DataSegment segment, LoadPeonCallback callback)
-  {
-    loadSegment(segment, SegmentAction.LOAD_AS_REPLICA, callback);
-  }
-
-  @Override
   public void dropSegment(DataSegment segment, LoadPeonCallback callback)
   {
     synchronized (lock) {
