@@ -20,7 +20,6 @@ exports[`HeaderBar matches snapshot 1`] = `
       href="#workbench"
       icon="application"
       minimal={true}
-      onClick={[Function]}
       text="Query"
     />
     <Blueprint4.Popover2
