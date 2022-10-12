@@ -311,7 +311,6 @@ public class KinesisIndexTaskTuningConfigTest
         null,
         null,
         null,
-        null,
         null
     );
     KinesisIndexTaskTuningConfig copy = (KinesisIndexTaskTuningConfig) original.convertToTaskTuningConfig();

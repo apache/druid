@@ -2315,30 +2315,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
-  protected boolean shouldSkipIgnorablePartitions()
-  {
-    return false;
-  }
-
-  /**
-   * Use this method if skipIgnorablePartitions is true in the spec
-   *
-   * These partitions can be safely ignored for both ingestion task assignment and autoscaler limits
-   *
-   * @return set of ids of ignorable partitions
-   */
-  protected Set<PartitionIdType> computeIgnorablePartitionIds()
-  {
-    return ImmutableSet.of();
-  }
-
   public int getPartitionCount()
   {
-    int partitionCount = recordSupplier.getPartitionIds(ioConfig.getStream()).size();
-    if (shouldSkipIgnorablePartitions()) {
-      partitionCount -= computeIgnorablePartitionIds().size();
-    }
-    return partitionCount;
+    return recordSupplier.getPartitionIds(ioConfig.getStream()).size();
   }
 
   private boolean updatePartitionDataFromStream()
@@ -2348,9 +2327,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     recordSupplierLock.lock();
     try {
       partitionIdsFromSupplier = recordSupplier.getPartitionIds(ioConfig.getStream());
-      if (shouldSkipIgnorablePartitions()) {
-        partitionIdsFromSupplier.removeAll(computeIgnorablePartitionIds());
-      }
     }
     catch (Exception e) {
       stateManager.recordThrowableEvent(e);
