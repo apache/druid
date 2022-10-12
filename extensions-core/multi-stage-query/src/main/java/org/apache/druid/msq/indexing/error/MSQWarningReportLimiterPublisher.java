@@ -91,7 +91,6 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
   @Override
   public void publishException(int stageNumber, Throwable e)
   {
-    new Logger(MSQWarningReportLimiterPublisher.class).warn("LOGG for NEWWWW");
     String errorCode = MSQErrorReport.getFaultFromException(e).getErrorCode();
     synchronized (lock) {
       totalCount = totalCount + 1;
