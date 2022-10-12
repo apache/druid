@@ -19,13 +19,19 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.query.BaseQuery;
+import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.clients.SqlResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
@@ -47,6 +53,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Test(groups = {TestNGGroup.COMPACTION, TestNGGroup.QUICKSTART_COMPATIBLE})
@@ -70,8 +78,23 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
   private static final String INDEX_TASK_WITH_TIMESTAMP = "/indexer/wikipedia_with_timestamp_index_task.json";
 
+  private static final String QUERY = "SELECT\n"
+                                      + "\"segment_id\",\n"
+                                      + "\"datasource\",\n"
+                                      + "\"start\",\n"
+                                      + "\"end\",\n"
+                                      + "\"version\",\n"
+                                      + "\"shard_spec\",\n"
+                                      + "\"partition_num\",\n"
+                                      + "\"size\",\n"
+                                      + "\"num_rows\"\n"
+                                      + "FROM sys.segments";
+
   @Inject
   private IntegrationTestingConfig config;
+
+  @Inject
+  private SqlResourceTestClient sqlClient;
 
   private String fullDatasourceName;
 
@@ -186,6 +209,20 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       loadData(indexTask, fullDatasourceName);
       // 4 segments across 2 days
+      LOG.info("Current metadata segments are %s",
+               coordinator.getFullSegmentsMetadata(fullDatasourceName)
+                          .stream().map(DataSegment::toString)
+                          .collect(Collectors.joining(", ")));
+      Thread.sleep(1000);
+      final Future<StatusResponseHolder> queryResponseFuture = sqlClient
+          .queryAsync(
+              sqlQueryHelper.getQueryURL(config.getRouterUrl()),
+              new SqlQuery(QUERY, ResultFormat.ARRAY, true, true, true, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "validId"), null)
+          );
+
+      Thread.sleep(1000);
+      final StatusResponseHolder queryResponse = queryResponseFuture.get(30, TimeUnit.SECONDS);
+      LOG.info("Query completed with following response [%s] and status [%s]", queryResponse.getContent(), queryResponse.getStatus());
       checkNumberOfSegments(4);
       List<String> expectedIntervalAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
       expectedIntervalAfterCompaction.sort(null);
@@ -299,11 +336,9 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   {
     ITRetryUtil.retryUntilTrue(
         () -> {
-          List<DataSegment> metadataSegments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
-          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegments.size(), numExpectedSegments);
-          LOG.info("Current metadata segments are %s",
-                   metadataSegments.stream().map(DataSegment::toString).collect(Collectors.joining(", ")));
-          return metadataSegments.size() == numExpectedSegments;
+          int metadataSegmentCount = coordinator.getSegments(fullDatasourceName).size();
+          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
+          return metadataSegmentCount == numExpectedSegments;
         },
         "Segment count check"
     );
