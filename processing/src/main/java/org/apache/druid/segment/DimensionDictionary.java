@@ -203,19 +203,15 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
   }
 
   /**
-   * Estimates the size of the dimension value in bytes. This method is called
-   * only when a new dimension value is being added to the lookup.
-   *
-   * @throws UnsupportedOperationException Implementations that want to estimate
-   *                                       memory must override this method.
+   * Estimates the size of the dimension value in bytes.
+   * <p>
+   * This method is called when adding a new dimension value to the lookup only
+   * if {@link #computeOnHeapSize()} returns true.
    */
   public abstract long estimateSizeOfValue(T value);
 
   /**
    * Whether on-heap size of this dictionary should be computed.
-   *
-   * @return false, by default. Implementations that want to estimate memory
-   * must override this method.
    */
   public abstract boolean computeOnHeapSize();
 
