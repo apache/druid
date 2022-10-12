@@ -177,10 +177,6 @@ public class DataSourceAnalysis
     return dataSource;
   }
 
-  public DataSourceAnalysis withDataSource(DataSource dataSource) {
-    // TODO:
-  }
-
   /**
    * Returns the base (bottom-leftmost) datasource.
    */

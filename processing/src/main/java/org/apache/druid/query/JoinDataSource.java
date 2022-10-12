@@ -425,4 +425,26 @@ public class JoinDataSource implements DataSource
     );
     return segmentMapFn;
   }
+
+  @Override
+  public DataSource withUpdatedDataSource(DataSource newSource)
+  {
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(this);
+    DataSource current = newSource;
+    DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
+
+    for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
+      current = JoinDataSource.create(
+          current,
+          clause.getDataSource(),
+          clause.getPrefix(),
+          clause.getCondition(),
+          clause.getJoinType(),
+          joinBaseFilter,
+          this.joinableFactoryWrapper
+      );
+      joinBaseFilter = null;
+    }
+    return current;
+  }
 }

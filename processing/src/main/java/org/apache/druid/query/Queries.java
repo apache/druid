@@ -29,7 +29,6 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -189,46 +188,8 @@ public class Queries
    */
   public static <T> Query<T> withBaseDataSource(final Query<T> query, final DataSource newBaseDataSource)
   {
-    if (true) {
-      return query.withDataSource(query.getDataSource().withUpdatedDataSource(newBaseDataSource));
-    }
-
     final Query<T> retVal;
-
-    /*
-     * Currently, this method is implemented in terms of a static walk doing a bunch of instanceof checks.
-     * We should likely look into moving this functionality into the DataSource object itself so that they
-     * can walk and create new objects on their own.  This will be necessary as we expand the set of DataSources
-     * that do actual work, as each of them will need to show up in this if/then waterfall.
-     */
-    final DataSource theDataSource = query.getDataSource();
-    if (theDataSource instanceof QueryDataSource) {
-      final Query<?> subQuery = ((QueryDataSource) theDataSource).getQuery();
-      retVal = query.withDataSource(new QueryDataSource(withBaseDataSource(subQuery, newBaseDataSource)));
-    } else if (theDataSource instanceof JoinDataSource) {
-      JoinDataSource joinDataSource = (JoinDataSource) theDataSource;
-      final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(theDataSource);
-
-      DataSource current = newBaseDataSource;
-      DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
-
-      for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
-        current = JoinDataSource.create(
-            current,
-            clause.getDataSource(),
-            clause.getPrefix(),
-            clause.getCondition(),
-            clause.getJoinType(),
-            joinBaseFilter,
-            joinDataSource.getJoinableFactoryWrapper()
-        );
-        joinBaseFilter = null;
-      }
-
-      retVal = query.withDataSource(current);
-    } else {
-      retVal = query.withDataSource(newBaseDataSource);
-    }
+    retVal = query.withDataSource(query.getDataSource().withUpdatedDataSource(newBaseDataSource));
 
     // Verify postconditions, just in case.
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(retVal.getDataSource());

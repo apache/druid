@@ -26,10 +26,8 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -135,18 +133,9 @@ public class ExternalDataSource implements DataSource
   }
 
   @Override
-  public Query withBaseDataSource(Query query, DataSource newBaseDataSource)
+  public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    final Query retVal;
-    retVal = query.withDataSource(newBaseDataSource);
-    // Verify postconditions, just in case.
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(retVal.getDataSource());
-
-    if (!newBaseDataSource.equals(analysis.getBaseDataSource())) {
-      throw new ISE("Unable to replace base dataSource");
-    }
-
-    return retVal;
+    return newSource;
   }
 
   @Override

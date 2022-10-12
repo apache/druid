@@ -118,6 +118,12 @@ public class UnionDataSource implements DataSource
   }
 
   @Override
+  public DataSource withUpdatedDataSource(DataSource newSource)
+  {
+    return newSource;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

@@ -103,6 +103,12 @@ public class InputNumberDataSource implements DataSource
     return analysis.getDataSource().createSegmentMapFunction(query, new AtomicLong());
   }
 
+  @Override
+  public DataSource withUpdatedDataSource(DataSource newSource)
+  {
+    return newSource;
+  }
+
   @JsonProperty
   public int getInputNumber()
   {

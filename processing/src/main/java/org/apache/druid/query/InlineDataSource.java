@@ -244,9 +244,9 @@ public class InlineDataSource implements DataSource
   }
 
   @Override
-  public Query withBaseDataSource(Query query, DataSource newBaseDataSource)
+  public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return null;
+    return newSource;
   }
 
   /**

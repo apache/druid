@@ -77,4 +77,10 @@ public class NoopDataSource implements DataSource
   {
     return Function.identity();
   }
+
+  @Override
+  public DataSource withUpdatedDataSource(DataSource newSource)
+  {
+    return newSource;
+  }
 }

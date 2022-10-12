@@ -87,8 +87,8 @@ public interface DataSource
    * Returns true if this datasource represents concrete data that can be scanned via a
    * {@link org.apache.druid.segment.Segment} adapter of some kind. True for e.g. 'table' but not for 'query' or 'join'.
    *
-   * @see org.apache.druid.query.planning.DataSourceAnalysis#isConcreteBased() which uses this
-   * @see org.apache.druid.query.planning.DataSourceAnalysis#isConcreteTableBased() which uses this
+   * @see DataSourceAnalysis#isConcreteBased() which uses this
+   * @see DataSourceAnalysis#isConcreteTableBased() which uses this
    */
   boolean isConcrete();
 
@@ -101,6 +101,12 @@ public interface DataSource
    */
   Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc);
 
-  DataSource withUpdatedDataSource(final DataSource newSource);
+  /**
+   * Returns an updated datasource based on the specified new source.
+   *
+   * @param newSource the new datasource to be used to update an existing query
+   * @return the updated datasource to be used
+   */
+  DataSource withUpdatedDataSource(DataSource newSource);
 
 }
