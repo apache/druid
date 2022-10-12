@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -1261,36 +1262,34 @@ public class TaskLockboxTest
   @Test
   public void testFailedToReacquireTaskLock() throws Exception
   {
-    final Task task = NoopTask.create();
-    taskStorage.insert(task, TaskStatus.running(task.getId()));
+    final Task badTask0 = NoopTask.withGroupId("BadTask");
+    final Task badTask1 = NoopTask.withGroupId("BadTask");
+    final Task goodTask0 = NoopTask.withGroupId("GoodTask");
+    taskStorage.insert(badTask0, TaskStatus.running(badTask0.getId()));
+    taskStorage.insert(badTask1, TaskStatus.running(badTask1.getId()));
+    taskStorage.insert(goodTask0, TaskStatus.running(goodTask0.getId()));
 
     TaskLockbox testLockbox = new NullLockPosseTaskLockbox(taskStorage, metadataStorageCoordinator);
-    testLockbox.add(task);
-    testLockbox.tryLock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
-                                                       task,
-                                                       Intervals.of("2017-05-01/2017-06-01"),
-                                                       null)
+    testLockbox.add(badTask0);
+    testLockbox.add(badTask1);
+    testLockbox.add(goodTask0);
+
+    testLockbox.tryLock(badTask0, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+                                                           badTask0,
+                                                           Intervals.of("2017-07-01/2017-08-01"),
+                                                           null)
     );
-    testLockbox.tryLock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
-                                                       task,
-                                                       Intervals.of("2017-06-01/2017-07-01"),
-                                                       null)
+
+    testLockbox.tryLock(goodTask0, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+                                                           goodTask0,
+                                                           Intervals.of("2017-07-01/2017-08-01"),
+                                                           null)
     );
-    testLockbox.tryLock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
-                                                       task,
-                                                       Intervals.of("2017-07-01/2017-08-01"),
-                                                       null)
-    );
-    Assert.assertEquals(1, taskStorage.getActiveTasks().size());
-    Assert.assertEquals(3, taskStorage.getLocks(task.getId()).size());
+    Assert.assertEquals(3, taskStorage.getActiveTasks().size());
 
     // The task must be marked for failure
     SyncResult result = testLockbox.syncFromStorage();
-    Assert.assertEquals(1, result.getTasksToFail().size());
-    Assert.assertEquals(task, result.getTasksToFail().get(0));
-
-    // Task must no longer have active locks
-    Assert.assertEquals(0, taskStorage.getLocks(task.getId()).size());
+    Assert.assertEquals(ImmutableSet.of(badTask0, badTask1), result.getTasksToFail());
   }
 
   private Set<TaskLock> getAllLocks(List<Task> tasks)
@@ -1432,7 +1431,7 @@ public class TaskLockboxTest
     @Override
     protected TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
     {
-      return null;
+      return task.getGroupId().contains("BadTask") ? null : super.verifyAndCreateOrFindLockPosse(task, taskLock);
     }
   }
 }

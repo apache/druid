@@ -117,8 +117,11 @@ public class TaskLockbox
 
     try {
       // Load stuff from taskStorage first. If this fails, we don't want to lose all our locks.
+      running.clear();
+      activeTasks.clear();
       final List<Pair<Task, TaskLock>> storedLocks = new ArrayList<>();
       for (final Task task : taskStorage.getActiveTasks()) {
+        activeTasks.add(task.getId());
         for (final TaskLock taskLock : taskStorage.getLocks(task.getId())) {
           storedLocks.add(Pair.of(task, taskLock));
         }
@@ -136,8 +139,6 @@ public class TaskLockbox
                                 .result();
         }
       };
-      running.clear();
-      activeTasks.clear();
       final Set<String> failedToReacquireLockTaskGroups = new HashSet<>();
       // Bookkeeping for a log message at the end
       int taskLockCount = 0;
@@ -190,6 +191,7 @@ public class TaskLockbox
               savedTaskLockWithPriority.getVersion(),
               task.getId()
           );
+          continue;
         }
       }
 
@@ -197,8 +199,7 @@ public class TaskLockbox
       for (Task task : taskStorage.getActiveTasks()) {
         if (failedToReacquireLockTaskGroups.contains(task.getGroupId())) {
           tasksToFail.add(task);
-        } else {
-          activeTasks.add(task.getId());
+          activeTasks.remove(task.getId());
         }
       }
 
@@ -224,10 +225,6 @@ public class TaskLockbox
   protected TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
   {
     giant.lock();
-
-    if (task.getGroupId().contains("zzz")) {
-      return null;
-    }
 
     try {
       Preconditions.checkArgument(
@@ -869,6 +866,26 @@ public class TaskLockbox
             ? ((SegmentLock) taskLockPosse.taskLock).getPartitionId()
             : null
         );
+      }
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  public void unlockUnacquiredLocks(Task task)
+  {
+    giant.lock();
+    try {
+      for (TaskLock lock : taskStorage.getLocks(task.getId())) {
+        // Clean up entries for locks for which lock couldn't be acquired
+        try {
+          taskStorage.removeLock(task.getId(), lock);
+          lockReleaseCondition.signalAll();
+        }
+        catch (Throwable e) {
+          log.warn(e, "Failed to unlock lock for task [%s]", task.getId());
+        }
       }
     }
     finally {

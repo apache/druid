@@ -86,7 +86,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        null
     );
     taskQueue.setActive(true);
     // task1 emulates a case when there is a task that was issued before task2 and acquired locks conflicting
@@ -131,7 +132,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        null
     );
     taskQueue.setActive(true);
 
@@ -171,7 +173,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        null
     );
     taskQueue.setActive(true);
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
@@ -206,7 +209,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        null
     );
     taskQueue.setActive(true);
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
@@ -231,7 +235,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        null
     );
     taskQueue.setActive(true);
     final Task task = new TestTask(
@@ -273,7 +278,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        null
     );
     taskQueue.setActive(true);
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
@@ -296,7 +302,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        null
     );
     taskQueue.setActive(true);
     final Task task = new TestTask(
@@ -326,7 +333,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        null
     );
     taskQueue.setActive(true);
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"))

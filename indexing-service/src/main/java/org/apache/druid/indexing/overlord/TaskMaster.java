@@ -26,7 +26,6 @@ import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.DruidLeaderSelector.Listener;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
@@ -115,7 +114,6 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
         try {
           SyncResult syncResult = taskLockbox.syncFromStorage();
-          processSyncResult(syncResult, taskStorage, taskLockbox);
           taskRunner = runnerFactory.build();
           taskQueue = new TaskQueue(
               taskLockConfig,
@@ -125,7 +123,8 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
               taskRunner,
               taskActionClientFactory,
               taskLockbox,
-              emitter
+              emitter,
+              syncResult
           );
 
           // Sensible order to start stuff:
@@ -416,37 +415,6 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       return taskRunner.get().getBlacklistedTaskSlotCount();
     } else {
       return null;
-    }
-  }
-
-  /**
-   *
-   * Process the results of synchronization from storage
-   *
-   * @param syncResult to be processed
-   * @param taskStorage stores tasks and related entities
-   * @param taskLockbox manages task locking
-   */
-  private void processSyncResult(SyncResult syncResult, TaskStorage taskStorage, TaskLockbox taskLockbox)
-  {
-    String taskReacquisitionFailure = "Failed to reacquire lock";
-    for (Task task : syncResult.getTasksToFail()) {
-      // Mark as failed all tasks
-      try {
-        taskStorage.setStatus(TaskStatus.failure(task.getId(), taskReacquisitionFailure));
-      }
-      catch (Throwable e) {
-        log.warn(e, "Failed to mark task [%s] as failed", task.getId());
-      }
-    }
-    for (Task task : syncResult.getTasksToFail()) {
-      // Mark as failed all tasks
-      try {
-        taskLockbox.unlockAll(task);
-      }
-      catch (Throwable e) {
-        log.warn(e, "Failed to unlock all locks for task [%s]", task.getId());
-      }
     }
   }
 }
