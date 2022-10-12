@@ -20,7 +20,6 @@
 package org.apache.druid.msq.indexing.error;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.Limits;
 
