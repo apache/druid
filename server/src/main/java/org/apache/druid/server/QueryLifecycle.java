@@ -62,7 +62,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-import java.util.Collections;
+
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -227,12 +227,10 @@ public class QueryLifecycle
             baseQuery.getDataSource().getTableNames(),
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
         ),
-        authConfig.authorizeQueryContextParams()
-        ? Iterables.transform(
-            userContextKeys,
+        Iterables.transform(
+            authConfig.filterContextKeys(userContextKeys),
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
-        : Collections.emptyList()
     );
     return doAuthorize(
         AuthorizationUtils.authenticationResultFromRequest(req),

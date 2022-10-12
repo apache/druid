@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -49,7 +50,6 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -184,7 +184,7 @@ public class DruidMeta extends MetaImpl
     // Don't stringify arrays for JDBC because Avatica needs to handle arrays.
     // When using query context security, all JDBC users must have permission on
     // this context key.
-    contextMap.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
+    contextMap.put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false);
     try {
       openDruidConnection(ch.id, secret, contextMap);
     }

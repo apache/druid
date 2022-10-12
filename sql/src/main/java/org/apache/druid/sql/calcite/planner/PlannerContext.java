@@ -33,8 +33,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
@@ -62,14 +62,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class PlannerContext
 {
-  // query context keys
-  public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
+  // Query context keys
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
-  public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
-  // This context parameter is an undocumented parameter, used internally, to allow the web console to
-  // apply a limit without having to rewrite the SQL query.
+  /**
+   * Undocumented context key, used internally, to allow the web console to
+   * apply a limit without having to rewrite the SQL query.
+   */
   public static final String CTX_SQL_OUTER_LIMIT = "sqlOuterLimit";
 
   // DataContext keys
@@ -84,7 +84,6 @@ public class PlannerContext
   private final DruidSchemaCatalog rootSchema;
   private final SqlEngine engine;
   private final Map<String, Object> queryContext;
-  private final Set<String> contextKeys;
   private final String sqlQueryId;
   private final boolean stringifyArrays;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
@@ -124,11 +123,10 @@ public class PlannerContext
     this.rootSchema = rootSchema;
     this.engine = engine;
     this.queryContext = queryContext;
-    this.contextKeys = contextKeys;
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
 
-    String sqlQueryId = (String) this.queryContext.get(CTX_SQL_QUERY_ID);
+    String sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
     if (Strings.isNullOrEmpty(sqlQueryId)) {
       sqlQueryId = UUID.randomUUID().toString();
@@ -152,7 +150,7 @@ public class PlannerContext
     final DateTimeZone timeZone;
     final boolean stringifyArrays;
 
-    final Object stringifyParam = queryContext.get(CTX_SQL_STRINGIFY_ARRAYS);
+    final Object stringifyParam = queryContext.get(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS);
     final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
     final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
 
@@ -241,16 +239,6 @@ public class PlannerContext
   public QueryContext queryContext()
   {
     return QueryContext.of(queryContext);
-  }
-
-  /**
-   * Returns the query context keys set by the user. (Actually, set by
-   * the request made on behalf of the user, which may include options set by
-   * intermediary services outside of Druid.)
-   */
-  public Set<String> queryContextKeys()
-  {
-    return contextKeys;
   }
 
   public boolean isStringifyArrays()

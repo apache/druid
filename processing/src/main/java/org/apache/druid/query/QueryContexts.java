@@ -82,7 +82,11 @@ public class QueryContexts
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
 
+  // SQL query context keys
+  public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
+  public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
+  // Defaults
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
   public static final boolean DEFAULT_USE_CACHE = true;

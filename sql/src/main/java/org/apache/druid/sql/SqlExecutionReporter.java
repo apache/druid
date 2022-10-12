@@ -94,10 +94,13 @@ public class SqlExecutionReporter
         metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
         metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
       }
-      if (stmt.fullResourceActions != null) {
+      if (stmt.authResult != null) {
+        // Note: the dimension is "dataSource" (sic), so we log only the SQL resource
+        // actions. Even here, for external tables, those actions are not always
+        // datasources.
         metricBuilder.setDimension(
             "dataSource",
-            stmt.fullResourceActions
+            stmt.authResult.sqlResourceActions
                             .stream()
                             .map(action -> action.getResource().getName())
                             .collect(Collectors.toList())

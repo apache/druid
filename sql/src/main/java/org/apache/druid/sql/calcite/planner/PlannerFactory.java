@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
@@ -135,7 +136,7 @@ public class PlannerFactory
     catch (SqlParseException | ValidationException e) {
       throw new RuntimeException(e);
     }
-    thePlanner.authorize(ra -> Access.OK, false);
+    thePlanner.authorize(ra -> Access.OK, ImmutableSet.of());
     return thePlanner;
   }
 

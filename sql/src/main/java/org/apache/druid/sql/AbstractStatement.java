@@ -24,14 +24,18 @@ import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.io.Closeable;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -66,19 +70,7 @@ public abstract class AbstractStatement implements Closeable
    */
   protected final Map<String, Object> queryContext;
   protected PlannerContext plannerContext;
-
-  /**
-   * Resource actions used with authorizing a cancellation request. These actions
-   * include only the data-level actions (e.g. the datasource.)
-   */
-  protected Set<ResourceAction> cancelationResourceActions;
-
-  /**
-   * Full resource actions authorized as part of this request. Used when logging
-   * resource actions. Includes query context keys, if query context authorization
-   * is enabled.
-   */
-  protected Set<ResourceAction> fullResourceActions;
+  protected DruidPlanner.AuthResult authResult;
 
   public AbstractStatement(
       final SqlToolbox sqlToolbox,
@@ -97,7 +89,7 @@ public abstract class AbstractStatement implements Closeable
     if (this.queryContext.remove(QueryContexts.BY_SEGMENT_KEY) != null) {
       log.warn("'bySegment' results are not supported for SQL queries, ignoring query context parameter");
     }
-    this.queryContext.putIfAbsent(PlannerContext.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
+    this.queryContext.putIfAbsent(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
     for (Map.Entry<String, Object> entry : sqlToolbox.defaultQueryConfig.getContext().entrySet()) {
       this.queryContext.putIfAbsent(entry.getKey(), entry.getValue());
     }
@@ -105,7 +97,7 @@ public abstract class AbstractStatement implements Closeable
 
   public String sqlQueryId()
   {
-    return QueryContexts.parseString(queryContext, PlannerContext.CTX_SQL_QUERY_ID);
+    return QueryContexts.parseString(queryContext, QueryContexts.CTX_SQL_QUERY_ID);
   }
 
   /**
@@ -149,21 +141,18 @@ public abstract class AbstractStatement implements Closeable
       final Function<Set<ResourceAction>, Access> authorizer
   )
   {
-    boolean authorizeContextParams = sqlToolbox.authConfig.authorizeQueryContextParams();
+    Set<String> securedKeys = this.sqlToolbox.authConfig.filterContextKeys(queryPlus.context().keySet());
+    Set<ResourceAction> contextResources = new HashSet<>();
+    securedKeys.forEach(key -> contextResources.add(
+        new ResourceAction(new Resource(key, ResourceType.QUERY_CONTEXT), Action.WRITE)
+    ));
 
     // Authentication is done by the planner using the function provided
     // here. The planner ensures that this step is done before planning.
-    Access authorizationResult = planner.authorize(authorizer, authorizeContextParams);
-    if (!authorizationResult.isAllowed()) {
-      throw new ForbiddenException(authorizationResult.toMessage());
+    authResult = planner.authorize(authorizer, contextResources);
+    if (!authResult.authorizationResult.isAllowed()) {
+      throw new ForbiddenException(authResult.authorizationResult.toMessage());
     }
-
-    // Capture the query resources twice. The first is used to validate the request
-    // to cancel the query, and includes only the query-level resources. The second
-    // is used to report the resources actually authorized and includes the
-    // query context variables, if we are authorizing them.
-    cancelationResourceActions = planner.resourceActions(false);
-    fullResourceActions = planner.resourceActions(authorizeContextParams);
   }
 
   /**
@@ -186,12 +175,12 @@ public abstract class AbstractStatement implements Closeable
    */
   public Set<ResourceAction> resources()
   {
-    return cancelationResourceActions;
+    return authResult.sqlResourceActions;
   }
 
   public Set<ResourceAction> allResources()
   {
-    return fullResourceActions;
+    return authResult.allResourceActions;
   }
 
   public SqlQueryPlus query()

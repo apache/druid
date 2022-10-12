@@ -131,7 +131,6 @@ import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -207,7 +206,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .put(MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, true)
-                  .put(PlannerContext.CTX_SQL_QUERY_ID, "test-query")
+                  .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
                   .put(QueryContexts.FINALIZE_KEY, true)
                   .build();
 
