@@ -158,9 +158,9 @@ public class VectorMathProcessors
       }
     } else if (leftType.is(ExprType.STRING)) {
       if (Types.is(rightType, ExprType.LONG)) {
-        processor = longOutLongsInProcessor.get();
+        processor = doubleOutDoubleLongInProcessor.get();
       } else if (Types.is(rightType, ExprType.DOUBLE)) {
-        processor = doubleOutLongDoubleInProcessor.get();
+        processor = doubleOutDoublesInProcessor.get();
       }
     }
     if (processor == null) {
