@@ -402,7 +402,13 @@ public class SqlBenchmark
       //22: Order by without alias with large in filter
       "SELECT __time, dimSequential from foo "
       + " where (dimSequential in (select DISTINCT dimSequential from foo)) "
-      + " order by 1 limit 1"
+      + " order by 1 limit 1",
+
+      //23: Group by and Order by with alias with large in filter nested query
+      "SELECT __time as t, dimSequential from foo "
+      + " where dimSequential in (select dimSequential from foo where "
+      + " dimSequential in (select dimSequential from foo)) "
+      + " group by 1,2 order by 1,2 limit 1"
   );
 
   @Param({"5000000"})
