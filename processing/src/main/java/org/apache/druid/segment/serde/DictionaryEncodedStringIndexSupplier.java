@@ -315,6 +315,8 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
         };
       }
 
+      // if the size of in-filter values is less than the threshold percentage of dictionary size, then use binary search
+      // based lookup per value. The algorithm works well for smaller number of values.
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
@@ -351,8 +353,6 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
 
             private void findNext()
             {
-              // if the size of in-filter values is less than the threshold percentage of dictionary size, then use binary search
-              // based lookup per value. The algorithm works well for smaller number of values.
               while (next < 0 && valuesIterator.hasNext()) {
                 ByteBuffer nextValue = valuesIterator.next();
                 next = dictionary.indexOf(nextValue);
