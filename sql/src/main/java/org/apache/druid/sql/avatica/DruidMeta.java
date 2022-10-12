@@ -40,7 +40,6 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContext;
@@ -57,6 +56,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -99,7 +99,15 @@ public class DruidMeta extends MetaImpl
   {
     if (error instanceof NoSuchConnectionException) {
       NoSuchConnectionException ex = (NoSuchConnectionException) error;
-      logFailure(error, StringUtils.format("No such connection: %s", ex.getConnectionId()));
+      logFailure(error, "No such connection: %s", ex.getConnectionId());
+    } else if (error instanceof NoSuchStatementException) {
+      NoSuchStatementException ex = (NoSuchStatementException) error;
+      logFailure(
+          error,
+          "No such statement: %s, %d",
+          ex.getStatementHandle().connectionId,
+          ex.getStatementHandle().id
+      );
     } else {
       logFailure(error, error.getMessage());
     }
@@ -148,8 +156,7 @@ public class DruidMeta extends MetaImpl
                 .build()
         ),
         authMapper.getAuthenticatorChain(),
-        // To prevent server hammering, the timeout must be at least 1 second.
-        new ResultFetcherFactory(Math.max(1000, config.getFetchTimeoutMs()))
+        new ResultFetcherFactory(config.getFetchTimeoutMs())
     );
   }
 
@@ -192,9 +199,6 @@ public class DruidMeta extends MetaImpl
       context.addSystemParam(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
       openDruidConnection(ch.id, secret, context);
     }
-    catch (NoSuchConnectionException e) {
-      throw e;
-    }
     catch (Throwable t) {
       // we want to avoid sanitizing Avatica specific exceptions as the Avatica code can rely on them to handle issues
       // differently
@@ -212,9 +216,6 @@ public class DruidMeta extends MetaImpl
         druidConnection.close();
       }
     }
-    catch (NoSuchConnectionException e) {
-      throw e;
-    }
     catch (Throwable t) {
       throw mapException(t);
     }
@@ -227,9 +228,6 @@ public class DruidMeta extends MetaImpl
       // getDruidConnection re-syncs it.
       getDruidConnection(ch.id);
       return connProps;
-    }
-    catch (NoSuchConnectionException e) {
-      throw e;
     }
     catch (Throwable t) {
       throw mapException(t);
@@ -248,9 +246,6 @@ public class DruidMeta extends MetaImpl
       final DruidJdbcStatement druidStatement = getDruidConnection(ch.id)
           .createStatement(sqlStatementFactory, fetcherFactory);
       return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
-    }
-    catch (NoSuchConnectionException e) {
-      throw e;
     }
     catch (Throwable t) {
       throw mapException(t);
@@ -286,9 +281,6 @@ public class DruidMeta extends MetaImpl
       stmt.prepare();
       LOG.debug("Successfully prepared statement [%s] for execution", stmt.getStatementId());
       return new StatementHandle(ch.id, stmt.getStatementId(), stmt.getSignature());
-    }
-    catch (NoSuchConnectionException e) {
-      throw e;
     }
     catch (Throwable t) {
       throw mapException(t);
@@ -350,10 +342,6 @@ public class DruidMeta extends MetaImpl
         return result;
       }
     }
-    // Cannot affect these exceptions as Avatica handles them.
-    catch (NoSuchConnectionException | NoSuchStatementException e) {
-      throw e;
-    }
     catch (Throwable t) {
       throw mapException(t);
     }
@@ -366,6 +354,15 @@ public class DruidMeta extends MetaImpl
    */
   private RuntimeException mapException(Throwable t)
   {
+    // Don't sanitize or wrap Avatica exceptions: these exceptions
+    // are handled specially by Avatica to provide SQLState, Error Code
+    // and other JDBC-specific items.
+    if (t instanceof AvaticaRuntimeException) {
+      throw (AvaticaRuntimeException) t;
+    }
+    if (t instanceof NoSuchConnectionException) {
+      throw (NoSuchConnectionException) t;
+    }
     // BasicSecurityAuthenticationException is not visible here.
     String className = t.getClass().getSimpleName();
     if (t instanceof ForbiddenException ||
@@ -374,7 +371,8 @@ public class DruidMeta extends MetaImpl
           t.getMessage(),
           ErrorResponse.UNAUTHORIZED_ERROR_CODE,
           ErrorResponse.UNAUTHORIZED_SQL_STATE,
-          AvaticaSeverity.ERROR);
+          AvaticaSeverity.ERROR
+      );
     }
 
     // Let Avatica do its default mapping.
@@ -434,9 +432,6 @@ public class DruidMeta extends MetaImpl
       LOG.debug("Fetching next frame from offset[%s] with [%s] rows for statement[%s]", offset, maxRows, statement.id);
       return getDruidStatement(statement, AbstractDruidJdbcStatement.class).nextFrame(offset, maxRows);
     }
-    catch (NoSuchConnectionException e) {
-      throw e;
-    }
     catch (Throwable t) {
       throw mapException(t);
     }
@@ -471,9 +466,6 @@ public class DruidMeta extends MetaImpl
           druidStatement.getStatementId());
       return result;
     }
-    catch (NoSuchStatementException | NoSuchConnectionException e) {
-      throw e;
-    }
     catch (Throwable t) {
       throw mapException(t);
     }
@@ -502,9 +494,6 @@ public class DruidMeta extends MetaImpl
         druidConnection.closeStatement(h.id);
       }
     }
-    catch (NoSuchConnectionException e) {
-      throw e;
-    }
     catch (Throwable t) {
       throw mapException(t);
     }
@@ -529,9 +518,6 @@ public class DruidMeta extends MetaImpl
         ));
       }
       return !isDone;
-    }
-    catch (NoSuchStatementException | NoSuchConnectionException e) {
-      throw e;
     }
     catch (Throwable t) {
       throw mapException(t);
@@ -569,9 +555,6 @@ public class DruidMeta extends MetaImpl
 
       return sqlResultSet(ch, sql);
     }
-    catch (NoSuchConnectionException e) {
-      throw e;
-    }
     catch (Throwable t) {
       throw mapException(t);
     }
@@ -605,9 +588,6 @@ public class DruidMeta extends MetaImpl
                          + "  TABLE_CATALOG, TABLE_SCHEM\n";
 
       return sqlResultSet(ch, sql);
-    }
-    catch (NoSuchConnectionException e) {
-      throw e;
     }
     catch (Throwable t) {
       throw mapException(t);
@@ -664,9 +644,6 @@ public class DruidMeta extends MetaImpl
                          + "  TABLE_TYPE, TABLE_CAT, TABLE_SCHEM, TABLE_NAME\n";
 
       return sqlResultSet(ch, sql);
-    }
-    catch (NoSuchConnectionException e) {
-      throw e;
     }
     catch (Throwable t) {
       throw mapException(t);
@@ -735,9 +712,6 @@ public class DruidMeta extends MetaImpl
 
       return sqlResultSet(ch, sql);
     }
-    catch (NoSuchConnectionException e) {
-      throw e;
-    }
     catch (Throwable t) {
       throw mapException(t);
     }
@@ -755,9 +729,6 @@ public class DruidMeta extends MetaImpl
                          + "  TABLE_TYPE\n";
 
       return sqlResultSet(ch, sql);
-    }
-    catch (NoSuchConnectionException e) {
-      throw e;
     }
     catch (Throwable t) {
       throw mapException(t);
@@ -835,7 +806,7 @@ public class DruidMeta extends MetaImpl
       throw logFailure(new ISE("Connection[%s] already open.", connectionId));
     }
 
-    LOG.debug("Connection[%s] opened.", connectionId);
+    LOG.debug("Connection [%s] opened.", connectionId);
 
     // Call getDruidConnection to start the timeout timer.
     return getDruidConnection(connectionId);
@@ -860,7 +831,7 @@ public class DruidMeta extends MetaImpl
     return connection.sync(
         exec.schedule(
             () -> {
-              LOG.debug("Connection[%s] timed out.", connectionId);
+              LOG.debug("Connection [%s] timed out.", connectionId);
               closeConnection(new ConnectionHandle(connectionId));
             },
             new Interval(DateTimes.nowUtc(), config.getConnectionIdleTimeout()).toDurationMillis(),

@@ -843,7 +843,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         AvaticaClientRuntimeException.class,
         () -> client.createStatement()
     );
-    Assert.assertTrue(ex.getMessage().contains("Too many open statements, limit is [4]"));
+    Assert.assertTrue(ex.getMessage().contains("Too many open statements, limit is 4"));
   }
 
   @Test
@@ -1673,7 +1673,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   // in reality, but handled at the JDBC level below DBI.)
   private void testWithJDBI(String baseUrl)
   {
-    String url = baseUrl + "?user=regularUser&password=druid";
+    String url = baseUrl + "?user=regularUser&password=druid" + getJdbcUrlTail();
     System.out.println(url);
     DBI dbi = new DBI(url);
     Handle handle = dbi.open();

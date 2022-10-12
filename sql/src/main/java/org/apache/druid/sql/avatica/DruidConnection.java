@@ -40,6 +40,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Connection tracking for {@link DruidMeta}. Thread-safe.
+ * <p>
+ * Lock is the instance itself. Used here to protect two members, and in
+ * other code when we must resolve the connection after resolving the statement.
+ * The lock prevents closing the connection concurrently with an operation on
+ * a statement for that connection.
  */
 public class DruidConnection
 {
@@ -52,12 +57,12 @@ public class DruidConnection
   private final AtomicInteger statementCounter = new AtomicInteger();
   private final AtomicReference<Future<?>> timeoutFuture = new AtomicReference<>();
 
-  // Typically synchronized by connectionLock, except in one case: the onClose function passed
+  // Typically synchronized by this instance, except in one case: the onClose function passed
   // into DruidStatements contained by the map.
-  @GuardedBy("connectionLock")
+  @GuardedBy("this")
   private final ConcurrentMap<Integer, AbstractDruidJdbcStatement> statements = new ConcurrentHashMap<>();
 
-  @GuardedBy("connectionLock")
+  @GuardedBy("this")
   private boolean open = true;
 
   public DruidConnection(
@@ -92,7 +97,7 @@ public class DruidConnection
     }
 
     if (statements.size() >= maxStatements) {
-      throw DruidMeta.logFailure(new ISE("Too many open statements, limit is [%,d]", maxStatements));
+      throw DruidMeta.logFailure(new ISE("Too many open statements, limit is %,d", maxStatements));
     }
 
     @SuppressWarnings("GuardedBy")
@@ -124,7 +129,7 @@ public class DruidConnection
     }
 
     if (statements.size() >= maxStatements) {
-      throw DruidMeta.logFailure(new ISE("Too many open statements, limit is [%,d]", maxStatements));
+      throw DruidMeta.logFailure(new ISE("Too many open statements, limit is %,d", maxStatements));
     }
 
     @SuppressWarnings("GuardedBy")
