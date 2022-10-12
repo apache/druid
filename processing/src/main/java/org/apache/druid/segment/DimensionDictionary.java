@@ -34,9 +34,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * added. A {@link SortedDimensionDictionary} can be constructed with a mapping of ids from this dictionary to the
  * sorted dictionary with the {@link #sort()} method.
  * <p>
- * This dictionary is thread-safe.
+ * Concrete implementations of this dictionary must be thread-safe.
  */
-public class DimensionDictionary<T extends Comparable<T>>
+public abstract class DimensionDictionary<T extends Comparable<T>>
 {
   public static final int ABSENT_VALUE_ID = -1;
   private final Class<T> cls;
@@ -53,22 +53,11 @@ public class DimensionDictionary<T extends Comparable<T>>
   private final List<T> idToValue = new ArrayList<>();
   private final ReentrantReadWriteLock lock;
 
-  @Nullable
-  private final DimensionSizeEstimator<T> sizeEstimator;
-
-  /**
-   * Creates a DimensionDictionary.
-   *
-   * @param cls           The dictionary holds items of this comparable type.
-   * @param sizeEstimator Function to estimate size of a single dimension value.
-   *                      Size estimation is disabled if this is passed as null.
-   */
-  public DimensionDictionary(Class<T> cls, @Nullable DimensionSizeEstimator<T> sizeEstimator)
+  public DimensionDictionary(Class<T> cls)
   {
     this.cls = cls;
     this.lock = new ReentrantReadWriteLock();
     valueToId.defaultReturnValue(ABSENT_VALUE_ID);
-    this.sizeEstimator = sizeEstimator;
   }
 
   public int getId(@Nullable T value)
@@ -135,7 +124,7 @@ public class DimensionDictionary<T extends Comparable<T>>
    */
   public long sizeInBytes()
   {
-    if (sizeEstimator == null) {
+    if (!computeOnHeapSize()) {
       throw new IllegalStateException("On-heap size computation is disabled");
     }
 
@@ -161,9 +150,9 @@ public class DimensionDictionary<T extends Comparable<T>>
       valueToId.put(originalValue, index);
       idToValue.add(originalValue);
 
-      if (sizeEstimator != null) {
+      if (computeOnHeapSize()) {
         // Add size of new dim value and 2 references (valueToId and idToValue)
-        sizeInBytes.addAndGet(sizeEstimator.estimateOnHeapSizeBytes(originalValue) + 2L * Long.BYTES);
+        sizeInBytes.addAndGet(estimateSizeOfValue(originalValue) + 2L * Long.BYTES);
       }
 
       minValue = minValue == null || minValue.compareTo(originalValue) > 0 ? originalValue : minValue;
@@ -212,5 +201,22 @@ public class DimensionDictionary<T extends Comparable<T>>
       lock.readLock().unlock();
     }
   }
+
+  /**
+   * Estimates the size of the dimension value in bytes. This method is called
+   * only when a new dimension value is being added to the lookup.
+   *
+   * @throws UnsupportedOperationException Implementations that want to estimate
+   *                                       memory must override this method.
+   */
+  public abstract long estimateSizeOfValue(T value);
+
+  /**
+   * Whether on-heap size of this dictionary should be computed.
+   *
+   * @return false, by default. Implementations that want to estimate memory
+   * must override this method.
+   */
+  public abstract boolean computeOnHeapSize();
 
 }
