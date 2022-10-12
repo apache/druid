@@ -100,6 +100,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.NumericTopNMetricSpec;
@@ -11318,6 +11319,33 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{946684800000L}
+        )
+    );
+  }
+
+  @Test
+  public void testOrderByAlongWithAliasInInnerSubQuery()
+  {
+    testQuery(
+        "select * from (select __time as t, dim2 as d, m1+m2 as sumval from druid.foo) order by 1 limit 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn(
+                    "v0",
+                    "(\"m1\" + \"m2\")",
+                    ColumnType.FLOAT
+                ))
+                .columns("__time", "dim2", "v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .limit(1)
+                .order(ScanQuery.Order.ASCENDING)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, "a", 2.0f}
         )
     );
   }
