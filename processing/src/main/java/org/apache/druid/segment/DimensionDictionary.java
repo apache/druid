@@ -213,13 +213,4 @@ public class DimensionDictionary<T extends Comparable<T>>
     }
   }
 
-  /**
-   * Estimates the size of the dimension value in bytes. This method is called
-   * only when a new dimension value is being added to the lookup.
-   */
-  private long estimateSizeOfValue(T value)
-  {
-    throw new UnsupportedOperationException();
-  }
-
 }
