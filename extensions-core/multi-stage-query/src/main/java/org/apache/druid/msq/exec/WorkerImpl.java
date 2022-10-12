@@ -262,19 +262,14 @@ public class WorkerImpl implements Worker
       }
     });
 
-    Long maxVerboseParseExceptions = (Long) task.getContext()
-                                                .getOrDefault(
-                                                    MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
-                                                    Long.MAX_VALUE
-                                                );
-    if (maxVerboseParseExceptions != null) {
-      if (maxVerboseParseExceptions == -1) {
-        maxVerboseParseExceptions = Limits.MAX_VERBOSE_PARSE_EXCEPTIONS;
-      } else {
-        maxVerboseParseExceptions = Math.min(maxVerboseParseExceptions, Limits.MAX_VERBOSE_PARSE_EXCEPTIONS);
-      }
-    } else {
+    long maxVerboseParseExceptions = ((Integer) task.getContext().getOrDefault(
+        MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
+        Integer.MAX_VALUE
+    )).longValue();
+    if (maxVerboseParseExceptions == -1) {
       maxVerboseParseExceptions = Limits.MAX_VERBOSE_PARSE_EXCEPTIONS;
+    } else {
+      maxVerboseParseExceptions = Math.min(maxVerboseParseExceptions, Limits.MAX_VERBOSE_PARSE_EXCEPTIONS);
     }
 
     final MSQWarningReportPublisher msqWarningReportPublisher = new MSQWarningReportLimiterPublisher(
