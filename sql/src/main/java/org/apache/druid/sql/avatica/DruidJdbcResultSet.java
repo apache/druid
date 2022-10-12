@@ -22,6 +22,7 @@ package org.apache.druid.sql.avatica;
 import com.google.common.base.Preconditions;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.calcite.avatica.Meta;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -65,7 +66,7 @@ public class DruidJdbcResultSet implements Closeable
 
   /**
    * Asynchronous result fetcher. JDBC operates via REST, which is subject to
-   * timeouts if a query takes to long to respond. Fortunately, JDBC uses a
+   * a timeout if a query takes too long to respond. Fortunately, JDBC uses a
    * batched API, and is perfectly happy to get an empty batch. This class
    * runs in a separate thread to fetch a batch. If the fetch takes too long,
    * the JDBC request thread will time out waiting, will return an empty batch
@@ -119,8 +120,7 @@ public class DruidJdbcResultSet implements Closeable
       Preconditions.checkState(batchSize > 0);
       int rowCount = 0;
       final int batchLimit = Math.min(limit - offset, batchSize);
-      Yielder<Object[]> yielder = this.yielder;
-      final List<Object> rows = new ArrayList<>();
+      final List<Object> rows = new ArrayList<>(batchLimit);
       while (!yielder.isDone() && rowCount < batchLimit) {
         rows.add(yielder.get());
         yielder = yielder.next(null);
@@ -187,13 +187,13 @@ public class DruidJdbcResultSet implements Closeable
   private Meta.Signature signature;
 
   /**
-   * The fetcher to use to read batches of rows. Holds onto the yielder for a
+   * The fetcher which reads batches of rows. Holds onto the yielder for a
    * query. Maintains the current read offset.
    */
   private ResultFetcher fetcher;
 
   /**
-   * Future for a fetch that timed out waiting, and should be use again on
+   * Future for a fetch that timed out waiting, and should be used again on
    * the next fetch request.
    */
   private Future<Meta.Frame> fetchFuture;
@@ -269,7 +269,13 @@ public class DruidJdbcResultSet implements Closeable
   public synchronized Meta.Frame nextFrame(final long fetchOffset, final int fetchMaxRowCount)
   {
     ensure(State.RUNNING, State.DONE);
-    Preconditions.checkState(fetchOffset == nextFetchOffset, "fetchOffset %,d != offset %,d", fetchOffset, nextFetchOffset);
+    if (fetchOffset != nextFetchOffset) {
+      throw new IAE(
+          "Druid can only fetch forward. Requested offset of %,d != current offset %,d",
+          fetchOffset,
+          nextFetchOffset
+      );
+    }
     if (state == State.DONE) {
       LOG.debug("EOF at offset %,d for result set [%s]", fetchOffset, stmt.sqlQueryId());
       return new Meta.Frame(fetcher.offset(), true, Collections.emptyList());
