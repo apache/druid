@@ -37,11 +37,13 @@ import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.WorkerManagerClient;
 import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 
+import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -83,6 +85,9 @@ public class MSQWorkerTaskLauncher
   private final long maxTaskStartDelayMillis;
   private final boolean durableStageStorageEnabled;
 
+  @Nullable
+  private final Long maxParseExceptions;
+
   // Mutable state meant to be accessible by threads outside the main loop.
   private final SettableFuture<?> stopFuture = SettableFuture.create();
   private final AtomicReference<State> state = new AtomicReference<>(State.NEW);
@@ -111,6 +116,7 @@ public class MSQWorkerTaskLauncher
       final String dataSource,
       final ControllerContext context,
       final boolean durableStageStorageEnabled,
+      @Nullable final Long maxParseExceptions,
       final long maxTaskStartDelayMillis
   )
   {
@@ -121,6 +127,7 @@ public class MSQWorkerTaskLauncher
         "multi-stage-query-task-launcher[" + StringUtils.encodeForFormat(controllerTaskId) + "]-%s"
     );
     this.durableStageStorageEnabled = durableStageStorageEnabled;
+    this.maxParseExceptions = maxParseExceptions;
     this.maxTaskStartDelayMillis = maxTaskStartDelayMillis;
   }
 
@@ -306,6 +313,10 @@ public class MSQWorkerTaskLauncher
 
     if (durableStageStorageEnabled) {
       taskContext.put(MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, true);
+    }
+
+    if (maxParseExceptions != null) {
+      taskContext.put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions);
     }
 
     final int firstTask;

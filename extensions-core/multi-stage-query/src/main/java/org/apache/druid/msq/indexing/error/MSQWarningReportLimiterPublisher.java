@@ -20,8 +20,11 @@
 package org.apache.druid.msq.indexing.error;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.Limits;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,44 +38,74 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublisher
 {
 
-  final MSQWarningReportPublisher delegate;
-  final long totalLimit;
-  final Map<String, Long> errorCodeToLimit;
-  final ConcurrentHashMap<String, Long> errorCodeToCurrentCount = new ConcurrentHashMap<>();
+  private final MSQWarningReportPublisher delegate;
+  private final long totalLimit;
+  private final Map<String, Long> errorCodeToLimit;
+  private final ConcurrentHashMap<String, Long> errorCodeToCurrentCount = new ConcurrentHashMap<>();
+  private final ControllerClient controllerClient;
+  private final String workerId;
+
+  @Nullable
+  private final String host;
 
   long totalCount = 0L;
 
   final Object lock = new Object();
 
-  public MSQWarningReportLimiterPublisher(MSQWarningReportPublisher delegate)
+  public MSQWarningReportLimiterPublisher(
+      MSQWarningReportPublisher delegate,
+      ControllerClient controllerClient,
+      String workerId,
+      @Nullable String host
+  )
   {
     this(
         delegate,
         Limits.MAX_VERBOSE_WARNINGS,
         ImmutableMap.of(
             CannotParseExternalDataFault.CODE, Limits.MAX_VERBOSE_PARSE_EXCEPTIONS
-        )
+        ),
+        controllerClient,
+        workerId,
+        host
     );
   }
 
   public MSQWarningReportLimiterPublisher(
       MSQWarningReportPublisher delegate,
       long totalLimit,
-      Map<String, Long> errorCodeToLimit
+      Map<String, Long> errorCodeToLimit,
+      ControllerClient controllerClient,
+      String workerId,
+      @Nullable String host
   )
   {
     this.delegate = delegate;
     this.errorCodeToLimit = errorCodeToLimit;
     this.totalLimit = totalLimit;
+    this.controllerClient = controllerClient;
+    this.workerId = workerId;
+    this.host = host;
   }
 
   @Override
   public void publishException(int stageNumber, Throwable e)
   {
+    new Logger(MSQWarningReportLimiterPublisher.class).warn("LOGG for NEWWWW");
     String errorCode = MSQErrorReport.getFaultFromException(e).getErrorCode();
     synchronized (lock) {
       totalCount = totalCount + 1;
       errorCodeToCurrentCount.compute(errorCode, (ignored, count) -> count == null ? 1L : count + 1);
+
+      // Send the warning as an error if its limit is 0
+      if (errorCodeToLimit.getOrDefault(errorCode, -1L) == 0) {
+        try {
+          controllerClient.postWorkerError(workerId, MSQErrorReport.fromException(workerId, host, stageNumber, e));
+        }
+        catch (IOException e2) {
+          throw new RuntimeException(e2);
+        }
+      }
 
       if (totalLimit != -1 && totalCount > totalLimit) {
         return;

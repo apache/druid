@@ -67,11 +67,13 @@ import org.apache.druid.msq.indexing.InputChannelsImpl;
 import org.apache.druid.msq.indexing.KeyStatisticsCollectionProcessor;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportSimplePublisher;
+import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.InputSlices;
@@ -260,13 +262,33 @@ public class WorkerImpl implements Worker
       }
     });
 
+    Long maxVerboseParseExceptions = (Long) task.getContext()
+                                                .getOrDefault(
+                                                    MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
+                                                    Long.MAX_VALUE
+                                                );
+    if (maxVerboseParseExceptions != null) {
+      if (maxVerboseParseExceptions == -1) {
+        maxVerboseParseExceptions = Limits.MAX_VERBOSE_PARSE_EXCEPTIONS;
+      } else {
+        maxVerboseParseExceptions = Math.min(maxVerboseParseExceptions, Limits.MAX_VERBOSE_PARSE_EXCEPTIONS);
+      }
+    } else {
+      maxVerboseParseExceptions = Limits.MAX_VERBOSE_PARSE_EXCEPTIONS;
+    }
+
     final MSQWarningReportPublisher msqWarningReportPublisher = new MSQWarningReportLimiterPublisher(
         new MSQWarningReportSimplePublisher(
             id(),
             controllerClient,
             id(),
             MSQTasks.getHostFromSelfNode(selfDruidNode)
-        )
+        ),
+        Limits.MAX_VERBOSE_WARNINGS,
+        ImmutableMap.of(CannotParseExternalDataFault.CODE, maxVerboseParseExceptions),
+        controllerClient,
+        id(),
+        MSQTasks.getHostFromSelfNode(selfDruidNode)
     );
 
     closer.register(msqWarningReportPublisher);

@@ -531,15 +531,6 @@ public class ControllerImpl implements Controller
 
     log.debug("Query [%s] durable storage mode is set to %s.", queryDef.getQueryId(), isDurableStorageEnabled);
 
-    this.workerTaskLauncher = new MSQWorkerTaskLauncher(
-        id(),
-        task.getDataSource(),
-        context,
-        isDurableStorageEnabled,
-
-        // 10 minutes +- 2 minutes jitter
-        TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
-    );
 
     long maxParseExceptions = -1;
 
@@ -549,6 +540,17 @@ public class ControllerImpl implements Controller
                                    .map(DimensionHandlerUtils::convertObjectToLong)
                                    .orElse(MSQWarnings.DEFAULT_MAX_PARSE_EXCEPTIONS_ALLOWED);
     }
+
+
+    this.workerTaskLauncher = new MSQWorkerTaskLauncher(
+        id(),
+        task.getDataSource(),
+        context,
+        isDurableStorageEnabled,
+        maxParseExceptions,
+        // 10 minutes +- 2 minutes jitter
+        TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
+    );
 
     this.faultsExceededChecker = new FaultsExceededChecker(
         ImmutableMap.of(CannotParseExternalDataFault.CODE, maxParseExceptions)
@@ -643,29 +645,12 @@ public class ControllerImpl implements Controller
       String errorCode = warningsExceeded.get().lhs;
       Long limit = warningsExceeded.get().rhs;
 
-      if (limit == 0L) {
-        boolean foundWarningReport = false;
-        for (MSQErrorReport warningReport : workerWarnings) {
-          if (warningReport.getFault().getErrorCode().equalsIgnoreCase(errorCode)) {
-            foundWarningReport = true;
-            workerError(warningReport);
-            break;
-          }
-        }
-        if (!foundWarningReport) {
-          throw new ISE(
-              "Warnings of type %s exceed the limit but the controller is unable to find the warning report.",
-              errorCode
-          );
-        }
-      } else {
-        workerError(MSQErrorReport.fromFault(
-            id(),
-            selfDruidNode.getHost(),
-            null,
-            new TooManyWarningsFault(limit.intValue(), errorCode)
-        ));
-      }
+      workerError(MSQErrorReport.fromFault(
+          id(),
+          selfDruidNode.getHost(),
+          null,
+          new TooManyWarningsFault(limit.intValue(), errorCode)
+      ));
       addToKernelManipulationQueue(
           queryKernel ->
               queryKernel.getActiveStages().forEach(queryKernel::failStage)
