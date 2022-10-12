@@ -696,7 +696,7 @@ public class VectorMathProcessors
   {
     final ExpressionType leftType = left.getOutputType(inspector);
     final ExpressionType rightType = right.getOutputType(inspector);
-    BivariateFunctionVectorValueProcessor<?, ?, ?> processor = null;
+    ExprVectorProcessor<?> processor = null;
     if ((Types.is(leftType, ExprType.LONG) && Types.isNullOr(rightType, ExprType.LONG)) ||
         (leftType == null && Types.is(rightType, ExprType.LONG))) {
       processor = new DoubleOutLongsInFunctionVectorValueProcessor(
