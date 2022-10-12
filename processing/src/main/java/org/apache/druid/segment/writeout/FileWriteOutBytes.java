@@ -64,7 +64,7 @@ final class FileWriteOutBytes extends WriteOutBytes
       Channels.writeFully(ch, buffer);
     }
     catch (IOException e) {
-      throw new IOE(e, "Failed to write to file: %s. Space needed: %d", file.getAbsolutePath(), writeOutBytes);
+      throw new IOE(e, "Failed to write to file: %s. Current size of file: %d", file.getAbsolutePath(), writeOutBytes);
     }
     buffer.clear();
   }

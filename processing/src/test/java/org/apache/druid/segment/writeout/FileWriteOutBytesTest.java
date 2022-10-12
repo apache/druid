@@ -206,6 +206,6 @@ public class FileWriteOutBytesTest
     fileWriteOutBytes.write(new byte[30]);
     IOException actual = Assert.assertThrows(IOException.class, () -> fileWriteOutBytes.flush());
     Assert.assertEquals(String.valueOf(actual.getCause()), actual.getCause(), cause);
-    Assert.assertEquals(actual.getMessage(), actual.getMessage(), "Failed to write to file: /tmp/file. Space needed: 34");
+    Assert.assertEquals(actual.getMessage(), actual.getMessage(), "Failed to write to file: /tmp/file. Current size of file: 34");
   }
 }
