@@ -70,11 +70,18 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       boolean useMaxMemoryEstimates
   )
   {
-    super(new StringDimensionDictionary(!useMaxMemoryEstimates));
+    super(new DimensionDictionary<>(String.class, useMaxMemoryEstimates ? null : createStringSizeEstimator()));
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
     this.hasSpatialIndexes = hasSpatialIndexes;
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
+  }
+
+  private static DimensionSizeEstimator<String> createStringSizeEstimator()
+  {
+    // According to https://www.ibm.com/developerworks/java/library/j-codetoheap/index.html
+    // Total string size = 28B (string metadata) + 16B (char array metadata) + 2B * num letters
+    return value -> 28 + 16 + (2L * value.length());
   }
 
   @Override

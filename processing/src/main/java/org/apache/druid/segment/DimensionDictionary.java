@@ -23,7 +23,6 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 import javax.annotation.Nullable;
-
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +33,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * Buildable dictionary for some comparable type. Values are unsorted, or rather sorted in the order which they are
  * added. A {@link SortedDimensionDictionary} can be constructed with a mapping of ids from this dictionary to the
  * sorted dictionary with the {@link #sort()} method.
- *
+ * <p>
  * This dictionary is thread-safe.
  */
 public class DimensionDictionary<T extends Comparable<T>>
@@ -54,11 +53,22 @@ public class DimensionDictionary<T extends Comparable<T>>
   private final List<T> idToValue = new ArrayList<>();
   private final ReentrantReadWriteLock lock;
 
-  public DimensionDictionary(Class<T> cls)
+  @Nullable
+  private final DimensionSizeEstimator<T> sizeEstimator;
+
+  /**
+   * Creates a DimensionDictionary.
+   *
+   * @param cls           The dictionary holds items of this comparable type.
+   * @param sizeEstimator Function to estimate size of a single dimension value.
+   *                      Size estimation is disabled if this is passed as null.
+   */
+  public DimensionDictionary(Class<T> cls, @Nullable DimensionSizeEstimator<T> sizeEstimator)
   {
     this.cls = cls;
     this.lock = new ReentrantReadWriteLock();
     valueToId.defaultReturnValue(ABSENT_VALUE_ID);
+    this.sizeEstimator = sizeEstimator;
   }
 
   public int getId(@Nullable T value)
@@ -196,7 +206,7 @@ public class DimensionDictionary<T extends Comparable<T>>
   {
     lock.readLock().lock();
     try {
-      return new SortedDimensionDictionary<T>(idToValue, idToValue.size());
+      return new SortedDimensionDictionary<>(idToValue, idToValue.size());
     }
     finally {
       lock.readLock().unlock();
@@ -217,13 +227,10 @@ public class DimensionDictionary<T extends Comparable<T>>
 
   /**
    * Whether on-heap size of this dictionary should be computed.
-   *
-   * @return false, by default. Implementations that want to estimate memory
-   * must override this method.
    */
-  public boolean computeOnHeapSize()
+  private boolean computeOnHeapSize()
   {
-    return false;
+    return sizeEstimator != null;
   }
 
 }
