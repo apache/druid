@@ -20,12 +20,13 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 
-public final class ExprEvalStringVector extends ExprEvalVector<String[]>
+public final class ExprEvalObjectVector extends ExprEvalVector<Object[]>
 {
   @Nullable
   private long[] longs;
@@ -35,7 +36,7 @@ public final class ExprEvalStringVector extends ExprEvalVector<String[]>
   @Nullable
   private boolean[] numericNulls;
 
-  public ExprEvalStringVector(String[] values)
+  public ExprEvalObjectVector(Object[] values)
   {
     super(values, null);
   }
@@ -47,7 +48,7 @@ public final class ExprEvalStringVector extends ExprEvalVector<String[]>
       doubles = new double[values.length];
       numericNulls = new boolean[values.length];
       for (int i = 0; i < values.length; i++) {
-        Number n = ExprEval.computeNumber(values[i]);
+        Number n = ExprEval.computeNumber(Evals.asString(values[i]));
         if (n != null) {
           longs[i] = n.longValue();
           doubles[i] = n.doubleValue();

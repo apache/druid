@@ -561,7 +561,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       class DictionaryEncodedStringSingleValueVectorObjectSelector implements VectorObjectSelector
       {
         private final int[] vector = new int[offset.getMaxVectorSize()];
-        private final String[] strings = new String[offset.getMaxVectorSize()];
+        private final Object[] strings = new Object[offset.getMaxVectorSize()];
         private int id = ReadableVectorInspector.NULL_ID;
 
         @Override
