@@ -19,13 +19,12 @@
 
 package org.apache.druid.msq.indexing.error;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.msq.exec.ControllerClient;
-import org.apache.druid.msq.exec.Limits;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -39,7 +38,8 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
 
   private final MSQWarningReportPublisher delegate;
   private final long totalLimit;
-  private final Map<String, Long> errorCodeToLimit;
+  private final Map<String, Long> errorCodeToVerboseCountLimit;
+  private final Set<String> disallowedWarningCode;
   private final ConcurrentHashMap<String, Long> errorCodeToCurrentCount = new ConcurrentHashMap<>();
   private final ControllerClient controllerClient;
   private final String workerId;
@@ -53,34 +53,17 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
 
   public MSQWarningReportLimiterPublisher(
       MSQWarningReportPublisher delegate,
-      ControllerClient controllerClient,
-      String workerId,
-      @Nullable String host
-  )
-  {
-    this(
-        delegate,
-        Limits.MAX_VERBOSE_WARNINGS,
-        ImmutableMap.of(
-            CannotParseExternalDataFault.CODE, Limits.MAX_VERBOSE_PARSE_EXCEPTIONS
-        ),
-        controllerClient,
-        workerId,
-        host
-    );
-  }
-
-  public MSQWarningReportLimiterPublisher(
-      MSQWarningReportPublisher delegate,
       long totalLimit,
-      Map<String, Long> errorCodeToLimit,
+      Map<String, Long> errorCodeToVerboseCountLimit,
+      Set<String> disallowedWarningCode,
       ControllerClient controllerClient,
       String workerId,
       @Nullable String host
   )
   {
     this.delegate = delegate;
-    this.errorCodeToLimit = errorCodeToLimit;
+    this.errorCodeToVerboseCountLimit = errorCodeToVerboseCountLimit;
+    this.disallowedWarningCode = disallowedWarningCode;
     this.totalLimit = totalLimit;
     this.controllerClient = controllerClient;
     this.workerId = workerId;
@@ -95,8 +78,8 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
       totalCount = totalCount + 1;
       errorCodeToCurrentCount.compute(errorCode, (ignored, count) -> count == null ? 1L : count + 1);
 
-      // Send the warning as an error if its limit is 0
-      if (errorCodeToLimit.getOrDefault(errorCode, -1L) == 0) {
+      // Send the warning as an error if it is disallowed altogether
+      if (disallowedWarningCode.contains(errorCode)) {
         try {
           controllerClient.postWorkerError(workerId, MSQErrorReport.fromException(workerId, host, stageNumber, e));
         }
@@ -110,7 +93,7 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
       }
     }
 
-    long limitForFault = errorCodeToLimit.getOrDefault(errorCode, -1L);
+    long limitForFault = errorCodeToVerboseCountLimit.getOrDefault(errorCode, -1L);
     synchronized (lock) {
       if (limitForFault != -1 && errorCodeToCurrentCount.getOrDefault(errorCode, 0L) > limitForFault) {
         return;

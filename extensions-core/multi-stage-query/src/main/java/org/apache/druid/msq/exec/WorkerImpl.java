@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -128,6 +129,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -262,14 +264,21 @@ public class WorkerImpl implements Worker
       }
     });
 
-    long maxVerboseParseExceptions = ((Integer) task.getContext().getOrDefault(
+    long maxAllowedParseExceptions = Long.parseLong(task.getContext().getOrDefault(
         MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
-        Integer.MAX_VALUE
-    )).longValue();
-    if (maxVerboseParseExceptions == -1) {
+        Long.MAX_VALUE
+    ).toString());
+
+    long maxVerboseParseExceptions;
+    if (maxAllowedParseExceptions == -1L) {
       maxVerboseParseExceptions = Limits.MAX_VERBOSE_PARSE_EXCEPTIONS;
     } else {
-      maxVerboseParseExceptions = Math.min(maxVerboseParseExceptions, Limits.MAX_VERBOSE_PARSE_EXCEPTIONS);
+      maxVerboseParseExceptions = Math.min(maxAllowedParseExceptions, Limits.MAX_VERBOSE_PARSE_EXCEPTIONS);
+    }
+
+    Set<String> disallowedWarningCode = ImmutableSet.of();
+    if (maxAllowedParseExceptions == 0) {
+      disallowedWarningCode = ImmutableSet.of(CannotParseExternalDataFault.CODE);
     }
 
     final MSQWarningReportPublisher msqWarningReportPublisher = new MSQWarningReportLimiterPublisher(
@@ -281,6 +290,7 @@ public class WorkerImpl implements Worker
         ),
         Limits.MAX_VERBOSE_WARNINGS,
         ImmutableMap.of(CannotParseExternalDataFault.CODE, maxVerboseParseExceptions),
+        disallowedWarningCode,
         controllerClient,
         id(),
         MSQTasks.getHostFromSelfNode(selfDruidNode)
