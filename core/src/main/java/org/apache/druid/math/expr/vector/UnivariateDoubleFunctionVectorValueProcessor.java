@@ -25,28 +25,30 @@ import org.apache.druid.math.expr.Expr;
  * common machinery for processing single input operators and functions, which should always treat null input as null
  * output, and are backed by a primitive value instead of an object value (and need to use the null vector instead of
  * checking the vector itself for nulls)
+ *
+ * this one is specialized for producing double[], see {@link UnivariateLongFunctionVectorValueProcessor} for
+ * long[] primitives.
  */
-public abstract class UnivariateFunctionVectorValueProcessor<TInput, TOutput> implements ExprVectorProcessor<TOutput>
+public abstract class UnivariateDoubleFunctionVectorValueProcessor<TInput> implements ExprVectorProcessor<double[]>
 {
   final ExprVectorProcessor<TInput> processor;
   final int maxVectorSize;
   final boolean[] outNulls;
-  final TOutput outValues;
+  final double[] outValues;
 
-  public UnivariateFunctionVectorValueProcessor(
+  public UnivariateDoubleFunctionVectorValueProcessor(
       ExprVectorProcessor<TInput> processor,
-      int maxVectorSize,
-      TOutput outValues
+      int maxVectorSize
   )
   {
     this.processor = processor;
     this.maxVectorSize = maxVectorSize;
     this.outNulls = new boolean[maxVectorSize];
-    this.outValues = outValues;
+    this.outValues = new double[maxVectorSize];
   }
 
   @Override
-  public final ExprEvalVector<TOutput> evalVector(Expr.VectorInputBinding bindings)
+  public final ExprEvalVector<double[]> evalVector(Expr.VectorInputBinding bindings)
   {
     final ExprEvalVector<TInput> lhs = processor.evalVector(bindings);
 
@@ -61,6 +63,8 @@ public abstract class UnivariateFunctionVectorValueProcessor<TInput, TOutput> im
         outNulls[i] = inputNulls[i];
         if (!outNulls[i]) {
           processIndex(input, i);
+        } else {
+          outValues[i] = 0.0;
         }
       }
     } else {
@@ -74,5 +78,8 @@ public abstract class UnivariateFunctionVectorValueProcessor<TInput, TOutput> im
 
   abstract void processIndex(TInput input, int i);
 
-  abstract ExprEvalVector<TOutput> asEval();
+  final ExprEvalVector<double[]> asEval()
+  {
+    return new ExprEvalDoubleVector(outValues, outNulls);
+  }
 }

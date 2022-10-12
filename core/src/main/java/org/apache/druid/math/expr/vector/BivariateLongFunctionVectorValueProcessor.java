@@ -25,32 +25,34 @@ import org.apache.druid.math.expr.Expr;
  * common machinery for processing two input operators and functions, which should always treat null inputs as null
  * output, and are backed by a primitive values instead of an object values (and need to use the null vectors instead of
  * checking the vector themselves for nulls)
+ *
+ * this one is specialized for producing long[], see {@link BivariateDoubleFunctionVectorValueProcessor} for
+ * double[] primitives.
  */
-public abstract class BivariateFunctionVectorValueProcessor<TLeftInput, TRightInput, TOutput>
-    implements ExprVectorProcessor<TOutput>
+public abstract class BivariateLongFunctionVectorValueProcessor<TLeftInput, TRightInput>
+    implements ExprVectorProcessor<long[]>
 {
   final ExprVectorProcessor<TLeftInput> left;
   final ExprVectorProcessor<TRightInput> right;
   final int maxVectorSize;
   final boolean[] outNulls;
-  final TOutput outValues;
+  final long[] outValues;
 
-  protected BivariateFunctionVectorValueProcessor(
+  protected BivariateLongFunctionVectorValueProcessor(
       ExprVectorProcessor<TLeftInput> left,
       ExprVectorProcessor<TRightInput> right,
-      int maxVectorSize,
-      TOutput outValues
+      int maxVectorSize
   )
   {
     this.left = left;
     this.right = right;
     this.maxVectorSize = maxVectorSize;
+    this.outValues = new long[maxVectorSize];
     this.outNulls = new boolean[maxVectorSize];
-    this.outValues = outValues;
   }
 
   @Override
-  public final ExprEvalVector<TOutput> evalVector(Expr.VectorInputBinding bindings)
+  public final ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
   {
     final ExprEvalVector<TLeftInput> lhs = left.evalVector(bindings);
     final ExprEvalVector<TRightInput> rhs = right.evalVector(bindings);
@@ -70,6 +72,8 @@ public abstract class BivariateFunctionVectorValueProcessor<TLeftInput, TRightIn
         outNulls[i] = (hasLeftNulls && leftNulls[i]) || (hasRightNulls && rightNulls[i]);
         if (!outNulls[i]) {
           processIndex(leftInput, rightInput, i);
+        } else {
+          outValues[i] = 0L;
         }
       }
     } else {
@@ -83,5 +87,8 @@ public abstract class BivariateFunctionVectorValueProcessor<TLeftInput, TRightIn
 
   abstract void processIndex(TLeftInput leftInput, TRightInput rightInput, int i);
 
-  abstract ExprEvalVector<TOutput> asEval();
+  final ExprEvalVector<long[]> asEval()
+  {
+    return new ExprEvalLongVector(outValues, outNulls);
+  }
 }
