@@ -22,14 +22,21 @@ package org.apache.druid.math.expr.vector;
 import org.apache.druid.math.expr.ExpressionType;
 
 /**
- * specialized {@link UnivariateFunctionVectorObjectProcessor} for processing (String[]) -> long[]
+ * specialized {@link UnivariateFunctionVectorObjectProcessor} for processing (Object[]) -> long[]
  */
-public abstract class LongOutStringInFunctionVectorProcessor
-    extends UnivariateFunctionVectorObjectProcessor<String[], long[]>
+public abstract class LongOutObjectInFunctionVectorProcessor
+    extends UnivariateFunctionVectorObjectProcessor<Object[], long[]>
 {
-  public LongOutStringInFunctionVectorProcessor(ExprVectorProcessor<String[]> processor, int maxVectorSize)
+  final ExpressionType inputType;
+
+  public LongOutObjectInFunctionVectorProcessor(
+      ExprVectorProcessor<Object[]> processor,
+      int maxVectorSize,
+      ExpressionType inputType
+  )
   {
-    super(CastToTypeVectorProcessor.cast(processor, ExpressionType.STRING), maxVectorSize, new long[maxVectorSize]);
+    super(CastToTypeVectorProcessor.cast(processor, inputType), maxVectorSize, new long[maxVectorSize]);
+    this.inputType = inputType;
   }
 
   @Override

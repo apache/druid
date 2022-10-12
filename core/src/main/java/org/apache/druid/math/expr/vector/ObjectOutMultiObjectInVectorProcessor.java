@@ -19,41 +19,43 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExpressionType;
 
 /**
  * many strings enter, one string leaves...
  */
-public abstract class StringOutMultiStringInVectorProcessor implements ExprVectorProcessor<String[]>
+public abstract class ObjectOutMultiObjectInVectorProcessor implements ExprVectorProcessor<Object[]>
 {
-  final ExprVectorProcessor<String[]>[] inputs;
+  final ExprVectorProcessor<Object[]>[] inputs;
   final int maxVectorSize;
-  final String[] outValues;
-  final boolean sqlCompatible = NullHandling.sqlCompatible();
+  final Object[] outValues;
 
-  protected StringOutMultiStringInVectorProcessor(
-      ExprVectorProcessor<String[]>[] inputs,
-      int maxVectorSize
+  final ExpressionType expressionType;
+
+  protected ObjectOutMultiObjectInVectorProcessor(
+      ExprVectorProcessor<Object[]>[] inputs,
+      int maxVectorSize,
+      ExpressionType objectType
   )
   {
     this.inputs = inputs;
     this.maxVectorSize = maxVectorSize;
-    this.outValues = new String[maxVectorSize];
+    this.outValues = new Object[maxVectorSize];
+    this.expressionType = objectType;
   }
 
   @Override
   public ExpressionType getOutputType()
   {
-    return ExpressionType.STRING;
+    return expressionType;
   }
 
   @Override
-  public ExprEvalVector<String[]> evalVector(Expr.VectorInputBinding bindings)
+  public ExprEvalVector<Object[]> evalVector(Expr.VectorInputBinding bindings)
   {
     final int currentSize = bindings.getCurrentVectorSize();
-    final String[][] in = new String[inputs.length][];
+    final Object[][] in = new Object[inputs.length][];
     for (int i = 0; i < inputs.length; i++) {
       in[i] = inputs[i].evalVector(bindings).values();
     }
@@ -61,8 +63,8 @@ public abstract class StringOutMultiStringInVectorProcessor implements ExprVecto
     for (int i = 0; i < currentSize; i++) {
       processIndex(in, i);
     }
-    return new ExprEvalStringVector(outValues);
+    return new ExprEvalObjectVector(outValues);
   }
 
-  abstract void processIndex(String[][] in, int i);
+  abstract void processIndex(Object[][] in, int i);
 }
