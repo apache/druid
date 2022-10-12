@@ -20,15 +20,15 @@
 package org.apache.druid.segment;
 
 /**
- * Function to estimate size of a dimension value.
+ * Function to estimate the on-heap size of a dimension value.
  *
  * @param <T> Dimension value type
  */
 public interface DimensionSizeEstimator<T>
 {
   /**
-   * Estimates the size of the dimension value in bytes.
+   * Estimates the on-heap size of the dimension value in bytes.
    */
-  long estimateSize(T value);
+  long estimateOnHeapSizeBytes(T value);
 }
 
