@@ -392,7 +392,17 @@ public class SqlBenchmark
       // 20: GroupBy, doubles sketches
       "SELECT dimZipf, APPROX_QUANTILE_DS(sumFloatNormal, 0.5), DS_QUANTILES_SKETCH(maxLongUniform) "
       + "FROM foo "
-      + "GROUP BY 1"
+      + "GROUP BY 1",
+
+      //21: Order by with alias with large in filter
+      "SELECT __time as t, dimSequential from foo "
+      + " where (dimSequential in (select DISTINCT dimSequential from foo)) "
+      + " order by 1 limit 1",
+
+      //22: Order by without alias with large in filter
+      "SELECT __time, dimSequential from foo "
+      + " where (dimSequential in (select DISTINCT dimSequential from foo)) "
+      + " order by 1 limit 1"
   );
 
   @Param({"5000000"})
