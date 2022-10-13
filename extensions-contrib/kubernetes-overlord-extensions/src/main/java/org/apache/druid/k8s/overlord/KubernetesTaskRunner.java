@@ -316,7 +316,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         KubernetesTaskRunnerConfig.toMilliseconds(k8sConfig.taskCleanupInterval),
         TimeUnit.MILLISECONDS
     );
-    log.info("Started cleanup executor for jobs older than 1 day....");
+    log.debug("Started cleanup executor for jobs older than 1 day....");
   }
 
 
@@ -451,7 +451,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     for (Pair<TaskRunnerListener, Executor> pair : listeners) {
       if (pair.lhs != null && pair.lhs.getListenerId().equals(listenerId)) {
         listeners.remove(pair);
-        log.info("Unregistered listener [%s]", listenerId);
+        log.debug("Unregistered listener [%s]", listenerId);
         return;
       }
     }
@@ -467,7 +467,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
 
     final Pair<TaskRunnerListener, Executor> listenerPair = Pair.of(listener, executor);
-    log.info("Registered listener [%s]", listener.getListenerId());
+    log.debug("Registered listener [%s]", listener.getListenerId());
     listeners.add(listenerPair);
   }
 
@@ -506,12 +506,13 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       return null;
     } else {
       PeonPhase phase = PeonPhase.getPhaseFor(item);
-      if (PeonPhase.PENDING.equals(phase)) {
-        return RunnerTaskState.PENDING;
-      } else if (PeonPhase.RUNNING.equals(phase)) {
-        return RunnerTaskState.RUNNING;
-      } else {
-        return RunnerTaskState.NONE;
+      switch (phase) {
+        case PENDING:
+          return RunnerTaskState.PENDING;
+        case RUNNING:
+          return RunnerTaskState.RUNNING;
+        default:
+          return RunnerTaskState.NONE;
       }
     }
   }

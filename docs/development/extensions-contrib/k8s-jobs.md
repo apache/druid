@@ -1,5 +1,5 @@
 ---
-id: k8s-jobs
+id: K8s-jobs
 title: "MM-less Druid in K8s"
 ---
 
@@ -22,24 +22,24 @@ title: "MM-less Druid in K8s"
   ~ under the License.
   -->
 
-Consider this an [EXPERIMENTAL](../experimental.md) feature mostly because it has not been tested yet on a wide variety of long-running Druid clusters.
+Apache Druid Extension to enable using Kubernetes for launching and managing tasks instead of the Middle Managers.  This extension allows you to launch tasks as kubernetes jobs removing the need for your middle manager.  
 
-Apache Druid Extension to enable using Kubernetes for launching and managing tasks instead of the Middle Managers.  This extension allows you to launch tasks as K8s jobs removing the need for your middle manager.  
+Consider this an [EXPERIMENTAL](../experimental.md) feature mostly because it has not been tested yet on a wide variety of long-running Druid clusters.
 
 ## How it works
 
-It takes the podSpec of your `Overlord` pod and creates a kubernetes job from this podSpec.  Thus if you have sidecars such as splunk, hubble, istio it can optionally launch a task as a k8s job.  All jobs are natively restorable, they are decopled from the druid deployment, thus restarting pods or doing upgrades has no affect on tasks in flight.  They will continue to run and when the overlord comes back up it will start tracking them again.  
+The K8s extension takes the podSpec of your `Overlord` pod and creates a kubernetes job from this podSpec.  Thus if you have sidecars such as Splunk or Istio it can optionally launch a task as a K8s job.  All jobs are natively restorable, they are decoupled from the druid deployment, thus restarting pods or doing upgrades has no affect on tasks in flight.  They will continue to run and when the overlord comes back up it will start tracking them again.  
 
 ## Configuration
 
 To use this extension please make sure to  [include](../extensions.md#loading-extensions)`druid-kubernetes-overlord-extensions` in the extensions load list for your overlord process.
 
-The extension uses the task queue to limit how many concurrent tasks (k8s jobs) are in flight so it is required you have a reasonable value for `druid.indexer.queue.maxSize`.  Additionally set the variable `druid.indexer.runner.namespace` to the namespace in which you are running druid.
+The extension uses the task queue to limit how many concurrent tasks (K8s jobs) are in flight so it is required you have a reasonable value for `druid.indexer.queue.maxSize`.  Additionally set the variable `druid.indexer.runner.namespace` to the namespace in which you are running druid.
 
 Other configurations required are: 
-`druid.indexer.runner.type: k8s` and `druid.indexer.task.enableTaskLevelLogPush: true`
+`druid.indexer.runner.type: K8s` and `druid.indexer.task.e  nableTaskLevelLogPush: true`
 
-You can add optional labels to your k8s jobs / pods if you need them by using the following configuration: 
+You can add optional labels to your K8s jobs / pods if you need them by using the following configuration: 
 `druid.indexer.runner.labels: '{"key":"value"}'`
 
 All other configurations you had for the middle manager tasks must be moved under the overlord with one caveat, you must specify javaOpts as an array: 
@@ -52,22 +52,24 @@ Additional Configuration
 ### Properties
 |Property|Possible Values|Description|Default|required|
 |--------|---------------|-----------|-------|--------|
-|`druid.indexer.runner.debugJobs`|`boolean`|Clean up k8s jobs after tasks complete.|False|No|
+|`druid.indexer.runner.debugJobs`|`boolean`|Clean up K8s jobs after tasks complete.|False|No|
 |`druid.indexer.runner.sidecarSupport`|`boolean`|If your overlord pod has sidecars, this will attempt to start the task with the same sidecars as the overlord pod.|False|No|
 |`druid.indexer.runner.kubexitImage`|`String`|Used kubexit project to help shutdown sidecars when the main pod completes.  Otherwise jobs with sidecars never terminate.|karlkfi/kubexit:latest|No|
 |`druid.indexer.runner.disableClientProxy`|`boolean`|Use this if you have a global http(s) proxy and you wish to bypass it.|false|No|
-|`druid.indexer.runner.maxTaskDuration`|`Duration`|Max time a task is allowed to run for before getting killed|4H|No|
-|`druid.indexer.runner.taskCleanupDelay`|`Duration`|How long do jobs stay around before getting reaped from k8s|2D|No|
-|`druid.indexer.runner.taskCleanupInterval`|`Duration`|How often to check for jobs to be reaped|10m|No|
-|`druid.indexer.runner.k8sjobLaunchTimeout`|`Duration`|How long to wait to launch a k8s task before marking it as failed, on a resource constrained cluster it may take some time.|1H|No|
-|`druid.indexer.runner.javaOptsArray`|`Duration`|java opts for the task.|-Xmx1g|No|
-|`druid.indexer.runner.graceTerminationPeriodSeconds`|`Long`|Number of seconds you want to wait after a sigterm for container lifecycle hooks to complete.  Keep at a smaller value if you want tasks to hold locks for shorter periods.|30s (k8s default)|No|
+|`druid.indexer.runner.maxTaskDuration`|`Duration`|Max time a task is allowed to run for before getting killed|`PT4H`|No|
+|`druid.indexer.runner.taskCleanupDelay`|`Duration`|How long do jobs stay around before getting reaped from K8s|`P2D`|No|
+|`druid.indexer.runner.taskCleanupInterval`|`Duration`|How often to check for jobs to be reaped|`PT10M`|No|
+|`druid.indexer.runner.K8sjobLaunchTimeout`|`Duration`|How long to wait to launch a K8s task before marking it as failed, on a resource constrained cluster it may take some time.|`PT1H`|No|
+|`druid.indexer.runner.javaOptsArray`|`JsonArray`|java opts for the task.|`-Xmx1g`|No|
+|`druid.indexer.runner.labels`|`JsonObject`|Addtional labels you wish to apply to peon pod|`{}`|No|
+|`druid.indexer.runner.annotations`|`JsonObject`|Addtional annotations you wish to apply to peon pod|`{}`|No|
+|`druid.indexer.runner.graceTerminationPeriodSeconds`|`Long`|Number of seconds you want to wait after a sigterm for container lifecycle hooks to complete.  Keep at a smaller value if you want tasks to hold locks for shorter periods.|`PT30S` (K8s default)|No|
 
 ### Gotchas
 
-- You must have in your role the abiliity to launch jobs.  
+- You must have in your role the ability to launch jobs.  
 - All Druid Pods belonging to one Druid cluster must be inside same kubernetes namespace.
-- For the sidecar support to work, your entrypoint / command in docker must be explicitly defined your spec.  
+- For the sidecar support to work, your entry point / command in docker must be explicitly defined your spec.  
 
 You can't have something like this: 
 Dockerfile: 
@@ -82,7 +84,7 @@ and in your sidecar specs:
 ```
 
 That will not work, because we cannot decipher what your command is, the extension needs to know it explicitly. 
-**Even for sidecars like isito which are dynamically created by the service mesh, this needs to happen.* 
+**Even for sidecars like Istio which are dynamically created by the service mesh, this needs to happen.* 
 
 Instead do the following: 
 You can keep your Dockerfile the same but you must have a sidecar spec like so: 
@@ -97,7 +99,7 @@ You can keep your Dockerfile the same but you must have a sidecar spec like so:
 The following roles must also be accessible. An example spec could be: 
 
 ```
-apiVersion: rbac.authorization.k8s.io/v1
+apiVersion: rbac.authorization.K8s.io/v1
 kind: Role
 metadata:
   name: druid-cluster
@@ -112,7 +114,7 @@ rules:
   - '*'
 ---
 kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
+apiVersion: rbac.authorization.K8s.io/v1
 metadata:
   name: druid-cluster
 subjects:
@@ -121,5 +123,5 @@ subjects:
 roleRef:
   kind: Role
   name: druid-cluster
-  apiGroup: rbac.authorization.k8s.io
+  apiGroup: rbac.authorization.K8s.io
 ```
