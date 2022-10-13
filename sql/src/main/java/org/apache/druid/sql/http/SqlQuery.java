@@ -81,6 +81,19 @@ public class SqlQuery
     }
   }
 
+  public SqlQuery withOverridenContext(Map<String, Object> overridenContext)
+  {
+    return new SqlQuery(
+        getQuery(),
+        getResultFormat(),
+        includeHeader(),
+        includeTypesHeader(),
+        includeSqlTypesHeader(),
+        overridenContext,
+        getParameters()
+    );
+  }
+
   @JsonProperty
   public String getQuery()
   {

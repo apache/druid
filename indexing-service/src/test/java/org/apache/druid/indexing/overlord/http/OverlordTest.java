@@ -32,7 +32,7 @@ import org.apache.curator.retry.RetryOneTime;
 import org.apache.curator.test.TestingServer;
 import org.apache.curator.test.Timing;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
-import org.apache.druid.curator.discovery.NoopServiceAnnouncer;
+import org.apache.druid.curator.discovery.LatchableServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -80,7 +80,6 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -181,22 +180,9 @@ public class OverlordTest
         taskStorage,
         taskActionClientFactory,
         druidNode,
-        new TaskRunnerFactory<MockTaskRunner>()
-        {
-          @Override
-          public MockTaskRunner build()
-          {
-            return new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
-          }
-        },
-        new NoopServiceAnnouncer()
-        {
-          @Override
-          public void announce(DruidNode node)
-          {
-            announcementLatch.countDown();
-          }
-        },
+        (TaskRunnerFactory<MockTaskRunner>) () ->
+            new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches),
+        new LatchableServiceAnnouncer(announcementLatch, null),
         new CoordinatorOverlordServiceConfig(null, null),
         serviceEmitter,
         supervisorManager,
@@ -217,6 +203,7 @@ public class OverlordTest
       Thread.sleep(10);
     }
     Assert.assertEquals(taskMaster.getCurrentLeader(), druidNode.getHostAndPort());
+    Assert.assertEquals(Optional.absent(), taskMaster.getRedirectLocation());
 
     final TaskStorageQueryAdapter taskStorageQueryAdapter = new TaskStorageQueryAdapter(taskStorage, taskLockbox);
     final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter = new WorkerTaskRunnerQueryAdapter(taskMaster, null);

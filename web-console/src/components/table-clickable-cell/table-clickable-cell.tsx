@@ -17,23 +17,26 @@
  */
 
 import { Icon, IconName } from '@blueprintjs/core';
+import classNames from 'classnames';
 import React, { MouseEventHandler, ReactNode } from 'react';
 
 import './table-clickable-cell.scss';
 
 export interface TableClickableCellProps {
+  className?: string;
   onClick: MouseEventHandler<any>;
   hoverIcon?: IconName;
+  title?: string;
   children?: ReactNode;
 }
 
 export const TableClickableCell = React.memo(function TableClickableCell(
   props: TableClickableCellProps,
 ) {
-  const { onClick, hoverIcon, children } = props;
+  const { className, onClick, hoverIcon, title, children } = props;
 
   return (
-    <div className="table-clickable-cell" onClick={onClick}>
+    <div className={classNames('table-clickable-cell', className)} title={title} onClick={onClick}>
       {children}
       {hoverIcon && <Icon className="hover-icon" icon={hoverIcon} />}
     </div>

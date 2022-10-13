@@ -602,7 +602,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
     Assert.assertEquals(
         sql,
-        StringUtils.format("Cannot build plan for query. %s", expectedError),
+        StringUtils.format("Query not supported. %s SQL was: %s", expectedError, sql),
         e.getMessage()
     );
   }
@@ -917,7 +917,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             .auth(authenticationResult)
             .build()
     );
-    Sequence<Object[]> results = stmt.execute();
+    Sequence<Object[]> results = stmt.execute().getResults();
     RelDataType rowType = stmt.prepareResult().getReturnedRowType();
     return new Pair<>(
         RowSignatures.fromRelDataType(rowType.getFieldNames(), rowType),

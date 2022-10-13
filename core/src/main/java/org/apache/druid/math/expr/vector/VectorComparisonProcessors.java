@@ -38,7 +38,7 @@ public class VectorComparisonProcessors
       Expr.VectorInputBindingInspector inspector,
       Expr left,
       Expr right,
-      Supplier<LongOutStringsInFunctionVectorProcessor> longOutStringsInFunctionVectorProcessor,
+      Supplier<LongOutObjectsInFunctionVectorProcessor> longOutStringsInFunctionVectorProcessor,
       Supplier<LongOutLongsInFunctionVectorValueProcessor> longOutLongsInProcessor,
       Supplier<DoubleOutLongDoubleInFunctionVectorValueProcessor> doubleOutLongDoubleInProcessor,
       Supplier<DoubleOutDoubleLongInFunctionVectorValueProcessor> doubleOutDoubleLongInProcessor,
@@ -81,7 +81,7 @@ public class VectorComparisonProcessors
       Expr.VectorInputBindingInspector inspector,
       Expr left,
       Expr right,
-      Supplier<LongOutStringsInFunctionVectorProcessor> longOutStringsInFunctionVectorProcessor,
+      Supplier<LongOutObjectsInFunctionVectorProcessor> longOutStringsInFunctionVectorProcessor,
       Supplier<LongOutLongsInFunctionVectorValueProcessor> longOutLongsInProcessor,
       Supplier<LongOutLongDoubleInFunctionVectorValueProcessor> longOutLongDoubleInProcessor,
       Supplier<LongOutDoubleLongInFunctionVectorValueProcessor> longOutDoubleLongInProcessor,
@@ -136,15 +136,16 @@ public class VectorComparisonProcessors
           inspector,
           left,
           right,
-          () -> new LongOutStringsInFunctionVectorProcessor(
+          () -> new LongOutObjectsInFunctionVectorProcessor(
               left.buildVectorized(inspector),
               right.buildVectorized(inspector),
-              inspector.getMaxVectorSize()
+              inspector.getMaxVectorSize(),
+              ExpressionType.STRING
           )
           {
             @Nullable
             @Override
-            Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+            Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
             {
               return Evals.asLong(Objects.equals(leftVal, rightVal));
             }
@@ -203,15 +204,16 @@ public class VectorComparisonProcessors
         inspector,
         left,
         right,
-        () -> new LongOutStringsInFunctionVectorProcessor(
+        () -> new LongOutObjectsInFunctionVectorProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
-            inspector.getMaxVectorSize()
+            inspector.getMaxVectorSize(),
+            ExpressionType.STRING
         )
         {
           @Nullable
           @Override
-          Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+          Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
           {
             return Evals.asLong(Objects.equals(leftVal, rightVal));
           }
@@ -278,15 +280,16 @@ public class VectorComparisonProcessors
           inspector,
           left,
           right,
-          () -> new LongOutStringsInFunctionVectorProcessor(
+          () -> new LongOutObjectsInFunctionVectorProcessor(
               left.buildVectorized(inspector),
               right.buildVectorized(inspector),
-              inspector.getMaxVectorSize()
+              inspector.getMaxVectorSize(),
+              ExpressionType.STRING
           )
           {
             @Nullable
             @Override
-            Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+            Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
             {
               return Evals.asLong(!Objects.equals(leftVal, rightVal));
             }
@@ -345,15 +348,16 @@ public class VectorComparisonProcessors
         inspector,
         left,
         right,
-        () -> new LongOutStringsInFunctionVectorProcessor(
+        () -> new LongOutObjectsInFunctionVectorProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
-            inspector.getMaxVectorSize()
+            inspector.getMaxVectorSize(),
+            ExpressionType.STRING
         )
         {
           @Nullable
           @Override
-          Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+          Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
           {
             return Evals.asLong(!Objects.equals(leftVal, rightVal));
           }
@@ -420,17 +424,20 @@ public class VectorComparisonProcessors
           inspector,
           left,
           right,
-          () -> new LongOutStringsInFunctionVectorProcessor(
+          () -> new LongOutObjectsInFunctionVectorProcessor(
               left.buildVectorized(inspector),
               right.buildVectorized(inspector),
-              inspector.getMaxVectorSize()
+              inspector.getMaxVectorSize(),
+              ExpressionType.STRING
           )
           {
             @Nullable
             @Override
-            Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+            Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
             {
-              return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) >= 0);
+              return Evals.asLong(
+                  Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) >= 0
+              );
             }
           },
           () -> new LongOutLongsInFunctionVectorValueProcessor(
@@ -487,17 +494,20 @@ public class VectorComparisonProcessors
         inspector,
         left,
         right,
-        () -> new LongOutStringsInFunctionVectorProcessor(
+        () -> new LongOutObjectsInFunctionVectorProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
-            inspector.getMaxVectorSize()
+            inspector.getMaxVectorSize(),
+            ExpressionType.STRING
         )
         {
           @Nullable
           @Override
-          Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+          Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
           {
-            return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) >= 0);
+            return Evals.asLong(
+                Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) >= 0
+            );
           }
         },
         () -> new LongOutLongsInFunctionVectorValueProcessor(
@@ -562,17 +572,20 @@ public class VectorComparisonProcessors
           inspector,
           left,
           right,
-          () -> new LongOutStringsInFunctionVectorProcessor(
+          () -> new LongOutObjectsInFunctionVectorProcessor(
               left.buildVectorized(inspector),
               right.buildVectorized(inspector),
-              inspector.getMaxVectorSize()
+              inspector.getMaxVectorSize(),
+              ExpressionType.STRING
           )
           {
             @Nullable
             @Override
-            Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+            Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
             {
-              return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) > 0);
+              return Evals.asLong(
+                  Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) > 0
+              );
             }
           },
           () -> new LongOutLongsInFunctionVectorValueProcessor(
@@ -629,17 +642,20 @@ public class VectorComparisonProcessors
         inspector,
         left,
         right,
-        () -> new LongOutStringsInFunctionVectorProcessor(
+        () -> new LongOutObjectsInFunctionVectorProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
-            inspector.getMaxVectorSize()
+            inspector.getMaxVectorSize(),
+            ExpressionType.STRING
         )
         {
           @Nullable
           @Override
-          Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+          Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
           {
-            return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) > 0);
+            return Evals.asLong(
+                Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) > 0
+            );
           }
         },
         () -> new LongOutLongsInFunctionVectorValueProcessor(
@@ -704,17 +720,20 @@ public class VectorComparisonProcessors
           inspector,
           left,
           right,
-          () -> new LongOutStringsInFunctionVectorProcessor(
+          () -> new LongOutObjectsInFunctionVectorProcessor(
               left.buildVectorized(inspector),
               right.buildVectorized(inspector),
-              inspector.getMaxVectorSize()
+              inspector.getMaxVectorSize(),
+              ExpressionType.STRING
           )
           {
             @Nullable
             @Override
-            Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+            Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
             {
-              return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) <= 0);
+              return Evals.asLong(
+                  Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) <= 0
+              );
             }
           },
           () -> new LongOutLongsInFunctionVectorValueProcessor(
@@ -771,17 +790,20 @@ public class VectorComparisonProcessors
         inspector,
         left,
         right,
-        () -> new LongOutStringsInFunctionVectorProcessor(
+        () -> new LongOutObjectsInFunctionVectorProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
-            inspector.getMaxVectorSize()
+            inspector.getMaxVectorSize(),
+            ExpressionType.STRING
         )
         {
           @Nullable
           @Override
-          Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+          Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
           {
-            return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) <= 0);
+            return Evals.asLong(
+                Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) <= 0
+            );
           }
         },
         () -> new LongOutLongsInFunctionVectorValueProcessor(
@@ -846,17 +868,20 @@ public class VectorComparisonProcessors
           inspector,
           left,
           right,
-          () -> new LongOutStringsInFunctionVectorProcessor(
+          () -> new LongOutObjectsInFunctionVectorProcessor(
               left.buildVectorized(inspector),
               right.buildVectorized(inspector),
-              inspector.getMaxVectorSize()
+              inspector.getMaxVectorSize(),
+              ExpressionType.STRING
           )
           {
             @Nullable
             @Override
-            Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+            Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
             {
-              return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) < 0);
+              return Evals.asLong(
+                  Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) < 0
+              );
             }
           },
           () -> new LongOutLongsInFunctionVectorValueProcessor(
@@ -913,17 +938,20 @@ public class VectorComparisonProcessors
         inspector,
         left,
         right,
-        () -> new LongOutStringsInFunctionVectorProcessor(
+        () -> new LongOutObjectsInFunctionVectorProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
-            inspector.getMaxVectorSize()
+            inspector.getMaxVectorSize(),
+            ExpressionType.STRING
         )
         {
           @Nullable
           @Override
-          Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+          Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
           {
-            return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) < 0);
+            return Evals.asLong(
+                Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) < 0
+            );
           }
         },
         () -> new LongOutLongsInFunctionVectorValueProcessor(

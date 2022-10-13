@@ -44,7 +44,12 @@ public class NestedPathArrayElement implements NestedPathPart
     // handle lists or arrays because who knows what might end up here, depending on how is created
     if (input instanceof List) {
       List<?> currentList = (List<?>) input;
-      if (currentList.size() > index) {
+      final int currentSize = currentList.size();
+      if (index < 0) {
+        if (currentSize + index >= 0) {
+          return currentList.get(currentSize + index);
+        }
+      } else if (currentList.size() > index) {
         return currentList.get(index);
       }
     } else if (input instanceof Object[]) {

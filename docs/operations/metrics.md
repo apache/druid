@@ -39,6 +39,11 @@ Metrics may have additional dimensions beyond those listed above.
 
 ## Query metrics
 
+### Router
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`query/time`|Milliseconds taken to complete a query.|Native Query: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id.|< 1s|
+
 ### Broker
 
 |Metric|Description|Dimensions|Normal Value|
@@ -57,6 +62,7 @@ Metrics may have additional dimensions beyond those listed above.
 |`query/segments/count`|This metric is not enabled by default. See the `QueryMetrics` Interface for reference regarding enabling this metric. Number of segments that will be touched by the query. In the broker, it makes a plan to distribute the query to realtime tasks and historicals based on a snapshot of segment distribution state. If there are some segments moved after this snapshot is created, certain historicals and realtime tasks can report those segments as missing to the broker. The broker will re-send the query to the new servers that serve those segments after move. In this case, those segments can be counted more than once in this metric.|Varies.||
 |`query/priority`|Assigned lane and priority, only if Laning strategy is enabled. Refer to [Laning strategies](../configuration/index.md#laning-strategies)|lane, dataSource, type|0|
 |`sqlQuery/time`|Milliseconds taken to complete a SQL query.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
+|`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
 |`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
 
 ### Historical
@@ -140,6 +146,7 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
 |`sqlQuery/time`|Milliseconds taken to complete a SQL.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
+|`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
 |`sqlQuery/bytes`|number of bytes returned in SQL response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
 
 ## Ingestion metrics

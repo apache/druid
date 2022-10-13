@@ -198,9 +198,13 @@ public class CliOverlord extends ServerRunnable
             )
                   .toProvider(
                       new ListProvider<TaskLogStreamer>()
-                          .add(TaskRunnerTaskLogStreamer.class)
                           .add(TaskLogs.class)
                   )
+                  .in(LazySingleton.class);
+
+            binder.bind(TaskLogStreamer.class)
+                  .annotatedWith(Names.named("taskstreamer"))
+                  .to(TaskRunnerTaskLogStreamer.class)
                   .in(LazySingleton.class);
 
             binder.bind(TaskActionClientFactory.class).to(LocalTaskActionClientFactory.class).in(LazySingleton.class);
@@ -296,7 +300,7 @@ public class CliOverlord extends ServerRunnable
                 binder,
                 "druid.indexer.runner.type",
                 Key.get(TaskRunnerFactory.class),
-                Key.get(ForkingTaskRunnerFactory.class)
+                Key.get(HttpRemoteTaskRunnerFactory.class)
             );
             final MapBinder<String, TaskRunnerFactory> biddy = PolyBind.optionBinder(
                 binder,

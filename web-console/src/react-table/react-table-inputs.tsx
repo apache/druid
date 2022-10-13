@@ -43,7 +43,7 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
   const [menuOpen, setMenuOpen] = useState(false);
   const [focused, setFocused] = useState(false);
 
-  const disableComparisons = String(column.headerClassName).includes('disable-comparisons');
+  const enableComparisons = String(column.headerClassName).includes('enable-comparisons');
 
   const { mode, needle } = (filter ? parseFilterModeAndNeedle(filter, true) : undefined) || {
     mode: '~',
@@ -64,7 +64,7 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
           onInteraction={setMenuOpen}
           content={
             <Menu>
-              {(disableComparisons ? FILTER_MODES_NO_COMPARISON : FILTER_MODES).map((m, i) => (
+              {(enableComparisons ? FILTER_MODES : FILTER_MODES_NO_COMPARISON).map((m, i) => (
                 <MenuItem
                   key={i}
                   icon={filterModeToIcon(m)}

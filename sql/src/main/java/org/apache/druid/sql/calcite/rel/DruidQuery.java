@@ -133,7 +133,7 @@ public class DruidQuery
   @Nullable
   private final Sorting sorting;
 
-  private final Query query;
+  private final Query<?> query;
   private final RowSignature outputRowSignature;
   private final RelDataType outputRowType;
   private final VirtualColumnRegistry virtualColumnRegistry;
@@ -795,7 +795,7 @@ public class DruidQuery
     return outputRowSignature;
   }
 
-  public Query getQuery()
+  public Query<?> getQuery()
   {
     return query;
   }
@@ -806,7 +806,7 @@ public class DruidQuery
    *
    * @return Druid query
    */
-  private Query computeQuery()
+  private Query<?> computeQuery()
   {
     if (dataSource instanceof QueryDataSource) {
       // If there is a subquery, then we prefer the outer query to be a groupBy if possible, since this potentially
@@ -1366,11 +1366,12 @@ public class DruidQuery
       final RowSignature signature = scanSignatureBuilder.build();
 
       try {
-        queryContext.addSystemParam(
+        final QueryContext newContext = queryContext.copy();
+        newContext.addSystemParam(
             CTX_SCAN_SIGNATURE,
             plannerContext.getJsonMapper().writeValueAsString(signature)
         );
-        return queryContext;
+        return newContext;
       }
       catch (JsonProcessingException e) {
         throw new RuntimeException(e);

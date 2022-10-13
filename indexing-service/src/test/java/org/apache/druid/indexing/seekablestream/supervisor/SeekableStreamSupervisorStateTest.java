@@ -470,6 +470,95 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
+  public void testIdleStateTransition() throws Exception
+  {
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(new SeekableStreamSupervisorIOConfig(
+        "stream",
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
+        1,
+        1,
+        new Period("PT1H"),
+        new Period("PT1S"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        new IdleConfig(true, 200L)
+    )
+    {
+    }).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(new DruidMonitorSchedulerConfig() {
+      @Override
+      public Duration getEmitterPeriod()
+      {
+        return new Period("PT1S").toStandardDuration();
+      }
+    }).anyTimes();
+    EasyMock.expect(spec.getType()).andReturn("test").anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    supervisor.start();
+
+    Assert.assertTrue(supervisor.stateManager.isHealthy());
+    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+
+    supervisor.runInternal();
+
+    Assert.assertTrue(supervisor.stateManager.isHealthy());
+    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+
+    Thread.sleep(100L);
+    supervisor.runInternal();
+
+    Assert.assertTrue(supervisor.stateManager.isHealthy());
+    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+
+    Thread.sleep(100L);
+    supervisor.runInternal();
+
+    Assert.assertTrue(supervisor.stateManager.isHealthy());
+    Assert.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+
+    Thread.sleep(100L);
+    supervisor.runInternal();
+
+    Assert.assertTrue(supervisor.stateManager.isHealthy());
+    Assert.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+
+    verifyAll();
+  }
+
+  @Test
   public void testCreatingTasksFailRecoveryFail() throws Exception
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -626,15 +715,62 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
+  public void testStoppingGracefully() throws Exception
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    taskRunner.unregisterListener("testSupervisorId");
+    indexTaskClient.close();
+    recordSupplier.close();
+
+    replayAll();
+
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    supervisor.start();
+
+    Assert.assertTrue(supervisor.stateManager.isHealthy());
+    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+
+    supervisor.runInternal();
+
+    Assert.assertTrue(supervisor.stateManager.isHealthy());
+    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+
+    supervisor.stop(true);
+
+    Assert.assertTrue(supervisor.stateManager.isHealthy());
+    Assert.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState().getBasicState());
+
+    // Subsequent run after graceful shutdown has begun
+    supervisor.runInternal();
+    Assert.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState().getBasicState());
+
+    verifyAll();
+  }
+
 
   @Test
   public void testEmitBothLag() throws Exception
   {
     expectEmitterSupervisor(false);
 
-    CountDownLatch latch = new CountDownLatch(2);
+    CountDownLatch latch = new CountDownLatch(1);
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
+        TestEmittingTestSeekableStreamSupervisor.LAG,
         ImmutableMap.of("1", 100L, "2", 250L, "3", 500L),
         ImmutableMap.of("1", 10000L, "2", 15000L, "3", 20000L)
     );
@@ -675,9 +811,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     expectEmitterSupervisor(false);
 
-    CountDownLatch latch = new CountDownLatch(2);
+    CountDownLatch latch = new CountDownLatch(1);
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
+        TestEmittingTestSeekableStreamSupervisor.LAG,
         ImmutableMap.of("1", 100L, "2", 250L, "3", 500L),
         null
     );
@@ -711,9 +848,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     expectEmitterSupervisor(false);
 
-    CountDownLatch latch = new CountDownLatch(2);
+    CountDownLatch latch = new CountDownLatch(1);
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
+        TestEmittingTestSeekableStreamSupervisor.LAG,
         null,
         ImmutableMap.of("1", 10000L, "2", 15000L, "3", 20000L)
     );
@@ -750,6 +888,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     CountDownLatch latch = new CountDownLatch(1);
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
+        TestEmittingTestSeekableStreamSupervisor.NOTICE_QUEUE,
         null,
         null
     );
@@ -779,14 +918,14 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testEmitNoticesTime() throws Exception
   {
     expectEmitterSupervisor(false);
-    CountDownLatch latch = new CountDownLatch(2);
+    CountDownLatch latch = new CountDownLatch(1);
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
+        TestEmittingTestSeekableStreamSupervisor.NOTICE_PROCESS,
         null,
         null
     );
     supervisor.start();
-    supervisor.emitNoticesTime();
     Assert.assertTrue(supervisor.stateManager.isHealthy());
     Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
@@ -798,9 +937,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     events = filterMetrics(events, whitelist);
     Assert.assertEquals(1, events.size());
     Assert.assertEquals("ingest/notices/time", events.get(0).toMap().get("metric"));
-    Assert.assertEquals(500L, events.get(0).toMap().get("value"));
+    Assert.assertTrue(String.valueOf(events.get(0).toMap().get("value")), (long) events.get(0).toMap().get("value") > 0);
     Assert.assertEquals("testDS", events.get(0).toMap().get("dataSource"));
-    Assert.assertEquals("dummyNoticeType", events.get(0).toMap().get("noticeType"));
+    Assert.assertEquals("run_notice", events.get(0).toMap().get("noticeType"));
     verifyAll();
   }
 
@@ -809,9 +948,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     expectEmitterSupervisor(true);
 
-    CountDownLatch latch = new CountDownLatch(2);
+    CountDownLatch latch = new CountDownLatch(1);
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
+        TestEmittingTestSeekableStreamSupervisor.LAG,
         ImmutableMap.of("1", 100L, "2", 250L, "3", 500L),
         ImmutableMap.of("1", 10000L, "2", 15000L, "3", 20000L)
     );
@@ -991,7 +1131,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(new SeekableStreamSupervisorIOConfig(
         "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
         1,
         1,
         new Period("PT1H"),
@@ -999,6 +1139,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         new Period("PT30S"),
         false,
         new Period("PT30M"),
+        null,
         null,
         null,
         null,
@@ -1049,7 +1190,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     return new SeekableStreamSupervisorIOConfig(
         "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
         1,
         1,
         new Period("PT1H"),
@@ -1058,7 +1199,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         false,
         new Period("PT30M"),
         null,
-        null, OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class), null
+        null,
+        OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class),
+        null,
+        null
     )
     {
     };
@@ -1433,7 +1577,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     @Override
     public LagStats computeLagStats()
     {
-      return null;
+      return new LagStats(0, 0, 0);
     }
   }
 
@@ -1442,14 +1586,22 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     private final CountDownLatch latch;
     private final Map<String, Long> partitionsRecordLag;
     private final Map<String, Long> partitionsTimeLag;
+    private final byte metricFlag;
+
+    private static final byte LAG = 0x01;
+    private static final byte NOTICE_QUEUE = 0x02;
+    private static final byte NOTICE_PROCESS = 0x04;
+
 
     TestEmittingTestSeekableStreamSupervisor(
         CountDownLatch latch,
+        byte metricFlag,
         Map<String, Long> partitionsRecordLag,
         Map<String, Long> partitionsTimeLag
     )
     {
       this.latch = latch;
+      this.metricFlag = metricFlag;
       this.partitionsRecordLag = partitionsRecordLag;
       this.partitionsTimeLag = partitionsTimeLag;
     }
@@ -1471,6 +1623,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     @Override
     protected void emitLag()
     {
+      if ((metricFlag & LAG) == 0) {
+        return;
+      }
       super.emitLag();
       if (stateManager.isSteadyState()) {
         latch.countDown();
@@ -1480,13 +1635,20 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     @Override
     protected void emitNoticesQueueSize()
     {
+      if ((metricFlag & NOTICE_QUEUE) == 0) {
+        return;
+      }
       super.emitNoticesQueueSize();
       latch.countDown();
     }
 
-    public void emitNoticesTime()
+    @Override
+    public void emitNoticeProcessTime(String noticeType, long timeInMillis)
     {
-      super.emitNoticeProcessTime("dummyNoticeType", 500);
+      if ((metricFlag & NOTICE_PROCESS) == 0) {
+        return;
+      }
+      super.emitNoticeProcessTime(noticeType, timeInMillis);
       latch.countDown();
     }
 

@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.duty;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.BalancerSegmentHolder;
 import org.apache.druid.server.coordinator.BalancerStrategy;
@@ -92,6 +91,7 @@ public class BalanceSegments implements CoordinatorDuty
   )
   {
 
+    log.info("Balancing segments in tier [%s]", tier);
     if (params.getUsedSegments().size() == 0) {
       log.info("Metadata segments are not available. Cannot balance.");
       // suppress emit zero stats
@@ -292,26 +292,18 @@ public class BalanceSegments implements CoordinatorDuty
         new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
       log.debug("Moving [%s] from [%s] to [%s]", segmentId, fromServer.getName(), toServer.getName());
 
-      LoadPeonCallback callback = null;
+      ConcurrentMap<SegmentId, BalancerSegmentHolder> movingSegments =
+          currentlyMovingSegments.get(toServer.getTier());
+      movingSegments.put(segmentId, segment);
+      final LoadPeonCallback callback = moveSuccess -> movingSegments.remove(segmentId);
       try {
-        ConcurrentMap<SegmentId, BalancerSegmentHolder> movingSegments =
-            currentlyMovingSegments.get(toServer.getTier());
-        movingSegments.put(segmentId, segment);
-        callback = () -> movingSegments.remove(segmentId);
-        coordinator.moveSegment(
-            params,
-            fromServer,
-            toServer,
-            segmentToMove,
-            callback
-        );
+        coordinator
+            .moveSegment(params, fromServer, toServer, segmentToMove, callback);
         return true;
       }
       catch (Exception e) {
-        log.makeAlert(e, StringUtils.format("[%s] : Moving exception", segmentId)).emit();
-        if (callback != null) {
-          callback.execute();
-        }
+        log.makeAlert(e, "[%s] : Moving exception", segmentId).emit();
+        callback.execute(false);
       }
     }
     return false;

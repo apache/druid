@@ -53,7 +53,7 @@ bin/post-index-task --file quickstart/tutorial/compaction-init-index.json --url 
 
 > `maxRowsPerSegment` in the tutorial ingestion spec is set to 1000 to generate multiple segments per hour for demonstration purposes. Do not use this spec in production.
 
-After the ingestion completes, navigate to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to see the new datasource in the Druid console.
+After the ingestion completes, navigate to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to see the new datasource in the web console.
 
 ![compaction-tutorial datasource](../assets/tutorial-compaction-01.png "compaction-tutorial datasource")
 
@@ -119,7 +119,7 @@ During that time, you may see 75 total segments comprised of the old segment set
 ![Compacted segments intermediate state 2](../assets/tutorial-compaction-04.png "Compacted segments intermediate state 2")
 
 The new compacted segments have a more recent version than the original segments.
-Even though the Druid console displays both sets of segments, queries only read from the new compacted segments.
+Even though the web console displays both sets of segments, queries only read from the new compacted segments.
 
 Run a COUNT query on `compaction-tutorial` again to verify the number of rows remains 39,244:
 
@@ -184,5 +184,5 @@ It takes some time before the Coordinator marks the old input segments as unused
 This tutorial demonstrated how to use a compaction task spec to manually compact segments and how to optionally change the segment granularity for segments.
 
 
-- For more details, see [Compaction](../ingestion/compaction.md).
+- For more details, see [Compaction](../data-management/compaction.md).
 - To learn about the benefits of compaction, see [Segment optimization](../operations/segment-optimization.md).

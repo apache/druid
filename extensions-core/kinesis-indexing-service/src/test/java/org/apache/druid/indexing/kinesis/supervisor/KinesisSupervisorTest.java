@@ -122,6 +122,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
   private static final InputFormat INPUT_FORMAT = new JsonInputFormat(
       new JSONPathSpec(true, ImmutableList.of()),
       ImmutableMap.of(),
+      false,
+      false,
+      false,
       false
   );
   private static final String DATASOURCE = "testDS";
@@ -2350,7 +2353,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             .andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
     taskQueue.shutdown(
         EasyMock.contains("sequenceName-0"),
-        EasyMock.eq("An exception occured while waiting for task [%s] to pause: [%s]"),
+        EasyMock.eq("An exception occurred while waiting for task [%s] to pause: [%s]"),
         EasyMock.contains("sequenceName-0"),
         EasyMock.anyString()
     );

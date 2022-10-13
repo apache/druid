@@ -599,17 +599,17 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     Assert.assertEquals(
         ImmutableList.of(1L, 2L, 3L),
-        ExpressionSelectors.coerceEvalToSelectorObject(ExprEval.ofLongArray(new Long[]{1L, 2L, 3L}))
+        ExpressionSelectors.coerceEvalToObjectOrList(ExprEval.ofLongArray(new Long[]{1L, 2L, 3L}))
     );
 
     Assert.assertEquals(
         ImmutableList.of(1.0, 2.0, 3.0),
-        ExpressionSelectors.coerceEvalToSelectorObject(ExprEval.ofDoubleArray(new Double[]{1.0, 2.0, 3.0}))
+        ExpressionSelectors.coerceEvalToObjectOrList(ExprEval.ofDoubleArray(new Double[]{1.0, 2.0, 3.0}))
     );
 
     Assert.assertEquals(
         ImmutableList.of("a", "b", "c"),
-        ExpressionSelectors.coerceEvalToSelectorObject(ExprEval.ofStringArray(new String[]{"a", "b", "c"}))
+        ExpressionSelectors.coerceEvalToObjectOrList(ExprEval.ofStringArray(new String[]{"a", "b", "c"}))
     );
 
     List<String> withNulls = new ArrayList<>();
@@ -618,7 +618,18 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     withNulls.add("c");
     Assert.assertEquals(
         withNulls,
-        ExpressionSelectors.coerceEvalToSelectorObject(ExprEval.ofStringArray(new String[]{"a", null, "c"}))
+        ExpressionSelectors.coerceEvalToObjectOrList(ExprEval.ofStringArray(new String[]{"a", null, "c"}))
+    );
+
+    Assert.assertNull(
+        ExpressionSelectors.coerceEvalToObjectOrList(ExprEval.ofLongArray(null))
+    );
+    Assert.assertEquals(
+        1L,
+        ExpressionSelectors.coerceEvalToObjectOrList(ExprEval.ofLongArray(new Long[]{1L}))
+    );
+    Assert.assertNull(
+        ExpressionSelectors.coerceEvalToObjectOrList(ExprEval.ofLongArray(new Long[]{null}))
     );
   }
 

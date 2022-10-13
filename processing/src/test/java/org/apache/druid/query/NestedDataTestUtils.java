@@ -271,7 +271,11 @@ public class NestedDataTestUtils
     return createIncrementalIndex(Granularities.DAY, true, true, 1000);
   }
 
-  public static List<Segment> createDefaultHourlySegments(AggregationTestHelper helper, TemporaryFolder tempFolder, Closer closer)
+  public static List<Segment> createDefaultHourlySegments(
+      AggregationTestHelper helper,
+      TemporaryFolder tempFolder,
+      Closer closer
+  )
       throws Exception
   {
     return createSegments(
@@ -284,7 +288,11 @@ public class NestedDataTestUtils
     );
   }
 
-  public static List<Segment> createDefaultHourlySegmentsTsv(AggregationTestHelper helper, TemporaryFolder tempFolder, Closer closer)
+  public static List<Segment> createDefaultHourlySegmentsTsv(
+      AggregationTestHelper helper,
+      TemporaryFolder tempFolder,
+      Closer closer
+  )
       throws Exception
   {
     return createTsvSegments(
@@ -297,7 +305,11 @@ public class NestedDataTestUtils
     );
   }
 
-  public static List<Segment> createDefaultDaySegments(AggregationTestHelper helper, TemporaryFolder tempFolder, Closer closer)
+  public static List<Segment> createDefaultDaySegments(
+      AggregationTestHelper helper,
+      TemporaryFolder tempFolder,
+      Closer closer
+  )
       throws Exception
   {
     return createSegments(

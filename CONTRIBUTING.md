@@ -139,6 +139,45 @@ You can find more developers' resources in [`dev/`](dev) directory.
   committer that merges your change will rebase and squash it into a single commit before
   committing it to master.
 
+## Release notes
+
+Release notes are the way that Druid users will learn about your fix or improvement. What does a user need to know? The key is to identify the user impact. Give it your best shot! Druid committers will review and edit your notes.
+
+Here's a non-exhaustive list of the type of changes that have user impact and need release notes: 
+
+* Changes what the user sees in the UI.
+* Changes any action that the user takes (in the UI, in the API, in configuration, in install, etc.)
+* Changes the results of any query, ingestion, or task.
+* Changes performance (preferably making things faster).
+* Adds, deprecates, or removes features.
+* Anything that changes install, configuration, or operation of Druid.
+
+An example of a change that doesn't need a release note is fixing a flakey test.
+
+Use these tips when writing your release note:
+
+**Summarize your change.** Describe the user impacting parts of your change, but try to be as concise as you can.
+
+**Be accurate, clear, and concise.** If you can't tick all of these off, the order of priority is accurate > clear > concise.
+
+**WIIFM - what's in it for me?** Spell out why the user should care. A release note shouldn't be like a stand-up update that focuses on the details of code changes.
+
+**Give enough context.** Make sure there's enough detail for users to do something with the information if they need to. For example, include the property they need to set and link to the documentation when possible.
+
+**You don't need to be formal and impersonal.** Speak directly to the user ("You can..."). Avoid passive voice (“X has been added”). 
+
+### Example release notes
+
+| Template                                        | Examples |
+|-------------------------------------------------|----------|
+| New: You can now…                           | New: You can now upload CSV files with a single header row for batch ingestion. Set the `infrerSchemaFromHeader` property of your ingestion spec to `true` to enable this feature. For more information, see [TITLE](/path/to/doc-file.md#anchor).|
+| Fixed: X no longer does Y when Z.               | Fixed: Multi-value string array expressions no longer give flattened results when used in  groupBy queries.         |
+| Changed: X now does Y. Previously, X did Z. | Changed: The first/last string aggregator now only compares based on values. Previously, the first/last string aggregator’s values were compared based on the `_time` column first and then on values.         |
+| Improved: Better / Increased / Updated etc. | Improved: You can now perform Kinesis ingestion even if there are empty shards. Previously, all shards had to have at least one record. |
+| Improved: Better / Increased / Updated etc. | Improved: Java 11 is fully supported and is no longer experimental. Java 17 support is improved.         |
+| Deprecated: Removed / Will remove X. | Deprecated: Support for ZooKeeper X.Y will be removed in the next release, so consider upgrading ZooKeeper. For information about how to upgrade ZooKeeper, see the ZooKeeper documentation.        |
+
+
 ## FAQ
 
 ### Help! I merged changes from upstream and cannot figure out how to resolve conflicts when rebasing!

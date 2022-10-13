@@ -94,12 +94,12 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-
-      final Map<String, Object> props = new HashMap<>(((KafkaIndexTaskIOConfig) super.ioConfig).getConsumerProperties());
+      KafkaIndexTaskIOConfig kafkaIndexTaskIOConfig = (KafkaIndexTaskIOConfig) super.ioConfig;
+      final Map<String, Object> props = new HashMap<>(kafkaIndexTaskIOConfig.getConsumerProperties());
 
       props.put("auto.offset.reset", "none");
 
-      return new KafkaRecordSupplier(props, configMapper);
+      return new KafkaRecordSupplier(props, configMapper, kafkaIndexTaskIOConfig.getConfigOverrides());
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
