@@ -83,4 +83,10 @@ public class NoopDataSource implements DataSource
   {
     return newSource;
   }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new byte[]{};
+  }
 }

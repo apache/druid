@@ -109,6 +109,12 @@ public class InputNumberDataSource implements DataSource
     return newSource;
   }
 
+  @Override
+  public byte[] getCacheKey()
+  {
+    return null;
+  }
+
   @JsonProperty
   public int getInputNumber()
   {

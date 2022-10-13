@@ -33,7 +33,9 @@ import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -59,6 +61,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -91,6 +94,8 @@ public class JoinDataSource implements DataSource
   private final DimFilter leftFilter;
   @Nullable
   private final JoinableFactoryWrapper joinableFactoryWrapper;
+  private static final Logger log = new Logger(JoinDataSource.class);
+  private final DataSourceAnalysis analysis;
 
   private JoinDataSource(
       DataSource left,
@@ -114,6 +119,7 @@ public class JoinDataSource implements DataSource
     );
     this.leftFilter = leftFilter;
     this.joinableFactoryWrapper = joinableFactoryWrapper;
+    this.analysis = DataSourceAnalysis.forDataSource(this);
   }
 
   /**
@@ -415,6 +421,7 @@ public class JoinDataSource implements DataSource
       AtomicLong cpuTimeAccumulator
   )
   {
+
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
 
     final Function<SegmentReference, SegmentReference> segmentMapFn = createSegmentMapFn(
@@ -429,7 +436,6 @@ public class JoinDataSource implements DataSource
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(this);
     DataSource current = newSource;
     DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
 
@@ -446,5 +452,33 @@ public class JoinDataSource implements DataSource
       joinBaseFilter = null;
     }
     return current;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    final List<PreJoinableClause> clauses = analysis.getPreJoinableClauses();
+    if (clauses.isEmpty()) {
+      throw new IAE("No join clauses to build the cache key for data source [%s]", analysis.getDataSource());
+    }
+
+    final CacheKeyBuilder keyBuilder;
+    keyBuilder = new CacheKeyBuilder(JoinableFactoryWrapper.JOIN_OPERATION);
+    if (analysis.getJoinBaseTableFilter().isPresent()) {
+      keyBuilder.appendCacheable(analysis.getJoinBaseTableFilter().get());
+    }
+    for (PreJoinableClause clause : clauses) {
+      Optional<byte[]> bytes = joinableFactoryWrapper.getJoinableFactory().computeJoinCacheKey(clause.getDataSource(), clause.getCondition());
+      if (!bytes.isPresent()) {
+        // Encountered a data source which didn't support cache yet
+        log.debug("skipping caching for join since [%s] does not support caching", clause.getDataSource());
+        return new byte[]{};
+      }
+      keyBuilder.appendByteArray(bytes.get());
+      keyBuilder.appendString(clause.getCondition().getOriginalExpression());
+      keyBuilder.appendString(clause.getPrefix());
+      keyBuilder.appendString(clause.getJoinType().name());
+    }
+    return keyBuilder.build();
   }
 }

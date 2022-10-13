@@ -188,17 +188,7 @@ public class Queries
    */
   public static <T> Query<T> withBaseDataSource(final Query<T> query, final DataSource newBaseDataSource)
   {
-    final Query<T> retVal;
-    retVal = query.withDataSource(query.getDataSource().withUpdatedDataSource(newBaseDataSource));
-
-    // Verify postconditions, just in case.
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(retVal.getDataSource());
-
-    if (!newBaseDataSource.equals(analysis.getBaseDataSource())) {
-      throw new ISE("Unable to replace base dataSource");
-    }
-
-    return retVal;
+    return query.withDataSource(query.getDataSource().withUpdatedDataSource(newBaseDataSource));
   }
 
   /**

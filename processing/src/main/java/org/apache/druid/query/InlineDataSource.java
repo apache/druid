@@ -249,6 +249,12 @@ public class InlineDataSource implements DataSource
     return newSource;
   }
 
+  @Override
+  public byte[] getCacheKey()
+  {
+    return null;
+  }
+
   /**
    * Returns the row signature (map of column name to type) for this inline datasource. Note that types may
    * be null, meaning we know we have a column with a certain name, but we don't know what its type is.

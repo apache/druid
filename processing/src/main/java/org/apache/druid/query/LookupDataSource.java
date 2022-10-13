@@ -115,6 +115,12 @@ public class LookupDataSource implements DataSource
   }
 
   @Override
+  public byte[] getCacheKey()
+  {
+    return null;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

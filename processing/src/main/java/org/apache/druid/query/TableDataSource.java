@@ -112,6 +112,12 @@ public class TableDataSource implements DataSource
   }
 
   @Override
+  public byte[] getCacheKey()
+  {
+    return null;
+  }
+
+  @Override
   public String toString()
   {
     return name;

@@ -294,9 +294,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           query,
           strategy,
           useCache,
-          populateCache,
-          dataSourceAnalysis,
-          joinableFactoryWrapper
+          populateCache
       );
     }
 
@@ -757,24 +755,18 @@ public class CachingClusteredClient implements QuerySegmentWalker
   {
     private final Query<T> query;
     private final CacheStrategy<T, Object, Query<T>> strategy;
-    private final DataSourceAnalysis dataSourceAnalysis;
-    private final JoinableFactoryWrapper joinableFactoryWrapper;
     private final boolean isSegmentLevelCachingEnable;
 
     CacheKeyManager(
         final Query<T> query,
         final CacheStrategy<T, Object, Query<T>> strategy,
         final boolean useCache,
-        final boolean populateCache,
-        final DataSourceAnalysis dataSourceAnalysis,
-        final JoinableFactoryWrapper joinableFactoryWrapper
+        final boolean populateCache
     )
     {
 
       this.query = query;
       this.strategy = strategy;
-      this.dataSourceAnalysis = dataSourceAnalysis;
-      this.joinableFactoryWrapper = joinableFactoryWrapper;
       this.isSegmentLevelCachingEnable = ((populateCache || useCache)
                                           && !QueryContexts.isBySegment(query));   // explicit bySegment queries are never cached
 
@@ -836,15 +828,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private byte[] computeQueryCacheKeyWithJoin()
     {
       Preconditions.checkNotNull(strategy, "strategy cannot be null");
-      if (dataSourceAnalysis.isJoin()) {
-        byte[] joinDataSourceCacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis)
-                                                              .orElse(null);
-        if (null == joinDataSourceCacheKey) {
-          return null;    // A join operation that does not support caching
-        }
-        return Bytes.concat(joinDataSourceCacheKey, strategy.computeCacheKey(query));
+      byte[] dataSourceCacheKey = query.getDataSource().getCacheKey();
+      if (null == dataSourceCacheKey) {
+        return null;
+      } else if (dataSourceCacheKey.length > 0) {
+        return Bytes.concat(dataSourceCacheKey, strategy.computeCacheKey(query));
+      } else {
+        return strategy.computeCacheKey(query);
       }
-      return strategy.computeCacheKey(query);
     }
   }
 
