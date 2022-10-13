@@ -83,10 +83,10 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   private final AtomicLong queuedSize = new AtomicLong(0);
   private final AtomicInteger failedAssignCount = new AtomicInteger(0);
 
-  private final ConcurrentSkipListMap<DataSegment, QueuedSegment> segmentsToLoad = new ConcurrentSkipListMap<>(
+  private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentSkipListMap<>(
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
-  private final ConcurrentSkipListMap<DataSegment, QueuedSegment> segmentsToDrop = new ConcurrentSkipListMap<>(
+  private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentSkipListMap<>(
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
   private final ConcurrentSkipListSet<DataSegment> segmentsMarkedToDrop = new ConcurrentSkipListSet<>(
@@ -155,15 +155,15 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     final List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
 
     synchronized (lock) {
-      Iterator<Map.Entry<DataSegment, QueuedSegment>> iter = Iterators.concat(
+      Iterator<Map.Entry<DataSegment, SegmentHolder>> iter = Iterators.concat(
           segmentsToDrop.entrySet().iterator(),
           segmentsToLoad.entrySet().iterator()
       );
 
       activeRequestSegments.clear();
       while (newRequests.size() < batchSize && iter.hasNext()) {
-        Map.Entry<DataSegment, QueuedSegment> entry = iter.next();
-        QueuedSegment queuedItem = entry.getValue();
+        Map.Entry<DataSegment, SegmentHolder> entry = iter.next();
+        SegmentHolder queuedItem = entry.getValue();
         if (hasRequestTimedOut(queuedItem)) {
           onRequestFailed(queuedItem, "timed out");
           iter.remove();
@@ -304,7 +304,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
             updateSuccessOrFailureInHolder(segmentsToDrop.remove(segment), status);
           }
 
-          private void updateSuccessOrFailureInHolder(QueuedSegment holder, SegmentLoadDropHandler.Status status)
+          private void updateSuccessOrFailureInHolder(SegmentHolder holder, SegmentLoadDropHandler.Status status)
           {
             if (holder == null) {
               return;
@@ -356,11 +356,11 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
       stopped = true;
 
-      for (QueuedSegment holder : segmentsToDrop.values()) {
+      for (SegmentHolder holder : segmentsToDrop.values()) {
         onRequestFailed(holder, "Stopping load queue peon.");
       }
 
-      for (QueuedSegment holder : segmentsToLoad.values()) {
+      for (SegmentHolder holder : segmentsToLoad.values()) {
         onRequestFailed(holder, "Stopping load queue peon.");
       }
 
@@ -386,11 +386,11 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         return;
       }
 
-      QueuedSegment holder = segmentsToLoad.get(segment);
+      SegmentHolder holder = segmentsToLoad.get(segment);
       if (holder == null) {
         log.trace("Server[%s] to load segment[%s] queued.", serverId, segment.getId());
         queuedSize.addAndGet(segment.getSize());
-        segmentsToLoad.put(segment, new QueuedSegment(segment, action, callback));
+        segmentsToLoad.put(segment, new SegmentHolder(segment, action, callback));
         processingExecutor.execute(this::doSegmentManagement);
       } else {
         holder.addCallback(callback);
@@ -411,11 +411,11 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         callback.execute(false);
         return;
       }
-      QueuedSegment holder = segmentsToDrop.get(segment);
+      SegmentHolder holder = segmentsToDrop.get(segment);
 
       if (holder == null) {
         log.trace("Server[%s] to drop segment[%s] queued.", serverId, segment.getId());
-        segmentsToDrop.put(segment, new QueuedSegment(segment, SegmentAction.DROP, callback));
+        segmentsToDrop.put(segment, new SegmentHolder(segment, SegmentAction.DROP, callback));
         processingExecutor.execute(this::doSegmentManagement);
       } else {
         holder.addCallback(callback);
@@ -492,13 +492,13 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
    *
    * @see DruidCoordinatorConfig#getLoadTimeoutDelay()
    */
-  private boolean hasRequestTimedOut(QueuedSegment holder)
+  private boolean hasRequestTimedOut(SegmentHolder holder)
   {
     return System.currentTimeMillis() - holder.getFirstRequestTimeMillis()
            > config.getLoadTimeoutDelay().getMillis();
   }
 
-  private void onRequestSucceeded(QueuedSegment holder)
+  private void onRequestSucceeded(SegmentHolder holder)
   {
     log.trace(
         "Server[%s] Successfully processed segment[%s] request[%s].",
@@ -513,7 +513,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     executeCallbacks(holder, true);
   }
 
-  private void onRequestFailed(QueuedSegment holder, String failureCause)
+  private void onRequestFailed(SegmentHolder holder, String failureCause)
   {
     log.error(
         "Server[%s] Failed segment[%s] request[%s] with cause [%s].",
@@ -530,7 +530,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     executeCallbacks(holder, false);
   }
 
-  private void onRequestCancelled(QueuedSegment holder)
+  private void onRequestCancelled(SegmentHolder holder)
   {
     if (holder.isLoad()) {
       queuedSize.addAndGet(-holder.getSegment().getSize());
@@ -538,7 +538,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     executeCallbacks(holder, false);
   }
 
-  private void executeCallbacks(QueuedSegment holder, boolean success)
+  private void executeCallbacks(SegmentHolder holder, boolean success)
   {
     callBackExecutor.execute(() -> {
       for (LoadPeonCallback callback : holder.getCallbacks()) {
@@ -570,7 +570,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         return false;
       }
 
-      final QueuedSegment holder = isLoad ? segmentsToLoad.remove(segment)
+      final SegmentHolder holder = isLoad ? segmentsToLoad.remove(segment)
                                           : segmentsToDrop.remove(segment);
       if (holder == null) {
         return false;

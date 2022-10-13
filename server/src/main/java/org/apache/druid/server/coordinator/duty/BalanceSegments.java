@@ -217,7 +217,7 @@ public class BalanceSegments implements CoordinatorDuty
         final List<ServerHolder> toMoveToWithLoadQueueCapacityAndNotServingSegment =
             toMoveTo.stream()
                     .filter(s -> s.getServer().equals(fromServer)
-                                 || loader.canLoadSegment(s, segmentToMove))
+                                 || s.canLoadSegment(segmentToMove))
                     .collect(Collectors.toList());
 
         if (toMoveToWithLoadQueueCapacityAndNotServingSegment.size() > 0) {

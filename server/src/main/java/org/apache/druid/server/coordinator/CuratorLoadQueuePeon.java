@@ -77,19 +77,20 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
-   * {@link #loadSegment(DataSegment, LoadPeonCallback)}, {@link #actionCompleted(QueuedSegment)},
-   * {@link #getSegmentsToLoad()} and {@link #stop()}
+   * {@link #loadSegment(DataSegment, SegmentAction, LoadPeonCallback)},
+   * {@link #actionCompleted(SegmentHolder)}, {@link #getSegmentsToLoad()} and
+   * {@link #stop()}.
    */
-  private final ConcurrentSkipListMap<DataSegment, QueuedSegment> segmentsToLoad = new ConcurrentSkipListMap<>(
+  private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentSkipListMap<>(
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
-   * {@link #dropSegment(DataSegment, LoadPeonCallback)}, {@link #actionCompleted(QueuedSegment)},
+   * {@link #dropSegment(DataSegment, LoadPeonCallback)}, {@link #actionCompleted(SegmentHolder)},
    * {@link #getSegmentsToDrop()} and {@link #stop()}
    */
-  private final ConcurrentSkipListMap<DataSegment, QueuedSegment> segmentsToDrop = new ConcurrentSkipListMap<>(
+  private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentSkipListMap<>(
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
 
@@ -104,7 +105,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
-   * {@link #failAssign(QueuedSegment, boolean, Exception)}, {@link #actionCompleted(QueuedSegment)},
+   * {@link #failAssign(SegmentHolder, boolean, Exception)}, {@link #actionCompleted(SegmentHolder)},
    * {@link #getTimedOutSegments()} and {@link #stop()}
    */
   private final ConcurrentSkipListSet<DataSegment> timedOutSegments = new ConcurrentSkipListSet<>(
@@ -185,8 +186,8 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   @Override
   public void loadSegment(final DataSegment segment, SegmentAction action, @Nullable final LoadPeonCallback callback)
   {
-    QueuedSegment segmentHolder = new QueuedSegment(segment, action, callback);
-    final QueuedSegment existingHolder = segmentsToLoad.putIfAbsent(segment, segmentHolder);
+    SegmentHolder segmentHolder = new SegmentHolder(segment, action, callback);
+    final SegmentHolder existingHolder = segmentsToLoad.putIfAbsent(segment, segmentHolder);
     if (existingHolder != null) {
       existingHolder.addCallback(callback);
       return;
@@ -199,8 +200,8 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   @Override
   public void dropSegment(final DataSegment segment, @Nullable final LoadPeonCallback callback)
   {
-    QueuedSegment segmentHolder = new QueuedSegment(segment, SegmentAction.DROP, callback);
-    final QueuedSegment existingHolder = segmentsToDrop.putIfAbsent(segment, segmentHolder);
+    SegmentHolder segmentHolder = new SegmentHolder(segment, SegmentAction.DROP, callback);
+    final SegmentHolder existingHolder = segmentsToDrop.putIfAbsent(segment, segmentHolder);
     if (existingHolder != null) {
       existingHolder.addCallback(callback);
       return;
@@ -223,9 +224,9 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
 
   private class SegmentChangeProcessor implements Runnable
   {
-    private final QueuedSegment segmentHolder;
+    private final SegmentHolder segmentHolder;
 
-    private SegmentChangeProcessor(QueuedSegment segmentHolder)
+    private SegmentChangeProcessor(SegmentHolder segmentHolder)
     {
       this.segmentHolder = segmentHolder;
     }
@@ -322,7 +323,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
     }
   }
 
-  private void actionCompleted(QueuedSegment segmentHolder)
+  private void actionCompleted(SegmentHolder segmentHolder)
   {
     switch (segmentHolder.getAction()) {
       case LOAD_AS_PRIMARY:
@@ -355,12 +356,12 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   @Override
   public void stop()
   {
-    for (QueuedSegment holder : segmentsToDrop.values()) {
+    for (SegmentHolder holder : segmentsToDrop.values()) {
       executeCallbacks(holder, false);
     }
     segmentsToDrop.clear();
 
-    for (QueuedSegment holder : segmentsToLoad.values()) {
+    for (SegmentHolder holder : segmentsToLoad.values()) {
       executeCallbacks(holder, false);
     }
     segmentsToLoad.clear();
@@ -370,7 +371,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
     failedAssignCount.set(0);
   }
 
-  private void onZkNodeDeleted(QueuedSegment segmentHolder, String path)
+  private void onZkNodeDeleted(SegmentHolder segmentHolder, String path)
   {
     if (!ZKPaths.getNodeFromPath(path).equals(segmentHolder.getSegmentIdentifier())) {
       log.warn(
@@ -390,7 +391,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
     );
   }
 
-  private void failAssign(QueuedSegment segmentHolder, boolean handleTimeout, Exception e)
+  private void failAssign(SegmentHolder segmentHolder, boolean handleTimeout, Exception e)
   {
     if (e != null) {
       log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, segmentHolder);
@@ -425,7 +426,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
     return false;
   }
 
-  private void executeCallbacks(QueuedSegment holder, boolean success)
+  private void executeCallbacks(SegmentHolder holder, boolean success)
   {
     for (LoadPeonCallback callback : holder.getCallbacks()) {
       callBackExecutor.submit(() -> callback.execute(success));

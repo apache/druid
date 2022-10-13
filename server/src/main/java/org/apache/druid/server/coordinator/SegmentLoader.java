@@ -48,7 +48,6 @@ public class SegmentLoader
   private final CoordinatorStats stats = new CoordinatorStats();
   private final SegmentReplicantLookup replicantLookup;
   private final BalancerStrategy strategy;
-  private final int maxLoadQueueSize;
 
   public SegmentLoader(SegmentStateManager stateManager, DruidCoordinatorRuntimeParams runParams)
   {
@@ -56,8 +55,6 @@ public class SegmentLoader
     this.strategy = runParams.getBalancerStrategy();
     this.cluster = runParams.getDruidCluster();
     this.replicantLookup = runParams.getSegmentReplicantLookup();
-    this.maxLoadQueueSize = runParams.getCoordinatorDynamicConfig()
-                                     .getMaxSegmentsInNodeLoadingQueue();
   }
 
   public CoordinatorStats getStats()
@@ -80,7 +77,7 @@ public class SegmentLoader
     // and toServer must be able to load it
     final SegmentState stateOnSrc = fromServer.getSegmentState(segment);
     if ((stateOnSrc != SegmentState.LOADING && stateOnSrc != SegmentState.LOADED)
-        || !canLoadSegment(toServer, segment)) {
+        || !toServer.canLoadSegment(segment)) {
       return false;
     }
 
@@ -171,23 +168,6 @@ public class SegmentLoader
   }
 
   /**
-   * Checks if the server can load the given segment.
-   * <p>
-   * A load is possible only if the server meets all of the following criteria:
-   * <ul>
-   *   <li>is not already serving or loading the segment</li>
-   *   <li>is not being decommissioned</li>
-   *   <li>has not already exceeded the load queue limit in this run</li>
-   *   <li>has available disk space</li>
-   * </ul>
-   */
-  public boolean canLoadSegment(ServerHolder server, DataSegment segment)
-  {
-    return server.canLoadSegment(segment)
-           && (maxLoadQueueSize == 0 || maxLoadQueueSize > server.getSegmentsQueuedForLoad());
-  }
-
-  /**
    * Loads the broadcast segment if it is not loaded on the given server.
    * Returns true only if the segment was successfully queued for load on the server.
    */
@@ -204,7 +184,7 @@ public class SegmentLoader
       return false;
     }
 
-    if (canLoadSegment(server, segment)
+    if (server.canLoadSegment(segment)
         && stateManager.loadSegment(segment, server, true)) {
       return true;
     } else {
@@ -428,7 +408,7 @@ public class SegmentLoader
   {
     final List<ServerHolder> eligibleServers =
         candidateServers.stream()
-                        .filter(server -> canLoadSegment(server, segment))
+                        .filter(server -> server.canLoadSegment(segment))
                         .collect(Collectors.toList());
     if (eligibleServers.isEmpty()) {
       log.warn("No eligible server to load replica of segment [%s]", segment.getId());

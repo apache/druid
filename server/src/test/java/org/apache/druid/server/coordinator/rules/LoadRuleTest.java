@@ -609,6 +609,7 @@ public class LoadRuleTest
 
     LoadRule rule = createLoadRule(ImmutableMap.of("hot", 1));
 
+    final int maxSegmentsInQueue = 2;
     DruidCluster druidCluster = DruidClusterBuilder
         .newBuilder()
         .addTier(
@@ -616,7 +617,9 @@ public class LoadRuleTest
             new ServerHolder(
                 new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 0)
                     .toImmutableDruidServer(),
-                peon
+                peon,
+                false,
+                maxSegmentsInQueue
             )
         )
         .build();
@@ -631,7 +634,7 @@ public class LoadRuleTest
         .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
         .withBalancerStrategy(mockBalancerStrategy)
         .withUsedSegmentsInTest(dataSegment1, dataSegment2, dataSegment3)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsInNodeLoadingQueue(2).build())
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsInNodeLoadingQueue(maxSegmentsInQueue).build())
         .build();
 
     CoordinatorStats stats1 = runRuleAndGetStats(rule, dataSegment1, params);

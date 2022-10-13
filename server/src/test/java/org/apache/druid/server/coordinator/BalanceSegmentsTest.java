@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -439,7 +440,9 @@ public class BalanceSegmentsTest
     EasyMock.replay(druidServer3);
     EasyMock.replay(druidServer4);
 
-    final ServerHolder holder1 = new ServerHolder(druidServer1, peon1);
+    final int maxSegmentsInQueue = 1;
+    final ServerHolder holder1 = new ServerHolder(druidServer1, peon1, false, maxSegmentsInQueue);
+    final ServerHolder holder2 = new ServerHolder(druidServer2, peon2, false, maxSegmentsInQueue);
     BalancerStrategy predefinedPickOrderStrategy = new PredefinedPickOrderBalancerStrategy(
         balancerStrategy,
         ImmutableList.of(
@@ -450,20 +453,25 @@ public class BalanceSegmentsTest
         )
     );
 
-    DruidCoordinatorRuntimeParams params = defaultRuntimeParamsBuilder(
-        ImmutableList.of(druidServer1, druidServer2),
-        ImmutableList.of(peon1, peon2)
-    )
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers.newBuilder()
+        .withDruidCluster(
+            DruidClusterBuilder.newBuilder()
+                               .addTier("normal", holder1, holder2)
+                               .build()
+        )
+        .withLoadManagementPeons(
+            ImmutableMap.of(druidServer1.getName(), peon1, druidServer2.getName(), peon2)
+        )
+        .withUsedSegmentsInTest(segments)
         .withBalancerStrategy(predefinedPickOrderStrategy)
         .withBroadcastDatasources(broadcastDatasources)
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
                 .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
-                .withMaxSegmentsInNodeLoadingQueue(1)
+                .withMaxSegmentsInNodeLoadingQueue(maxSegmentsInQueue)
                 .build()
-        )
-        .build();
+        ).build();
 
     params = new BalanceSegments(stateManager).run(params);
 

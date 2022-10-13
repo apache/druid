@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Represents a segment queued for a load or drop operation in a LoadQueuePeon.
  */
-public class QueuedSegment
+public class SegmentHolder
 {
   private final DataSegment segment;
   private final DataSegmentChangeRequest changeRequest;
@@ -44,7 +44,7 @@ public class QueuedSegment
   private final List<LoadPeonCallback> callbacks = new ArrayList<>();
   private final AtomicLong firstRequestMillis = new AtomicLong(0);
 
-  QueuedSegment(
+  SegmentHolder(
       DataSegment segment,
       SegmentAction action,
       @Nullable LoadPeonCallback callback

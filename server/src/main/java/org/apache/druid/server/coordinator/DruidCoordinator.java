@@ -933,13 +933,15 @@ public class DruidCoordinator
     DruidCluster prepareCluster(DruidCoordinatorRuntimeParams params, List<ImmutableDruidServer> currentServers)
     {
       Set<String> decommissioningServers = params.getCoordinatorDynamicConfig().getDecommissioningNodes();
+      final int maxSegmentsInLoadQueue = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
       final DruidCluster cluster = new DruidCluster();
       for (ImmutableDruidServer server : currentServers) {
         cluster.add(
             new ServerHolder(
                 server,
                 loadManagementPeons.get(server.getName()),
-                decommissioningServers.contains(server.getHost())
+                decommissioningServers.contains(server.getHost()),
+                maxSegmentsInLoadQueue
             )
         );
       }
