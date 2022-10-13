@@ -73,91 +73,6 @@ public class WorkerSketchFetcher
   }
 
   /**
-   * Fetches cluster statistics from all workers and generates partition boundaries from them one time chunk at a time.
-   * This takes longer due to the overhead of fetching sketches, however, this prevents any loss in accuracy from
-   * downsampling on the controller.
-   */
-  private CompletableFuture<Either<Long, ClusterByPartitions>> sequentialTimeChunkMerging(
-      ClusterByStatisticsWorkerReport workerReport,
-      StageDefinition stageDefinition,
-      List<String> workerTaskIds
-  )
-  {
-    CompletableFuture<Either<Long, ClusterByPartitions>> partitionFuture = new CompletableFuture<>();
-    List<ClusterByPartition> finalRanges = new ArrayList<>();
-
-    SortedMap<Long, Set<Integer>> timeSegmentVsWorkerIdMap = workerReport.getTimeSegmentVsWorkerIdMap();
-    submitFetchingTasksForTimeChunk(partitionFuture, timeSegmentVsWorkerIdMap, stageDefinition, workerTaskIds, finalRanges);
-    return partitionFuture;
-  }
-
-  private void submitFetchingTasksForTimeChunk(
-      CompletableFuture<Either<Long, ClusterByPartitions>> partitionFuture,
-      SortedMap<Long, Set<Integer>> timeSegmentVsWorkerIdMap,
-      StageDefinition stageDefinition,
-      List<String> workerTaskIds,
-      List<ClusterByPartition> finalRanges
-  )
-  {
-    if (!timeSegmentVsWorkerIdMap.isEmpty()) {
-      final ClusterByStatisticsCollector mergedStatisticsCollector = stageDefinition.createResultKeyStatisticsCollector();
-      final Set<Integer> finishedWorkers = new HashSet<>();
-
-      Long timeChunk = timeSegmentVsWorkerIdMap.firstKey();
-      Set<Integer> workerIdsWithTimeChunk = timeSegmentVsWorkerIdMap.get(timeChunk);
-      timeSegmentVsWorkerIdMap.remove(timeChunk);
-
-      for (int workerNo : workerIdsWithTimeChunk) {
-        executorService.submit(new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            try {
-              ClusterByStatisticsSnapshot singletonStatisticsSnapshot =
-                  workerClient.fetchSingletonStatisticsSnapshot(
-                      workerTaskIds.get(workerNo),
-                      stageDefinition.getId().getQueryId(),
-                      stageDefinition.getStageNumber(),
-                      timeChunk
-                  );
-              // If the future already failed for some reason, stop the task.
-              if (partitionFuture.isDone()) {
-                return;
-              }
-
-              synchronized (mergedStatisticsCollector) {
-                mergedStatisticsCollector.addAll(singletonStatisticsSnapshot);
-                finishedWorkers.add(workerNo);
-
-                if (finishedWorkers.size() == workerIdsWithTimeChunk.size()) {
-                  Either<Long, ClusterByPartitions> longClusterByPartitionsEither = stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector);
-                  if (longClusterByPartitionsEither.isError()) {
-                    partitionFuture.complete(longClusterByPartitionsEither);
-                  }
-                  List<ClusterByPartition> partitions = stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector).valueOrThrow().ranges();
-                  if (!finalRanges.isEmpty()) {
-                    ClusterByPartition clusterByPartition = finalRanges.get(finalRanges.size() - 1);
-                    finalRanges.remove(finalRanges.size() - 1);
-                    finalRanges.add(new ClusterByPartition(clusterByPartition.getStart(), partitions.get(0).getStart()));
-                  }
-                  finalRanges.addAll(partitions);
-                  submitFetchingTasksForTimeChunk(partitionFuture, timeSegmentVsWorkerIdMap, stageDefinition, workerTaskIds, finalRanges);
-                }
-              }
-            }
-            catch (Exception e) {
-              partitionFuture.completeExceptionally(e);
-            }
-          }
-        });
-      }
-    } else {
-      partitionFuture.complete(Either.value(new ClusterByPartitions(finalRanges)));
-    }
-  }
-
-  /**
    * Fetches the full {@link ClusterByStatisticsCollector} from all workers and generates partition boundaries from them.
    * This is faster than fetching them timechunk by timechunk but the collector will be downsampled till it can fit
    * on the controller, resulting in less accurate partition boundries.
@@ -175,38 +90,138 @@ public class WorkerSketchFetcher
 
     for (int i = 0; i < workerCount; i++) {
       final int workerNo = i;
-      executorService.submit(new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          try {
-            ClusterByStatisticsSnapshot clusterByStatisticsSnapshot = workerClient.fetchClusterByStatisticsSnapshot(
-                workerTaskIds.get(workerNo),
-                stageDefinition.getId().getQueryId(),
-                stageDefinition.getStageNumber()
-            );
+      executorService.submit(() -> {
+        try {
+          ClusterByStatisticsSnapshot clusterByStatisticsSnapshot = workerClient.fetchClusterByStatisticsSnapshot(
+              workerTaskIds.get(workerNo),
+              stageDefinition.getId().getQueryId(),
+              stageDefinition.getStageNumber()
+          );
 
-            // If the future already failed for some reason, stop the task.
-            if (partitionFuture.isDone()) {
-              return;
-            }
+          // If the future already failed for some reason, stop the task.
+          if (partitionFuture.isDone()) {
+            return;
+          }
 
-            synchronized (mergedStatisticsCollector) {
-              mergedStatisticsCollector.addAll(clusterByStatisticsSnapshot);
-              finishedWorkers.add(workerNo);
+          synchronized (mergedStatisticsCollector) {
+            mergedStatisticsCollector.addAll(clusterByStatisticsSnapshot);
+            finishedWorkers.add(workerNo);
 
-              if (finishedWorkers.size() == workerCount) {
-                partitionFuture.complete(stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector));
-              }
+            if (finishedWorkers.size() == workerCount) {
+              partitionFuture.complete(stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector));
             }
           }
-          catch (Exception e) {
-            partitionFuture.completeExceptionally(e);
-          }
+        }
+        catch (Exception e) {
+          partitionFuture.completeExceptionally(e);
         }
       });
     }
     return partitionFuture;
+  }
+
+  /**
+   * Fetches cluster statistics from all workers and generates partition boundaries from them one time chunk at a time.
+   * This takes longer due to the overhead of fetching sketches, however, this prevents any loss in accuracy from
+   * downsampling on the controller.
+   */
+  private CompletableFuture<Either<Long, ClusterByPartitions>> sequentialTimeChunkMerging(
+      ClusterByStatisticsWorkerReport workerReport,
+      StageDefinition stageDefinition,
+      List<String> workerTaskIds
+  )
+  {
+    SequentialFetchStage sequentialFetchStage = new SequentialFetchStage(
+        stageDefinition,
+        workerTaskIds,
+        workerReport.getTimeSegmentVsWorkerIdMap()
+    );
+    sequentialFetchStage.submitFetchingTasksForNextTimeChunk();
+    return sequentialFetchStage.getPartitionFuture();
+  }
+
+  private class SequentialFetchStage
+  {
+    private final StageDefinition stageDefinition;
+    private final List<String> workerTaskIds;
+    private final SortedMap<Long, Set<Integer>> timeSegmentVsWorkerIdMap;
+    private final CompletableFuture<Either<Long, ClusterByPartitions>> partitionFuture;
+    private final List<ClusterByPartition> finalRanges;
+
+    public SequentialFetchStage(
+        StageDefinition stageDefinition,
+        List<String> workerTaskIds,
+        SortedMap<Long, Set<Integer>> timeSegmentVsWorkerIdMap
+    )
+    {
+      this.finalRanges = new ArrayList<>();
+      this.stageDefinition = stageDefinition;
+      this.workerTaskIds = workerTaskIds;
+      this.timeSegmentVsWorkerIdMap = timeSegmentVsWorkerIdMap;
+      this.partitionFuture = new CompletableFuture<>();
+    }
+
+    public void submitFetchingTasksForNextTimeChunk()
+    {
+      if (timeSegmentVsWorkerIdMap.isEmpty()) {
+        partitionFuture.complete(Either.value(new ClusterByPartitions(finalRanges)));
+      } else {
+        Long timeChunk = timeSegmentVsWorkerIdMap.firstKey();
+        Set<Integer> workerIdsWithTimeChunk = timeSegmentVsWorkerIdMap.get(timeChunk);
+        timeSegmentVsWorkerIdMap.remove(timeChunk);
+        ClusterByStatisticsCollector mergedStatisticsCollector = stageDefinition.createResultKeyStatisticsCollector();
+        Set<Integer> finishedWorkers = new HashSet<>();
+
+        for (int workerNo : workerIdsWithTimeChunk) {
+          executorService.submit(() -> {
+            try {
+              ClusterByStatisticsSnapshot singletonStatisticsSnapshot =
+                  workerClient.fetchSingletonStatisticsSnapshot(
+                      workerTaskIds.get(workerNo),
+                      stageDefinition.getId().getQueryId(),
+                      stageDefinition.getStageNumber(),
+                      timeChunk
+                  );
+              // If the future already failed for some reason, stop the task.
+              if (partitionFuture.isDone()) {
+                return;
+              }
+              synchronized (mergedStatisticsCollector) {
+                mergedStatisticsCollector.addAll(singletonStatisticsSnapshot);
+                finishedWorkers.add(workerNo);
+
+                if (finishedWorkers.size() == workerIdsWithTimeChunk.size()) {
+                  Either<Long, ClusterByPartitions> longClusterByPartitionsEither = stageDefinition.generatePartitionsForShuffle(
+                      mergedStatisticsCollector);
+                  if (longClusterByPartitionsEither.isError()) {
+                    partitionFuture.complete(longClusterByPartitionsEither);
+                  }
+                  List<ClusterByPartition> partitions = stageDefinition.generatePartitionsForShuffle(
+                      mergedStatisticsCollector).valueOrThrow().ranges();
+                  if (!finalRanges.isEmpty()) {
+                    ClusterByPartition clusterByPartition = finalRanges.get(finalRanges.size() - 1);
+                    finalRanges.remove(finalRanges.size() - 1);
+                    finalRanges.add(new ClusterByPartition(
+                        clusterByPartition.getStart(),
+                        partitions.get(0).getStart()
+                    ));
+                  }
+                  finalRanges.addAll(partitions);
+                  submitFetchingTasksForNextTimeChunk();
+                }
+              }
+            }
+            catch (Exception e) {
+              partitionFuture.completeExceptionally(e);
+            }
+          });
+        }
+      }
+    }
+
+    public CompletableFuture<Either<Long, ClusterByPartitions>> getPartitionFuture()
+    {
+      return partitionFuture;
+    }
   }
 }
