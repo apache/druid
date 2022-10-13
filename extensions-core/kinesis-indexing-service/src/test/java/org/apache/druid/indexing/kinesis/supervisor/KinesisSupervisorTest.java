@@ -3968,6 +3968,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         42, // This property is different from tuningConfig
         null,
         null,
+        null,
         null
     );
 
