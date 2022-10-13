@@ -30,9 +30,10 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -134,7 +135,7 @@ public class WorkerSketchFetcher
     SequentialFetchStage sequentialFetchStage = new SequentialFetchStage(
         stageDefinition,
         workerTaskIds,
-        workerReport.getTimeSegmentVsWorkerIdMap()
+        workerReport.getTimeSegmentVsWorkerIdMap().entrySet().iterator()
     );
     sequentialFetchStage.submitFetchingTasksForNextTimeChunk();
     return sequentialFetchStage.getPartitionFuture();
@@ -144,31 +145,31 @@ public class WorkerSketchFetcher
   {
     private final StageDefinition stageDefinition;
     private final List<String> workerTaskIds;
-    private final SortedMap<Long, Set<Integer>> timeSegmentVsWorkerIdMap;
+    private final Iterator<Map.Entry<Long, Set<Integer>>> timeSegmentVsWorkerIdIterator;
     private final CompletableFuture<Either<Long, ClusterByPartitions>> partitionFuture;
-    private final List<ClusterByPartition> finalRanges;
+    private final List<ClusterByPartition> finalPartitionBoundries;
 
     public SequentialFetchStage(
         StageDefinition stageDefinition,
         List<String> workerTaskIds,
-        SortedMap<Long, Set<Integer>> timeSegmentVsWorkerIdMap
+        Iterator<Map.Entry<Long, Set<Integer>>> timeSegmentVsWorkerIdIterator
     )
     {
-      this.finalRanges = new ArrayList<>();
+      this.finalPartitionBoundries = new ArrayList<>();
       this.stageDefinition = stageDefinition;
       this.workerTaskIds = workerTaskIds;
-      this.timeSegmentVsWorkerIdMap = timeSegmentVsWorkerIdMap;
+      this.timeSegmentVsWorkerIdIterator = timeSegmentVsWorkerIdIterator;
       this.partitionFuture = new CompletableFuture<>();
     }
 
     public void submitFetchingTasksForNextTimeChunk()
     {
-      if (timeSegmentVsWorkerIdMap.isEmpty()) {
-        partitionFuture.complete(Either.value(new ClusterByPartitions(finalRanges)));
+      if (!timeSegmentVsWorkerIdIterator.hasNext()) {
+        partitionFuture.complete(Either.value(new ClusterByPartitions(finalPartitionBoundries)));
       } else {
-        Long timeChunk = timeSegmentVsWorkerIdMap.firstKey();
-        Set<Integer> workerIdsWithTimeChunk = timeSegmentVsWorkerIdMap.get(timeChunk);
-        timeSegmentVsWorkerIdMap.remove(timeChunk);
+        Map.Entry<Long, Set<Integer>> entry = timeSegmentVsWorkerIdIterator.next();
+        Long timeChunk = entry.getKey();
+        Set<Integer> workerIdsWithTimeChunk = entry.getValue();
         ClusterByStatisticsCollector mergedStatisticsCollector = stageDefinition.createResultKeyStatisticsCollector();
         Set<Integer> finishedWorkers = new HashSet<>();
 
@@ -191,22 +192,19 @@ public class WorkerSketchFetcher
                 finishedWorkers.add(workerNo);
 
                 if (finishedWorkers.size() == workerIdsWithTimeChunk.size()) {
-                  Either<Long, ClusterByPartitions> longClusterByPartitionsEither = stageDefinition.generatePartitionsForShuffle(
-                      mergedStatisticsCollector);
+                  Either<Long, ClusterByPartitions> longClusterByPartitionsEither =
+                      stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector);
+
                   if (longClusterByPartitionsEither.isError()) {
                     partitionFuture.complete(longClusterByPartitionsEither);
                   }
-                  List<ClusterByPartition> partitions = stageDefinition.generatePartitionsForShuffle(
-                      mergedStatisticsCollector).valueOrThrow().ranges();
-                  if (!finalRanges.isEmpty()) {
-                    ClusterByPartition clusterByPartition = finalRanges.get(finalRanges.size() - 1);
-                    finalRanges.remove(finalRanges.size() - 1);
-                    finalRanges.add(new ClusterByPartition(
-                        clusterByPartition.getStart(),
-                        partitions.get(0).getStart()
-                    ));
-                  }
-                  finalRanges.addAll(partitions);
+
+                  List<ClusterByPartition> timeSketchpartitions =
+                      stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector)
+                                     .valueOrThrow()
+                                     .ranges();
+                  abutAndAppendPartitionBoundries(finalPartitionBoundries, timeSketchpartitions);
+
                   submitFetchingTasksForNextTimeChunk();
                 }
               }
@@ -217,6 +215,18 @@ public class WorkerSketchFetcher
           });
         }
       }
+    }
+
+    private void abutAndAppendPartitionBoundries(
+        List<ClusterByPartition> finalPartitionBoundries,
+        List<ClusterByPartition> timeSketchpartitions
+    )
+    {
+      if (!finalPartitionBoundries.isEmpty()) {
+        ClusterByPartition clusterByPartition = finalPartitionBoundries.remove(finalPartitionBoundries.size() - 1);
+        finalPartitionBoundries.add(new ClusterByPartition(clusterByPartition.getStart(), timeSketchpartitions.get(0).getStart()));
+      }
+      finalPartitionBoundries.addAll(timeSketchpartitions);
     }
 
     public CompletableFuture<Either<Long, ClusterByPartitions>> getPartitionFuture()
