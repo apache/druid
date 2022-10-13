@@ -19,7 +19,6 @@
 
 package org.apache.druid.k8s.overlord;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -181,7 +180,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                         TimeUnit.MILLISECONDS
                     );
                     log.info("Job %s launched in k8s", k8sTaskId);
-                    completedPhase = monitorJob(peonPod, task, k8sTaskId);
+                    completedPhase = monitorJob(peonPod, k8sTaskId);
                   } else {
                     Job job = existingJob.get();
                     if (job.getStatus().getActive() == null) {
@@ -192,12 +191,12 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                       }
                     } else {
                       // the job is active lets monitor it
-                      completedPhase = monitorJob(task, k8sTaskId);
+                      completedPhase = monitorJob(k8sTaskId);
                     }
                   }
                   TaskStatus status;
                   if (PeonPhase.SUCCEEDED.equals(completedPhase.getPhase())) {
-                    status = TaskStatus.success(task.getId(), completedPhase.getLocation());
+                    status = TaskStatus.success(task.getId());
                   } else {
                     status = TaskStatus.failure(
                         task.getId(),
@@ -239,46 +238,31 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
   }
 
-  JobResponse monitorJob(Task task, K8sTaskId k8sTaskId)
+  JobResponse monitorJob(K8sTaskId k8sTaskId)
   {
-    return monitorJob(client.getMainJobPod(k8sTaskId), task, k8sTaskId);
+    return monitorJob(client.getMainJobPod(k8sTaskId), k8sTaskId);
   }
 
-  JobResponse monitorJob(Pod peonPod, Task task, K8sTaskId k8sTaskId)
+  JobResponse monitorJob(Pod peonPod, K8sTaskId k8sTaskId)
   {
     if (peonPod == null) {
       throw new ISE("Error in k8s launching peon pod for task %s", k8sTaskId);
     }
-    log.info("monitorJob: Enable TLS Port is " + node.isEnableTlsPort());
-    log.info("Pod Host IP " + peonPod.getStatus().getPodIP());
-    TaskLocation location = TaskLocation.create(
-        peonPod.getStatus().getPodIP(),
-        DruidK8sConstants.PORT,
-        DruidK8sConstants.TLS_PORT,
-        node.isEnableTlsPort()
-    );
-    client.waitForProcessToStart(location, 10, TimeUnit.MINUTES);
-
-    updateLocation(task, location);
-    updateStatus(task, TaskStatus.running(task.getId()));
-
-    JobResponse response = client.waitForJobCompletion(
+    return client.waitForJobCompletion(
         k8sTaskId,
         KubernetesTaskRunnerConfig.toMilliseconds(k8sConfig.maxTaskDuration),
         TimeUnit.MILLISECONDS
     );
-    response.setLocation(location);
-    return response;
   }
 
-  @VisibleForTesting
-  void updateStatus(Task task, TaskStatus status)
+  @Override
+  public void updateStatus(Task task, TaskStatus status)
   {
     TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
   }
 
-  @VisibleForTesting
-  void updateLocation(Task task, TaskLocation location)
+  @Override
+  public void updateLocation(Task task, TaskLocation location)
   {
     TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), location);
   }

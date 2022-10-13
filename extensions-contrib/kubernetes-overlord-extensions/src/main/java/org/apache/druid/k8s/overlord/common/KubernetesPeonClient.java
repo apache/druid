@@ -22,7 +22,6 @@ package org.apache.druid.k8s.overlord.common;
 import com.google.common.base.Optional;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
-import org.apache.druid.indexer.TaskLocation;
 
 import java.io.InputStream;
 import java.util.List;
@@ -35,8 +34,6 @@ public interface KubernetesPeonClient
   Optional<Job> jobExists(K8sTaskId taskId);
 
   Pod launchJobAndWaitForStart(Job job, long howLong, TimeUnit timeUnit);
-
-  boolean waitForProcessToStart(TaskLocation location, long howLong, TimeUnit timeUnit);
 
   JobResponse waitForJobCompletion(K8sTaskId taskId, long howLong, TimeUnit timeUnit);
 

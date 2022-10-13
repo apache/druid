@@ -598,7 +598,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             taskStorage,
             mdc,
             emitter,
-            EasyMock.createMock(SupervisorManager.class)
+            EasyMock.createMock(SupervisorManager.class),
+            null
         ),
         new TaskAuditLogConfig(true)
     );

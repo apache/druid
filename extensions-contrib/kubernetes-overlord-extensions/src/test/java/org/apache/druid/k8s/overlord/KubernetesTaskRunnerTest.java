@@ -177,15 +177,7 @@ class KubernetesTaskRunnerTest
     // we should never launch the job here, one exists
     verify(peonClient, never()).launchJobAndWaitForStart(isA(Job.class), anyLong(), isA(TimeUnit.class));
     verify(peonClient, times(1)).cleanUpJob(eq(k8sTaskId));
-    TaskLocation expectedTaskLocation = TaskLocation.create(
-        peonPod.getStatus().getPodIP(),
-        DruidK8sConstants.PORT,
-        DruidK8sConstants.TLS_PORT,
-        node.isEnableTlsPort()
-    );
-    verify(spyRunner, times(1)).updateLocation(eq(task), eq(expectedTaskLocation));
-    verify(spyRunner, times(1)).updateStatus(eq(task), eq(TaskStatus.running(task.getId())));
-    verify(spyRunner, times(1)).updateStatus(eq(task), eq(TaskStatus.success(task.getId(), expectedTaskLocation)));
+    verify(spyRunner, times(1)).updateStatus(eq(task), eq(TaskStatus.success(task.getId())));
   }
 
   @Test
@@ -245,8 +237,6 @@ class KubernetesTaskRunnerTest
         DruidK8sConstants.TLS_PORT,
         node.isEnableTlsPort()
     );
-    verify(spyRunner, times(1)).updateLocation(eq(task), eq(expectedTaskLocation));
-    verify(spyRunner, times(1)).updateStatus(eq(task), eq(TaskStatus.running(task.getId())));
     verify(spyRunner, times(1)).updateStatus(eq(task), eq(TaskStatus.success(task.getId(), expectedTaskLocation)));
   }
 
@@ -306,15 +296,7 @@ class KubernetesTaskRunnerTest
     // we should never launch the job here, one exists
     verify(peonClient, never()).launchJobAndWaitForStart(isA(Job.class), anyLong(), isA(TimeUnit.class));
     verify(peonClient, times(1)).cleanUpJob(eq(k8sTaskId));
-    TaskLocation expectedTaskLocation = TaskLocation.create(
-        peonPod.getStatus().getPodIP(),
-        DruidK8sConstants.PORT,
-        DruidK8sConstants.TLS_PORT,
-        node.isEnableTlsPort()
-    );
-    verify(spyRunner, times(1)).updateLocation(eq(task), eq(expectedTaskLocation));
-    verify(spyRunner, times(1)).updateStatus(eq(task), eq(TaskStatus.running(task.getId())));
-    verify(spyRunner, times(1)).updateStatus(eq(task), eq(TaskStatus.success(task.getId(), expectedTaskLocation)));
+    verify(spyRunner, times(1)).updateStatus(eq(task), eq(TaskStatus.success(task.getId())));
     verify(spyRunner, times(1)).run(eq(task));
   }
 

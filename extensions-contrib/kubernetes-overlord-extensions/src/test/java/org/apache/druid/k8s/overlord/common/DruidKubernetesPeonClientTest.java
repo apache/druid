@@ -30,18 +30,13 @@ import io.fabric8.kubernetes.api.model.batch.v1.JobStatus;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientTimeoutException;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
-import org.apache.druid.common.utils.SocketUtil;
-import org.apache.druid.indexer.TaskLocation;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
-import java.net.ServerSocket;
 import java.sql.Timestamp;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -104,36 +99,6 @@ public class DruidKubernetesPeonClientTest
     List<Job> toDelete = peonClient.getJobsToCleanup(jobs, 30, TimeUnit.MINUTES);
     assertEquals(1, toDelete.size()); // should only cleanup one job
     assertEquals(killThisOne, Iterables.getOnlyElement(toDelete)); // should only cleanup one job
-  }
-
-  @Test
-  void testWaitingForSocketToBeAvailable() throws Exception
-  {
-    DruidKubernetesPeonClient peonClient = new DruidKubernetesPeonClient(
-        new TestKubernetesClient(this.client), "test",
-        false
-    );
-    int openPort = SocketUtil.findOpenPortFrom(1);
-
-    CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(new Supplier<Boolean>()
-    {
-      @Override
-      public Boolean get()
-      {
-        return peonClient.waitForProcessToStart(
-            new TaskLocation("localhost", openPort, -1),
-            10,
-            TimeUnit.SECONDS
-        );
-      }
-    });
-
-    ServerSocket socket = new ServerSocket(openPort);
-    socket.accept();
-
-    Boolean result = future.get(10, TimeUnit.SECONDS);
-    assertTrue(result);
-    socket.close();
   }
 
   @Test

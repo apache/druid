@@ -47,6 +47,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final TaskQueueConfig taskQueueConfig;
   private final TaskLogPusher taskLogPusher;
   private final DruidNode druidNode;
+  private KubernetesTaskRunner runner;
 
 
   @Inject
@@ -90,8 +91,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       adapter = new SingleContainerTaskAdapter(client, kubernetesTaskRunnerConfig, smileMapper);
     }
 
-
-    return new KubernetesTaskRunner(
+    runner = new KubernetesTaskRunner(
         taskConfig,
         startupLoggingConfig,
         adapter,
@@ -101,5 +101,12 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
         new DruidKubernetesPeonClient(client, kubernetesTaskRunnerConfig.namespace, kubernetesTaskRunnerConfig.debugJobs),
         druidNode
     );
+    return runner;
+  }
+
+  @Override
+  public KubernetesTaskRunner get()
+  {
+    return runner;
   }
 }

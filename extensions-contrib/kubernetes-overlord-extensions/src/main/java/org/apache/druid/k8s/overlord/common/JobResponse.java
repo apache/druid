@@ -21,7 +21,6 @@ package org.apache.druid.k8s.overlord.common;
 
 import com.google.common.base.Optional;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
-import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.Period;
@@ -35,7 +34,6 @@ public class JobResponse
 
   private final Job job;
   private final PeonPhase phase;
-  private TaskLocation location;
 
   public JobResponse(Job job, PeonPhase phase)
   {
@@ -51,16 +49,6 @@ public class JobResponse
   public PeonPhase getPhase()
   {
     return phase;
-  }
-
-  public TaskLocation getLocation()
-  {
-    return location;
-  }
-
-  public void setLocation(TaskLocation location)
-  {
-    this.location = location;
   }
 
   public Optional<Long> getJobDuration()

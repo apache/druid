@@ -3121,7 +3121,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             );
             return true;
           }
-        }
+        },
+        null
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,

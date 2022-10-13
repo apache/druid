@@ -143,4 +143,16 @@ public interface TaskRunner
   {
     return false;
   }
+
+  default void updateStatus(Task task, TaskStatus status)
+  {
+    // do nothing
+  }
+
+  default void updateLocation(Task task, TaskLocation location)
+  {
+    // do nothing
+  }
+
+
 }

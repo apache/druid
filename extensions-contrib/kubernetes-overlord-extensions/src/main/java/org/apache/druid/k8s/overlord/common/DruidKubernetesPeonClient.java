@@ -21,27 +21,22 @@ package org.apache.druid.k8s.overlord.common;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import com.google.common.net.HostAndPort;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.utils.Utils;
 import org.apache.commons.io.input.ReaderInputStream;
-import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import java.io.InputStream;
 import java.io.Reader;
-import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -106,24 +101,6 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
       log.info("Took task %s %d ms for pod to startup", taskId, duration);
       return result;
     });
-  }
-
-  @Override
-  public boolean waitForProcessToStart(TaskLocation location, long howLong, TimeUnit timeUnit)
-  {
-    CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-      boolean scanning = true;
-      HostAndPort hostAndPort = location.toHostAndPort();
-      while (scanning) {
-        try {
-          new Socket(hostAndPort.getHostText(), hostAndPort.getPort()).close();
-          scanning = false;
-        }
-        catch (Exception ignore) {
-        }
-      }
-    });
-    return Utils.waitUntilReady(future, howLong, timeUnit);
   }
 
   @Override

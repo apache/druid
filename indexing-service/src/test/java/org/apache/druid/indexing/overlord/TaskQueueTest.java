@@ -380,7 +380,7 @@ public class TaskQueueTest extends IngestionTestBase
     }
 
     @Override
-    public void cleanUp(TaskToolbox toolbox)
+    public void cleanUp(TaskToolbox toolbox, boolean failure)
     {
       // do nothing
     }

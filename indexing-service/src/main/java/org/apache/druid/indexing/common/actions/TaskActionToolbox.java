@@ -19,9 +19,12 @@
 
 package org.apache.druid.indexing.common.actions;
 
+import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.TaskRunner;
+import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -33,6 +36,7 @@ public class TaskActionToolbox
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final ServiceEmitter emitter;
   private final SupervisorManager supervisorManager;
+  private final TaskRunnerFactory factory;
 
   @Inject
   public TaskActionToolbox(
@@ -40,7 +44,8 @@ public class TaskActionToolbox
       TaskStorage taskStorage,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       ServiceEmitter emitter,
-      SupervisorManager supervisorManager
+      SupervisorManager supervisorManager,
+      TaskRunnerFactory factory
   )
   {
     this.taskLockbox = taskLockbox;
@@ -48,6 +53,7 @@ public class TaskActionToolbox
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.emitter = emitter;
     this.supervisorManager = supervisorManager;
+    this.factory = factory;
   }
 
   public TaskLockbox getTaskLockbox()
@@ -74,4 +80,10 @@ public class TaskActionToolbox
   {
     return supervisorManager;
   }
+
+  public Optional<TaskRunner> getTaskRunner()
+  {
+    return Optional.of(factory.build());
+  }
+
 }

@@ -1,5 +1,5 @@
 ---
-id: K8s-jobs
+id: k8s-jobs
 title: "MM-less Druid in K8s"
 ---
 
@@ -37,10 +37,12 @@ To use this extension please make sure to  [include](../extensions.md#loading-ex
 The extension uses the task queue to limit how many concurrent tasks (K8s jobs) are in flight so it is required you have a reasonable value for `druid.indexer.queue.maxSize`.  Additionally set the variable `druid.indexer.runner.namespace` to the namespace in which you are running druid.
 
 Other configurations required are: 
-`druid.indexer.runner.type: K8s` and `druid.indexer.task.e  nableTaskLevelLogPush: true`
+`druid.indexer.runner.type: K8s` and `druid.indexer.task.encapsulatedTask: true`
 
 You can add optional labels to your K8s jobs / pods if you need them by using the following configuration: 
 `druid.indexer.runner.labels: '{"key":"value"}'`
+Annotations are the same with:
+`druid.indexer.runner.annotations: '{"key":"value"}'`
 
 All other configurations you had for the middle manager tasks must be moved under the overlord with one caveat, you must specify javaOpts as an array: 
 `druid.indexer.runner.javaOptsArray`, `druid.indexer.runner.javaOpts` is no longer supported.
@@ -99,7 +101,7 @@ You can keep your Dockerfile the same but you must have a sidecar spec like so:
 The following roles must also be accessible. An example spec could be: 
 
 ```
-apiVersion: rbac.authorization.K8s.io/v1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: druid-cluster
@@ -114,7 +116,7 @@ rules:
   - '*'
 ---
 kind: RoleBinding
-apiVersion: rbac.authorization.K8s.io/v1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: druid-cluster
 subjects:
@@ -123,5 +125,5 @@ subjects:
 roleRef:
   kind: Role
   name: druid-cluster
-  apiGroup: rbac.authorization.K8s.io
+  apiGroup: rbac.authorization.k8s.io
 ```

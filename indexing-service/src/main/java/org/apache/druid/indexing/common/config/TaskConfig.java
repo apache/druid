@@ -119,7 +119,7 @@ public class TaskConfig
   private final boolean storeEmptyColumns;
 
   @JsonProperty
-  private final boolean enableTaskLevelLogPush;
+  private final boolean encapsulatedTask;
 
   @JsonCreator
   public TaskConfig(
@@ -136,7 +136,7 @@ public class TaskConfig
       @JsonProperty("batchMemoryMappedIndex") boolean batchMemoryMappedIndex, // deprecated, only set to true to fall back to older behavior
       @JsonProperty("batchProcessingMode") String batchProcessingMode,
       @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
-      @JsonProperty("enableTaskLevelLogPush") boolean enableTaskLevelLogPush
+      @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -165,7 +165,7 @@ public class TaskConfig
 
     this.batchMemoryMappedIndex = batchMemoryMappedIndex;
 
-    this.enableTaskLevelLogPush = enableTaskLevelLogPush;
+    this.encapsulatedTask = enableTaskLevelLogPush;
     // Conflict resolution. Assume that if batchMemoryMappedIndex is set (since false is the default) that
     // the user changed it intentionally to use legacy, in this case oveeride batchProcessingMode and also
     // set it to legacy else just use batchProcessingMode and don't pay attention to batchMemoryMappedIndexMode:
@@ -287,9 +287,9 @@ public class TaskConfig
   }
 
   @JsonProperty
-  public boolean isEnableTaskLevelLogPush()
+  public boolean isEncapsulatedTask()
   {
-    return enableTaskLevelLogPush;
+    return encapsulatedTask;
   }
 
   private String defaultDir(@Nullable String configParameter, final String defaultVal)

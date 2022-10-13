@@ -182,10 +182,18 @@ public class OverlordTest
         druidNode,
         new TaskRunnerFactory<MockTaskRunner>()
         {
+          private MockTaskRunner runner;
           @Override
           public MockTaskRunner build()
           {
-            return new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
+            runner = new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
+            return runner;
+          }
+
+          @Override
+          public MockTaskRunner get()
+          {
+            return runner;
           }
         },
         new NoopServiceAnnouncer()
