@@ -1950,6 +1950,45 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // make sure the checkpoints are consistent with each other and with the metadata store
 
     verifyAndMergeCheckpoints(taskGroupsToVerify.values());
+
+    // A pause from the previous Overlord's supervisor, immediately before leader change
+    // can lead to tasks being in a state where they are active but do not read.
+    // If this is the first run, resume all existing active tasks to be safe
+    if (getState().isFirstRunOnly()) {
+      Map<String, ListenableFuture<Boolean>> activeTaskToResumeFutureMap = new HashMap<>();
+      for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
+        for (String taskId : taskGroup.tasks.keySet()) {
+          activeTaskToResumeFutureMap.put(taskId, taskClient.resumeAsync(taskId));
+        }
+      }
+
+      for (Map.Entry<String, ListenableFuture<Boolean>> entry : activeTaskToResumeFutureMap.entrySet()) {
+        String taskId = entry.getKey();
+        ListenableFuture<Boolean> future = entry.getValue();
+        future.addListener(
+            new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                try {
+                  if (entry.getValue().get()) {
+                    log.info("Resumed task [%s]", taskId);
+                  } else {
+                    log.warn("Failed to resume task [%s]", taskId);
+                    killTask(taskId, "Could not resume task");
+                  }
+                }
+                catch (Exception e) {
+                  log.warn(e, "Failed to resume task [%s]", taskId);
+                  killTask(taskId, "Could not resume task");
+                }
+              }
+            },
+            workerExec
+        );
+      }
+    }
   }
 
   private void verifyAndMergeCheckpoints(final Collection<TaskGroup> taskGroupsToVerify)
