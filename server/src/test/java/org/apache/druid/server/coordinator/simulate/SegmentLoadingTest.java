@@ -26,6 +26,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -114,76 +115,75 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   }
 
   @Test
-  public void testDropHappensAfterTwoReplicas()
+  public void testTierShiftDoesNotCauseUnderReplication()
   {
-    // load queue size = 3,
-    // maxNonPrimaryReplicas = 0, each tier can load only one replica of a segment
+    // maxNonPrimaryReplicas = 1, each tier can load at most 1 replica in a single run
     CoordinatorDynamicConfig dynamicConfig =
         CoordinatorDynamicConfig.builder()
                                 .withMaxSegmentsToMove(0)
-                                .withMaxSegmentsInNodeLoadingQueue(3)
-                                .withMaxNonPrimaryReplicantsToLoad(0)
+                                .withMaxNonPrimaryReplicantsToLoad(1)
                                 .build();
 
-    // historicals = 1(in T1) + 2(in T2) + 2(in T3)
-    // segments = 10 * 1day, replicas = 2(T2) + 2(T3)
-    final DruidServer historicalT31 = createHistorical(1, Tier.T3, 10_000);
-    final DruidServer historicalT32 = createHistorical(2, Tier.T3, 10_000);
+    // historicals = 2(in T1) + 3(in T2)
+    // segments = 1, replicas = 3(T2)
+    final DataSegment segment = segments.get(0);
+    final DruidServer historicalT23 = createHistorical(3, Tier.T2, 10_000);
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .withSegments(segments)
+                             .withSegments(Collections.singletonList(segment))
                              .withDynamicConfig(dynamicConfig)
-                             .withRules(datasource, Load.on(Tier.T2, 2).andOn(Tier.T3, 2).forever())
+                             .withRules(datasource, Load.on(Tier.T2, 3).forever())
                              .withServers(
                                  historicalT11,
+                                 historicalT12,
                                  historicalT21,
                                  historicalT22,
-                                 historicalT31,
-                                 historicalT32
+                                 historicalT23
                              )
                              .build();
 
-    // At the start, T1 has all the segments
-    segments.forEach(historicalT11::addDataSegment);
+    // At the start, T1 has the segment fully replicated
+    historicalT11.addDataSegment(segment);
+    historicalT12.addDataSegment(segment);
 
-    // Run 1: Nothing is dropped from T1 but things are assigned to T2 and T3
+    // Run 1: Nothing is dropped from T1 but 2 replicas are assigned to T2
     startSimulation(sim);
     runCoordinatorCycle();
 
     verifyNoEvent(Metric.DROPPED_COUNT);
-    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 6L);
-    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T3), 6L);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 2L);
 
-    // Run 2: Segments still queued
-    // nothing new is assigned to T2 or T3, nothing is dropped from T1
+    // Run 2: Replicas still queued
+    // nothing new is assigned to T2, nothing is dropped from T1
     runCoordinatorCycle();
 
     verifyNoEvent(Metric.DROPPED_COUNT);
     verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 0L);
-    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T3), 0L);
 
     loadQueuedSegments();
-    Assert.assertEquals(6, getNumLoadedSegments(historicalT21, historicalT22));
-    Assert.assertEquals(6, getNumLoadedSegments(historicalT31, historicalT32));
+    Assert.assertEquals(2, getNumLoadedSegments(historicalT21, historicalT22, historicalT23));
+    Assert.assertEquals(2, getNumLoadedSegments(historicalT11, historicalT12));
 
-    // Run 3: Some segments have been loaded
-    // All segments with atleast 2 replicas will now be dropped from T1
+    // Run 3: total loaded replicas (4) > total required replicas (3)
+    // third replica is assigned to T2, one replica is dropped from T1
     runCoordinatorCycle();
 
-    verifyValue(Metric.DROPPED_COUNT, 6L);
-    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 4L);
-    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T3), 4L);
+    verifyValue(Metric.DROPPED_COUNT, filter(DruidMetrics.TIER, Tier.T1), 1L);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 1L);
 
     loadQueuedSegments();
+    Assert.assertEquals(3, getNumLoadedSegments(historicalT21, historicalT22, historicalT23));
+    Assert.assertEquals(1, getNumLoadedSegments(historicalT11, historicalT12));
 
-    // Run 4: All segments now have 2 loaded target replicas
-    // all segments will be dropped from T1
+    // Run 4: segment is fully replicated on T2
+    // second replica is now dropped from T1
     runCoordinatorCycle();
 
-    verifyValue(Metric.DROPPED_COUNT, filter(DruidMetrics.TIER, Tier.T1), 4L);
+    verifyValue(Metric.DROPPED_COUNT, filter(DruidMetrics.TIER, Tier.T1), 1L);
+    verifyNoEvent(Metric.ASSIGNED_COUNT);
 
     loadQueuedSegments();
-    Assert.assertEquals(0, historicalT11.getTotalSegments());
+    Assert.assertEquals(0, getNumLoadedSegments(historicalT11, historicalT12));
     verifyDatasourceIsFullyLoaded(datasource);
   }
 

@@ -120,6 +120,7 @@ public class RunRules implements CoordinatorDuty
          .emit();
     }
 
+    segmentLoader.makeAlerts();
     return params.buildFromExisting()
                  .withCoordinatorStats(segmentLoader.getStats())
                  .withBroadcastDatasources(broadcastDatasources)

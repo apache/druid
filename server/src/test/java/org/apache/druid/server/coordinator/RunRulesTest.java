@@ -491,7 +491,7 @@ public class RunRulesTest
     mockEmptyPeon();
 
     emitter.emit(EasyMock.<ServiceEventBuilder>anyObject());
-    EasyMock.expectLastCall().times(12);
+    EasyMock.expectLastCall().once();
     EasyMock.replay(emitter);
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(

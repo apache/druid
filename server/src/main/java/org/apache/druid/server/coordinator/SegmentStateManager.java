@@ -84,7 +84,10 @@ public class SegmentStateManager
     }
 
     try {
-      server.startOperation(segment, SegmentState.LOADING);
+      if (!server.startOperation(segment, SegmentState.LOADING)) {
+        return false;
+      }
+
       server.getPeon().loadSegment(
           segment,
           isPrimary ? SegmentAction.LOAD_AS_PRIMARY : SegmentAction.LOAD_AS_REPLICA,
@@ -101,7 +104,10 @@ public class SegmentStateManager
   public boolean dropSegment(DataSegment segment, ServerHolder server)
   {
     try {
-      server.startOperation(segment, SegmentState.DROPPING);
+      if (!server.startOperation(segment, SegmentState.DROPPING)) {
+        return false;
+      }
+
       server.getPeon().dropSegment(segment, null);
       return true;
     }
