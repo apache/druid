@@ -99,7 +99,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
               @Override
               public ScanQueryLimitRowIterator make()
               {
-                return new ScanQueryOrderByLimitRowIterator(runner, queryPlus.withQuery(queryToRun), responseContext);
+                return new ScanQueryOrderByMergeRowIterator(runner, queryPlus.withQuery(queryToRun), responseContext);
               }
 
               @Override

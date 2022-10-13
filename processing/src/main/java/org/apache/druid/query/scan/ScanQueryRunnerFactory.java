@@ -100,18 +100,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       responseContext.putTimeoutTime(timeoutAt);
 
       if (!query.canPushSort()) {
-        try {
-          return multiColumnSort(
-              Sequences.concat(Sequences.map(
-                  Sequences.simple(Lists.newArrayList(queryRunners)),
-                  input -> input.run(queryPlus, responseContext)
-              )),
-              query
-          );
-        }
-        catch (IOException e) {
-          throw new RuntimeException(e);
-        }
+        return new ScanQueryOrderByRunner(queryProcessingPool, queryRunners).run(queryPlus, responseContext);
       }
 
       if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {

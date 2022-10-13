@@ -39,10 +39,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class ScanQueryOrderByLimitRowIterator extends ScanQueryLimitRowIterator
+public class ScanQueryOrderByMergeRowIterator extends ScanQueryLimitRowIterator
 {
 
-  public ScanQueryOrderByLimitRowIterator(
+  public ScanQueryOrderByMergeRowIterator(
       QueryRunner<ScanResultValue> baseRunner,
       QueryPlus<ScanResultValue> queryPlus,
       ResponseContext responseContext
