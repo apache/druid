@@ -37,28 +37,39 @@ import java.util.NoSuchElementException;
 
 /**
  * A key collector that is used when not aggregating. It uses a quantiles sketch to track keys.
+ *
+ * The collector maintains the averageKeyLength for all keys added through {@link #add(RowKey, long)} or
+ * {@link #addAll(QuantilesSketchKeyCollector)}. The average is calculated as a running average and accounts for
+ * weight of the key added. The averageKeyLength is assumed to be unaffected by {@link #downSample()}.
  */
 public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketchKeyCollector>
 {
   private final Comparator<RowKey> comparator;
   private ItemsSketch<RowKey> sketch;
+  private double averageKeyLength;
 
   QuantilesSketchKeyCollector(
       final Comparator<RowKey> comparator,
-      @Nullable final ItemsSketch<RowKey> sketch
+      @Nullable final ItemsSketch<RowKey> sketch,
+      double averageKeyLength
   )
   {
     this.comparator = comparator;
     this.sketch = sketch;
+    this.averageKeyLength = averageKeyLength;
   }
 
   @Override
   public void add(RowKey key, long weight)
   {
+    double estimatedTotalSketchSizeInBytes = averageKeyLength * sketch.getN();
+    // The key is added "weight" times to the sketch, we can update the total weight directly.
+    estimatedTotalSketchSizeInBytes += key.getNumberOfBytes() * weight;
     for (int i = 0; i < weight; i++) {
       // Add the same key multiple times to make it "heavier".
       sketch.update(key);
     }
+    averageKeyLength = (estimatedTotalSketchSizeInBytes / sketch.getN());
   }
 
   @Override
@@ -68,6 +79,10 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
         Math.max(sketch.getK(), other.sketch.getK()),
         comparator
     );
+
+    double sketchBytesCount = averageKeyLength * sketch.getN();
+    double otherBytesCount = other.averageKeyLength * other.getSketch().getN();
+    averageKeyLength = ((sketchBytesCount + otherBytesCount) / (sketch.getN() + other.sketch.getN()));
 
     union.update(sketch);
     union.update(other.sketch);
@@ -87,14 +102,15 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
   }
 
   @Override
+  public double estimatedRetainedBytes()
+  {
+    return averageKeyLength * estimatedRetainedKeys();
+  }
+
+  @Override
   public int estimatedRetainedKeys()
   {
-    // Rough estimation of retained keys for a given K for ~billions of total items, based on the table from
-    // https://datasketches.apache.org/docs/Quantiles/OrigQuantilesSketch.html.
-    final int estimatedMaxRetainedKeys = 11 * sketch.getK();
-
-    // Cast to int is safe because estimatedMaxRetainedKeys is always within int range.
-    return (int) Math.min(sketch.getN(), estimatedMaxRetainedKeys);
+    return sketch.getRetainedItems();
   }
 
   @Override
@@ -164,5 +180,13 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
   ItemsSketch<RowKey> getSketch()
   {
     return sketch;
+  }
+
+  /**
+   * Retrieves the average key length. Exists for usage by {@link QuantilesSketchKeyCollectorFactory}.
+   */
+  double getAverageKeyLength()
+  {
+    return averageKeyLength;
   }
 }

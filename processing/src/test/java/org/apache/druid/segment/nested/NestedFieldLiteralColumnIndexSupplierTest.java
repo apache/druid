@@ -129,6 +129,24 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     globalDoubles = FixedIndexed.read(doubleBuffer, TypeStrategies.DOUBLE, ByteOrder.nativeOrder(), Double.BYTES);
   }
 
+  @Test
+  public void testSingleTypeStringColumnValueIndex() throws IOException
+  {
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeStringSupplier();
+
+    NullValueIndex nullIndex = indexSupplier.as(NullValueIndex.class);
+    Assert.assertNotNull(nullIndex);
+
+    // 10 rows
+    // local: [b, foo, fooo, z]
+    // column: [foo, b, fooo, b, z, fooo, z, b, b, foo]
+
+    BitmapColumnIndex columnIndex = nullIndex.forNull();
+    Assert.assertNotNull(columnIndex);
+    Assert.assertEquals(0.0, columnIndex.estimateSelectivity(10), 0.0);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    Assert.assertEquals(0, bitmap.size());
+  }
 
   @Test
   public void testSingleTypeStringColumnValueSetIndex() throws IOException

@@ -62,6 +62,7 @@ public class SupervisorStateManager
 
     PENDING(true, true),
     RUNNING(true, false),
+    IDLE(true, false),
     SUSPENDED(true, false),
     STOPPING(true, false);
 
@@ -154,10 +155,11 @@ public class SupervisorStateManager
       return;
     }
 
-    // if we're trying to switch to a healthy steady state (i.e. RUNNING or SUSPENDED) but haven't had a successful run
+    // if we're trying to switch to a healthy steady state (i.e. RUNNING or SUSPENDED) or IDLE state but haven't had a successful run
     // yet, refuse to switch and prefer the more specific states used for first run (CONNECTING_TO_STREAM,
     // DISCOVERING_INITIAL_TASKS, CREATING_TASKS, etc.)
-    if (healthySteadyState.equals(proposedState) && !atLeastOneSuccessfulRun) {
+    if ((healthySteadyState.equals(proposedState) || BasicState.IDLE.equals(proposedState))
+        && !atLeastOneSuccessfulRun) {
       return;
     }
 
@@ -196,11 +198,13 @@ public class SupervisorStateManager
     consecutiveSuccessfulRuns = currentRunSuccessful ? consecutiveSuccessfulRuns + 1 : 0;
     consecutiveFailedRuns = currentRunSuccessful ? 0 : consecutiveFailedRuns + 1;
 
-    // Try to set the state to RUNNING or SUSPENDED. This will be rejected if we haven't had atLeastOneSuccessfulRun
+    // If the supervisor is not IDLE, try to set the state to RUNNING or SUSPENDED.
+    // This will be rejected if we haven't had atLeastOneSuccessfulRun
     // (in favor of the more specific states for the initial run) and will instead trigger setting the state to an
     // unhealthy one if we are now over the error thresholds.
-    maybeSetState(healthySteadyState);
-
+    if (!isIdle()) {
+      maybeSetState(healthySteadyState);
+    }
     // reset for next run
     currentRunSuccessful = true;
   }
@@ -228,6 +232,11 @@ public class SupervisorStateManager
   public boolean isAtLeastOneSuccessfulRun()
   {
     return atLeastOneSuccessfulRun;
+  }
+
+  public boolean isIdle()
+  {
+    return SupervisorStateManager.BasicState.IDLE.equals(supervisorState);
   }
 
   protected Deque<ExceptionEvent> getRecentEventsQueue()
