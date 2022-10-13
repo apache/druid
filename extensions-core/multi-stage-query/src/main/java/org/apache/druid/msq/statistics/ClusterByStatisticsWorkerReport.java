@@ -22,37 +22,42 @@ package org.apache.druid.msq.statistics;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.HashSet;
 import java.util.Set;
+import java.util.SortedMap;
 
 /**
  * Class sent by worker to controller after reading input to generate partition boundries.
  */
 public class ClusterByStatisticsWorkerReport
 {
-  private final Set<Integer> workerIds; // TODO: change to be a map of rowkey vs worker id. Currently this isn't very useful.
+  private final SortedMap<Long, Set<Integer>> timeSegmentVsWorkerIdMap;
 
   private Boolean hasMultipleValues;
 
   @JsonCreator
   public ClusterByStatisticsWorkerReport(
-      @JsonProperty("workerIds") final Set<Integer> timeChunks,
+      @JsonProperty("timeSegmentVsWorkerIdMap") final SortedMap<Long, Set<Integer>> timeChunks,
       @JsonProperty("hasMultipleValues") boolean hasMultipleValues
   )
   {
-    this.workerIds = timeChunks;
+    this.timeSegmentVsWorkerIdMap = timeChunks;
     this.hasMultipleValues = hasMultipleValues;
   }
 
   public void addAll(ClusterByStatisticsWorkerReport other)
   {
-    workerIds.addAll(other.getWorkerIds());
+    for (Long timeChunk : other.timeSegmentVsWorkerIdMap.keySet()) {
+      timeSegmentVsWorkerIdMap.computeIfAbsent(timeChunk, key -> new HashSet<>())
+                              .addAll(other.timeSegmentVsWorkerIdMap.get(timeChunk));
+    }
     hasMultipleValues = hasMultipleValues || other.hasMultipleValues;
   }
 
-  @JsonProperty("workerIds")
-  public Set<Integer> getWorkerIds()
+  @JsonProperty("timeSegmentVsWorkerIdMap")
+  public SortedMap<Long, Set<Integer>> getTimeSegmentVsWorkerIdMap()
   {
-    return workerIds;
+    return timeSegmentVsWorkerIdMap;
   }
 
   @JsonProperty("hasMultipleValues")

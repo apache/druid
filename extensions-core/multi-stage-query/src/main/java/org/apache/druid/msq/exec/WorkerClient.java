@@ -48,6 +48,17 @@ public interface WorkerClient extends AutoCloseable
       throws ExecutionException, InterruptedException;
 
   /**
+   * Fetches a {@link ClusterByStatisticsSnapshot} which contains only the sketch of the specified timeChunk.
+   * This is intended to be used by the {@link WorkerSketchFetcher}.
+   */
+  ClusterByStatisticsSnapshot fetchSingletonStatisticsSnapshot(
+      String workerTaskId,
+      String queryId,
+      int stageNumber,
+      long timeChunk
+  ) throws ExecutionException, InterruptedException;
+
+  /**
    * Worker's client method to inform it of the partition boundaries for the given stage. This is usually invoked by the
    * controller after collating the result statistics from all the workers processing the query
    */

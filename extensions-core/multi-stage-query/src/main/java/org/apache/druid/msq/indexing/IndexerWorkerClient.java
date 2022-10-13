@@ -126,6 +126,28 @@ public class IndexerWorkerClient implements WorkerClient
   }
 
   @Override
+  public ClusterByStatisticsSnapshot fetchSingletonStatisticsSnapshot(
+      String workerTaskId,
+      String queryId,
+      int stageNumber,
+      long timeChunk
+  ) throws ExecutionException, InterruptedException
+  {
+    String path = StringUtils.format("/singletonKeyStatistics/%s/%d/%d",
+                                     StringUtils.urlEncode(queryId),
+                                     stageNumber,
+                                     timeChunk);
+
+    return deserialize(
+        getClient(workerTaskId).request(
+            new RequestBuilder(HttpMethod.POST, path),
+            new BytesFullResponseHandler()
+        ),
+        new TypeReference<ClusterByStatisticsSnapshot>() {}
+    );
+  }
+
+  @Override
   public ListenableFuture<Void> postResultPartitionBoundaries(
       String workerTaskId,
       StageId stageId,

@@ -61,6 +61,18 @@ public class MSQTestWorkerClient implements WorkerClient
   }
 
   @Override
+  public ClusterByStatisticsSnapshot fetchSingletonStatisticsSnapshot(
+      String workerTaskId,
+      String queryId,
+      int stageNumber,
+      long timeChunk
+  ) throws ExecutionException, InterruptedException
+  {
+    StageId stageId = new StageId(queryId, stageNumber);
+    return inMemoryWorkers.get(workerTaskId).fetchSingletonStatisticsSnapshot(stageId, timeChunk);
+  }
+
+  @Override
   public ListenableFuture<Void> postResultPartitionBoundaries(
       String workerTaskId,
       StageId stageId,

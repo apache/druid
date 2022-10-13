@@ -208,6 +208,33 @@ public class WorkerChatHandler implements ChatHandler
                    .build();
   }
 
+  @POST
+  @Path("/singletonKeyStatistics/{queryId}/{stageNumber}/{timeChunk}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response httpSketch(
+      @PathParam("queryId") final String queryId,
+      @PathParam("stageNumber") final int stageNumber,
+      @PathParam("timeChunk") final long timeChunk,
+      @Context final HttpServletRequest req
+  )
+  {
+    ChatHandlers.authorizationCheck(req, Action.READ, task.getDataSource(), toolbox.getAuthorizerMapper());
+    ClusterByStatisticsSnapshot singletonSnapshot;
+    try {
+      StageId stageId = new StageId(queryId, stageNumber);
+      singletonSnapshot = worker.fetchSingletonStatisticsSnapshot(stageId, timeChunk);
+    }
+    catch (ExecutionException | InterruptedException e) {
+      return Response
+          .status(Response.Status.INTERNAL_SERVER_ERROR)
+          .build();
+    }
+    return Response.status(Response.Status.ACCEPTED)
+                   .entity(singletonSnapshot)
+                   .build();
+  }
+
   /**
    * See {@link org.apache.druid.msq.exec.WorkerClient#postCleanupStage} for the client-side code that calls this API.
    */

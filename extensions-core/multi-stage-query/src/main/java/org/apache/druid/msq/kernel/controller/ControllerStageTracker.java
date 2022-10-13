@@ -42,7 +42,7 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.TreeSet;
+import java.util.TreeMap;
 
 /**
  * Controller-side state machine for each stage. Used by {@link ControllerQueryKernel} to form the overall state
@@ -89,7 +89,7 @@ class ControllerStageTracker
     this.workerInputs = workerInputs;
 
     if (stageDef.mustGatherResultKeyStatistics()) {
-      this.clusterByStatisticsWorkerReport = new ClusterByStatisticsWorkerReport(new TreeSet<>(), false);
+      this.clusterByStatisticsWorkerReport = new ClusterByStatisticsWorkerReport(new TreeMap<>(), false);
     } else {
       this.clusterByStatisticsWorkerReport = null;
       generateResultPartitionsAndBoundariesWithoutKeyStatistics();

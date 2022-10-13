@@ -22,12 +22,15 @@ package org.apache.druid.msq.statistics;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.TreeMap;
 
 public class ClusterByStatisticsWorkerReportSerdeTest
 {
@@ -45,7 +48,7 @@ public class ClusterByStatisticsWorkerReportSerdeTest
   public void testSerde() throws JsonProcessingException
   {
     ClusterByStatisticsWorkerReport workerReport = new ClusterByStatisticsWorkerReport(
-        ImmutableSet.of(1, 3, 4),
+        new TreeMap<>(ImmutableMap.of(2L, ImmutableSet.of(2, 3))),
         false
     );
 
@@ -54,7 +57,7 @@ public class ClusterByStatisticsWorkerReportSerdeTest
         json,
         ClusterByStatisticsWorkerReport.class
     );
-    Assert.assertEquals(json, workerReport.getWorkerIds(), deserializedWorkerReport.getWorkerIds());
+    Assert.assertEquals(json, workerReport.getTimeSegmentVsWorkerIdMap(), deserializedWorkerReport.getTimeSegmentVsWorkerIdMap());
     Assert.assertEquals(json, workerReport.isHasMultipleValues(), deserializedWorkerReport.isHasMultipleValues());
   }
 }

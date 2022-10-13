@@ -102,6 +102,7 @@ import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
 import org.apache.druid.msq.util.DecoratedExecutorService;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.PrioritizedCallable;
@@ -328,10 +329,14 @@ public class WorkerImpl implements Worker
 
         if (kernel.getPhase() == WorkerStagePhase.READING_INPUT && kernel.hasResultKeyStatisticsSnapshot()) {
           if (controllerAlive) {
+            ClusterByStatisticsWorkerReport workerReport =
+                kernel.getResultKeyStatisticsSnapshot()
+                      .workerReport(task().getWorkerNumber());
+
             controllerClient.postWorkerReport(
                 stageDefinition.getId(),
                 kernel.getWorkOrder().getWorkerNumber(),
-                kernel.getResultKeyStatisticsSnapshot().workerReport(task().getWorkerNumber())
+                workerReport
             );
           }
           kernel.startPreshuffleWaitingForResultPartitionBoundaries();
@@ -532,6 +537,19 @@ public class WorkerImpl implements Worker
     CompletableFuture<ClusterByStatisticsSnapshot> future = new CompletableFuture<>();
     kernelManipulationQueue.add(kernelHolder -> {
       future.complete(kernelHolder.stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot());
+    });
+    return future.get();
+  }
+
+  @Override
+  public ClusterByStatisticsSnapshot fetchSingletonStatisticsSnapshot(StageId stageId, long timeChunk)
+      throws ExecutionException, InterruptedException
+  {
+    CompletableFuture<ClusterByStatisticsSnapshot> future = new CompletableFuture<>();
+    kernelManipulationQueue.add(kernelHolder -> {
+      ClusterByStatisticsSnapshot snapshot = kernelHolder.stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
+      ClusterByStatisticsSnapshot singletonSnapshot = snapshot.getSingletonSnapshot(timeChunk);
+      future.complete(singletonSnapshot);
     });
     return future.get();
   }

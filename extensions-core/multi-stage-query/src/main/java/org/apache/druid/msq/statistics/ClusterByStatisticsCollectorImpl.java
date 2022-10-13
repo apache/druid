@@ -35,6 +35,7 @@ import org.apache.druid.segment.column.RowSignature;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -167,7 +168,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   public ClusterByStatisticsCollector addAll(final ClusterByStatisticsSnapshot snapshot)
   {
     // Add all key collectors from the other collector.
-    for (ClusterByStatisticsSnapshot.Bucket otherBucket : snapshot.getBuckets()) {
+    for (ClusterByStatisticsSnapshot.Bucket otherBucket : snapshot.getBuckets().values()) {
       //noinspection rawtypes, unchecked
       final KeyCollector<?> otherKeyCollector =
           ((KeyCollectorFactory) keyCollectorFactory).fromSnapshot(otherBucket.getKeyCollectorSnapshot());
@@ -315,13 +316,18 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   {
     assertRetainedByteCountsAreTrackedCorrectly();
 
-    final List<ClusterByStatisticsSnapshot.Bucket> bucketSnapshots = new ArrayList<>();
+    final Map<Long, ClusterByStatisticsSnapshot.Bucket> bucketSnapshots = new HashMap<>();
+    final RowKeyReader trimmedRowReader = keyReader.trimmedKeyReader(clusterBy.getBucketByCount());
 
     for (final Map.Entry<RowKey, BucketHolder> bucketEntry : buckets.entrySet()) {
       //noinspection rawtypes, unchecked
       final KeyCollectorSnapshot keyCollectorSnapshot =
           ((KeyCollectorFactory) keyCollectorFactory).toSnapshot(bucketEntry.getValue().keyCollector);
-      bucketSnapshots.add(new ClusterByStatisticsSnapshot.Bucket(bucketEntry.getKey(), keyCollectorSnapshot));
+      Long bucketKey = Long.MIN_VALUE;
+      if (clusterBy.getBucketByCount() == 1) {
+        bucketKey = (Long) trimmedRowReader.read(bucketEntry.getKey(), 0);
+      }
+      bucketSnapshots.put(bucketKey, new ClusterByStatisticsSnapshot.Bucket(bucketEntry.getKey(), keyCollectorSnapshot));
     }
 
     final IntSet hasMultipleValuesSet;

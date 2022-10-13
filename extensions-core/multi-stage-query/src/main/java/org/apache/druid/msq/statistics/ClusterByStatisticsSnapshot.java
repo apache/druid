@@ -23,23 +23,26 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.frame.key.RowKey;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
-import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 public class ClusterByStatisticsSnapshot
 {
-  private final List<Bucket> buckets;
+  private final Map<Long, Bucket> buckets;
   private final Set<Integer> hasMultipleValues;
 
   @JsonCreator
   ClusterByStatisticsSnapshot(
-      @JsonProperty("buckets") final List<Bucket> buckets,
+      @JsonProperty("buckets") final Map<Long, Bucket> buckets,
       @JsonProperty("hasMultipleValues") @Nullable final Set<Integer> hasMultipleValues
   )
   {
@@ -49,13 +52,19 @@ public class ClusterByStatisticsSnapshot
 
   public static ClusterByStatisticsSnapshot empty()
   {
-    return new ClusterByStatisticsSnapshot(Collections.emptyList(), null);
+    return new ClusterByStatisticsSnapshot(Collections.emptyMap(), null);
   }
 
   @JsonProperty("buckets")
-  List<Bucket> getBuckets()
+  Map<Long, Bucket> getBuckets()
   {
     return buckets;
+  }
+
+  public ClusterByStatisticsSnapshot getSingletonSnapshot(long timeChunk)
+  {
+    Bucket bucket = buckets.get(timeChunk);
+    return new ClusterByStatisticsSnapshot(ImmutableMap.of(timeChunk, bucket), null);
   }
 
   @JsonProperty("hasMultipleValues")
@@ -67,7 +76,13 @@ public class ClusterByStatisticsSnapshot
 
   public ClusterByStatisticsWorkerReport workerReport(int workerNumber)
   {
-    return new ClusterByStatisticsWorkerReport(ImmutableSet.of(workerNumber), !getHasMultipleValues().isEmpty());
+    SortedMap<Long, Set<Integer>> rowKeyIntSetTreeSet = new TreeMap<>();
+
+    for (Long bucketKey : buckets.keySet()) {
+      rowKeyIntSetTreeSet.put(bucketKey, ImmutableSet.of(workerNumber));
+    }
+
+    return new ClusterByStatisticsWorkerReport(rowKeyIntSetTreeSet, !getHasMultipleValues().isEmpty());
   }
 
   @Override
