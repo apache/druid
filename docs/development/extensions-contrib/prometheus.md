@@ -29,7 +29,7 @@ To use this Apache Druid extension, [include](../../development/extensions.md#lo
 
 This extension exposes [Druid metrics](https://druid.apache.org/docs/latest/operations/metrics.html) for collection by a Prometheus server (https://prometheus.io/).
 
-Emitter is enabled by setting `druid.emitter=prometheus` [configs](https://druid.apache.org/docs/latest/configuration/index.html#emitting-metrics) or include `prometheus` in the composing emitter list. 
+Emitter is enabled by setting `druid.emitter=prometheus` [configs](https://druid.apache.org/docs/latest/configuration/index.html#enabling-metrics) or include `prometheus` in the composing emitter list. 
 
 Note that if you're colocating druid processes on the same host(such as broker/router, historical/middlemanager, coordinator/overlord), then the druid.emitter.prometheus.port would need to be separately specified in each of the runtime properties configuration for each host and be different between collocated processes. Additionally peons should emit metrics via push gateway. 
 
