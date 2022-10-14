@@ -197,9 +197,7 @@ public class ServerManager implements QuerySegmentWalker
     Function<SegmentReference, SegmentReference> segmentMapFn = analysis.getDataSource().createSegmentMapFunction(query, cpuTimeAccumulator);
 
     // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
-    final Optional<byte[]> cacheKeyPrefix = analysis.isJoin()
-                                            ? Optional.ofNullable(query.getDataSource().getCacheKey())
-                                            : Optional.of(StringUtils.EMPTY_BYTES);
+    final Optional<byte[]> cacheKeyPrefix = Optional.ofNullable(query.getDataSource().getCacheKey());
 
     final FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
         .create(specs)

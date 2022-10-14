@@ -147,6 +147,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
 
   private boolean initializeSegmentMapFn(final IntSet readableInputs)
   {
+    final AtomicLong cpuAccumulator = new AtomicLong();
     if (segmentMapFn != null) {
       return true;
     } else if (broadcastJoinHelper == null) {
@@ -164,7 +165,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
           // make progress on the refactor without breaking functionality.  Hopefully, some future
           // developer will move this away from a setter.
           inputNumberDataSource.setBroadcastJoinHelper(broadcastJoinHelper);
-          segmentMapFn = inputNumberDataSource.createSegmentMapFunction(query, new AtomicLong());
+          segmentMapFn = inputNumberDataSource.createSegmentMapFunction(query, cpuAccumulator);
         }
         return retVal;
       } else {

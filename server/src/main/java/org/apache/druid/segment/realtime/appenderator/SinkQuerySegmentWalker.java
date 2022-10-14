@@ -31,7 +31,6 @@ import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -177,9 +176,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
 
     // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
-    final Optional<byte[]> cacheKeyPrefix = analysis.isJoin()
-                                            ? Optional.ofNullable(query.getDataSource().getCacheKey())
-                                            : Optional.of(StringUtils.EMPTY_BYTES);
+    final Optional<byte[]> cacheKeyPrefix = Optional.ofNullable(query.getDataSource().getCacheKey());
 
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
         specs,

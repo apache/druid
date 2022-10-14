@@ -26,6 +26,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContext;
@@ -86,8 +87,8 @@ import java.util.concurrent.TimeUnit;
  */
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 3)
-@Measurement(iterations = 10)
+@Warmup(iterations = 5)
+@Measurement(iterations = 15)
 public class SqlBenchmark
 {
   static {
@@ -401,31 +402,13 @@ public class SqlBenchmark
 
   @Param({
       "0",
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      "7",
-      "8",
-      "9",
       "10",
-      "11",
-      "12",
-      "13",
-      "14",
-      "15",
-      "16",
-      "17",
-      "18",
-      "19",
-      "20"
+      "18"
   })
   private String query;
 
-  //@Param({STORAGE_MMAP, STORAGE_FRAME_ROW, STORAGE_FRAME_COLUMNAR})
-  @Param({STORAGE_MMAP})
+  @Param({STORAGE_MMAP, STORAGE_FRAME_ROW, STORAGE_FRAME_COLUMNAR})
+
   private String storageType;
 
   private SqlEngine engine;
@@ -528,7 +511,7 @@ public class SqlBenchmark
     closer.close();
   }
 
-  /*@Benchmark
+  @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void querySql(Blackhole blackhole) throws Exception
@@ -544,7 +527,7 @@ public class SqlBenchmark
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);
     }
-  }*/
+  }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)

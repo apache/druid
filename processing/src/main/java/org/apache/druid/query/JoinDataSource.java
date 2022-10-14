@@ -421,7 +421,6 @@ public class JoinDataSource implements DataSource
       AtomicLong cpuTimeAccumulator
   )
   {
-
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
 
     final Function<SegmentReference, SegmentReference> segmentMapFn = createSegmentMapFn(

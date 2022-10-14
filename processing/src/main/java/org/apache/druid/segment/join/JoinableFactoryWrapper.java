@@ -26,7 +26,6 @@ import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.filter.FalseFilter;
@@ -45,7 +44,6 @@ public class JoinableFactoryWrapper
 {
 
   public static final byte JOIN_OPERATION = 0x1;
-  private static final Logger log = new Logger(JoinableFactoryWrapper.class);
 
   private final JoinableFactory joinableFactory;
 
@@ -60,7 +58,6 @@ public class JoinableFactoryWrapper
    * <p>
    * See {@link #convertJoinToFilter} for details on the logic.
    */
-  @VisibleForTesting
   public static Pair<List<Filter>, List<JoinableClause>> convertJoinsToFilters(
       final List<JoinableClause> clauses,
       final Set<String> requiredColumns,

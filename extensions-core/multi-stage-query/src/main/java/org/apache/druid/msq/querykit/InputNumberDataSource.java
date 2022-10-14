@@ -98,6 +98,13 @@ public class InputNumberDataSource implements DataSource
       AtomicLong cpuTime
   )
   {
+    if (broadcastJoinHelper == null) {
+      throw new IAE(
+          "No helper for broadcast join found on data source [%s]. "
+          + "Please make sure to set this before this call. ",
+          query.getDataSource()
+      );
+    }
     final DataSource dataSourceWithInlinedChannelData = broadcastJoinHelper.inlineChannelData(query.getDataSource());
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(dataSourceWithInlinedChannelData);
     return analysis.getDataSource().createSegmentMapFunction(query, new AtomicLong());
@@ -112,7 +119,7 @@ public class InputNumberDataSource implements DataSource
   @Override
   public byte[] getCacheKey()
   {
-    return null;
+    return new byte[0];
   }
 
   @JsonProperty

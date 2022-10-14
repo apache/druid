@@ -117,7 +117,7 @@ public class LookupDataSource implements DataSource
   @Override
   public byte[] getCacheKey()
   {
-    return null;
+    return new byte[0];
   }
 
   @Override

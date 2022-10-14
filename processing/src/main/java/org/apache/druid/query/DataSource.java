@@ -114,8 +114,7 @@ public interface DataSource
   /**
    * Compute a cache key prefix for a data source. This includes the data sources that participate in the RHS of a
    * join as well as any query specific constructs associated with join data source such as base table filter. This key prefix
-   * can be used in segment level cache or result level cache. The function can return following wrapped in an
-   * Optional
+   * can be used in segment level cache or result level cache. The function can return following
    * - Non-empty byte array - If there is join datasource involved and caching is possible. The result includes
    * join condition expression, join type and cache key returned by joinable factory for each {@link PreJoinableClause}
    * - NULL - There is a join but caching is not possible. It may happen if one of the participating datasource
