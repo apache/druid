@@ -117,11 +117,10 @@ public class TaskLockbox
 
     try {
       // Load stuff from taskStorage first. If this fails, we don't want to lose all our locks.
-      running.clear();
-      activeTasks.clear();
+      final Set<String> storedActiveTasks = new HashSet<>();
       final List<Pair<Task, TaskLock>> storedLocks = new ArrayList<>();
       for (final Task task : taskStorage.getActiveTasks()) {
-        activeTasks.add(task.getId());
+        storedActiveTasks.add(task.getId());
         for (final TaskLock taskLock : taskStorage.getLocks(task.getId())) {
           storedLocks.add(Pair.of(task, taskLock));
         }
@@ -139,6 +138,10 @@ public class TaskLockbox
                                 .result();
         }
       };
+      running.clear();
+      activeTasks.clear();
+      activeTasks.addAll(storedActiveTasks);
+      // Set of task groups in which at least one task failed to re-acquire a lock
       final Set<String> failedToReacquireLockTaskGroups = new HashSet<>();
       // Bookkeeping for a log message at the end
       int taskLockCount = 0;
