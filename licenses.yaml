@@ -4557,7 +4557,7 @@ libraries:
 
 name: org.apache.ranger ranger-plugins-audit
 license_category: binary
-version: 2.0.0
+version: 2.4.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -4567,7 +4567,7 @@ libraries:
 
 name: org.apache.ranger ranger-plugins-common
 license_category: binary
-version: 2.0.0
+version: 2.4.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -4587,7 +4587,7 @@ libraries:
 
 name: com.kstruct gethostname4j
 license_category: binary
-version: 0.0.2
+version: 1.0.0
 module: druid-ranger-security
 license_name: MIT License
 libraries:
