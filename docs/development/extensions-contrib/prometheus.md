@@ -31,7 +31,7 @@ This extension exposes [Druid metrics](https://druid.apache.org/docs/latest/oper
 
 Emitter is enabled by setting `druid.emitter=prometheus` [configs](https://druid.apache.org/docs/latest/configuration/index.html#enabling-metrics) or include `prometheus` in the composing emitter list. 
 
-Note that if you're colocating druid processes on the same host(such as broker/router, historical/middlemanager, coordinator/overlord), then the druid.emitter.prometheus.port would need to be separately specified in each of the runtime properties configuration for each host and be different between collocated processes. Additionally peons should emit metrics via push gateway. 
+In certain instances, Druid processes may be colocated on the same host. For example, the Broker and Router may share the same server. Other colocated processes include the Historical and MiddleManager or the Coordinator and Overlord. When you have colocated processes, specify `druid.emitter.prometheus.port` separately for each process on each host. For example, even if the Broker and Router share the same host, the Broker runtime properties and the Router runtime properties each need to list `druid.emitter.prometheus.port`, and the port value for both must be different. While peon tasks are typically colocated with MiddleManagers and often Historicals, peons should use `pushgateway` for `druid.emitter.prometheus.strategy` and should not start an HTTP server to push metrics.
 
 ## Configuration
 
