@@ -276,9 +276,11 @@ public class WorkerImpl implements Worker
       maxVerboseParseExceptions = Math.min(maxAllowedParseExceptions, Limits.MAX_VERBOSE_PARSE_EXCEPTIONS);
     }
 
-    Set<String> disallowedWarningCode = ImmutableSet.of();
+    Set<String> criticalWarningCodes;
     if (maxAllowedParseExceptions == 0) {
-      disallowedWarningCode = ImmutableSet.of(CannotParseExternalDataFault.CODE);
+      criticalWarningCodes = ImmutableSet.of(CannotParseExternalDataFault.CODE);
+    } else {
+      criticalWarningCodes = ImmutableSet.of();
     }
 
     final MSQWarningReportPublisher msqWarningReportPublisher = new MSQWarningReportLimiterPublisher(
@@ -290,7 +292,7 @@ public class WorkerImpl implements Worker
         ),
         Limits.MAX_VERBOSE_WARNINGS,
         ImmutableMap.of(CannotParseExternalDataFault.CODE, maxVerboseParseExceptions),
-        disallowedWarningCode,
+        criticalWarningCodes,
         controllerClient,
         id(),
         MSQTasks.getHostFromSelfNode(selfDruidNode)

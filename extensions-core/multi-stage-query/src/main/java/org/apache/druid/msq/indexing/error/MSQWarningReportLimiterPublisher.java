@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.indexing.error;
 
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.msq.exec.ControllerClient;
 
 import javax.annotation.Nullable;
@@ -38,8 +39,8 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
 
   private final MSQWarningReportPublisher delegate;
   private final long totalLimit;
-  private final Map<String, Long> errorCodeToVerboseCountLimit;
-  private final Set<String> disallowedWarningCode;
+  private final Map<String, Long> errorCodeToLimit;
+  private final Set<String> criticalWarningCodes;
   private final ConcurrentHashMap<String, Long> errorCodeToCurrentCount = new ConcurrentHashMap<>();
   private final ControllerClient controllerClient;
   private final String workerId;
@@ -51,19 +52,27 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
 
   final Object lock = new Object();
 
+  /**
+   * Creates a publisher which publishes the warnings to the controller if they have not yet exceeded the allowed limit.
+   * Moreover, if a warning is disallowed, i.e. it's limit is set to 0, then the publisher directly reports the warning
+   * as an error, since we donot need to wrap the original warning {@link TooManyWarningsFault} in that case and can
+   * surface it directly to the user. 
+   * {@code errorCodeToLimit} refers to the maximum number of verbose warnings that should be published. The actual
+   * limit for the warnings before which the controller should fail can be much higher and hence a separate {@code criticalWarningCodes}
+   */
   public MSQWarningReportLimiterPublisher(
       MSQWarningReportPublisher delegate,
       long totalLimit,
-      Map<String, Long> errorCodeToVerboseCountLimit,
-      Set<String> disallowedWarningCode,
+      Map<String, Long> errorCodeToLimit,
+      Set<String> criticalWarningCodes,
       ControllerClient controllerClient,
       String workerId,
       @Nullable String host
   )
   {
     this.delegate = delegate;
-    this.errorCodeToVerboseCountLimit = errorCodeToVerboseCountLimit;
-    this.disallowedWarningCode = disallowedWarningCode;
+    this.errorCodeToLimit = errorCodeToLimit;
+    this.criticalWarningCodes = criticalWarningCodes;
     this.totalLimit = totalLimit;
     this.controllerClient = controllerClient;
     this.workerId = workerId;
@@ -79,12 +88,12 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
       errorCodeToCurrentCount.compute(errorCode, (ignored, count) -> count == null ? 1L : count + 1);
 
       // Send the warning as an error if it is disallowed altogether
-      if (disallowedWarningCode.contains(errorCode)) {
+      if (criticalWarningCodes.contains(errorCode)) {
         try {
           controllerClient.postWorkerError(workerId, MSQErrorReport.fromException(workerId, host, stageNumber, e));
         }
         catch (IOException e2) {
-          throw new RuntimeException(e2);
+          throw new RE(e2, "Failed to post the worker error [%s] to the controller", errorCode);
         }
       }
 
@@ -93,7 +102,7 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
       }
     }
 
-    long limitForFault = errorCodeToVerboseCountLimit.getOrDefault(errorCode, -1L);
+    long limitForFault = errorCodeToLimit.getOrDefault(errorCode, -1L);
     synchronized (lock) {
       if (limitForFault != -1 && errorCodeToCurrentCount.getOrDefault(errorCode, 0L) > limitForFault) {
         return;
