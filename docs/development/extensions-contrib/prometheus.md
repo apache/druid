@@ -36,8 +36,9 @@ In certain instances, Druid processes may be colocated on the same host. For exa
 Peon tasks are short-lived batch processes typically colocated with MiddleManagers and often Historicals. Multiple peons may run at once. These tasks should use `pushgateway` for `druid.emitter.prometheus.strategy` and should not start an HTTP server to push metrics. 
 To configure Pushgateway for peons, pass the Prometheus options to the peon's JVM by setting the [`javaOptsArray` property](../../configuration/index.md#middlemanager-configuration) in your MiddleManager runtime properties file:
 ```
-druid.indexer.runner.javaOptsArray=["druid.emitter.prometheus.strategy=pushgateway","druid.emitter.prometheus.pushGatewayAddress=http://pushgatewayhost:pushgatewayport"]
+druid.indexer.runner.javaOptsArray=["druid.emitter.prometheus.strategy=pushgateway","druid.emitter.prometheus.pushGatewayAddress=http://PUSHGATEWAYHOST:PUSHGATEWAYPORT"]
 ```
+Replace `PUSHGATEWAYHOST:PUSHGATEWAYPORT` with your Pushgateway address.
 
 ## Configuration
 
