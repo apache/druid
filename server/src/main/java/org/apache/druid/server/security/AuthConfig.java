@@ -161,7 +161,7 @@ public class AuthConfig
    *
    * @return the list of secured keys to check via authentication
    */
-  public Set<String> filterContextKeys(final Set<String> userKeys)
+  public Set<String> contextKeysToAuthorize(final Set<String> userKeys)
   {
     if (!authorizeQueryContextParams) {
       return ImmutableSet.of();

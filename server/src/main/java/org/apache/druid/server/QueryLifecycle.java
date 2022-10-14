@@ -228,7 +228,7 @@ public class QueryLifecycle
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
         ),
         Iterables.transform(
-            authConfig.filterContextKeys(userContextKeys),
+            authConfig.contextKeysToAuthorize(userContextKeys),
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
     );

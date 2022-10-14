@@ -44,7 +44,7 @@ public class AuthConfigTest
     {
       AuthConfig config = new AuthConfig();
       Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.CTX_SQL_QUERY_ID);
-      assertTrue(config.filterContextKeys(keys).isEmpty());
+      assertTrue(config.contextKeysToAuthorize(keys).isEmpty());
     }
 
     // Default security
@@ -53,7 +53,7 @@ public class AuthConfigTest
           .setAuthorizeQueryContextParams(true)
           .build();
       Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.CTX_SQL_QUERY_ID);
-      assertEquals(ImmutableSet.of("a", "b"), config.filterContextKeys(keys));
+      assertEquals(ImmutableSet.of("a", "b"), config.contextKeysToAuthorize(keys));
     }
 
     // Specify unsecured keys (white-list)
@@ -63,7 +63,7 @@ public class AuthConfigTest
           .setUnsecuredContextKeys(ImmutableSet.of("a"))
           .build();
       Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.CTX_SQL_QUERY_ID);
-      assertEquals(ImmutableSet.of("b"), config.filterContextKeys(keys));
+      assertEquals(ImmutableSet.of("b"), config.contextKeysToAuthorize(keys));
     }
 
     // Specify secured keys (black-list)
@@ -73,7 +73,7 @@ public class AuthConfigTest
           .setSecuredContextKeys(ImmutableSet.of("a"))
           .build();
       Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.CTX_SQL_QUERY_ID);
-      assertEquals(ImmutableSet.of("a"), config.filterContextKeys(keys));
+      assertEquals(ImmutableSet.of("a"), config.contextKeysToAuthorize(keys));
     }
 
     // Specify both
@@ -84,7 +84,7 @@ public class AuthConfigTest
           .setSecuredContextKeys(ImmutableSet.of("b", "c"))
           .build();
       Set<String> keys = ImmutableSet.of("a", "b", "c", "d", QueryContexts.CTX_SQL_QUERY_ID);
-      assertEquals(ImmutableSet.of("c"), config.filterContextKeys(keys));
+      assertEquals(ImmutableSet.of("c"), config.contextKeysToAuthorize(keys));
     }
   }
 }
