@@ -74,7 +74,7 @@ import java.util.function.Supplier;
  */
 public class StageDefinition
 {
-  private static final int PARTITION_STATS_MAX_KEYS = 2 << 15; // Avoid immediate downsample of single-bucket collectors
+  private static final int PARTITION_STATS_MAX_BYTES = 300_000_000; // Avoid immediate downsample of single-bucket collectors
   private static final int PARTITION_STATS_MAX_BUCKETS = 5_000; // Limit for TooManyBuckets
   private static final int MAX_PARTITIONS = 25_000; // Limit for TooManyPartitions
 
@@ -289,7 +289,7 @@ public class StageDefinition
     return ClusterByStatisticsCollectorImpl.create(
         shuffleSpec.getClusterBy(),
         signature,
-        PARTITION_STATS_MAX_KEYS,
+        PARTITION_STATS_MAX_BYTES,
         PARTITION_STATS_MAX_BUCKETS,
         shuffleSpec.doesAggregateByClusterKey(),
         shuffleCheckHasMultipleValues

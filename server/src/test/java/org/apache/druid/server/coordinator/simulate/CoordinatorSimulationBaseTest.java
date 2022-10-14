@@ -124,6 +124,12 @@ public abstract class CoordinatorSimulationBaseTest
   }
 
   @Override
+  public void removeServer(DruidServer server)
+  {
+    sim.cluster().removeServer(server);
+  }
+
+  @Override
   public double getLoadPercentage(String datasource)
   {
     return sim.coordinator().getLoadPercentage(datasource);

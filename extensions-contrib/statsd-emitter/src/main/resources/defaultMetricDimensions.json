@@ -169,5 +169,8 @@
 
   "segment/compacted/bytes" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "segment/compacted/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "interval/compacted/count" : { "dimensions" : ["dataSource"], "type" : "count" }
+  "interval/compacted/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+
+  "namespace/cache/numEntries" : { "dimensions" : [], "type" : "gauge" },
+  "namespace/cache/heapSizeInBytes" : { "dimensions" : [], "type" : "gauge" }
 }

@@ -20,7 +20,7 @@ import { HotkeysProvider, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React from 'react';
-import { RouteComponentProps } from 'react-router';
+import { Redirect, RouteComponentProps } from 'react-router';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { HeaderActiveTab, HeaderBar, Loader } from './components';
@@ -33,7 +33,6 @@ import {
   IngestionView,
   LoadDataView,
   LookupsView,
-  QueryView,
   SegmentsView,
   ServicesView,
   SqlDataLoaderView,
@@ -245,20 +244,6 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private readonly wrappedQueryView = () => {
-    const { defaultQueryContext, mandatoryQueryContext } = this.props;
-
-    return this.wrapInViewContainer(
-      'query',
-      <QueryView
-        initQuery={this.queryWithContext?.queryString}
-        defaultQueryContext={defaultQueryContext}
-        mandatoryQueryContext={mandatoryQueryContext}
-      />,
-      'thin',
-    );
-  };
-
   private readonly wrappedWorkbenchView = (p: RouteComponentProps<any>) => {
     const { defaultQueryContext, mandatoryQueryContext } = this.props;
     const { capabilities } = this.state;
@@ -384,7 +369,9 @@ export class ConsoleApplication extends React.PureComponent<
               <Route path="/segments" component={this.wrappedSegmentsView} />
               <Route path="/services" component={this.wrappedServicesView} />
 
-              <Route path="/query" component={this.wrappedQueryView} />
+              <Route path="/query">
+                <Redirect to="/workbench" />
+              </Route>
               <Route
                 path={['/workbench/:tabId', '/workbench']}
                 component={this.wrappedWorkbenchView}
