@@ -22,9 +22,12 @@ package org.apache.druid.guice;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
+import com.google.inject.ConfigurationException;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.druid.java.util.common.IAE;
+
+import javax.annotation.Nullable;
 
 /**
  */
@@ -50,7 +53,15 @@ public class GuiceInjectableValues extends InjectableValues
     // Currently we should only be dealing with `Key` instances, and anything more advanced should be handled with
     // great care
     if (valueId instanceof Key) {
-      return injector.getInstance((Key) valueId);
+      try {
+        return injector.getInstance((Key) valueId);
+      }
+      catch (ConfigurationException ce) {
+        //check if annotation is nullable
+        if (forProperty.getAnnotation(Nullable.class).annotationType().isAnnotation()) {
+          return null;
+        }
+      }
     }
     throw new IAE(
         "Unknown class type [%s] for valueId [%s]",
