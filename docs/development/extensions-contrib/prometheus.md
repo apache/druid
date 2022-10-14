@@ -31,7 +31,11 @@ This extension exposes [Druid metrics](https://druid.apache.org/docs/latest/oper
 
 Emitter is enabled by setting `druid.emitter=prometheus` [configs](https://druid.apache.org/docs/latest/configuration/index.html#enabling-metrics) or include `prometheus` in the composing emitter list. 
 
-In certain instances, Druid processes may be colocated on the same host. For example, the Broker and Router may share the same server. Other colocated processes include the Historical and MiddleManager or the Coordinator and Overlord. When you have colocated processes, specify `druid.emitter.prometheus.port` separately for each process on each host. For example, even if the Broker and Router share the same host, the Broker runtime properties and the Router runtime properties each need to list `druid.emitter.prometheus.port`, and the port value for both must be different. While peon tasks are typically colocated with MiddleManagers and often Historicals, peons should use `pushgateway` for `druid.emitter.prometheus.strategy` and should not start an HTTP server to push metrics.
+In certain instances, Druid processes may be colocated on the same host. For example, the Broker and Router may share the same server. Other colocated processes include the Historical and MiddleManager or the Coordinator and Overlord. When you have colocated processes, specify `druid.emitter.prometheus.port` separately for each process on each host. For example, even if the Broker and Router share the same host, the Broker runtime properties and the Router runtime properties each need to list `druid.emitter.prometheus.port`, and the port value for both must be different. While peon tasks are typically colocated with MiddleManagers and often Historicals, peons should use `pushgateway` for `druid.emitter.prometheus.strategy` and should not start an HTTP server to push metrics (they are short lived batch processes and multiple of these processes can be running at once) . 
+To configure push gateway for peons you can add somehting like this in you middlemanager runtime properties file:
+```
+druid.indexer.runner.javaOptsArray=["druid.emitter.prometheus.strategy=pushgateway","druid.emitter.prometheus.pushGatewayAddress=http://pushgatewayhost:pushgatewayport"]
+```
 
 ## Configuration
 
