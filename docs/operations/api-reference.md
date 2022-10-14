@@ -314,7 +314,7 @@ result of this API call.
 
 `POST /druid/coordinator/v1/datasources/{dataSourceName}/markUnused`
 
-Marks segments (un)used for a datasource by interval or set of segment Ids.When marking used only segments that are not overshadowed will be updated.
+Marks segments (un)used for a datasource by interval or set of segment Ids. When marking used only segments that are not overshadowed will be updated.
 
 The request payload contains the interval or set of segment Ids to be marked unused.
 Either interval or segment ids should be provided, if both or none are provided in the payload, the API would throw an error (400 BAD REQUEST).
