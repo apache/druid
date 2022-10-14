@@ -121,8 +121,7 @@ public class TaskLockConfigTest
         taskRunner,
         actionClientFactory,
         lockbox,
-        emitter,
-        null
+        emitter
     );
   }
 }

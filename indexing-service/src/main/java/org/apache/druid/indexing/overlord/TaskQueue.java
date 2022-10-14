@@ -34,6 +34,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
+import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -100,10 +101,6 @@ public class TaskQueue
   @GuardedBy("giant")
   private final Set<String> recentlyCompletedTasks = new HashSet<>();
 
-  // Tasks to be forcefully failed due to lock reacquisition failure
-  @GuardedBy("giant")
-  private final Set<Task> tasksToFail;
-
   private final TaskLockConfig lockConfig;
   private final TaskQueueConfig config;
   private final DefaultTaskConfig defaultTaskConfig;
@@ -146,8 +143,7 @@ public class TaskQueue
       TaskRunner taskRunner,
       TaskActionClientFactory taskActionClientFactory,
       TaskLockbox taskLockbox,
-      ServiceEmitter emitter,
-      SyncResult syncResult
+      ServiceEmitter emitter
   )
   {
     this.lockConfig = Preconditions.checkNotNull(lockConfig, "lockConfig");
@@ -158,7 +154,6 @@ public class TaskQueue
     this.taskActionClientFactory = Preconditions.checkNotNull(taskActionClientFactory, "taskActionClientFactory");
     this.taskLockbox = Preconditions.checkNotNull(taskLockbox, "taskLockbox");
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
-    this.tasksToFail = syncResult == null ? new HashSet<>() : syncResult.getTasksToFail();
   }
 
   @VisibleForTesting
@@ -179,6 +174,12 @@ public class TaskQueue
       Preconditions.checkState(!active, "queue must be stopped");
       active = true;
       syncFromStorage();
+      // Mark these tasks as failed as they could not reacuire the lock
+      // Clean up needs to happen after tasks have been synced from storage
+      Set<Task> tasksToFail = taskLockbox.syncFromStorage().getTasksToFail();
+      for (Task task : tasksToFail) {
+        shutdown(task.getId(), "Failed to reacquire lock.");
+      }
       managerExec.submit(
           new Runnable()
           {
@@ -234,6 +235,13 @@ public class TaskQueue
           }
       );
       requestManagement();
+      // Remove any unacquired locks from storage
+      // This is called after requesting management as task failure occurs after notifyStatus is processed
+      for (Task task : tasksToFail) {
+        for (TaskLock lock : taskStorage.getLocks(task.getId())) {
+          taskStorage.removeLock(task.getId(), lock);
+        }
+      }
     }
     finally {
       giant.unlock();
@@ -775,17 +783,6 @@ public class TaskQueue
         for (Task task : addedTasks) {
           addTaskInternal(task);
         }
-
-        for (Task task : tasksToFail) {
-          try {
-            tasks.putIfAbsent(task.getId(), task);
-            shutdown(task.getId(), "Failed to reacquire lock");
-          }
-          catch (Throwable e) {
-            log.warn(e, "Failed to shutdown task[%s]", task.getId());
-          }
-        }
-        tasksToFail.clear();
 
         log.info(
             "Synced %d tasks from storage (%d tasks added, %d tasks removed).",

@@ -111,7 +111,7 @@ public class TaskLockbox
    *
    * @return SyncResult which needs to be processed by the caller
    */
-  public SyncResult syncFromStorage()
+  public TaskLockboxSyncResult syncFromStorage()
   {
     giant.lock();
 
@@ -186,10 +186,11 @@ public class TaskLockbox
         } else {
           failedToReacquireLockTaskGroups.add(task.getGroupId());
           log.error(
-              "Could not reacquire lock on interval[%s] version[%s] for task: %s.",
+              "Could not reacquire lock on interval[%s] version[%s] for task: %s from group %s.",
               savedTaskLockWithPriority.getInterval(),
               savedTaskLockWithPriority.getVersion(),
-              task.getId()
+              task.getId(),
+              task.getGroupId()
           );
           continue;
         }
@@ -210,7 +211,12 @@ public class TaskLockbox
           storedLocks.size() - taskLockCount
       );
 
-      return new SyncResult(tasksToFail);
+      if (!failedToReacquireLockTaskGroups.isEmpty()) {
+        log.warn("Marking all tasks from task groups[%s] to be failed "
+                 + "as they failed to reacquire at least one lock.", failedToReacquireLockTaskGroups);
+      }
+
+      return new TaskLockboxSyncResult(tasksToFail);
     }
     finally {
       giant.unlock();
@@ -866,26 +872,6 @@ public class TaskLockbox
             ? ((SegmentLock) taskLockPosse.taskLock).getPartitionId()
             : null
         );
-      }
-    }
-    finally {
-      giant.unlock();
-    }
-  }
-
-  public void unlockUnacquiredLocks(Task task)
-  {
-    giant.lock();
-    try {
-      for (TaskLock lock : taskStorage.getLocks(task.getId())) {
-        // Clean up entries for locks for which lock couldn't be acquired
-        try {
-          taskStorage.removeLock(task.getId(), lock);
-          lockReleaseCondition.signalAll();
-        }
-        catch (Throwable e) {
-          log.warn(e, "Failed to unlock lock for task [%s]", task.getId());
-        }
       }
     }
     finally {

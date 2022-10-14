@@ -1288,7 +1288,7 @@ public class TaskLockboxTest
     Assert.assertEquals(3, taskStorage.getActiveTasks().size());
 
     // The task must be marked for failure
-    SyncResult result = testLockbox.syncFromStorage();
+    TaskLockboxSyncResult result = testLockbox.syncFromStorage();
     Assert.assertEquals(ImmutableSet.of(badTask0, badTask1), result.getTasksToFail());
   }
 
