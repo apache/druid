@@ -38,22 +38,16 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.CuratorUtils;
-import org.apache.druid.curator.discovery.LatchableServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.initialization.ZkPathsConfig;
-import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -68,13 +62,12 @@ import org.junit.Test;
 import org.junit.rules.TestRule;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -84,16 +77,12 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class CuratorDruidCoordinatorTest extends CuratorTestBase
 {
-  private DruidCoordinator coordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
   private DataSourcesSnapshot dataSourcesSnapshot;
   private DruidCoordinatorRuntimeParams coordinatorRuntimeParams;
 
-  private ConcurrentMap<String, LoadQueuePeon> loadManagementPeons;
   private LoadQueuePeon sourceLoadQueuePeon;
   private LoadQueuePeon destinationLoadQueuePeon;
-  private CountDownLatch leaderAnnouncerLatch;
-  private CountDownLatch leaderUnannouncerLatch;
   private PathChildrenCache sourceLoadQueueChildrenCache;
   private PathChildrenCache destinationLoadQueueChildrenCache;
   private DruidCoordinatorConfig druidCoordinatorConfig;
@@ -197,9 +186,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         callbackExec,
         druidCoordinatorConfig
     );
-    loadManagementPeons = new ConcurrentHashMap<>();
-    leaderAnnouncerLatch = new CountDownLatch(1);
-    leaderUnannouncerLatch = new CountDownLatch(1);
   }
 
   @After
@@ -323,8 +309,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
     sourceSegments.forEach(source::addDataSegment);
     destinationSegments.forEach(dest::addDataSegment);
-    loadManagementPeons.put("localhost:1", sourceLoadQueuePeon);
-    loadManagementPeons.put("localhost:2", destinationLoadQueuePeon);
 
     segmentRemovedLatch = new CountDownLatch(1);
     segmentAddedLatch = new CountDownLatch(1);
@@ -343,9 +327,12 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(dataSourcesSnapshot);
 
     // Move the segment from source to dest
-    SegmentStateManager stateManager = new SegmentStateManager(baseView, segmentsMetadataManager, false);
-    stateManager.prepareForRun(coordinatorRuntimeParams);
-    SegmentLoader segmentLoader = new SegmentLoader(stateManager, coordinatorRuntimeParams);
+    SegmentStateManager stateManager = new SegmentStateManager(
+        baseView,
+        segmentsMetadataManager,
+        LoadQueuePeonTester.mockCuratorTaskMaster()
+    );
+    SegmentLoader segmentLoader = createSegmentLoader(stateManager, coordinatorRuntimeParams);
     segmentLoader.moveSegment(
         segmentToMove,
         new ServerHolder(source.toImmutableDruidServer(), sourceLoadQueuePeon),
@@ -460,32 +447,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
     sourceLoadQueuePeon.start();
     destinationLoadQueuePeon.start();
-
-    final LoadQueueTaskMaster loadQueueTaskMaster = EasyMock.createMock(LoadQueueTaskMaster.class);
-    EasyMock.expect(loadQueueTaskMaster.isHttpLoading()).andReturn(false).anyTimes();
-    EasyMock.replay(loadQueueTaskMaster);
-
-    coordinator = new DruidCoordinator(
-        druidCoordinatorConfig,
-        configManager,
-        segmentsMetadataManager,
-        baseView,
-        EasyMock.createNiceMock(MetadataRuleManager.class),
-        new NoopServiceEmitter(),
-        (corePoolSize, nameFormat) -> Executors.newSingleThreadScheduledExecutor(),
-        null,
-        loadQueueTaskMaster,
-        new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
-        new DruidNode("hey", "what", false, 1234, null, true, false),
-        loadManagementPeons,
-        null,
-        null,
-        new CoordinatorCustomDutyGroups(ImmutableSet.of()),
-        new CostBalancerStrategyFactory(),
-        EasyMock.createNiceMock(LookupCoordinatorManager.class),
-        new TestDruidLeaderSelector(),
-        null
-    );
   }
 
   private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)
@@ -501,5 +462,27 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
                       .binaryVersion(9)
                       .size(0)
                       .build();
+  }
+
+  private SegmentLoader createSegmentLoader(
+      SegmentStateManager stateManager,
+      DruidCoordinatorRuntimeParams params,
+      String... tiersEligibleForReplication
+  )
+  {
+    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
+    ReplicationThrottler throttler = new ReplicationThrottler(
+        new HashSet<>(Arrays.asList(tiersEligibleForReplication)),
+        dynamicConfig.getReplicationThrottleLimit(),
+        dynamicConfig.getReplicantLifetime(),
+        dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
+    );
+    return new SegmentLoader(
+        stateManager,
+        params.getDruidCluster(),
+        params.getSegmentReplicantLookup(),
+        throttler,
+        params.getBalancerStrategy()
+    );
   }
 }

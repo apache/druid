@@ -78,7 +78,7 @@ public class BalanceSegmentsTest
   @Before
   public void setUp()
   {
-    stateManager = new SegmentStateManager(null, null, true);
+    stateManager = new SegmentStateManager(null, null, null);
     druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer3 = EasyMock.createMock(ImmutableDruidServer.class);

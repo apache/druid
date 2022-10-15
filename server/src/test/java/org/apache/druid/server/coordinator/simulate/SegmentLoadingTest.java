@@ -120,8 +120,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     // maxNonPrimaryReplicas = 1, each tier can load at most 1 replica in a single run
     CoordinatorDynamicConfig dynamicConfig =
         CoordinatorDynamicConfig.builder()
-                                .withMaxSegmentsToMove(0)
-                                .withMaxNonPrimaryReplicantsToLoad(1)
+                                .withReplicationThrottleLimit(0)
                                 .build();
 
     // historicals = 2(in T1) + 3(in T2)

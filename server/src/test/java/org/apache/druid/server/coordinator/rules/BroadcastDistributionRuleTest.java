@@ -23,18 +23,21 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidClusterBuilder;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.SegmentStateManager;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.assertj.core.util.Sets;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,7 +66,7 @@ public class BroadcastDistributionRuleTest
   @Before
   public void setUp()
   {
-    stateManager = new SegmentStateManager(null, null, true);
+    stateManager = new SegmentStateManager(null, null, null);
     smallSegment = new DataSegment(
         DS_SMALL,
         Intervals.of("0/1000"),
@@ -428,8 +431,20 @@ public class BroadcastDistributionRuleTest
       DruidCoordinatorRuntimeParams params
   )
   {
-    stateManager.prepareForRun(params);
-    SegmentLoader loader = new SegmentLoader(stateManager, params);
+    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
+    ReplicationThrottler throttler = new ReplicationThrottler(
+        Sets.newHashSet(params.getDruidCluster().getTierNames()),
+        dynamicConfig.getReplicationThrottleLimit(),
+        dynamicConfig.getReplicantLifetime(),
+        dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
+    );
+    SegmentLoader loader = new SegmentLoader(
+        stateManager,
+        params.getDruidCluster(),
+        params.getSegmentReplicantLookup(),
+        throttler,
+        params.getBalancerStrategy()
+    );
     rule.run(segment, loader);
     return loader.getStats();
   }

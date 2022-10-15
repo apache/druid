@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.timeline.DataSegment;
+import org.easymock.EasyMock;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -29,6 +30,14 @@ import java.util.concurrent.ConcurrentSkipListSet;
 public class LoadQueuePeonTester extends CuratorLoadQueuePeon
 {
   private final ConcurrentSkipListSet<DataSegment> segmentsToLoad = new ConcurrentSkipListSet<DataSegment>();
+
+  public static LoadQueueTaskMaster mockCuratorTaskMaster()
+  {
+    final LoadQueueTaskMaster taskMaster = EasyMock.createMock(LoadQueueTaskMaster.class);
+    EasyMock.expect(taskMaster.isHttpLoading()).andReturn(false).anyTimes();
+    EasyMock.replay(taskMaster);
+    return taskMaster;
+  }
 
   public LoadQueuePeonTester()
   {

@@ -31,26 +31,16 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TierLoadingState
 {
   private int lifetime;
-  private final ConcurrentHashMap<SegmentId, String> processingSegments = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<SegmentId, String> processingSegmentToHost = new ConcurrentHashMap<>();
 
-  public TierLoadingState(int maxLifetime)
+  TierLoadingState(int maxLifetime)
   {
     this.lifetime = maxLifetime;
   }
 
-  public void addSegment(SegmentId segmentId, String serverId)
-  {
-    processingSegments.put(segmentId, serverId);
-  }
-
-  public void removeSegment(SegmentId segmentId)
-  {
-    processingSegments.remove(segmentId);
-  }
-
   public int getNumProcessingSegments()
   {
-    return processingSegments.size();
+    return processingSegmentToHost.size();
   }
 
   public int getLifetime()
@@ -58,15 +48,27 @@ public class TierLoadingState
     return lifetime;
   }
 
-  public void reduceLifetime()
-  {
-    --lifetime;
-  }
-
   public List<String> getCurrentlyProcessingSegmentsAndHosts()
   {
     List<String> segmentsAndHosts = new ArrayList<>();
-    processingSegments.forEach((segmentId, serverId) -> segmentsAndHosts.add(segmentId + " ON " + serverId));
+    processingSegmentToHost.forEach((segmentId, serverId) -> segmentsAndHosts.add(segmentId + " ON " + serverId));
     return segmentsAndHosts;
+  }
+
+  // Write methods are to be accessed only by the SegmentStateManager
+
+  void addSegment(SegmentId segmentId, String host)
+  {
+    processingSegmentToHost.put(segmentId, host);
+  }
+
+  void removeSegment(SegmentId segmentId)
+  {
+    processingSegmentToHost.remove(segmentId);
+  }
+
+  void reduceLifetime()
+  {
+    --lifetime;
   }
 }

@@ -63,7 +63,7 @@ public class BalanceSegmentsProfiler
   @Before
   public void setUp()
   {
-    stateManager = new SegmentStateManager(null, null, true);
+    stateManager = new SegmentStateManager(null, null, null);
     druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
     emitter = EasyMock.createMock(ServiceEmitter.class);
@@ -125,8 +125,6 @@ public class BalanceSegmentsProfiler
         .newBuilder()
         .addTier("normal", serverHolderList.toArray(new ServerHolder[0]))
         .build();
-    final ReplicationThrottler replicationThrottler = new ReplicationThrottler();
-    replicationThrottler.updateReplicationState(2, 500, 4);
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder(druidCluster)
         .withLoadManagementPeons(peonMap)

@@ -49,16 +49,24 @@ public class SegmentLoader
   private final DruidCluster cluster;
   private final CoordinatorStats stats = new CoordinatorStats();
   private final SegmentReplicantLookup replicantLookup;
+  private final ReplicationThrottler replicationThrottler;
   private final BalancerStrategy strategy;
 
   private final Set<String> emptyTiers = new HashSet<>();
 
-  public SegmentLoader(SegmentStateManager stateManager, DruidCoordinatorRuntimeParams runParams)
+  public SegmentLoader(
+      SegmentStateManager stateManager,
+      DruidCluster cluster,
+      SegmentReplicantLookup replicantLookup,
+      ReplicationThrottler replicationThrottler,
+      BalancerStrategy strategy
+  )
   {
     this.stateManager = stateManager;
-    this.strategy = runParams.getBalancerStrategy();
-    this.cluster = runParams.getDruidCluster();
-    this.replicantLookup = runParams.getSegmentReplicantLookup();
+    this.cluster = cluster;
+    this.replicantLookup = replicantLookup;
+    this.replicationThrottler = replicationThrottler;
+    this.strategy = strategy;
   }
 
   public CoordinatorStats getStats()
@@ -92,13 +100,14 @@ public class SegmentLoader
       return false;
     }
 
-    final boolean loadCancelledOnFromServer = stateManager.cancelOperation(SegmentState.LOADING, segment, fromServer);
+    final boolean loadCancelledOnFromServer =
+        stateManager.cancelOperation(SegmentState.LOADING, segment, fromServer);
     if (loadCancelledOnFromServer) {
       stats.addToTieredStat(CoordinatorStats.CANCELLED_LOADS, tier, 1);
       int loadedCountOnTier = replicantLookup.getLoadedReplicants(segment.getId(), tier);
-      return stateManager.loadSegment(segment, toServer, loadedCountOnTier < 1);
+      return stateManager.loadSegment(segment, toServer, loadedCountOnTier < 1, replicationThrottler);
     } else {
-      return stateManager.moveSegment(segment, fromServer, toServer);
+      return stateManager.moveSegment(segment, fromServer, toServer, replicationThrottler.getMaxLifetime());
     }
   }
 
@@ -194,7 +203,7 @@ public class SegmentLoader
     }
 
     if (server.canLoadSegment(segment)
-        && stateManager.loadSegment(segment, server, true)) {
+        && stateManager.loadSegment(segment, server, true, replicationThrottler)) {
       return true;
     } else {
       log.makeAlert("Failed to broadcast segment for [%s]", segment.getDataSource())
@@ -490,12 +499,16 @@ public class SegmentLoader
     // Load the primary on this tier
     int numLoadsQueued = 0;
     if (!isSegmentAvailableOnTier) {
-      numLoadsQueued += stateManager.loadSegment(segment, serverIterator.next(), true) ? 1 : 0;
+      boolean queueSuccess =
+          stateManager.loadSegment(segment, serverIterator.next(), true, replicationThrottler);
+      numLoadsQueued += queueSuccess ? 1 : 0;
     }
 
     // Load the remaining replicas
     while (numLoadsQueued < numToLoad && serverIterator.hasNext()) {
-      numLoadsQueued += stateManager.loadSegment(segment, serverIterator.next(), false) ? 1 : 0;
+      boolean queueSuccess =
+          stateManager.loadSegment(segment, serverIterator.next(), false, replicationThrottler);
+      numLoadsQueued += queueSuccess ? 1 : 0;
     }
     return numLoadsQueued;
   }

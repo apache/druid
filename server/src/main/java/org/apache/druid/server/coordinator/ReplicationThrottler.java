@@ -19,46 +19,30 @@
 
 package org.apache.druid.server.coordinator;
 
-import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.timeline.SegmentId;
-
-import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The ReplicationThrottler is used to throttle the number of replicants that are created.
+ * The ReplicationThrottler is used to throttle the number of segment replicas
+ * that are assigned to a load queue in a single run.
+ * This is achieved by setting the values of these configs:
+ * <ul>
+ *   <li>{@link CoordinatorDynamicConfig#getReplicationThrottleLimit()}, and</li>
+ *   <li>{@link CoordinatorDynamicConfig#getMaxNonPrimaryReplicantsToLoad()}</li>
+ * </ul>
  */
 public class ReplicationThrottler
 {
-  private static final EmittingLogger log = new EmittingLogger(ReplicationThrottler.class);
+  private final Set<String> eligibleTiers;
+  private final int replicationThrottleLimit;
+  private final int maxLifetime;
+  private final int maxTotalReplicasPerRun;
 
-  /**
-   * Tiers that are already replicating segments are not allowed to queue new items.
-   */
-  private final Set<String> busyTiers = new HashSet<>();
-
-  // This needs to be thread-safe as it is called by callbacks via unregister
-  private final ConcurrentHashMap<String, TierLoadingState> currentlyReplicating = new ConcurrentHashMap<>();
-
-  // These fields need not be thread-safe as they are only accessed by the
-  // coordinator duties and not callbacks.
-  private int replicationThrottleLimit;
-  private int maxLifetime;
-  private int maxTotalReplicasPerRun;
   private int numReplicasAssignedInRun;
 
   /**
-   * Updates the replication state for all the tiers for a new coordinator run.
-   * This involves:
-   * <ul>
-   *   <li>Updating the replication throttling parameters with the given values.</li>
-   *   <li>Emitting alerts for tiers that have replicas stuck in the load queue.</li>
-   *   <li>Identifying the tiers that already have some active replication in
-   *   progress. These tiers will not be considered eligible for replication
-   *   in this run.</li>
-   * </ul>
+   * Creates a new ReplicationThrottler for use during a single coordiantor run.
    *
+   * @param eligibleTiers            Set of tiers eligible for replication.
    * @param replicationThrottleLimit Maximum number of replicas that can be
    *                                 actively loading on a tier at any given time.
    * @param maxLifetime              Number of coordinator runs after which a
@@ -67,76 +51,39 @@ public class ReplicationThrottler
    * @param maxTotalReplicasPerRun   Maximum number of replicas that can be
    *                                 assigned for loading in a single coordinator run.
    */
-  public void updateReplicationState(int replicationThrottleLimit, int maxLifetime, int maxTotalReplicasPerRun)
+  public ReplicationThrottler(
+      Set<String> eligibleTiers,
+      int replicationThrottleLimit,
+      int maxLifetime,
+      int maxTotalReplicasPerRun
+  )
   {
+    this.eligibleTiers = eligibleTiers;
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.maxLifetime = maxLifetime;
     this.maxTotalReplicasPerRun = maxTotalReplicasPerRun;
     this.numReplicasAssignedInRun = 0;
-
-    // Identify the busy and active tiers
-    busyTiers.clear();
-
-    final Set<String> inactiveTiers = new HashSet<>();
-    currentlyReplicating.forEach((tier, holder) -> {
-      if (holder.getNumProcessingSegments() == 0) {
-        inactiveTiers.add(tier);
-      } else {
-        busyTiers.add(tier);
-        updateReplicationState(tier, holder);
-      }
-    });
-
-    // Reset state for inactive tiers
-    inactiveTiers.forEach(currentlyReplicating::remove);
   }
 
-  /**
-   * Reduces the lifetime of segments replicating in the given tier, if any.
-   * Triggers an alert if the replication has timed out.
-   */
-  private void updateReplicationState(String tier, TierLoadingState holder)
+  public boolean canAssignReplica(String tier)
   {
-    log.info(
-        "[%s]: Replicant create queue still has %d segments. Lifetime[%d]. Segments %s",
-        tier,
-        holder.getNumProcessingSegments(),
-        holder.getLifetime(),
-        holder.getCurrentlyProcessingSegmentsAndHosts()
-    );
-    holder.reduceLifetime();
-
-    if (holder.getLifetime() < 0) {
-      log.makeAlert("[%s]: Replicant create queue stuck after %d+ runs!", tier, maxLifetime)
-         .addData("segments", holder.getCurrentlyProcessingSegmentsAndHosts())
-         .emit();
-    }
+    return numReplicasAssignedInRun < maxTotalReplicasPerRun
+           && eligibleTiers.contains(tier);
   }
 
-  public boolean canCreateReplicant(String tier)
-  {
-    if (numReplicasAssignedInRun >= maxTotalReplicasPerRun
-        || busyTiers.contains(tier)) {
-      return false;
-    }
-
-    TierLoadingState holder = currentlyReplicating.get(tier);
-    return holder == null || holder.getNumProcessingSegments() < replicationThrottleLimit;
-  }
-
-  public void registerReplicantCreation(String tier, SegmentId segmentId, String serverId)
+  public void incrementAssignedReplicas(String tier)
   {
     ++numReplicasAssignedInRun;
-    currentlyReplicating.computeIfAbsent(tier, t -> new TierLoadingState(maxLifetime))
-                        .addSegment(segmentId, serverId);
   }
 
-  public void unregisterReplicantCreation(String tier, SegmentId segmentId)
+  public int getReplicationThrottleLimit()
   {
-    TierLoadingState tierReplication = currentlyReplicating.get(tier);
-    if (tierReplication != null) {
-      tierReplication.removeSegment(segmentId);
-    }
+    return replicationThrottleLimit;
+  }
+
+  public int getMaxLifetime()
+  {
+    return maxLifetime;
   }
 
 }

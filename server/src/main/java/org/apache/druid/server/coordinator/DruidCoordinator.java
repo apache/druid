@@ -174,6 +174,7 @@ public class DruidCoordinator
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
       LoadQueueTaskMaster taskMaster,
+      SegmentStateManager segmentStateManager,
       ServiceAnnouncer serviceAnnouncer,
       @Self DruidNode self,
       @CoordinatorMetadataStoreManagementDuty Set<CoordinatorDuty> metadataStoreManagementDuties,
@@ -195,6 +196,7 @@ public class DruidCoordinator
         scheduledExecutorFactory,
         indexingServiceClient,
         taskMaster,
+        segmentStateManager,
         serviceAnnouncer,
         self,
         new ConcurrentHashMap<>(),
@@ -218,6 +220,7 @@ public class DruidCoordinator
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
       LoadQueueTaskMaster taskMaster,
+      SegmentStateManager segmentStateManager,
       ServiceAnnouncer serviceAnnouncer,
       DruidNode self,
       ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap,
@@ -253,8 +256,7 @@ public class DruidCoordinator
     this.coordLeaderSelector = coordLeaderSelector;
     this.objectMapper = objectMapper;
     this.compactSegments = initializeCompactSegmentsDuty();
-    this.segmentStateManager =
-        new SegmentStateManager(serverInventoryView, segmentsMetadataManager, taskMaster.isHttpLoading());
+    this.segmentStateManager = segmentStateManager;
   }
 
   public boolean isLeader()
@@ -887,7 +889,6 @@ public class DruidCoordinator
 
       stopPeonsForDisappearedServers(currentServers);
 
-      segmentStateManager.prepareForRun(params);
       return params.buildFromExisting()
                    .withDruidCluster(cluster)
                    .withLoadManagementPeons(loadManagementPeons)

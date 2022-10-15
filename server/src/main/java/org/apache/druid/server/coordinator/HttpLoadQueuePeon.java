@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -374,7 +373,11 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   @Override
   public void loadSegment(DataSegment segment, SegmentAction action, LoadPeonCallback callback)
   {
-    Preconditions.checkArgument(action != SegmentAction.DROP);
+    if (action == SegmentAction.DROP) {
+      log.warn("Invalid load action [%s] for segment [%s] on server [%s].", action, segment.getId(), serverId);
+      return;
+    }
+
     synchronized (lock) {
       if (stopped) {
         log.warn(

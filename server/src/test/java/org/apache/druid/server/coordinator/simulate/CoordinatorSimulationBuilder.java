@@ -43,6 +43,7 @@ import org.apache.druid.server.coordinator.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
+import org.apache.druid.server.coordinator.SegmentStateManager;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -204,6 +205,7 @@ public class CoordinatorSimulationBuilder
         env.executorFactory,
         null,
         env.loadQueueTaskMaster,
+        env.segmentStateManager,
         new ServiceAnnouncer.Noop(),
         null,
         Collections.emptySet(),
@@ -391,6 +393,7 @@ public class CoordinatorSimulationBuilder
     private final TestMetadataRuleManager ruleManager;
 
     private final LoadQueueTaskMaster loadQueueTaskMaster;
+    private final SegmentStateManager segmentStateManager;
 
     /**
      * Represents the current inventory of all servers (typically historicals)
@@ -456,6 +459,8 @@ public class CoordinatorSimulationBuilder
           httpClient,
           null
       );
+      this.segmentStateManager =
+          new SegmentStateManager(coordinatorInventoryView, segmentManager, loadQueueTaskMaster);
 
       this.jacksonConfigManager = mockConfigManager();
       setDynamicConfig(dynamicConfig);

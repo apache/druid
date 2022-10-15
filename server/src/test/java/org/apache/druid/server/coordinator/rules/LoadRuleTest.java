@@ -46,6 +46,7 @@ import org.apache.druid.server.coordinator.DruidClusterBuilder;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.SegmentAction;
 import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
@@ -55,6 +56,7 @@ import org.apache.druid.server.coordinator.cost.ClusterCostCache;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.assertj.core.util.Sets;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -110,7 +112,7 @@ public class LoadRuleTest
     cachingCostBalancerStrategy = new CachingCostBalancerStrategy(ClusterCostCache.builder().build(), exec);
 
     mockBalancerStrategy = EasyMock.createMock(BalancerStrategy.class);
-    stateManager = new SegmentStateManager(null, null, true);
+    stateManager = new SegmentStateManager(null, null, null);
   }
 
   @After
@@ -190,8 +192,20 @@ public class LoadRuleTest
       DruidCoordinatorRuntimeParams params
   )
   {
-    stateManager.prepareForRun(params);
-    SegmentLoader loader = new SegmentLoader(stateManager, params);
+    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
+    ReplicationThrottler throttler = new ReplicationThrottler(
+        Sets.newHashSet(params.getDruidCluster().getTierNames()),
+        dynamicConfig.getReplicationThrottleLimit(),
+        dynamicConfig.getReplicantLifetime(),
+        dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
+    );
+    SegmentLoader loader = new SegmentLoader(
+        stateManager,
+        params.getDruidCluster(),
+        params.getSegmentReplicantLookup(),
+        throttler,
+        params.getBalancerStrategy()
+    );
     rule.run(segment, loader);
     return loader.getStats();
   }

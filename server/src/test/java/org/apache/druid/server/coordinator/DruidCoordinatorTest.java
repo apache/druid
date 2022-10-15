@@ -92,7 +92,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private DruidCoordinator coordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
   private DataSourcesSnapshot dataSourcesSnapshot;
-  private DruidCoordinatorRuntimeParams coordinatorRuntimeParams;
 
   private BatchServerInventoryView serverInventoryView;
   private ScheduledExecutorFactory scheduledExecutorFactory;
@@ -116,11 +115,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
     serverInventoryView = EasyMock.createMock(BatchServerInventoryView.class);
     segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
     dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
-    coordinatorRuntimeParams = EasyMock.createNiceMock(DruidCoordinatorRuntimeParams.class);
     metadataRuleManager = EasyMock.createNiceMock(MetadataRuleManager.class);
-    loadQueueTaskMaster = EasyMock.createMock(LoadQueueTaskMaster.class);
-    EasyMock.expect(loadQueueTaskMaster.isHttpLoading()).andReturn(false).anyTimes();
-    EasyMock.replay(loadQueueTaskMaster);
+    loadQueueTaskMaster = LoadQueuePeonTester.mockCuratorTaskMaster();
 
     JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
@@ -181,6 +177,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         loadQueueTaskMaster,
+        new SegmentStateManager(serverInventoryView, segmentsMetadataManager, loadQueueTaskMaster),
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         loadManagementPeons,
@@ -615,6 +612,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         null,
         null,
+        null,
         new CoordinatorCustomDutyGroups(ImmutableSet.of()),
         null,
         null,
@@ -663,6 +661,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         loadQueueTaskMaster,
+        null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         loadManagementPeons,
@@ -703,6 +702,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         loadQueueTaskMaster,
+        null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         loadManagementPeons,
@@ -752,6 +752,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         loadQueueTaskMaster,
+        null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         loadManagementPeons,
@@ -861,6 +862,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         loadQueueTaskMaster,
+        null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         loadManagementPeons,

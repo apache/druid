@@ -79,7 +79,8 @@ public class RunRulesTest
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
     segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
-    segmentStateManager = new SegmentStateManager(null, segmentsMetadataManager, true);
+    segmentStateManager =
+        new SegmentStateManager(null, segmentsMetadataManager, null);
 
     usedSegments = CreateDataSegments.ofDatasource("test")
                                      .forIntervals(24, Granularities.HOUR)
@@ -144,7 +145,6 @@ public class RunRulesTest
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).withMaxNonPrimaryReplicantsToLoad(10).build())
         .build();
 
-    segmentStateManager.prepareForRun(params);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
@@ -219,7 +219,6 @@ public class RunRulesTest
                                     .withMaxNonPrimaryReplicantsToLoad(24).build()
         ).build();
 
-    segmentStateManager.prepareForRun(params);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
@@ -402,7 +401,6 @@ public class RunRulesTest
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
 
-    segmentStateManager.prepareForRun(params);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
@@ -920,7 +918,6 @@ public class RunRulesTest
         .withDynamicConfigs(createCoordinatorDynamicConfig())
         .build();
 
-    segmentStateManager.prepareForRun(params);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
@@ -1025,7 +1022,6 @@ public class RunRulesTest
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withReplicationThrottleLimit(7).build())
         .build();
 
-    segmentStateManager.prepareForRun(params);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 

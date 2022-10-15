@@ -32,10 +32,11 @@ import org.apache.druid.server.coordinator.SegmentStateManager;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.stream.Collectors;
 
@@ -51,6 +52,40 @@ public class BalanceSegments implements CoordinatorDuty
     this.stateManager = stateManager;
   }
 
+  /**
+   * Reduces the lifetimes of segments currently being moved in all the tiers.
+   * Returns the set of tiers that are currently moving some segments and won't be
+   * eligible for assigning more balancing moves in this run.
+   */
+  private Set<String> reduceLifetimesAndGetBusyTiers(int maxLifetime)
+  {
+    final Set<String> busyTiers = new HashSet<>();
+    stateManager.reduceLifetimesOfMovingSegments().forEach((tier, movingState) -> {
+      int numMovingSegments = movingState.getNumProcessingSegments();
+      if (numMovingSegments <= 0) {
+        return;
+      }
+
+      log.info(
+          "Skipping balance for tier [%s] as it still has %,d segments in queue with lifetime [%d / %d].",
+          tier,
+          numMovingSegments,
+          movingState.getLifetime(),
+          maxLifetime
+      );
+
+      // Create alerts for stuck tiers
+      busyTiers.add(tier);
+      if (movingState.getLifetime() <= 0) {
+        log.makeAlert("Balancing queue for tier [%s] has [%d] segments stuck .", tier, numMovingSegments)
+           .addData("segments", movingState.getCurrentlyProcessingSegmentsAndHosts())
+           .emit();
+      }
+    });
+
+    return busyTiers;
+  }
+
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
@@ -60,9 +95,21 @@ public class BalanceSegments implements CoordinatorDuty
     }
 
     final CoordinatorStats stats = new CoordinatorStats();
-    final SegmentLoader loader = new SegmentLoader(stateManager, params);
-    params.getDruidCluster().getHistoricals().forEach((String tier, NavigableSet<ServerHolder> servers) -> {
-      balanceTier(params, tier, servers, stats, loader);
+    final SegmentLoader loader = new SegmentLoader(
+        stateManager,
+        params.getDruidCluster(),
+        params.getSegmentReplicantLookup(),
+        params.getReplicationManager(),
+        params.getBalancerStrategy()
+    );
+
+    final Set<String> busyTiers = reduceLifetimesAndGetBusyTiers(
+        params.getCoordinatorDynamicConfig().getReplicantLifetime()
+    );
+    params.getDruidCluster().getHistoricals().forEach((tier, servers) -> {
+      if (!busyTiers.contains(tier)) {
+        balanceTier(params, tier, servers, stats, loader);
+      }
     });
 
     stats.accumulate(loader.getStats());
@@ -77,17 +124,6 @@ public class BalanceSegments implements CoordinatorDuty
       SegmentLoader loader
   )
   {
-    final int numSegmentsMovingInTier = stateManager.getNumMovingSegments(tier);
-    if (numSegmentsMovingInTier > 0) {
-      log.info(
-          "Skipping balance for tier [%s] as there are still %,d segments in balancing queue.",
-          tier,
-          numSegmentsMovingInTier
-      );
-      // suppress emit zero stats
-      return;
-    }
-
     /*
       Take as many segments from decommissioning servers as decommissioningMaxPercentOfMaxSegmentsToMove allows and find
       the best location for them on active servers. After that, balance segments within active servers pool.
