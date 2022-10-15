@@ -322,7 +322,7 @@ public class DruidMeta extends MetaImpl
       final long maxRowCount,
       final int maxRowsInFirstFrame,
       final PrepareCallback callback
-  ) throws NoSuchStatementException
+  )
   {
     try {
       // Ignore "callback", this class is designed for use with LocalService which doesn't use it.
@@ -454,7 +454,7 @@ public class DruidMeta extends MetaImpl
       final StatementHandle statement,
       final List<TypedValue> parameterValues,
       final int maxRowsInFirstFrame
-  ) throws NoSuchStatementException
+  )
   {
     try {
       final DruidJdbcPreparedStatement druidStatement =
@@ -504,7 +504,7 @@ public class DruidMeta extends MetaImpl
       final StatementHandle sh,
       final QueryState state,
       final long offset
-  ) throws NoSuchStatementException
+  )
   {
     try {
       final AbstractDruidJdbcStatement druidStatement = getDruidStatement(sh, AbstractDruidJdbcStatement.class);
