@@ -214,22 +214,19 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
                coordinator.getFullSegmentsMetadata(fullDatasourceName)
                           .stream().map(DataSegment::toString)
                           .collect(Collectors.joining(", ")));
-      Thread.sleep(10000);
       final Future<StatusResponseHolder> queryResponseFuture = sqlClient
           .queryAsync(
               sqlQueryHelper.getQueryURL(config.getRouterUrl()),
               new SqlQuery(QUERY, ResultFormat.ARRAY, true, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "validId"), null)
           );
       final StatusResponseHolder queryResponse = queryResponseFuture.get(30, TimeUnit.SECONDS);
-      Thread.sleep(10000);
       LOG.info("Query completed with following response [%s] and status [%s]", queryResponse.getContent(), queryResponse.getStatus());
       final Future<StatusResponseHolder> query1ResponseFuture = sqlClient
           .queryAsync(
               sqlQueryHelper.getQueryURL(config.getRouterUrl()),
-              new SqlQuery(StringUtils.format("SELECT * FROM %s;", fullDatasourceName), ResultFormat.ARRAY, true, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "validId"), null)
+              new SqlQuery("SELECT * FROM " + fullDatasourceName, ResultFormat.ARRAY, true, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "validId"), null)
           );
       final StatusResponseHolder query1Response = query1ResponseFuture.get(30, TimeUnit.SECONDS);
-      Thread.sleep(10000);
       LOG.info("Query1 completed with following response [%s] and status [%s]", query1Response.getContent(), query1Response.getStatus());
       checkNumberOfSegments(4);
       List<String> expectedIntervalAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
