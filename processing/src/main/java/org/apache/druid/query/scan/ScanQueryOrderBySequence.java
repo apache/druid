@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.AbstractPrioritizedQueryRunnerCallable;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
@@ -90,6 +89,7 @@ public class ScanQueryOrderBySequence extends BaseSequence<ScanResultValue, Iter
     public Iterator<ScanResultValue> make()
     {
       ScanQuery query = (ScanQuery) threadSafeQueryPlus.getQuery();
+      QueryContext queryContext = QueryContext.of(query.getContext());
       List<ListenableFuture<ScanResultValue>> futures =
           Lists.newArrayList(
               Iterables.transform(
@@ -101,7 +101,7 @@ public class ScanQueryOrderBySequence extends BaseSequence<ScanResultValue, Iter
 
                     return queryProcessingPool.submitRunnerTask(
                         new AbstractPrioritizedQueryRunnerCallable<ScanResultValue, ScanResultValue>(
-                            QueryContext.of(query.getContext()).getPriority(),
+                            queryContext.getPriority(),
                             input
                         )
                         {
@@ -147,7 +147,6 @@ public class ScanQueryOrderBySequence extends BaseSequence<ScanResultValue, Iter
 
       try {
         //Result of merging multiple segments
-        QueryContext queryContext = QueryContext.of(query.getContext());
         return queryContext.hasTimeout() ?
                future.get(queryContext.getTimeout(), TimeUnit.MILLISECONDS).iterator() :
                future.get().iterator();
