@@ -67,8 +67,6 @@ public class ScanQueryOrderBySequence extends BaseSequence<ScanResultValue, Iter
       implements BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>
   {
     private static final Logger log = new Logger(ScanQueryOrderByIteratorMaker.class);
-    private final ScanQuery query;
-    private final int priority;
     private final QueryPlus<ScanResultValue> threadSafeQueryPlus;
     private final ResponseContext responseContext;
     private final Iterable<QueryRunner<ScanResultValue>> queryables;
@@ -81,17 +79,16 @@ public class ScanQueryOrderBySequence extends BaseSequence<ScanResultValue, Iter
         ResponseContext responseContext
     )
     {
-      query = (ScanQuery) queryPlus.getQuery();
-      priority = QueryContexts.getPriority(query);
-      threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
+      this.threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
       this.responseContext = responseContext;
-      this.queryables = Iterables.unmodifiableIterable(queryables);
+      this.queryables = queryables;
       this.queryProcessingPool = queryProcessingPool;
     }
 
     @Override
     public Iterator<ScanResultValue> make()
     {
+      ScanQuery query = (ScanQuery) threadSafeQueryPlus.getQuery();
       List<ListenableFuture<ScanResultValue>> futures =
           Lists.newArrayList(
               Iterables.transform(
@@ -103,7 +100,7 @@ public class ScanQueryOrderBySequence extends BaseSequence<ScanResultValue, Iter
 
                     return queryProcessingPool.submitRunnerTask(
                         new AbstractPrioritizedQueryRunnerCallable<ScanResultValue, ScanResultValue>(
-                            priority,
+                            QueryContexts.getPriority(query),
                             input
                         )
                         {
