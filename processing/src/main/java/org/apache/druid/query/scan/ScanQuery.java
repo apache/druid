@@ -517,11 +517,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return Druids.ScanQueryBuilder.copy(this).limit(newLimit).build();
   }
 
-  public ScanQuery withNoneOrderByLimit()
-  {
-    return Druids.ScanQueryBuilder.copy(this).limit(Long.MAX_VALUE).orderBy(new ArrayList<>()).order(Order.NONE).resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST).build();
-  }
-
   public ScanQuery withNonNullLegacy(final ScanQueryConfig scanQueryConfig)
   {
     return Druids.ScanQueryBuilder.copy(this).legacy(legacy != null ? legacy : scanQueryConfig.isLegacy()).build();

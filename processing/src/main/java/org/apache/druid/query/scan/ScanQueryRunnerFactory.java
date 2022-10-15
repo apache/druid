@@ -20,12 +20,9 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import org.apache.druid.collections.QueueBasedSorter;
-import org.apache.druid.collections.Sorter;
 import org.apache.druid.collections.StableLimitingSorter;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -100,10 +97,13 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       responseContext.putTimeoutTime(timeoutAt);
 
       if (!query.canPushSort()) {
-        return new ScanQueryOrderByRunner(queryProcessingPool, queryRunners).run(queryPlus, responseContext);
-      }
-
-      if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
+        return Sequences.concat(
+            Sequences.map(
+                Sequences.simple(queryRunners),
+                input -> input.run(queryPlus, responseContext)
+            )
+        );
+      } else if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
         // Use normal strategy
         Sequence<ScanResultValue> returnedRows = Sequences.concat(
             Sequences.map(
@@ -124,7 +124,9 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           intervalsOrdered = Lists.reverse(intervalsOrdered);
           queryRunnersOrdered = Lists.reverse(queryRunnersOrdered);
         }
-        int maxRowsQueuedForOrdering = getMaxRowsQueuedForOrdering(query);
+        int maxRowsQueuedForOrdering = (query.getMaxRowsQueuedForOrdering() == null
+                                        ? scanQueryConfig.getMaxRowsQueuedForOrdering()
+                                        : query.getMaxRowsQueuedForOrdering());
         if (query.getScanRowsLimit() <= maxRowsQueuedForOrdering) {
           // Use priority queue strategy
           try {
@@ -175,8 +177,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                                          .get();
 
           int maxSegmentPartitionsOrderedInMemory = query.getMaxSegmentPartitionsOrderedInMemory() == null
-                                                    ? scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory()
-                                                    : query.getMaxSegmentPartitionsOrderedInMemory();
+                                      ? scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory()
+                                      : query.getMaxSegmentPartitionsOrderedInMemory();
           if (maxNumPartitionsInSegment <= maxSegmentPartitionsOrderedInMemory) {
             // Use n-way merge strategy
 
@@ -207,13 +209,6 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         }
       }
     };
-  }
-
-  private int getMaxRowsQueuedForOrdering(ScanQuery query)
-  {
-    return query.getMaxRowsQueuedForOrdering() == null
-           ? scanQueryConfig.getMaxRowsQueuedForOrdering()
-           : query.getMaxRowsQueuedForOrdering();
   }
 
   /**
@@ -285,50 +280,6 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       yielder.close();
     }
   }
-
-  Sequence<ScanResultValue> multiColumnSort(
-      Sequence<ScanResultValue> inputSequence,
-      ScanQuery scanQuery
-  ) throws IOException
-  {
-    int limit;
-    if (scanQuery.getScanRowsLimit() > Integer.MAX_VALUE) {
-      limit = Integer.MAX_VALUE;
-    } else {
-      limit = Math.toIntExact(scanQuery.getScanRowsLimit());
-    }
-
-    Sorter<Object> sorter = new QueueBasedSorter<>(limit, scanQuery.getOrderByNoneTimeResultOrdering());
-    Yielder<ScanResultValue> yielder = Yielders.each(inputSequence);
-    List<String> columns = new ArrayList<>();
-    try {
-      boolean doneScanning = yielder.isDone();
-      while (!doneScanning) {
-        ScanResultValue next = yielder.get();
-        List<ScanResultValue> singleEventScanResultValues = next.toSingleEventScanResultValues();
-        for (ScanResultValue srv : singleEventScanResultValues) {
-          columns = columns.isEmpty() ? srv.getColumns() : columns;
-          List events = (List) (srv.getEvents());
-          for (Object event : events) {
-            sorter.add((List<Object>) event);
-          }
-        }
-        yielder = yielder.next(null);
-        doneScanning = yielder.isDone();
-      }
-      final List<List<Object>> sortedElements = new ArrayList<>(sorter.size());
-      Iterators.addAll(sortedElements, sorter.drainElement());
-      List<String> finalColumns = columns;
-      return Sequences.simple(ImmutableList.of(new ScanResultValue(null, finalColumns, sortedElements)));
-    }
-    catch (Exception e) {
-      throw new ISE(e.getMessage());
-    }
-    finally {
-      yielder.close();
-    }
-  }
-
 
   @VisibleForTesting
   List<Interval> getIntervalsFromSpecificQuerySpec(QuerySegmentSpec spec)
@@ -402,7 +353,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     return toolChest;
   }
 
-  static class ScanQueryRunner implements QueryRunner<ScanResultValue>
+  private static class ScanQueryRunner implements QueryRunner<ScanResultValue>
   {
     private final ScanQueryEngine engine;
     private final Segment segment;
@@ -421,14 +372,10 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         throw new ISE("Got a [%s] which isn't a %s", query.getClass(), ScanQuery.class);
       }
 
-
       // it happens in unit tests
       final Long timeoutAt = responseContext.getTimeoutTime();
       if (timeoutAt == null || timeoutAt == 0L) {
         responseContext.putTimeoutTime(JodaUtils.MAX_INSTANT);
-      }
-      if (!((ScanQuery) query).canPushSort()) {
-        query = ((ScanQuery) query).withNoneOrderByLimit();
       }
       return engine.process((ScanQuery) query, segment, responseContext, queryPlus.getQueryMetrics());
     }
