@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.AbstractPrioritizedQueryRunnerCallable;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
@@ -100,7 +101,7 @@ public class ScanQueryOrderBySequence extends BaseSequence<ScanResultValue, Iter
 
                     return queryProcessingPool.submitRunnerTask(
                         new AbstractPrioritizedQueryRunnerCallable<ScanResultValue, ScanResultValue>(
-                            QueryContexts.getPriority(query),
+                            QueryContext.of(query.getContext()).getPriority(),
                             input
                         )
                         {
@@ -146,8 +147,9 @@ public class ScanQueryOrderBySequence extends BaseSequence<ScanResultValue, Iter
 
       try {
         //Result of merging multiple segments
-        return QueryContexts.hasTimeout(query) ?
-               future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS).iterator() :
+        QueryContext queryContext = QueryContext.of(query.getContext());
+        return queryContext.hasTimeout() ?
+               future.get(queryContext.getTimeout(), TimeUnit.MILLISECONDS).iterator() :
                future.get().iterator();
       }
       catch (InterruptedException e) {
