@@ -1243,7 +1243,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testExplainCountStar() throws Exception
   {
     Map<String, Object> queryContext = ImmutableMap.of(
-        PlannerContext.CTX_SQL_QUERY_ID,
+        QueryContexts.CTX_SQL_QUERY_ID,
         DUMMY_SQL_QUERY_ID,
         PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
         "false"
@@ -1809,7 +1809,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity(), stats.get("identity"));
     Assert.assertTrue(stats.containsKey("sqlQuery/time"));
     Assert.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
-    Assert.assertTrue(queryContext.containsKey(PlannerContext.CTX_SQL_QUERY_ID));
+    Assert.assertTrue(queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID));
     if (success) {
       Assert.assertTrue(stats.containsKey("sqlQuery/bytes"));
     } else {

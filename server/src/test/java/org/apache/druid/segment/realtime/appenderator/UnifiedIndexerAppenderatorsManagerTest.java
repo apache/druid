@@ -119,8 +119,6 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
   @Test
   public void test_getBundle_knownDataSource()
   {
-
-
     final UnifiedIndexerAppenderatorsManager.DatasourceBundle bundle = manager.getBundle(
         Druids.newScanQueryBuilder()
               .dataSource(appenderator.getDataSource())

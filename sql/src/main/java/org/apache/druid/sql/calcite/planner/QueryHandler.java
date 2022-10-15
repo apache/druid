@@ -60,7 +60,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -537,8 +536,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   @Nullable
   private RelRoot possiblyWrapRootWithOuterLimitFromContext(RelRoot root)
   {
-    Object outerLimitObj = handlerContext.queryContext().get(PlannerContext.CTX_SQL_OUTER_LIMIT);
-    Long outerLimit = DimensionHandlerUtils.convertObjectToLong(outerLimitObj, true);
+    Long outerLimit = handlerContext.queryContext().getLong(PlannerContext.CTX_SQL_OUTER_LIMIT);
     if (outerLimit == null) {
       return root;
     }
