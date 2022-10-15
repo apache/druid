@@ -97,13 +97,10 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       responseContext.putTimeoutTime(timeoutAt);
 
       if (!query.canPushSort()) {
-        return Sequences.concat(
-            Sequences.map(
-                Sequences.simple(queryRunners),
-                input -> input.run(queryPlus, responseContext)
-            )
-        );
-      } else if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
+        return new ScanQueryOrderByRunner(queryProcessingPool, queryRunners).run(queryPlus, responseContext);
+      }
+
+      if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
         // Use normal strategy
         Sequence<ScanResultValue> returnedRows = Sequences.concat(
             Sequences.map(

@@ -21,19 +21,14 @@ package org.apache.druid.query.scan;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.collections.QueueBasedSorter;
-import org.apache.druid.collections.Sorter;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.AbstractPrioritizedQueryRunnerCallable;
 import org.apache.druid.query.QueryContexts;
@@ -47,6 +42,7 @@ import org.apache.druid.query.context.ResponseContext;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -73,7 +69,6 @@ public class ScanQueryOrderBySequence extends BaseSequence<ScanResultValue, Iter
     private static final Logger log = new Logger(ScanQueryOrderByIteratorMaker.class);
     private final ScanQuery query;
     private final int priority;
-    private final int limit;
     private final QueryPlus<ScanResultValue> threadSafeQueryPlus;
     private final ResponseContext responseContext;
     private final Iterable<QueryRunner<ScanResultValue>> queryables;
@@ -92,17 +87,11 @@ public class ScanQueryOrderBySequence extends BaseSequence<ScanResultValue, Iter
       this.responseContext = responseContext;
       this.queryables = Iterables.unmodifiableIterable(queryables);
       this.queryProcessingPool = queryProcessingPool;
-      if (query.getScanRowsLimit() > Integer.MAX_VALUE) {
-        limit = Integer.MAX_VALUE;
-      } else {
-        limit = Math.toIntExact(query.getScanRowsLimit());
-      }
     }
 
     @Override
     public Iterator<ScanResultValue> make()
     {
-      // Make it a List<> to materialize all of the values (so that it will submit everything to the executor)
       List<ListenableFuture<ScanResultValue>> futures =
           Lists.newArrayList(
               Iterables.transform(
@@ -126,31 +115,18 @@ public class ScanQueryOrderBySequence extends BaseSequence<ScanResultValue, Iter
                               if (result == null) {
                                 throw new ISE("Got a null result! Segments are missing!");
                               }
-                              //Sort each batch of segment data to complete the sorting of the entire segment
-                              Sorter<Object> sorter = new QueueBasedSorter<>(
-                                  limit,
-                                  query.getOrderByNoneTimeResultOrdering()
-                              );
-                              Yielder<ScanResultValue> yielder = Yielders.each(result);
+
+                              Iterator<ScanResultValue> it = result.toList().iterator();
+                              List<List<Object>> eventList = new ArrayList<>();
                               List<String> columns = new ArrayList<>();
-                              boolean doneScanning = yielder.isDone();
-                              while (!doneScanning) {
-                                ScanResultValue next = yielder.get();
-                                List<ScanResultValue> singleEventScanResultValues = next.toSingleEventScanResultValues();
-                                for (ScanResultValue srv : singleEventScanResultValues) {
-                                  columns = columns.isEmpty() ? srv.getColumns() : columns;
-                                  List events = (List) (srv.getEvents());
-                                  for (Object event : events) {
-                                    sorter.add((List<Object>) event);
-                                  }
-                                }
-                                yielder = yielder.next(null);
-                                doneScanning = yielder.isDone();
+                              String segmentId = null;
+                              while (it.hasNext()) {
+                                ScanResultValue next = it.next();
+                                eventList.addAll((List<List<Object>>) next.getEvents());
+                                columns = columns.isEmpty() ? next.getColumns() : columns;
+                                segmentId = Objects.nonNull(segmentId) ? segmentId : next.getSegmentId();
                               }
-                              final List<List<Object>> sortedElements = new ArrayList<>(sorter.size());
-                              Iterators.addAll(sortedElements, sorter.drainElement());
-                              List<String> finalColumns = columns;
-                              return new ScanResultValue(null, finalColumns, sortedElements);
+                              return new ScanResultValue(segmentId, columns, eventList);
                             }
                             catch (QueryInterruptedException e) {
                               throw new RuntimeException(e);
