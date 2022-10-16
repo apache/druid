@@ -165,6 +165,7 @@ public class RunRules implements CoordinatorDuty
         return;
       }
 
+      busyTiers.add(tier);
       log.info(
           "Skipping replication on tier [%s] as is still has %d segments in queue with lifetime [%d / %d]",
           tier,
@@ -174,7 +175,6 @@ public class RunRules implements CoordinatorDuty
       );
 
       // Create alerts for stuck tiers
-      busyTiers.add(tier);
       if (replicatingState.getLifetime() <= 0) {
         log.makeAlert("Replication queue for tier [%s] has [%d] segments stuck.", tier, numReplicatingSegments)
            .addData("segments", replicatingState.getCurrentlyProcessingSegmentsAndHosts())

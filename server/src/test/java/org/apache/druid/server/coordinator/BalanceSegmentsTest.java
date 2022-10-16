@@ -453,7 +453,13 @@ public class BalanceSegmentsTest
         )
     );
 
-    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers.newBuilder()
+    final CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig
+        .builder()
+        .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
+        .withMaxSegmentsInNodeLoadingQueue(maxSegmentsInQueue)
+        .build();
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
         .withDruidCluster(
             DruidClusterBuilder.newBuilder()
                                .addTier("normal", holder1, holder2)
@@ -465,13 +471,9 @@ public class BalanceSegmentsTest
         .withUsedSegmentsInTest(segments)
         .withBalancerStrategy(predefinedPickOrderStrategy)
         .withBroadcastDatasources(broadcastDatasources)
-        .withDynamicConfigs(
-            CoordinatorDynamicConfig
-                .builder()
-                .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
-                .withMaxSegmentsInNodeLoadingQueue(maxSegmentsInQueue)
-                .build()
-        ).build();
+        .withDynamicConfigs(dynamicConfig)
+        .withReplicationManager(createReplicationThrottler(dynamicConfig))
+        .build();
 
     params = new BalanceSegments(stateManager).run(params);
 
@@ -645,6 +647,8 @@ public class BalanceSegmentsTest
       List<Boolean> decommissioning
   )
   {
+    CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig
+        .builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build();
     return CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(
@@ -666,9 +670,10 @@ public class BalanceSegmentsTest
                 .collect(Collectors.toMap(i -> String.valueOf(i + 1), peons::get))
         )
         .withUsedSegmentsInTest(segments)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
+        .withDynamicConfigs(dynamicConfig)
         .withBroadcastDatasources(broadcastDatasources)
-        .withBalancerStrategy(balancerStrategy);
+        .withBalancerStrategy(balancerStrategy)
+        .withReplicationManager(createReplicationThrottler(dynamicConfig));
   }
 
   private static void mockDruidServer(
@@ -794,5 +799,15 @@ public class BalanceSegmentsTest
         .withBalancerStrategy(strategy)
         .withBroadcastDatasources(broadcastDatasources)
         .build();
+  }
+
+  private ReplicationThrottler createReplicationThrottler(CoordinatorDynamicConfig dynamicConfig)
+  {
+    return new ReplicationThrottler(
+        Collections.singleton("normal"),
+        dynamicConfig.getReplicationThrottleLimit(),
+        dynamicConfig.getReplicantLifetime(),
+        dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
+    );
   }
 }

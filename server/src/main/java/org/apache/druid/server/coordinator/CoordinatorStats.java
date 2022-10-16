@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.ObjLongConsumer;
 
 /**
@@ -39,11 +40,23 @@ public class CoordinatorStats
 
   public static final String ASSIGNED_COUNT = "assignedCount";
   public static final String DROPPED_COUNT = "droppedCount";
+  public static final String DELETED_COUNT = "deletedCount";
 
-  public static final String BROADCAST_LOADS = "broadcastLoadCount";
-  public static final String BROADCAST_DROPS = "broadcastDropCount";
+  public static final String ASSIGN_SKIP_COUNT = "assignSkip";
+  public static final String DROP_SKIP_COUNT = "dropSkip";
 
-  public static final String DELETED_SEGMENTS = "deletedCount";
+  public static final String MOVED_COUNT = "movedCount";
+  public static final String UNMOVED_COUNT = "unmovedCount";
+
+  public static final String LOAD_SUCCESS_COUNT = "loadSuccess";
+  public static final String LOAD_FAIL_COUNT = "loadFail";
+  public static final String DROP_SUCCESS_COUNT = "dropSuccess";
+  public static final String DROP_FAIL_COUNT = "dropFail";
+  public static final String MOVE_SUCCESS_COUNT = "moveSuccess";
+  public static final String MOVE_FAIL_COUNT = "moveFail";
+
+  public static final String BROADCAST_LOADS = "broadcastLoad";
+  public static final String BROADCAST_DROPS = "broadcastDrop";
 
   public static final String REQUIRED_CAPACITY = "requiredCapacity";
   public static final String TOTAL_CAPACITY = "totalCapacity";
@@ -237,5 +250,17 @@ public class CoordinatorStats
     }
 
     return this;
+  }
+
+  public Map<String, Long> getSortedTierStats(String tier)
+  {
+    final Map<String, Long> sortedTierStats = new TreeMap<>();
+    perTierStats.forEach((statName, statsPerTier) -> {
+      if (statsPerTier.containsKey(tier)) {
+        sortedTierStats.put(statName, statsPerTier.getLong(tier));
+      }
+    });
+
+    return sortedTierStats;
   }
 }

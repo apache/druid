@@ -105,10 +105,23 @@ public class SegmentHolder
     }
   }
 
-  public long getFirstRequestTimeMillis()
+  public void markRequestSentToServer()
   {
     firstRequestMillis.compareAndSet(0L, System.currentTimeMillis());
-    return firstRequestMillis.get();
+  }
+
+  public boolean isRequestSentToServer()
+  {
+    return firstRequestMillis.get() > 0;
+  }
+
+  public long getMillisSinceFirstRequestToServer()
+  {
+    if (firstRequestMillis.get() == 0) {
+      return 0;
+    } else {
+      return System.currentTimeMillis() - firstRequestMillis.get();
+    }
   }
 
   @Override

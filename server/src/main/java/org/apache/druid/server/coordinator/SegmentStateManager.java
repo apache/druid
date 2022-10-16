@@ -82,6 +82,7 @@ public class SegmentStateManager
       replicatingInTier.addSegment(segment.getId(), server.getServer().getHost());
       callback = success -> replicatingInTier.removeSegment(segment.getId());
     } else {
+      throttler.incrementThrottledReplicas(tier);
       return false;
     }
 

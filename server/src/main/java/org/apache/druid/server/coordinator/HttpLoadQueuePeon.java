@@ -162,12 +162,13 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       activeRequestSegments.clear();
       while (newRequests.size() < batchSize && iter.hasNext()) {
         Map.Entry<DataSegment, SegmentHolder> entry = iter.next();
-        SegmentHolder queuedItem = entry.getValue();
-        if (hasRequestTimedOut(queuedItem)) {
-          onRequestFailed(queuedItem, "timed out");
+        SegmentHolder holder = entry.getValue();
+        if (hasRequestTimedOut(holder)) {
+          onRequestFailed(holder, "timed out");
           iter.remove();
         } else {
-          newRequests.add(queuedItem.getChangeRequest());
+          newRequests.add(holder.getChangeRequest());
+          holder.markRequestSentToServer();
           activeRequestSegments.add(entry.getKey());
         }
       }
@@ -497,8 +498,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
    */
   private boolean hasRequestTimedOut(SegmentHolder holder)
   {
-    return System.currentTimeMillis() - holder.getFirstRequestTimeMillis()
-           > config.getLoadTimeoutDelay().getMillis();
+    return holder.isRequestSentToServer()
+           && holder.getMillisSinceFirstRequestToServer()
+              > config.getLoadTimeoutDelay().getMillis();
   }
 
   private void onRequestSucceeded(SegmentHolder holder)

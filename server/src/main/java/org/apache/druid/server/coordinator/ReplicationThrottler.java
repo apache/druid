@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.coordinator;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -37,7 +39,10 @@ public class ReplicationThrottler
   private final int maxLifetime;
   private final int maxTotalReplicasPerRun;
 
-  private int numReplicasAssignedInRun;
+  private final Map<String, Integer> tierToNumAssigned = new HashMap<>();
+  private final Map<String, Integer> tierToNumThrottled = new HashMap<>();
+
+  private int totalNumAssignedReplicas;
 
   /**
    * Creates a new ReplicationThrottler for use during a single coordiantor run.
@@ -62,18 +67,29 @@ public class ReplicationThrottler
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.maxLifetime = maxLifetime;
     this.maxTotalReplicasPerRun = maxTotalReplicasPerRun;
-    this.numReplicasAssignedInRun = 0;
+    this.totalNumAssignedReplicas = 0;
   }
 
   public boolean canAssignReplica(String tier)
   {
-    return numReplicasAssignedInRun < maxTotalReplicasPerRun
+    return totalNumAssignedReplicas < maxTotalReplicasPerRun
            && eligibleTiers.contains(tier);
   }
 
   public void incrementAssignedReplicas(String tier)
   {
-    ++numReplicasAssignedInRun;
+    ++totalNumAssignedReplicas;
+    tierToNumAssigned.compute(tier, (t, count) -> (count == null) ? 1 : count + 1);
+  }
+
+  public void incrementThrottledReplicas(String tier)
+  {
+    tierToNumThrottled.compute(tier, (t, count) -> (count == null) ? 1 : count + 1);
+  }
+
+  public Map<String, Integer> getTierToNumThrottled()
+  {
+    return tierToNumThrottled;
   }
 
   public int getReplicationThrottleLimit()

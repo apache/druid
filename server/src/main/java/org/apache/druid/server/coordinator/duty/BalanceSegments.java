@@ -66,6 +66,7 @@ public class BalanceSegments implements CoordinatorDuty
         return;
       }
 
+      busyTiers.add(tier);
       log.info(
           "Skipping balance for tier [%s] as it still has %,d segments in queue with lifetime [%d / %d].",
           tier,
@@ -75,7 +76,6 @@ public class BalanceSegments implements CoordinatorDuty
       );
 
       // Create alerts for stuck tiers
-      busyTiers.add(tier);
       if (movingState.getLifetime() <= 0) {
         log.makeAlert("Balancing queue for tier [%s] has [%d] segments stuck .", tier, numMovingSegments)
            .addData("segments", movingState.getCurrentlyProcessingSegmentsAndHosts())
@@ -91,6 +91,11 @@ public class BalanceSegments implements CoordinatorDuty
   {
     if (params.getUsedSegments().isEmpty()) {
       log.info("Skipping balance as there are no used segments.");
+      return params;
+    }
+    int maxSegmentsToMove = params.getCoordinatorDynamicConfig().getMaxSegmentsToMove();
+    if (maxSegmentsToMove <= 0) {
+      log.info("Skipping balance as maxSegmentsToMove is %d.", maxSegmentsToMove);
       return params;
     }
 
@@ -200,10 +205,7 @@ public class BalanceSegments implements CoordinatorDuty
       SegmentLoader loader
   )
   {
-    if (maxSegmentsToMove <= 0) {
-      log.debug("maxSegmentsToMove is 0; no balancing work can be performed.");
-      return new Pair<>(0, 0);
-    } else if (toMoveFrom.isEmpty()) {
+    if (toMoveFrom.isEmpty()) {
       log.debug("toMoveFrom is empty; no balancing work can be performed.");
       return new Pair<>(0, 0);
     } else if (toMoveTo.isEmpty()) {

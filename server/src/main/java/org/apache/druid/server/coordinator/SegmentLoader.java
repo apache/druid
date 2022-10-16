@@ -182,7 +182,7 @@ public class SegmentLoader
   public void deleteSegment(DataSegment segment)
   {
     stateManager.deleteSegment(segment);
-    stats.addToGlobalStat(CoordinatorStats.DELETED_SEGMENTS, 1);
+    stats.addToGlobalStat(CoordinatorStats.DELETED_COUNT, 1);
   }
 
   /**
@@ -206,7 +206,7 @@ public class SegmentLoader
         && stateManager.loadSegment(segment, server, true, replicationThrottler)) {
       return true;
     } else {
-      log.makeAlert("Failed to broadcast segment for [%s]", segment.getDataSource())
+      log.makeAlert("Failed to assign broadcast segment for datasource [%s]", segment.getDataSource())
          .addData("segmentId", segment.getId())
          .addData("segmentSize", segment.getSize())
          .addData("hostName", server.getServer().getHost())
@@ -348,8 +348,9 @@ public class SegmentLoader
 
       stats.addToTieredStat(CoordinatorStats.ASSIGNED_COUNT, tier, successfulLoadsQueued);
       if (numReplicasToLoad > successfulLoadsQueued) {
-        log.warn(
-            "Queued %d of %d loads of segment [%s] on tier [%s].",
+        stats.addToTieredStat(CoordinatorStats.ASSIGN_SKIP_COUNT, tier, numReplicasToLoad - successfulLoadsQueued);
+        log.debug(
+            "Queued only %d of %d loads of segment [%s] on tier [%s] due to throttling or failures.",
             successfulLoadsQueued,
             numReplicasToLoad,
             segment.getId(),
@@ -394,8 +395,9 @@ public class SegmentLoader
 
       stats.addToTieredStat(CoordinatorStats.DROPPED_COUNT, tier, successfulDropsQueued);
       if (numReplicasToDrop > successfulDropsQueued) {
-        log.warn(
-            "Queued %d of %d loads of segment [%s] on tier [%s].",
+        stats.addToTieredStat(CoordinatorStats.DROP_SKIP_COUNT, tier, 1L);
+        log.debug(
+            "Queued only %d of %d drops of segment [%s] on tier [%s] due to throttling or failures.",
             successfulDropsQueued,
             numReplicasToDrop,
             segment.getId(),

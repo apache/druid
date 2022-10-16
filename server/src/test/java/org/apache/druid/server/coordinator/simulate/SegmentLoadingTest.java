@@ -120,6 +120,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     // maxNonPrimaryReplicas = 1, each tier can load at most 1 replica in a single run
     CoordinatorDynamicConfig dynamicConfig =
         CoordinatorDynamicConfig.builder()
+                                .withMaxSegmentsToMove(0)
                                 .withReplicationThrottleLimit(0)
                                 .build();
 
@@ -151,6 +152,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     verifyNoEvent(Metric.DROPPED_COUNT);
     verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 2L);
+    verifyValue(Metric.THROTTLED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 1);
 
     // Run 2: Replicas still queued
     // nothing new is assigned to T2, nothing is dropped from T1
@@ -158,6 +160,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     verifyNoEvent(Metric.DROPPED_COUNT);
     verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 0L);
+    verifyValue(Metric.THROTTLED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 1);
 
     loadQueuedSegments();
     Assert.assertEquals(2, getNumLoadedSegments(historicalT21, historicalT22, historicalT23));
