@@ -205,7 +205,10 @@ public class BalanceSegments implements CoordinatorDuty
       SegmentLoader loader
   )
   {
-    if (toMoveFrom.isEmpty()) {
+    if (maxSegmentsToMove <= 0) {
+      log.debug("maxSegmentsToMove is 0; no balancing work can be performed.");
+      return new Pair<>(0, 0);
+    } else if (toMoveFrom.isEmpty()) {
       log.debug("toMoveFrom is empty; no balancing work can be performed.");
       return new Pair<>(0, 0);
     } else if (toMoveTo.isEmpty()) {
