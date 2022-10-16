@@ -95,10 +95,10 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public WorkerClient taskClientFor(Controller controller, IndexerWorkerClient.TaskIdResolver taskIdResolver)
+  public WorkerClient taskClientFor(Controller controller)
   {
     // Ignore controller parameter.
-    return new IndexerWorkerClient(clientFactory, overlordClient, jsonMapper(), taskIdResolver);
+    return new IndexerWorkerClient(clientFactory, overlordClient, jsonMapper());
   }
 
   @Override

@@ -514,9 +514,7 @@ public class ControllerImpl implements Controller
     this.selfDruidNode = context.selfNode();
     context.registerController(this, closer);
 
-    this.netClient = new ExceptionWrappingWorkerClient(
-        context.taskClientFor(this, workerNumber -> this.workerTaskLauncher.getTaskList().get(workerNumber))
-    );
+    this.netClient = new ExceptionWrappingWorkerClient(context.taskClientFor(this));
     closer.register(netClient::close);
 
     final boolean isDurableStorageEnabled =
@@ -1010,7 +1008,7 @@ public class ControllerImpl implements Controller
     final Int2ObjectMap<WorkOrder> workOrders = queryKernel.createWorkOrders(stageNumber, extraInfos);
 
     contactWorkersForStage(
-        (netClient, taskId, workerNumber) -> netClient.postWorkOrder(workerNumber, workOrders.get(workerNumber)),
+        (netClient, taskId, workerNumber) -> netClient.postWorkOrder(taskId, workOrders.get(workerNumber)),
         workOrders.keySet()
     );
   }
@@ -1025,7 +1023,7 @@ public class ControllerImpl implements Controller
     contactWorkersForStage(
         (netClient, taskId, workerNumber) ->
             netClient.postResultPartitionBoundaries(
-                workerNumber,
+                taskId,
                 new StageId(queryDef.getQueryId(), stageNumber),
                 resultPartitionBoundaries
             ),
@@ -1131,11 +1129,12 @@ public class ControllerImpl implements Controller
   private CounterSnapshotsTree getCountersFromAllTasks()
   {
     final CounterSnapshotsTree retVal = new CounterSnapshotsTree();
+    final List<String> taskList = workerTaskLauncher.getTaskList();
 
     final List<ListenableFuture<CounterSnapshotsTree>> futures = new ArrayList<>();
 
-    for (int i = 0; i < workerTaskLauncher.getTaskList().size(); ++i) {
-      futures.add(netClient.getCounters(i));
+    for (String taskId : taskList) {
+      futures.add(netClient.getCounters(taskId));
     }
 
     final List<CounterSnapshotsTree> snapshotsTrees =
@@ -1150,10 +1149,12 @@ public class ControllerImpl implements Controller
 
   private void postFinishToAllTasks()
   {
+    final List<String> taskList = workerTaskLauncher.getTaskList();
+
     final List<ListenableFuture<Void>> futures = new ArrayList<>();
 
-    for (int i = 0; i < workerTaskLauncher.getTaskList().size(); ++i) {
-      futures.add(netClient.postFinish(i));
+    for (String taskId : taskList) {
+      futures.add(netClient.postFinish(taskId));
     }
 
     FutureUtils.getUnchecked(MSQFutureUtils.allAsList(futures, true), true);
@@ -2133,7 +2134,7 @@ public class ControllerImpl implements Controller
       for (final StageId stageId : queryKernel.getEffectivelyFinishedStageIds()) {
         log.info("Query [%s] issuing cleanup order for stage %d.", queryDef.getQueryId(), stageId.getStageNumber());
         contactWorkersForStage(
-            (netClient, taskId, workerNumber) -> netClient.postCleanupStage(workerNumber, stageId),
+            (netClient, taskId, workerNumber) -> netClient.postCleanupStage(taskId, stageId),
             queryKernel.getWorkerInputsForStage(stageId).workers()
         );
         queryKernel.finishStage(stageId, true);

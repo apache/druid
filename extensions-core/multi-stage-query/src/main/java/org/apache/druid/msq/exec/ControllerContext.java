@@ -25,7 +25,6 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.msq.indexing.IndexerWorkerClient;
 import org.apache.druid.server.DruidNode;
 
 import java.util.Map;
@@ -74,8 +73,7 @@ public interface ControllerContext
   /**
    * Client for communicating with workers.
    */
-  WorkerClient taskClientFor(Controller controller, IndexerWorkerClient.TaskIdResolver taskIdResolver);
-
+  WorkerClient taskClientFor(Controller controller);
   /**
    * Writes controller task report.
    */

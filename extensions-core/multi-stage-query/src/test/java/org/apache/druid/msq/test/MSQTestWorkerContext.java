@@ -34,7 +34,6 @@ import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.IndexerFrameContext;
-import org.apache.druid.msq.indexing.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.IndexerWorkerContext;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.QueryDefinition;
@@ -57,12 +56,12 @@ public class MSQTestWorkerContext implements WorkerContext
   private final Controller controller;
   private final ObjectMapper mapper;
   private final Injector injector;
-  private final Map<Integer, Worker> inMemoryWorkers;
+  private final Map<String, Worker> inMemoryWorkers;
   private final File file = FileUtils.createTempDir();
   private final WorkerMemoryParameters workerMemoryParameters;
 
   public MSQTestWorkerContext(
-      Map<Integer, Worker> inMemoryWorkers,
+      Map<String, Worker> inMemoryWorkers,
       Controller controller,
       ObjectMapper mapper,
       Injector injector,
@@ -101,7 +100,7 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
-  public WorkerClient makeWorkerClient(IndexerWorkerClient.TaskIdResolver taskIdResolver)
+  public WorkerClient makeWorkerClient()
   {
     return new MSQTestWorkerClient(inMemoryWorkers);
   }

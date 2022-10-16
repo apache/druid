@@ -43,7 +43,6 @@ import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.msq.exec.WorkerManagerClient;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
-import org.apache.druid.msq.indexing.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -62,9 +61,8 @@ public class MSQTestControllerContext implements ControllerContext
 {
   private static final Logger log = new Logger(MSQTestControllerContext.class);
   private final TaskActionClient taskActionClient;
-  private final Map<Integer, Worker> inMemoryWorkers = new HashMap<>();
-  private final Map<String, Integer> taskIdToWorkerNumber = new HashMap<>();
-  private final ConcurrentMap<Integer, TaskStatus> statusMap = new ConcurrentHashMap<>();
+  private final Map<String, Worker> inMemoryWorkers = new HashMap<>();
+  private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
   private final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.singleThreaded(
       "MultiStageQuery-test-controller-client"));
   private final CoordinatorClient coordinatorClient;
@@ -122,10 +120,8 @@ public class MSQTestControllerContext implements ControllerContext
           task,
           new MSQTestWorkerContext(inMemoryWorkers, controller, mapper, injector, workerMemoryParameters)
       );
-      int workerNumber = inMemoryWorkers.size();
-      inMemoryWorkers.put(workerNumber, worker);
-      taskIdToWorkerNumber.put(task.getId(), workerNumber);
-      statusMap.put(workerNumber, TaskStatus.running(task.getId()));
+      inMemoryWorkers.put(task.getId(), worker);
+      statusMap.put(task.getId(), TaskStatus.running(task.getId()));
 
       ListenableFuture<TaskStatus> future = executor.submit(worker::run);
 
@@ -134,14 +130,14 @@ public class MSQTestControllerContext implements ControllerContext
         @Override
         public void onSuccess(@Nullable TaskStatus result)
         {
-          statusMap.put(workerNumber, result);
+          statusMap.put(task.getId(), result);
         }
 
         @Override
         public void onFailure(Throwable t)
         {
           log.error(t, "error running worker task %s", task.getId());
-          statusMap.put(workerNumber, TaskStatus.failure(task.getId(), t.getMessage()));
+          statusMap.put(task.getId(), TaskStatus.failure(task.getId(), t.getMessage()));
         }
       });
 
@@ -153,14 +149,10 @@ public class MSQTestControllerContext implements ControllerContext
     {
       Map<String, TaskStatus> result = new HashMap<>();
       for (String taskId : taskIds) {
-        Integer workerNumber = taskIdToWorkerNumber.get(taskId);
-        if (workerNumber == null) {
-          continue;
-        }
-        TaskStatus taskStatus = statusMap.get(workerNumber);
+        TaskStatus taskStatus = statusMap.get(taskId);
         if (taskStatus != null) {
 
-          if (taskStatus.getStatusCode().equals(TaskState.RUNNING) && !inMemoryWorkers.containsKey(workerNumber)) {
+          if (taskStatus.getStatusCode().equals(TaskState.RUNNING) && !inMemoryWorkers.containsKey(taskId)) {
             result.put(taskId, new TaskStatus(taskId, TaskState.FAILED, 0, null, null));
           } else {
             result.put(
@@ -182,12 +174,8 @@ public class MSQTestControllerContext implements ControllerContext
     @Override
     public TaskLocation location(String workerId)
     {
-      Integer workerNumber = taskIdToWorkerNumber.get(workerId);
-      if (workerNumber == null) {
-        return TaskLocation.unknown();
-      }
-      final TaskStatus status = statusMap.get(workerNumber);
-      if (status != null && status.getStatusCode().equals(TaskState.RUNNING) && inMemoryWorkers.containsKey(workerNumber)) {
+      final TaskStatus status = statusMap.get(workerId);
+      if (status != null && status.getStatusCode().equals(TaskState.RUNNING) && inMemoryWorkers.containsKey(workerId)) {
         return TaskLocation.create("host-" + workerId, 1, -1);
       } else {
         return TaskLocation.unknown();
@@ -197,11 +185,7 @@ public class MSQTestControllerContext implements ControllerContext
     @Override
     public void cancel(String workerId)
     {
-      Integer workerNumber = taskIdToWorkerNumber.get(workerId);
-      if (workerNumber == null) {
-        return;
-      }
-      final Worker worker = inMemoryWorkers.remove(workerNumber);
+      final Worker worker = inMemoryWorkers.remove(workerId);
       if (worker != null) {
         worker.stopGracefully();
       }
@@ -257,10 +241,7 @@ public class MSQTestControllerContext implements ControllerContext
   }
 
   @Override
-  public WorkerClient taskClientFor(
-      Controller controller,
-      IndexerWorkerClient.TaskIdResolver taskIdResolver
-  )
+  public WorkerClient taskClientFor(Controller controller)
   {
     return new MSQTestWorkerClient(inMemoryWorkers);
   }

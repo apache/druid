@@ -218,10 +218,10 @@ public class IndexerWorkerContext implements WorkerContext
   }
 
   @Override
-  public WorkerClient makeWorkerClient(IndexerWorkerClient.TaskIdResolver taskIdResolver)
+  public WorkerClient makeWorkerClient()
   {
     // Ignore workerId parameter. The workerId is passed into each method of WorkerClient individually.
-    return new IndexerWorkerClient(clientFactory, makeOverlordClient(), jsonMapper(), taskIdResolver);
+    return new IndexerWorkerClient(clientFactory, makeOverlordClient(), jsonMapper());
   }
 
   @Override

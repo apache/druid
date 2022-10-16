@@ -66,25 +66,19 @@ public class IndexerWorkerClient implements WorkerClient
   private final ServiceClientFactory clientFactory;
   private final OverlordClient overlordClient;
   private final ObjectMapper jsonMapper;
-  private final TaskIdResolver taskIdResolver;
 
   @GuardedBy("clientMap")
   private final Map<String, Pair<ServiceClient, Closeable>> clientMap = new HashMap<>();
 
-  @GuardedBy("clientMap")
-  private final Map<Integer, String> workerNumberToTaskId = new HashMap<>();
-
   public IndexerWorkerClient(
       final ServiceClientFactory clientFactory,
       final OverlordClient overlordClient,
-      final ObjectMapper jsonMapper,
-      final TaskIdResolver taskIdResolver
+      final ObjectMapper jsonMapper
   )
   {
     this.clientFactory = clientFactory;
     this.overlordClient = overlordClient;
     this.jsonMapper = jsonMapper;
-    this.taskIdResolver = taskIdResolver;
   }
 
 
@@ -100,9 +94,9 @@ public class IndexerWorkerClient implements WorkerClient
   }
 
   @Override
-  public ListenableFuture<Void> postWorkOrder(int workerNumber, WorkOrder workOrder)
+  public ListenableFuture<Void> postWorkOrder(String workerTaskId, WorkOrder workOrder)
   {
-    return updateAndGetClient(workerNumber).asyncRequest(
+    return getClient(workerTaskId).asyncRequest(
         new RequestBuilder(HttpMethod.POST, "/workOrder")
             .jsonContent(jsonMapper, workOrder),
         IgnoreHttpResponseHandler.INSTANCE
@@ -111,7 +105,7 @@ public class IndexerWorkerClient implements WorkerClient
 
   @Override
   public ListenableFuture<Void> postResultPartitionBoundaries(
-      int workerNumber,
+      String workerTaskId,
       StageId stageId,
       ClusterByPartitions partitionBoundaries
   )
@@ -122,7 +116,7 @@ public class IndexerWorkerClient implements WorkerClient
         stageId.getStageNumber()
     );
 
-    return updateAndGetClient(workerNumber).asyncRequest(
+    return getClient(workerTaskId).asyncRequest(
         new RequestBuilder(HttpMethod.POST, path)
             .jsonContent(jsonMapper, partitionBoundaries),
         IgnoreHttpResponseHandler.INSTANCE
@@ -134,7 +128,7 @@ public class IndexerWorkerClient implements WorkerClient
    */
   @Override
   public ListenableFuture<Void> postCleanupStage(
-      final int workerNumber,
+      final String workerTaskId,
       final StageId stageId
   )
   {
@@ -144,26 +138,26 @@ public class IndexerWorkerClient implements WorkerClient
         stageId.getStageNumber()
     );
 
-    return updateAndGetClient(workerNumber).asyncRequest(
+    return getClient(workerTaskId).asyncRequest(
         new RequestBuilder(HttpMethod.POST, path),
         IgnoreHttpResponseHandler.INSTANCE
     );
   }
 
   @Override
-  public ListenableFuture<Void> postFinish(int workerNumber)
+  public ListenableFuture<Void> postFinish(String workerTaskId)
   {
-    return updateAndGetClient(workerNumber).asyncRequest(
+    return getClient(workerTaskId).asyncRequest(
         new RequestBuilder(HttpMethod.POST, "/finish"),
         IgnoreHttpResponseHandler.INSTANCE
     );
   }
 
   @Override
-  public ListenableFuture<CounterSnapshotsTree> getCounters(int workerNumber)
+  public ListenableFuture<CounterSnapshotsTree> getCounters(String workerTaskId)
   {
     return FutureUtils.transform(
-        updateAndGetClient(workerNumber).asyncRequest(
+        getClient(workerTaskId).asyncRequest(
             new RequestBuilder(HttpMethod.GET, "/counters"),
             new BytesFullResponseHandler()
         ),
@@ -175,14 +169,14 @@ public class IndexerWorkerClient implements WorkerClient
 
   @Override
   public ListenableFuture<Boolean> fetchChannelData(
-      int workerNumber,
+      String workerTaskId,
       StageId stageId,
       int partitionNumber,
       long offset,
       ReadableByteChunksFrameChannel channel
   )
   {
-    final ServiceClient client = updateAndGetClient(workerNumber);
+    final ServiceClient client = getClient(workerTaskId);
     final String path = getStagePartitionPath(stageId, partitionNumber);
 
     final SettableFuture<Boolean> retVal = SettableFuture.create();
@@ -242,25 +236,9 @@ public class IndexerWorkerClient implements WorkerClient
     }
   }
 
-  private ServiceClient updateAndGetClient(final int workerNumber)
+  private ServiceClient getClient(final String workerTaskId)
   {
     synchronized (clientMap) {
-      String workerTaskId = taskIdResolver.resolve(workerNumber);
-
-      // Close and remove the old client if the worker task id has been updated
-      if (workerNumberToTaskId.containsKey(workerNumber) && !workerNumberToTaskId.get(workerNumber)
-                                                                                 .equals(workerTaskId)) {
-        String oldWorkerTaskId = workerNumberToTaskId.get(workerNumber);
-        Pair<ServiceClient, Closeable> oldClientAndCloseable = clientMap.get(oldWorkerTaskId);
-        try {
-          oldClientAndCloseable.rhs.close();
-        }
-        catch (IOException ignored) {
-
-        }
-        clientMap.remove(oldWorkerTaskId);
-      }
-      workerNumberToTaskId.put(workerNumber, workerTaskId);
       return clientMap.computeIfAbsent(
           workerTaskId,
           id -> {
@@ -289,16 +267,5 @@ public class IndexerWorkerClient implements WorkerClient
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-  }
-
-
-  /**
-   * Functional interface that resolves the worker number to the task id
-   */
-  public interface TaskIdResolver
-  {
-
-    String resolve(int workerNumber);
-
   }
 }

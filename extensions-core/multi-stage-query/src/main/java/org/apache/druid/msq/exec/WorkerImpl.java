@@ -242,16 +242,7 @@ public class WorkerImpl implements Worker
     closer.register(controllerClient::close);
     context.registerWorker(this, closer); // Uses controllerClient, so must be called after that is initialized
 
-    // Worker client is only used during non fault tolerant mode of MSQE therefore it is cool to memoize the task
-    // list that the controller sends it
-    final List<String> taskList;
-    try {
-      taskList = controllerClient.getTaskList();
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    this.workerClient = new ExceptionWrappingWorkerClient(context.makeWorkerClient(taskList::get));
+    this.workerClient = new ExceptionWrappingWorkerClient(context.makeWorkerClient());
     closer.register(workerClient::close);
 
     final KernelHolder kernelHolder = new KernelHolder();

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.msq.indexing.IndexerWorkerClient;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.server.DruidNode;
@@ -56,9 +55,8 @@ public interface WorkerContext
   /**
    * Creates and fetches a {@link WorkerClient}. It is independent of the workerId because the workerId is passed
    * in to every method of the client.
-   * @param taskIdResolver
    */
-  WorkerClient makeWorkerClient(IndexerWorkerClient.TaskIdResolver taskIdResolver);
+  WorkerClient makeWorkerClient();
 
   /**
    * Fetch a directory for temporary outputs
