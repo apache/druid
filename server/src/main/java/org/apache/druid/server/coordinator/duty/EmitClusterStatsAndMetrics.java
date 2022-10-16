@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -166,7 +167,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         if (addNewline.getAndSet(!addNewline.get())) {
           summary.append("\n");
         }
-        summary.append(String.format("%25s:%8d", stat, value));
+        summary.append(StringUtils.format("%25s:%8d", stat, value));
       });
 
       log.info("Summary for tier [%s]: %s", tierName, summary.toString());
@@ -216,7 +217,6 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     emitTieredStats("segment/cancelMove/count", stats, CoordinatorStats.CANCELLED_MOVES);
 
     emitTieredStats("segment/cost/raw", stats, "initialCost");
-
     emitTieredStats("segment/cost/normalization", stats, "normalization");
 
     emitTieredStats("segment/moved/count", stats, CoordinatorStats.MOVED_COUNT);
@@ -251,16 +251,6 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     );
 
     emitGlobalStat("segment/overShadowed/count", stats, "overShadowedCount");
-
-    stats.forEachTieredStat(
-        "movedCount",
-        (tier, count) -> log.info("[%s] : Moved %,d segment(s)", tier, count)
-    );
-
-    stats.forEachTieredStat(
-        "unmovedCount",
-        (tier, count) -> log.info("[%s] : Let alone %,d segment(s)", tier, count)
-    );
 
     // Log load queue status of all replication or broadcast targets
     log.info("Load Queues:");
