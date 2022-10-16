@@ -7022,7 +7022,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(new Object[]{946771200000L, "10.1", 1L})
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(new Object[]{946684800000L, "", 1L}, new Object[]{946771200000L, "10.1", 1L})
+        : ImmutableList.of(new Object[]{946771200000L, "10.1", 1L})
     );
   }
 
