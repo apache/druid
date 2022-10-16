@@ -41,7 +41,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-@Test(groups = {TestNGGroup.COMPACTION, TestNGGroup.QUICKSTART_COMPATIBLE})
+@Test(groups = {TestNGGroup.COMPACTION_IGNORE, TestNGGroup.QUICKSTART_COMPATIBLE})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITCompactionSparseColumnTest extends AbstractIndexerTest
 {

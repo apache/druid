@@ -42,6 +42,7 @@ public class TestNGGroup
   public static final String KAFKA_DATA_FORMAT = "kafka-data-format";
 
   public static final String COMPACTION = "compaction";
+  public static final String COMPACTION_IGNORE = "compaction_ignore";
 
   public static final String UPGRADE = "upgrade";
 

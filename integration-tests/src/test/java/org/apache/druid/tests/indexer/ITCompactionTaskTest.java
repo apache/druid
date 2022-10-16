@@ -62,19 +62,13 @@ import java.util.stream.Collectors;
 public class ITCompactionTaskTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(ITCompactionTaskTest.class);
-  private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
-
-  private static final String INDEX_QUERIES_YEAR_RESOURCE = "/indexer/wikipedia_index_queries_year_query_granularity.json";
-  private static final String INDEX_QUERIES_HOUR_RESOURCE = "/indexer/wikipedia_index_queries_hour_query_granularity.json";
 
   private static final String INDEX_DATASOURCE = "wikipedia_index_test";
 
   private static final String SEGMENT_METADATA_QUERY_RESOURCE = "/indexer/segment_metadata_query.json";
 
   private static final String COMPACTION_TASK = "/indexer/wikipedia_compaction_task.json";
-  private static final String COMPACTION_TASK_WITH_SEGMENT_GRANULARITY = "/indexer/wikipedia_compaction_task_with_segment_granularity.json";
-  private static final String COMPACTION_TASK_WITH_GRANULARITY_SPEC = "/indexer/wikipedia_compaction_task_with_granularity_spec.json";
 
   private static final String INDEX_TASK_WITH_TIMESTAMP = "/indexer/wikipedia_with_timestamp_index_task.json";
 
@@ -102,95 +96,6 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   public void setFullDatasourceName(Method method)
   {
     fullDatasourceName = INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix() + "-" + method.getName();
-  }
-
-  @Test
-  public void testCompaction() throws Exception
-  {
-    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK, null);
-  }
-
-  @Test
-  public void testCompactionWithSegmentGranularity() throws Exception
-  {
-    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK_WITH_SEGMENT_GRANULARITY, GranularityType.MONTH);
-  }
-
-  @Test
-  public void testCompactionWithSegmentGranularityInGranularitySpec() throws Exception
-  {
-    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK_WITH_GRANULARITY_SPEC, GranularityType.MONTH);
-  }
-
-  @Test
-  public void testCompactionWithQueryGranularityInGranularitySpec() throws Exception
-  {
-    try (final Closeable ignored = unloader(fullDatasourceName)) {
-      loadData(INDEX_TASK, fullDatasourceName);
-      // 4 segments across 2 days
-      checkNumberOfSegments(4);
-      List<String> expectedIntervalAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
-      expectedIntervalAfterCompaction.sort(null);
-
-      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.SECOND.name(), 4);
-      String queryResponseTemplate = getQueryResponseTemplate(INDEX_QUERIES_RESOURCE);
-      queryHelper.testQueriesFromString(queryResponseTemplate);
-      // QueryGranularity was SECOND, now we will change it to HOUR (QueryGranularity changed to coarser)
-      compactData(COMPACTION_TASK_WITH_GRANULARITY_SPEC, null, GranularityType.HOUR);
-
-      // The original 4 segments should be compacted into 2 new segments since data only has 2 days and the compaction
-      // segmentGranularity is DAY
-      checkNumberOfSegments(2);
-      queryResponseTemplate = getQueryResponseTemplate(INDEX_QUERIES_HOUR_RESOURCE);
-      queryHelper.testQueriesFromString(queryResponseTemplate);
-      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.HOUR.name(), 2);
-      checkCompactionIntervals(expectedIntervalAfterCompaction);
-
-      // QueryGranularity was HOUR, now we will change it to MINUTE (QueryGranularity changed to finer)
-      compactData(COMPACTION_TASK_WITH_GRANULARITY_SPEC, null, GranularityType.MINUTE);
-
-      // There will be no change in number of segments as compaction segmentGranularity is the same and data interval
-      // is the same. Since QueryGranularity is changed to finer qranularity, the data will remains the same. (data
-      // will just be bucketed to a finer qranularity but roll up will not be different
-      // i.e. 2020-10-29T05:00 will just be bucketed to 2020-10-29T05:00:00)
-      checkNumberOfSegments(2);
-      queryResponseTemplate = getQueryResponseTemplate(INDEX_QUERIES_HOUR_RESOURCE);
-      queryHelper.testQueriesFromString(queryResponseTemplate);
-      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.MINUTE.name(), 2);
-      checkCompactionIntervals(expectedIntervalAfterCompaction);
-    }
-  }
-
-  @Test
-  public void testCompactionWithSegmentGranularityAndQueryGranularityInGranularitySpec() throws Exception
-  {
-    try (final Closeable ignored = unloader(fullDatasourceName)) {
-      loadData(INDEX_TASK, fullDatasourceName);
-      // 4 segments across 2 days
-      checkNumberOfSegments(4);
-      List<String> expectedIntervalAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
-      expectedIntervalAfterCompaction.sort(null);
-
-      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.SECOND.name(), 4);
-      String queryResponseTemplate = getQueryResponseTemplate(INDEX_QUERIES_RESOURCE);
-      queryHelper.testQueriesFromString(queryResponseTemplate);
-      compactData(COMPACTION_TASK_WITH_GRANULARITY_SPEC, GranularityType.YEAR, GranularityType.YEAR);
-
-      // The original 4 segments should be compacted into 1 new segment
-      checkNumberOfSegments(1);
-      queryResponseTemplate = getQueryResponseTemplate(INDEX_QUERIES_YEAR_RESOURCE);
-      queryHelper.testQueriesFromString(queryResponseTemplate);
-      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.YEAR.name(), 1);
-
-      List<String> newIntervals = new ArrayList<>();
-      for (String interval : expectedIntervalAfterCompaction) {
-        for (Interval newinterval : GranularityType.YEAR.getDefaultGranularity().getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
-          newIntervals.add(newinterval.toString());
-        }
-      }
-      expectedIntervalAfterCompaction = newIntervals;
-      checkCompactionIntervals(expectedIntervalAfterCompaction);
-    }
   }
 
   @Test
@@ -224,7 +129,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       final Future<StatusResponseHolder> query1ResponseFuture = sqlClient
           .queryAsync(
               sqlQueryHelper.getQueryURL(config.getRouterUrl()),
-              new SqlQuery("SELECT * FROM " + fullDatasourceName, ResultFormat.ARRAY, true, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "validId"), null)
+              new SqlQuery(StringUtils.format("SELECT * FROM \"%s\"", fullDatasourceName), ResultFormat.ARRAY, true, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "validId"), null)
           );
       final StatusResponseHolder query1Response = query1ResponseFuture.get(30, TimeUnit.SECONDS);
       LOG.info("Query1 completed with following response [%s] and status [%s]", query1Response.getContent(), query1Response.getStatus());

@@ -90,7 +90,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-@Test(groups = {TestNGGroup.COMPACTION})
+@Test(groups = {TestNGGroup.COMPACTION_IGNORE})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITAutoCompactionTest extends AbstractIndexerTest
 {

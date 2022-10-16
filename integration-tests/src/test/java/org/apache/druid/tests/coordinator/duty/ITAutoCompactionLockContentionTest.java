@@ -63,7 +63,7 @@ import java.util.Set;
  * Integration Test to verify behaviour when there is a lock contention between
  * compaction tasks and on-going stream ingestion tasks.
  */
-@Test(groups = {TestNGGroup.COMPACTION})
+@Test(groups = {TestNGGroup.COMPACTION_IGNORE})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingServiceTest
 {
