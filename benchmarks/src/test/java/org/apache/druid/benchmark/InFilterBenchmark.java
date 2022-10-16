@@ -64,6 +64,7 @@ public class InFilterBenchmark
   private static final int START_INT = 10_000_000;
 
   private InDimFilter inFilter;
+  private InDimFilter endInDimFilter;
 
   // cardinality of the dictionary. it will contain this many ints (as strings, of course), starting at START_INT,
   // even numbers only.
@@ -71,7 +72,7 @@ public class InFilterBenchmark
   int dictionarySize;
 
   // cardinality of the "in" filter. half of its values will be in the dictionary, half will not.
-  @Param({"10000"})
+  @Param({"1", "10", "100", "1000", "10000"})
   int filterSize;
 
   // selector will contain a "dictionarySize" number of bitmaps; each one contains a single int.
@@ -114,6 +115,12 @@ public class InFilterBenchmark
         "dummy",
         IntStream.range(START_INT, START_INT + filterSize).mapToObj(String::valueOf).collect(Collectors.toSet())
     );
+    endInDimFilter = new InDimFilter(
+        "dummy",
+        IntStream.range(START_INT + dictionarySize * 2, START_INT + dictionarySize * 2 + 1)
+                 .mapToObj(String::valueOf)
+                 .collect(Collectors.toSet())
+    );
   }
 
   @Benchmark
@@ -122,6 +129,15 @@ public class InFilterBenchmark
   public void doFilter(Blackhole blackhole)
   {
     final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(inFilter, selector);
+    blackhole.consume(bitmapIndex);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void doFilterAtEnd(Blackhole blackhole)
+  {
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(endInDimFilter, selector);
     blackhole.consume(bitmapIndex);
   }
 

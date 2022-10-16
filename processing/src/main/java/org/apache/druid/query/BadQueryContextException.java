@@ -32,6 +32,11 @@ public class BadQueryContextException extends BadQueryException
     this(ERROR_CODE, e.getMessage(), ERROR_CLASS);
   }
 
+  public BadQueryContextException(String msg)
+  {
+    this(ERROR_CODE, msg, ERROR_CLASS);
+  }
+
   @JsonCreator
   private BadQueryContextException(
       @JsonProperty("error") String errorCode,

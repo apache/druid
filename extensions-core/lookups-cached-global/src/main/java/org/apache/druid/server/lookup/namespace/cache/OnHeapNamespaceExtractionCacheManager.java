@@ -150,7 +150,9 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
         size += key.length() + value.length();
       }
     }
+    // Each String object has ~40 bytes of overhead, and x 2 for key and value strings
+    long heapSizeInBytes = (80 * numEntries) + size * Character.BYTES;
     serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/numEntries", numEntries));
-    serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/heapSizeInBytes", size * Character.BYTES));
+    serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/heapSizeInBytes", heapSizeInBytes));
   }
 }

@@ -49,7 +49,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -97,6 +96,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -951,7 +951,7 @@ public class DruidQuery
       final DataSource newDataSource = dataSourceFiltrationPair.lhs;
       final Filtration filtration = dataSourceFiltrationPair.rhs;
       String bound = minTime ? TimeBoundaryQuery.MIN_TIME : TimeBoundaryQuery.MAX_TIME;
-      HashMap<String, Object> context = new HashMap<>(plannerContext.getQueryContext().getMergedParams());
+      Map<String, Object> context = new HashMap<>(plannerContext.queryContextMap());
       if (minTime) {
         context.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, aggregatorFactory.getName());
       } else {
@@ -1051,7 +1051,7 @@ public class DruidQuery
     if (!Granularities.ALL.equals(queryGranularity) || grouping.hasGroupingDimensionsDropped()) {
       theContext.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
     }
-    theContext.putAll(plannerContext.getQueryContext().getMergedParams());
+    theContext.putAll(plannerContext.queryContextMap());
 
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
@@ -1175,7 +1175,7 @@ public class DruidQuery
         Granularities.ALL,
         grouping.getAggregatorFactories(),
         postAggregators,
-        ImmutableSortedMap.copyOf(plannerContext.getQueryContext().getMergedParams())
+        ImmutableSortedMap.copyOf(plannerContext.queryContextMap())
     );
   }
 
@@ -1232,7 +1232,7 @@ public class DruidQuery
         havingSpec,
         Optional.ofNullable(sorting).orElse(Sorting.none()).limitSpec(),
         grouping.getSubtotals().toSubtotalsSpec(grouping.getDimensionSpecs()),
-        ImmutableSortedMap.copyOf(plannerContext.getQueryContext().getMergedParams())
+        ImmutableSortedMap.copyOf(plannerContext.queryContextMap())
     );
     // We don't apply timestamp computation optimization yet when limit is pushed down. Maybe someday.
     if (query.getLimitSpec() instanceof DefaultLimitSpec && query.isApplyLimitPushDown()) {
@@ -1404,8 +1404,8 @@ public class DruidQuery
         withScanSignatureIfNeeded(
             virtualColumns,
             scanColumnsList,
-            plannerContext.getQueryContext()
-        ).getMergedParams()
+            plannerContext.queryContextMap()
+        )
     );
   }
 
@@ -1413,43 +1413,42 @@ public class DruidQuery
    * Returns a copy of "queryContext" with {@link #CTX_SCAN_SIGNATURE} added if the execution context has the
    * {@link EngineFeature#SCAN_NEEDS_SIGNATURE} feature.
    */
-  private QueryContext withScanSignatureIfNeeded(
+  private Map<String, Object> withScanSignatureIfNeeded(
       final VirtualColumns virtualColumns,
       final List<String> scanColumns,
-      final QueryContext queryContext
+      final Map<String, Object> queryContext
   )
   {
-    if (plannerContext.engineHasFeature(EngineFeature.SCAN_NEEDS_SIGNATURE)) {
-      // Compute the signature of the columns that we are selecting.
-      final RowSignature.Builder scanSignatureBuilder = RowSignature.builder();
-
-      for (final String columnName : scanColumns) {
-        final ColumnCapabilities capabilities =
-            virtualColumns.getColumnCapabilitiesWithFallback(sourceRowSignature, columnName);
-
-        if (capabilities == null) {
-          // No type for this column. This is a planner bug.
-          throw new ISE("No type for column [%s]", columnName);
-        }
-
-        scanSignatureBuilder.add(columnName, capabilities.toColumnType());
-      }
-
-      final RowSignature signature = scanSignatureBuilder.build();
-
-      try {
-        final QueryContext newContext = queryContext.copy();
-        newContext.addSystemParam(
-            CTX_SCAN_SIGNATURE,
-            plannerContext.getJsonMapper().writeValueAsString(signature)
-        );
-        return newContext;
-      }
-      catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
-      }
-    } else {
+    if (!plannerContext.engineHasFeature(EngineFeature.SCAN_NEEDS_SIGNATURE)) {
       return queryContext;
+    }
+    // Compute the signature of the columns that we are selecting.
+    final RowSignature.Builder scanSignatureBuilder = RowSignature.builder();
+
+    for (final String columnName : scanColumns) {
+      final ColumnCapabilities capabilities =
+          virtualColumns.getColumnCapabilitiesWithFallback(sourceRowSignature, columnName);
+
+      if (capabilities == null) {
+        // No type for this column. This is a planner bug.
+        throw new ISE("No type for column [%s]", columnName);
+      }
+
+      scanSignatureBuilder.add(columnName, capabilities.toColumnType());
+    }
+
+    final RowSignature signature = scanSignatureBuilder.build();
+
+    try {
+      Map<String, Object> revised = new HashMap<>(queryContext);
+      revised.put(
+          CTX_SCAN_SIGNATURE,
+          plannerContext.getJsonMapper().writeValueAsString(signature)
+      );
+      return revised;
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
     }
   }
 }

@@ -519,7 +519,7 @@ public class ControllerImpl implements Controller
     closer.register(netClient::close);
 
     final boolean isDurableStorageEnabled =
-        MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().getContext());
+        MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().context());
 
     final QueryDefinition queryDef = makeQueryDefinition(
         id(),
@@ -1193,7 +1193,7 @@ public class ControllerImpl implements Controller
 
       final InputChannelFactory inputChannelFactory;
 
-      if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().getContext())) {
+      if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().context())) {
         inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
             id(),
             () -> taskIds,
@@ -1296,7 +1296,7 @@ public class ControllerImpl implements Controller
    */
   private void cleanUpDurableStorageIfNeeded()
   {
-    if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().getContext())) {
+    if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().context())) {
       final String controllerDirName = DurableStorageOutputChannelFactory.getControllerDirectory(task.getId());
       try {
         // Delete all temporary files as a failsafe
@@ -1462,7 +1462,7 @@ public class ControllerImpl implements Controller
   {
     if (isRollupQuery) {
       final String queryGranularityString =
-          query.getQueryContext().getAsString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, "");
+          query.context().getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, "");
 
       if (timeIsGroupByDimension((GroupByQuery) query, columnMappings) && !queryGranularityString.isEmpty()) {
         final Granularity queryGranularity;
@@ -1496,8 +1496,7 @@ public class ControllerImpl implements Controller
   {
     if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME)) {
       final String queryTimeColumn = columnMappings.getQueryColumnForOutputColumn(ColumnHolder.TIME_COLUMN_NAME);
-      return queryTimeColumn.equals(groupByQuery.getQueryContext()
-                                                .getAsString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD));
+      return queryTimeColumn.equals(groupByQuery.context().getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD));
     } else {
       return false;
     }
@@ -1519,8 +1518,8 @@ public class ControllerImpl implements Controller
   private static boolean isRollupQuery(Query<?> query)
   {
     return query instanceof GroupByQuery
-           && !MultiStageQueryContext.isFinalizeAggregations(query.getQueryContext())
-           && !query.getContextBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
+           && !MultiStageQueryContext.isFinalizeAggregations(query.context())
+           && !query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
   }
 
   private static boolean isInlineResults(final MSQSpec querySpec)
