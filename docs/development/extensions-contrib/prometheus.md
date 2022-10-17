@@ -31,14 +31,6 @@ This extension exposes [Druid metrics](https://druid.apache.org/docs/latest/oper
 
 Emitter is enabled by setting `druid.emitter=prometheus` [configs](https://druid.apache.org/docs/latest/configuration/index.html#enabling-metrics) or include `prometheus` in the composing emitter list. 
 
-In certain instances, Druid processes may be colocated on the same host. For example, the Broker and Router may share the same server. Other colocated processes include the Historical and MiddleManager or the Coordinator and Overlord. When you have colocated processes, specify `druid.emitter.prometheus.port` separately for each process on each host. For example, even if the Broker and Router share the same host, the Broker runtime properties and the Router runtime properties each need to list `druid.emitter.prometheus.port`, and the port value for both must be different.
-
-Peon tasks are short-lived batch processes typically colocated with MiddleManagers and often Historicals. Multiple peons may run at once. These tasks should use `pushgateway` for `druid.emitter.prometheus.strategy` and should not start an HTTP server to push metrics. 
-To configure Pushgateway for peons, pass the Prometheus options to the peon's JVM by setting the [`javaOptsArray` property](../../configuration/index.md#middlemanager-configuration) in your MiddleManager runtime properties file:
-```
-druid.indexer.runner.javaOptsArray=["druid.emitter.prometheus.strategy=pushgateway","druid.emitter.prometheus.pushGatewayAddress=http://PUSHGATEWAYHOST:PUSHGATEWAYPORT"]
-```
-Replace `PUSHGATEWAYHOST:PUSHGATEWAYPORT` with your Pushgateway address.
 
 ## Configuration
 
@@ -55,12 +47,23 @@ All the configuration parameters for the Prometheus emitter are under `druid.emi
 | `druid.emitter.prometheus.pushGatewayAddress` | Pushgateway address. Required if using `pushgateway` strategy.                                                                                                                                                                         | no        | none                                 |
 |`druid.emitter.prometheus.flushPeriod`|Emit metrics to Pushgateway every `flushPeriod` seconds. Required if `pushgateway` strategy is used.|no|15|
 
+### Different ports for colocated druid processes
+
+In certain instances, Druid processes may be colocated on the same host. For example, the Broker and Router may share the same server. Other colocated processes include the Historical and MiddleManager or the Coordinator and Overlord. When you have colocated processes, specify `druid.emitter.prometheus.port` separately for each process on each host. For example, even if the Broker and Router share the same host, the Broker runtime properties and the Router runtime properties each need to list `druid.emitter.prometheus.port`, and the port value for both must be different.
+
 ### Override properties for Peon Tasks
 
 Peon tasks are created dynamically by middle managers and have dynamic host and port addresses. Since the `exporter` strategy allows Prometheus to read only from a fixed address, it cannot be used for peon tasks.
 So, these tasks need to be configured to use `pushgateway` strategy to push metrics from Druid to prometheus gateway.
 
 If this emitter is configured to use `exporter` strategy globally, some of the above configurations need to be overridden in the middle manager so that spawned peon tasks can still use the `pushgateway` strategy.
+
+To configure Pushgateway for peons, pass the Prometheus options to the peon's JVM by setting the [`javaOptsArray` property](../../configuration/index.md#middlemanager-configuration) in your MiddleManager runtime properties file:
+```
+druid.indexer.runner.javaOptsArray=["druid.emitter.prometheus.strategy=pushgateway","druid.emitter.prometheus.pushGatewayAddress=http://PUSHGATEWAYHOST:PUSHGATEWAYPORT"]
+```
+Replace `PUSHGATEWAYHOST:PUSHGATEWAYPORT` with your Pushgateway address.
+
 
 ```
 #
