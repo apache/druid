@@ -77,12 +77,14 @@ public class ClusterByStatisticsSnapshot
   public ClusterByStatisticsWorkerReport workerReport(int workerNumber)
   {
     SortedMap<Long, Set<Integer>> rowKeyIntSetTreeSet = new TreeMap<>();
+    double bytesRetained = 0;
 
     for (Long bucketKey : buckets.keySet()) {
       rowKeyIntSetTreeSet.put(bucketKey, ImmutableSet.of(workerNumber));
+      bytesRetained += buckets.get(bucketKey).bytesRetained;
     }
 
-    return new ClusterByStatisticsWorkerReport(rowKeyIntSetTreeSet, !getHasMultipleValues().isEmpty());
+    return new ClusterByStatisticsWorkerReport(rowKeyIntSetTreeSet, !getHasMultipleValues().isEmpty(), bytesRetained);
   }
 
   @Override
@@ -107,16 +109,19 @@ public class ClusterByStatisticsSnapshot
   static class Bucket
   {
     private final RowKey bucketKey;
+    private final double bytesRetained;
     private final KeyCollectorSnapshot keyCollectorSnapshot;
 
     @JsonCreator
     Bucket(
         @JsonProperty("bucketKey") RowKey bucketKey,
-        @JsonProperty("data") KeyCollectorSnapshot keyCollectorSnapshot
+        @JsonProperty("data") KeyCollectorSnapshot keyCollectorSnapshot,
+        @JsonProperty("bytesRetained") double bytesRetained
     )
     {
       this.bucketKey = Preconditions.checkNotNull(bucketKey, "bucketKey");
       this.keyCollectorSnapshot = Preconditions.checkNotNull(keyCollectorSnapshot, "data");
+      this.bytesRetained = bytesRetained;
     }
 
     @JsonProperty

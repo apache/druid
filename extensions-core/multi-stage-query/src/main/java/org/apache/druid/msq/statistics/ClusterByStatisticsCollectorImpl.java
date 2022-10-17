@@ -57,7 +57,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
 
   private final boolean[] hasMultipleValues;
 
-  private final int maxRetainedBytes;
+  private final long maxRetainedBytes;
   private final int maxBuckets;
   private double totalRetainedBytes;
 
@@ -65,7 +65,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
       final ClusterBy clusterBy,
       final RowKeyReader keyReader,
       final KeyCollectorFactory<?, ?> keyCollectorFactory,
-      final int maxRetainedBytes,
+      final long maxRetainedBytes,
       final int maxBuckets,
       final boolean checkHasMultipleValues
   )
@@ -87,7 +87,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   public static ClusterByStatisticsCollector create(
       final ClusterBy clusterBy,
       final RowSignature signature,
-      final int maxRetainedBytes,
+      final long maxRetainedBytes,
       final int maxBuckets,
       final boolean aggregate,
       final boolean checkHasMultipleValues
@@ -327,7 +327,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
       if (clusterBy.getBucketByCount() == 1) {
         bucketKey = (Long) trimmedRowReader.read(bucketEntry.getKey(), 0);
       }
-      bucketSnapshots.put(bucketKey, new ClusterByStatisticsSnapshot.Bucket(bucketEntry.getKey(), keyCollectorSnapshot));
+      bucketSnapshots.put(bucketKey, new ClusterByStatisticsSnapshot.Bucket(bucketEntry.getKey(), keyCollectorSnapshot, totalRetainedBytes));
     }
 
     final IntSet hasMultipleValuesSet;

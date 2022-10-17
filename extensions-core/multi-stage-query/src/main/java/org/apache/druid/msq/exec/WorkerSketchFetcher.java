@@ -44,14 +44,17 @@ import java.util.concurrent.Executors;
 public class WorkerSketchFetcher
 {
   private static final int DEFAULT_THREAD_COUNT = 10;
-  private static final boolean SEQUENTIAL_MERGING = true;
+  private static final long BYTES_THRESHOLD = 1_000_000_000L;
+  private static final long WORKER_THRESHOLD = 100;
 
+  private final boolean forceNonSequentialMerging;
   private final WorkerClient workerClient;
   private final ExecutorService executorService;
 
-  public WorkerSketchFetcher(WorkerClient workerClient)
+  public WorkerSketchFetcher(WorkerClient workerClient, boolean forceNonSequentialMerging)
   {
     this.workerClient = workerClient;
+    this.forceNonSequentialMerging = forceNonSequentialMerging;
     this.executorService = Executors.newFixedThreadPool(DEFAULT_THREAD_COUNT);
   }
 
@@ -62,11 +65,14 @@ public class WorkerSketchFetcher
   public CompletableFuture<Either<Long, ClusterByPartitions>> submitFetcherTask(
       ClusterByStatisticsWorkerReport workerReport,
       List<String> workerTaskIds,
-      StageDefinition stageDefinition)
+      StageDefinition stageDefinition
+  )
   {
     ClusterBy clusterBy = stageDefinition.getClusterBy();
 
-    if (clusterBy.getBucketByCount() == 0 || !SEQUENTIAL_MERGING) {
+    if (forceNonSequentialMerging || clusterBy.getBucketByCount() == 0) {
+      return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
+    } else if (stageDefinition.getMaxWorkerCount() > WORKER_THRESHOLD || workerReport.getBytesRetained() > BYTES_THRESHOLD) {
       return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
     } else {
       return sequentialTimeChunkMerging(workerReport, stageDefinition, workerTaskIds);
@@ -199,11 +205,11 @@ public class WorkerSketchFetcher
                     partitionFuture.complete(longClusterByPartitionsEither);
                   }
 
-                  List<ClusterByPartition> timeSketchpartitions =
+                  List<ClusterByPartition> timeSketchPartitions =
                       stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector)
                                      .valueOrThrow()
                                      .ranges();
-                  abutAndAppendPartitionBoundries(finalPartitionBoundries, timeSketchpartitions);
+                  abutAndAppendPartitionBoundries(finalPartitionBoundries, timeSketchPartitions);
 
                   submitFetchingTasksForNextTimeChunk();
                 }
@@ -219,14 +225,14 @@ public class WorkerSketchFetcher
 
     private void abutAndAppendPartitionBoundries(
         List<ClusterByPartition> finalPartitionBoundries,
-        List<ClusterByPartition> timeSketchpartitions
+        List<ClusterByPartition> timeSketchPartitions
     )
     {
       if (!finalPartitionBoundries.isEmpty()) {
         ClusterByPartition clusterByPartition = finalPartitionBoundries.remove(finalPartitionBoundries.size() - 1);
-        finalPartitionBoundries.add(new ClusterByPartition(clusterByPartition.getStart(), timeSketchpartitions.get(0).getStart()));
+        finalPartitionBoundries.add(new ClusterByPartition(clusterByPartition.getStart(), timeSketchPartitions.get(0).getStart()));
       }
-      finalPartitionBoundries.addAll(timeSketchpartitions);
+      finalPartitionBoundries.addAll(timeSketchPartitions);
     }
 
     public CompletableFuture<Either<Long, ClusterByPartitions>> getPartitionFuture()

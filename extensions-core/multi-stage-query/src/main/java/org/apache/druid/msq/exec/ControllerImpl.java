@@ -519,7 +519,10 @@ public class ControllerImpl implements Controller
     context.registerController(this, closer);
 
     this.netClient = new ExceptionWrappingWorkerClient(context.taskClientFor(this));
-    this.workerSketchFetcher = new WorkerSketchFetcher(netClient);
+    Boolean forceNonSequentialMerging = (Boolean) task.getSqlQueryContext()
+                                                      .getOrDefault("msqForceNonSequentialMerging", false);
+    this.workerSketchFetcher = new WorkerSketchFetcher(netClient, forceNonSequentialMerging);
+
     closer.register(netClient::close);
 
     final boolean isDurableStorageEnabled =

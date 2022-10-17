@@ -35,23 +35,29 @@ public class ClusterByStatisticsWorkerReport
 
   private Boolean hasMultipleValues;
 
+  private double bytesRetained;
+
   @JsonCreator
   public ClusterByStatisticsWorkerReport(
       @JsonProperty("timeSegmentVsWorkerIdMap") final SortedMap<Long, Set<Integer>> timeChunks,
-      @JsonProperty("hasMultipleValues") boolean hasMultipleValues
+      @JsonProperty("hasMultipleValues") boolean hasMultipleValues,
+      @JsonProperty("bytesRetained") double bytesRetained
   )
   {
     this.timeSegmentVsWorkerIdMap = timeChunks;
     this.hasMultipleValues = hasMultipleValues;
+    this.bytesRetained = bytesRetained;
   }
 
   public void addAll(ClusterByStatisticsWorkerReport other)
   {
     for (Long timeChunk : other.timeSegmentVsWorkerIdMap.keySet()) {
-      timeSegmentVsWorkerIdMap.computeIfAbsent(timeChunk, key -> new HashSet<>())
-                              .addAll(other.timeSegmentVsWorkerIdMap.get(timeChunk));
+      this.timeSegmentVsWorkerIdMap
+          .computeIfAbsent(timeChunk, key -> new HashSet<>())
+          .addAll(other.timeSegmentVsWorkerIdMap.get(timeChunk));
     }
-    hasMultipleValues = hasMultipleValues || other.hasMultipleValues;
+    this.hasMultipleValues = this.hasMultipleValues || other.hasMultipleValues;
+    this.bytesRetained += bytesRetained;
   }
 
   @JsonProperty("timeSegmentVsWorkerIdMap")
@@ -64,5 +70,11 @@ public class ClusterByStatisticsWorkerReport
   public boolean isHasMultipleValues()
   {
     return hasMultipleValues;
+  }
+
+  @JsonProperty("bytesRetained")
+  public double getBytesRetained()
+  {
+    return bytesRetained;
   }
 }

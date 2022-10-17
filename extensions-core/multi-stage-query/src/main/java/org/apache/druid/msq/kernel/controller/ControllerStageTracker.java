@@ -89,7 +89,7 @@ class ControllerStageTracker
     this.workerInputs = workerInputs;
 
     if (stageDef.mustGatherResultKeyStatistics()) {
-      this.clusterByStatisticsWorkerReport = new ClusterByStatisticsWorkerReport(new TreeMap<>(), false);
+      this.clusterByStatisticsWorkerReport = new ClusterByStatisticsWorkerReport(new TreeMap<>(), false, 0);
     } else {
       this.clusterByStatisticsWorkerReport = null;
       generateResultPartitionsAndBoundariesWithoutKeyStatistics();
