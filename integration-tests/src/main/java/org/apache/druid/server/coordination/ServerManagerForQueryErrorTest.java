@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -125,7 +126,8 @@ public class ServerManagerForQueryErrorTest extends ServerManager
       Optional<byte[]> cacheKeyPrefix
   )
   {
-    if (query.getContextBoolean(QUERY_RETRY_TEST_CONTEXT_KEY, false)) {
+    final QueryContext queryContext = query.context();
+    if (queryContext.getBoolean(QUERY_RETRY_TEST_CONTEXT_KEY, false)) {
       final MutableBoolean isIgnoreSegment = new MutableBoolean(false);
       queryToIgnoredSegments.compute(
           query.getMostSpecificId(),
@@ -145,7 +147,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         LOG.info("Pretending I don't have segment[%s]", descriptor);
         return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
       }
-    } else if (query.getContextBoolean(QUERY_TIMEOUT_TEST_CONTEXT_KEY, false)) {
+    } else if (queryContext.getBoolean(QUERY_TIMEOUT_TEST_CONTEXT_KEY, false)) {
       return (queryPlus, responseContext) -> new Sequence<T>()
       {
         @Override
@@ -160,7 +162,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
           throw new QueryTimeoutException("query timeout test");
         }
       };
-    } else if (query.getContextBoolean(QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY, false)) {
+    } else if (queryContext.getBoolean(QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY, false)) {
       return (queryPlus, responseContext) -> new Sequence<T>()
       {
         @Override
@@ -175,7 +177,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
           throw QueryCapacityExceededException.withErrorMessageAndResolvedHost("query capacity exceeded test");
         }
       };
-    } else if (query.getContextBoolean(QUERY_UNSUPPORTED_TEST_CONTEXT_KEY, false)) {
+    } else if (queryContext.getBoolean(QUERY_UNSUPPORTED_TEST_CONTEXT_KEY, false)) {
       return (queryPlus, responseContext) -> new Sequence<T>()
       {
         @Override
@@ -190,7 +192,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
           throw new QueryUnsupportedException("query unsupported test");
         }
       };
-    } else if (query.getContextBoolean(RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY, false)) {
+    } else if (queryContext.getBoolean(RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY, false)) {
       return (queryPlus, responseContext) -> new Sequence<T>()
       {
         @Override
@@ -205,7 +207,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
           throw new ResourceLimitExceededException("resource limit exceeded test");
         }
       };
-    } else if (query.getContextBoolean(QUERY_FAILURE_TEST_CONTEXT_KEY, false)) {
+    } else if (queryContext.getBoolean(QUERY_FAILURE_TEST_CONTEXT_KEY, false)) {
       return (queryPlus, responseContext) -> new Sequence<T>()
       {
         @Override
