@@ -34,6 +34,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
+import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -173,6 +174,13 @@ public class TaskQueue
       Preconditions.checkState(!active, "queue must be stopped");
       active = true;
       syncFromStorage();
+      // Mark these tasks as failed as they could not reacuire the lock
+      // Clean up needs to happen after tasks have been synced from storage
+      Set<Task> tasksToFail = taskLockbox.syncFromStorage().getTasksToFail();
+      for (Task task : tasksToFail) {
+        shutdown(task.getId(),
+                 "Shutting down forcefully as task failed to reacquire lock while becoming leader");
+      }
       managerExec.submit(
           new Runnable()
           {
@@ -228,6 +236,13 @@ public class TaskQueue
           }
       );
       requestManagement();
+      // Remove any unacquired locks from storage (shutdown only clears entries for which a TaskLockPosse was acquired)
+      // This is called after requesting management as locks need to be cleared after notifyStatus is processed
+      for (Task task : tasksToFail) {
+        for (TaskLock lock : taskStorage.getLocks(task.getId())) {
+          taskStorage.removeLock(task.getId(), lock);
+        }
+      }
     }
     finally {
       giant.unlock();
