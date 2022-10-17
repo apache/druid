@@ -213,12 +213,8 @@ public class DruidJdbcResultSet implements Closeable
   public DruidJdbcResultSet(
       final AbstractDruidJdbcStatement jdbcStatement,
       final DirectStatement stmt,
-<<<<<<< HEAD
       final long maxRowCount,
       final ResultFetcherFactory fetcherFactory
-=======
-      final long maxRowCount
->>>>>>> master
   )
   {
     this.stmt = stmt;

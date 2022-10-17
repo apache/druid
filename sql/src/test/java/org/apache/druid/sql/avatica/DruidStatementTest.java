@@ -139,13 +139,9 @@ public class DruidStatementTest extends CalciteTestBase
     return new DruidJdbcStatement(
         "",
         0,
-<<<<<<< HEAD
-        new QueryContext(),
+        Collections.emptyMap(),
         sqlStatementFactory,
         new ResultFetcherFactory(AvaticaServerConfig.DEFAULT_FETCH_TIMEOUT_MS)
-=======
-        sqlStatementFactory
->>>>>>> master
     );
   }
 
