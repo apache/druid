@@ -58,12 +58,6 @@ So, these tasks need to be configured to use `pushgateway` strategy to push metr
 
 If this emitter is configured to use `exporter` strategy globally, some of the above configurations need to be overridden in the middle manager so that spawned peon tasks can still use the `pushgateway` strategy.
 
-To configure Pushgateway for peons, pass the Prometheus options to the peon's JVM by setting the [`javaOptsArray` property](../../configuration/index.md#middlemanager-configuration) in your MiddleManager runtime properties file:
-```
-druid.indexer.runner.javaOptsArray=["druid.emitter.prometheus.strategy=pushgateway","druid.emitter.prometheus.pushGatewayAddress=http://PUSHGATEWAYHOST:PUSHGATEWAYPORT"]
-```
-Replace `PUSHGATEWAYHOST:PUSHGATEWAYPORT` with your Pushgateway address.
-
 
 ```
 #
