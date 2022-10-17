@@ -186,7 +186,7 @@ public class OssInputSource extends CloudObjectInputSource
 
       // Skip files that didn't match glob filter.
       if (StringUtils.isNotBlank(getObjectGlob())) {
-        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + objectGlobWithoutProtocolAndBucket());
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getObjectGlob());
 
         iterator = Iterators.filter(
             iterator,

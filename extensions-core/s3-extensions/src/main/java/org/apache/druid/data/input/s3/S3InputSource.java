@@ -403,7 +403,7 @@ public class S3InputSource extends CloudObjectInputSource
 
       // Skip files that didn't match filter.
       if (org.apache.commons.lang.StringUtils.isNotBlank(getObjectGlob())) {
-        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + objectGlobWithoutProtocolAndBucket());
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getObjectGlob());
 
         iterator = Iterators.filter(
             iterator,

@@ -118,37 +118,6 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   }
 
   /**
-   * Strips out blob store's protocol and bucket from {@link #getObjectGlob}.
-   * This is to reduce user errors when crafting a objectGlob.
-   */
-  protected String objectGlobWithoutProtocolAndBucket()
-  {
-    // If objectGlob is null, just return it.
-    if (objectGlob == null) {
-      return objectGlob;
-    }
-
-    String prefix = scheme + "://";
-
-    // Don't do anything if we don't detect a protocol, simply returns the objectGlob.
-    if (!objectGlob.startsWith(prefix)) {
-      return objectGlob;
-    }
-
-    // Strip out the protocol
-    String objectGlobWithoutProtocol = StringUtils.removeStart(objectGlob, prefix);
-
-    String[] objectGlobWithoutProtocolChunkArray = objectGlobWithoutProtocol.split("/");
-
-    // If there's only 1 element, just return it because we don't know if that's a file name or bucket name.
-    if (objectGlobWithoutProtocolChunkArray.length == 1) {
-      return objectGlobWithoutProtocolChunkArray[0];
-    }
-
-    return Arrays.stream(objectGlobWithoutProtocolChunkArray).skip(1).collect(Collectors.joining("/"));
-  }
-
-  /**
    * Create the correct {@link InputEntity} for this input source given a split on a {@link CloudObjectLocation}. This
    * is called internally by {@link #formattableReader} and operates on the output of {@link #createSplits}.
    */
@@ -175,7 +144,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       Stream<CloudObjectLocation> objectStream = objects.stream();
 
       if (StringUtils.isNotBlank(objectGlob)) {
-        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + objectGlobWithoutProtocolAndBucket());
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getObjectGlob());
         objectStream = objectStream.filter(object -> m.matches(Paths.get(object.getPath())));
       }
 
@@ -186,7 +155,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       Stream<URI> uriStream = uris.stream();
 
       if (StringUtils.isNotBlank(objectGlob)) {
-        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + objectGlobWithoutProtocolAndBucket());
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getObjectGlob());
         uriStream = uriStream.filter(uri -> m.matches(Paths.get(uri.toString())));
       }
 
