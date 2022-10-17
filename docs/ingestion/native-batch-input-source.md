@@ -46,7 +46,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "filter": "*.json",
+        "objectGlob": "*.json",
         "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"]
       },
       "inputFormat": {
@@ -63,7 +63,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "filter": "**.parquet",
+        "objectGlob": "**.parquet",
         "prefixes": ["s3://foo/bar/", "s3://bar/foo/"]
       },
       "inputFormat": {
@@ -81,7 +81,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "filter": "*.json",
+        "objectGlob": "*.json",
         "objects": [
           { "bucket": "foo", "path": "bar/file1.json"},
           { "bucket": "bar", "path": "foo/file2.json"}
@@ -101,7 +101,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "filter": "*.json",
+        "objectGlob": "*.json",
         "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
         "properties": {
           "accessKeyId": "KLJ78979SDFdS2",
@@ -122,7 +122,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "filter": "*.json",
+        "objectGlob": "*.json",
         "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
         "properties": {
           "accessKeyId": "KLJ78979SDFdS2",
@@ -182,7 +182,7 @@ Sample specs:
 |uris|JSON array of URIs where S3 objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of S3 objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of S3 Objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
-|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
+|objectGlob|A wildcard filter for files. See [here](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
 | endpointConfig |Config for overriding the default S3 endpoint and signing region. This would allow ingesting data from a different S3 store. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
 | clientConfig |S3 client properties for the overridden s3 endpoint. This is used in conjunction with `endPointConfig`. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
 | proxyConfig |Properties for specifying proxy information for the overridden s3 endpoint. This is used in conjunction with `clientConfig`. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
@@ -226,7 +226,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
-        "filter": "*.json",
+        "objectGlob": "*.json",
         "uris": ["gs://foo/bar/file.json", "gs://bar/foo/file2.json"]
       },
       "inputFormat": {
@@ -243,7 +243,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
-        "filter": "**.parquet",
+        "objectGlob": "**.parquet",
         "prefixes": ["gs://foo/bar/", "gs://bar/foo/"]
       },
       "inputFormat": {
@@ -261,7 +261,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
-        "filter": "*.json",
+        "objectGlob": "*.json",
         "objects": [
           { "bucket": "foo", "path": "bar/file1.json"},
           { "bucket": "bar", "path": "foo/file2.json"}
@@ -281,7 +281,7 @@ Sample specs:
 |uris|JSON array of URIs where Google Cloud Storage objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Google Cloud Storage objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Google Cloud Storage objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
-|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
+|objectGlob|A wildcard filter for files. See [here](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
 
 Note that the Google Cloud Storage input source will skip all empty objects only when `prefixes` is specified.
 
@@ -307,7 +307,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
-        "filter": "*.json",
+        "objectGlob": "*.json",
         "uris": ["azure://container/prefix1/file.json", "azure://container/prefix2/file2.json"]
       },
       "inputFormat": {
@@ -324,7 +324,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
-        "filter": "**.parquet",
+        "objectGlob": "**.parquet",
         "prefixes": ["azure://container/prefix1/", "azure://container/prefix2/"]
       },
       "inputFormat": {
@@ -342,7 +342,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
-        "filter": "*.json",
+        "objectGlob": "*.json",
         "objects": [
           { "bucket": "container", "path": "prefix1/file1.json"},
           { "bucket": "container", "path": "prefix2/file2.json"}
@@ -362,7 +362,7 @@ Sample specs:
 |uris|JSON array of URIs where the Azure objects to be ingested are located, in the form `azure://<container>/<path-to-file>`|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form `azure://<container>/<prefix>`. Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Azure objects to ingest.|None|`uris` or `prefixes` or `objects` must be set|
-|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
+|objectGlob|A wildcard filter for files. See [here](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
 
 Note that the Azure input source skips all empty objects only when `prefixes` is specified.
 
@@ -586,7 +586,7 @@ Sample spec:
       "type": "index_parallel",
       "inputSource": {
         "type": "local",
-        "filter" : "**.csv",
+        "filter" : "*.csv",
         "baseDir": "/data/directory",
         "files": ["/bar/foo", "/foo/bar"]
       },
@@ -752,7 +752,7 @@ Compared to the other native batch input sources, SQL input source behaves diffe
 
 The Combining input source lets you read data from multiple input sources.
 It identifies the splits from delegate input sources and uses a worker task to process each split.
-Use the Combining input source only if all the delegates are splittable and can be used by the [Parallel task](./native-batch.md). 
+Use the Combining input source only if all the delegates are splittable and can be used by the [Parallel task](./native-batch.md).
 
 Similar to other input sources, the Combining input source supports a single `inputFormat`.
 Delegate input sources that require an `inputFormat` must have the same format for input data.
@@ -773,7 +773,7 @@ The following is an example of a Combining input source spec:
         "delegates" : [
          {
           "type": "local",
-          "filter" : "**.csv",
+          "objectGlob" : "**.csv",
           "baseDir": "/data/directory",
           "files": ["/bar/foo", "/foo/bar"]
          },
