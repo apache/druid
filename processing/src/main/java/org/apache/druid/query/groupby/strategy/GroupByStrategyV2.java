@@ -31,6 +31,7 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.guice.annotations.Global;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
@@ -98,6 +99,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final NonBlockingPool<ByteBuffer> bufferPool;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
+  private final ObjectMapper jsonMapper;
   private final ObjectMapper spillMapper;
   private final QueryWatcher queryWatcher;
 
@@ -107,6 +109,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       Supplier<GroupByQueryConfig> configSupplier,
       @Global NonBlockingPool<ByteBuffer> bufferPool,
       @Merging BlockingPool<ByteBuffer> mergeBufferPool,
+      @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper spillMapper,
       QueryWatcher queryWatcher
   )
@@ -115,6 +118,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     this.configSupplier = configSupplier;
     this.bufferPool = bufferPool;
     this.mergeBufferPool = mergeBufferPool;
+    this.jsonMapper = jsonMapper;
     this.spillMapper = spillMapper;
     this.queryWatcher = queryWatcher;
   }
@@ -252,7 +256,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       // the granularity and dimensions are slightly different.
       // now, part of the query plan logic is handled in GroupByStrategyV2, not only in DruidQuery.toGroupByQuery()
       final Granularity timestampResultFieldGranularity
-          = queryContext.getGranularity(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY);
+          = queryContext.getGranularity(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, jsonMapper);
       dimensionSpecs =
           query.getDimensions()
                .stream()
