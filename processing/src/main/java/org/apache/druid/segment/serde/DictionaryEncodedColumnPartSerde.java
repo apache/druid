@@ -318,12 +318,18 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           final byte encodingId = buffer.get();
           if (encodingId == StringEncodingStrategy.FRONT_CODED_ID) {
             readFrontCodedColumn(buffer, builder, rVersion, rFlags, hasMultipleValues);
+          } else if (encodingId == StringEncodingStrategy.UTF8_ID) {
+            // this cannot happen naturally right now since generic indexed is written in the 'legacy' format, but
+            // this provides backwards compatibility should we switch at some point in the future to always
+            // writing dictionaryVersion
+            readGenericIndexedColumn(buffer, builder, columnConfig, rVersion, rFlags, hasMultipleValues);
           } else {
             throw new ISE("impossible, unknown encoding strategy id: %s", encodingId);
           }
         } else {
-          // legacy format that only supports plain utf8 enoding stored in GenericIndexed
-          // reset start position so the GenericIndexed version can be correctly read
+          // legacy format that only supports plain utf8 enoding stored in GenericIndexed and the byte we are reading
+          // as dictionaryVersion is actually also the GenericIndexed version, so we reset start position so the
+          // GenericIndexed version can be correctly read
           buffer.position(dictionaryStartPosition);
           readGenericIndexedColumn(buffer, builder, columnConfig, rVersion, rFlags, hasMultipleValues);
         }

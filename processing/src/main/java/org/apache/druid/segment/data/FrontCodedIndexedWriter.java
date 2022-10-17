@@ -141,8 +141,8 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
     return Byte.BYTES +
            Byte.BYTES +
            Byte.BYTES +
-           VByte.estimateIntSize(numWritten) +
-           VByte.estimateIntSize(headerAndValues) +
+           VByte.computeIntSize(numWritten) +
+           VByte.computeIntSize(headerAndValues) +
            headerAndValues;
   }
 
@@ -236,7 +236,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
         // convert to bytes because not every char is a single byte
         final byte[] suffix = new byte[next.length - prefixLength];
         System.arraycopy(next, prefixLength, suffix, 0, suffix.length);
-        int rem = buffer.remaining() - VByte.estimateIntSize(prefixLength);
+        int rem = buffer.remaining() - VByte.computeIntSize(prefixLength);
         // wasn't enough room, bail out
         if (rem < 0) {
           return rem;
@@ -260,7 +260,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
    */
   public static int writeValue(ByteBuffer buffer, byte[] bytes)
   {
-    final int remaining = buffer.remaining() - VByte.estimateIntSize(bytes.length) - bytes.length;
+    final int remaining = buffer.remaining() - VByte.computeIntSize(bytes.length) - bytes.length;
     if (remaining < 0) {
       return remaining;
     }

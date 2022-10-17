@@ -64,7 +64,7 @@ public class VByteTest
 
   private static void roundTrip(ByteBuffer buffer, int position, int value, int expectedSize)
   {
-    Assert.assertEquals(expectedSize, VByte.estimateIntSize(value));
+    Assert.assertEquals(expectedSize, VByte.computeIntSize(value));
     buffer.position(position);
     VByte.writeInt(buffer, value);
     Assert.assertEquals(expectedSize, buffer.position() - position);

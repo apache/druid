@@ -98,13 +98,13 @@ public class VByte
   }
 
   /**
-   * Estimate size of variable byte encoded integer.
+   * Compute size of variable byte encoded integer.
    *
    * vbyte encoding stores values in the last 7 bits of a byte and reserves the high bit for the 'contination'. If 0,
    * one or more aditional bytes must be read to complete the value, and a 1 indicates the terminal byte. Because of
    * this, it can only store positive values, and larger integers can take up to 5 bytes.
    */
-  public static int estimateIntSize(int val)
+  public static int computeIntSize(int val)
   {
     if (val < (1 << 7)) {
       return 1;
