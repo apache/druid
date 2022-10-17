@@ -175,8 +175,8 @@ public class OverlordTest
     druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
     ServiceEmitter serviceEmitter = new NoopServiceEmitter();
 
-    // Add two task with conflicting locks
-    // The "BadTask" must be failed
+    // Add two tasks with conflicting locks
+    // The bad task (The one with a lexicographically larger name) must be failed
     Task badTask = new NoopTask(badTaskId, badTaskId, "datasource", 10_000, 0, null, null, null);
     TaskLock badLock = new TimeChunkLock(null, badTaskId, "datasource", Intervals.ETERNITY, "version1", 50);
     Task goodTask = new NoopTask(goodTaskId, goodTaskId, "datasource", 0, 0, null, null, null);

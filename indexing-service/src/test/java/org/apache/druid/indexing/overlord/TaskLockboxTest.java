@@ -1262,34 +1262,42 @@ public class TaskLockboxTest
   @Test
   public void testFailedToReacquireTaskLock() throws Exception
   {
-    final Task badTask0 = NoopTask.withGroupId("BadTask");
-    final Task badTask1 = NoopTask.withGroupId("BadTask");
-    final Task goodTask0 = NoopTask.withGroupId("GoodTask");
-    taskStorage.insert(badTask0, TaskStatus.running(badTask0.getId()));
-    taskStorage.insert(badTask1, TaskStatus.running(badTask1.getId()));
-    taskStorage.insert(goodTask0, TaskStatus.running(goodTask0.getId()));
+    // Tasks to be failed have a group id with the substring "FailingLockAcquisition"
+    // Please refer to NullLockPosseTaskLockbox
+    final Task taskWithFailingLockAcquisition0 = NoopTask.withGroupId("FailingLockAcquisition");
+    final Task taskWithFailingLockAcquisition1 = NoopTask.withGroupId("FailingLockAcquisition");
+    final Task taskWithSuccessfulLockAcquisition = NoopTask.create();
+    taskStorage.insert(taskWithFailingLockAcquisition0, TaskStatus.running(taskWithFailingLockAcquisition0.getId()));
+    taskStorage.insert(taskWithFailingLockAcquisition1, TaskStatus.running(taskWithFailingLockAcquisition1.getId()));
+    taskStorage.insert(taskWithSuccessfulLockAcquisition, TaskStatus.running(taskWithSuccessfulLockAcquisition.getId()));
 
     TaskLockbox testLockbox = new NullLockPosseTaskLockbox(taskStorage, metadataStorageCoordinator);
-    testLockbox.add(badTask0);
-    testLockbox.add(badTask1);
-    testLockbox.add(goodTask0);
+    testLockbox.add(taskWithFailingLockAcquisition0);
+    testLockbox.add(taskWithFailingLockAcquisition1);
+    testLockbox.add(taskWithSuccessfulLockAcquisition);
 
-    testLockbox.tryLock(badTask0, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
-                                                           badTask0,
-                                                           Intervals.of("2017-07-01/2017-08-01"),
-                                                           null)
+    testLockbox.tryLock(taskWithFailingLockAcquisition0,
+                        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+                                                 taskWithFailingLockAcquisition0,
+                                                 Intervals.of("2017-07-01/2017-08-01"),
+                                                 null
+                        )
     );
 
-    testLockbox.tryLock(goodTask0, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
-                                                           goodTask0,
-                                                           Intervals.of("2017-07-01/2017-08-01"),
-                                                           null)
+    testLockbox.tryLock(taskWithSuccessfulLockAcquisition,
+                        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+                                                 taskWithSuccessfulLockAcquisition,
+                                                 Intervals.of("2017-07-01/2017-08-01"),
+                                                 null
+                        )
     );
+
     Assert.assertEquals(3, taskStorage.getActiveTasks().size());
 
-    // The task must be marked for failure
+    // The tasks must be marked for failure
     TaskLockboxSyncResult result = testLockbox.syncFromStorage();
-    Assert.assertEquals(ImmutableSet.of(badTask0, badTask1), result.getTasksToFail());
+    Assert.assertEquals(ImmutableSet.of(taskWithFailingLockAcquisition0, taskWithFailingLockAcquisition1),
+                        result.getTasksToFail());
   }
 
   private Set<TaskLock> getAllLocks(List<Task> tasks)
@@ -1418,6 +1426,9 @@ public class TaskLockboxTest
     }
   }
 
+  /**
+   * Extends TaskLockbox to return a null TaskLockPosse when the task's group name contains "FailingLockAcquisition".
+   */
   private static class NullLockPosseTaskLockbox extends TaskLockbox
   {
     public NullLockPosseTaskLockbox(
@@ -1431,7 +1442,8 @@ public class TaskLockboxTest
     @Override
     protected TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
     {
-      return task.getGroupId().contains("BadTask") ? null : super.verifyAndCreateOrFindLockPosse(task, taskLock);
+      return task.getGroupId()
+                 .contains("FailingLockAcquisition") ? null : super.verifyAndCreateOrFindLockPosse(task, taskLock);
     }
   }
 }

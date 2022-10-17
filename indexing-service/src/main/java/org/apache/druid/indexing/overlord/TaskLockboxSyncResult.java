@@ -37,7 +37,7 @@ class TaskLockboxSyncResult
   }
 
   /**
-   * Return list of tasks whose status needs to be set to failed due to lock re-acquisition failure
+   * Return set of tasks which need to be forcefully failed due to lock re-acquisition failure
    */
   Set<Task> getTasksToFail()
   {

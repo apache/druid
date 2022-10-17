@@ -178,7 +178,8 @@ public class TaskQueue
       // Clean up needs to happen after tasks have been synced from storage
       Set<Task> tasksToFail = taskLockbox.syncFromStorage().getTasksToFail();
       for (Task task : tasksToFail) {
-        shutdown(task.getId(), "Failed to reacquire lock.");
+        shutdown(task.getId(),
+                 "Shutting down forcefully as task failed to reacquire lock while becoming leader");
       }
       managerExec.submit(
           new Runnable()
@@ -235,8 +236,8 @@ public class TaskQueue
           }
       );
       requestManagement();
-      // Remove any unacquired locks from storage
-      // This is called after requesting management as task failure occurs after notifyStatus is processed
+      // Remove any unacquired locks from storage (shutdown only clears entries for which a TaskLockPosse was acquired)
+      // This is called after requesting management as locks need to be cleared after notifyStatus is processed
       for (Task task : tasksToFail) {
         for (TaskLock lock : taskStorage.getLocks(task.getId())) {
           taskStorage.removeLock(task.getId(), lock);
