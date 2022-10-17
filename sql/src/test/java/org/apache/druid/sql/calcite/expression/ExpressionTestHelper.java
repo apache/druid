@@ -34,7 +34,6 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -63,6 +62,7 @@ import org.joda.time.DateTimeZone;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
+
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
@@ -88,7 +88,8 @@ class ExpressionTestHelper
           )
       ),
       null /* Don't need engine */,
-      new QueryContext()
+      Collections.emptyMap(),
+      Collections.emptySet()
   );
 
   private final RowSignature rowSignature;

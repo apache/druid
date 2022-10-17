@@ -777,7 +777,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     }
 
     expectedException.expect(AvaticaClientRuntimeException.class);
-    expectedException.expectMessage("Too many open statements, limit is [4]");
+    expectedException.expectMessage("Too many open statements, limit is 4");
     client.createStatement();
   }
 
