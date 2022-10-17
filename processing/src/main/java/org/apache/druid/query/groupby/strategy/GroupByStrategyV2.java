@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.groupby.strategy;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
