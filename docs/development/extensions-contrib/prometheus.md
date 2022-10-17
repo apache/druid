@@ -47,7 +47,7 @@ All the configuration parameters for the Prometheus emitter are under `druid.emi
 | `druid.emitter.prometheus.pushGatewayAddress` | Pushgateway address. Required if using `pushgateway` strategy.                                                                                                                                                                         | no        | none                                 |
 |`druid.emitter.prometheus.flushPeriod`|Emit metrics to Pushgateway every `flushPeriod` seconds. Required if `pushgateway` strategy is used.|no|15|
 
-### Different ports for colocated druid processes
+### Ports for colocated Druid processes
 
 In certain instances, Druid processes may be colocated on the same host. For example, the Broker and Router may share the same server. Other colocated processes include the Historical and MiddleManager or the Coordinator and Overlord. When you have colocated processes, specify `druid.emitter.prometheus.port` separately for each process on each host. For example, even if the Broker and Router share the same host, the Broker runtime properties and the Router runtime properties each need to list `druid.emitter.prometheus.port`, and the port value for both must be different.
 
@@ -57,7 +57,6 @@ Peon tasks are created dynamically by middle managers and have dynamic host and 
 So, these tasks need to be configured to use `pushgateway` strategy to push metrics from Druid to prometheus gateway.
 
 If this emitter is configured to use `exporter` strategy globally, some of the above configurations need to be overridden in the middle manager so that spawned peon tasks can still use the `pushgateway` strategy.
-
 
 ```
 #
