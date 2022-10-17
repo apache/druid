@@ -276,7 +276,8 @@ public class NestedDataOperatorConversions
               call.operand(0),
               call.operand(1)
           );
-        } else if (SqlTypeName.APPROX_TYPES.contains(sqlType.getSqlTypeName())) {
+        } else if (SqlTypeName.DECIMAL.equals(sqlType.getSqlTypeName()) ||
+                   SqlTypeName.APPROX_TYPES.contains(sqlType.getSqlTypeName())) {
           rewrite = JsonValueDoubleOperatorConversion.FUNCTION.createCall(
               SqlParserPos.ZERO,
               call.operand(0),
