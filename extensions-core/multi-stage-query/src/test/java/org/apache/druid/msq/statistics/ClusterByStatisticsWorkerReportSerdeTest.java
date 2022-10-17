@@ -60,6 +60,6 @@ public class ClusterByStatisticsWorkerReportSerdeTest
     );
     Assert.assertEquals(json, workerReport.getTimeSegmentVsWorkerIdMap(), deserializedWorkerReport.getTimeSegmentVsWorkerIdMap());
     Assert.assertEquals(json, workerReport.isHasMultipleValues(), deserializedWorkerReport.isHasMultipleValues());
-    Assert.assertEquals(json, workerReport.getBytesRetained(), deserializedWorkerReport.getBytesRetained());
+    Assert.assertEquals(json, workerReport.getBytesRetained(), deserializedWorkerReport.getBytesRetained(), 0);
   }
 }
