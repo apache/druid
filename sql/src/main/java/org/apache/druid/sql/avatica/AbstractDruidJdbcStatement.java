@@ -72,7 +72,10 @@ public abstract class AbstractDruidJdbcStatement implements Closeable
     this.fetcherFactory = fetcherFactory;
   }
 
-  protected static Meta.Signature createSignature(PrepareResult prepareResult, String sql)
+  protected static Meta.Signature createSignature(
+      final PrepareResult prepareResult,
+      final String sql
+  )
   {
     List<AvaticaParameter> params = new ArrayList<>();
     final RelDataType parameterRowType = prepareResult.getParameterRowType();
@@ -89,7 +92,10 @@ public abstract class AbstractDruidJdbcStatement implements Closeable
     );
   }
 
-  private static AvaticaParameter createParameter(RelDataTypeField field, RelDataType type)
+  private static AvaticaParameter createParameter(
+      final RelDataTypeField field,
+      final RelDataType type
+  )
   {
     // signed is always false because no way to extract from RelDataType, and the only usage of this AvaticaParameter
     // constructor I can find, in CalcitePrepareImpl, does it this way with hard coded false

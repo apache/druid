@@ -21,26 +21,30 @@ package org.apache.druid.sql.avatica;
 
 import com.google.common.base.Preconditions;
 import org.apache.calcite.avatica.Meta;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 
+import java.util.Map;
+
 /**
  * Represents Druid's version of the JDBC {@code Statement} class:
  * can be executed multiple times, one after another, producing a
- * {@link DruidJdbcResultSet} for each execution.
+ * {@link DruidJdbcResultSet} for each execution. Thread safe, but
+ * only when accessed sequentially by different request threads:
+ * not designed for concurrent access as JDBC does not support
+ * concurrent actions on the same statement.
  */
 public class DruidJdbcStatement extends AbstractDruidJdbcStatement
 {
   private final SqlStatementFactory lifecycleFactory;
-  protected final QueryContext queryContext;
+  protected final Map<String, Object> queryContext;
 
   public DruidJdbcStatement(
       final String connectionId,
       final int statementId,
-      final QueryContext queryContext,
+      final Map<String, Object> queryContext,
       final SqlStatementFactory lifecycleFactory,
       final ResultFetcherFactory fetcherFactory
   )

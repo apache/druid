@@ -59,6 +59,10 @@ import java.util.concurrent.TimeoutException;
  * the application can only read results sequentially, the application
  * can't jump around or read backwards. As a result, the enclosing
  * statement closes the result set at EOF to release resources early.
+ * <p>
+ * Thread safe, but only when accessed sequentially by different request
+ * threads: not designed for concurrent access as JDBC does not support
+ * concurrent actions on the same result set.
  */
 public class DruidJdbcResultSet implements Closeable
 {
@@ -209,8 +213,12 @@ public class DruidJdbcResultSet implements Closeable
   public DruidJdbcResultSet(
       final AbstractDruidJdbcStatement jdbcStatement,
       final DirectStatement stmt,
+<<<<<<< HEAD
       final long maxRowCount,
       final ResultFetcherFactory fetcherFactory
+=======
+      final long maxRowCount
+>>>>>>> master
   )
   {
     this.stmt = stmt;

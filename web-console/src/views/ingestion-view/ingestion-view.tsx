@@ -921,7 +921,7 @@ ORDER BY
               if (value > 0) {
                 return formatDuration(value);
               }
-              if (original.created_time) {
+              if (oneOf(original.status, 'RUNNING', 'PENDING') && original.created_time) {
                 // Compute running duration from the created time if it exists
                 return formatDuration(Date.now() - Date.parse(original.created_time));
               }

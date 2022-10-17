@@ -23,7 +23,7 @@ sidebar_label: Nested columns
   ~ under the License.
   -->
 
-> Nested columns is an experimental feature available starting in Apache Druid 24.0. Like most experimental features, functionality documented on this page is subject to change in future releases. However, the COMPLEX column type includes versioning to provide backward compatible support in future releases. We strongly encourage you you experiment with nested columns in your development environment to evaluate that they meet your use case. If so, you can use them in production scenarios. Review the release notes and this page to stay up to date with changes.
+> Nested columns is an experimental feature available starting in Apache Druid 24.0. Like most experimental features, functionality documented on this page is subject to change in future releases. However, the COMPLEX column type includes versioning to provide backward compatible support in future releases. We strongly encourage you to experiment with nested columns in your development environment to evaluate that they meet your use case. If so, you can use them in production scenarios. Review the release notes and this page to stay up to date with changes.
 
 Apache Druid supports directly storing nested data structures in `COMPLEX<json>` columns. `COMPLEX<json>` columns store a copy of the structured data in JSON format and specialized internal columns and indexes for nested literal values&mdash;STRING, LONG, and DOUBLE types. An optimized [virtual column](./virtual-columns.md#nested-field-virtual-column) allows Druid to read and filter these values at speeds consistent with standard Druid LONG, DOUBLE, and STRING columns.
 

@@ -21,16 +21,15 @@ package org.apache.druid.sql.avatica;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.PreparedStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -52,8 +51,15 @@ public class DruidConnection
 
   private final String connectionId;
   private final int maxStatements;
-  private final ImmutableMap<String, Object> userSecret;
-  private final QueryContext context;
+  private final Map<String, Object> userSecret;
+
+  /**
+   * The set of context values for each query within this connection. In JDBC,
+   * Druid query context values are set at the connection level, not on the
+   * individual query. This session context is shared by all queries (statements)
+   * within the connection.
+   */
+  private final Map<String, Object> sessionContext;
   private final AtomicInteger statementCounter = new AtomicInteger();
   private final AtomicReference<Future<?>> timeoutFuture = new AtomicReference<>();
 
@@ -69,18 +75,28 @@ public class DruidConnection
       final String connectionId,
       final int maxStatements,
       final Map<String, Object> userSecret,
-      final QueryContext context
+      final Map<String, Object> sessionContext
   )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId);
     this.maxStatements = maxStatements;
-    this.userSecret = ImmutableMap.copyOf(userSecret);
-    this.context = context;
+    this.userSecret = Collections.unmodifiableMap(userSecret);
+    this.sessionContext = Collections.unmodifiableMap(sessionContext);
   }
 
   public String getConnectionId()
   {
     return connectionId;
+  }
+
+  public Map<String, Object> sessionContext()
+  {
+    return sessionContext;
+  }
+
+  public Map<String, Object> userSecret()
+  {
+    return userSecret;
   }
 
   public synchronized DruidJdbcStatement createStatement(
@@ -90,28 +106,30 @@ public class DruidConnection
   {
     final int statementId = statementCounter.incrementAndGet();
 
-    if (statements.containsKey(statementId)) {
-      // Will only happen if statementCounter rolls over before old statements are cleaned up. If this
-      // ever happens then something fishy is going on, because we shouldn't have billions of statements.
-      throw DruidMeta.logFailure(new ISE("Uh oh, too many statements"));
+    synchronized (this) {
+      if (statements.containsKey(statementId)) {
+        // Will only happen if statementCounter rolls over before old statements are cleaned up. If this
+        // ever happens then something fishy is going on, because we shouldn't have billions of statements.
+        throw DruidMeta.logFailure(new ISE("Uh oh, too many statements"));
+      }
+
+      if (statements.size() >= maxStatements) {
+        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is %,d", maxStatements));
+      }
+
+      @SuppressWarnings("GuardedBy")
+      final DruidJdbcStatement statement = new DruidJdbcStatement(
+          connectionId,
+          statementId,
+          sessionContext,
+          sqlStatementFactory,
+          fetcherFactory
+      );
+
+      statements.put(statementId, statement);
+      LOG.debug("Connection [%s] opened statement [%s].", connectionId, statementId);
+      return statement;
     }
-
-    if (statements.size() >= maxStatements) {
-      throw DruidMeta.logFailure(new ISE("Too many open statements, limit is %,d", maxStatements));
-    }
-
-    @SuppressWarnings("GuardedBy")
-    final DruidJdbcStatement statement = new DruidJdbcStatement(
-        connectionId,
-        statementId,
-        context.copy(),
-        sqlStatementFactory,
-        fetcherFactory
-    );
-
-    statements.put(statementId, statement);
-    LOG.debug("Connection [%s] opened statement [%s].", connectionId, statementId);
-    return statement;
   }
 
   public synchronized DruidJdbcPreparedStatement createPreparedStatement(
@@ -122,31 +140,34 @@ public class DruidConnection
   )
   {
     final int statementId = statementCounter.incrementAndGet();
-    if (statements.containsKey(statementId)) {
-      // Will only happen if statementCounter rolls over before old statements are cleaned up. If this
-      // ever happens then something fishy is going on, because we shouldn't have billions of statements.
-      throw DruidMeta.logFailure(new ISE("Uh oh, too many statements"));
+
+    synchronized (this) {
+      if (statements.containsKey(statementId)) {
+        // Will only happen if statementCounter rolls over before old statements are cleaned up. If this
+        // ever happens then something fishy is going on, because we shouldn't have billions of statements.
+        throw DruidMeta.logFailure(new ISE("Uh oh, too many statements"));
+      }
+
+      if (statements.size() >= maxStatements) {
+        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is %,d", maxStatements));
+      }
+
+      @SuppressWarnings("GuardedBy")
+      final PreparedStatement statement = sqlStatementFactory.preparedStatement(
+          sqlQueryPlus.withContext(sessionContext)
+      );
+      final DruidJdbcPreparedStatement jdbcStmt = new DruidJdbcPreparedStatement(
+          connectionId,
+          statementId,
+          statement,
+          maxRowCount,
+          fetcherFactory
+      );
+
+      statements.put(statementId, jdbcStmt);
+      LOG.debug("Connection [%s] opened prepared statement [%s].", connectionId, statementId);
+      return jdbcStmt;
     }
-
-    if (statements.size() >= maxStatements) {
-      throw DruidMeta.logFailure(new ISE("Too many open statements, limit is %,d", maxStatements));
-    }
-
-    @SuppressWarnings("GuardedBy")
-    final PreparedStatement statement = sqlStatementFactory.preparedStatement(
-        sqlQueryPlus.withContext(context.copy())
-    );
-    final DruidJdbcPreparedStatement jdbcStmt = new DruidJdbcPreparedStatement(
-        connectionId,
-        statementId,
-        statement,
-        maxRowCount,
-        fetcherFactory
-    );
-
-    statements.put(statementId, jdbcStmt);
-    LOG.debug("Connection [%s] opened prepared statement [%s].", connectionId, statementId);
-    return jdbcStmt;
   }
 
   public synchronized AbstractDruidJdbcStatement getStatement(final int statementId)
@@ -204,10 +225,5 @@ public class DruidConnection
       oldFuture.cancel(false);
     }
     return this;
-  }
-
-  public Map<String, Object> userSecret()
-  {
-    return userSecret;
   }
 }
