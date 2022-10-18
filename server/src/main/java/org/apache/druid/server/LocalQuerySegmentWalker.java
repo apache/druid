@@ -93,7 +93,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
-    Function<SegmentReference, SegmentReference> segmentMapFn = analysis
+    final Function<SegmentReference, SegmentReference> segmentMapFn = analysis
         .getDataSource()
         .createSegmentMapFunction(
             query,

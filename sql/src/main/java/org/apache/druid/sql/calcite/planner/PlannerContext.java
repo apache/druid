@@ -78,7 +78,7 @@ public class PlannerContext
   private final String sql;
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
-  private final JoinableFactoryWrapper jfw;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final ObjectMapper jsonMapper;
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
@@ -113,7 +113,7 @@ public class PlannerContext
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
       final QueryContext queryContext,
-      JoinableFactoryWrapper jfw
+      JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
     this.sql = sql;
@@ -126,7 +126,7 @@ public class PlannerContext
     this.queryContext = queryContext;
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
-    this.jfw = jfw;
+    this.joinableFactoryWrapper = joinableFactoryWrapper;
 
     String sqlQueryId = (String) this.queryContext.get(CTX_SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
@@ -145,7 +145,7 @@ public class PlannerContext
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
       final QueryContext queryContext,
-      final JoinableFactoryWrapper jfw
+      final JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
     final DateTime utcNow;
@@ -185,7 +185,7 @@ public class PlannerContext
         rootSchema,
         engine,
         queryContext,
-        jfw
+        joinableFactoryWrapper
     );
   }
 
@@ -221,7 +221,7 @@ public class PlannerContext
 
   public JoinableFactoryWrapper getJoinableFactoryWrapper()
   {
-    return jfw;
+    return joinableFactoryWrapper;
   }
 
   @Nullable

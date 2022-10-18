@@ -95,7 +95,7 @@ public class InputNumberDataSource implements DataSource
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
       Query query,
-      AtomicLong cpuTime
+      AtomicLong cpuTimeAcc
   )
   {
     if (broadcastJoinHelper == null) {
@@ -107,7 +107,7 @@ public class InputNumberDataSource implements DataSource
     }
     final DataSource dataSourceWithInlinedChannelData = broadcastJoinHelper.inlineChannelData(query.getDataSource());
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(dataSourceWithInlinedChannelData);
-    return analysis.getDataSource().createSegmentMapFunction(query, new AtomicLong());
+    return analysis.getDataSource().createSegmentMapFunction(query, cpuTimeAcc);
   }
 
   @Override

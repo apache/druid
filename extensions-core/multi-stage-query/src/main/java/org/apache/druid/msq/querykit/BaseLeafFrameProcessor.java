@@ -38,7 +38,6 @@ import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
@@ -156,11 +155,23 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
       return true;
     } else {
       final boolean retVal = broadcastJoinHelper.buildBroadcastTablesIncrementally(readableInputs);
+      DataSource inlineChannelDataSource = broadcastJoinHelper.inlineChannelData(query.getDataSource());
       if (retVal) {
-        final DataSource dataSourceWithInlinedChannelData = broadcastJoinHelper.inlineChannelData(query.getDataSource());
-        segmentMapFn = dataSourceWithInlinedChannelData.createSegmentMapFunction(query, cpuAccumulator);
+        if (inlineChannelDataSource instanceof InputNumberDataSource) {
+          InputNumberDataSource inputNumberDataSource = (InputNumberDataSource) query.getDataSource();
+          // The InputNumberDataSource requires a BroadcastJoinHelper to be able to create its
+          // segment map function.  It would be a lot better if the InputNumberDataSource actually
+          // had a way to get that injected into it on its own, but the relationship between these objects
+          // was figured out during a refactor and using a setter here seemed like the least-bad way to
+          // make progress on the refactor without breaking functionality.  Hopefully, some future
+          // developer will move this away from a setter.
+          inputNumberDataSource.setBroadcastJoinHelper(broadcastJoinHelper);
+          segmentMapFn = inputNumberDataSource.createSegmentMapFunction(query, cpuAccumulator);
+        } else {
+          segmentMapFn = inlineChannelDataSource.createSegmentMapFunction(query, cpuAccumulator);
+        }
       }
-      return true;
+      return retVal;
     }
   }
 

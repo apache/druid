@@ -98,6 +98,7 @@ public class JoinDataSource implements DataSource
   private final DataSourceAnalysis analysis;
 
 
+
   private JoinDataSource(
       DataSource left,
       DataSource right,
@@ -416,14 +417,13 @@ public class JoinDataSource implements DataSource
     );
   }
 
+
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
       Query query,
       AtomicLong cpuTimeAccumulator
   )
   {
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-
     final Function<SegmentReference, SegmentReference> segmentMapFn = createSegmentMapFn(
         analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
