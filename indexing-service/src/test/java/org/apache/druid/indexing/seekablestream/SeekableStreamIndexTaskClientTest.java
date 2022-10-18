@@ -242,6 +242,7 @@ public class SeekableStreamIndexTaskClientTest extends EasyMockSupport
     )).andReturn(
             Futures.immediateFuture(Either.value(responseHolder))
     ).times(numRequests);
+    
     replayAll();
 
     List<ListenableFuture> futures = new ArrayList<>();
