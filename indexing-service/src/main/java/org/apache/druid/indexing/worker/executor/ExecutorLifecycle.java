@@ -116,7 +116,7 @@ public class ExecutorLifecycle
 
       log.info(
           "Running with task: %s",
-          jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(task)
+          maskSensitiveJsonKeys(jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(task))
       );
     }
     catch (IOException e) {
