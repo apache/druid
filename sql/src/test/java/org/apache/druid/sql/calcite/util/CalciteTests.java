@@ -66,6 +66,7 @@ import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
@@ -341,7 +342,7 @@ public class CalciteTests
             druidLeaderClient,
             getJsonMapper(),
             new BrokerSegmentWatcherConfig(),
-            plannerConfig
+            SegmentMetadataCacheConfig.create()
         ),
         new TestServerInventoryView(walker.getSegments()),
         new FakeServerInventoryView(),

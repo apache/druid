@@ -139,9 +139,9 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.QueryFramework;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -164,6 +164,7 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -253,7 +254,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   {
     groupByBuffers = TestGroupByBuffers.createDefault();
 
-    QueryFramework qf = queryFramework();
+    SqlTestFramework qf = queryFramework();
     Injector secondInjector = GuiceInjectors.makeStartupInjector();
 
 
@@ -370,7 +371,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new MSQTestTaskActionClient(objectMapper),
         workerMemoryParameters
     );
-    final InProcessViewManager viewManager = new InProcessViewManager(QueryFramework.DRUID_VIEW_MACRO_FACTORY);
+    final InProcessViewManager viewManager = new InProcessViewManager(SqlTestFramework.DRUID_VIEW_MACRO_FACTORY);
     DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
         CalciteTests.INJECTOR,
         qf.conglomerate(),

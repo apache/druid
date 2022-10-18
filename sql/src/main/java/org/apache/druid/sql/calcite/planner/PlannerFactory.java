@@ -100,7 +100,8 @@ public class PlannerFactory
   public DruidPlanner createPlanner(
       final SqlEngine engine,
       final String sql,
-      final QueryContext queryContext)
+      final QueryContext queryContext
+  )
   {
     final PlannerContext context = PlannerContext.create(
         sql,

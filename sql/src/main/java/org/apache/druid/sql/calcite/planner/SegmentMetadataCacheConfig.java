@@ -33,6 +33,12 @@ import java.util.Objects;
 public class SegmentMetadataCacheConfig
 {
   @JsonProperty
+  private boolean metadataSegmentCacheEnable = false;
+
+  @JsonProperty
+  private long metadataSegmentPollPeriod = 60000;
+
+  @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
 
   @JsonProperty
@@ -52,6 +58,11 @@ public class SegmentMetadataCacheConfig
     return config;
   }
 
+  public boolean isMetadataSegmentCacheEnable()
+  {
+    return metadataSegmentCacheEnable;
+  }
+
   public Period getMetadataRefreshPeriod()
   {
     return metadataRefreshPeriod;
@@ -60,6 +71,11 @@ public class SegmentMetadataCacheConfig
   public boolean isAwaitInitializationOnStart()
   {
     return awaitInitializationOnStart;
+  }
+
+  public long getMetadataSegmentPollPeriod()
+  {
+    return metadataSegmentPollPeriod;
   }
 
   @Override
@@ -73,6 +89,8 @@ public class SegmentMetadataCacheConfig
     }
     final SegmentMetadataCacheConfig that = (SegmentMetadataCacheConfig) o;
     return awaitInitializationOnStart == that.awaitInitializationOnStart &&
+           metadataSegmentCacheEnable == that.metadataSegmentCacheEnable &&
+           metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod);
   }
 
@@ -81,7 +99,9 @@ public class SegmentMetadataCacheConfig
   {
     return Objects.hash(
         metadataRefreshPeriod,
-        awaitInitializationOnStart
+        awaitInitializationOnStart,
+        metadataSegmentCacheEnable,
+        metadataSegmentPollPeriod
     );
   }
 
@@ -90,6 +110,8 @@ public class SegmentMetadataCacheConfig
   {
     return "SegmentCacheConfig{" +
            "metadataRefreshPeriod=" + metadataRefreshPeriod +
+           ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
+           ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
            '}';
   }

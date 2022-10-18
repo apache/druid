@@ -38,7 +38,7 @@ public class PlannerConfig
   public static final int NUM_FILTER_NOT_USED = -1;
 
   @JsonProperty
-  private int maxTopNLimit = 100000;
+  private int maxTopNLimit = 100_000;
 
   @JsonProperty
   private boolean useApproximateCountDistinct = true;
@@ -51,12 +51,6 @@ public class PlannerConfig
 
   @JsonProperty
   private DateTimeZone sqlTimeZone = DateTimeZone.UTC;
-
-  @JsonProperty
-  private boolean metadataSegmentCacheEnable = false;
-
-  @JsonProperty
-  private long metadataSegmentPollPeriod = 60000;
 
   @JsonProperty
   private boolean useGroupingSetForExactDistinct = false;
@@ -78,19 +72,9 @@ public class PlannerConfig
 
   private boolean serializeComplexValues = true;
 
-  public long getMetadataSegmentPollPeriod()
-  {
-    return metadataSegmentPollPeriod;
-  }
-
   public int getMaxNumericInFilters()
   {
     return maxNumericInFilters;
-  }
-
-  public boolean isMetadataSegmentCacheEnable()
-  {
-    return metadataSegmentCacheEnable;
   }
 
   public int getMaxTopNLimit()
@@ -176,8 +160,6 @@ public class PlannerConfig
            useApproximateCountDistinct == that.useApproximateCountDistinct &&
            useApproximateTopN == that.useApproximateTopN &&
            requireTimeCondition == that.requireTimeCondition &&
-           metadataSegmentCacheEnable == that.metadataSegmentCacheEnable &&
-           metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
            serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone) &&
            useNativeQueryExplain == that.useNativeQueryExplain &&
@@ -198,8 +180,6 @@ public class PlannerConfig
         useApproximateTopN,
         requireTimeCondition,
         sqlTimeZone,
-        metadataSegmentCacheEnable,
-        metadataSegmentPollPeriod,
         serializeComplexValues,
         useNativeQueryExplain,
         forceExpressionVirtualColumns
@@ -214,8 +194,6 @@ public class PlannerConfig
            ", useApproximateCountDistinct=" + useApproximateCountDistinct +
            ", useApproximateTopN=" + useApproximateTopN +
            ", requireTimeCondition=" + requireTimeCondition +
-           ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
-           ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", sqlTimeZone=" + sqlTimeZone +
            ", serializeComplexValues=" + serializeComplexValues +
            ", useNativeQueryExplain=" + useNativeQueryExplain +
@@ -245,8 +223,6 @@ public class PlannerConfig
     private boolean useApproximateTopN;
     private boolean requireTimeCondition;
     private DateTimeZone sqlTimeZone;
-    private boolean metadataSegmentCacheEnable;
-    private long metadataSegmentPollPeriod;
     private boolean useGroupingSetForExactDistinct;
     private boolean computeInnerJoinCostAsFilter;
     private boolean authorizeSystemTablesDirectly;
@@ -265,9 +241,7 @@ public class PlannerConfig
       useApproximateTopN = base.isUseApproximateTopN();
       requireTimeCondition = base.isRequireTimeCondition();
       sqlTimeZone = base.getSqlTimeZone();
-      metadataSegmentCacheEnable = base.isMetadataSegmentCacheEnable();
       useGroupingSetForExactDistinct = base.isUseGroupingSetForExactDistinct();
-      metadataSegmentPollPeriod = base.getMetadataSegmentPollPeriod();
       computeInnerJoinCostAsFilter = base.computeInnerJoinCostAsFilter;
       authorizeSystemTablesDirectly = base.isAuthorizeSystemTablesDirectly();
       useNativeQueryExplain = base.isUseNativeQueryExplain();
@@ -408,8 +382,6 @@ public class PlannerConfig
       config.useApproximateTopN = useApproximateTopN;
       config.requireTimeCondition = requireTimeCondition;
       config.sqlTimeZone = sqlTimeZone;
-      config.metadataSegmentCacheEnable = metadataSegmentCacheEnable;
-      config.metadataSegmentPollPeriod = metadataSegmentPollPeriod;
       config.useGroupingSetForExactDistinct = useGroupingSetForExactDistinct;
       config.computeInnerJoinCostAsFilter = computeInnerJoinCostAsFilter;
       config.authorizeSystemTablesDirectly = authorizeSystemTablesDirectly;

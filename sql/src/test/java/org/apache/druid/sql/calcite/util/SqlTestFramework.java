@@ -75,13 +75,13 @@ import java.util.Map;
  * <p>
  * The framework allows the test to customize many of the framework components.
  * Since those components tend to depend on other framework components, we use
- * an indirection, {@link QueryFramework.QueryComponentSupplier QueryComponentSupplier}
+ * an indirection, {@link SqlTestFramework.QueryComponentSupplier QueryComponentSupplier}
  * to build those components. The methods of this interface match the methods
  * in @link org.apache.druid.sql.calcite.BaseCalciteQueryTest BaseCalciteQueryTest}
  * so that those tests can customize the framework just by overriding methods.
  * (This was done to maintain backward compatibility with earlier versions of the
  * code.) Other tests can implement {@code QueryComponentSupplier} directly by
- * extending {@link QueryFramework.StandardComponentSupplier StandardComponentSupplier}.
+ * extending {@link SqlTestFramework.StandardComponentSupplier StandardComponentSupplier}.
  * <p>
  * The framework should be built once per test class (not once per test method.)
  * Then, per method, call {@link #statementFactory(PlannerConfig, AuthConfig)} to
@@ -95,7 +95,7 @@ import java.util.Map;
  * are those created by the provided injector, or in this class, using objects
  * from that injector.
  */
-public class QueryFramework
+public class SqlTestFramework
 {
   /**
    * Interface to provide various framework components. Extend to customize,
@@ -234,9 +234,9 @@ public class QueryFramework
       return this;
     }
 
-    public QueryFramework build()
+    public SqlTestFramework build()
     {
-      return new QueryFramework(this);
+      return new SqlTestFramework(this);
     }
   }
 
@@ -247,7 +247,7 @@ public class QueryFramework
   private final AuthorizerMapper authorizerMapper = CalciteTests.TEST_AUTHORIZER_MAPPER;
   private final SqlEngine engine;
 
-  private QueryFramework(Builder builder)
+  private SqlTestFramework(Builder builder)
   {
     this.injector = buildInjector(builder, resourceCloser);
     this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper());

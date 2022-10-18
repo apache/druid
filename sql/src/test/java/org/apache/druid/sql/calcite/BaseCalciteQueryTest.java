@@ -86,11 +86,11 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.QueryFramework;
-import org.apache.druid.sql.calcite.util.QueryFramework.QueryComponentSupplier;
-import org.apache.druid.sql.calcite.util.QueryFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.http.SqlParameter;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -245,7 +245,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
 
   @Nullable
   public final SqlEngine engine0;
-  private static QueryFramework queryFramework;
+  private static SqlTestFramework queryFramework;
   final boolean useDefault = NullHandling.replaceWithDefault();
 
   @Rule
@@ -476,7 +476,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
     return queryLogHook = QueryLogHook.create(queryFramework().queryJsonMapper());
   }
 
-  public QueryFramework queryFramework()
+  public SqlTestFramework queryFramework()
   {
     if (queryFramework == null) {
       createFramework(0);
@@ -503,7 +503,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
     catch (IOException e) {
       throw new RE(e);
     }
-    queryFramework = new QueryFramework.Builder(this)
+    queryFramework = new SqlTestFramework.Builder(this)
         .minTopNThreshold(minTopNThreshold)
         .mergeBufferCount(mergeBufferCount)
         .build();
@@ -792,6 +792,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
       }
       final List<QueryTestRunner.QueryRunStep> runSteps = new ArrayList<>();
       final List<QueryTestRunner.QueryVerifyStep> verifySteps = new ArrayList<>();
+
+      // Historically, a test either prepares the query (to check resources), or
+      // runs the query (to check the native query and results.) In the future we
+      // may want to do both in a single test; but we have no such tests today.
       if (builder.expectedResources != null) {
         Preconditions.checkArgument(
             builder.expectedResultsVerifier == null,
@@ -803,12 +807,18 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
       } else {
         QueryTestRunner.ExecuteQuery execStep = new QueryTestRunner.ExecuteQuery(builder);
         runSteps.add(execStep);
-        if (builder.expectedResultsVerifier != null) {
-          verifySteps.add(new QueryTestRunner.VerifyResults(execStep));
-        }
+
+        // Verify native queries before results. (Note: change from prior pattern
+        // that reversed the steps.
         if (builder.expectedQueries != null) {
           verifySteps.add(new QueryTestRunner.VerifyNativeQueries(execStep));
         }
+        if (builder.expectedResultsVerifier != null) {
+          verifySteps.add(new QueryTestRunner.VerifyResults(execStep));
+        }
+
+        // The exception is always verified: either there should be no exception
+        // (the other steps ran), or there should be the defined exception.
         verifySteps.add(new QueryTestRunner.VerifyExpectedException(execStep));
       }
       return new QueryTestRunner(runSteps, verifySteps);
