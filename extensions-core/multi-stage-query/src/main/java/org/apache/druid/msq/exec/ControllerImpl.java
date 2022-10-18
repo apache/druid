@@ -519,8 +519,7 @@ public class ControllerImpl implements Controller
     context.registerController(this, closer);
 
     this.netClient = new ExceptionWrappingWorkerClient(context.taskClientFor(this));
-    Boolean forceNonSequentialMerging = (Boolean) task.getSqlQueryContext()
-                                                      .getOrDefault("msqForceNonSequentialMerging", false);
+    boolean forceNonSequentialMerging = MultiStageQueryContext.isForceSequentialMerge(task.getSqlQueryContext());
     this.workerSketchFetcher = new WorkerSketchFetcher(netClient, forceNonSequentialMerging);
 
     closer.register(netClient::close);

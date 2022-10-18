@@ -59,6 +59,7 @@ public class MultiStageQueryContext
   private static final boolean DEFAULT_FINALIZE_AGGREGATIONS = true;
 
   public static final String CTX_ENABLE_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
+  public static final String CTX_FORCE_NON_SEQUENTIAL_MERGE = "forceNonSequentialMerging";
   private static final String DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE = "false";
 
   public static final String CTX_DESTINATION = "destination";
@@ -96,6 +97,20 @@ public class MultiStageQueryContext
                 CTX_ENABLE_DURABLE_SHUFFLE_STORAGE,
                 null,
                 DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE
+            )
+        )
+    );
+  }
+
+  public static boolean isForceSequentialMerge(Map<String, Object> propertyMap)
+  {
+    return Boolean.parseBoolean(
+        String.valueOf(
+            getValueFromPropertyMap(
+                propertyMap,
+                CTX_FORCE_NON_SEQUENTIAL_MERGE,
+                null,
+                false
             )
         )
     );
