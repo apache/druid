@@ -24,7 +24,7 @@ import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
-import org.apache.druid.catalog.model.table.DatasourceDefn;
+import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.HideColumns;
 import org.apache.druid.catalog.storage.MoveColumn;
@@ -82,7 +82,7 @@ public class ITCatalogRestTest
     {
       final TableMetadata table = new TableBuilder()
           .id(TableId.of(TableId.SYSTEM_SCHEMA, "foo"))
-          .property(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D")
+          .property(AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D")
           .build();
       assertThrows(
           Exception.class,
@@ -92,7 +92,7 @@ public class ITCatalogRestTest
 
     // Malformed table name
     {
-      final TableMetadata table = TableBuilder.detailTable(" foo ", "P1D")
+      final TableMetadata table = TableBuilder.datasource(" foo ", "P1D")
           .build();
       assertThrows(
           Exception.class,
@@ -111,7 +111,7 @@ public class ITCatalogRestTest
     CatalogClient client = new CatalogClient(clusterClient);
 
     // Create a datasource
-    TableMetadata table = TableBuilder.detailTable("example", "P1D")
+    TableMetadata table = TableBuilder.datasource("example", "P1D")
         .column("a", "VARCHAR")
         .column("b", "BIGINT")
         .column("c", "FLOAT")
@@ -123,7 +123,7 @@ public class ITCatalogRestTest
 
     // Update the datasource
     TableSpec dsSpec2 = TableBuilder.copyOf(table)
-        .property(DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 3_000_000)
+        .property(AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 3_000_000)
         .column("d", "DOUBLE")
         .buildSpec();
 
@@ -156,7 +156,7 @@ public class ITCatalogRestTest
     read = client.readTable(table.id());
     assertEquals(
           Arrays.asList("e", "f"),
-          read.spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+          read.spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
 
     // Unhide
@@ -168,7 +168,7 @@ public class ITCatalogRestTest
     read = client.readTable(table.id());
     assertEquals(
           Collections.singletonList("f"),
-          read.spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+          read.spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
 
     // List schemas

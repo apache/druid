@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.CatalogTest;
 import org.apache.druid.catalog.model.Columns;
-import org.apache.druid.catalog.model.Parameterized;
+import org.apache.druid.catalog.model.ParameterizedDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableSpec;
@@ -163,7 +163,7 @@ public class LocalTableTest
         .property(LocalTableDefn.BASE_DIR_PROPERTY, "/tmp")
         .buildResolved(mapper);
 
-    Parameterized parameterizedTable = tableDefn;
+    ParameterizedDefn parameterizedTable = tableDefn;
     assertEquals(2, parameterizedTable.parameters().size());
     assertNotNull(parameterizedTable.parameter(LocalTableDefn.FILE_FILTER_PROPERTY));
     assertNotNull(parameterizedTable.parameter(LocalTableDefn.FILES_PROPERTY));

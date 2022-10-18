@@ -33,8 +33,7 @@ import java.util.Map;
 public class TableDefnRegistry
 {
   private static final TableDefn[] TABLE_DEFNS = {
-      new DatasourceDefn.DetailDatasourceDefn(),
-      new DatasourceDefn.RollupDatasourceDefn(),
+      new DatasourceDefn(),
       new InlineTableDefn(),
       new HttpTableDefn(),
       new LocalTableDefn()

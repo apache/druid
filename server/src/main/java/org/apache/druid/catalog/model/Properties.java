@@ -44,15 +44,16 @@ import java.util.Set;
  */
 public interface Properties
 {
-  interface PropertyDefn
+  interface PropertyDefn<T>
   {
     String name();
     String typeName();
     void validate(Object value, ObjectMapper jsonMapper);
     Object merge(Object existing, Object update);
+    T decode(Object value, ObjectMapper jsonMapper);
   }
 
-  abstract class BasePropertyDefn implements PropertyDefn
+  abstract class BasePropertyDefn<T> implements PropertyDefn<T>
   {
     protected final String name;
 
@@ -83,7 +84,7 @@ public interface Properties
     }
   }
 
-  class SimplePropertyDefn<T> extends BasePropertyDefn
+  class SimplePropertyDefn<T> extends BasePropertyDefn<T>
   {
     public final Class<T> valueClass;
 
@@ -108,6 +109,7 @@ public interface Properties
      * SQL parameters. As a side effect, verifies that the value is of
      * the correct type.
      */
+    @Override
     public T decode(Object value, ObjectMapper jsonMapper)
     {
       if (value == null) {
@@ -137,7 +139,7 @@ public interface Properties
     }
   }
 
-  class TypeRefPropertyDefn<T> extends BasePropertyDefn
+  class TypeRefPropertyDefn<T> extends BasePropertyDefn<T>
   {
     public final String typeName;
     public final TypeReference<T> valueType;
@@ -159,6 +161,7 @@ public interface Properties
       return typeName;
     }
 
+    @Override
     public T decode(Object value, ObjectMapper jsonMapper)
     {
       if (value == null) {

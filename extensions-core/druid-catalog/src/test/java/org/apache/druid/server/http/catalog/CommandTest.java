@@ -26,6 +26,7 @@ import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.HideColumns;
 import org.apache.druid.catalog.storage.MoveColumn;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -42,7 +43,7 @@ public class CommandTest
   @Test
   public void testMoveColumn()
   {
-    TableSpec dsSpec = TableBuilder.detailTable("foo", "P1D")
+    TableSpec dsSpec = TableBuilder.datasource("foo", "P1D")
         .column("a", "VARCHAR")
         .column("b", "BIGINT")
         .column("c", "FLOAT")
@@ -96,8 +97,8 @@ public class CommandTest
         CatalogUtils.columnNames(revised)
     );
 
-    byte[] bytes = CatalogUtils.toBytes(mapper, cmd);
-    MoveColumn cmd2 = CatalogUtils.fromBytes(mapper, bytes, MoveColumn.class);
+    byte[] bytes = JacksonUtils.toBytes(mapper, cmd);
+    MoveColumn cmd2 = JacksonUtils.fromBytes(mapper, bytes, MoveColumn.class);
     assertEquals(cmd, cmd2);
   }
 
@@ -149,8 +150,8 @@ public class CommandTest
     revised = cmd.perform(Arrays.asList("a", "b", "c"));
     assertEquals(Arrays.asList("a", "b", "d", "e"), revised);
 
-    byte[] bytes = CatalogUtils.toBytes(mapper, cmd);
-    HideColumns cmd2 = CatalogUtils.fromBytes(mapper, bytes, HideColumns.class);
+    byte[] bytes = JacksonUtils.toBytes(mapper, cmd);
+    HideColumns cmd2 = JacksonUtils.fromBytes(mapper, bytes, HideColumns.class);
     assertEquals(cmd, cmd2);
   }
 }

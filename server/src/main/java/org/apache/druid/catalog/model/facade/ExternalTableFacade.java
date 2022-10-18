@@ -28,9 +28,9 @@ import org.apache.druid.segment.column.RowSignature;
 
 import java.util.List;
 
-public class InputTableFacade extends TableFacade
+public class ExternalTableFacade extends TableFacade
 {
-  public InputTableFacade(ResolvedTable resolved)
+  public ExternalTableFacade(ResolvedTable resolved)
   {
     super(resolved);
   }

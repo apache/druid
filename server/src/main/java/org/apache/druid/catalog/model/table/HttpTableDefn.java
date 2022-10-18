@@ -22,7 +22,7 @@ package org.apache.druid.catalog.model.table;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.CatalogUtils;
-import org.apache.druid.catalog.model.Parameterized;
+import org.apache.druid.catalog.model.ParameterizedDefn;
 import org.apache.druid.catalog.model.Properties.StringListPropertyDefn;
 import org.apache.druid.catalog.model.Properties.StringPropertyDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
@@ -57,7 +57,7 @@ import java.util.regex.Pattern;
  * form where the user provides the partial URLs to use for a particular
  * query.
  */
-public class HttpTableDefn extends FormattedExternalTableDefn implements Parameterized
+public class HttpTableDefn extends FormattedExternalTableDefn implements ParameterizedDefn
 {
   public static final String TABLE_TYPE = HttpInputSource.TYPE_KEY;
   public static final String URI_TEMPLATE_PROPERTY = "template";

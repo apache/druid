@@ -24,7 +24,7 @@ import org.apache.druid.catalog.model.table.ExternalSpec;
 import java.util.List;
 import java.util.Map;
 
-public interface Parameterized
+public interface ParameterizedDefn
 {
   interface ParameterDefn
   {

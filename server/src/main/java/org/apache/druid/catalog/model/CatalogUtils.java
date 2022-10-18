@@ -19,98 +19,32 @@
 
 package org.apache.druid.catalog.model;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.joda.time.Period;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import javax.annotation.Nullable;
+
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class CatalogUtils
 {
-  // Amazing that a parser doesn't already exist...
-  private static final Map<String, Granularity> GRANULARITIES = new HashMap<>();
-
-  static {
-    GRANULARITIES.put("millisecond", Granularities.SECOND);
-    GRANULARITIES.put("second", Granularities.SECOND);
-    GRANULARITIES.put("minute", Granularities.MINUTE);
-    GRANULARITIES.put("5 minute", Granularities.FIVE_MINUTE);
-    GRANULARITIES.put("5 minutes", Granularities.FIVE_MINUTE);
-    GRANULARITIES.put("five_minute", Granularities.FIVE_MINUTE);
-    GRANULARITIES.put("10 minute", Granularities.TEN_MINUTE);
-    GRANULARITIES.put("10 minutes", Granularities.TEN_MINUTE);
-    GRANULARITIES.put("ten_minute", Granularities.TEN_MINUTE);
-    GRANULARITIES.put("15 minute", Granularities.FIFTEEN_MINUTE);
-    GRANULARITIES.put("15 minutes", Granularities.FIFTEEN_MINUTE);
-    GRANULARITIES.put("fifteen_minute", Granularities.FIFTEEN_MINUTE);
-    GRANULARITIES.put("30 minute", Granularities.THIRTY_MINUTE);
-    GRANULARITIES.put("30 minutes", Granularities.THIRTY_MINUTE);
-    GRANULARITIES.put("thirty_minute", Granularities.THIRTY_MINUTE);
-    GRANULARITIES.put("hour", Granularities.HOUR);
-    GRANULARITIES.put("6 hour", Granularities.SIX_HOUR);
-    GRANULARITIES.put("6 hours", Granularities.SIX_HOUR);
-    GRANULARITIES.put("six_hour", Granularities.SIX_HOUR);
-    GRANULARITIES.put("day", Granularities.DAY);
-    GRANULARITIES.put("week", Granularities.WEEK);
-    GRANULARITIES.put("month", Granularities.MONTH);
-    GRANULARITIES.put("quarter", Granularities.QUARTER);
-    GRANULARITIES.put("year", Granularities.YEAR);
-    GRANULARITIES.put("all", Granularities.ALL);
-  }
-
-  public static Granularity toGranularity(String value)
-  {
-    return GRANULARITIES.get(StringUtils.toLowerCase(value));
-  }
-
-  public static int findColumn(List<ColumnSpec> columns, String colName)
-  {
-    for (int i = 0; i < columns.size(); i++) {
-      if (columns.get(i).name().equals(colName)) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
   public static List<String> columnNames(List<ColumnSpec> columns)
   {
     return columns
            .stream()
            .map(col -> col.name())
            .collect(Collectors.toList());
-  }
-
-  public static <T extends ColumnSpec> List<T> dropColumns(
-      final List<T> columns,
-      final List<String> toDrop)
-  {
-    if (toDrop == null || toDrop.isEmpty()) {
-      return columns;
-    }
-    Set<String> drop = new HashSet<String>(toDrop);
-    List<T> revised = new ArrayList<>();
-    for (T col : columns) {
-      if (!drop.contains(col.name())) {
-        revised.add(col);
-      }
-    }
-    return revised;
   }
 
   /**
@@ -124,11 +58,6 @@ public class CatalogUtils
     if (Strings.isNullOrEmpty(value)) {
       return Granularities.ALL;
     }
-    Granularity gran = toGranularity(value);
-    if (gran != null) {
-      return gran;
-    }
-
     try {
       return new PeriodGranularity(new Period(value), null, null);
     }
@@ -180,63 +109,15 @@ public class CatalogUtils
     return String.join("\n", lines) + "\n";
   }
 
-  public static Set<String> setOf(String...items)
-  {
-    if (items.length == 0) {
-      return null;
-    }
-    return new HashSet<>(Arrays.asList(items));
-  }
-
-  public static byte[] toBytes(ObjectMapper jsonMapper, Object obj)
-  {
-    try {
-      return jsonMapper.writeValueAsBytes(obj);
-    }
-    catch (JsonProcessingException e) {
-      throw new ISE("Failed to serialize " + obj.getClass().getSimpleName());
-    }
-  }
-
-  public static <T> T fromBytes(ObjectMapper jsonMapper, byte[] bytes, Class<T> clazz)
-  {
-    try {
-      return jsonMapper.readValue(bytes, clazz);
-    }
-    catch (IOException e) {
-      throw new ISE(e, "Failed to deserialize a " + clazz.getSimpleName());
-    }
-  }
-
-  public static String toString(Object obj)
-  {
-    ObjectMapper jsonMapper = new ObjectMapper();
-    try {
-      return jsonMapper.writeValueAsString(obj);
-    }
-    catch (JsonProcessingException e) {
-      throw new ISE("Failed to serialize TableDefn");
-    }
-  }
-
   public static <T> List<T> concatLists(
-      final List<T> base,
-      final List<T> additions
+      @Nullable final List<T> base,
+      @Nullable final List<T> additions
   )
   {
-    if (base == null && additions != null) {
-      return additions;
-    }
-    if (base != null && additions == null) {
-      return base;
-    }
-    List<T> extended = new ArrayList<>();
-    if (base != null) {
-      extended.addAll(base);
-    }
-    if (additions != null) {
-      extended.addAll(additions);
-    }
-    return extended;
+    return Stream
+        .of(base, additions)
+        .filter(Objects::nonNull)
+        .flatMap(Collection::stream)
+        .collect(Collectors.toList());
   }
 }

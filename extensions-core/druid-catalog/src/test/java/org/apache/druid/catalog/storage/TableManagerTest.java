@@ -25,6 +25,7 @@ import org.apache.druid.catalog.CatalogTest;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
+import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.storage.sql.CatalogManager;
 import org.apache.druid.catalog.storage.sql.CatalogManager.DuplicateKeyException;
@@ -85,11 +86,10 @@ public class TableManagerTest
   public void testCreate() throws DuplicateKeyException
   {
     Map<String, Object> props = ImmutableMap.of(
-        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
-        DatasourceDefn.ROLLUP_GRANULARITY_PROPERTY, "PT1M",
-        DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
+        AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
     );
-    TableSpec spec = new TableSpec(DatasourceDefn.ROLLUP_DATASOURCE_TYPE, props, null);
+    TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     TableMetadata table = TableMetadata.newTable(TableId.datasource("table1"), spec);
 
     // Table does not exist, read returns nothing.
@@ -111,19 +111,17 @@ public class TableManagerTest
   public void testUpdate() throws DuplicateKeyException, OutOfDateException, NotFoundException
   {
     Map<String, Object> props = ImmutableMap.of(
-        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
-        DatasourceDefn.ROLLUP_GRANULARITY_PROPERTY, "PT1M",
-        DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
+        AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
     );
-    TableSpec spec = new TableSpec(DatasourceDefn.ROLLUP_DATASOURCE_TYPE, props, null);
+    TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     TableMetadata table = TableMetadata.newTable(TableId.datasource("table1"), spec);
     long version = manager.create(table);
 
     // Change the definition
     props = ImmutableMap.of(
-        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
-        DatasourceDefn.ROLLUP_GRANULARITY_PROPERTY, "PT1H",
-        DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 2_000_000
+        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
+        AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 2_000_000
     );
     TableSpec spec2 = spec.withProperties(props);
     TableMetadata table2 = table.withSpec(spec2);
@@ -152,11 +150,10 @@ public class TableManagerTest
   public void testDelete() throws DuplicateKeyException
   {
     Map<String, Object> props = ImmutableMap.of(
-        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
-        DatasourceDefn.ROLLUP_GRANULARITY_PROPERTY, "PT1M",
-        DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
+        AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
     );
-    TableSpec spec = new TableSpec(DatasourceDefn.ROLLUP_DATASOURCE_TYPE, props, null);
+    TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     TableMetadata table = TableMetadata.newTable(TableId.datasource("table1"), spec);
 
     assertFalse(manager.delete(table.id()));
@@ -172,11 +169,10 @@ public class TableManagerTest
     assertTrue(list.isEmpty());
 
     Map<String, Object> props = ImmutableMap.of(
-        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
-        DatasourceDefn.ROLLUP_GRANULARITY_PROPERTY, "PT1M",
-        DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
+        AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
     );
-    TableSpec spec = new TableSpec(DatasourceDefn.ROLLUP_DATASOURCE_TYPE, props, null);
+    TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
 
     // Create tables in inverse order
     TableMetadata table2 = TableMetadata.newTable(TableId.datasource("table2"), spec);

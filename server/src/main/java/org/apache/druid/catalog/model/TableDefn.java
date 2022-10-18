@@ -38,7 +38,7 @@ import java.util.Set;
  * properties and a schema. Subclasses define specific table types
  * such as datasources or input tables. Some tables may be parameterized
  * to allow the table to appear in a SQL table function by implementing
- * the {@link Parameterized} interface.
+ * the {@link ParameterizedDefn} interface.
  */
 public class TableDefn extends ObjectDefn
 {
@@ -52,7 +52,7 @@ public class TableDefn extends ObjectDefn
   public TableDefn(
       final String name,
       final String typeValue,
-      final List<PropertyDefn> properties,
+      final List<PropertyDefn<?>> properties,
       final List<ColumnDefn> columnDefns
   )
   {

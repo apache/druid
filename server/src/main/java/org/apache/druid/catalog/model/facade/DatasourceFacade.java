@@ -21,18 +21,17 @@ package org.apache.druid.catalog.model.facade;
 
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ResolvedTable;
+import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
-import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.java.util.common.granularity.Granularity;
 
 import java.util.Collections;
 import java.util.List;
 
 /**
- * Convenience wrapper on top of a resolved table (a table spec
- * and its corresponding definition.) To be used by consumers
- * of catalog objects that work with specific datasource properties
- * rather than layers that work with specs generically.
+ * Convenience wrapper on top of a resolved table (a table spec and its corresponding
+ * definition.) To be used by consumers of catalog objects that work with specific
+ * datasource properties rather than layers that work with specs generically.
  */
 public class DatasourceFacade extends TableFacade
 {
@@ -41,48 +40,32 @@ public class DatasourceFacade extends TableFacade
     super(resolved);
   }
 
-  public boolean isRollup()
-  {
-    return DatasourceDefn.ROLLUP_DATASOURCE_TYPE.equals(spec().type());
-  }
-
-  public boolean isDetail()
-  {
-    return !isRollup();
-  }
-
   public String segmentGranularityString()
   {
-    return stringProperty(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY);
+    return stringProperty(AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY);
   }
 
   public Granularity segmentGranularity()
   {
-    String value = stringProperty(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY);
+    String value = stringProperty(AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY);
     return value == null ? null : CatalogUtils.asDruidGranularity(value);
   }
 
   public Integer targetSegmentRows()
   {
-    return intProperty(DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY);
+    return intProperty(AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY);
   }
 
   @SuppressWarnings("unchecked")
   public List<ClusterKeySpec> clusterKeys()
   {
-    return (List<ClusterKeySpec>) property(DatasourceDefn.CLUSTER_KEYS_PROPERTY);
+    return (List<ClusterKeySpec>) property(AbstractDatasourceDefn.CLUSTER_KEYS_PROPERTY);
   }
 
   @SuppressWarnings("unchecked")
   public List<String> hiddenColumns()
   {
-    Object value = property(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
+    Object value = property(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
     return value == null ? Collections.emptyList() : (List<String>) value;
-  }
-
-  public Granularity rollupGranularity()
-  {
-    String value = stringProperty(DatasourceDefn.ROLLUP_GRANULARITY_PROPERTY);
-    return value == null ? null : CatalogUtils.asDruidGranularity(value);
   }
 }

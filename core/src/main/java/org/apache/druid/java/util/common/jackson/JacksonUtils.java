@@ -20,11 +20,13 @@
 package org.apache.druid.java.util.common.jackson;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -44,6 +46,10 @@ public final class JacksonUtils
       new TypeReference<Map<String, Boolean>>()
       {
       };
+
+  private JacksonUtils()
+  {
+  }
 
   /**
    * Silences Jackson's {@link IOException}.
@@ -89,7 +95,50 @@ public final class JacksonUtils
     }
   }
 
-  private JacksonUtils()
+  /**
+   * Convert the given object to an array of bytes. Use when the object is
+   * known serializable so that the Jackson exception can be suppressed.
+   */
+  public static byte[] toBytes(ObjectMapper jsonMapper, Object obj)
   {
+    try {
+      return jsonMapper.writeValueAsBytes(obj);
+    }
+    catch (JsonProcessingException e) {
+      throw new ISE("Failed to serialize " + obj.getClass().getSimpleName());
+    }
+  }
+
+  /**
+   * Deserialize an object from an array of bytes. Use when the object is
+   * known deserializable so that the Jackson exception can be suppressed.
+   */
+  public static <T> T fromBytes(ObjectMapper jsonMapper, byte[] bytes, Class<T> clazz)
+  {
+    try {
+      return jsonMapper.readValue(bytes, clazz);
+    }
+    catch (IOException e) {
+      throw new ISE(e, "Failed to deserialize a " + clazz.getSimpleName());
+    }
+  }
+
+  /**
+   * Quick & easy implementation of {@code toString()} for objects which are
+   * primarily representations of JSON objects. Use only for cases where the
+   * {@code toString()} is for debugging: the cost of creating an object mapper
+   * every time is undesirable for production code. Also, assumes that the
+   * type can serialized using the default mapper: doesn't work for types that
+   * require custom Jackson extensions.
+   */
+  public static String toString(Object obj)
+  {
+    ObjectMapper jsonMapper = new ObjectMapper();
+    try {
+      return jsonMapper.writeValueAsString(obj);
+    }
+    catch (JsonProcessingException e) {
+      throw new ISE("Failed to serialize TableDefn");
+    }
   }
 }

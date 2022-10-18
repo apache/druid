@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -113,18 +114,18 @@ public class TableSpec
 
   public byte[] toBytes(ObjectMapper jsonMapper)
   {
-    return CatalogUtils.toBytes(jsonMapper, this);
+    return JacksonUtils.toBytes(jsonMapper, this);
   }
 
   public static TableSpec fromBytes(ObjectMapper jsonMapper, byte[] bytes)
   {
-    return CatalogUtils.fromBytes(jsonMapper, bytes, TableSpec.class);
+    return JacksonUtils.fromBytes(jsonMapper, bytes, TableSpec.class);
   }
 
   @Override
   public String toString()
   {
-    return CatalogUtils.toString(this);
+    return JacksonUtils.toString(this);
   }
 
   @Override

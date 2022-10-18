@@ -19,7 +19,7 @@
 
 package org.apache.druid.catalog.model;
 
-import org.apache.druid.catalog.model.table.DatasourceDefn;
+import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.ExternalTableDefn;
 import org.apache.druid.server.security.ResourceType;
 
@@ -92,7 +92,7 @@ public class SchemaRegistryImpl implements SchemaRegistry
     register(new SchemaDefnImpl(
         TableId.DRUID_SCHEMA,
         ResourceType.DATASOURCE,
-        DatasourceDefn.tableTypes()
+        AbstractDatasourceDefn.tableTypes()
     ));
     register(new SchemaDefnImpl(
         TableId.LOOKUP_SCHEMA,

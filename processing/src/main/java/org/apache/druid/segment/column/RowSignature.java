@@ -32,7 +32,6 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnInspector;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;

@@ -24,8 +24,10 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.catalog.CatalogTest;
 import org.apache.druid.catalog.model.TableMetadata.TableState;
+import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -55,8 +57,8 @@ public class TableMetadataTest
     assertEquals(TableId.DRUID_SCHEMA, id2.schema());
     assertEquals("ds", id2.name());
 
-    byte[] bytes = CatalogUtils.toBytes(mapper, id1);
-    TableId id3 = CatalogUtils.fromBytes(mapper, bytes, TableId.class);
+    byte[] bytes = JacksonUtils.toBytes(mapper, id1);
+    TableId id3 = JacksonUtils.fromBytes(mapper, bytes, TableId.class);
     assertEquals(id1, id3);
   }
 
@@ -72,9 +74,9 @@ public class TableMetadataTest
   public void testTableMetadata()
   {
     Map<String, Object> props = ImmutableMap.of(
-        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"
+        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"
     );
-    TableSpec spec = new TableSpec(DatasourceDefn.DETAIL_DATASOURCE_TYPE, props, null);
+    TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     {
       TableMetadata table = new TableMetadata(
           TableId.datasource("foo"),
@@ -91,8 +93,8 @@ public class TableMetadataTest
       assertEquals(TableState.ACTIVE, table.state());
       assertNotNull(table.spec());
 
-      byte[] bytes = CatalogUtils.toBytes(mapper, table);
-      TableMetadata table2 = CatalogUtils.fromBytes(mapper, bytes, TableMetadata.class);
+      byte[] bytes = JacksonUtils.toBytes(mapper, table);
+      TableMetadata table2 = JacksonUtils.fromBytes(mapper, bytes, TableMetadata.class);
       assertEquals(table, table2);
     }
 
@@ -116,9 +118,9 @@ public class TableMetadataTest
   public void testConversions()
   {
     Map<String, Object> props = ImmutableMap.of(
-        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"
+        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"
     );
-    TableSpec spec = new TableSpec(DatasourceDefn.DETAIL_DATASOURCE_TYPE, props, null);
+    TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     TableMetadata table = TableMetadata.newTable(
         TableId.datasource("ds"),
         spec

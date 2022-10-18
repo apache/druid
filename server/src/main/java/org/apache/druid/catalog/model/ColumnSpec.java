@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 
 import javax.annotation.Nullable;
 
@@ -98,18 +99,18 @@ public class ColumnSpec
 
   public byte[] toBytes(ObjectMapper jsonMapper)
   {
-    return CatalogUtils.toBytes(jsonMapper, this);
+    return JacksonUtils.toBytes(jsonMapper, this);
   }
 
   public static ColumnSpec fromBytes(ObjectMapper jsonMapper, byte[] bytes)
   {
-    return CatalogUtils.fromBytes(jsonMapper, bytes, ColumnSpec.class);
+    return JacksonUtils.fromBytes(jsonMapper, bytes, ColumnSpec.class);
   }
 
   @Override
   public String toString()
   {
-    return CatalogUtils.toString(this);
+    return JacksonUtils.toString(this);
   }
 
   @Override

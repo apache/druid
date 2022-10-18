@@ -20,7 +20,7 @@
 package org.apache.druid.catalog.model.table;
 
 import org.apache.druid.catalog.model.CatalogUtils;
-import org.apache.druid.catalog.model.Parameterized;
+import org.apache.druid.catalog.model.ParameterizedDefn;
 import org.apache.druid.catalog.model.Properties.StringListPropertyDefn;
 import org.apache.druid.catalog.model.Properties.StringPropertyDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
@@ -35,7 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class LocalTableDefn extends FormattedExternalTableDefn implements Parameterized
+public class LocalTableDefn extends FormattedExternalTableDefn implements ParameterizedDefn
 {
   public static final String TABLE_TYPE = LocalInputSource.TYPE_KEY;
 

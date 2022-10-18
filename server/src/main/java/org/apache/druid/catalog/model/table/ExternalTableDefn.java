@@ -21,12 +21,13 @@ package org.apache.druid.catalog.model.table;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnDefn;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
-import org.apache.druid.catalog.model.Parameterized;
-import org.apache.druid.catalog.model.Parameterized.ParameterDefn;
+import org.apache.druid.catalog.model.ParameterizedDefn;
+import org.apache.druid.catalog.model.ParameterizedDefn.ParameterDefn;
 import org.apache.druid.catalog.model.Properties.PropertyDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
@@ -50,7 +51,7 @@ import java.util.Set;
  * properties, as do all table definitions.
  * <p>
  * The external table implements the mechanism for parameterized tables,
- * but does not implement the {@link Parameterized} interface itself.
+ * but does not implement the {@link ParameterizedDefn} interface itself.
  * Tables which are parameterized implement that interface to expose
  * methods defined here.
  */
@@ -67,7 +68,7 @@ public abstract class ExternalTableDefn extends TableDefn
     public FormattedExternalTableDefn(
         final String name,
         final String typeValue,
-        final List<PropertyDefn> properties,
+        final List<PropertyDefn<?>> properties,
         final List<ColumnDefn> columnDefns,
         final List<InputFormatDefn> formats,
         final List<ParameterDefn> parameters
@@ -92,16 +93,16 @@ public abstract class ExternalTableDefn extends TableDefn
      * in the order defined by the format. Allow same-named properties across
      * formats, as long as the types are the same.
      */
-    private static List<PropertyDefn> addFormatProperties(
-        final List<PropertyDefn> properties,
+    private static List<PropertyDefn<?>> addFormatProperties(
+        final List<PropertyDefn<?>> properties,
         final List<InputFormatDefn> formats
     )
     {
-      List<PropertyDefn> toAdd = new ArrayList<>();
-      Map<String, PropertyDefn> formatProps = new HashMap<>();
+      List<PropertyDefn<?>> toAdd = new ArrayList<>();
+      Map<String, PropertyDefn<?>> formatProps = new HashMap<>();
       for (InputFormatDefn format : formats) {
-        for (PropertyDefn prop : format.properties()) {
-          PropertyDefn existing = formatProps.putIfAbsent(prop.name(), prop);
+        for (PropertyDefn<?> prop : format.properties()) {
+          PropertyDefn<?> existing = formatProps.putIfAbsent(prop.name(), prop);
           if (existing == null) {
             toAdd.add(prop);
           } else if (existing.getClass() != prop.getClass()) {
@@ -186,7 +187,7 @@ public abstract class ExternalTableDefn extends TableDefn
   public ExternalTableDefn(
       final String name,
       final String typeValue,
-      final List<PropertyDefn> fields,
+      final List<PropertyDefn<?>> fields,
       final List<ColumnDefn> columnDefns,
       final List<ParameterDefn> parameters
   )
@@ -263,7 +264,7 @@ public abstract class ExternalTableDefn extends TableDefn
   public static Set<String> tableTypes()
   {
     // Known input tables. Get this from a registry later.
-    return CatalogUtils.setOf(
+    return ImmutableSet.of(
         InlineTableDefn.TABLE_TYPE,
         HttpTableDefn.TABLE_TYPE,
         LocalTableDefn.TABLE_TYPE

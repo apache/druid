@@ -51,7 +51,7 @@ public class InputFormats
   {
     String name();
     String typeTag();
-    List<PropertyDefn> properties();
+    List<PropertyDefn<?>> properties();
     void validate(ResolvedTable table);
     InputFormat convert(ResolvedTable table);
   }
@@ -60,12 +60,12 @@ public class InputFormats
   {
     private final String name;
     private final String typeTag;
-    private final List<PropertyDefn> properties;
+    private final List<PropertyDefn<?>> properties;
 
     public BaseFormatDefn(
         final String name,
         final String typeTag,
-        final List<PropertyDefn> properties
+        final List<PropertyDefn<?>> properties
     )
     {
       this.name = name;
@@ -86,7 +86,7 @@ public class InputFormats
     }
 
     @Override
-    public List<PropertyDefn> properties()
+    public List<PropertyDefn<?>> properties()
     {
       return properties;
     }
@@ -119,7 +119,7 @@ public class InputFormats
     public FlatTextFormatDefn(
         final String name,
         final String typeTag,
-        final List<PropertyDefn> properties
+        final List<PropertyDefn<?>> properties
     )
     {
       super(

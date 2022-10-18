@@ -29,8 +29,7 @@ import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableSpec;
-import org.apache.druid.catalog.model.table.DatasourceDefn.DetailDatasourceDefn;
-import org.apache.druid.catalog.model.table.DatasourceDefn.RollupDatasourceDefn;
+import org.apache.druid.catalog.model.table.DatasourceDefn.DatasourceColumnDefn;
 import org.apache.druid.java.util.common.IAE;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -64,21 +63,21 @@ public class DatasourceTableTest
   {
     // Minimum possible definition
     Map<String, Object> props = ImmutableMap.of(
-        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"
+        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"
     );
     {
-      TableSpec spec = new TableSpec(DatasourceDefn.DETAIL_DATASOURCE_TYPE, props, null);
+      TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
       ResolvedTable table = registry.resolve(spec);
       assertNotNull(table);
-      assertTrue(table.defn() instanceof DetailDatasourceDefn);
+      assertTrue(table.defn() instanceof DatasourceDefn);
       table.validate();
     }
 
     {
-      TableSpec spec = new TableSpec(DatasourceDefn.ROLLUP_DATASOURCE_TYPE, props, null);
+      TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
       ResolvedTable table = registry.resolve(spec);
       assertNotNull(table);
-      assertTrue(table.defn() instanceof RollupDatasourceDefn);
+      assertTrue(table.defn() instanceof DatasourceDefn);
       table.validate();
     }
   }
@@ -109,13 +108,13 @@ public class DatasourceTableTest
     }
 
     {
-      TableSpec spec = new TableSpec(DatasourceDefn.DETAIL_DATASOURCE_TYPE, ImmutableMap.of(), null);
+      TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, ImmutableMap.of(), null);
       ResolvedTable table = registry.resolve(spec);
       expectValidationFails(table);
     }
 
     {
-      TableSpec spec = new TableSpec(DatasourceDefn.ROLLUP_DATASOURCE_TYPE, ImmutableMap.of(), null);
+      TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, ImmutableMap.of(), null);
       expectValidationFails(spec);
     }
   }
@@ -125,14 +124,13 @@ public class DatasourceTableTest
   {
     Map<String, Object> props = ImmutableMap.<String, Object>builder()
         .put(TableDefn.DESCRIPTION_PROPERTY, "My table")
-        .put(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D")
-        .put(DatasourceDefn.ROLLUP_GRANULARITY_PROPERTY, "PT1M")
-        .put(DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000)
-        .put(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Arrays.asList("foo", "bar"))
+        .put(AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D")
+        .put(AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000)
+        .put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Arrays.asList("foo", "bar"))
         .build();
 
     {
-      TableSpec spec = new TableSpec(DatasourceDefn.DETAIL_DATASOURCE_TYPE, props, null);
+      TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
       expectValidationSucceeds(spec);
 
       // Check serialization
@@ -141,7 +139,7 @@ public class DatasourceTableTest
     }
 
     {
-      TableSpec spec = new TableSpec(DatasourceDefn.ROLLUP_DATASOURCE_TYPE, props, null);
+      TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
       expectValidationSucceeds(spec);
 
       // Check serialization
@@ -160,47 +158,32 @@ public class DatasourceTableTest
 
     // Segment granularity
     {
-      TableSpec spec = TableBuilder.detailTable("foo", "bogus").buildSpec();
+      TableSpec spec = TableBuilder.datasource("foo", "bogus").buildSpec();
       expectValidationFails(spec);
     }
 
     {
-      TableSpec spec = TableBuilder.rollupTable("foo", "bogus").buildSpec();
-      expectValidationFails(spec);
-    }
-
-    // Rollup granularity
-    {
-      TableSpec spec = TableBuilder.rollupTable("foo", "P1D")
-          .rollupGranularity("bogus")
-          .buildSpec();
-      expectValidationFails(spec);
-    }
-
-    {
-      TableSpec spec = TableBuilder.rollupTable("foo", "P1D")
-          .property(DatasourceDefn.ROLLUP_GRANULARITY_PROPERTY, 10)
-          .buildSpec();
+      TableSpec spec = TableBuilder.datasource("foo", "bogus").buildSpec();
       expectValidationFails(spec);
     }
 
     // Target segment rows
     {
-      TableSpec spec = TableBuilder.detailTable("foo", "P1D")
-          .property(DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, "bogus")
+      TableSpec spec = TableBuilder.datasource("foo", "P1D")
+          .property(AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, "bogus")
           .buildSpec();
       expectValidationFails(spec);
     }
 
     // Hidden columns
     {
-      TableSpec spec = TableBuilder.detailTable("foo", "P1D")
-          .property(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, "bogus")
+      TableSpec spec = TableBuilder.datasource("foo", "P1D")
+          .property(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, "bogus")
           .buildSpec();
       expectValidationFails(spec);
     }
     {
-      TableSpec spec = TableBuilder.detailTable("foo", "P1D")
+      TableSpec spec = TableBuilder.datasource("foo", "P1D")
           .hiddenColumns("a", Columns.TIME_COLUMN)
           .buildSpec();
       expectValidationFails(spec);
@@ -210,7 +193,7 @@ public class DatasourceTableTest
   @Test
   public void testExtendedProperties()
   {
-    TableSpec spec = TableBuilder.detailTable("foo", "P1D")
+    TableSpec spec = TableBuilder.datasource("foo", "P1D")
         .property("foo", 10)
         .property("bar", "mumble")
         .buildSpec();
@@ -228,17 +211,17 @@ public class DatasourceTableTest
 
     // Name is required
     {
-      ColumnSpec spec = new ColumnSpec(DatasourceDefn.DETAIL_COLUMN_TYPE, null, null, null);
+      ColumnSpec spec = new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, null, null, null);
       assertThrows(IAE.class, () -> spec.validate());
     }
     {
-      ColumnSpec spec = new ColumnSpec(DatasourceDefn.DETAIL_COLUMN_TYPE, "foo", null, null);
+      ColumnSpec spec = new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, "foo", null, null);
       spec.validate();
     }
 
     // Type is optional
     {
-      ColumnSpec spec = new ColumnSpec(DatasourceDefn.DETAIL_COLUMN_TYPE, "foo", "VARCHAR", null);
+      ColumnSpec spec = new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, "foo", "VARCHAR", null);
       spec.validate();
     }
   }
@@ -246,7 +229,7 @@ public class DatasourceTableTest
   @Test
   public void testDetailTableColumns()
   {
-    TableBuilder builder = TableBuilder.detailTable("foo", "P1D");
+    TableBuilder builder = TableBuilder.datasource("foo", "P1D");
 
     // OK to have no columns
     {
@@ -309,22 +292,6 @@ public class DatasourceTableTest
       expectValidationFails(spec);
     }
 
-    // Cannot use a measure
-    {
-      TableSpec spec = builder.copy()
-          .measure("foo", SUM_BIGINT)
-          .buildSpec();
-      expectValidationFails(spec);
-    }
-
-    // Cannot use a dimension for a detail table
-    {
-      TableSpec spec = builder.copy()
-          .column(new ColumnSpec(DatasourceDefn.DIMENSION_TYPE, "foo", Columns.VARCHAR, null))
-          .buildSpec();
-      expectValidationFails(spec);
-    }
-
     // Reject duplicate columns
     {
       TableSpec spec = builder.copy()
@@ -337,111 +304,6 @@ public class DatasourceTableTest
       TableSpec spec = builder.copy()
           .column("foo", Columns.VARCHAR)
           .column("foo", Columns.BIGINT)
-          .buildSpec();
-      expectValidationFails(spec);
-    }
-  }
-
-  @Test
-  public void testRollupTableColumns()
-  {
-    TableBuilder builder = TableBuilder.rollupTable("foo", "P1D")
-        .rollupGranularity("PT1M");
-
-    // OK to have no columns
-    {
-      TableSpec spec = builder.buildSpec();
-      expectValidationSucceeds(spec);
-    }
-
-    // OK for a dimension to have no type
-    {
-      TableSpec spec = builder.copy()
-          .column("foo", null)
-          .buildSpec();
-      expectValidationSucceeds(spec);
-    }
-
-    // Dimensions must have a scalar type, if the type is non-null
-    {
-      TableSpec spec = builder.copy()
-          .column("foo", Columns.VARCHAR)
-          .buildSpec();
-      expectValidationSucceeds(spec);
-    }
-    {
-      TableSpec spec = builder.copy()
-          .column("foo", "BOGUS")
-          .buildSpec();
-      expectValidationFails(spec);
-    }
-    {
-      TableSpec spec = builder.copy()
-          .column("foo", SUM_BIGINT)
-          .buildSpec();
-      expectValidationFails(spec);
-    }
-
-    // Time column can be a dimension and can only have TIMESTAMP type
-    {
-      TableSpec spec = builder.copy()
-          .timeColumn()
-          .buildSpec();
-      expectValidationSucceeds(spec);
-    }
-    {
-      TableSpec spec = builder.copy()
-          .column(Columns.TIME_COLUMN, Columns.VARCHAR)
-          .buildSpec();
-      expectValidationFails(spec);
-    }
-    {
-      TableSpec spec = builder.copy()
-          .column(Columns.TIME_COLUMN, SUM_BIGINT)
-          .buildSpec();
-      expectValidationFails(spec);
-    }
-
-    // Measures must have an aggregate type
-    {
-      TableSpec spec = builder.copy()
-          .measure("foo", null)
-          .buildSpec();
-      expectValidationFails(spec);
-    }
-    {
-      TableSpec spec = builder.copy()
-          .measure("foo", Columns.VARCHAR)
-          .buildSpec();
-      expectValidationFails(spec);
-    }
-    {
-      TableSpec spec = builder.copy()
-          .measure("foo", SUM_BIGINT)
-          .buildSpec();
-      expectValidationSucceeds(spec);
-    }
-
-    // Cannot use a detail column
-    {
-      TableSpec spec = builder.copy()
-          .column(new ColumnSpec(DatasourceDefn.DETAIL_COLUMN_TYPE, "foo", null, null))
-          .buildSpec();
-      expectValidationFails(spec);
-    }
-
-    // Reject duplicate columns
-    {
-      TableSpec spec = builder.copy()
-          .column("foo", Columns.VARCHAR)
-          .measure("bar", SUM_BIGINT)
-          .buildSpec();
-      expectValidationSucceeds(spec);
-    }
-    {
-      TableSpec spec = builder.copy()
-          .column("foo", Columns.VARCHAR)
-          .measure("foo", SUM_BIGINT)
           .buildSpec();
       expectValidationFails(spec);
     }
@@ -464,14 +326,13 @@ public class DatasourceTableTest
         .put("colProp1", "value 1")
         .put("colProp2", "value 2")
         .build();
-    TableSpec spec = TableBuilder.rollupTable("foo", "PT1H")
+    TableSpec spec = TableBuilder.datasource("foo", "PT1H")
         .description("My table")
-        .rollupGranularity("PT1M")
-        .property(DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000)
+        .property(AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000)
         .hiddenColumns("foo", "bar")
         .property("tag1", "some value")
         .property("tag2", "second value")
-        .column(new ColumnSpec(DatasourceDefn.DIMENSION_TYPE, "a", null, colProps))
+        .column(new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, "a", null, colProps))
         .column("b", Columns.VARCHAR)
         .buildSpec();
 
@@ -541,7 +402,7 @@ public class DatasourceTableTest
     // such values to indicate which properties to remove.
     Map<String, Object> updatedProps = new HashMap<>();
     // Update a property
-    updatedProps.put(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D");
+    updatedProps.put(AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D");
     // Remove a property
     updatedProps.put("tag1", null);
     // Add a property
@@ -556,8 +417,8 @@ public class DatasourceTableTest
     // changed.
     assertNotEquals(spec, merged);
     assertEquals(
-        updatedProps.get(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY),
-        merged.properties().get(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY)
+        updatedProps.get(AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY),
+        merged.properties().get(AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY)
     );
     assertFalse(merged.properties().containsKey("tag1"));
     assertEquals(
@@ -573,24 +434,24 @@ public class DatasourceTableTest
 
     // Remove all hidden columns
     Map<String, Object> updatedProps = new HashMap<>();
-    updatedProps.put(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, null);
+    updatedProps.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, null);
     TableSpec update = new TableSpec(null, updatedProps, null);
     TableSpec merged = mergeTables(spec, update);
     expectValidationSucceeds(merged);
     assertFalse(
-        merged.properties().containsKey(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+        merged.properties().containsKey(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
 
     // Wrong type
     updatedProps = ImmutableMap.of(
-        DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, "mumble"
+        AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, "mumble"
     );
     update = new TableSpec(null, updatedProps, null);
     assertMergeFails(spec, update);
 
     // Merge
     updatedProps = ImmutableMap.of(
-        DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Collections.singletonList("mumble")
+        AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Collections.singletonList("mumble")
     );
     update = new TableSpec(null, updatedProps, null);
     merged = mergeTables(spec, update);
@@ -598,7 +459,7 @@ public class DatasourceTableTest
 
     assertEquals(
         Arrays.asList("foo", "bar", "mumble"),
-        merged.properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+        merged.properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
   }
 
@@ -606,13 +467,13 @@ public class DatasourceTableTest
   public void testMergeColsWithEmptyList()
   {
     Map<String, Object> props = ImmutableMap.of(
-        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"
+        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"
     );
-    TableSpec spec = new TableSpec(DatasourceDefn.DETAIL_DATASOURCE_TYPE, props, null);
+    TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
 
     List<ColumnSpec> colUpdates = Collections.singletonList(
         new ColumnSpec(
-            DatasourceDefn.DETAIL_COLUMN_TYPE,
+            DatasourceColumnDefn.COLUMN_TYPE,
             "a",
             Columns.BIGINT,
             null
@@ -641,13 +502,13 @@ public class DatasourceTableTest
 
     List<ColumnSpec> colUpdates = Arrays.asList(
         new ColumnSpec(
-            DatasourceDefn.DIMENSION_TYPE,
+            DatasourceColumnDefn.COLUMN_TYPE,
             "a",
             Columns.BIGINT,
             updatedProps
         ),
         new ColumnSpec(
-            DatasourceDefn.DIMENSION_TYPE,
+            DatasourceColumnDefn.COLUMN_TYPE,
             "c",
             Columns.VARCHAR,
             null

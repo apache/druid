@@ -25,7 +25,7 @@ import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
-import org.apache.druid.catalog.model.table.DatasourceDefn;
+import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.InlineTableDefn;
 import org.apache.druid.catalog.model.table.InputFormats;
 import org.apache.druid.catalog.model.table.TableBuilder;
@@ -87,7 +87,7 @@ public class CatalogResourceTest
   public void testCreate()
   {
     final String tableName = "create";
-    TableSpec dsSpec = TableBuilder.detailTable(tableName, "P1D").buildSpec();
+    TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
 
     // Blank schema name: infer the schema.
     Response resp = resource.postTable("", tableName, dsSpec, null, 0, postBy(CatalogTests.SUPER_USER));
@@ -155,7 +155,7 @@ public class CatalogResourceTest
   public void testUpdate()
   {
     final String tableName = "update";
-    TableSpec dsSpec = TableBuilder.detailTable(tableName, "P1D").buildSpec();
+    TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
 
     // Does not exist
     Response resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, "replace", 0, postBy(CatalogTests.SUPER_USER));
@@ -190,7 +190,7 @@ public class CatalogResourceTest
   public void testForce()
   {
     final String tableName = "force";
-    TableSpec dsSpec = TableBuilder.detailTable(tableName, "P1D").buildSpec();
+    TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
 
     // Create the table
     Response resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, "force", 0, postBy(CatalogTests.WRITER_USER));
@@ -207,7 +207,7 @@ public class CatalogResourceTest
   public void testRead()
   {
     final String tableName = "read";
-    TableSpec dsSpec = TableBuilder.detailTable(tableName, "P1D").buildSpec();
+    TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
 
     // Missing schema name
     Response resp = resource.getTable("", tableName, getBy(CatalogTests.SUPER_USER));
@@ -291,7 +291,7 @@ public class CatalogResourceTest
 
     // Create a table
     final String tableName = "list";
-    TableSpec dsSpec = TableBuilder.detailTable(tableName, "P1D").buildSpec();
+    TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
     resp = resource.postTable(TableId.DRUID_SCHEMA, "list", dsSpec, null, 0, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
@@ -361,7 +361,7 @@ public class CatalogResourceTest
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
     // Create the table
-    TableSpec dsSpec = TableBuilder.detailTable(tableName, "P1D").buildSpec();
+    TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
     resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, null, 0, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
@@ -385,7 +385,7 @@ public class CatalogResourceTest
   {
     // Operations for one table - create
     String table1Name = "lifecycle1";
-    TableSpec dsSpec = TableBuilder.detailTable(table1Name, "P1D").buildSpec();
+    TableSpec dsSpec = TableBuilder.datasource(table1Name, "P1D").buildSpec();
     Response resp = resource.postTable(TableId.DRUID_SCHEMA, table1Name, dsSpec, null, 0, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     long version = getVersion(resp);
@@ -413,7 +413,7 @@ public class CatalogResourceTest
     assertEquals(id1.name(), tables.get(0));
 
     // update
-    TableSpec table2Spec = TableBuilder.detailTable(table1Name, "PT1H").buildSpec();
+    TableSpec table2Spec = TableBuilder.datasource(table1Name, "PT1H").buildSpec();
     resp = resource.postTable(TableId.DRUID_SCHEMA, table1Name, table2Spec, "replace", version, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     assertTrue(getVersion(resp) > version);
@@ -470,7 +470,7 @@ public class CatalogResourceTest
   public void testMoveColumn()
   {
     String tableName = "move";
-    TableSpec dsSpec = TableBuilder.detailTable(tableName, "P1D")
+    TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D")
         .column("a", "VARCHAR")
         .column("b", "BIGINT")
         .column("c", "FLOAT")
@@ -519,7 +519,7 @@ public class CatalogResourceTest
   public void testHideColumns()
   {
     String tableName = "hide";
-    TableSpec dsSpec = TableBuilder.detailTable(tableName, "P1D")
+    TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D")
          .buildSpec();
     Response resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, null, 0, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
@@ -540,7 +540,7 @@ public class CatalogResourceTest
 
     resp = resource.getTable(TableId.DRUID_SCHEMA, tableName, postBy(CatalogTests.READER_USER));
     TableMetadata read = (TableMetadata) resp.getEntity();
-    assertNull(read.spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY));
+    assertNull(read.spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY));
 
     // Hide
     cmd = new HideColumns(Arrays.asList("a", "b"), null);
@@ -551,7 +551,7 @@ public class CatalogResourceTest
     read = (TableMetadata) resp.getEntity();
     assertEquals(
         Arrays.asList("a", "b"),
-        read.spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+        read.spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
     assertTrue(read.updateTime() > version);
 
@@ -564,7 +564,7 @@ public class CatalogResourceTest
     read = (TableMetadata) resp.getEntity();
     assertEquals(
         Arrays.asList("b", "c"),
-        read.spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+        read.spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
     assertTrue(read.updateTime() > version);
 
@@ -575,7 +575,7 @@ public class CatalogResourceTest
   public void testDropColumns()
   {
     String tableName = "drop";
-    TableSpec dsSpec = TableBuilder.detailTable(tableName, "P1D")
+    TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D")
         .column("a", "VARCHAR")
         .column("b", "BIGINT")
         .column("c", "FLOAT")

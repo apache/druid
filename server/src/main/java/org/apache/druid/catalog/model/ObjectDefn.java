@@ -39,12 +39,12 @@ public class ObjectDefn
 {
   private final String name;
   private final String typeValue;
-  private final Map<String, PropertyDefn> properties;
+  private final Map<String, PropertyDefn<?>> properties;
 
   public ObjectDefn(
       final String name,
       final String typeValue,
-      final List<PropertyDefn> fields
+      final List<PropertyDefn<?>> fields
   )
   {
     this.name = name;
@@ -52,11 +52,11 @@ public class ObjectDefn
     this.properties = toPropertyMap(fields);
   }
 
-  protected static Map<String, PropertyDefn> toPropertyMap(final List<PropertyDefn> props)
+  protected static Map<String, PropertyDefn<?>> toPropertyMap(final List<PropertyDefn<?>> props)
   {
-    ImmutableMap.Builder<String, PropertyDefn> builder = ImmutableMap.builder();
+    ImmutableMap.Builder<String, PropertyDefn<?>> builder = ImmutableMap.builder();
     if (props != null) {
-      for (PropertyDefn prop : props) {
+      for (PropertyDefn<?> prop : props) {
         builder.put(prop.name(), prop);
       }
     }
@@ -78,19 +78,19 @@ public class ObjectDefn
     return typeValue;
   }
 
-  public Map<String, PropertyDefn> properties()
+  public Map<String, PropertyDefn<?>> properties()
   {
     return properties;
   }
 
-  public PropertyDefn property(String key)
+  public PropertyDefn<?> property(String key)
   {
     return properties.get(key);
   }
 
   /**
    * Merge the properties for an object using a set of updates in a map. If the
-   * update value is null, then remove the property in the revised set. If the
+   * update value is {@code null}, then remove the property in the revised set. If the
    * property is known, use the column definition to merge the values. Else, the
    * update replaces any existing value.
    * <p>
@@ -113,7 +113,7 @@ public class ObjectDefn
       if (entry.getValue() == null) {
         merged.remove(entry.getKey());
       } else {
-        PropertyDefn propDefn = property(entry.getKey());
+        PropertyDefn<?> propDefn = property(entry.getKey());
         Object value = entry.getValue();
         if (propDefn != null) {
           value = propDefn.merge(merged.get(entry.getKey()), entry.getValue());
@@ -131,7 +131,7 @@ public class ObjectDefn
    */
   public void validate(Map<String, Object> spec, ObjectMapper jsonMapper)
   {
-    for (PropertyDefn propDefn : properties.values()) {
+    for (PropertyDefn<?> propDefn : properties.values()) {
       propDefn.validate(spec.get(propDefn.name()), jsonMapper);
     }
   }

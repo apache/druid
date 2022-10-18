@@ -69,7 +69,7 @@ public class ColumnDefn extends ObjectDefn
   public ColumnDefn(
       final String name,
       final String typeValue,
-      final List<PropertyDefn> fields
+      final List<PropertyDefn<?>> fields
   )
   {
     super(name, typeValue, fields);

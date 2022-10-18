@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.CatalogTest;
 import org.apache.druid.catalog.model.Columns;
-import org.apache.druid.catalog.model.Parameterized;
+import org.apache.druid.catalog.model.ParameterizedDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableSpec;
@@ -137,7 +137,7 @@ public class HttpInputTableTest
     table.validate();
 
     // Parameters
-    Parameterized parameterizedTable = tableDefn;
+    ParameterizedDefn parameterizedTable = tableDefn;
     assertEquals(1, parameterizedTable.parameters().size());
     assertNotNull(parameterizedTable.parameter(HttpTableDefn.URIS_PARAMETER));
 

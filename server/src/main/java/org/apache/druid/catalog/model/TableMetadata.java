@@ -25,6 +25,7 @@ import com.google.common.base.Strings;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 
 import java.util.Objects;
 
@@ -196,18 +197,18 @@ public class TableMetadata
 
   public byte[] toBytes(ObjectMapper jsonMapper)
   {
-    return CatalogUtils.toBytes(jsonMapper, this);
+    return JacksonUtils.toBytes(jsonMapper, this);
   }
 
   public static TableMetadata fromBytes(ObjectMapper jsonMapper, byte[] bytes)
   {
-    return CatalogUtils.fromBytes(jsonMapper, bytes, TableMetadata.class);
+    return JacksonUtils.fromBytes(jsonMapper, bytes, TableMetadata.class);
   }
 
   @Override
   public String toString()
   {
-    return CatalogUtils.toString(this);
+    return JacksonUtils.toString(this);
   }
 
   @Override

@@ -53,19 +53,11 @@ public class TableBuilder
   private Map<String, Object> properties = new HashMap<>();
   private List<ColumnSpec> columns = new ArrayList<>();
 
-  public static TableBuilder detailTable(String name, String granularity)
+  public static TableBuilder datasource(String name, String granularity)
   {
     return new TableBuilder()
         .datasource(name)
-        .type(DatasourceDefn.DETAIL_DATASOURCE_TYPE)
-        .segmentGranularity(granularity);
-  }
-
-  public static TableBuilder rollupTable(String name, String granularity)
-  {
-    return new TableBuilder()
-        .datasource(name)
-        .type(DatasourceDefn.ROLLUP_DATASOURCE_TYPE)
+        .type(DatasourceDefn.TABLE_TYPE)
         .segmentGranularity(granularity);
   }
 
@@ -168,19 +160,14 @@ public class TableBuilder
     return property(TableDefn.DESCRIPTION_PROPERTY, description);
   }
 
-  public TableBuilder rollupGranularity(String rollupGranularty)
-  {
-    return property(DatasourceDefn.ROLLUP_GRANULARITY_PROPERTY, rollupGranularty);
-  }
-
   public TableBuilder segmentGranularity(String segmentGranularity)
   {
-    return property(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, segmentGranularity);
+    return property(AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, segmentGranularity);
   }
 
   public TableBuilder clusterColumns(ClusterKeySpec...clusterKeys)
   {
-    return property(DatasourceDefn.CLUSTER_KEYS_PROPERTY, Arrays.asList(clusterKeys));
+    return property(AbstractDatasourceDefn.CLUSTER_KEYS_PROPERTY, Arrays.asList(clusterKeys));
   }
 
   public TableBuilder columns(List<ColumnSpec> columns)
@@ -214,10 +201,8 @@ public class TableBuilder
     String colType;
     if (isInputTable(tableType)) {
       colType = ExternalTableDefn.EXTERNAL_COLUMN_TYPE;
-    } else if (DatasourceDefn.DETAIL_DATASOURCE_TYPE.equals(tableType)) {
-      colType = DatasourceDefn.DETAIL_COLUMN_TYPE;
-    } else if (DatasourceDefn.ROLLUP_DATASOURCE_TYPE.equals(tableType)) {
-      colType = DatasourceDefn.DIMENSION_TYPE;
+    } else if (DatasourceDefn.TABLE_TYPE.equals(tableType)) {
+      colType = DatasourceDefn.DatasourceColumnDefn.COLUMN_TYPE;
     } else {
       throw new ISE("Unknown table type: %s", tableType);
     }
@@ -241,14 +226,9 @@ public class TableBuilder
     return column(new ColumnSpec(colType, name, sqlType, null));
   }
 
-  public TableBuilder measure(String name, String sqlType)
-  {
-    return column(DatasourceDefn.MEASURE_TYPE, name, sqlType);
-  }
-
   public TableBuilder hiddenColumns(List<String> hiddenColumns)
   {
-    return property(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, hiddenColumns);
+    return property(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, hiddenColumns);
   }
 
   public TableBuilder hiddenColumns(String...hiddenColumns)

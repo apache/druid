@@ -21,13 +21,13 @@ package org.apache.druid.catalog.http;
 
 import com.google.common.base.Strings;
 import org.apache.curator.shaded.com.google.common.collect.Lists;
-import org.apache.druid.catalog.model.CatalogUtils;
+import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.SchemaRegistry.SchemaSpec;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
-import org.apache.druid.catalog.model.table.DatasourceDefn;
+import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.storage.Actions;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.HideColumns;
@@ -60,8 +60,11 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -412,13 +415,13 @@ public class CatalogResource
         null,
         req,
         (spec) -> {
-          if (!DatasourceDefn.isDatasource(spec.type())) {
+          if (!AbstractDatasourceDefn.isDatasource(spec.type())) {
             throw new ISE("hideColumns is supported only for data source specs");
           }
           @SuppressWarnings("unchecked")
-          List<String> hiddenProps = (List<String>) spec.properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
+          List<String> hiddenProps = (List<String>) spec.properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
           return spec.withProperty(
-              DatasourceDefn.HIDDEN_COLUMNS_PROPERTY,
+              AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY,
               command.perform(hiddenProps)
           );
         }
@@ -444,8 +447,25 @@ public class CatalogResource
         TableId.of(dbSchema, name),
         null,
         req,
-        (spec) -> spec.withColumns(CatalogUtils.dropColumns(spec.columns(), columns))
+        (spec) -> spec.withColumns(dropColumns(spec.columns(), columns))
     );
+  }
+
+  private static <T extends ColumnSpec> List<T> dropColumns(
+      final List<T> columns,
+      final List<String> toDrop)
+  {
+    if (toDrop == null || toDrop.isEmpty()) {
+      return columns;
+    }
+    Set<String> drop = new HashSet<String>(toDrop);
+    List<T> revised = new ArrayList<>();
+    for (T col : columns) {
+      if (!drop.contains(col.name())) {
+        revised.add(col);
+      }
+    }
+    return revised;
   }
 
   /**

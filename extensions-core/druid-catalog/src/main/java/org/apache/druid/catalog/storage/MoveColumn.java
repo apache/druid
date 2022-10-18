@@ -21,7 +21,6 @@ package org.apache.druid.catalog.storage;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.java.util.common.ISE;
 
@@ -67,13 +66,13 @@ public class MoveColumn
   public List<ColumnSpec> perform(List<ColumnSpec> columns)
   {
     List<ColumnSpec> revised = new ArrayList<>(columns);
-    final int colPosn = CatalogUtils.findColumn(columns, column);
+    final int colPosn = findColumn(columns, column);
     if (colPosn == -1) {
       throw new ISE("Column [%s] is not defined", column);
     }
     int anchorPosn;
     if (where == Position.BEFORE || where == Position.AFTER) {
-      anchorPosn = CatalogUtils.findColumn(columns, anchor);
+      anchorPosn = findColumn(columns, anchor);
       if (anchorPosn == -1) {
         throw new ISE("Anchor [%s] is not defined", column);
       }
@@ -101,6 +100,17 @@ public class MoveColumn
     }
     return revised;
   }
+
+  private static int findColumn(List<ColumnSpec> columns, String colName)
+  {
+    for (int i = 0; i < columns.size(); i++) {
+      if (columns.get(i).name().equals(colName)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
 
   @Override
   public boolean equals(Object o)
