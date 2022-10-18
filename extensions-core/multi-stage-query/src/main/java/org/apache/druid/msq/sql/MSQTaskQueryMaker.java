@@ -21,7 +21,9 @@ package org.apache.druid.msq.sql;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.common.guava.FutureUtils;
@@ -68,6 +70,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class MSQTaskQueryMaker implements QueryMaker
@@ -88,6 +92,19 @@ public class MSQTaskQueryMaker implements QueryMaker
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
   private final List<Pair<Integer, String>> fieldMapping;
+
+  private static final Set<String> SENSISTIVE_JSON_KEYS = ImmutableSet.of("accessKeyId", "secretAccessKey");
+  private static final Set<Pattern> SENSITIVE_KEYS_REGEX_PATTERNS = SENSISTIVE_JSON_KEYS.stream()
+                                                                                        .map(sensitiveKey ->
+                                                                                                 Pattern.compile(
+                                                                                                     StringUtils.format(
+                                                                                                         "\\\\\"%s\\\\\"(\\s)*:(\\s)*(?<sensitive>\\{(\\S)+?\\})",
+                                                                                                         sensitiveKey
+                                                                                                     ),
+                                                                                                     Pattern.CASE_INSENSITIVE
+                                                                                                 ))
+                                                                                        .collect(Collectors.toSet());
+
 
   MSQTaskQueryMaker(
       @Nullable final String targetDataSource,
@@ -252,7 +269,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
         querySpec,
-        plannerContext.getSql(),
+        maskSensitiveJsonKeys(plannerContext.getSql()),
         plannerContext.getQueryContext().getMergedParams(),
         sqlTypeNames,
         null
@@ -279,6 +296,23 @@ public class MSQTaskQueryMaker implements QueryMaker
     return retVal;
   }
 
+  @VisibleForTesting
+  static String maskSensitiveJsonKeys(String taskJson)
+  {
+    StringBuilder maskedJson = new StringBuilder(taskJson);
+    for (Pattern p : SENSITIVE_KEYS_REGEX_PATTERNS) {
+      Matcher m = p.matcher(taskJson);
+      while (m.find()) {
+        String sensitiveData = m.group("sensitive");
+        int start = maskedJson.indexOf(sensitiveData);
+        int end = start + sensitiveData.length();
+        maskedJson.replace(start, end, "<masked>");
+      }
+    }
+    return maskedJson.toString();
+  }
+
+  @VisibleForTesting
   static void validateSegmentSortOrder(final List<String> sortOrder, final Collection<String> allOutputColumns)
   {
     final Set<String> allOutputColumnsSet = new HashSet<>(allOutputColumns);

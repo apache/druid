@@ -20,10 +20,8 @@
 package org.apache.druid.indexing.worker.executor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
@@ -35,7 +33,6 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -49,11 +46,7 @@ import java.io.InputStream;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.StandardOpenOption;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Encapsulates the lifecycle of a task executor. Loads one task, runs it, writes its status, and all the while
@@ -75,18 +68,6 @@ public class ExecutorLifecycle
   private volatile ListenableFuture<TaskStatus> statusFuture = null;
   private volatile FileChannel taskLockChannel;
   private volatile FileLock taskLockFileLock;
-
-  private static final Set<String> SENSISTIVE_JSON_KEYS = ImmutableSet.of("accessKeyId", "secretAccessKey");
-  private static final Set<Pattern> SENSITIVE_KEYS_REGEX_PATTERNS = SENSISTIVE_JSON_KEYS.stream()
-                                                                                        .map(sensitiveKey ->
-                                                                                                 Pattern.compile(
-                                                                                                     StringUtils.format(
-                                                                                                         "\\\\\"%s\\\\\"(\\s)*:(\\s)*(?<sensitive>\\{(\\S)+?\\})",
-                                                                                                         sensitiveKey
-                                                                                                     ),
-                                                                                                     Pattern.CASE_INSENSITIVE
-                                                                                                 ))
-                                                                                        .collect(Collectors.toSet());
 
   @Inject
   public ExecutorLifecycle(
@@ -116,7 +97,7 @@ public class ExecutorLifecycle
 
       log.info(
           "Running with task: %s",
-          maskSensitiveJsonKeys(jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(task))
+          jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(task)
       );
     }
     catch (IOException e) {
@@ -223,22 +204,6 @@ public class ExecutorLifecycle
           }
         }
     );
-  }
-
-  @VisibleForTesting
-  static String maskSensitiveJsonKeys(String taskJson)
-  {
-    StringBuilder maskedJson = new StringBuilder(taskJson);
-    for (Pattern p : SENSITIVE_KEYS_REGEX_PATTERNS) {
-      Matcher m = p.matcher(taskJson);
-      while (m.find()) {
-        String sensitiveData = m.group("sensitive");
-        int start = maskedJson.indexOf(sensitiveData);
-        int end = start + sensitiveData.length();
-        maskedJson.replace(start, end, "<masked>");
-      }
-    }
-    return maskedJson.toString();
   }
 
   public void join()

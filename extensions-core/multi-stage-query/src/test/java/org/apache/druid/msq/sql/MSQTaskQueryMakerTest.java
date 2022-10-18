@@ -50,4 +50,16 @@ public class MSQTaskQueryMakerTest
         )
     );
   }
+
+  @Test
+  public void maskSensitiveJsonKeys()
+  {
+    String json = "\"REPLACE INTO table OVERWRITE ALL\\nWITH ext AS (SELECT *\\nFROM TABLE(\\n  EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"},\\\"secretAccessKey\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"}}}',\\n    '{\\\"type\\\":\\\"json\\\"}',\\n    '[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\nSELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country FROM ext\\nPARTITIONED BY DAY\"";
+    String maskedJson = MSQTaskQueryMaker.maskSensitiveJsonKeys(json);
+    Assert.assertEquals(
+        "\"REPLACE INTO table OVERWRITE ALL\\nWITH ext AS (SELECT *\\nFROM TABLE(\\n  EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":<masked>,\\\"secretAccessKey\\\":<masked>}}',\\n    '{\\\"type\\\":\\\"json\\\"}',\\n    '[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\nSELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country FROM ext\\nPARTITIONED BY DAY\"",
+        maskedJson
+    );
+  }
+
 }
