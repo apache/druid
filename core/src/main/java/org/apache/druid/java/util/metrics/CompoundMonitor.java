@@ -56,6 +56,14 @@ public abstract class CompoundMonitor implements Monitor
   }
 
   @Override
+  public void stopAfterLastRoundOfMetricsEmission(ServiceEmitter emitter)
+  {
+    for (Monitor monitor : monitors) {
+      monitor.stopAfterLastRoundOfMetricsEmission(emitter);
+    }
+  }
+
+  @Override
   public boolean monitor(final ServiceEmitter emitter)
   {
     return shouldReschedule(Lists.transform(monitors, monitor -> monitor.monitor(emitter)));

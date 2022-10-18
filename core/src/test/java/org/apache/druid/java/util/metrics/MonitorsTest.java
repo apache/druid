@@ -63,6 +63,16 @@ public class MonitorsTest
     checkEvents(emitter.getEvents(), "metrics");
   }
 
+  @Test
+  public void testStopAfterLastRoundOfMetricsEmission()
+  {
+    StubServiceEmitter emitter = new StubServiceEmitter("dev/monitor-test", "localhost:0000");
+    Monitor m = Monitors.createCompoundJvmMonitor(ImmutableMap.of());
+    m.start();
+    m.stopAfterLastRoundOfMetricsEmission(emitter);
+    checkEvents(emitter.getEvents(), "metrics");
+  }
+
   private void checkEvents(List<Event> events, String expectedFeed)
   {
     Assert.assertFalse("no events emitted", events.isEmpty());

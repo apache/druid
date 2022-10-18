@@ -410,6 +410,12 @@ public class ClockDriftSafeMonitorSchedulerTest
     }
 
     @Override
+    public void stopAfterLastRoundOfMetricsEmission(ServiceEmitter emitter)
+    {
+
+    }
+
+    @Override
     public boolean monitor(ServiceEmitter emitter)
     {
       return true;

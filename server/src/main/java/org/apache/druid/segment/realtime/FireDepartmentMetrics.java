@@ -29,6 +29,8 @@ public class FireDepartmentMetrics
 {
   private static final long DEFAULT_PROCESSING_COMPLETION_TIME = -1L;
 
+  private static final long INVALID_SEGMENT_HANDOFF_TIME = -1L;
+
   private final AtomicLong processedCount = new AtomicLong(0);
   private final AtomicLong processedWithErrorsCount = new AtomicLong(0);
   private final AtomicLong thrownAwayCount = new AtomicLong(0);
@@ -48,6 +50,8 @@ public class FireDepartmentMetrics
   private final AtomicLong messageMaxTimestamp = new AtomicLong(0);
   private final AtomicLong messageGap = new AtomicLong(0);
   private final AtomicLong messageProcessingCompletionTime = new AtomicLong(DEFAULT_PROCESSING_COMPLETION_TIME);
+
+  private final AtomicLong maxSegmentHandoffTime = new AtomicLong(INVALID_SEGMENT_HANDOFF_TIME);
 
   public void incrementProcessed()
   {
@@ -132,6 +136,11 @@ public class FireDepartmentMetrics
   public void reportMessageMaxTimestamp(long messageMaxTimestamp)
   {
     this.messageMaxTimestamp.set(Math.max(messageMaxTimestamp, this.messageMaxTimestamp.get()));
+  }
+
+  public void reportMaxSegmentHandoffTime(long maxSegmentHandoffTime)
+  {
+    this.maxSegmentHandoffTime.set(Math.max(maxSegmentHandoffTime, this.maxSegmentHandoffTime.get()));
   }
 
   public void markProcessingDone()
@@ -241,6 +250,11 @@ public class FireDepartmentMetrics
     return messageGap.get();
   }
 
+  public long maxSegmentHandoffTime()
+  {
+    return maxSegmentHandoffTime.get();
+  }
+
   public FireDepartmentMetrics snapshot()
   {
     final FireDepartmentMetrics retVal = new FireDepartmentMetrics();
@@ -261,7 +275,11 @@ public class FireDepartmentMetrics
     retVal.handOffCount.set(handOffCount.get());
     retVal.sinkCount.set(sinkCount.get());
     retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
+    retVal.maxSegmentHandoffTime.set(maxSegmentHandoffTime.get());
+    // Resetting to invalid value so that it's reported only once after it has been set.
+    maxSegmentHandoffTime.set(INVALID_SEGMENT_HANDOFF_TIME);
     retVal.messageProcessingCompletionTime.set(messageProcessingCompletionTime.get());
+    messageProcessingCompletionTime.set(DEFAULT_PROCESSING_COMPLETION_TIME);
     retVal.messageProcessingCompletionTime.compareAndSet(DEFAULT_PROCESSING_COMPLETION_TIME, System.currentTimeMillis());
     long maxTimestamp = retVal.messageMaxTimestamp.get();
     retVal.messageGap.set(maxTimestamp > 0 ? retVal.messageProcessingCompletionTime.get() - maxTimestamp : 0L);

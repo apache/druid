@@ -332,6 +332,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       }
 
       log.debug("Register handoff of segments: [%s]", waitingSegmentIdList);
+      long handoffStartTime = System.currentTimeMillis();
 
       final SettableFuture<SegmentsAndCommitMetadata> resultFuture = SettableFuture.create();
       final AtomicInteger numRemainingHandoffSegments = new AtomicInteger(waitingSegmentIdList.size());
@@ -359,6 +360,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                       if (numRemainingHandoffSegments.decrementAndGet() == 0) {
                         List<DataSegment> segments = segmentsAndCommitMetadata.getSegments();
                         log.debug("Successfully handed off [%d] segments.", segments.size());
+                        metrics.reportMaxSegmentHandoffTime(System.currentTimeMillis() - handoffStartTime);
                         resultFuture.set(
                             new SegmentsAndCommitMetadata(
                                 segments,
