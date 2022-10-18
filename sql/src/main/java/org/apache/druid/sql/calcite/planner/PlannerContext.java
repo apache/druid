@@ -113,7 +113,7 @@ public class PlannerContext
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
       final QueryContext queryContext,
-      JoinableFactoryWrapper joinableFactoryWrapper
+      final JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
     this.sql = sql;

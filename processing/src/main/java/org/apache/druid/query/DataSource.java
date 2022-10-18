@@ -21,7 +21,6 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.SegmentReference;
@@ -121,7 +120,6 @@ public interface DataSource
    * in the JOIN is not cacheable.
    *
    * @return the cache key to be used as part of query cache key
-   * @throws {@link IAE} if this operation is called on a non-join data source
    */
   byte[] getCacheKey();
 

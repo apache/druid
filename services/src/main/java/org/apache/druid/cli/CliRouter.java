@@ -112,7 +112,7 @@ public class CliRouter extends ServerRunnable
           binder.bind(new TypeLiteral<List<TieredBrokerSelectorStrategy>>() {})
                 .toProvider(TieredBrokerSelectorStrategiesProvider.class)
                 .in(LazySingleton.class);
-          
+
           binder.bind(QueryCountStatsProvider.class).to(AsyncQueryForwardingServlet.class).in(LazySingleton.class);
           binder.bind(JettyServerInitializer.class).to(RouterJettyServerInitializer.class).in(LazySingleton.class);
 

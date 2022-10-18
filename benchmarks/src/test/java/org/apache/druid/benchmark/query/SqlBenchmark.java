@@ -400,15 +400,10 @@ public class SqlBenchmark
   @Param({"force"})
   private String vectorize;
 
-  @Param({
-      "0",
-      "10",
-      "18"
-  })
+  @Param({"0", "10", "18"})
   private String query;
 
   @Param({STORAGE_MMAP, STORAGE_FRAME_ROW, STORAGE_FRAME_COLUMNAR})
-
   private String storageType;
 
   private SqlEngine engine;

@@ -57,8 +57,8 @@ public class GuiceInjectableValues extends InjectableValues
         return injector.getInstance((Key) valueId);
       }
       catch (ConfigurationException ce) {
-        //check if annotation is nullable
-        if (forProperty.getAnnotation(Nullable.class).annotationType().isAnnotation()) {
+        // check if nullable annotation is present for this
+        if (forProperty.getAnnotation(Nullable.class) != null) {
           return null;
         }
       }

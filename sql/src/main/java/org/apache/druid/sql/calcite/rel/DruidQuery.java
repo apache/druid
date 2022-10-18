@@ -740,7 +740,7 @@ public class DruidQuery
       DataSource dataSource,
       DimFilter filter,
       VirtualColumnRegistry virtualColumnRegistry,
-      JoinableFactoryWrapper jfw
+      JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
     if (!(dataSource instanceof JoinDataSource)) {
@@ -769,7 +769,7 @@ public class DruidQuery
         joinDataSource.getConditionAnalysis(),
         joinDataSource.getJoinType(),
         leftFiltration.getDimFilter(),
-        jfw
+        joinableFactoryWrapper
     );
     return Pair.of(newDataSource, queryFiltration);
   }

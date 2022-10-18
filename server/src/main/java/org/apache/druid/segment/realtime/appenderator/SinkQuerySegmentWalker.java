@@ -168,7 +168,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    Function<SegmentReference, SegmentReference> segmentMapFn = analysis.getDataSource()
+    final Function<SegmentReference, SegmentReference> segmentMapFn = analysis.getDataSource()
                                                                         .createSegmentMapFunction(
                                                                             query,
                                                                             cpuTimeAccumulator

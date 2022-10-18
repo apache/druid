@@ -96,7 +96,7 @@ public class TestHelper
   public static ObjectMapper makeJsonMapper()
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
-    AnnotationIntrospector introspector = makeAnnotationIntrospector();
+    final AnnotationIntrospector introspector = makeAnnotationIntrospector();
     DruidSecondaryModule.setupAnnotationIntrospector(mapper, introspector);
 
 
@@ -109,7 +109,7 @@ public class TestHelper
     return mapper;
   }
 
-  public static ObjectMapper makeJsonMapperForJoinable(JoinableFactoryWrapper jfw)
+  public static ObjectMapper makeJsonMapperForJoinable(JoinableFactoryWrapper joinableFactoryWrapper)
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
     AnnotationIntrospector introspector = makeAnnotationIntrospector();
@@ -121,7 +121,7 @@ public class TestHelper
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
             .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
-            .addValue(JoinableFactoryWrapper.class, jfw)
+            .addValue(JoinableFactoryWrapper.class, joinableFactoryWrapper)
     );
     return mapper;
   }

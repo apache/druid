@@ -1083,7 +1083,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         authorizerMapper
     );
 
-    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(CalciteTests.createDefaultJoinableFactory());
+    final JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(CalciteTests.createDefaultJoinableFactory());
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
