@@ -33,7 +33,6 @@ import org.apache.curator.test.TestingServer;
 import org.apache.curator.test.Timing;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
 import org.apache.druid.curator.discovery.NoopServiceAnnouncer;
-import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
