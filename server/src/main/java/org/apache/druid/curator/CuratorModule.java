@@ -105,7 +105,7 @@ public class CuratorModule implements Module
             try {
               Threads.sleepFor(30, TimeUnit.SECONDS);
             }
-            catch (InterruptedException ex) {
+            catch (InterruptedException ignored) {
 
             }
             log.warn(
