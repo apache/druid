@@ -1308,6 +1308,26 @@ Sample spec:
 }
 ```
 
+#### Inline Descriptor Protobuf Bytes Decoder
+
+This Protobuf bytes decoder allows the user to provide the contents of a Protobuf descriptor file inline, encoded as a Base64 string, and then parse it to get schema used to decode the Protobuf record from bytes.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| type | String | Set value to `inline`. | yes |
+| descriptorString | String | A compiled Protobuf descriptor, encoded as a Base64 string. | yes |
+| protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted. The parser uses the first message type found in the descriptor if not specified. | no |
+
+Sample spec:
+
+```json
+"protoBytesDecoder": {
+  "type": "inline",
+  "descriptorString": <Contents of a Protobuf descriptor file encoded as Base64 string>,
+  "protoMessageType": "Metrics"
+}
+```
+
 ##### Confluent Schema Registry-based Protobuf Bytes Decoder
 
 This Protobuf bytes decoder first extracts a unique `id` from input message bytes, and then uses it to look up the schema in the Schema Registry used to decode the Avro record from bytes.

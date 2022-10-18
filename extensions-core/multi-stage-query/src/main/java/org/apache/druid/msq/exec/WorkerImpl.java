@@ -107,6 +107,7 @@ import org.apache.druid.msq.util.DecoratedExecutorService;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.PrioritizedCallable;
 import org.apache.druid.query.PrioritizedRunnable;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.server.DruidNode;
 
@@ -180,7 +181,9 @@ public class WorkerImpl implements Worker
     this.context = context;
     this.selfDruidNode = context.selfNode();
     this.processorBouncer = context.processorBouncer();
-    this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(task.getContext());
+    this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(
+        QueryContext.of(task.getContext())
+    );
   }
 
   @Override
