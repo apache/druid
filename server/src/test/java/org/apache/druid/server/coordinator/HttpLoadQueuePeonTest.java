@@ -103,7 +103,7 @@ public class HttpLoadQueuePeonTest
   }
 
   @Test
-  public void testSimple() throws Exception
+  public void testSimple()
   {
     httpLoadQueuePeon
         .dropSegment(segments.get(0), markSegmentProcessed(segments.get(0)));
