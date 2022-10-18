@@ -2045,9 +2045,9 @@ This section describes configurations that control behavior of Druid's query typ
 
 ### Overriding default query context values
 
-Any [Query Context General Parameter](../querying/query-context.md#general-parameters) default value can be
-overridden by setting runtime property in the format of `druid.query.default.context.{query_context_key}`.
-`druid.query.default.context.{query_context_key}` runtime property prefix applies to all current and future
+Any [query context general parameter](../querying/query-context.md#general-parameters) default value can be
+overridden by setting the runtime property in the format of `druid.query.default.context.{query_context_key}`.
+The `druid.query.default.context.{query_context_key}` runtime property prefix applies to all current and future
 query context keys, the same as how query context parameter passed with the query works. Note that the runtime property
 value can be overridden if value for the same key is explicitly specify in the query contexts.
 

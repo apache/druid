@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -1258,6 +1259,47 @@ public class TaskLockboxTest
     );
   }
 
+  @Test
+  public void testFailedToReacquireTaskLock() throws Exception
+  {
+    // Tasks to be failed have a group id with the substring "FailingLockAcquisition"
+    // Please refer to NullLockPosseTaskLockbox
+    final Task taskWithFailingLockAcquisition0 = NoopTask.withGroupId("FailingLockAcquisition");
+    final Task taskWithFailingLockAcquisition1 = NoopTask.withGroupId("FailingLockAcquisition");
+    final Task taskWithSuccessfulLockAcquisition = NoopTask.create();
+    taskStorage.insert(taskWithFailingLockAcquisition0, TaskStatus.running(taskWithFailingLockAcquisition0.getId()));
+    taskStorage.insert(taskWithFailingLockAcquisition1, TaskStatus.running(taskWithFailingLockAcquisition1.getId()));
+    taskStorage.insert(taskWithSuccessfulLockAcquisition, TaskStatus.running(taskWithSuccessfulLockAcquisition.getId()));
+
+    TaskLockbox testLockbox = new NullLockPosseTaskLockbox(taskStorage, metadataStorageCoordinator);
+    testLockbox.add(taskWithFailingLockAcquisition0);
+    testLockbox.add(taskWithFailingLockAcquisition1);
+    testLockbox.add(taskWithSuccessfulLockAcquisition);
+
+    testLockbox.tryLock(taskWithFailingLockAcquisition0,
+                        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+                                                 taskWithFailingLockAcquisition0,
+                                                 Intervals.of("2017-07-01/2017-08-01"),
+                                                 null
+                        )
+    );
+
+    testLockbox.tryLock(taskWithSuccessfulLockAcquisition,
+                        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+                                                 taskWithSuccessfulLockAcquisition,
+                                                 Intervals.of("2017-07-01/2017-08-01"),
+                                                 null
+                        )
+    );
+
+    Assert.assertEquals(3, taskStorage.getActiveTasks().size());
+
+    // The tasks must be marked for failure
+    TaskLockboxSyncResult result = testLockbox.syncFromStorage();
+    Assert.assertEquals(ImmutableSet.of(taskWithFailingLockAcquisition0, taskWithFailingLockAcquisition1),
+                        result.getTasksToFail());
+  }
+
   private Set<TaskLock> getAllLocks(List<Task> tasks)
   {
     return tasks.stream()
@@ -1381,6 +1423,27 @@ public class TaskLockboxTest
     public TaskStatus run(TaskToolbox toolbox)
     {
       return TaskStatus.failure("how?", "Dummy task status err msg");
+    }
+  }
+
+  /**
+   * Extends TaskLockbox to return a null TaskLockPosse when the task's group name contains "FailingLockAcquisition".
+   */
+  private static class NullLockPosseTaskLockbox extends TaskLockbox
+  {
+    public NullLockPosseTaskLockbox(
+        TaskStorage taskStorage,
+        IndexerMetadataStorageCoordinator metadataStorageCoordinator
+    )
+    {
+      super(taskStorage, metadataStorageCoordinator);
+    }
+
+    @Override
+    protected TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
+    {
+      return task.getGroupId()
+                 .contains("FailingLockAcquisition") ? null : super.verifyAndCreateOrFindLockPosse(task, taskLock);
     }
   }
 }

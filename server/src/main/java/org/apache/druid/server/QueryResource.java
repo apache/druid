@@ -46,7 +46,7 @@ import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.BadQueryException;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
-import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
@@ -383,20 +383,19 @@ public class QueryResource implements QueryCountStatsProvider
     catch (JsonParseException e) {
       throw new BadJsonQueryException(e);
     }
+
     String prevEtag = getPreviousEtag(req);
-
-    if (prevEtag != null) {
-      if (baseQuery.getQueryContext() == null) {
-        QueryContext context = new QueryContext(baseQuery.getContext());
-        context.addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
-
-        return baseQuery.withOverriddenContext(context.getMergedParams());
-      } else {
-        baseQuery.getQueryContext().addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
-      }
+    if (prevEtag == null) {
+      return baseQuery;
     }
 
-    return baseQuery;
+    return baseQuery.withOverriddenContext(
+        QueryContexts.override(
+            baseQuery.getContext(),
+            HEADER_IF_NONE_MATCH,
+            prevEtag
+        )
+    );
   }
 
   private static String getPreviousEtag(final HttpServletRequest req)
