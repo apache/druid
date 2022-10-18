@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -1096,7 +1097,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
     output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField);
 
     try {
-      output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, queryJsonMapper.writeValueAsString(granularity));
+      output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, queryFramework().queryJsonMapper().writeValueAsString(granularity));
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);

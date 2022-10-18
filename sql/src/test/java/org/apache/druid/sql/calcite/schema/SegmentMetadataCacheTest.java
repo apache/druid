@@ -62,6 +62,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.NoopEscalator;
+import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -279,7 +280,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
             ImmutableSet.of(globalTableJoinable),
             ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
         ),
-        PLANNER_CONFIG_DEFAULT,
+        SegmentMetadataCacheConfig.create(),
         new NoopEscalator(),
         new BrokerInternalQueryConfig()
         )
