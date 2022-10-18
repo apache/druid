@@ -154,17 +154,17 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 
   public boolean isGrandTotal()
   {
-    return getContextBoolean(CTX_GRAND_TOTAL, false);
+    return context().getBoolean(CTX_GRAND_TOTAL, false);
   }
 
   public String getTimestampResultField()
   {
-    return getQueryContext().getAsString(CTX_TIMESTAMP_RESULT_FIELD);
+    return context().getString(CTX_TIMESTAMP_RESULT_FIELD);
   }
 
   public boolean isSkipEmptyBuckets()
   {
-    return getContextBoolean(SKIP_EMPTY_BUCKETS, false);
+    return context().getBoolean(SKIP_EMPTY_BUCKETS, false);
   }
 
   @Nullable

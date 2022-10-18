@@ -54,6 +54,12 @@ public interface KeyCollector<CollectorType extends KeyCollector<CollectorType>>
   int estimatedRetainedKeys();
 
   /**
+   * Returns an estimate of the number of bytes currently retained by this collector. This may change over time as
+   * more keys are added.
+   */
+  double estimatedRetainedBytes();
+
+  /**
    * Downsample this collector, dropping about half of the keys that are currently retained. Returns true if
    * the collector was downsampled, or if it is already retaining zero or one keys. Returns false if the collector is
    * retaining more than one key, yet cannot be downsampled any further.

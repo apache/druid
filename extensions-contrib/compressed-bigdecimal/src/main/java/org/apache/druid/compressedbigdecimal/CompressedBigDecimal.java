@@ -19,6 +19,7 @@
 
 package org.apache.druid.compressedbigdecimal;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 
 import java.math.BigDecimal;
@@ -32,8 +33,7 @@ import java.util.function.ToIntBiFunction;
  */
 public abstract class CompressedBigDecimal extends Number implements Comparable<CompressedBigDecimal>
 {
-
-  private static final long INT_MASK = 0x00000000ffffffffL;
+  protected static final long INT_MASK = 0x00000000ffffffffL;
 
   private final int scale;
 
@@ -60,11 +60,10 @@ public abstract class CompressedBigDecimal extends Number implements Comparable<
    * @param rhs The object to accumulate
    * @return a reference to <b>this</b>
    */
-  public CompressedBigDecimal accumulate(CompressedBigDecimal rhs)
+  public CompressedBigDecimal accumulateSum(CompressedBigDecimal rhs)
   {
-    if (rhs.scale != scale) {
-      throw new IllegalArgumentException("Cannot accumulate MutableBigDecimals with differing scales");
-    }
+    checkScaleCompatibility(rhs);
+
     if (rhs.getArraySize() > getArraySize()) {
       throw new IllegalArgumentException("Right hand side too big to fit in the result value");
     }
@@ -74,17 +73,57 @@ public abstract class CompressedBigDecimal extends Number implements Comparable<
     return this;
   }
 
+  public CompressedBigDecimal accumulateMax(CompressedBigDecimal rhs)
+  {
+    checkScaleCompatibility(rhs);
+
+    if (compareTo(rhs) < 0) {
+      setValue(rhs);
+    }
+
+    return this;
+  }
+
+  public CompressedBigDecimal accumulateMin(CompressedBigDecimal rhs)
+  {
+    checkScaleCompatibility(rhs);
+
+    if (compareTo(rhs) > 0) {
+      setValue(rhs);
+    }
+
+    return this;
+  }
+
+  private void checkScaleCompatibility(CompressedBigDecimal rhs)
+  {
+    Preconditions.checkArgument(
+        rhs.getScale() == getScale(),
+        "scales do not match: lhs [%s] vs rhs [%s]",
+        getScale(),
+        rhs.getScale()
+    );
+  }
+
   /**
-   * Clear any accumulated value, resetting to zero. Scale is preserved at its original value.
+   * copy the value from the rhs into this object
+   * <p>
+   * Note: implementations in subclasses are virtually identical, but specialized to allow for inlining of
+   * element access. Callsites to the rhs's getArrayEntry should be monomorphic also (each subclass should only see the
+   * same type it is)
    *
-   * @return this
+   * @param rhs a {@link CompressedBigDecimal} object
    */
-  public CompressedBigDecimal reset()
+  protected abstract void setValue(CompressedBigDecimal rhs);
+
+  /**
+   * Clear any value, resetting to zero. Scale is preserved at its original value.
+   */
+  public void reset()
   {
     for (int ii = 0; ii < getArraySize(); ++ii) {
       setArrayEntry(ii, 0);
     }
-    return this;
   }
 
   /**
@@ -141,14 +180,20 @@ public abstract class CompressedBigDecimal extends Number implements Comparable<
    *
    * @return the byte array for use in BigInteger
    */
-  private byte[] toByteArray()
+  private ByteArrayResult toByteArray()
   {
     int byteArrayLength = getArraySize() * 4;
     byte[] bytes = new byte[byteArrayLength];
 
     int byteIdx = 0;
+    boolean isZero = true;
     for (int ii = getArraySize(); ii > 0; --ii) {
       int val = getArrayEntry(ii - 1);
+
+      if (val != 0) {
+        isZero = false;
+      }
+
       bytes[byteIdx + 3] = (byte) val;
       val >>>= 8;
       bytes[byteIdx + 2] = (byte) val;
@@ -168,10 +213,32 @@ public abstract class CompressedBigDecimal extends Number implements Comparable<
         // one is on a byte boundary).
         emptyBytes--;
       }
-      return Arrays.copyOfRange(bytes, emptyBytes, byteArrayLength);
+      return new ByteArrayResult(Arrays.copyOfRange(bytes, emptyBytes, byteArrayLength), isZero);
     }
 
-    return bytes;
+    return new ByteArrayResult(bytes, isZero);
+  }
+
+  protected void setMinValue()
+  {
+    for (int i = 0; i < getArraySize(); i++) {
+      if (i == getArraySize() - 1) {
+        setArrayEntry(i, 0x80000000);
+      } else {
+        setArrayEntry(i, 0);
+      }
+    }
+  }
+
+  protected void setMaxValue()
+  {
+    for (int i = 0; i < getArraySize(); i++) {
+      if (i == getArraySize() - 1) {
+        setArrayEntry(i, 0x7FFFFFFF);
+      } else {
+        setArrayEntry(i, 0xFFFFFFFF);
+      }
+    }
   }
 
   /**
@@ -220,17 +287,22 @@ public abstract class CompressedBigDecimal extends Number implements Comparable<
    */
   public BigDecimal toBigDecimal()
   {
-    BigInteger bigInt = new BigInteger(toByteArray());
-    return new BigDecimal(bigInt, scale);
+    ByteArrayResult byteArrayResult = toByteArray();
+
+    if (byteArrayResult.isZero) {
+      return new BigDecimal(BigDecimal.ZERO.toBigInteger(), 0);
+    } else {
+      BigInteger bigInt = new BigInteger(byteArrayResult.bytes);
+
+      return new BigDecimal(bigInt, scale);
+    }
   }
 
-  /* (non-Javadoc)
-   * @see java.lang.Object#toString()
-   */
   @Override
   public String toString()
   {
-    return toBigDecimal().toString();
+    BigDecimal bigDecimal = toBigDecimal();
+    return bigDecimal.toString();
   }
 
   /**
@@ -248,9 +320,23 @@ public abstract class CompressedBigDecimal extends Number implements Comparable<
     return getArrayEntry(getArraySize() - 1) < 0;
   }
 
-  public boolean isPositive()
+  public boolean isNonNegative()
   {
-    return !isNegative();
+    return getArrayEntry(getArraySize() - 1) >= 0;
+  }
+
+  public boolean isZero()
+  {
+    boolean isZero = true;
+
+    for (int i = getArraySize() - 1; i >= 0; i--) {
+      if (getArrayEntry(i) != 0) {
+        isZero = false;
+        break;
+      }
+    }
+
+    return isZero;
   }
 
   /**
@@ -315,9 +401,9 @@ public abstract class CompressedBigDecimal extends Number implements Comparable<
   {
     // this short-circuit serves two functions: 1. it speeds up comparison in +/- cases 2. it avoids the case of
     // overflow of positive - negative and negative - positive. p - p and n - n both fit in the given allotment of ints
-    if (lhs.isPositive() && rhs.isNegative()) {
+    if (lhs.isNonNegative() && rhs.isNegative()) {
       return 1;
-    } else if (lhs.isNegative() && rhs.isPositive()) {
+    } else if (lhs.isNegative() && rhs.isNonNegative()) {
       return -1;
     }
 
@@ -420,5 +506,17 @@ public abstract class CompressedBigDecimal extends Number implements Comparable<
   public double doubleValue()
   {
     return toBigDecimal().doubleValue();
+  }
+
+  private static class ByteArrayResult
+  {
+    private final byte[] bytes;
+    private final boolean isZero;
+
+    public ByteArrayResult(byte[] bytes, boolean isZero)
+    {
+      this.bytes = bytes;
+      this.isZero = isZero;
+    }
   }
 }

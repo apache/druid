@@ -22,12 +22,12 @@ import {
   SqlFunction,
   SqlLiteral,
   SqlOrderByClause,
+  SqlOrderByExpression,
   SqlPartitionedByClause,
   SqlQuery,
   SqlRef,
   SqlTableRef,
 } from 'druid-query-toolkit';
-import { SqlOrderByExpression } from 'druid-query-toolkit/build/sql/sql-clause/sql-order-by-expression/sql-order-by-expression';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';

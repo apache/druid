@@ -21,9 +21,10 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.joda.time.DateTimeZone;
 
+import java.util.Map;
 import java.util.Objects;
 
 public class PlannerConfig
@@ -136,7 +137,7 @@ public class PlannerConfig
     return forceExpressionVirtualColumns;
   }
 
-  public PlannerConfig withOverrides(final QueryContext queryContext)
+  public PlannerConfig withOverrides(final Map<String, Object> queryContext)
   {
     if (queryContext.isEmpty()) {
       return this;
@@ -316,33 +317,40 @@ public class PlannerConfig
       return this;
     }
 
-    public Builder withOverrides(final QueryContext queryContext)
+    public Builder withOverrides(final Map<String, Object> queryContext)
     {
-      useApproximateCountDistinct = queryContext.getAsBoolean(
+      useApproximateCountDistinct = QueryContexts.parseBoolean(
+          queryContext,
           CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
           useApproximateCountDistinct
       );
-      useGroupingSetForExactDistinct = queryContext.getAsBoolean(
+      useGroupingSetForExactDistinct = QueryContexts.parseBoolean(
+          queryContext,
           CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
           useGroupingSetForExactDistinct
       );
-      useApproximateTopN = queryContext.getAsBoolean(
+      useApproximateTopN = QueryContexts.parseBoolean(
+          queryContext,
           CTX_KEY_USE_APPROXIMATE_TOPN,
           useApproximateTopN
       );
-      computeInnerJoinCostAsFilter = queryContext.getAsBoolean(
+      computeInnerJoinCostAsFilter = QueryContexts.parseBoolean(
+          queryContext,
           CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
           computeInnerJoinCostAsFilter
       );
-      useNativeQueryExplain = queryContext.getAsBoolean(
+      useNativeQueryExplain = QueryContexts.parseBoolean(
+          queryContext,
           CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
           useNativeQueryExplain
       );
-      forceExpressionVirtualColumns = queryContext.getAsBoolean(
+      forceExpressionVirtualColumns = QueryContexts.parseBoolean(
+          queryContext,
           CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS,
           forceExpressionVirtualColumns
       );
-      final int queryContextMaxNumericInFilters = queryContext.getAsInt(
+      final int queryContextMaxNumericInFilters = QueryContexts.parseInt(
+          queryContext,
           CTX_MAX_NUMERIC_IN_FILTERS,
           maxNumericInFilters
       );

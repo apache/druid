@@ -27,6 +27,7 @@ public class Access
   public static final String DEFAULT_ERROR_MESSAGE = "Unauthorized";
 
   public static final Access OK = new Access(true);
+  public static final Access DENIED = new Access(false);
 
   private final boolean allowed;
   private final String message;

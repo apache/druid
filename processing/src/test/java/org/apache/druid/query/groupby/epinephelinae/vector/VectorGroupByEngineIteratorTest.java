@@ -20,7 +20,6 @@
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
 import org.apache.commons.lang3.mutable.MutableObject;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -68,7 +67,7 @@ public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
         interval,
         query.getVirtualColumns(),
         false,
-        QueryContexts.getVectorSize(query),
+        query.context().getVectorSize(),
         null
     );
     final List<GroupByVectorColumnSelector> dimensions = query.getDimensions().stream().map(

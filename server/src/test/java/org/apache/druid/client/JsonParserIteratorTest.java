@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -309,13 +310,8 @@ public class JsonParserIteratorTest
       Query<?> query = Mockito.mock(Query.class);
       QueryContext context = Mockito.mock(QueryContext.class);
       Mockito.when(query.getId()).thenReturn(queryId);
-      Mockito.when(query.getQueryContext()).thenReturn(context);
-      Mockito.when(
-          context.getAsLong(
-              ArgumentMatchers.eq(DirectDruidClient.QUERY_FAIL_TIME),
-              ArgumentMatchers.eq(-1L)
-          )
-      ).thenReturn(timeoutAt);
+      Mockito.when(query.context()).thenReturn(
+          QueryContext.of(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, timeoutAt)));
       return query;
     }
   }

@@ -29,13 +29,13 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -139,8 +139,9 @@ public class DruidStatementTest extends CalciteTestBase
     return new DruidJdbcStatement(
         "",
         0,
-        new QueryContext(),
-        sqlStatementFactory
+        Collections.emptyMap(),
+        sqlStatementFactory,
+        new ResultFetcherFactory(AvaticaServerConfig.DEFAULT_FETCH_TIMEOUT_MS)
     );
   }
 
@@ -519,7 +520,8 @@ public class DruidStatementTest extends CalciteTestBase
         "",
         0,
         sqlStatementFactory.preparedStatement(queryPlus),
-        Long.MAX_VALUE
+        Long.MAX_VALUE,
+        new ResultFetcherFactory(AvaticaServerConfig.DEFAULT_FETCH_TIMEOUT_MS)
     );
   }
 
