@@ -121,7 +121,6 @@ public class MaterializedViewQueryTest
         .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
     MaterializedViewQuery query = new MaterializedViewQuery(topNQuery, optimizer);
-    Assert.assertEquals(20_000_000, query.getContextHumanReadableBytes("maxOnDiskStorage", HumanReadableBytes.ZERO).getBytes());
-
+    Assert.assertEquals(20_000_000, query.context().getHumanReadableBytes("maxOnDiskStorage", HumanReadableBytes.ZERO).getBytes());
   }
 }

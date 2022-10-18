@@ -1952,6 +1952,35 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testReturningAndSumPathWithMaths()
+  {
+    testQuery(
+        "SELECT "
+        + "SUM(JSON_VALUE(nest, '$.x' RETURNING BIGINT) / 100) "
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "(\"v1\" / 100)", ColumnType.LONG),
+                      new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.LONG)
+                  )
+                  .aggregators(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{4L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
   public void testReturningAndSumPathDouble()
   {
     testQuery(
@@ -1996,6 +2025,35 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{400.0}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testReturningAndSumPathDecimalWithMaths()
+  {
+    testQuery(
+        "SELECT "
+        + "SUM(JSON_VALUE(nest, '$.x' RETURNING DECIMAL) / 100.0) "
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "(\"v1\" / 100.0)", ColumnType.DOUBLE),
+                      new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.DOUBLE)
+                  )
+                  .aggregators(aggregators(new DoubleSumAggregatorFactory("a0", "v0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{4.0}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.DOUBLE)

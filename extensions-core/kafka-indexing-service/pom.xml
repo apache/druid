@@ -191,10 +191,10 @@
       <artifactId>easymock</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
+    <dependency><!-- Required by dependency check, used by kafka_2.13 -->
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
-      <version>2.13.3</version>
+      <version>${scala.library.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>

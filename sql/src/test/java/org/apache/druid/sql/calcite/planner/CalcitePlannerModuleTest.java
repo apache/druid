@@ -34,7 +34,6 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -56,6 +55,7 @@ import org.junit.runner.RunWith;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+import java.util.Collections;
 import java.util.Set;
 
 import static org.apache.calcite.plan.RelOptRule.any;
@@ -178,7 +178,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         injector.getInstance(PlannerConfig.class),
         rootSchema,
         null,
-        new QueryContext(),
+        Collections.emptyMap(),
+        Collections.emptySet(),
         joinableFactoryWrapper
     );
     boolean containsCustomRule = injector.getInstance(CalciteRulesManager.class)

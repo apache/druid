@@ -107,11 +107,11 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
 
   @Override
   @SuppressWarnings({"unchecked", "rawtypes"})
-  public QueryResponse runQuery()
+  public QueryResponse<Object[]> runQuery()
   {
     // Lazy: run each query in sequence, not all at once.
     if (limit == 0) {
-      return new QueryResponse(Sequences.empty(), ResponseContext.createEmpty());
+      return new QueryResponse<Object[]>(Sequences.empty(), ResponseContext.createEmpty());
     } else {
 
       // We run the first rel here for two reasons:
@@ -122,10 +122,10 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
       //    is also sub-optimal as it would consume parallel query resources and potentially starve the system.
       //    Instead, we only return the headers from the first query and potentially exception out and fail the query
       //    if there are any response headers that come from subsequent queries that are correctness concerns
-      final QueryResponse queryResponse = ((DruidRel) rels.get(0)).runQuery();
+      final QueryResponse<Object[]> queryResponse = ((DruidRel) rels.get(0)).runQuery();
 
-      final List<Sequence<Object>> firstAsList = Collections.singletonList(queryResponse.getResults());
-      final Iterable<Sequence<Object>> theRestTransformed = FluentIterable
+      final List<Sequence<Object[]>> firstAsList = Collections.singletonList(queryResponse.getResults());
+      final Iterable<Sequence<Object[]>> theRestTransformed = FluentIterable
           .from(rels.subList(1, rels.size()))
           .transform(
               rel -> {
@@ -144,10 +144,10 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
               }
           );
 
-      final Iterable<Sequence<Object>> recombinedSequences = Iterables.concat(firstAsList, theRestTransformed);
+      final Iterable<Sequence<Object[]>> recombinedSequences = Iterables.concat(firstAsList, theRestTransformed);
 
       final Sequence returnSequence = Sequences.concat(recombinedSequences);
-      return new QueryResponse(
+      return new QueryResponse<Object[]>(
           limit > 0 ? returnSequence.limit(limit) : returnSequence,
           queryResponse.getResponseContext()
       );

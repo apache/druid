@@ -574,12 +574,12 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       }
 
       final TopNQuery query = (TopNQuery) input;
-      final int minTopNThreshold = query.getContextValue("minTopNThreshold", config.getMinTopNThreshold());
+      final int minTopNThreshold = query.context().getInt(QueryContexts.MIN_TOP_N_THRESHOLD, config.getMinTopNThreshold());
       if (query.getThreshold() > minTopNThreshold) {
         return runner.run(queryPlus, responseContext);
       }
 
-      final boolean isBySegment = QueryContexts.isBySegment(query);
+      final boolean isBySegment = query.context().isBySegment();
 
       return Sequences.map(
           runner.run(queryPlus.withQuery(query.withThreshold(minTopNThreshold)), responseContext),

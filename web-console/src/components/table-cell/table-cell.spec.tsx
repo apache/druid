@@ -64,6 +64,13 @@ describe('TableCell', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
+  it('matches snapshot array mixed', () => {
+    const tableCell = <TableCell value={['a', { v: 'b' }, 'c']} />;
+
+    const { container } = render(tableCell);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
   it('matches snapshot object', () => {
     const tableCell = <TableCell value={{ hello: 'world' }} />;
 

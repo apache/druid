@@ -57,7 +57,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
   {
     RowSignature scanSignature;
     try {
-      final String s = scanQuery.getContextValue(DruidQuery.CTX_SCAN_SIGNATURE);
+      final String s = scanQuery.context().getString(DruidQuery.CTX_SCAN_SIGNATURE);
       scanSignature = jsonMapper.readValue(s, RowSignature.class);
     }
     catch (JsonProcessingException e) {
@@ -74,7 +74,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
    *  2. This is an offset which means everything gets funneled into a single partition hence we use MaxCountShuffleSpec
    */
   // No ordering, but there is a limit or an offset. These work by funneling everything through a single partition.
-  // So there is no point in forcing any particular partitioning. Since everything is funnelled into a single
+  // So there is no point in forcing any particular partitioning. Since everything is funneled into a single
   // partition without a ClusterBy, we don't need to necessarily create it via the resultShuffleSpecFactory provided
   @Override
   public QueryDefinition makeQueryDefinition(

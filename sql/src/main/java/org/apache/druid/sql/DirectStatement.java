@@ -98,7 +98,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
      * Do the actual execute step which allows subclasses to wrap the sequence,
      * as is sometimes needed for testing.
      */
-    public QueryResponse run()
+    public QueryResponse<Object[]> run()
     {
       try {
         // Check cancellation. Required for SqlResourceTest to work.
@@ -176,7 +176,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
    *
    * @return sequence which delivers query results
    */
-  public QueryResponse execute()
+  public QueryResponse<Object[]> execute()
   {
     return plan().run();
   }
@@ -206,7 +206,11 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     try (DruidPlanner planner = sqlToolbox.plannerFactory.createPlanner(
         sqlToolbox.engine,
         queryPlus.sql(),
-        queryPlus.context())) {
+        queryContext,
+        // Context keys for authorization. Use the user-provided keys,
+        // NOT the keys from the query context which, by this point,
+        // will have been extended with internally-defined values.
+        queryPlus.context().keySet())) {
       validate(planner);
       authorize(planner, authorizer());
 

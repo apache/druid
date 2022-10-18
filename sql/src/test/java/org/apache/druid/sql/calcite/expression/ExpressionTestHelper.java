@@ -34,7 +34,6 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -90,7 +89,8 @@ class ExpressionTestHelper
           )
       ),
       null /* Don't need engine */,
-      new QueryContext(),
+      Collections.emptyMap(),
+      Collections.emptySet(),
       JOINABLE_FACTORY_WRAPPER
   );
 

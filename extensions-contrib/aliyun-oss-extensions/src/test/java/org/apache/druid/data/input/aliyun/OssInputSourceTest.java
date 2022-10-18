@@ -327,7 +327,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
         null
     );
 
@@ -353,7 +353,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
         new MaxSizeSplitHintSpec(null, 1)
     );
 
@@ -380,7 +380,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
         new MaxSizeSplitHintSpec(new HumanReadableBytes(CONTENT.length * 3L), null)
     );
 
@@ -410,7 +410,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
         null
     );
     Assert.assertEquals(
@@ -444,7 +444,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     );
 
     inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
         null
     ).collect(Collectors.toList());
   }

@@ -36,7 +36,6 @@ import org.junit.Test;
 
 public class SetAndVerifyContextQueryRunnerTest
 {
-
   @Test
   public void testTimeoutIsUsedIfTimeoutIsNonZero() throws InterruptedException
   {
@@ -58,7 +57,7 @@ public class SetAndVerifyContextQueryRunnerTest
     // time + 1 at the time the method was called
     // this means that after sleeping for 1 millis, the fail time should be less than the current time when checking
     Assert.assertTrue(
-        System.currentTimeMillis() > (Long) transformed.getContextValue(DirectDruidClient.QUERY_FAIL_TIME)
+        System.currentTimeMillis() > transformed.context().getLong(DirectDruidClient.QUERY_FAIL_TIME)
     );
   }
 
@@ -85,7 +84,7 @@ public class SetAndVerifyContextQueryRunnerTest
     Query<ScanResultValue> transformed = queryRunner.withTimeoutAndMaxScatterGatherBytes(query, defaultConfig);
 
     // timeout is not set, default timeout has been set to long.max, make sure timeout is still in the future
-    Assert.assertEquals((Long) Long.MAX_VALUE, transformed.getContextValue(DirectDruidClient.QUERY_FAIL_TIME));
+    Assert.assertEquals(Long.MAX_VALUE, (long) transformed.context().getLong(DirectDruidClient.QUERY_FAIL_TIME));
   }
 
   @Test
@@ -107,7 +106,7 @@ public class SetAndVerifyContextQueryRunnerTest
     // timeout is set to 0, so withTimeoutAndMaxScatterGatherBytes should set QUERY_FAIL_TIME to be the current
     // time + max query timeout at the time the method was called
     // since default is long max, expect long max since current time would overflow
-    Assert.assertEquals((Long) Long.MAX_VALUE, transformed.getContextValue(DirectDruidClient.QUERY_FAIL_TIME));
+    Assert.assertEquals(Long.MAX_VALUE, (long) transformed.context().getLong(DirectDruidClient.QUERY_FAIL_TIME));
   }
 
   @Test
@@ -137,7 +136,7 @@ public class SetAndVerifyContextQueryRunnerTest
     // time + max query timeout at the time the method was called
     // this means that the fail time should be greater than the current time when checking
     Assert.assertTrue(
-        System.currentTimeMillis() < (Long) transformed.getContextValue(DirectDruidClient.QUERY_FAIL_TIME)
+        System.currentTimeMillis() < transformed.context().getLong(DirectDruidClient.QUERY_FAIL_TIME)
     );
   }
 }

@@ -49,6 +49,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
@@ -171,7 +172,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
           histogramName,
           input.getDirectColumn(),
           k,
-          getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
+          getMaxStreamLengthFromQueryContext(plannerContext.queryContext())
       );
     } else {
       String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -182,7 +183,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
           histogramName,
           virtualColumnName,
           k,
-          getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
+          getMaxStreamLengthFromQueryContext(plannerContext.queryContext())
       );
     }
 
@@ -201,7 +202,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 
   static long getMaxStreamLengthFromQueryContext(QueryContext queryContext)
   {
-    return queryContext.getAsLong(
+    return queryContext.getLong(
         CTX_APPROX_QUANTILE_DS_MAX_STREAM_LENGTH,
         DoublesSketchAggregatorFactory.DEFAULT_MAX_STREAM_LENGTH
     );

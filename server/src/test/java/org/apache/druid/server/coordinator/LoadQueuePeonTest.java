@@ -206,14 +206,14 @@ public class LoadQueuePeonTest extends CuratorTestBase
     for (final DataSegment segment : segmentToDrop) {
       loadQueuePeon.dropSegment(
           segment,
-          () -> segmentDroppedSignals.get(segment.getId()).countDown()
+          success -> segmentDroppedSignals.get(segment.getId()).countDown()
       );
     }
 
     for (final DataSegment segment : segmentToLoad) {
       loadQueuePeon.loadSegment(
           segment,
-          () -> segmentLoadedSignals.get(segment.getId()).countDown()
+          success -> segmentLoadedSignals.get(segment.getId()).countDown()
       );
     }
 
@@ -292,14 +292,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     loadQueuePeon.loadSegment(
         segment,
-        new LoadPeonCallback()
-        {
-          @Override
-          public void execute()
-          {
-            segmentLoadedSignal.countDown();
-          }
-        }
+        success -> segmentLoadedSignal.countDown()
     );
 
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentLoadedSignal));
@@ -359,14 +352,9 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     loadQueuePeon.loadSegment(
         segment,
-        new LoadPeonCallback()
-        {
-          @Override
-          public void execute()
-          {
-            segmentLoadedSignal.countDown();
-            delayedSegmentLoadedSignal.countDown();
-          }
+        success -> {
+          segmentLoadedSignal.countDown();
+          delayedSegmentLoadedSignal.countDown();
         }
     );
 

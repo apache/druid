@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.guice.annotations.PublicApi;
@@ -35,6 +36,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -258,5 +260,25 @@ public class Queries
     }
 
     return requiredColumns;
+  }
+
+  public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
+  {
+    QueryContext context = query.context();
+    if (!context.containsKey(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY)) {
+      return query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, maxScatterGatherBytesLimit));
+    }
+    context.verifyMaxScatterGatherBytes(maxScatterGatherBytesLimit);
+    return query;
+  }
+
+  public static <T> Query<T> withTimeout(Query<T> query, long timeout)
+  {
+    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, timeout));
+  }
+
+  public static <T> Query<T> withDefaultTimeout(Query<T> query, long defaultTimeout)
+  {
+    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.DEFAULT_TIMEOUT_KEY, defaultTimeout));
   }
 }

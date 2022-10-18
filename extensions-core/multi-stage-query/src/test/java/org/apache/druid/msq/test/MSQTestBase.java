@@ -87,7 +87,6 @@ import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -130,7 +129,6 @@ import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -160,6 +158,7 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -205,7 +204,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .put(MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, true)
-                  .put(PlannerContext.CTX_SQL_QUERY_ID, "test-query")
+                  .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
                   .put(QueryContexts.FINALIZE_KEY, true)
                   .build();
 
@@ -587,7 +586,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     final DirectStatement stmt = sqlStatementFactory.directStatement(
         new SqlQueryPlus(
             query,
-            new QueryContext(context),
+            context,
             Collections.emptyList(),
             CalciteTests.REGULAR_USER_AUTH_RESULT
         )

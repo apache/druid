@@ -59,7 +59,8 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
 
     if not exclude_ext:
         extensions_core_path = os.path.join(druid_path, "extensions-core")
-        extension_dirs = os.listdir(extensions_core_path)
+        command = "mvn -Dexec.executable='echo' -Dexec.args='${basedir}' exec:exec -q | grep extensions-core | grep -o '[^/]*$'"
+        extension_dirs = subprocess.check_output(command, cwd=druid_path, shell=True).decode().split('\n')[:-1]
         print("Found {} extensions".format(len(extension_dirs)))
         for extension_dir in extension_dirs:
             print("extension dir: {}".format(extension_dir))

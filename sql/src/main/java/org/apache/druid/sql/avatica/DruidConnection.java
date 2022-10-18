@@ -21,15 +21,13 @@ package org.apache.druid.sql.avatica;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.QueryContext;
-import org.apache.druid.sql.PreparedStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -46,8 +44,15 @@ public class DruidConnection
 
   private final String connectionId;
   private final int maxStatements;
-  private final ImmutableMap<String, Object> userSecret;
-  private final QueryContext context;
+  private final Map<String, Object> userSecret;
+
+  /**
+   * The set of context values for each query within this connection. In JDBC,
+   * Druid query context values are set at the connection level, not on the
+   * individual query. This session context is shared by all queries (statements)
+   * within the connection.
+   */
+  private final Map<String, Object> sessionContext;
   private final AtomicInteger statementCounter = new AtomicInteger();
   private final AtomicReference<Future<?>> timeoutFuture = new AtomicReference<>();
 
@@ -64,13 +69,13 @@ public class DruidConnection
       final String connectionId,
       final int maxStatements,
       final Map<String, Object> userSecret,
-      final QueryContext context
+      final Map<String, Object> sessionContext
   )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId);
     this.maxStatements = maxStatements;
-    this.userSecret = ImmutableMap.copyOf(userSecret);
-    this.context = context;
+    this.userSecret = Collections.unmodifiableMap(userSecret);
+    this.sessionContext = Collections.unmodifiableMap(sessionContext);
   }
 
   public String getConnectionId()
@@ -78,7 +83,19 @@ public class DruidConnection
     return connectionId;
   }
 
-  public DruidJdbcStatement createStatement(SqlStatementFactory sqlStatementFactory)
+  public Map<String, Object> sessionContext()
+  {
+    return sessionContext;
+  }
+
+  public Map<String, Object> userSecret()
+  {
+    return userSecret;
+  }
+
+  public DruidJdbcStatement createStatement(
+      final SqlStatementFactory sqlStatementFactory
+  )
   {
     final int statementId = statementCounter.incrementAndGet();
 
@@ -90,14 +107,13 @@ public class DruidConnection
       }
 
       if (statements.size() >= maxStatements) {
-        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is [%,d]", maxStatements));
+        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is %,d", maxStatements));
       }
 
       @SuppressWarnings("GuardedBy")
       final DruidJdbcStatement statement = new DruidJdbcStatement(
           connectionId,
           statementId,
-          context,
           sqlStatementFactory
       );
 
@@ -108,9 +124,10 @@ public class DruidConnection
   }
 
   public DruidJdbcPreparedStatement createPreparedStatement(
-      SqlStatementFactory sqlStatementFactory,
-      SqlQueryPlus sqlRequest,
-      final long maxRowCount)
+      final SqlStatementFactory sqlStatementFactory,
+      final SqlQueryPlus sqlQueryPlus,
+      final long maxRowCount
+  )
   {
     final int statementId = statementCounter.incrementAndGet();
 
@@ -122,17 +139,14 @@ public class DruidConnection
       }
 
       if (statements.size() >= maxStatements) {
-        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is [%,d]", maxStatements));
+        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is %,d", maxStatements));
       }
 
       @SuppressWarnings("GuardedBy")
-      final PreparedStatement statement = sqlStatementFactory.preparedStatement(
-          sqlRequest.withContext(context)
-      );
       final DruidJdbcPreparedStatement jdbcStmt = new DruidJdbcPreparedStatement(
           connectionId,
           statementId,
-          statement,
+          sqlStatementFactory.preparedStatement(sqlQueryPlus),
           maxRowCount
       );
 
@@ -203,10 +217,5 @@ public class DruidConnection
       oldFuture.cancel(false);
     }
     return this;
-  }
-
-  public Map<String, Object> userSecret()
-  {
-    return userSecret;
   }
 }

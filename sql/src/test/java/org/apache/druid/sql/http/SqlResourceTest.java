@@ -1245,7 +1245,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testExplainCountStar() throws Exception
   {
     Map<String, Object> queryContext = ImmutableMap.of(
-        PlannerContext.CTX_SQL_QUERY_ID,
+        QueryContexts.CTX_SQL_QUERY_ID,
         DUMMY_SQL_QUERY_ID,
         PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
         "false"
@@ -1790,7 +1790,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertNotNull(queryContextException);
     Assert.assertEquals(BadQueryContextException.ERROR_CODE, queryContextException.getErrorCode());
     Assert.assertEquals(BadQueryContextException.ERROR_CLASS, queryContextException.getErrorClass());
-    Assert.assertTrue(queryContextException.getMessage().contains("For input string: \"2000'\""));
+    Assert.assertTrue(queryContextException.getMessage().contains("2000'"));
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
   }
@@ -1831,7 +1831,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity(), stats.get("identity"));
     Assert.assertTrue(stats.containsKey("sqlQuery/time"));
     Assert.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
-    Assert.assertTrue(queryContext.containsKey(PlannerContext.CTX_SQL_QUERY_ID));
+    Assert.assertTrue(queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID));
     if (success) {
       Assert.assertTrue(stats.containsKey("sqlQuery/bytes"));
     } else {
@@ -2079,7 +2079,7 @@ public class SqlResourceTest extends CalciteTestBase
       return new ResultSet(plannerResult)
       {
         @Override
-        public QueryResponse run()
+        public QueryResponse<Object[]> run()
         {
           final Function<Sequence<Object[]>, Sequence<Object[]>> sequenceMapFn =
               Optional.ofNullable(sequenceMapFnSupplier.get()).orElse(Function.identity());
@@ -2087,12 +2087,12 @@ public class SqlResourceTest extends CalciteTestBase
           final NonnullPair<CountDownLatch, Boolean> executeLatch = executeLatchSupplier.get();
           if (executeLatch != null) {
             if (executeLatch.rhs) {
-              final QueryResponse resp = super.run();
+              final QueryResponse<Object[]> resp = super.run();
               Sequence<Object[]> sequence = sequenceMapFn.apply(resp.getResults());
               executeLatch.lhs.countDown();
               final ResponseContext respContext = resp.getResponseContext();
               respContext.merge(responseContextSupplier.get());
-              return new QueryResponse(sequence, respContext);
+              return new QueryResponse<>(sequence, respContext);
             } else {
               try {
                 if (!executeLatch.lhs.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
@@ -2105,11 +2105,11 @@ public class SqlResourceTest extends CalciteTestBase
             }
           }
 
-          final QueryResponse resp = super.run();
+          final QueryResponse<Object[]> resp = super.run();
           Sequence<Object[]> sequence = sequenceMapFn.apply(resp.getResults());
           final ResponseContext respContext = resp.getResponseContext();
           respContext.merge(responseContextSupplier.get());
-          return new QueryResponse(sequence, respContext);
+          return new QueryResponse<>(sequence, respContext);
         }
       };
     }

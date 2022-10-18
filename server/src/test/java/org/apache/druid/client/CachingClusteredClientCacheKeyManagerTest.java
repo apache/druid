@@ -19,6 +19,7 @@
 
 package org.apache.druid.client;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Bytes;
 import org.apache.druid.client.selector.QueryableDruidServer;
@@ -26,6 +27,7 @@ import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -69,7 +71,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   public void setup()
   {
     expect(strategy.computeCacheKey(query)).andReturn(QUERY_CACHE_KEY).anyTimes();
-    expect(query.getContextValue(QueryContexts.BY_SEGMENT_KEY)).andReturn(false).anyTimes();
+    expect(query.context()).andReturn(QueryContext.of(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, false))).anyTimes();
   }
 
   @After
@@ -179,8 +181,10 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   {
     expect(dataSourceAnalysis.isJoin()).andReturn(false);
     reset(query);
-    expect(query.getContextValue(QueryContexts.BY_SEGMENT_KEY)).andReturn(true).anyTimes();
+
     expect(query.getDataSource()).andReturn(new NoopDataSource());
+    expect(query.context()).andReturn(QueryContext.of(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true))).anyTimes();
+
     replayAll();
     CachingClusteredClient.CacheKeyManager<Object> keyManager = makeKeyManager();
     Set<SegmentServerSelector> selectors = ImmutableSet.of(
@@ -246,7 +250,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   public void testSegmentQueryCacheKey_noCachingIfBySegment()
   {
     reset(query);
-    expect(query.getContextValue(QueryContexts.BY_SEGMENT_KEY)).andReturn(true).anyTimes();
+    expect(query.context()).andReturn(QueryContext.of(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true))).anyTimes();
     replayAll();
     byte[] cacheKey = makeKeyManager().computeSegmentLevelQueryCacheKey();
     Assert.assertNull(cacheKey);

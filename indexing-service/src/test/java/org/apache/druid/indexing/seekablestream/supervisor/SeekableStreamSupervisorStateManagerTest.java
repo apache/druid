@@ -99,6 +99,69 @@ public class SeekableStreamSupervisorStateManagerTest
   }
 
   @Test
+  public void testIdlePath()
+  {
+    Assert.assertEquals(BasicState.PENDING, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.PENDING, stateManager.getSupervisorState().getBasicState());
+
+    stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CONNECTING_TO_STREAM);
+    Assert.assertEquals(SeekableStreamState.CONNECTING_TO_STREAM, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
+
+    stateManager.maybeSetState(SeekableStreamState.DISCOVERING_INITIAL_TASKS);
+    Assert.assertEquals(SeekableStreamState.DISCOVERING_INITIAL_TASKS, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
+
+    stateManager.maybeSetState(SeekableStreamState.CREATING_TASKS);
+    Assert.assertEquals(SeekableStreamState.CREATING_TASKS, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
+
+    stateManager.markRunFinished();
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
+
+    // Emulates submitting Idle notice
+    stateManager.maybeSetState(BasicState.IDLE);
+    Assert.assertEquals(BasicState.IDLE, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.IDLE, stateManager.getSupervisorState().getBasicState());
+
+    // Stay in idle state when supervisor is running until or unless it is specifically set to a different state
+    stateManager.markRunFinished();
+    Assert.assertEquals(BasicState.IDLE, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.IDLE, stateManager.getSupervisorState().getBasicState());
+
+    stateManager.maybeSetState(BasicState.RUNNING);
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
+  }
+
+  @Test
+  public void testStoppingPath()
+  {
+    Assert.assertEquals(BasicState.PENDING, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.PENDING, stateManager.getSupervisorState().getBasicState());
+
+    stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CONNECTING_TO_STREAM);
+    Assert.assertEquals(SeekableStreamState.CONNECTING_TO_STREAM, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
+
+    stateManager.maybeSetState(SeekableStreamState.DISCOVERING_INITIAL_TASKS);
+    Assert.assertEquals(SeekableStreamState.DISCOVERING_INITIAL_TASKS, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
+
+    // Emulates graceful shutdown
+    stateManager.maybeSetState(BasicState.STOPPING);
+
+    stateManager.maybeSetState(SeekableStreamState.CREATING_TASKS);
+    Assert.assertEquals(BasicState.STOPPING, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.STOPPING, stateManager.getSupervisorState().getBasicState());
+
+    stateManager.markRunFinished();
+    Assert.assertEquals(BasicState.STOPPING, stateManager.getSupervisorState());
+    Assert.assertEquals(BasicState.STOPPING, stateManager.getSupervisorState().getBasicState());
+  }
+
+  @Test
   public void testStreamFailureLostContact()
   {
     stateManager.markRunFinished(); // clean run without errors

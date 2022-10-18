@@ -66,6 +66,7 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
@@ -401,6 +402,7 @@ public class GroupByTypeInterfaceBenchmark
             configSupplier,
             bufferPool,
             mergePool,
+            TestHelper.makeJsonMapper(),
             new ObjectMapper(new SmileFactory()),
             QueryBenchmarkUtil.NOOP_QUERYWATCHER
         )

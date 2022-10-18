@@ -450,7 +450,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @JsonIgnore
   public boolean getContextSortByDimsFirst()
   {
-    return getContextBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
+    return context().getBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
   }
 
   @JsonIgnore
@@ -465,7 +465,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @JsonIgnore
   public boolean getApplyLimitPushDownFromContext()
   {
-    return getContextBoolean(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true);
+    return context().getBoolean(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true);
   }
 
   @Override
@@ -487,7 +487,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
   private boolean validateAndGetForceLimitPushDown()
   {
-    final boolean forcePushDown = getContextBoolean(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, false);
+    final boolean forcePushDown = context().getBoolean(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, false);
     if (forcePushDown) {
       if (!(limitSpec instanceof DefaultLimitSpec)) {
         throw new IAE("When forcing limit push down, a limit spec must be provided.");
@@ -748,7 +748,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @Nullable
   private DateTime computeUniversalTimestamp()
   {
-    final String timestampStringFromContext = getContextValue(CTX_KEY_FUDGE_TIMESTAMP, "");
+    final String timestampStringFromContext = context().getString(CTX_KEY_FUDGE_TIMESTAMP, "");
     final Granularity granularity = getGranularity();
 
     if (!timestampStringFromContext.isEmpty()) {

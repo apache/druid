@@ -19,15 +19,15 @@
 
 package org.apache.druid.compressedbigdecimal;
 
+import com.google.common.base.Preconditions;
+
 import java.nio.ByteBuffer;
 
 /**
  * A compressed big decimal that holds its data with an embedded array.
  */
-@SuppressWarnings("serial")
-public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal<ByteBufferCompressedBigDecimal>
+public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal
 {
-
   private final ByteBuffer buf;
   private final int position;
   private final int size;
@@ -57,7 +57,7 @@ public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal<ByteBuf
    * @param position the position in the ByteBuffer
    * @param val      initial value
    */
-  public ByteBufferCompressedBigDecimal(ByteBuffer buf, int position, CompressedBigDecimal<?> val)
+  public ByteBufferCompressedBigDecimal(ByteBuffer buf, int position, CompressedBigDecimal val)
   {
     super(val.getScale());
     this.buf = buf;
@@ -65,6 +65,42 @@ public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal<ByteBuf
     this.size = val.getArraySize();
 
     copyToBuffer(buf, position, size, val);
+  }
+
+  public static void initZero(ByteBuffer buf, int position, int size)
+  {
+    for (int i = 0; i < size; ++i) {
+      buf.putInt(position + (i * Integer.BYTES), 0);
+    }
+  }
+
+  public static void initMin(ByteBuffer buf, int position, int size)
+  {
+    for (int i = 0; i < size; ++i) {
+      if (i == size - 1) {
+        buf.putInt(position + (i * Integer.BYTES), 0x80000000);
+      } else {
+        buf.putInt(position + (i * Integer.BYTES), 0);
+      }
+    }
+  }
+
+  public static void initMax(ByteBuffer buf, int position, int size)
+  {
+    for (int i = 0; i < size; ++i) {
+      if (i == size - 1) {
+        buf.putInt(position + (i * Integer.BYTES), 0x7FFFFFFF);
+      } else {
+        buf.putInt(position + (i * Integer.BYTES), 0xFFFFFFFF);
+      }
+    }
+  }
+
+
+  @Override
+  public CompressedBigDecimal toHeap()
+  {
+    return new ArrayCompressedBigDecimal(this);
   }
 
   /* (non-Javadoc)
@@ -100,6 +136,31 @@ public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal<ByteBuf
     buf.putInt(position + idx * Integer.BYTES, val);
   }
 
+  @Override
+  protected void setValue(CompressedBigDecimal rhs)
+  {
+    Preconditions.checkArgument(
+        rhs.getArraySize() <= getArraySize(),
+        "lhs too small to store entry: lhs [%s] vs rhs [%s]",
+        size,
+        rhs.getArraySize()
+    );
+
+    long extension = rhs.getArrayEntry(rhs.getArraySize() - 1) < 0 ? INT_MASK : 0L;
+
+    for (int i = 0; i < size; i++) {
+      long rhsElement;
+
+      if (i < rhs.getArraySize()) {
+        rhsElement = INT_MASK & rhs.getArrayEntry(i);
+      } else {
+        rhsElement = extension;
+      }
+
+      buf.putInt(position + i * Integer.BYTES, (int) rhsElement);
+    }
+  }
+
   /**
    * Copy a compressed big decimal into a Bytebuffer in a format understood by this class.
    *
@@ -108,7 +169,7 @@ public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal<ByteBuf
    * @param size     The space (in number of ints) allocated for the value
    * @param val      THe value to copy
    */
-  public static void copyToBuffer(ByteBuffer buf, int position, int size, CompressedBigDecimal<?> val)
+  public static void copyToBuffer(ByteBuffer buf, int position, int size, CompressedBigDecimal val)
   {
     if (val.getArraySize() > size) {
       throw new IllegalArgumentException("Right hand side too big to fit in the result value");
@@ -117,5 +178,4 @@ public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal<ByteBuf
       buf.putInt(position + ii * Integer.BYTES, val.getArrayEntry(ii));
     }
   }
-
 }

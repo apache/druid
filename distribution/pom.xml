@@ -39,6 +39,12 @@
             <artifactId>druid-services</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+        <dependency>
+            <!-- This is needed to bundle the web console -->
+            <groupId>org.apache.druid</groupId>
+            <artifactId>web-console</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
     </dependencies>
     <properties>
         <!-- the default value is a repeated flag from the command line, since blank value is not allowed -->
