@@ -55,10 +55,17 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
   /**
    * Creates a publisher which publishes the warnings to the controller if they have not yet exceeded the allowed limit.
    * Moreover, if a warning is disallowed, i.e. it's limit is set to 0, then the publisher directly reports the warning
-   * as an error, since we donot need to wrap the original warning {@link TooManyWarningsFault} in that case and can
-   * surface it directly to the user. 
+   * as an error
    * {@code errorCodeToLimit} refers to the maximum number of verbose warnings that should be published. The actual
    * limit for the warnings before which the controller should fail can be much higher and hence a separate {@code criticalWarningCodes}
+   *
+   * @param delegate The delegate publisher which publishes the allowed warnings
+   * @param totalLimit Total limit of warnings that a worker can publish
+   * @param errorCodeToLimit Map of error code to the number of allowed warnings that the publisher can publish
+   * @param criticalWarningCodes Error codes which if encountered should be thrown as error
+   * @param controllerClient Controller client (for directly sending the warning as an error)
+   * @param workerId workerId, used to construct the error report
+   * @param host worker' host, used to construct the error report
    */
   public MSQWarningReportLimiterPublisher(
       MSQWarningReportPublisher delegate,
@@ -92,8 +99,8 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
         try {
           controllerClient.postWorkerError(workerId, MSQErrorReport.fromException(workerId, host, stageNumber, e));
         }
-        catch (IOException e2) {
-          throw new RE(e2, "Failed to post the worker error [%s] to the controller", errorCode);
+        catch (IOException postException) {
+          throw new RE(postException, "Failed to post the worker error [%s] to the controller", errorCode);
         }
       }
 
