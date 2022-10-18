@@ -108,17 +108,19 @@ public class TaskLockbox
 
   /**
    * Wipe out our current in-memory state and resync it from our bundled {@link TaskStorage}.
+   *
+   * @return SyncResult which needs to be processed by the caller
    */
-  public void syncFromStorage()
+  public TaskLockboxSyncResult syncFromStorage()
   {
     giant.lock();
 
     try {
       // Load stuff from taskStorage first. If this fails, we don't want to lose all our locks.
-      final Set<String> storedActiveTasks = new HashSet<>();
+      final Set<Task> storedActiveTasks = new HashSet<>();
       final List<Pair<Task, TaskLock>> storedLocks = new ArrayList<>();
       for (final Task task : taskStorage.getActiveTasks()) {
-        storedActiveTasks.add(task.getId());
+        storedActiveTasks.add(task);
         for (final TaskLock taskLock : taskStorage.getLocks(task.getId())) {
           storedLocks.add(Pair.of(task, taskLock));
         }
@@ -138,7 +140,12 @@ public class TaskLockbox
       };
       running.clear();
       activeTasks.clear();
-      activeTasks.addAll(storedActiveTasks);
+      activeTasks.addAll(storedActiveTasks.stream()
+                                          .map(Task::getId)
+                                          .collect(Collectors.toSet())
+      );
+      // Set of task groups in which at least one task failed to re-acquire a lock
+      final Set<String> failedToReacquireLockTaskGroups = new HashSet<>();
       // Bookkeeping for a log message at the end
       int taskLockCount = 0;
       for (final Pair<Task, TaskLock> taskAndLock : byVersionOrdering.sortedCopy(storedLocks)) {
@@ -183,20 +190,39 @@ public class TaskLockbox
             );
           }
         } else {
-          throw new ISE(
-              "Could not reacquire lock on interval[%s] version[%s] for task: %s",
+          failedToReacquireLockTaskGroups.add(task.getGroupId());
+          log.error(
+              "Could not reacquire lock on interval[%s] version[%s] for task: %s from group %s.",
               savedTaskLockWithPriority.getInterval(),
               savedTaskLockWithPriority.getVersion(),
-              task.getId()
+              task.getId(),
+              task.getGroupId()
           );
+          continue;
         }
       }
+
+      Set<Task> tasksToFail = new HashSet<>();
+      for (Task task : storedActiveTasks) {
+        if (failedToReacquireLockTaskGroups.contains(task.getGroupId())) {
+          tasksToFail.add(task);
+          activeTasks.remove(task.getId());
+        }
+      }
+
       log.info(
           "Synced %,d locks for %,d activeTasks from storage (%,d locks ignored).",
           taskLockCount,
           activeTasks.size(),
           storedLocks.size() - taskLockCount
       );
+
+      if (!failedToReacquireLockTaskGroups.isEmpty()) {
+        log.warn("Marking all tasks from task groups[%s] to be failed "
+                 + "as they failed to reacquire at least one lock.", failedToReacquireLockTaskGroups);
+      }
+
+      return new TaskLockboxSyncResult(tasksToFail);
     }
     finally {
       giant.unlock();
@@ -207,7 +233,8 @@ public class TaskLockbox
    * This method is called only in {@link #syncFromStorage()} and verifies the given task and the taskLock have the same
    * groupId, dataSource, and priority.
    */
-  private TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
+  @VisibleForTesting
+  protected TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
   {
     giant.lock();
 
