@@ -903,7 +903,7 @@ public class LoadRuleTest
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(segs).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsInQueue())
-            .andReturn(ImmutableMap.of(segment, SegmentAction.LOAD_AS_PRIMARY)).anyTimes();
+            .andReturn(ImmutableMap.of(segment, SegmentAction.PRIORITY_LOAD)).anyTimes();
     EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(segs.size()).anyTimes();
 
     EasyMock.expect(mockPeon.getTimedOutSegments())

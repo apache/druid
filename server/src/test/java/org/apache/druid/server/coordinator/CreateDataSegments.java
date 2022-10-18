@@ -26,6 +26,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -102,6 +104,7 @@ public class CreateDataSegments
    */
   private static class NumberedDataSegment extends DataSegment
   {
+    private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyyMMdd");
     private final int uniqueId;
 
     private NumberedDataSegment(
@@ -129,7 +132,9 @@ public class CreateDataSegments
     @Override
     public String toString()
     {
-      return "{" + getDataSource() + "::" + uniqueId + "}";
+      return "{" + getDataSource()
+             + "::" + getInterval().getStart().toString(FORMATTER)
+             + "::" + uniqueId + "}";
     }
   }
 }

@@ -57,12 +57,12 @@ public class TierLoadingState
 
   // Write methods are to be accessed only by the SegmentStateManager
 
-  void addSegment(SegmentId segmentId, String host)
+  void markStarted(SegmentId segmentId, String host)
   {
     processingSegmentToHost.put(segmentId, host);
   }
 
-  void removeSegment(SegmentId segmentId)
+  void markCompleted(SegmentId segmentId)
   {
     processingSegmentToHost.remove(segmentId);
   }

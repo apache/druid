@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Ordering;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
@@ -27,18 +28,33 @@ import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Represents a segment queued for a load or drop operation in a LoadQueuePeon.
+ * <p>
+ * Requests are naturally ordered using the {@link #COMPARE_ACTION_THEN_INTERVAL}.
  */
-public class SegmentHolder
+public class SegmentHolder implements Comparable<SegmentHolder>
 {
+  /**
+   * Orders segment requests:
+   * <ul>
+   *   <li>first by action: all drops, then all loads, then all moves</li>
+   *   <li>then by interval: newest segments first</li>
+   * </ul>
+   */
+  public static final Comparator<SegmentHolder> COMPARE_ACTION_THEN_INTERVAL =
+      Ordering.explicit(SegmentAction.DROP, SegmentAction.PRIORITY_LOAD, SegmentAction.LOAD, SegmentAction.MOVE_TO)
+              .onResultOf(SegmentHolder::getAction)
+              .compound(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST.onResultOf(SegmentHolder::getSegment));
+
   private final DataSegment segment;
   private final DataSegmentChangeRequest changeRequest;
   private final SegmentAction action;
-  private final boolean isLoad;
 
   // Guaranteed to store only non-null elements
   private final List<LoadPeonCallback> callbacks = new ArrayList<>();
@@ -55,7 +71,6 @@ public class SegmentHolder
     this.changeRequest = (action == SegmentAction.DROP)
                          ? new SegmentChangeRequestDrop(segment)
                          : new SegmentChangeRequestLoad(segment);
-    this.isLoad = action != SegmentAction.DROP;
     if (callback != null) {
       callbacks.add(callback);
     }
@@ -73,7 +88,7 @@ public class SegmentHolder
 
   public boolean isLoad()
   {
-    return isLoad;
+    return action != SegmentAction.DROP;
   }
 
   public DataSegmentChangeRequest getChangeRequest()
@@ -122,6 +137,31 @@ public class SegmentHolder
     } else {
       return System.currentTimeMillis() - firstRequestMillis.get();
     }
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SegmentHolder that = (SegmentHolder) o;
+    return getSegment().equals(that.getSegment()) && getAction() == that.getAction();
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getSegment(), getAction());
+  }
+
+  @Override
+  public int compareTo(SegmentHolder that)
+  {
+    return Objects.compare(this, that, COMPARE_ACTION_THEN_INTERVAL);
   }
 
   @Override

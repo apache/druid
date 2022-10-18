@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import com.google.inject.Inject;
 import org.apache.druid.client.ServerInventoryView;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
 
@@ -36,8 +35,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SegmentStateManager
 {
-  private static final EmittingLogger log = new EmittingLogger(SegmentStateManager.class);
-
   private final LoadQueueTaskMaster taskMaster;
   private final ServerInventoryView serverInventoryView;
   private final SegmentsMetadataManager segmentsMetadataManager;
@@ -60,42 +57,42 @@ public class SegmentStateManager
   }
 
   /**
-   * Queues load of a replica of the segment on the given server.
+   * Queues load of the segment on the given server.
    */
   public boolean loadSegment(
       DataSegment segment,
       ServerHolder server,
-      boolean isPrimary,
+      boolean isFirstLoad,
       ReplicationThrottler throttler
   )
   {
+    // Check if this load operation has to be throttled
     final String tier = server.getServer().getTier();
-    final LoadPeonCallback callback;
-    if (isPrimary) {
-      // Primary replicas are not subject to throttling
-      callback = null;
-    } else if (canLoadReplica(tier, throttler)) {
-      throttler.incrementAssignedReplicas(tier);
-
-      final TierLoadingState replicatingInTier = currentlyReplicatingSegments
-          .computeIfAbsent(tier, t -> new TierLoadingState(throttler.getMaxLifetime()));
-      replicatingInTier.addSegment(segment.getId(), server.getServer().getHost());
-      callback = success -> replicatingInTier.removeSegment(segment.getId());
-    } else {
+    if (!isFirstLoad && !canLoadReplica(tier, throttler)) {
       throttler.incrementThrottledReplicas(tier);
       return false;
     }
 
     try {
-      if (!server.startOperation(segment, SegmentState.LOADING)) {
+      if (!server.canLoadSegment(segment)
+          || !server.startOperation(segment, SegmentState.LOADING)) {
         return false;
       }
 
-      server.getPeon().loadSegment(
-          segment,
-          isPrimary ? SegmentAction.LOAD_AS_PRIMARY : SegmentAction.LOAD_AS_REPLICA,
-          callback
-      );
+      final LoadPeonCallback callback;
+      if (isFirstLoad) {
+        callback = null;
+      } else {
+        throttler.incrementAssignedReplicas(tier);
+
+        final TierLoadingState replicatingInTier = currentlyReplicatingSegments
+            .computeIfAbsent(tier, t -> new TierLoadingState(throttler.getMaxLifetime()));
+        replicatingInTier.markStarted(segment.getId(), server.getServer().getHost());
+        callback = success -> replicatingInTier.markCompleted(segment.getId());
+      }
+
+      SegmentAction loadType = isFirstLoad ? SegmentAction.PRIORITY_LOAD : SegmentAction.LOAD;
+      server.getPeon().loadSegment(segment, loadType, callback);
       return true;
     }
     catch (Exception e) {
@@ -134,14 +131,14 @@ public class SegmentStateManager
     final LoadQueuePeon fromServerPeon = fromServer.getPeon();
     final LoadPeonCallback moveFinishCallback = success -> {
       fromServerPeon.unmarkSegmentToDrop(segment);
-      segmentsMovingInTier.removeSegment(segment.getId());
+      segmentsMovingInTier.markCompleted(segment.getId());
     };
 
     // mark segment to drop before it is actually loaded on server
     // to be able to account for this information in BalancerStrategy immediately
     toServer.startOperation(segment, SegmentState.MOVING_TO);
     fromServerPeon.markSegmentToDrop(segment);
-    segmentsMovingInTier.addSegment(segment.getId(), fromServer.getServer().getHost());
+    segmentsMovingInTier.markStarted(segment.getId(), fromServer.getServer().getHost());
 
     final LoadQueuePeon toServerPeon = toServer.getPeon();
     final String toServerName = toServer.getServer().getName();

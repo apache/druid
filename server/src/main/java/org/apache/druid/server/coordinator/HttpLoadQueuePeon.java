@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -55,6 +54,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
@@ -64,6 +64,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ *
  */
 public class HttpLoadQueuePeon implements LoadQueuePeon
 {
@@ -91,6 +92,18 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   private final ConcurrentSkipListSet<DataSegment> segmentsMarkedToDrop = new ConcurrentSkipListSet<>(
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
+
+  /**
+   * Segments currently in queue ordered by priority. This includes drop requests
+   * as well. This need not be thread-safe as all operations on it are synchronized
+   * with {@link #lock}.
+   */
+  private final Set<SegmentHolder> queuedSegments = new TreeSet<>();
+
+  /**
+   * Set of segments for which requests have been sent to the server and can
+   * not be cancelled anymore. This need not be thread-safe.
+   */
   private final Set<DataSegment> activeRequestSegments = new HashSet<>();
 
   private final ScheduledExecutorService processingExecutor;
@@ -154,22 +167,22 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     final List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
 
     synchronized (lock) {
-      Iterator<Map.Entry<DataSegment, SegmentHolder>> iter = Iterators.concat(
-          segmentsToDrop.entrySet().iterator(),
-          segmentsToLoad.entrySet().iterator()
-      );
+      final Iterator<SegmentHolder> iter = queuedSegments.iterator();
 
-      activeRequestSegments.clear();
       while (newRequests.size() < batchSize && iter.hasNext()) {
-        Map.Entry<DataSegment, SegmentHolder> entry = iter.next();
-        SegmentHolder holder = entry.getValue();
+        SegmentHolder holder = iter.next();
         if (hasRequestTimedOut(holder)) {
           onRequestFailed(holder, "timed out");
           iter.remove();
+          if (holder.isLoad()) {
+            segmentsToLoad.remove(holder.getSegment());
+          } else {
+            segmentsToDrop.remove(holder.getSegment());
+          }
         } else {
           newRequests.add(holder.getChangeRequest());
           holder.markRequestSentToServer();
-          activeRequestSegments.add(entry.getKey());
+          activeRequestSegments.add(holder.getSegment());
         }
       }
     }
@@ -235,7 +248,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
                             log.error("Server[%s] returned unknown state in status[%s].", serverId, e.getStatus());
                         }
                       }
-                      activeRequestSegments.clear();
                     }
                   }
                   catch (Exception ex) {
@@ -310,6 +322,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
               return;
             }
 
+            queuedSegments.remove(holder);
+            activeRequestSegments.remove(holder.getSegment());
             if (status.getState() == SegmentLoadDropHandler.Status.STATE.FAILED) {
               onRequestFailed(holder, status.getFailureCause());
             } else {
@@ -366,6 +380,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
       segmentsToDrop.clear();
       segmentsToLoad.clear();
+      queuedSegments.clear();
+      activeRequestSegments.clear();
       queuedSize.set(0L);
       failedAssignCount.set(0);
     }
@@ -394,7 +410,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       if (holder == null) {
         log.trace("Server[%s] to load segment[%s] queued.", serverId, segment.getId());
         queuedSize.addAndGet(segment.getSize());
-        segmentsToLoad.put(segment, new SegmentHolder(segment, action, callback));
+        holder = new SegmentHolder(segment, action, callback);
+        segmentsToLoad.put(segment, holder);
+        queuedSegments.add(holder);
         processingExecutor.execute(this::doSegmentManagement);
       } else {
         holder.addCallback(callback);
@@ -419,7 +437,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
       if (holder == null) {
         log.trace("Server[%s] to drop segment[%s] queued.", serverId, segment.getId());
-        segmentsToDrop.put(segment, new SegmentHolder(segment, SegmentAction.DROP, callback));
+        holder = new SegmentHolder(segment, SegmentAction.DROP, callback);
+        segmentsToDrop.put(segment, holder);
+        queuedSegments.add(holder);
         processingExecutor.execute(this::doSegmentManagement);
       } else {
         holder.addCallback(callback);
@@ -449,8 +469,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   public Map<DataSegment, SegmentAction> getSegmentsInQueue()
   {
     final Map<DataSegment, SegmentAction> segmentsInQueue = new HashMap<>();
-    segmentsToLoad.values().forEach(s -> segmentsInQueue.put(s.getSegment(), s.getAction()));
-    segmentsToDrop.values().forEach(s -> segmentsInQueue.put(s.getSegment(), s.getAction()));
+    queuedSegments.forEach(s -> segmentsInQueue.put(s.getSegment(), s.getAction()));
     return segmentsInQueue;
   }
 
@@ -581,6 +600,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         return false;
       }
 
+      queuedSegments.remove(holder);
       onRequestCancelled(holder);
       return true;
     }

@@ -326,8 +326,8 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   private void actionCompleted(SegmentHolder segmentHolder)
   {
     switch (segmentHolder.getAction()) {
-      case LOAD_AS_PRIMARY:
-      case LOAD_AS_REPLICA:
+      case PRIORITY_LOAD:
+      case LOAD:
       case MOVE_TO:
         // When load failed a segment will be removed from the segmentsToLoad twice and
         // null value will be returned at the second time in which case queueSize may be negative.

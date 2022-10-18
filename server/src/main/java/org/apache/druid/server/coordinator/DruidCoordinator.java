@@ -83,7 +83,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -119,7 +118,7 @@ public class DruidCoordinator
    * cluster has availability problems and struggling to make all segments available immediately, at least we try to
    * make more "important" (more recent) segments available as soon as possible.
    */
-  static final Comparator<DataSegment> SEGMENT_COMPARATOR_RECENT_FIRST = Ordering
+  static final Ordering<DataSegment> SEGMENT_COMPARATOR_RECENT_FIRST = Ordering
       .from(Comparators.intervalsByEndThenStart())
       .onResultOf(DataSegment::getInterval)
       .compound(Ordering.<DataSegment>natural())

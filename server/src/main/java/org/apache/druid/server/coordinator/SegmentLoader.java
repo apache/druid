@@ -62,11 +62,11 @@ public class SegmentLoader
       BalancerStrategy strategy
   )
   {
-    this.stateManager = stateManager;
     this.cluster = cluster;
+    this.strategy = strategy;
+    this.stateManager = stateManager;
     this.replicantLookup = replicantLookup;
     this.replicationThrottler = replicationThrottler;
-    this.strategy = strategy;
   }
 
   public CoordinatorStats getStats()
@@ -343,10 +343,11 @@ public class SegmentLoader
           numReplicasToLoad,
           segment,
           serversByState.get(SegmentState.NONE),
-          totalReplicas > 0
+          totalReplicas < 1
       );
 
       stats.addToTieredStat(CoordinatorStats.ASSIGNED_COUNT, tier, successfulLoadsQueued);
+
       if (numReplicasToLoad > successfulLoadsQueued) {
         stats.addToTieredStat(CoordinatorStats.ASSIGN_SKIP_COUNT, tier, numReplicasToLoad - successfulLoadsQueued);
         log.debug(
@@ -392,8 +393,8 @@ public class SegmentLoader
           segment,
           serversByState.get(SegmentState.LOADED)
       );
-
       stats.addToTieredStat(CoordinatorStats.DROPPED_COUNT, tier, successfulDropsQueued);
+
       if (numReplicasToDrop > successfulDropsQueued) {
         stats.addToTieredStat(CoordinatorStats.DROP_SKIP_COUNT, tier, 1L);
         log.debug(
@@ -471,15 +472,13 @@ public class SegmentLoader
   /**
    * Queues load of {@code numToLoad} replicas of the segment on a tier.
    *
-   * @param isSegmentAvailableOnTier true if there is atleast one replica of the
-   *                                 segment already loaded on this tier.
    * @return The number of successfully queued load operations.
    */
   private int loadReplicas(
       int numToLoad,
       DataSegment segment,
       List<ServerHolder> candidateServers,
-      boolean isSegmentAvailableOnTier
+      boolean isFirstLoadOnTier
   )
   {
     final List<ServerHolder> eligibleServers =
@@ -498,18 +497,11 @@ public class SegmentLoader
       return 0;
     }
 
-    // Load the primary on this tier
+    // Load the replicas on this tier
     int numLoadsQueued = 0;
-    if (!isSegmentAvailableOnTier) {
-      boolean queueSuccess =
-          stateManager.loadSegment(segment, serverIterator.next(), true, replicationThrottler);
-      numLoadsQueued += queueSuccess ? 1 : 0;
-    }
-
-    // Load the remaining replicas
     while (numLoadsQueued < numToLoad && serverIterator.hasNext()) {
       boolean queueSuccess =
-          stateManager.loadSegment(segment, serverIterator.next(), false, replicationThrottler);
+          stateManager.loadSegment(segment, serverIterator.next(), isFirstLoadOnTier, replicationThrottler);
       numLoadsQueued += queueSuccess ? 1 : 0;
     }
     return numLoadsQueued;

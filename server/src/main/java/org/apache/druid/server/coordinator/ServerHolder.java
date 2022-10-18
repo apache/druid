@@ -73,8 +73,8 @@ public class ServerHolder implements Comparable<ServerHolder>
       case DROP:
         startOperation(segment, SegmentState.DROPPING);
         break;
-      case LOAD_AS_PRIMARY:
-      case LOAD_AS_REPLICA:
+      case PRIORITY_LOAD:
+      case LOAD:
         startOperation(segment, SegmentState.LOADING);
         break;
       case MOVE_TO:

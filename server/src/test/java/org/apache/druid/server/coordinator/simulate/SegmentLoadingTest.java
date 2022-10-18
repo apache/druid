@@ -117,17 +117,12 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   @Test
   public void testTierShiftDoesNotCauseUnderReplication()
   {
-    // maxNonPrimaryReplicas = 1, each tier can load at most 1 replica in a single run
-    CoordinatorDynamicConfig dynamicConfig =
-        CoordinatorDynamicConfig.builder()
-                                .withMaxSegmentsToMove(0)
-                                .withReplicationThrottleLimit(0)
-                                .build();
+    // disable balancing
+    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 10);
 
     // historicals = 2(in T1) + 3(in T2)
     // segments = 1, replicas = 3(T2)
     final DataSegment segment = segments.get(0);
-    final DruidServer historicalT23 = createHistorical(3, Tier.T2, 10_000);
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(Collections.singletonList(segment))
@@ -137,8 +132,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
                                  historicalT11,
                                  historicalT12,
                                  historicalT21,
-                                 historicalT22,
-                                 historicalT23
+                                 historicalT22
                              )
                              .build();
 
@@ -152,7 +146,6 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     verifyNoEvent(Metric.DROPPED_COUNT);
     verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 2L);
-    verifyValue(Metric.THROTTLED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 1);
 
     // Run 2: Replicas still queued
     // nothing new is assigned to T2, nothing is dropped from T1
@@ -160,31 +153,43 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     verifyNoEvent(Metric.DROPPED_COUNT);
     verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 0L);
-    verifyValue(Metric.THROTTLED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 1);
 
     loadQueuedSegments();
-    Assert.assertEquals(2, getNumLoadedSegments(historicalT21, historicalT22, historicalT23));
+    Assert.assertEquals(2, getNumLoadedSegments(historicalT21, historicalT22));
     Assert.assertEquals(2, getNumLoadedSegments(historicalT11, historicalT12));
 
     // Run 3: total loaded replicas (4) > total required replicas (3)
-    // third replica is assigned to T2, one replica is dropped from T1
+    // no server to assign third replica in T2, one replica is dropped from T1
     runCoordinatorCycle();
 
     verifyValue(Metric.DROPPED_COUNT, filter(DruidMetrics.TIER, Tier.T1), 1L);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 0L);
+
+    loadQueuedSegments();
+    Assert.assertEquals(2, getNumLoadedSegments(historicalT21, historicalT22));
+    Assert.assertEquals(1, getNumLoadedSegments(historicalT11, historicalT12));
+
+    // Run 4: another server added to T2, third replica can now be assigned
+    // nothing is dropped from T1
+    final DruidServer historicalT23 = createHistorical(3, Tier.T2, 10_000);
+    addServer(historicalT23);
+    runCoordinatorCycle();
+
+    verifyNoEvent(Metric.DROPPED_COUNT);
     verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 1L);
 
     loadQueuedSegments();
     Assert.assertEquals(3, getNumLoadedSegments(historicalT21, historicalT22, historicalT23));
     Assert.assertEquals(1, getNumLoadedSegments(historicalT11, historicalT12));
 
-    // Run 4: segment is fully replicated on T2
-    // second replica is now dropped from T1
+    // Run 5: segment is fully replicated on T2, all replicas will now be dropped from T1
     runCoordinatorCycle();
 
     verifyValue(Metric.DROPPED_COUNT, filter(DruidMetrics.TIER, Tier.T1), 1L);
     verifyNoEvent(Metric.ASSIGNED_COUNT);
 
     loadQueuedSegments();
+    Assert.assertEquals(3, getNumLoadedSegments(historicalT21, historicalT22, historicalT23));
     Assert.assertEquals(0, getNumLoadedSegments(historicalT11, historicalT12));
     verifyDatasourceIsFullyLoaded(datasource);
   }
