@@ -20,7 +20,7 @@ import { Button, ButtonGroup, InputGroup, Menu, MenuItem } from '@blueprintjs/co
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { Loader, QueryErrorPane } from '../../../components';
 import {
@@ -34,6 +34,7 @@ import {
 } from '../../../druid-models';
 import {
   executionBackgroundStatusCheck,
+  getClusterCapacity,
   reattachTaskExecution,
   submitTaskQuery,
 } from '../../../helpers';
@@ -46,6 +47,7 @@ import {
   WorkbenchRunningPromises,
 } from '../../../singletons/workbench-running-promises';
 import { ColumnMetadata, DruidError, QueryAction, QueryManager, RowColumn } from '../../../utils';
+import { CapacityAlert } from '../capacity-alert/capacity-alert';
 import { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
 import { ExecutionErrorPane } from '../execution-error-pane/execution-error-pane';
 import { ExecutionProgressPane } from '../execution-progress-pane/execution-progress-pane';
@@ -89,6 +91,7 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
     queryEngines,
     goToIngestion,
   } = props;
+  const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
   const handleQueryStringChange = usePermanentCallback((queryString: string) => {
     onQueryChange(query.changeQueryString(queryString));
   });
@@ -99,7 +102,7 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
     onQueryChange(query.changeQueryString(parsedQuery.apply(queryAction).toString()));
 
     if (shouldAutoRun()) {
-      setTimeout(() => handleRun(false), 20);
+      setTimeout(() => void handleRun(false), 20);
     }
   });
 
@@ -230,11 +233,40 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
     currentQueryInput.goToPosition(position);
   }
 
-  const handleRun = usePermanentCallback((preview: boolean) => {
+  const handleRun = usePermanentCallback(async (preview: boolean) => {
     if (!query.isValid()) return;
 
     WorkbenchHistory.addQueryToHistory(query);
-    queryManager.runQuery(preview ? query.makePreview() : query);
+
+    if (query.getEffectiveEngine() !== 'sql-msq-task') {
+      queryManager.runQuery(query);
+      return;
+    }
+
+    const effectiveQuery = preview ? query.makePreview() : query;
+
+    const capacityInfo = await getClusterCapacity();
+
+    const effectiveMaxNumTasks = effectiveQuery.queryContext.maxNumTasks ?? 2;
+    if (
+      capacityInfo &&
+      capacityInfo.totalTaskSlots - capacityInfo.usedTaskSlots < effectiveMaxNumTasks
+    ) {
+      setAlertElement(
+        <CapacityAlert
+          maxNumTasks={effectiveMaxNumTasks}
+          capacityInfo={capacityInfo}
+          onRun={() => {
+            queryManager.runQuery(effectiveQuery);
+          }}
+          onClose={() => {
+            setAlertElement(undefined);
+          }}
+        />,
+      );
+    } else {
+      queryManager.runQuery(effectiveQuery);
+    }
   });
 
   const collapsed = query.getCollapsed();
@@ -403,6 +435,7 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
           )}
         </>
       )}
+      {alertElement}
     </div>
   );
 });

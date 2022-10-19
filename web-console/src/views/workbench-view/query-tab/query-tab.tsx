@@ -21,7 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import SplitterLayout from 'react-splitter-layout';
 
 import { Loader, QueryErrorPane } from '../../../components';
@@ -34,6 +34,7 @@ import {
 } from '../../../druid-models';
 import {
   executionBackgroundStatusCheck,
+  getClusterCapacity,
   reattachTaskExecution,
   submitTaskQuery,
 } from '../../../helpers';
@@ -55,6 +56,7 @@ import {
   QueryManager,
   RowColumn,
 } from '../../../utils';
+import { CapacityAlert } from '../capacity-alert/capacity-alert';
 import { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
 import { ExecutionErrorPane } from '../execution-error-pane/execution-error-pane';
 import { ExecutionProgressPane } from '../execution-progress-pane/execution-progress-pane';
@@ -99,6 +101,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     runMoreMenu,
     goToIngestion,
   } = props;
+  const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
   const handleQueryStringChange = usePermanentCallback((queryString: string) => {
     if (query.isEmptyQuery() && queryString.split('=====').length > 2) {
       let parsedWorkbenchQuery: WorkbenchQuery | undefined;
@@ -125,7 +128,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     onQueryChange(query.changeQueryString(parsedQuery.apply(queryAction).toString()));
 
     if (shouldAutoRun()) {
-      setTimeout(() => handleRun(false), 20);
+      setTimeout(() => void handleRun(false), 20);
     }
   });
 
@@ -259,11 +262,40 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     currentQueryInput.goToPosition(position);
   }
 
-  const handleRun = usePermanentCallback((preview: boolean) => {
+  const handleRun = usePermanentCallback(async (preview: boolean) => {
     if (!query.isValid()) return;
 
     WorkbenchHistory.addQueryToHistory(query);
-    queryManager.runQuery(preview ? query.makePreview() : query);
+
+    if (query.getEffectiveEngine() !== 'sql-msq-task') {
+      queryManager.runQuery(query);
+      return;
+    }
+
+    const effectiveQuery = preview ? query.makePreview() : query;
+
+    const capacityInfo = await getClusterCapacity();
+
+    const effectiveMaxNumTasks = effectiveQuery.queryContext.maxNumTasks ?? 2;
+    if (
+      capacityInfo &&
+      capacityInfo.totalTaskSlots - capacityInfo.usedTaskSlots < effectiveMaxNumTasks
+    ) {
+      setAlertElement(
+        <CapacityAlert
+          maxNumTasks={effectiveMaxNumTasks}
+          capacityInfo={capacityInfo}
+          onRun={() => {
+            queryManager.runQuery(effectiveQuery);
+          }}
+          onClose={() => {
+            setAlertElement(undefined);
+          }}
+        />,
+      );
+    } else {
+      queryManager.runQuery(effectiveQuery);
+    }
   });
 
   const statsTaskId: string | undefined = execution?.id;
@@ -452,6 +484,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
             ))}
         </div>
       </SplitterLayout>
+      {alertElement}
     </div>
   );
 });
