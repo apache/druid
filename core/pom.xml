@@ -29,7 +29,7 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>0.23.103-SNAPSHOT</version>
+    <version>0.23.106-SNAPSHOT</version>
   </parent>
 
   <properties>

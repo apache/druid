@@ -25,3 +25,4 @@ README
 **/.pmdruleset.xml
 .java-version
 integration-tests/gen-scripts/
+pom.xml.versionsBackup

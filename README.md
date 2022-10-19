@@ -17,6 +17,10 @@
   ~ under the License.
   -->
 
+# IMPORTANT: See [VertaAI/java-services/README.md](https://github.com/VertaAI/java-services/blob/main/README.md)
+
+We use github pacakges as our artifact repository. To publish artifacts you must follow setup instructions in that project.
+
 [![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://druid.apache.org/community/join-slack)
 [![Build Status](https://api.travis-ci.com/apache/druid.svg?branch=master)](https://app.travis-ci.com/github/apache/druid)
 [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/apache/druid.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/apache/druid/context:java)

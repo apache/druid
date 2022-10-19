@@ -17,6 +17,11 @@
   ~ under the License.
   -->
 
+
+# IMPORTANT: See [VertaAI/java-services/README.md](https://github.com/VertaAI/java-services/blob/main/README.md)
+
+We use github pacakges as our artifact repository. To publish artifacts you must follow setup instructions in that project.
+
 # How to Contribute
 
 When submitting a pull request (PR), please use the following guidelines:

@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.23.103-SNAPSHOT</version>
+    <version>0.23.106-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -38,12 +38,12 @@
 
     <distributionManagement>
         <repository>
-            <id>gitub-verta-druid</id>
+            <id>github-verta-druid</id>
             <name>GitHub VertaAI Apache Maven Packages</name>
             <url>https://maven.pkg.github.com/VertaAI/druid</url>
         </repository>
         <snapshotRepository>
-            <id>gitub-verta-druid</id>
+            <id>github-verta-druid</id>
             <name>GitHub VertaAI Apache Maven Packages</name>
             <url>https://maven.pkg.github.com/VertaAI/druid</url>
         </snapshotRepository>
@@ -84,6 +84,7 @@
     </scm>
 
     <properties>
+        <revision>0.23.106-SNAPSHOT</revision>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <java.version>8</java.version>
@@ -224,7 +225,7 @@
         </repository>
 
         <repository>
-            <id>gitub-verta-druid</id>
+            <id>github-verta-druid</id>
             <url>https://maven.pkg.github.com/VertaAI/druid</url>
             <snapshots>
                 <enabled>true</enabled>
@@ -1478,6 +1479,16 @@
                 <executions>
                     <execution>
                         <phase>none</phase>  <!-- TODO: Consider enabling so part of dev flow instead of just CI -->
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                    <id>attach-sources</id>
+                    <phase>package</phase>
+                    <goals><goal>jar-no-fork</goal></goals>
                     </execution>
                 </executions>
             </plugin>
