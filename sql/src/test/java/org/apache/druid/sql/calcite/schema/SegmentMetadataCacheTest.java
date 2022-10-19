@@ -62,7 +62,6 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -280,7 +279,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
             ImmutableSet.of(globalTableJoinable),
             ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
         ),
-        SegmentMetadataCacheConfig.create(),
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new BrokerInternalQueryConfig()
         )
@@ -1085,8 +1084,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
-    // should not be a GlobalTableDataSource for now, because isGlobal is couple with joinability. idealy this will be
-    // changed in the future and we should expect
+    // Should not be a GlobalTableDataSource for now, because isGlobal is couple with joinability. Ideally this will be
+    // changed in the future and we should expect.
     Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
     Assert.assertTrue(fooTable.isBroadcast());
     Assert.assertFalse(fooTable.isJoinable());
