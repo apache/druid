@@ -195,6 +195,57 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   }
 
   @Test
+  public void testTierAddDoesNotCauseUnderReplication()
+  {
+    // disable balancing
+    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 10);
+
+    // historicals = 2(in T1) + 1(in T2)
+    // current replicas = 2(T1)
+    // required replicas = 1(T1) + 1(T2)
+    final DataSegment segment = segments.get(0);
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(Collections.singletonList(segment))
+                             .withDynamicConfig(dynamicConfig)
+                             .withRules(datasource, Load.on(Tier.T1, 1).andOn(Tier.T2, 1).forever())
+                             .withServers(historicalT11, historicalT12, historicalT21)
+                             .build();
+
+    // At the start, T1 has 2 replicas of the segment
+    historicalT11.addDataSegment(segment);
+    historicalT12.addDataSegment(segment);
+
+    // Run 1: Nothing is dropped from T1 but 1 replica is assigned to T2
+    startSimulation(sim);
+    runCoordinatorCycle();
+
+    verifyNoEvent(Metric.DROPPED_COUNT);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 1L);
+
+    // Run 2: Replicas still queued
+    // nothing new is assigned to T2, nothing is dropped from T1
+    runCoordinatorCycle();
+
+    verifyNoEvent(Metric.DROPPED_COUNT);
+    verifyNoEvent(Metric.ASSIGNED_COUNT);
+
+    loadQueuedSegments();
+    Assert.assertEquals(1, getNumLoadedSegments(historicalT21));
+    Assert.assertEquals(2, getNumLoadedSegments(historicalT11, historicalT12));
+
+    // Run 3: total loaded replicas (3) > total required replicas (2)
+    // one replica is dropped from T1
+    runCoordinatorCycle();
+
+    verifyValue(Metric.DROPPED_COUNT, filter(DruidMetrics.TIER, Tier.T1), 1L);
+
+    loadQueuedSegments();
+    Assert.assertEquals(1, getNumLoadedSegments(historicalT21));
+    Assert.assertEquals(1, getNumLoadedSegments(historicalT11, historicalT12));
+  }
+
+  @Test
   public void testImmediateLoadingDoesNotOverassignHistorical()
   {
     // historicals = 1(in T1), size 1 GB

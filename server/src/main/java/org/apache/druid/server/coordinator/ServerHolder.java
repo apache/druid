@@ -23,9 +23,9 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  *
@@ -40,7 +40,18 @@ public class ServerHolder implements Comparable<ServerHolder>
   private int segmentsQueuedForLoad;
   private long sizeOfLoadingSegments;
 
-  private final ConcurrentMap<SegmentId, SegmentState> queuedSegments = new ConcurrentHashMap<>();
+  /**
+   * Contains segments that:
+   * <ul>
+   * <li>were present in the load or drop queue when the current coordinator run
+   * started</li>
+   * <li>have been added to the load or drop queue during the current run</li>
+   * </ul>
+   * Once added, segments are removed from the map only if the operation is
+   * cancelled during the run. Load/drop success or failure that happens during
+   * the run does not update this map.
+   */
+  private final Map<SegmentId, SegmentState> queuedSegments = new HashMap<>();
 
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
   {
@@ -210,11 +221,6 @@ public class ServerHolder implements Comparable<ServerHolder>
     }
     queuedSegments.remove(segment.getId());
     return true;
-  }
-
-  public int getNumberOfSegmentsInQueue()
-  {
-    return peon.getNumberOfSegmentsInQueue();
   }
 
   public boolean isServingSegment(SegmentId segmentId)

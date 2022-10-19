@@ -209,8 +209,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(tier, 2));
     EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
             .andReturn(ImmutableList.of(foreverLoadRule)).atLeastOnce();
-    EasyMock.expect(metadataRuleManager.getAllRules())
-            .andReturn(ImmutableMap.of(dataSource, ImmutableList.of(foreverLoadRule))).atLeastOnce();
 
     metadataRuleManager.stop();
     EasyMock.expectLastCall().once();
@@ -366,8 +364,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
             .andReturn(ImmutableList.of(hotTier, coldTier)).atLeastOnce();
-    EasyMock.expect(metadataRuleManager.getAllRules())
-            .andReturn(ImmutableMap.of(dataSource, ImmutableList.of(hotTier, coldTier))).atLeastOnce();
 
     EasyMock.expect(serverInventoryView.getInventory())
             .andReturn(ImmutableList.of(hotServer, coldServer))
@@ -525,8 +521,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     final Rule broadcastDistributionRule = new ForeverBroadcastDistributionRule();
     EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
             .andReturn(ImmutableList.of(broadcastDistributionRule)).atLeastOnce();
-    EasyMock.expect(metadataRuleManager.getAllRules())
-            .andReturn(ImmutableMap.of(dataSource, ImmutableList.of(broadcastDistributionRule))).atLeastOnce();
 
     EasyMock.expect(serverInventoryView.getInventory())
             .andReturn(ImmutableList.of(hotServer, coldServer, brokerServer1, brokerServer2, peonServer))

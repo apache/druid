@@ -23,16 +23,13 @@ import com.google.common.collect.Sets;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -113,38 +110,112 @@ public class SegmentLoader
 
   /**
    * Queues load or drop of replicas of the given segment to achieve the
-   * target replication level in all the tiers.
+   * target replication level on all the tiers.
    */
   public void updateReplicas(DataSegment segment, Map<String, Integer> tierToReplicaCount)
   {
-    // Handle every target tier
-    tierToReplicaCount.forEach((tier, numReplicas) -> {
-      updateReplicasOnTargetTier(segment, tier, tierToReplicaCount.get(tier));
-      stats.addToTieredStat(CoordinatorStats.REQUIRED_CAPACITY, tier, segment.getSize() * numReplicas);
+    // Identify empty tiers and determine total required replicas
+    final AtomicInteger requiredTotalReplicas = new AtomicInteger(0);
+    final Set<String> allTiers = Sets.newHashSet(cluster.getTierNames());
+    tierToReplicaCount.forEach((tier, requiredReplicas) -> {
+      reportTierCapacityStats(segment, requiredReplicas, tier);
+      if (!allTiers.contains(tier)) {
+        emptyTiers.add(tier);
+      } else {
+        requiredTotalReplicas.addAndGet(requiredReplicas);
+      }
     });
 
-    // Find the total level of replication required on target tiers
-    final int requiredTotalReplication = tierToReplicaCount.values().stream()
-                                                           .reduce(0, Integer::sum);
+    // Get the current status of this segment in the cluster
+    final SegmentClusterStatus segmentStatus = new SegmentClusterStatus(segment, cluster);
+    final int totalOverReplication =
+        segmentStatus.getTotalLoadedReplicas() - requiredTotalReplicas.get();
 
-    // To ensure that segment read concurrency does not suffer during a tier shift,
-    // drop old replicas while always maintaining total required replication
-    int loadedReplicas = replicantLookup.getLoadedReplicants(segment.getId());
-    if (loadedReplicas <= requiredTotalReplication) {
-      return;
+    // Update replicas in every tier
+    int totalDropsQueued = 0;
+    for (String tier : allTiers) {
+      totalDropsQueued += updateReplicasInTier(
+          segment,
+          tier,
+          segmentStatus,
+          tierToReplicaCount.getOrDefault(tier, 0),
+          totalOverReplication - totalDropsQueued
+      );
+    }
+  }
+
+  /**
+   * Queues load or drop operations on this tier based on the required
+   * number of replicas and the current state.
+   * <p>
+   * The {@code maxReplicasToDrop} helps to maintain the required level of
+   * replication in the cluster. This ensures that segment read concurrency does
+   * not suffer during a tier shift or load rule change.
+   * <p>
+   * Returns the number of new drop operations queued on this tier.
+   */
+  private int updateReplicasInTier(
+      DataSegment segment,
+      String tier,
+      SegmentClusterStatus segmentStatus,
+      int requiredReplicas,
+      int maxReplicasToDrop
+  )
+  {
+    final int projectedReplicas = segmentStatus.getProjectedReplicas(tier);
+
+    // Cancel all moves in this tier if it does not need to have replicas
+    if (requiredReplicas == 0) {
+      int cancelledMoves =
+          cancelOperations(0, SegmentState.MOVING_TO, segment, tier, segmentStatus);
+      stats.addToTieredStat(CoordinatorStats.CANCELLED_MOVES, tier, cancelledMoves);
     }
 
-    // If there are more replicas than required, try to drop from unneeded tiers
-    final Set<String> allTiers = Sets.newHashSet(cluster.getTierNames());
-    allTiers.removeAll(tierToReplicaCount.keySet());
-    final Iterator<String> unneededTiers = allTiers.iterator();
+    // Cancel drops and queue loads if the projected count is below the requirement
+    if (projectedReplicas < requiredReplicas) {
+      int replicaDeficit = requiredReplicas - projectedReplicas;
+      int cancelledDrops =
+          cancelOperations(replicaDeficit, SegmentState.DROPPING, segment, tier, segmentStatus);
 
-    int numDropsQueued = 0;
-    final int numReplicasToDrop = loadedReplicas - requiredTotalReplication;
-    while (numReplicasToDrop > numDropsQueued && unneededTiers.hasNext()) {
-      numDropsQueued +=
-          dropReplicasFromUnneededTier(numReplicasToDrop - numDropsQueued, segment, unneededTiers.next());
+      // Cancelled drops can be counted as loaded replicas, thus reducing deficit
+      int numReplicasToLoad = replicaDeficit - cancelledDrops;
+      if (numReplicasToLoad > 0) {
+        boolean isFirstLoadOnTier = segmentStatus.getLoadedReplicas(tier) + cancelledDrops < 1;
+        int numLoadsQueued = loadReplicas(numReplicasToLoad, segment, tier, segmentStatus, isFirstLoadOnTier);
+        stats.addToTieredStat(CoordinatorStats.ASSIGNED_COUNT, tier, numLoadsQueued);
+      }
     }
+
+    // Cancel loads and queue drops if the projected count exceeds the requirement
+    if (projectedReplicas > requiredReplicas) {
+      int replicaSurplus = projectedReplicas - requiredReplicas;
+      int cancelledLoads =
+          cancelOperations(replicaSurplus, SegmentState.LOADING, segment, tier, segmentStatus);
+      stats.addToTieredStat(CoordinatorStats.CANCELLED_LOADS, tier, cancelledLoads);
+
+      int numReplicasToDrop = Math.min(replicaSurplus - cancelledLoads, maxReplicasToDrop);
+      if (numReplicasToDrop > 0) {
+        int dropsQueuedOnTier = dropReplicas(numReplicasToDrop, segment, tier, segmentStatus);
+        stats.addToTieredStat(CoordinatorStats.DROPPED_COUNT, tier, dropsQueuedOnTier);
+        return dropsQueuedOnTier;
+      }
+    }
+
+    return 0;
+  }
+
+  private void reportTierCapacityStats(DataSegment segment, int requiredReplicas, String tier)
+  {
+    stats.accumulateMaxTieredStat(
+        CoordinatorStats.MAX_REPLICATION_FACTOR,
+        tier,
+        requiredReplicas
+    );
+    stats.addToTieredStat(
+        CoordinatorStats.REQUIRED_CAPACITY,
+        tier,
+        segment.getSize() * requiredReplicas
+    );
   }
 
   /**
@@ -237,191 +308,21 @@ public class SegmentLoader
   }
 
   /**
-   * Loads or drops the replicas of a segment on a target tier, i.e. a tier
-   * that specifies non-zero replication in the matched load rule.
-   */
-  private void updateReplicasOnTargetTier(DataSegment segment, String tier, int targetCount)
-  {
-    // Do not proceed if tier is empty, send an alert for empty tiers later
-    if (emptyTiers.contains(tier)) {
-      return;
-    }
-
-    final Map<SegmentState, List<ServerHolder>> serversByState = getSegmentStateInTier(segment, tier);
-    if (serversByState.isEmpty()) {
-      emptyTiers.add(tier);
-      return;
-    }
-
-    final int currentCount = serversByState.get(SegmentState.LOADED).size()
-                             + serversByState.get(SegmentState.LOADING).size();
-    if (targetCount == currentCount) {
-      return;
-    }
-
-    if (targetCount > currentCount) {
-      cancelDropOrLoadReplicas(targetCount - currentCount, segment, tier, serversByState);
-    } else {
-      cancelLoadOrDropReplicas(currentCount - targetCount, segment, tier, serversByState);
-    }
-  }
-
-  private Map<SegmentState, List<ServerHolder>> getSegmentStateInTier(DataSegment segment, String tier)
-  {
-    final Set<ServerHolder> historicals = cluster.getHistoricalsByTier(tier);
-    if (historicals == null || historicals.isEmpty()) {
-      return Collections.emptyMap();
-    }
-
-    final Map<SegmentState, List<ServerHolder>> serversByState = new EnumMap<>(SegmentState.class);
-    Arrays.stream(SegmentState.values())
-          .forEach(state -> serversByState.put(state, new ArrayList<>()));
-    historicals.forEach(
-        serverHolder -> serversByState
-            .get(serverHolder.getSegmentState(segment))
-            .add(serverHolder)
-    );
-    return serversByState;
-  }
-
-  /**
-   * Drops replicas of the segment from an unneeded tier, i.e. a tier that
-   * specifies no replication in the matched load rule.
-   */
-  private int dropReplicasFromUnneededTier(int numReplicasToDrop, DataSegment segment, String tier)
-  {
-    final Map<SegmentState, List<ServerHolder>> serversByState = getSegmentStateInTier(segment, tier);
-    if (serversByState.isEmpty()) {
-      return 0;
-    }
-
-    // Cancel all in-progress balancing moves on this tier, if any
-    final List<ServerHolder> movingServers = serversByState.get(SegmentState.MOVING_TO);
-    if (!movingServers.isEmpty()) {
-      int cancelledMoves =
-          cancelOperations(SegmentState.MOVING_TO, segment, movingServers, movingServers.size());
-      stats.addToTieredStat(CoordinatorStats.CANCELLED_MOVES, tier, cancelledMoves);
-    }
-
-    // Cancel all in-progress loads on this tier, if any
-    final List<ServerHolder> loadingServers = serversByState.get(SegmentState.LOADING);
-    if (!loadingServers.isEmpty()) {
-      int cancelledLoads =
-          cancelOperations(SegmentState.LOADING, segment, loadingServers, loadingServers.size());
-      stats.addToTieredStat(CoordinatorStats.CANCELLED_LOADS, tier, cancelledLoads);
-    }
-
-    // Drop as many replicas as required from this tier
-    int successfullyQueuedDrops =
-        dropReplicasDecommissioningFirst(numReplicasToDrop, segment, serversByState.get(SegmentState.LOADED));
-    stats.addToTieredStat(CoordinatorStats.DROPPED_COUNT, tier, successfullyQueuedDrops);
-    return successfullyQueuedDrops;
-  }
-
-  private void cancelDropOrLoadReplicas(
-      int numReplicasToLoad,
-      DataSegment segment,
-      String tier,
-      Map<SegmentState, List<ServerHolder>> serversByState
-  )
-  {
-    // Try to cancel in-progress drop operations
-    final int cancelledDrops = cancelOperations(
-        SegmentState.DROPPING,
-        segment,
-        serversByState.get(SegmentState.DROPPING),
-        numReplicasToLoad
-    );
-
-    // Successfully cancelled drops can be counted as loaded replicas
-    numReplicasToLoad -= cancelledDrops;
-    final int totalReplicas = serversByState.get(SegmentState.LOADED).size()
-                              + serversByState.get(SegmentState.LOADING).size()
-                              + cancelledDrops;
-    if (numReplicasToLoad > 0) {
-      int successfulLoadsQueued = loadReplicas(
-          numReplicasToLoad,
-          segment,
-          serversByState.get(SegmentState.NONE),
-          totalReplicas < 1
-      );
-
-      stats.addToTieredStat(CoordinatorStats.ASSIGNED_COUNT, tier, successfulLoadsQueued);
-
-      if (numReplicasToLoad > successfulLoadsQueued) {
-        stats.addToTieredStat(CoordinatorStats.ASSIGN_SKIP_COUNT, tier, numReplicasToLoad - successfulLoadsQueued);
-        log.debug(
-            "Queued only %d of %d loads of segment [%s] on tier [%s] due to throttling or failures.",
-            successfulLoadsQueued,
-            numReplicasToLoad,
-            segment.getId(),
-            tier
-        );
-      }
-    }
-  }
-
-  /**
-   * Cancels in-progress loads of this segment and queues new drops as required.
-   *
-   * @param numReplicasToDrop Total required number of cancelled load operations
-   *                          and queued drop operations.
-   */
-  private void cancelLoadOrDropReplicas(
-      int numReplicasToDrop,
-      DataSegment segment,
-      String tier,
-      Map<SegmentState, List<ServerHolder>> serversByState
-  )
-  {
-    // Try to cancel in-progress loads
-    final int cancelledLoads;
-    final List<ServerHolder> loadingServers = serversByState.get(SegmentState.LOADING);
-    if (loadingServers != null && !loadingServers.isEmpty()) {
-      cancelledLoads =
-          cancelOperations(SegmentState.LOADING, segment, loadingServers, numReplicasToDrop);
-      stats.addToTieredStat(CoordinatorStats.CANCELLED_LOADS, tier, cancelledLoads);
-    } else {
-      cancelledLoads = 0;
-    }
-
-    // Successfully cancelled loads can be counted as drops
-    numReplicasToDrop -= cancelledLoads;
-    if (numReplicasToDrop > 0) {
-      final int successfulDropsQueued = dropReplicasDecommissioningFirst(
-          numReplicasToDrop,
-          segment,
-          serversByState.get(SegmentState.LOADED)
-      );
-      stats.addToTieredStat(CoordinatorStats.DROPPED_COUNT, tier, successfulDropsQueued);
-
-      if (numReplicasToDrop > successfulDropsQueued) {
-        stats.addToTieredStat(CoordinatorStats.DROP_SKIP_COUNT, tier, 1L);
-        log.debug(
-            "Queued only %d of %d drops of segment [%s] on tier [%s] due to throttling or failures.",
-            successfulDropsQueued,
-            numReplicasToDrop,
-            segment.getId(),
-            tier
-        );
-      }
-    }
-  }
-
-  /**
    * Queues drop of {@code numToDrop} replicas of the segment from a tier.
    * Tries to drop replicas first from decommissioning servers and then from
    * active servers.
    * <p>
    * Returns the number of successfully queued drop operations.
    */
-  private int dropReplicasDecommissioningFirst(
+  private int dropReplicas(
       int numToDrop,
       DataSegment segment,
-      List<ServerHolder> eligibleServers
+      String tier,
+      SegmentClusterStatus segmentStatus
   )
   {
-    if (eligibleServers == null || eligibleServers.isEmpty()) {
+    final List<ServerHolder> eligibleServers = segmentStatus.getServers(tier, SegmentState.LOADED);
+    if (eligibleServers.isEmpty() || numToDrop <= 0) {
       return 0;
     }
 
@@ -439,7 +340,7 @@ public class SegmentLoader
 
     // Drop as many replicas as possible from decommissioning servers
     int remainingNumToDrop = numToDrop;
-    int numDropsQueued = dropReplicas(remainingNumToDrop, segment, eligibleDyingServers.iterator());
+    int numDropsQueued = dropReplicasFromServers(remainingNumToDrop, segment, eligibleDyingServers.iterator());
 
     // Drop more replicas if required from active servers
     if (numToDrop > numDropsQueued) {
@@ -448,7 +349,18 @@ public class SegmentLoader
           eligibleLiveServers.size() >= remainingNumToDrop
           ? eligibleLiveServers.iterator()
           : strategy.pickServersToDrop(segment, eligibleLiveServers);
-      numDropsQueued += dropReplicas(remainingNumToDrop, segment, serverIterator);
+      numDropsQueued += dropReplicasFromServers(remainingNumToDrop, segment, serverIterator);
+    }
+
+    if (numToDrop > numDropsQueued) {
+      stats.addToTieredStat(CoordinatorStats.DROP_SKIP_COUNT, tier, numToDrop - numDropsQueued);
+      log.debug(
+          "Queued only %d of %d drops of segment [%s] on tier [%s] due to failures.",
+          numDropsQueued,
+          numToDrop,
+          segment.getId(),
+          tier
+      );
     }
 
     return numDropsQueued;
@@ -458,7 +370,7 @@ public class SegmentLoader
    * Queues drop of {@code numToDrop} replicas of the segment from the servers.
    * Returns the number of successfully queued drop operations.
    */
-  private int dropReplicas(int numToDrop, DataSegment segment, Iterator<ServerHolder> serverIterator)
+  private int dropReplicasFromServers(int numToDrop, DataSegment segment, Iterator<ServerHolder> serverIterator)
   {
     int numDropsQueued = 0;
     while (numToDrop > numDropsQueued && serverIterator.hasNext()) {
@@ -471,20 +383,19 @@ public class SegmentLoader
 
   /**
    * Queues load of {@code numToLoad} replicas of the segment on a tier.
-   *
-   * @return The number of successfully queued load operations.
    */
   private int loadReplicas(
       int numToLoad,
       DataSegment segment,
-      List<ServerHolder> candidateServers,
+      String tier,
+      SegmentClusterStatus segmentStatus,
       boolean isFirstLoadOnTier
   )
   {
     final List<ServerHolder> eligibleServers =
-        candidateServers.stream()
-                        .filter(server -> server.canLoadSegment(segment))
-                        .collect(Collectors.toList());
+        segmentStatus.getServers(tier, SegmentState.NONE).stream()
+                     .filter(server -> server.canLoadSegment(segment))
+                     .collect(Collectors.toList());
     if (eligibleServers.isEmpty()) {
       log.warn("No eligible server to load replica of segment [%s]", segment.getId());
       return 0;
@@ -504,16 +415,34 @@ public class SegmentLoader
           stateManager.loadSegment(segment, serverIterator.next(), isFirstLoadOnTier, replicationThrottler);
       numLoadsQueued += queueSuccess ? 1 : 0;
     }
+
+    if (numToLoad > numLoadsQueued) {
+      stats.addToTieredStat(CoordinatorStats.ASSIGN_SKIP_COUNT, tier, numToLoad - numLoadsQueued);
+      log.debug(
+          "Queued only %d of %d loads of segment [%s] on tier [%s] due to throttling or failures.",
+          numLoadsQueued,
+          numToLoad,
+          segment.getId(),
+          tier
+      );
+    }
+
     return numLoadsQueued;
   }
 
   private int cancelOperations(
+      int maxNumToCancel,
       SegmentState state,
       DataSegment segment,
-      List<ServerHolder> servers,
-      int maxNumToCancel
+      String tier,
+      SegmentClusterStatus segmentStatus
   )
   {
+    final List<ServerHolder> servers = segmentStatus.getServers(tier, state);
+    if (servers.isEmpty() || maxNumToCancel <= 0) {
+      return 0;
+    }
+
     int numCancelled = 0;
     for (int i = 0; i < servers.size() && numCancelled < maxNumToCancel; ++i) {
       numCancelled += stateManager.cancelOperation(state, segment, servers.get(i)) ? 1 : 0;

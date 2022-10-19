@@ -60,6 +60,7 @@ public class CoordinatorStats
 
   public static final String REQUIRED_CAPACITY = "requiredCapacity";
   public static final String TOTAL_CAPACITY = "totalCapacity";
+  public static final String MAX_REPLICATION_FACTOR = "maxReplicationFactor";
 
   private final Map<String, Object2LongOpenHashMap<String>> perTierStats;
   private final Map<String, Object2LongOpenHashMap<String>> perDataSourceStats;

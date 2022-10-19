@@ -32,7 +32,6 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.concurrent.TimeUnit;
@@ -46,7 +45,6 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
   private static final Logger log = new Logger(EmitClusterStatsAndMetrics.class);
 
   public static final String TOTAL_HISTORICAL_COUNT = "totalHistoricalCount";
-  public static final String MAX_REPLICATION_FACTOR = "maxReplicationFactor";
 
   private final DruidCoordinator coordinator;
   private final String groupName;
@@ -286,28 +284,10 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
       }
     }
 
-    params.getDatabaseRuleManager()
-          .getAllRules()
-          .values()
-          .forEach(
-              rules -> rules.forEach(
-                  rule -> {
-                    if (rule instanceof LoadRule) {
-                      ((LoadRule) rule).getTieredReplicants()
-                                       .forEach(
-                                           (tier, replica) -> stats.accumulateMaxTieredStat(
-                                               MAX_REPLICATION_FACTOR,
-                                               tier,
-                                               replica
-                                           ));
-                    }
-                  }
-              ));
-
     emitTieredStats("tier/required/capacity", stats, CoordinatorStats.REQUIRED_CAPACITY);
     emitTieredStats("tier/total/capacity", stats, CoordinatorStats.TOTAL_CAPACITY);
 
-    emitTieredStats("tier/replication/factor", stats, MAX_REPLICATION_FACTOR);
+    emitTieredStats("tier/replication/factor", stats, CoordinatorStats.MAX_REPLICATION_FACTOR);
     emitTieredStats("tier/historical/count", stats, TOTAL_HISTORICAL_COUNT);
 
     // Emit coordinator metrics
