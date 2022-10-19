@@ -21,9 +21,7 @@ package org.apache.druid.msq.sql;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.common.guava.FutureUtils;
@@ -43,13 +41,13 @@ import org.apache.druid.msq.indexing.MSQDestination;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.TaskReportMSQDestination;
+import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -64,16 +62,11 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class MSQTaskQueryMaker implements QueryMaker
@@ -94,18 +87,6 @@ public class MSQTaskQueryMaker implements QueryMaker
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
   private final List<Pair<Integer, String>> fieldMapping;
-
-  private static final Set<String> SENSISTIVE_JSON_KEYS = ImmutableSet.of("accessKeyId", "secretAccessKey");
-  private static final Set<Pattern> SENSITIVE_KEYS_REGEX_PATTERNS = SENSISTIVE_JSON_KEYS.stream()
-                                                                                        .map(sensitiveKey ->
-                                                                                                 Pattern.compile(
-                                                                                                     StringUtils.format(
-                                                                                                         "\\\\\"%s\\\\\"(\\s)*:(\\s)*(?<sensitive>\\{(\\S)+?\\})",
-                                                                                                         sensitiveKey
-                                                                                                     ),
-                                                                                                     Pattern.CASE_INSENSITIVE
-                                                                                                 ))
-                                                                                        .collect(Collectors.toSet());
 
 
   MSQTaskQueryMaker(
@@ -236,7 +217,7 @@ public class MSQTaskQueryMaker implements QueryMaker
           MultiStageQueryContext.getSortOrder(queryContext)
       );
 
-      validateSegmentSortOrder(
+      MSQTaskQueryMakerUtils.validateSegmentSortOrder(
           segmentSortOrder,
           fieldMapping.stream().map(f -> f.right).collect(Collectors.toList())
       );
@@ -272,7 +253,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
         querySpec,
-        maskSensitiveJsonKeys(plannerContext.getSql()),
+        MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(plannerContext.getSql()),
         plannerContext.queryContextMap(),
         sqlTypeNames,
         null
@@ -299,37 +280,4 @@ public class MSQTaskQueryMaker implements QueryMaker
     return retVal;
   }
 
-  @VisibleForTesting
-  static String maskSensitiveJsonKeys(String taskJson)
-  {
-    StringBuilder maskedJson = new StringBuilder(taskJson);
-    for (Pattern p : SENSITIVE_KEYS_REGEX_PATTERNS) {
-      Matcher m = p.matcher(taskJson);
-      while (m.find()) {
-        String sensitiveData = m.group("sensitive");
-        int start = maskedJson.indexOf(sensitiveData);
-        int end = start + sensitiveData.length();
-        maskedJson.replace(start, end, "<masked>");
-      }
-    }
-    return maskedJson.toString();
-  }
-
-  @VisibleForTesting
-  static void validateSegmentSortOrder(final List<String> sortOrder, final Collection<String> allOutputColumns)
-  {
-    final Set<String> allOutputColumnsSet = new HashSet<>(allOutputColumns);
-
-    for (final String column : sortOrder) {
-      if (!allOutputColumnsSet.contains(column)) {
-        throw new IAE("Column [%s] in segment sort order does not appear in the query output", column);
-      }
-    }
-
-    if (sortOrder.size() > 0
-        && allOutputColumns.contains(ColumnHolder.TIME_COLUMN_NAME)
-        && !ColumnHolder.TIME_COLUMN_NAME.equals(sortOrder.get(0))) {
-      throw new IAE("Segment sort order must begin with column [%s]", ColumnHolder.TIME_COLUMN_NAME);
-    }
-  }
 }

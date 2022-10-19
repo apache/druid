@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.sql;
+package org.apache.druid.msq.util;
 
 import com.google.common.collect.ImmutableList;
 import org.junit.Assert;
@@ -25,26 +25,26 @@ import org.junit.Test;
 
 import java.util.Collections;
 
-public class MSQTaskQueryMakerTest
+public class MSQTaskQueryMakerUtilsTest
 {
   @Test
   public void testValidateSegmentSortOrder()
   {
     // These are all OK, so validateSegmentSortOrder does nothing.
-    MSQTaskQueryMaker.validateSegmentSortOrder(Collections.emptyList(), ImmutableList.of("__time", "a", "b"));
-    MSQTaskQueryMaker.validateSegmentSortOrder(ImmutableList.of("__time"), ImmutableList.of("__time", "a", "b"));
-    MSQTaskQueryMaker.validateSegmentSortOrder(ImmutableList.of("__time", "b"), ImmutableList.of("__time", "a", "b"));
-    MSQTaskQueryMaker.validateSegmentSortOrder(ImmutableList.of("b"), ImmutableList.of("a", "b"));
+    MSQTaskQueryMakerUtils.validateSegmentSortOrder(Collections.emptyList(), ImmutableList.of("__time", "a", "b"));
+    MSQTaskQueryMakerUtils.validateSegmentSortOrder(ImmutableList.of("__time"), ImmutableList.of("__time", "a", "b"));
+    MSQTaskQueryMakerUtils.validateSegmentSortOrder(ImmutableList.of("__time", "b"), ImmutableList.of("__time", "a", "b"));
+    MSQTaskQueryMakerUtils.validateSegmentSortOrder(ImmutableList.of("b"), ImmutableList.of("a", "b"));
 
     // These are not OK.
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> MSQTaskQueryMaker.validateSegmentSortOrder(ImmutableList.of("c"), ImmutableList.of("a", "b"))
+        () -> MSQTaskQueryMakerUtils.validateSegmentSortOrder(ImmutableList.of("c"), ImmutableList.of("a", "b"))
     );
 
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> MSQTaskQueryMaker.validateSegmentSortOrder(
+        () -> MSQTaskQueryMakerUtils.validateSegmentSortOrder(
             ImmutableList.of("b", "__time"),
             ImmutableList.of("__time", "a", "b")
         )
@@ -55,7 +55,7 @@ public class MSQTaskQueryMakerTest
   public void maskSensitiveJsonKeys()
   {
     String json = "\"REPLACE INTO table OVERWRITE ALL\\nWITH ext AS (SELECT *\\nFROM TABLE(\\n  EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"},\\\"secretAccessKey\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"}}}',\\n    '{\\\"type\\\":\\\"json\\\"}',\\n    '[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\nSELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country FROM ext\\nPARTITIONED BY DAY\"";
-    String maskedJson = MSQTaskQueryMaker.maskSensitiveJsonKeys(json);
+    String maskedJson = MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(json);
     Assert.assertEquals(
         "\"REPLACE INTO table OVERWRITE ALL\\nWITH ext AS (SELECT *\\nFROM TABLE(\\n  EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":<masked>,\\\"secretAccessKey\\\":<masked>}}',\\n    '{\\\"type\\\":\\\"json\\\"}',\\n    '[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\nSELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country FROM ext\\nPARTITIONED BY DAY\"",
         maskedJson
