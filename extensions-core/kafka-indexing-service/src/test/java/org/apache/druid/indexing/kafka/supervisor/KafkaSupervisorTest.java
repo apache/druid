@@ -215,6 +215,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskRunner = createMock(TaskRunner.class);
     indexerMetadataStorageCoordinator = createMock(IndexerMetadataStorageCoordinator.class);
     taskClient = createMock(KafkaIndexTaskClient.class);
+    EasyMock.expect(taskClient.resumeAsync(EasyMock.anyString())).andReturn(Futures.immediateFuture(true)).anyTimes();
     taskQueue = createMock(TaskQueue.class);
 
     topic = getTopic();
@@ -3929,6 +3930,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   public void testResumeAllActivelyReadingTasks() throws Exception
   {
     supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
+    // Mock with task based setup for resumeAsync
+    EasyMock.reset(taskClient);
     addSomeEvents(100);
 
     KafkaIndexTask readingTask = createKafkaIndexTask("readingTask",
