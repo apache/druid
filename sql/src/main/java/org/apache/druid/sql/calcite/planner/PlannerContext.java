@@ -33,8 +33,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
@@ -48,6 +48,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -61,14 +62,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class PlannerContext
 {
-  // query context keys
-  public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
+  // Query context keys
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
-  public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
-  // This context parameter is an undocumented parameter, used internally, to allow the web console to
-  // apply a limit without having to rewrite the SQL query.
+  /**
+   * Undocumented context key, used internally, to allow the web console to
+   * apply a limit without having to rewrite the SQL query.
+   */
   public static final String CTX_SQL_OUTER_LIMIT = "sqlOuterLimit";
 
   // DataContext keys
@@ -82,7 +83,7 @@ public class PlannerContext
   private final DateTime localNow;
   private final DruidSchemaCatalog rootSchema;
   private final SqlEngine engine;
-  private final QueryContext queryContext;
+  private final Map<String, Object> queryContext;
   private final String sqlQueryId;
   private final boolean stringifyArrays;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
@@ -110,7 +111,8 @@ public class PlannerContext
       final boolean stringifyArrays,
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
-      final QueryContext queryContext
+      final Map<String, Object> queryContext,
+      final Set<String> contextKeys
   )
   {
     this.sql = sql;
@@ -124,7 +126,7 @@ public class PlannerContext
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
 
-    String sqlQueryId = (String) this.queryContext.get(CTX_SQL_QUERY_ID);
+    String sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
     if (Strings.isNullOrEmpty(sqlQueryId)) {
       sqlQueryId = UUID.randomUUID().toString();
@@ -140,14 +142,15 @@ public class PlannerContext
       final PlannerConfig plannerConfig,
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
-      final QueryContext queryContext
+      final Map<String, Object> queryContext,
+      final Set<String> contextKeys
   )
   {
     final DateTime utcNow;
     final DateTimeZone timeZone;
     final boolean stringifyArrays;
 
-    final Object stringifyParam = queryContext.get(CTX_SQL_STRINGIFY_ARRAYS);
+    final Object stringifyParam = queryContext.get(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS);
     final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
     final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
 
@@ -179,7 +182,8 @@ public class PlannerContext
         stringifyArrays,
         rootSchema,
         engine,
-        queryContext
+        queryContext,
+        contextKeys
     );
   }
 
@@ -219,9 +223,22 @@ public class PlannerContext
     return rootSchema.getResourceType(schema, resourceName);
   }
 
-  public QueryContext getQueryContext()
+  /**
+   * Return the query context as a mutable map. Use this form when
+   * modifying the context during planning.
+   */
+  public Map<String, Object> queryContextMap()
   {
     return queryContext;
+  }
+
+  /**
+   * Return the query context as an immutable object. Use this form
+   * when querying the context as it provides type-safe accessors.
+   */
+  public QueryContext queryContext()
+  {
+    return QueryContext.of(queryContext);
   }
 
   public boolean isStringifyArrays()

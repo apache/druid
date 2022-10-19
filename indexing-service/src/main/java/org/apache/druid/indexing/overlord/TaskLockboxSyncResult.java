@@ -17,33 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.indexing.overlord;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.common.task.Task;
 
-public class BadQueryContextException extends BadQueryException
+import java.util.Set;
+
+/**
+ * Result of TaskLockbox#syncFromStorage()
+ * Contains tasks which need to be forcefully failed to let the overlord become the leader
+ */
+class TaskLockboxSyncResult
 {
-  public static final String ERROR_CODE = "Query context parse failed";
-  public static final String ERROR_CLASS = BadQueryContextException.class.getName();
+  private final Set<Task> tasksToFail;
 
-  public BadQueryContextException(Exception e)
+  TaskLockboxSyncResult(Set<Task> tasksToFail)
   {
-    this(ERROR_CODE, e.getMessage(), ERROR_CLASS);
+    this.tasksToFail = tasksToFail;
   }
 
-  public BadQueryContextException(String msg)
+  /**
+   * Return set of tasks which need to be forcefully failed due to lock re-acquisition failure
+   */
+  Set<Task> getTasksToFail()
   {
-    this(ERROR_CODE, msg, ERROR_CLASS);
-  }
-
-  @JsonCreator
-  private BadQueryContextException(
-      @JsonProperty("error") String errorCode,
-      @JsonProperty("errorMessage") String errorMessage,
-      @JsonProperty("errorClass") String errorClass
-  )
-  {
-    super(errorCode, errorMessage, errorClass);
+    return tasksToFail;
   }
 }
