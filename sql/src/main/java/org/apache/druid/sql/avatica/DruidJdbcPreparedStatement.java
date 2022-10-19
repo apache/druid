@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.PreparedStatement;
+import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
 import java.util.List;
@@ -50,10 +51,11 @@ public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
       final String connectionId,
       final int statementId,
       final PreparedStatement stmt,
-      final long maxRowCount
+      final long maxRowCount,
+      final ResultFetcherFactory fetcherFactory
   )
   {
-    super(connectionId, statementId);
+    super(connectionId, statementId, fetcherFactory);
     this.sqlStatement = stmt;
     this.maxRowCount = maxRowCount;
   }
@@ -98,7 +100,7 @@ public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
     closeResultSet();
     try {
       DirectStatement directStmt = sqlStatement.execute(parameters);
-      resultSet = new DruidJdbcResultSet(this, directStmt, maxRowCount);
+      resultSet = new DruidJdbcResultSet(this, directStmt, maxRowCount, fetcherFactory);
       resultSet.execute();
     }
     // Failure to execute does not close the prepared statement.
