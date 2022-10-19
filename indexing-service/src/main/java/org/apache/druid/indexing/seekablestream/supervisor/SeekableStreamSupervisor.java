@@ -1951,14 +1951,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     verifyAndMergeCheckpoints(taskGroupsToVerify.values());
 
+    // A pause from the previous Overlord's supervisor, immediately before leader change,
+    // can lead to tasks being in a state where they are active but do not read.
     resumeAllActivelyReadingTasks();
   }
 
   /**
-   * A pause from the previous Overlord's supervisor, immediately before leader change,
-   * can lead to tasks being in a state where they are active but do not read.
-   * If this is the first run, resume all existing active tasks to be safe
-   *
+   * If this is the first run, resume all tasks in the set of activelyReadingTaskGroups
+   * Paused tasks will be resumed
+   * Other tasks in this set are not affected adversely by the resume operation
    */
   private void resumeAllActivelyReadingTasks()
   {
