@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
@@ -30,12 +29,10 @@ import org.apache.druid.collections.spatial.RTree;
 import org.apache.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.StringEncodingStrategies;
-import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ByteBufferWriter;
@@ -76,15 +73,6 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
   )
   {
     super(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress, closer);
-    if (capabilities.hasSpatialIndexes()) {
-      Preconditions.checkArgument(
-          StringEncodingStrategy.UTF8.equals(indexSpec.getStringDictionaryEncoding().getType()),
-          StringUtils.format(
-              "Spatial indexes are incompatible with [%s] encoded dictionaries",
-              indexSpec.getStringDictionaryEncoding().getType()
-          )
-      );
-    }
   }
 
   @Override

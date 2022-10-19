@@ -53,6 +53,9 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
   private final int bucketSize;
   private final ByteOrder byteOrder;
   private final byte[][] bucketBuffer;
+  private final ByteBuffer getOffsetBuffer;
+  private final int div;
+
   @Nullable
   private byte[] prevObject = null;
   @Nullable
@@ -65,7 +68,6 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
   private boolean isClosed = false;
   private boolean hasNulls = false;
 
-
   public FrontCodedIndexedWriter(
       SegmentWriteOutMedium segmentWriteOutMedium,
       ByteOrder byteOrder,
@@ -77,6 +79,8 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
     this.bucketSize = bucketSize;
     this.byteOrder = byteOrder;
     this.bucketBuffer = new byte[bucketSize][];
+    this.getOffsetBuffer = ByteBuffer.allocate(Integer.BYTES).order(byteOrder);
+    this.div = Integer.numberOfTrailingZeros(bucketSize);
   }
 
   @Override
@@ -169,6 +173,48 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
   public boolean isSorted()
   {
     return true;
+  }
+
+  @Nullable
+  @Override
+  public byte[] get(int index) throws IOException
+  {
+    if (index == 0 && hasNulls) {
+      return null;
+    }
+    final int adjustedIndex = hasNulls ? index - 1 : index;
+    final int relativeIndex = adjustedIndex % bucketSize;
+    // check for current page
+    if (adjustedIndex >= numWritten - bucketSize) {
+      return bucketBuffer[relativeIndex];
+    } else {
+      final int bucket = adjustedIndex >> div;
+      long startOffset;
+      if (bucket == 0) {
+        startOffset = 0;
+      } else {
+        startOffset = getBucketOffset(bucket - 1);
+      }
+      long endOffset = getBucketOffset(bucket);
+      int bucketSize = Ints.checkedCast(endOffset - startOffset);
+      if (bucketSize == 0) {
+        return null;
+      }
+      final ByteBuffer bucketBuffer = ByteBuffer.allocate(bucketSize).order(byteOrder);
+      valuesOut.readFully(startOffset, bucketBuffer);
+      bucketBuffer.clear();
+      final ByteBuffer valueBuffer = FrontCodedIndexed.getFromBucket(bucketBuffer, relativeIndex);
+      final byte[] valueBytes = new byte[valueBuffer.limit() - valueBuffer.position()];
+      valueBuffer.get(valueBytes);
+      return valueBytes;
+    }
+  }
+
+  private long getBucketOffset(int index) throws IOException
+  {
+    getOffsetBuffer.clear();
+    headerOut.readFully(index * (long) Integer.BYTES, getOffsetBuffer);
+    return getOffsetBuffer.getInt(0);
   }
 
   private void flush() throws IOException

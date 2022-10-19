@@ -64,6 +64,16 @@ public class EncodedStringDictionaryWriter implements DictionaryWriter<String>
   }
 
   @Override
+  public String get(int dictId) throws IOException
+  {
+    final byte[] bytes = delegate.get(dictId);
+    if (bytes == null) {
+      return null;
+    }
+    return StringUtils.fromUtf8(bytes);
+  }
+
+  @Override
   public long getSerializedSize() throws IOException
   {
     return 2 + delegate.getSerializedSize();

@@ -59,7 +59,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
     List<String> theList = ImmutableList.of("hello", "helloo", "hellooo", "hellooz", "helloozy");
-    fillBuffer(buffer, theList.iterator(), 4);
+    fillBuffer(buffer, theList, 4);
 
     buffer.position(0);
     FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
@@ -90,7 +90,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
     List<String> theList = ImmutableList.of("hello", "helloo", "hellooo", "hellooz", "helloozy");
-    fillBuffer(buffer, theList.iterator(), 16);
+    fillBuffer(buffer, theList, 16);
 
     FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
         buffer,
@@ -125,7 +125,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
       for (int i = 0; i < sizeBase + sizeAdjust; i++) {
         values.add(IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId());
       }
-      fillBuffer(buffer, values.iterator(), bucketSize);
+      fillBuffer(buffer, values, bucketSize);
 
       FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
           buffer,
@@ -161,7 +161,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
       for (int i = 0; i < sizeBase + sizeAdjust; i++) {
         values.add(IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId());
       }
-      fillBuffer(buffer, values.iterator(), 4);
+      fillBuffer(buffer, values, 4);
 
       FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
           buffer,
@@ -195,7 +195,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
     List<String> theList = ImmutableList.of("hello", "helloo", "hellooo", "hellooz", "helloozy");
 
-    fillBuffer(buffer, theList.iterator(), 4);
+    fillBuffer(buffer, theList, 4);
 
     FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
         buffer,
@@ -219,7 +219,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     TreeSet<String> values = new TreeSet<>(GenericIndexed.STRING_STRATEGY);
     values.add(null);
     values.addAll(theList);
-    fillBuffer(buffer, values.iterator(), 4);
+    fillBuffer(buffer, values, 4);
 
     FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
         buffer,
@@ -240,7 +240,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
     List<String> theList = ImmutableList.of("Győ-Moson-Sopron", "Győr");
-    fillBuffer(buffer, theList.iterator(), 4);
+    fillBuffer(buffer, theList, 4);
 
     buffer.position(0);
     FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
@@ -263,8 +263,9 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     Assert.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
   }
 
-  private static long fillBuffer(ByteBuffer buffer, Iterator<String> sortedStrings, int bucketSize) throws IOException
+  private static long fillBuffer(ByteBuffer buffer, Iterable<String> sortedIterable, int bucketSize) throws IOException
   {
+    Iterator<String> sortedStrings = sortedIterable.iterator();
     buffer.position(0);
     OnHeapMemorySegmentWriteOutMedium medium = new OnHeapMemorySegmentWriteOutMedium();
     FrontCodedIndexedWriter writer = new FrontCodedIndexedWriter(
@@ -273,8 +274,31 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
         bucketSize
     );
     writer.open();
+    int index = 0;
     while (sortedStrings.hasNext()) {
-      writer.write(StringUtils.toUtf8Nullable(sortedStrings.next()));
+      final String next = sortedStrings.next();
+      final byte[] nextBytes = StringUtils.toUtf8Nullable(next);
+      writer.write(nextBytes);
+      if (nextBytes == null) {
+        Assert.assertNull(writer.get(index));
+      } else {
+        Assert.assertArrayEquals(nextBytes, writer.get(index));
+      }
+      index++;
+    }
+
+    // check 'get' again so that we aren't always reading from current page
+    index = 0;
+    sortedStrings = sortedIterable.iterator();
+    while (sortedStrings.hasNext()) {
+      final String next = sortedStrings.next();
+      final byte[] nextBytes = StringUtils.toUtf8Nullable(next);
+      if (nextBytes == null) {
+        Assert.assertNull("row " + index, writer.get(index));
+      } else {
+        Assert.assertArrayEquals("row " + index, nextBytes, writer.get(index));
+      }
+      index++;
     }
 
     WritableByteChannel channel = new WritableByteChannel()

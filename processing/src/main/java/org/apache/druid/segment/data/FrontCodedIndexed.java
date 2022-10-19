@@ -412,7 +412,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
    *
    * This method modifies the position of the buffer.
    */
-  private static ByteBuffer getFromBucket(ByteBuffer buffer, int offset)
+  static ByteBuffer getFromBucket(ByteBuffer buffer, int offset)
   {
     int prefixPosition;
     if (offset == 0) {
