@@ -79,7 +79,7 @@ public class JwtAuthenticator implements Authenticator
   @Override
   public String getPath()
   {
-    return null;
+    return "/*";
   }
 
   @Nullable
