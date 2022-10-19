@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -52,6 +51,7 @@ import org.apache.druid.sql.calcite.run.SqlEngines;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class MSQTaskSqlEngine implements SqlEngine
@@ -86,7 +86,7 @@ public class MSQTaskSqlEngine implements SqlEngine
   }
 
   @Override
-  public void validateContext(QueryContext queryContext) throws ValidationException
+  public void validateContext(Map<String, Object> queryContext) throws ValidationException
   {
     SqlEngines.validateNoSpecialContextKeys(queryContext, SYSTEM_CONTEXT_PARAMETERS);
   }
@@ -166,7 +166,7 @@ public class MSQTaskSqlEngine implements SqlEngine
   {
     validateNoDuplicateAliases(fieldMappings);
 
-    if (plannerContext.getQueryContext().containsKey(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)) {
+    if (plannerContext.queryContext().containsKey(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)) {
       throw new ValidationException(
           StringUtils.format("Cannot use \"%s\" without INSERT", DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
       );
@@ -207,14 +207,14 @@ public class MSQTaskSqlEngine implements SqlEngine
 
     try {
       segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(
-          plannerContext.getQueryContext().getMergedParams()
+          plannerContext.queryContextMap()
       );
     }
     catch (Exception e) {
       throw new ValidationException(
           StringUtils.format(
               "Invalid segmentGranularity: %s",
-              plannerContext.getQueryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
+              plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
           ),
           e
       );

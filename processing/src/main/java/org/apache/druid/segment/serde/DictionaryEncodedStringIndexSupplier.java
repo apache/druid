@@ -21,6 +21,8 @@ package org.apache.druid.segment.serde;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
 import it.unimi.dsi.fastutil.ints.IntIntImmutablePair;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import it.unimi.dsi.fastutil.ints.IntIterator;
@@ -175,6 +177,13 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
       extends BaseGenericIndexedDictionaryEncodedIndex<ByteBuffer> implements StringValueSetIndex, Utf8ValueSetIndex
   {
     private static final int SIZE_WORTH_CHECKING_MIN = 8;
+    // This determines the cut-off point to swtich the merging algorithm from doing binary-search per element in the value
+    // set to doing a sorted merge algorithm between value set and dictionary. The ratio here represents the ratio b/w
+    // the number of elements in value set and the number of elements in the dictionary. The number has been derived
+    // using benchmark in https://github.com/apache/druid/pull/13133. If the ratio is higher than the threshold, we use
+    // sorted merge instead of binary-search based algorithm.
+    private static final double SORTED_MERGE_RATIO_THRESHOLD = 0.12D;
+    private final GenericIndexed<ByteBuffer> genericIndexedDictionary;
 
     public GenericIndexedDictionaryEncodedStringValueSetIndex(
         BitmapFactory bitmapFactory,
@@ -183,6 +192,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
     )
     {
       super(bitmapFactory, dictionary, bitmaps);
+      this.genericIndexedDictionary = dictionary;
     }
 
     @Override
@@ -219,7 +229,8 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
           Iterables.transform(
               values,
               input -> ByteBuffer.wrap(StringUtils.toUtf8(input))
-          )
+          ),
+          values.size()
       );
     }
 
@@ -235,24 +246,86 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
         tailSet = valuesUtf8;
       }
 
-      return getBitmapColumnIndexForSortedIterableUtf8(tailSet);
+      return getBitmapColumnIndexForSortedIterableUtf8(tailSet, tailSet.size());
     }
 
     /**
      * Helper used by {@link #forSortedValues} and {@link #forSortedValuesUtf8}.
      */
-    private BitmapColumnIndex getBitmapColumnIndexForSortedIterableUtf8(Iterable<ByteBuffer> valuesUtf8)
+    private BitmapColumnIndex getBitmapColumnIndexForSortedIterableUtf8(Iterable<ByteBuffer> valuesUtf8, int size)
     {
+      // for large number of in-filter values in comparison to the dictionary size, use the sorted merge algorithm.
+      if (size > SORTED_MERGE_RATIO_THRESHOLD * dictionary.size()) {
+        return new SimpleImmutableBitmapIterableIndex()
+        {
+          @Override
+          public Iterable<ImmutableBitmap> getBitmapIterable()
+          {
+            return () -> new Iterator<ImmutableBitmap>()
+            {
+              final PeekingIterator<ByteBuffer> valuesIterator = Iterators.peekingIterator(valuesUtf8.iterator());
+              final PeekingIterator<ByteBuffer> dictionaryIterator =
+                  Iterators.peekingIterator(genericIndexedDictionary.iterator());
+              int next = -1;
+              int idx = 0;
+
+              @Override
+              public boolean hasNext()
+              {
+                if (next < 0) {
+                  findNext();
+                }
+                return next >= 0;
+              }
+
+              @Override
+              public ImmutableBitmap next()
+              {
+                if (next < 0) {
+                  findNext();
+                  if (next < 0) {
+                    throw new NoSuchElementException();
+                  }
+                }
+                final int swap = next;
+                next = -1;
+                return getBitmap(swap);
+              }
+
+              private void findNext()
+              {
+                while (next < 0 && valuesIterator.hasNext() && dictionaryIterator.hasNext()) {
+                  ByteBuffer nextValue = valuesIterator.peek();
+                  ByteBuffer nextDictionaryKey = dictionaryIterator.peek();
+                  int comparison = GenericIndexed.BYTE_BUFFER_STRATEGY.compare(nextValue, nextDictionaryKey);
+                  if (comparison == 0) {
+                    next = idx;
+                    valuesIterator.next();
+                    break;
+                  } else if (comparison < 0) {
+                    valuesIterator.next();
+                  } else {
+                    dictionaryIterator.next();
+                    idx++;
+                  }
+                }
+              }
+            };
+          }
+        };
+      }
+
+      // if the size of in-filter values is less than the threshold percentage of dictionary size, then use binary search
+      // based lookup per value. The algorithm works well for smaller number of values.
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
-          final int dictionarySize = dictionary.size();
-
           return () -> new Iterator<ImmutableBitmap>()
           {
-            final Iterator<ByteBuffer> iterator = valuesUtf8.iterator();
+            final PeekingIterator<ByteBuffer> valuesIterator = Iterators.peekingIterator(valuesUtf8.iterator());
+            final int dictionarySize = dictionary.size();
             int next = -1;
 
             @Override
@@ -280,8 +353,8 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
 
             private void findNext()
             {
-              while (next < 0 && iterator.hasNext()) {
-                ByteBuffer nextValue = iterator.next();
+              while (next < 0 && valuesIterator.hasNext()) {
+                ByteBuffer nextValue = valuesIterator.next();
                 next = dictionary.indexOf(nextValue);
 
                 if (next == -dictionarySize - 1) {

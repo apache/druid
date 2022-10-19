@@ -38,12 +38,15 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -59,6 +62,8 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.helpers.OverlordHelperManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -82,6 +87,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -103,10 +109,14 @@ public class OverlordTest
   private CountDownLatch announcementLatch;
   private DruidNode druidNode;
   private OverlordResource overlordResource;
-  private CountDownLatch[] taskCompletionCountDownLatches;
-  private CountDownLatch[] runTaskCountDownLatches;
+  private Map<String, CountDownLatch> taskCompletionCountDownLatches;
+  private Map<String, CountDownLatch> runTaskCountDownLatches;
   private HttpServletRequest req;
   private SupervisorManager supervisorManager;
+
+  // Bad task's id must be lexicographically greater than the good task's
+  private final String goodTaskId = "aaa";
+  private final String badTaskId = "zzz";
 
   private void setupServerAndCurator() throws Exception
   {
@@ -140,38 +150,52 @@ public class OverlordTest
     req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().anyTimes();
     supervisorManager = EasyMock.createMock(SupervisorManager.class);
-    taskLockbox = EasyMock.createStrictMock(TaskLockbox.class);
-    taskLockbox.syncFromStorage();
-    EasyMock.expectLastCall().atLeastOnce();
-    taskLockbox.add(EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    taskLockbox.remove(EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-
-    // for second Noop Task directly added to deep storage.
-    taskLockbox.add(EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    taskLockbox.remove(EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
 
     taskActionClientFactory = EasyMock.createStrictMock(TaskActionClientFactory.class);
     EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject()))
             .andReturn(null).anyTimes();
-    EasyMock.replay(taskLockbox, taskActionClientFactory, req);
+    EasyMock.replay(taskActionClientFactory, req);
 
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
-    runTaskCountDownLatches = new CountDownLatch[2];
-    runTaskCountDownLatches[0] = new CountDownLatch(1);
-    runTaskCountDownLatches[1] = new CountDownLatch(1);
-    taskCompletionCountDownLatches = new CountDownLatch[2];
-    taskCompletionCountDownLatches[0] = new CountDownLatch(1);
-    taskCompletionCountDownLatches[1] = new CountDownLatch(1);
+
+    IndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
+
+    taskLockbox = new TaskLockbox(taskStorage, mdc);
+
+    runTaskCountDownLatches = new HashMap<>();
+    runTaskCountDownLatches.put("0", new CountDownLatch(1));
+    runTaskCountDownLatches.put("1", new CountDownLatch(1));
+    taskCompletionCountDownLatches = new HashMap<>();
+    taskCompletionCountDownLatches.put("0", new CountDownLatch(1));
+    taskCompletionCountDownLatches.put("1", new CountDownLatch(1));
     announcementLatch = new CountDownLatch(1);
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
     druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
     ServiceEmitter serviceEmitter = new NoopServiceEmitter();
+
+    // Add two tasks with conflicting locks
+    // The bad task (The one with a lexicographically larger name) must be failed
+    Task badTask = new NoopTask(badTaskId, badTaskId, "datasource", 10_000, 0, null, null, null);
+    TaskLock badLock = new TimeChunkLock(null, badTaskId, "datasource", Intervals.ETERNITY, "version1", 50);
+    Task goodTask = new NoopTask(goodTaskId, goodTaskId, "datasource", 0, 0, null, null, null);
+    TaskLock goodLock = new TimeChunkLock(null, goodTaskId, "datasource", Intervals.ETERNITY, "version0", 50);
+    taskStorage.insert(goodTask, TaskStatus.running(goodTaskId));
+    taskStorage.insert(badTask, TaskStatus.running(badTaskId));
+    taskStorage.addLock(badTaskId, badLock);
+    taskStorage.addLock(goodTaskId, goodLock);
+    runTaskCountDownLatches.put(badTaskId, new CountDownLatch(1));
+    runTaskCountDownLatches.put(goodTaskId, new CountDownLatch(1));
+    taskCompletionCountDownLatches.put(badTaskId, new CountDownLatch(1));
+    taskCompletionCountDownLatches.put(goodTaskId, new CountDownLatch(1));
+
+    TaskRunnerFactory taskRunnerFactory = (TaskRunnerFactory<MockTaskRunner>) () ->
+        new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
+
+    taskRunnerFactory.build().run(badTask);
+    taskRunnerFactory.build().run(goodTask);
+
     taskMaster = new TaskMaster(
         new TaskLockConfig(),
         new TaskQueueConfig(null, new Period(1), null, new Period(10)),
@@ -180,8 +204,7 @@ public class OverlordTest
         taskStorage,
         taskActionClientFactory,
         druidNode,
-        (TaskRunnerFactory<MockTaskRunner>) () ->
-            new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches),
+        taskRunnerFactory,
         new LatchableServiceAnnouncer(announcementLatch, null),
         new CoordinatorOverlordServiceConfig(null, null),
         serviceEmitter,
@@ -222,6 +245,13 @@ public class OverlordTest
     Response response = overlordResource.getLeader();
     Assert.assertEquals(druidNode.getHostAndPort(), response.getEntity());
 
+    // BadTask must fail due to null task lock
+    waitForTaskStatus(badTaskId, TaskState.FAILED);
+
+    // GoodTask must successfully run
+    taskCompletionCountDownLatches.get(goodTaskId).countDown();
+    waitForTaskStatus(goodTaskId, TaskState.SUCCESS);
+
     final String taskId_0 = "0";
     NoopTask task_0 = NoopTask.create(taskId_0, 0);
     response = overlordResource.taskPost(task_0, req);
@@ -249,7 +279,7 @@ public class OverlordTest
     );
 
     // Simulate completion of task_0
-    taskCompletionCountDownLatches[Integer.parseInt(taskId_0)].countDown();
+    taskCompletionCountDownLatches.get(taskId_0).countDown();
     // Wait for taskQueue to handle success status of task_0
     waitForTaskStatus(taskId_0, TaskState.SUCCESS);
 
@@ -259,7 +289,7 @@ public class OverlordTest
     NoopTask task_1 = NoopTask.create(taskId_1, 0);
     taskStorage.insert(task_1, TaskStatus.running(taskId_1));
     // Wait for task runner to run task_1
-    runTaskCountDownLatches[Integer.parseInt(taskId_1)].await();
+    runTaskCountDownLatches.get(taskId_1).await();
 
     response = overlordResource.getRunningTasks(null, req);
     // 1 task that was manually inserted should be in running state
@@ -270,19 +300,20 @@ public class OverlordTest
     Assert.assertEquals(TASK_LOCATION, taskResponseObject.getLocation());
 
     // Simulate completion of task_1
-    taskCompletionCountDownLatches[Integer.parseInt(taskId_1)].countDown();
+    taskCompletionCountDownLatches.get(taskId_1).countDown();
     // Wait for taskQueue to handle success status of task_1
     waitForTaskStatus(taskId_1, TaskState.SUCCESS);
 
     // should return number of tasks which are not in running state
     response = overlordResource.getCompleteTasks(null, req);
-    Assert.assertEquals(2, (((List) response.getEntity()).size()));
+    Assert.assertEquals(4, (((List) response.getEntity()).size()));
 
     response = overlordResource.getCompleteTasks(1, req);
     Assert.assertEquals(1, (((List) response.getEntity()).size()));
+
     taskMaster.stop();
     Assert.assertFalse(taskMaster.isLeader());
-    EasyMock.verify(taskLockbox, taskActionClientFactory);
+    EasyMock.verify(taskActionClientFactory);
   }
 
   /* Wait until the task with given taskId has the given Task Status
@@ -308,12 +339,12 @@ public class OverlordTest
 
   public static class MockTaskRunner implements TaskRunner
   {
-    private CountDownLatch[] completionLatches;
-    private CountDownLatch[] runLatches;
+    private Map<String, CountDownLatch> completionLatches;
+    private Map<String, CountDownLatch> runLatches;
     private ConcurrentHashMap<String, TaskRunnerWorkItem> taskRunnerWorkItems;
     private List<String> runningTasks;
 
-    public MockTaskRunner(CountDownLatch[] runLatches, CountDownLatch[] completionLatches)
+    public MockTaskRunner(Map<String, CountDownLatch> runLatches, Map<String, CountDownLatch> completionLatches)
     {
       this.runLatches = runLatches;
       this.completionLatches = completionLatches;
@@ -367,11 +398,11 @@ public class OverlordTest
               // this is equivalent of getting process holder to run task in ForkingTaskRunner
               runningTasks.add(taskId);
               if (runLatches != null) {
-                runLatches[Integer.parseInt(taskId)].countDown();
+                runLatches.get(taskId).countDown();
               }
               // Wait for completion count down
               if (completionLatches != null) {
-                completionLatches[Integer.parseInt(taskId)].await();
+                completionLatches.get(taskId).await();
               }
               taskRunnerWorkItems.remove(taskId);
               runningTasks.remove(taskId);
@@ -407,6 +438,7 @@ public class OverlordTest
     @Override
     public void shutdown(String taskid, String reason)
     {
+      runningTasks.remove(taskid);
     }
 
     @Override

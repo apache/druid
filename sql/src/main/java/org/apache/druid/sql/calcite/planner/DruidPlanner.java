@@ -31,10 +31,8 @@ import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -42,6 +40,7 @@ import org.joda.time.DateTimeZone;
 
 import java.io.Closeable;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -60,6 +59,35 @@ public class DruidPlanner implements Closeable
   public enum State
   {
     START, VALIDATED, PREPARED, PLANNED
+  }
+
+  public static class AuthResult
+  {
+    public final Access authorizationResult;
+
+    /**
+     * Resource actions used with authorizing a cancellation request. These actions
+     * include only the data-level actions (e.g. the datasource.)
+     */
+    public final Set<ResourceAction> sqlResourceActions;
+
+    /**
+     * Full resource actions authorized as part of this request. Used when logging
+     * resource actions. Includes query context keys, if query context authorization
+     * is enabled.
+     */
+    public final Set<ResourceAction> allResourceActions;
+
+    public AuthResult(
+        final Access authorizationResult,
+        final Set<ResourceAction> sqlResourceActions,
+        final Set<ResourceAction> allResourceActions
+    )
+    {
+      this.authorizationResult = authorizationResult;
+      this.sqlResourceActions = sqlResourceActions;
+      this.allResourceActions = allResourceActions;
+    }
   }
 
   private final FrameworkConfig frameworkConfig;
@@ -93,7 +121,7 @@ public class DruidPlanner implements Closeable
     Preconditions.checkState(state == State.START);
 
     // Validate query context.
-    engine.validateContext(plannerContext.getQueryContext());
+    engine.validateContext(plannerContext.queryContextMap());
 
     // Parse the query string.
     SqlNode root = planner.parse(plannerContext.getSql());
@@ -161,41 +189,29 @@ public class DruidPlanner implements Closeable
    * step within the planner's state machine.
    *
    * @param authorizer a function from resource actions to a {@link Access} result.
+   * @param extraActions set of additional resource actions beyond those inferred
+   *        from the query itself. Specifically, the set of context keys to
+   *        authorize.
    *
    * @return the return value from the authorizer
    */
-  public Access authorize(Function<Set<ResourceAction>, Access> authorizer, boolean authorizeContextParams)
+  public AuthResult authorize(
+      final Function<Set<ResourceAction>, Access> authorizer,
+      final Set<ResourceAction> extraActions
+  )
   {
     Preconditions.checkState(state == State.VALIDATED);
-    Access access = authorizer.apply(resourceActions(authorizeContextParams));
+    Set<ResourceAction> sqlResourceActions = plannerContext.getResourceActions();
+    Set<ResourceAction> allResourceActions = new HashSet<>(sqlResourceActions);
+    allResourceActions.addAll(extraActions);
+    Access access = authorizer.apply(allResourceActions);
     plannerContext.setAuthorizationResult(access);
 
     // Authorization is done as a flag, not a state, alas.
-    // Views do prepare without authorize, Avatica does authorize, then prepare,
-    // so the only constraint is that authorize be done after validation, before plan.
+    // Views prepare without authorization, Avatica does authorize, then prepare,
+    // so the only constraint is that authorization be done before planning.
     authorized = true;
-    return access;
-  }
-
-  /**
-   * Return the resource actions corresponding to the datasources and views which
-   * an authenticated request must be authorized for to process the query. The
-   * actions will be {@code null} if the planner has not yet advanced to the
-   * validation step. This may occur if validation fails and the caller accesses
-   * the resource actions as part of clean-up.
-   */
-  public Set<ResourceAction> resourceActions(boolean includeContext)
-  {
-    Set<ResourceAction> resourceActions = plannerContext.getResourceActions();
-    if (includeContext) {
-      Set<ResourceAction> actions = new HashSet<>(resourceActions);
-      plannerContext.getQueryContext().getUserParams().keySet().forEach(contextParam -> actions.add(
-          new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
-      ));
-      return actions;
-    } else {
-      return resourceActions;
-    }
+    return new AuthResult(access, sqlResourceActions, allResourceActions);
   }
 
   /**
@@ -253,7 +269,13 @@ public class DruidPlanner implements Closeable
     @Override
     public QueryContext queryContext()
     {
-      return plannerContext.getQueryContext();
+      return plannerContext.queryContext();
+    }
+
+    @Override
+    public Map<String, Object> queryContextMap()
+    {
+      return plannerContext.queryContextMap();
     }
 
     @Override

@@ -46,6 +46,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class DoublesSketchObjectSqlAggregator implements SqlAggregator
@@ -113,7 +114,7 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
           histogramName,
           input.getDirectColumn(),
           k,
-          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
+          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.queryContext())
       );
     } else {
       String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -124,7 +125,7 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
           histogramName,
           virtualColumnName,
           k,
-          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
+          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.queryContext())
       );
     }
 
@@ -136,7 +137,6 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
 
   private static class DoublesSketchSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE1 = "'" + NAME + "(column)'\n";
     private static final String SIGNATURE2 = "'" + NAME + "(column, k)'\n";
 
     DoublesSketchSqlAggFunction()
