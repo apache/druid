@@ -1987,7 +1987,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 if (entry.getValue().get()) {
                   log.info("Resumed task [%s]", taskId);
                 } else {
-                  log.warn("Failed to resume task [%s]", taskId);
+                  log.warn("Failed to resume task [%s] in first supervisor run.", taskId);
                   killTask(taskId, "Could not resume task in the first supervisor run after Overlord change.");
                 }
               }
