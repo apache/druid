@@ -63,6 +63,7 @@ public class EncodedStringDictionaryWriter implements DictionaryWriter<String>
     delegate.write(StringUtils.toUtf8Nullable(NullHandling.emptyToNullIfNeeded(objectToWrite)));
   }
 
+  @Nullable
   @Override
   public String get(int dictId) throws IOException
   {

@@ -32,8 +32,6 @@ public interface DictionaryWriter<T> extends Serializer
 
   void write(@Nullable T objectToWrite) throws IOException;
 
-  default T get(int dictId) throws IOException
-  {
-    throw new UnsupportedOperationException("'get' not supported");
-  }
+  @Nullable
+  T get(int dictId) throws IOException;
 }
