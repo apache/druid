@@ -11318,6 +11318,27 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testOrderByAlongWithAliasOrderByTimeOneCol()
+  {
+    testQuery(
+        "select __time as bug from druid.foo order by 1 limit 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time")
+                .order(ScanQuery.Order.ASCENDING)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L}
+        )
+    );
+  }
+
+  @Test
   public void testProjectAfterSort()
   {
     testQuery(
