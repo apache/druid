@@ -80,7 +80,7 @@ public class MSQInsertTest extends MSQTestBase
   public void testInsertOnExternalDataSource() throws IOException
   {
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadFileNameAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -305,7 +305,7 @@ public class MSQInsertTest extends MSQTestBase
   public void testRollUpOnExternalDataSource() throws IOException
   {
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadFileNameAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -341,7 +341,7 @@ public class MSQInsertTest extends MSQTestBase
   public void testRollUpOnExternalDataSourceWithCompositeKey() throws IOException
   {
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadFileNameAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -496,7 +496,7 @@ public class MSQInsertTest extends MSQTestBase
   public void testInsertWithTooLargeRowShouldThrowException() throws IOException
   {
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadFileNameAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     Mockito.doReturn(500).when(workerMemoryParameters).getLargeFrameSize();
 
