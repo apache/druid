@@ -37,7 +37,7 @@ To use this extension please make sure to  [include](../extensions.md#loading-ex
 The extension uses the task queue to limit how many concurrent tasks (K8s jobs) are in flight so it is required you have a reasonable value for `druid.indexer.queue.maxSize`.  Additionally set the variable `druid.indexer.runner.namespace` to the namespace in which you are running druid.
 
 Other configurations required are: 
-`druid.indexer.runner.type: K8s` and `druid.indexer.task.encapsulatedTask: true`
+`druid.indexer.runner.type: k8s` and `druid.indexer.task.encapsulatedTask: true`
 
 You can add optional labels to your K8s jobs / pods if you need them by using the following configuration: 
 `druid.indexer.runner.labels: '{"key":"value"}'`
