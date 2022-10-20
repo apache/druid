@@ -3929,7 +3929,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testResumeAllActivelyReadingTasks() throws Exception
   {
-    supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
+    supervisor = getTestableSupervisor(2, 3, true, "PT1H", null, null);
     // Mock with task based setup for resumeAsync
     EasyMock.reset(taskClient);
     addSomeEvents(100);

@@ -1985,15 +1985,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             {
               try {
                 if (entry.getValue().get()) {
-                  log.info("Resumed task [%s]", taskId);
+                  log.info("Resumed task [%s] in first supervisor run.", taskId);
                 } else {
                   log.warn("Failed to resume task [%s] in first supervisor run.", taskId);
-                  killTask(taskId, "Killing forcefully as task could not be resumed in the first supervisor run after Overlord change.");
+                  killTask(taskId,
+                           "Killing forcefully as task could not be resumed in the first supervisor run after Overlord change.");
                 }
               }
               catch (Exception e) {
-                log.warn(e, "Failed to resume task [%s]", taskId);
-                killTask(taskId, "Could not resume task in the first supervisor run after Overlord change.");
+                log.warn(e, "Failed to resume task [%s] in first supervisor run.", taskId);
+                killTask(taskId,
+                         "Killing forcefully as task could not be resumed in the first supervisor run after Overlord change.");
               }
             }
           },
