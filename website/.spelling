@@ -1234,6 +1234,7 @@ column_1
 column_n
 com.opencsv
 ctrl
+descriptorString
 headerFormat
 headerLabelPrefix
 jsonLowercase

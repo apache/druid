@@ -144,6 +144,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
+            null,
             null
         ),
         null,
@@ -316,6 +317,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             true,
+            null,
             null,
             null,
             null,

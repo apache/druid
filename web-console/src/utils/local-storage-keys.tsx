@@ -40,7 +40,6 @@ export const LocalStorageKeys = {
   QUERY_KEY: 'druid-console-query' as const,
   QUERY_CONTEXT: 'query-context' as const,
   INGESTION_VIEW_PANE_SIZE: 'ingestion-view-pane-size' as const,
-  QUERY_VIEW_PANE_SIZE: 'query-view-pane-size' as const,
   TASKS_REFRESH_RATE: 'task-refresh-rate' as const,
   DATASOURCES_REFRESH_RATE: 'datasources-refresh-rate' as const,
   SEGMENTS_REFRESH_RATE: 'segments-refresh-rate' as const,

@@ -19,11 +19,13 @@
 
 package org.apache.druid.msq.indexing.error;
 
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.msq.exec.Limits;
+import org.apache.druid.java.util.common.RE;
+import org.apache.druid.msq.exec.ControllerClient;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -35,35 +37,53 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublisher
 {
 
-  final MSQWarningReportPublisher delegate;
-  final long totalLimit;
-  final Map<String, Long> errorCodeToLimit;
-  final ConcurrentHashMap<String, Long> errorCodeToCurrentCount = new ConcurrentHashMap<>();
+  private final MSQWarningReportPublisher delegate;
+  private final long totalLimit;
+  private final Map<String, Long> errorCodeToLimit;
+  private final Set<String> criticalWarningCodes;
+  private final ConcurrentHashMap<String, Long> errorCodeToCurrentCount = new ConcurrentHashMap<>();
+  private final ControllerClient controllerClient;
+  private final String workerId;
+
+  @Nullable
+  private final String host;
 
   long totalCount = 0L;
 
   final Object lock = new Object();
 
-  public MSQWarningReportLimiterPublisher(MSQWarningReportPublisher delegate)
-  {
-    this(
-        delegate,
-        Limits.MAX_VERBOSE_WARNINGS,
-        ImmutableMap.of(
-            CannotParseExternalDataFault.CODE, Limits.MAX_VERBOSE_PARSE_EXCEPTIONS
-        )
-    );
-  }
-
+  /**
+   * Creates a publisher which publishes the warnings to the controller if they have not yet exceeded the allowed limit.
+   * Moreover, if a warning is disallowed, i.e. it's limit is set to 0, then the publisher directly reports the warning
+   * as an error
+   * {@code errorCodeToLimit} refers to the maximum number of verbose warnings that should be published. The actual
+   * limit for the warnings before which the controller should fail can be much higher and hence a separate {@code criticalWarningCodes}
+   *
+   * @param delegate The delegate publisher which publishes the allowed warnings
+   * @param totalLimit Total limit of warnings that a worker can publish
+   * @param errorCodeToLimit Map of error code to the number of allowed warnings that the publisher can publish
+   * @param criticalWarningCodes Error codes which if encountered should be thrown as error
+   * @param controllerClient Controller client (for directly sending the warning as an error)
+   * @param workerId workerId, used to construct the error report
+   * @param host worker' host, used to construct the error report
+   */
   public MSQWarningReportLimiterPublisher(
       MSQWarningReportPublisher delegate,
       long totalLimit,
-      Map<String, Long> errorCodeToLimit
+      Map<String, Long> errorCodeToLimit,
+      Set<String> criticalWarningCodes,
+      ControllerClient controllerClient,
+      String workerId,
+      @Nullable String host
   )
   {
     this.delegate = delegate;
     this.errorCodeToLimit = errorCodeToLimit;
+    this.criticalWarningCodes = criticalWarningCodes;
     this.totalLimit = totalLimit;
+    this.controllerClient = controllerClient;
+    this.workerId = workerId;
+    this.host = host;
   }
 
   @Override
@@ -73,6 +93,16 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
     synchronized (lock) {
       totalCount = totalCount + 1;
       errorCodeToCurrentCount.compute(errorCode, (ignored, count) -> count == null ? 1L : count + 1);
+
+      // Send the warning as an error if it is disallowed altogether
+      if (criticalWarningCodes.contains(errorCode)) {
+        try {
+          controllerClient.postWorkerError(workerId, MSQErrorReport.fromException(workerId, host, stageNumber, e));
+        }
+        catch (IOException postException) {
+          throw new RE(postException, "Failed to post the worker error [%s] to the controller", errorCode);
+        }
+      }
 
       if (totalLimit != -1 && totalCount > totalLimit) {
         return;

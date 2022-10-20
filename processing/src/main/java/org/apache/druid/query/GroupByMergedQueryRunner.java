@@ -84,8 +84,9 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
         querySpecificConfig
     );
     final Pair<Queue, Accumulator<Queue, T>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
-    final boolean bySegment = QueryContexts.isBySegment(query);
-    final int priority = QueryContexts.getPriority(query);
+    final QueryContext queryContext = query.context();
+    final boolean bySegment = queryContext.isBySegment();
+    final int priority = queryContext.getPriority();
     final QueryPlus<T> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
     final List<ListenableFuture<Void>> futures =
         Lists.newArrayList(
@@ -173,8 +174,9 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
     ListenableFuture<List<Void>> future = Futures.allAsList(futures);
     try {
       queryWatcher.registerQueryFuture(query, future);
-      if (QueryContexts.hasTimeout(query)) {
-        future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS);
+      final QueryContext context = query.context();
+      if (context.hasTimeout()) {
+        future.get(context.getTimeout(), TimeUnit.MILLISECONDS);
       } else {
         future.get();
       }
