@@ -3929,7 +3929,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testResumeAllActivelyReadingTasks() throws Exception
   {
-    supervisor = getTestableSupervisor(2, 3, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 2, true, "PT1H", null, null);
     // Mock with task based setup for resumeAsync
     EasyMock.reset(taskClient);
     addSomeEvents(100);
@@ -4048,15 +4048,17 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStartTimeAsync(failsToResumePausedTask.getId())).andReturn(Futures.immediateFuture(startTime));
     EasyMock.expect(taskClient.resumeAsync(failsToResumePausedTask.getId())).andReturn(Futures.immediateFuture(false));
 
+    Capture<String> shutdownTaskId = EasyMock.newCapture();
     // The task which failed to resume is shutdown forcibly.
-    taskQueue.shutdown(failsToResumePausedTask.getId(),
-                       "Could not resume task in the first supervisor run after Overlord change.");
+    taskQueue.shutdown(EasyMock.capture(shutdownTaskId), EasyMock.anyString());
     EasyMock.expectLastCall();
 
     replayAll();
 
     supervisor.start();
     supervisor.runInternal();
+
+    Assert.assertEquals(failsToResumePausedTask.getId(), shutdownTaskId.getValue());
 
     verifyAll();
   }
