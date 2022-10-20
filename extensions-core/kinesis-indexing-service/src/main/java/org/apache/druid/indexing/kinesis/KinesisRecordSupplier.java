@@ -743,7 +743,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     });
   }
 
-  public Set<Shard> getShards(String stream)
+  private Set<Shard> getShards(String stream)
   {
     if (useListShards) {
       return getShardsUsingListShards(stream);
@@ -805,21 +805,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   public Set<String> getPartitionIds(String stream)
   {
     return wrapExceptions(() -> {
-      final Set<String> retVal = new TreeSet<>();
-      ListShardsRequest request = new ListShardsRequest().withStreamName(stream);
-      while (true) {
-        ListShardsResult result = kinesis.listShards(request);
-        retVal.addAll(result.getShards()
-                            .stream()
-                            .map(Shard::getShardId)
-                            .collect(Collectors.toList())
-        );
-        String nextToken = result.getNextToken();
-        if (nextToken == null) {
-          return retVal;
-        }
-        request = new ListShardsRequest().withNextToken(nextToken);
+      Set<String> partitionIds = new TreeSet<>();
+      for (Shard shard : getShards(stream)) {
+        partitionIds.add(shard.getShardId());
       }
+      return partitionIds;
     });
   }
 
