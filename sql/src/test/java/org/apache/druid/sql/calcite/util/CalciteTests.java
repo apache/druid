@@ -185,19 +185,19 @@ public class CalciteTests
     public Authorizer getAuthorizer(String name)
     {
       return (authenticationResult, resource, action) -> {
-        if (authenticationResult.getIdentity().equals(TEST_SUPERUSER_NAME)) {
+        if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
           return Access.OK;
         }
 
         switch (resource.getType()) {
           case ResourceType.DATASOURCE:
-            if (resource.getName().equals(FORBIDDEN_DATASOURCE)) {
+            if (FORBIDDEN_DATASOURCE.equals(resource.getName())) {
               return new Access(false);
             } else {
               return Access.OK;
             }
           case ResourceType.VIEW:
-            if (resource.getName().equals("forbiddenView")) {
+            if ("forbiddenView".equals(resource.getName())) {
               return new Access(false);
             } else {
               return Access.OK;
@@ -254,7 +254,7 @@ public class CalciteTests
       null, null
   );
 
-  private static final String TIMESTAMP_COLUMN = "t";
+  public static final String TIMESTAMP_COLUMN = "t";
 
   public static final Injector INJECTOR = new CalciteTestInjectorBuilder().build();
 

@@ -851,6 +851,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
                 new JsonInputFormat(
                     new JSONPathSpec(true, null),
                     null,
+                    null,
+                    null,
                     null
                 ),
                 false,

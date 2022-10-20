@@ -52,7 +52,9 @@ public class JsonInputFormatTest
             )
         ),
         ImmutableMap.of(Feature.ALLOW_COMMENTS.name(), true, Feature.ALLOW_UNQUOTED_FIELD_NAMES.name(), false),
-        true
+        true,
+        false,
+        false
     );
     final byte[] bytes = mapper.writeValueAsBytes(format);
     final JsonInputFormat fromJson = (JsonInputFormat) mapper.readValue(bytes, InputFormat.class);
@@ -79,6 +81,8 @@ public class JsonInputFormatTest
     final JsonInputFormat format = new JsonInputFormat(
         new JSONPathSpec(false, null),
         null,
+        null,
+        null,
         null
     );
     Assert.assertFalse(format.isKeepNullColumns());
@@ -89,6 +93,8 @@ public class JsonInputFormatTest
   {
     final JsonInputFormat format = new JsonInputFormat(
         new JSONPathSpec(true, null),
+        null,
+        null,
         null,
         null
     );
@@ -101,7 +107,9 @@ public class JsonInputFormatTest
     final JsonInputFormat format = new JsonInputFormat(
         new JSONPathSpec(true, null),
         null,
-        false
+        false,
+        null,
+        null
     );
     Assert.assertFalse(format.isKeepNullColumns());
   }

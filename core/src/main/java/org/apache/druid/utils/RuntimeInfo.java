@@ -48,7 +48,7 @@ public class RuntimeInfo
   public long getDirectMemorySizeBytes()
   {
     try {
-      Class<?> vmClass = Class.forName("sun.misc.VM");
+      Class<?> vmClass = Class.forName(JvmUtils.majorVersion() >= 9 ? "jdk.internal.misc.VM" : "sun.misc.VM");
       Object maxDirectMemoryObj = vmClass.getMethod("maxDirectMemory").invoke(null);
 
       if (maxDirectMemoryObj == null || !(maxDirectMemoryObj instanceof Number)) {

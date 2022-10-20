@@ -56,6 +56,8 @@ public class JsonLineReaderTest
             )
         ),
         null,
+        null,
+        null,
         null
     );
 
@@ -106,6 +108,8 @@ public class JsonLineReaderTest
             )
         ),
         null,
+        null,
+        null,
         null
     );
 
@@ -148,7 +152,9 @@ public class JsonLineReaderTest
             )
         ),
         null,
-        true
+        true,
+        null,
+        null
     );
 
     final ByteEntity source = new ByteEntity(
@@ -190,7 +196,9 @@ public class JsonLineReaderTest
             )
         ),
         null,
-        true
+        true,
+        null,
+        null
     );
 
     final ByteEntity source = new ByteEntity(
@@ -232,7 +240,9 @@ public class JsonLineReaderTest
             )
         ),
         null,
-        false
+        false,
+        null,
+        null
     );
 
     final ByteEntity source = new ByteEntity(

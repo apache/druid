@@ -258,7 +258,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
-              true
+              false
           );
           break;
         case "CLOSED_SEGMENTS":
@@ -281,7 +281,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
-              true
+              false
           );
 
           break;
@@ -305,7 +305,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
-              true
+              false
           );
           break;
         default:

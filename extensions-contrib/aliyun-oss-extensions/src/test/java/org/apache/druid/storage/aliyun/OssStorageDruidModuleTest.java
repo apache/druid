@@ -42,8 +42,8 @@ public class OssStorageDruidModuleTest
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertTrue(killer.getKillers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
     Assert.assertSame(
-        killer.getKillers().get(OssStorageDruidModule.SCHEME_ZIP),
-        killer.getKillers().get(OssStorageDruidModule.SCHEME_ZIP)
+        killer.getKillers().get(OssStorageDruidModule.SCHEME_ZIP).get(),
+        killer.getKillers().get(OssStorageDruidModule.SCHEME_ZIP).get()
     );
   }
 
@@ -54,8 +54,8 @@ public class OssStorageDruidModuleTest
     OmniDataSegmentArchiver archiver = injector.getInstance(OmniDataSegmentArchiver.class);
     Assert.assertTrue(archiver.getArchivers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
     Assert.assertSame(
-        archiver.getArchivers().get(OssStorageDruidModule.SCHEME_ZIP),
-        archiver.getArchivers().get(OssStorageDruidModule.SCHEME_ZIP)
+        archiver.getArchivers().get(OssStorageDruidModule.SCHEME_ZIP).get(),
+        archiver.getArchivers().get(OssStorageDruidModule.SCHEME_ZIP).get()
     );
   }
 
@@ -66,8 +66,8 @@ public class OssStorageDruidModuleTest
     OmniDataSegmentMover mover = injector.getInstance(OmniDataSegmentMover.class);
     Assert.assertTrue(mover.getMovers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
     Assert.assertSame(
-        mover.getMovers().get(OssStorageDruidModule.SCHEME_ZIP),
-        mover.getMovers().get(OssStorageDruidModule.SCHEME_ZIP)
+        mover.getMovers().get(OssStorageDruidModule.SCHEME_ZIP).get(),
+        mover.getMovers().get(OssStorageDruidModule.SCHEME_ZIP).get()
     );
   }
 

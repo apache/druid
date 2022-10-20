@@ -49,6 +49,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(Duration.millis(50), config.getLoadQueuePeonRepeatDelay());
     Assert.assertTrue(config.getCompactionSkipLockedIntervals());
     Assert.assertFalse(config.getCoordinatorKillIgnoreDurationToRetain());
+    Assert.assertEquals("http", config.getLoadQueuePeonType());
 
     //with non-defaults
     Properties props = new Properties();

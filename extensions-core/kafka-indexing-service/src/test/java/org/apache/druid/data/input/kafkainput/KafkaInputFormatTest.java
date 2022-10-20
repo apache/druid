@@ -91,7 +91,8 @@ public class KafkaInputFormatTest
         // Key Format
         new JsonInputFormat(
             new JSONPathSpec(true, ImmutableList.of()),
-            null, null, false //make sure JsonReader is used
+            null, null, false, //make sure JsonReader is used
+            false, false
         ),
         // Value Format
         new JsonInputFormat(
@@ -106,7 +107,8 @@ public class KafkaInputFormatTest
                     new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
                 )
             ),
-            null, null, false //make sure JsonReader is used
+            null, null, false, //make sure JsonReader is used
+            false, false
         ),
         "kafka.newheader.", "kafka.newkey.key", "kafka.newts.timestamp"
     );
@@ -121,7 +123,8 @@ public class KafkaInputFormatTest
         // Key Format
         new JsonInputFormat(
             new JSONPathSpec(true, ImmutableList.of()),
-            null, null, false //make sure JsonReader is used
+            null, null, false, //make sure JsonReader is used
+            false, false
         ),
         // Value Format
         new JsonInputFormat(
@@ -136,7 +139,8 @@ public class KafkaInputFormatTest
                     new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
                 )
             ),
-            null, null, false //make sure JsonReader is used
+            null, null, false, //make sure JsonReader is used
+            false, false
         ),
         "kafka.newheader.", "kafka.newkey.key", "kafka.newts.timestamp"
     );
@@ -407,7 +411,8 @@ public class KafkaInputFormatTest
                     new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
                 )
             ),
-            null, null, false //make sure JsonReader is used
+            null, null, false, //make sure JsonReader is used
+            false, false
         ),
         "kafka.newheader.", "kafka.newkey.", "kafka.newts."
     );
