@@ -88,7 +88,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testBinaryMathOperators()
   {
-    final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "nonexistent", "null"};
+    final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "nonexistent", "null", "s1"};
     final String[] columns2 = new String[]{"d1", "d2", "l1", "l2", "1", "1.0"};
     final String[][] templateInputs = makeTemplateArgs(columns, columns2);
     final String[] templates =
@@ -305,7 +305,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     ExprEvalVector<?> vectorEval = parsed.buildVectorized(bindings.rhs).evalVector(bindings.rhs);
     // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
     if (outputType != null) {
-      Assert.assertEquals(outputType, vectorEval.getType());
+      Assert.assertEquals(expr, outputType, vectorEval.getType());
     }
     for (int i = 0; i < VECTOR_SIZE; i++) {
       ExprEval<?> eval = parsed.eval(bindings.lhs[i]);

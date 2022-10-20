@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -53,7 +54,6 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
@@ -324,7 +324,7 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
                       new QuantilePostAggregator("a6", "a6:agg", 0.999f),
                       new QuantilePostAggregator("a7", "a5:agg", 0.999f)
                   )
-                  .context(ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+                  .context(ImmutableMap.of(QueryContexts.CTX_SQL_QUERY_ID, "dummy"))
                   .build()
         ),
         ImmutableList.of(
