@@ -743,6 +743,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean lifecycleStarted = false;
   private final ServiceEmitter emitter;
 
+  // snapshots latest sequences from stream to be verified in next run cycle of inactive stream check
+  private final Map<PartitionIdType, SequenceOffsetType> previousSequencesFromStream = new HashMap<>();
+  private long lastActiveTimeMillis;
+
   public SeekableStreamSupervisor(
       final String supervisorId,
       final TaskStorage taskStorage,
@@ -1454,12 +1458,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       checkCurrentTaskState();
 
+      checkIfStreamInactiveAndTurnSupervisorIdle();
+
+      // If supervisor is already stopping, don't contend for stateChangeLock since the block can be skipped
+      if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
+        generateAndLogReport();
+        return;
+      }
+
       synchronized (stateChangeLock) {
         // if supervisor is not suspended, ensure required tasks are running
         // if suspended, ensure tasks have been requested to gracefully stop
         if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
           // if we're already terminating, don't do anything here, the terminate already handles shutdown
           log.info("[%s] supervisor is already stopping.", dataSource);
+        } else if (stateManager.isIdle()) {
+          log.info("[%s] supervisor is idle.", dataSource);
         } else if (!spec.isSuspended()) {
           log.info("[%s] supervisor is running.", dataSource);
 
@@ -1471,11 +1485,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
       }
 
-      if (log.isDebugEnabled()) {
-        log.debug(generateReport(true).toString());
-      } else {
-        log.info(generateReport(false).toString());
-      }
+      generateAndLogReport();
     }
     catch (Exception e) {
       stateManager.recordThrowableEvent(e);
@@ -1483,6 +1493,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     finally {
       stateManager.markRunFinished();
+    }
+  }
+
+  private void generateAndLogReport()
+  {
+    if (log.isDebugEnabled()) {
+      log.debug(generateReport(true).toString());
+    } else {
+      log.info(generateReport(false).toString());
     }
   }
 
@@ -2491,11 +2510,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return true;
   }
 
+  /**
+   * gets mapping of partitions in stream to their latest offsets.
+   */
+  protected Map<PartitionIdType, SequenceOffsetType> getLatestSequencesFromStream()
+  {
+    return new HashMap<>();
+  }
+
   private void assignRecordSupplierToPartitionIds()
   {
     recordSupplierLock.lock();
     try {
-      final Set partitions = partitionIds.stream()
+      final Set<StreamPartition<PartitionIdType>> partitions = partitionIds.stream()
                                          .map(partitionId -> new StreamPartition<>(ioConfig.getStream(), partitionId))
                                          .collect(Collectors.toSet());
       if (!recordSupplier.getAssignment().containsAll(partitions)) {
@@ -3233,6 +3260,44 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
   }
 
+  private void checkIfStreamInactiveAndTurnSupervisorIdle()
+  {
+    IdleConfig idleConfig = spec.getIoConfig().getIdleConfig();
+    if ((idleConfig == null || !idleConfig.isEnabled()) || spec.isSuspended()) {
+      return;
+    }
+
+    Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
+    long nowTime = Instant.now().toEpochMilli();
+    boolean idle;
+    long idleTime;
+
+    if (lastActiveTimeMillis > 0
+        && previousSequencesFromStream.equals(latestSequencesFromStream)
+        && computeTotalLag() == 0) {
+      idleTime = nowTime - lastActiveTimeMillis;
+      idle = true;
+    } else {
+      idleTime = 0L;
+      lastActiveTimeMillis = nowTime;
+      idle = false;
+    }
+
+    previousSequencesFromStream.clear();
+    previousSequencesFromStream.putAll(latestSequencesFromStream);
+    if (!idle) {
+      stateManager.maybeSetState(SupervisorStateManager.BasicState.RUNNING);
+    } else if (!stateManager.isIdle() && idleTime > idleConfig.getInactiveAfterMillis()) {
+      stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
+    }
+  }
+
+  private long computeTotalLag()
+  {
+    LagStats lagStats = computeLagStats();
+    return lagStats != null ? lagStats.getTotalLag() : 0;
+  }
+
   /**
    * If the seekable stream system supported by this supervisor allows for partition expiration, expired partitions
    * should be removed from the starting offsets sent to the tasks.
@@ -3584,7 +3649,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // if we aren't in a steady state, chill out for a bit, don't worry, we'll get called later, but if we aren't
     // healthy go ahead and try anyway to try if possible to provide insight into how much time is left to fix the
     // issue for cluster operators since this feeds the lag metrics
-    if (stateManager.isSteadyState() || !stateManager.isHealthy()) {
+    if (stateManager.isIdle() || stateManager.isSteadyState() || !stateManager.isHealthy()) {
       try {
         updateCurrentOffsets();
         updatePartitionLagFromStream();
@@ -3635,27 +3700,41 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @Nullable
   protected abstract Map<PartitionIdType, Long> getPartitionTimeLag();
 
+  /**
+   * Gets highest current offsets of all the tasks (actively reading and publishing) for all partitions of the stream.
+   * In case if no task is reading for a partition, returns offset stored in metadata storage for that partition.
+   * In case of no active and publishing task groups, returns offsets stored in metadata storage.
+   * Used to compute lag by comparing with latest offsets from stream for reporting and determining idleness.
+   */
   protected Map<PartitionIdType, SequenceOffsetType> getHighestCurrentOffsets()
   {
+    Map<PartitionIdType, SequenceOffsetType> offsetsFromMetadataStorage = getOffsetsFromMetadataStorage();
     if (!spec.isSuspended()) {
       if (activelyReadingTaskGroups.size() > 0 || pendingCompletionTaskGroups.size() > 0) {
-        return activelyReadingTaskGroups
-            .values()
-            .stream()
-            .flatMap(taskGroup -> taskGroup.tasks.entrySet().stream())
-            .flatMap(taskData -> taskData.getValue().currentSequences.entrySet().stream())
-            .collect(Collectors.toMap(
+        Map<PartitionIdType, SequenceOffsetType> currentOffsets =
+            Stream.concat(
+                activelyReadingTaskGroups
+                    .values()
+                    .stream()
+                    .flatMap(taskGroup -> taskGroup.tasks.entrySet().stream())
+                    .flatMap(taskData -> taskData.getValue().currentSequences.entrySet().stream()),
+                pendingCompletionTaskGroups
+                    .values()
+                    .stream()
+                    .flatMap(taskGroups -> taskGroups.stream().flatMap(taskGroup -> taskGroup.tasks.entrySet().stream()))
+                    .flatMap(taskData -> taskData.getValue().currentSequences.entrySet().stream())
+            ).collect(Collectors.toMap(
                 Entry::getKey,
                 Entry::getValue,
                 (v1, v2) -> makeSequenceNumber(v1).compareTo(makeSequenceNumber(v2)) > 0 ? v1 : v2
             ));
+
+        partitionIds.forEach(partitionId -> currentOffsets.putIfAbsent(partitionId, offsetsFromMetadataStorage.get(partitionId)));
+        return currentOffsets;
       }
-      // nothing is running but we are not suspended, so lets just hang out in case we get called while things start up
-      return ImmutableMap.of();
-    } else {
-      // if supervisor is suspended, no tasks are likely running so use offsets in metadata, if exist
-      return getOffsetsFromMetadataStorage();
     }
+    // if supervisor is suspended or is idle and nothing is running, use offsets in metadata, if exist
+    return offsetsFromMetadataStorage;
   }
 
   private OrderedSequenceNumber<SequenceOffsetType> makeSequenceNumber(SequenceOffsetType seq)
@@ -3966,7 +4045,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected void emitLag()
   {
-    if (spec.isSuspended() || !stateManager.isSteadyState()) {
+    if (spec.isSuspended() || !(stateManager.isSteadyState() || stateManager.isIdle())) {
       // don't emit metrics if supervisor is suspended or not in a healthy running state
       // (lag should still available in status report)
       return;

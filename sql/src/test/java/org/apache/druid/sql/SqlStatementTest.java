@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql;
 
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -51,7 +50,6 @@ import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
@@ -70,7 +68,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.servlet.http.HttpServletRequest;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -159,15 +156,18 @@ public class SqlStatementTest
         new CalciteRulesManager(ImmutableSet.of())
     );
 
-    this.sqlStatementFactory = new SqlStatementFactoryFactory(
-        plannerFactory,
-        new NoopServiceEmitter(),
-        testRequestLogger,
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new AuthConfig(),
-        Suppliers.ofInstance(defaultQueryConfig),
-        new SqlLifecycleManager()
-    ).factorize(CalciteTests.createMockSqlEngine(walker, conglomerate));
+    this.sqlStatementFactory = new SqlStatementFactory(
+        new SqlToolbox(
+            CalciteTests.createMockSqlEngine(walker, conglomerate),
+            plannerFactory,
+            new NoopServiceEmitter(),
+            testRequestLogger,
+            QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+            new AuthConfig(),
+            defaultQueryConfig,
+            new SqlLifecycleManager()
+        )
+    );
   }
 
   @After
@@ -221,7 +221,7 @@ public class SqlStatementTest
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     ResultSet resultSet = stmt.plan();
     assertTrue(resultSet.runnable());
-    List<Object[]> results = resultSet.run().toList();
+    List<Object[]> results = resultSet.run().getResults().toList();
     assertEquals(1, results.size());
     assertEquals(6L, results.get(0)[0]);
     assertEquals("foo", results.get(0)[1]);
@@ -341,7 +341,7 @@ public class SqlStatementTest
         makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo"),
         request(true)
         );
-    List<Object[]> results = stmt.execute().toList();
+    List<Object[]> results = stmt.execute().getResults().toList();
     assertEquals(1, results.size());
     assertEquals(6L, results.get(0)[0]);
     assertEquals("foo", results.get(0)[1]);
@@ -422,6 +422,7 @@ public class SqlStatementTest
       List<Object[]> results = stmt
           .execute(Collections.emptyList())
           .execute()
+          .getResults()
           .toList();
       assertEquals(1, results.size());
       assertEquals(6L, results.get(0)[0]);
@@ -491,10 +492,10 @@ public class SqlStatementTest
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
-    Map<String, Object> context = stmt.query().context().getMergedParams();
+    Map<String, Object> context = stmt.context();
     Assert.assertEquals(2, context.size());
     // should contain only query id, not bySegment since it is not valid for SQL
-    Assert.assertTrue(context.containsKey(PlannerContext.CTX_SQL_QUERY_ID));
+    Assert.assertTrue(context.containsKey(QueryContexts.CTX_SQL_QUERY_ID));
   }
 
   @Test
@@ -506,7 +507,7 @@ public class SqlStatementTest
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
-    Map<String, Object> context = stmt.query().context().getMergedParams();
+    Map<String, Object> context = stmt.context();
     Assert.assertEquals(2, context.size());
     // Statement should contain default query context values
     for (String defaultContextKey : defaultQueryConfig.getContext().keySet()) {

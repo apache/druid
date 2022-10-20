@@ -22,10 +22,6 @@ package org.apache.druid.segment.nested;
 import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.doubles.Double2IntLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.doubles.Double2IntMap;
-import it.unimi.dsi.fastutil.ints.Int2DoubleLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
-import it.unimi.dsi.fastutil.ints.Int2LongLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import it.unimi.dsi.fastutil.longs.Long2IntLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap;
@@ -35,18 +31,15 @@ import javax.annotation.Nullable;
 
 /**
  * Ingestion time dictionary identifier lookup, used by {@link NestedDataColumnSerializer} to build a global dictionary
- * id to value mapping for the 'stacked' global value dictionaries. Also provides reverse lookup for numeric values,
- * since they serialize a value column
+ * id to value mapping for the 'stacked' global value dictionaries.
  */
 public class GlobalDictionaryIdLookup
 {
   private final Object2IntMap<String> stringLookup;
 
   private final Long2IntMap longLookup;
-  private final Int2LongMap reverseLongLookup;
 
   private final Double2IntMap doubleLookup;
-  private final Int2DoubleMap reverseDoubleLookup;
 
   private int dictionarySize;
 
@@ -54,9 +47,7 @@ public class GlobalDictionaryIdLookup
   {
     this.stringLookup = new Object2IntLinkedOpenHashMap<>();
     this.longLookup = new Long2IntLinkedOpenHashMap();
-    this.reverseLongLookup = new Int2LongLinkedOpenHashMap();
     this.doubleLookup = new Double2IntLinkedOpenHashMap();
-    this.reverseDoubleLookup = new Int2DoubleLinkedOpenHashMap();
   }
 
   public void addString(@Nullable String value)
@@ -82,7 +73,6 @@ public class GlobalDictionaryIdLookup
     );
     int id = dictionarySize++;
     longLookup.put(value, id);
-    reverseLongLookup.put(id, value);
   }
 
   public int lookupLong(@Nullable Long value)
@@ -93,20 +83,10 @@ public class GlobalDictionaryIdLookup
     return longLookup.get(value.longValue());
   }
 
-  @Nullable
-  public Long lookupLong(int id)
-  {
-    if (id == 0) {
-      return null;
-    }
-    return reverseLongLookup.get(id);
-  }
-
   public void addDouble(double value)
   {
     int id = dictionarySize++;
     doubleLookup.put(value, id);
-    reverseDoubleLookup.put(id, value);
   }
 
   public int lookupDouble(@Nullable Double value)
@@ -115,14 +95,5 @@ public class GlobalDictionaryIdLookup
       return 0;
     }
     return doubleLookup.get(value.doubleValue());
-  }
-
-  @Nullable
-  public Double lookupDouble(int id)
-  {
-    if (id == 0) {
-      return null;
-    }
-    return reverseDoubleLookup.get(id);
   }
 }

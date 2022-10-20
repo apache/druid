@@ -114,7 +114,7 @@ import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
-import org.apache.druid.sql.SqlStatementFactoryFactory;
+import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -185,19 +185,19 @@ public class CalciteTests
     public Authorizer getAuthorizer(String name)
     {
       return (authenticationResult, resource, action) -> {
-        if (authenticationResult.getIdentity().equals(TEST_SUPERUSER_NAME)) {
+        if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
           return Access.OK;
         }
 
         switch (resource.getType()) {
           case ResourceType.DATASOURCE:
-            if (resource.getName().equals(FORBIDDEN_DATASOURCE)) {
+            if (FORBIDDEN_DATASOURCE.equals(resource.getName())) {
               return new Access(false);
             } else {
               return Access.OK;
             }
           case ResourceType.VIEW:
-            if (resource.getName().equals("forbiddenView")) {
+            if ("forbiddenView".equals(resource.getName())) {
               return new Access(false);
             } else {
               return Access.OK;
@@ -254,7 +254,7 @@ public class CalciteTests
       null, null
   );
 
-  private static final String TIMESTAMP_COLUMN = "t";
+  public static final String TIMESTAMP_COLUMN = "t";
 
   public static final Injector INJECTOR = new CalciteTestInjectorBuilder().build();
 
@@ -804,15 +804,18 @@ public class CalciteTests
       final AuthConfig authConfig
   )
   {
-    return new SqlStatementFactoryFactory(
-        plannerFactory,
-        new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
-        new NoopRequestLogger(),
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        authConfig,
-        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())),
-        new SqlLifecycleManager()
-    ).factorize(engine);
+    return new SqlStatementFactory(
+        new SqlToolbox(
+            engine,
+            plannerFactory,
+            new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
+            new NoopRequestLogger(),
+            QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+            authConfig,
+            new DefaultQueryConfig(ImmutableMap.of()),
+            new SqlLifecycleManager()
+        )
+    );
   }
 
   public static ObjectMapper getJsonMapper()

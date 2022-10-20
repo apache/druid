@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.24.0-SNAPSHOT</version>
+        <version>25.0.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -240,6 +240,11 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-multi-stage-query</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-services</artifactId>
             <version>${project.parent.version}</version>
@@ -401,7 +406,6 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>3.11.0</version>
         </dependency>
 
         <!-- Tests -->
@@ -651,7 +655,6 @@
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8
                                 -Ddruid.test.config.dockerIp=${env.DOCKER_IP}
-                                -Ddruid.test.config.hadoopDir=${env.HADOOP_DIR}
                                 -Ddruid.test.config.extraDatasourceNameSuffix=${extra.datasource.name.suffix}
                                 -Ddruid.zk.service.host=${env.DOCKER_IP}
                                 -Ddruid.client.https.trustStorePath=client_tls/truststore.jks

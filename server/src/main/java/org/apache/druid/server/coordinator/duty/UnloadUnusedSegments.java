@@ -136,7 +136,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
           LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
 
           if (!queuePeon.getSegmentsToDrop().contains(segment)) {
-            queuePeon.dropSegment(segment, () -> {});
+            queuePeon.dropSegment(segment, success -> {});
             stats.addToTieredStat("unneededCount", server.getTier(), 1);
             log.info(
                 "Dropping uneeded segment [%s] from server [%s] in tier [%s]",

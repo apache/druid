@@ -40,6 +40,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIngestionSpec;
@@ -77,6 +78,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -856,7 +858,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   {
     SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
         "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
         1,
         1,
         new Period("PT1H"),
@@ -865,7 +867,10 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         false,
         new Period("PT30M"),
         null,
-        null, null, null
+        null,
+        null,
+        null,
+        null
     )
     {
     };
@@ -902,6 +907,75 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     autoScaler.stop();
   }
 
+  @Test
+  public void testEnablingIdleBeviourPerSupervisorWithOverlordConfigEnabled()
+  {
+    SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
+        1,
+        1,
+        new Period("PT1H"),
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        new IdleConfig(true, null)
+    ){
+    };
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.replay(ingestionSchema);
+
+    spec = new SeekableStreamSupervisorSpec(
+        ingestionSchema,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        supervisorStateManagerConfig
+    )
+    {
+      @Override
+      public Supervisor createSupervisor()
+      {
+        return null;
+      }
+
+      @Override
+      protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend)
+      {
+        return null;
+      }
+
+      @Override
+      public String getType()
+      {
+        return null;
+      }
+
+      @Override
+      public String getSource()
+      {
+        return null;
+      }
+    };
+
+    Assert.assertTrue(Objects.requireNonNull(spec.getIoConfig().getIdleConfig()).isEnabled());
+    Assert.assertEquals(600000L, spec.getIoConfig().getIdleConfig().getInactiveAfterMillis());
+  }
+
   private static DataSchema getDataSchema()
   {
     List<DimensionSchema> dimensions = new ArrayList<>();
@@ -927,7 +1001,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     if (scaleOut) {
       return new SeekableStreamSupervisorIOConfig(
           "stream",
-          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
+          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
           1,
           taskCount,
           new Period("PT1H"),
@@ -937,14 +1011,16 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           new Period("PT30M"),
           null,
           null,
-          mapper.convertValue(getScaleOutProperties(2), AutoScalerConfig.class), null
+          mapper.convertValue(getScaleOutProperties(2), AutoScalerConfig.class),
+          null,
+          null
       )
       {
       };
     } else {
       return new SeekableStreamSupervisorIOConfig(
           "stream",
-          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
+          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
           1,
           taskCount,
           new Period("PT1H"),
@@ -954,7 +1030,9 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           new Period("PT30M"),
           null,
           null,
-          mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class), null
+          mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class),
+          null,
+          null
       )
       {
       };

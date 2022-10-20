@@ -35,12 +35,14 @@ import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
@@ -75,6 +77,8 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
   private final AggregationTestHelper helper;
   private final TrinaryFn<AggregationTestHelper, TemporaryFolder, Closer, List<Segment>> segmentsGenerator;
   private final String segmentsName;
+
+  private boolean cannotVectorize = false;
 
   public NestedDataGroupByQueryTest(
       GroupByQueryConfig config,
@@ -270,6 +274,46 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
         groupQuery.getResultRowSignature(),
         results,
         ImmutableList.of(new Object[]{null, NullHandling.defaultLongValue()})
+    );
+  }
+
+  @Test
+  public void testGroupByNonExistentVirtualColumn()
+  {
+    if (GroupByStrategySelector.STRATEGY_V1.equals(config.getDefaultStrategy())) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage(
+          "GroupBy v1 does not support dimension selectors with unknown cardinality."
+      );
+    }
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v1"))
+                                          .setVirtualColumns(
+                                              new NestedFieldVirtualColumn("fake", "$.fake", "v0", ColumnType.STRING),
+                                              new ExpressionVirtualColumn(
+                                                  "v1",
+                                                  "concat(v0, 'foo')",
+                                                  ColumnType.STRING,
+                                                  TestExprMacroTable.INSTANCE
+                                              )
+                                          )
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .build();
+
+
+    Sequence<ResultRow> seq = helper.runQueryOnSegmentsObjs(segmentsGenerator.apply(helper, tempFolder, closer), groupQuery);
+
+    List<ResultRow> results = seq.toList();
+    verifyResults(
+        groupQuery.getResultRowSignature(),
+        results,
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(new Object[]{null, 16L})
+        : ImmutableList.of(new Object[]{"foo", 16L})
     );
   }
 

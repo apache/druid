@@ -17,7 +17,7 @@
  */
 
 import { Button, Icon, Intent, Menu, MenuItem } from '@blueprintjs/core';
-import { IconName, IconNames } from '@blueprintjs/icons';
+import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import {
@@ -30,13 +30,13 @@ import {
   SqlQuery,
   SqlRef,
   SqlStar,
-  trimString,
 } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React, { useEffect, useState } from 'react';
 import ReactTable from 'react-table';
 
 import { BracedText, Deferred, TableCell } from '../../../components';
+import { CellFilterMenu } from '../../../components/cell-filter-menu/cell-filter-menu';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
 import {
   computeFlattenExprsForData,
@@ -56,24 +56,12 @@ import {
   Pagination,
   prettyPrintSql,
   QueryAction,
-  stringifyValue,
   timeFormatToSql,
 } from '../../../utils';
 import { ExpressionEditorDialog } from '../../sql-data-loader-view/expression-editor-dialog/expression-editor-dialog';
 import { TimeFloorMenuItem } from '../time-floor-menu-item/time-floor-menu-item';
 
 import './result-table-pane.scss';
-
-function sqlLiteralForColumnValue(column: Column, value: unknown): SqlLiteral | undefined {
-  if (column.sqlType === 'TIMESTAMP') {
-    const asDate = new Date(value as any);
-    if (!isNaN(asDate.valueOf())) {
-      return SqlLiteral.create(asDate);
-    }
-  }
-
-  return SqlLiteral.maybe(value);
-}
 
 const CAST_TARGETS: string[] = ['VARCHAR', 'BIGINT', 'DOUBLE'];
 
@@ -82,11 +70,7 @@ function jsonValue(ex: SqlExpression, path: string): SqlExpression {
 }
 
 function getJsonPaths(jsons: Record<string, any>[]): string[] {
-  return ['$.'].concat(computeFlattenExprsForData(jsons, 'path', 'include-arrays', true));
-}
-
-function isComparable(x: unknown): boolean {
-  return x !== null && x !== '';
+  return ['$.'].concat(computeFlattenExprsForData(jsons, 'include-arrays', true));
 }
 
 function getExpressionIfAlias(query: SqlQuery, selectIndex: number): string {
@@ -244,7 +228,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
       }
 
       // JSON hint
-      if (column.nativeType === 'COMPLEX<json>') {
+      if (selectExpression && column.nativeType === 'COMPLEX<json>') {
         const paths = getJsonPaths(
           filterMap(queryResult.rows, row => {
             const v = row[headerIndex];
@@ -319,7 +303,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
         }
       }
 
-      if (!parsedQuery.hasStarInSelect()) {
+      if (noStar) {
         menuItems.push(
           <MenuItem
             key="edit_column"
@@ -487,16 +471,18 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
         }
       }
 
-      menuItems.push(
-        <MenuItem
-          key="remove_column"
-          icon={IconNames.CROSS}
-          text="Remove column"
-          onClick={() => {
-            onQueryAction(q => q.removeOutputColumn(header));
-          }}
-        />,
-      );
+      if (noStar) {
+        menuItems.push(
+          <MenuItem
+            key="remove_column"
+            icon={IconNames.CROSS}
+            text="Remove column"
+            onClick={() => {
+              onQueryAction(q => q.removeOutputColumn(header));
+            }}
+          />,
+        );
+      }
     } else {
       menuItems.push(
         <MenuItem
@@ -540,106 +526,18 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
     return <Menu>{menuItems}</Menu>;
   }
 
-  function filterOnMenuItem(icon: IconName, clause: SqlExpression, having: boolean) {
-    if (!parsedQuery) return;
-
-    return (
-      <MenuItem
-        icon={icon}
-        text={`${having ? 'Having' : 'Filter on'}: ${prettyPrintSql(clause)}`}
-        onClick={() => {
-          const column = clause.getUsedColumns()[0];
-          onQueryAction(
-            having
-              ? q => q.removeFromHaving(column).addHaving(clause)
-              : q => q.removeColumnFromWhere(column).addWhere(clause),
-          );
-        }}
-      />
-    );
-  }
-
-  function clipboardMenuItem(clause: SqlExpression) {
-    const prettyLabel = prettyPrintSql(clause);
-    return (
-      <MenuItem
-        icon={IconNames.CLIPBOARD}
-        text={`Copy: ${prettyLabel}`}
-        onClick={() => copyAndAlert(clause.toString(), `${prettyLabel} copied to clipboard`)}
-      />
-    );
-  }
-
   function getCellMenu(column: Column, headerIndex: number, value: unknown) {
-    const showFullValueMenuItem = (
-      <MenuItem
-        icon={IconNames.EYE_OPEN}
-        text="Show full value"
-        onClick={() => {
-          setShowValue(stringifyValue(value));
-        }}
+    return (
+      <CellFilterMenu
+        column={column}
+        value={value}
+        headerIndex={headerIndex}
+        runeMode={runeMode}
+        query={parsedQuery}
+        onQueryAction={onQueryAction}
+        onShowFullValue={setShowValue}
       />
     );
-
-    const val = sqlLiteralForColumnValue(column, value);
-
-    if (parsedQuery) {
-      let ex: SqlExpression | undefined;
-      let having = false;
-      if (parsedQuery.hasStarInSelect()) {
-        ex = SqlRef.column(column.name);
-      } else {
-        const selectValue = parsedQuery.getSelectExpressionForIndex(headerIndex);
-        if (selectValue) {
-          const outputName = selectValue.getOutputName();
-          having = parsedQuery.isAggregateSelectIndex(headerIndex);
-          if (having && outputName) {
-            ex = SqlRef.column(outputName);
-          } else {
-            ex = selectValue.getUnderlyingExpression();
-          }
-        }
-      }
-
-      const jsonColumn = column.nativeType === 'COMPLEX<json>';
-      return (
-        <Menu>
-          {ex && val && !jsonColumn && (
-            <>
-              {filterOnMenuItem(IconNames.FILTER, ex.equal(val), having)}
-              {filterOnMenuItem(IconNames.FILTER, ex.unequal(val), having)}
-              {isComparable(value) && (
-                <>
-                  {filterOnMenuItem(IconNames.FILTER, ex.greaterThanOrEqual(val), having)}
-                  {filterOnMenuItem(IconNames.FILTER, ex.lessThanOrEqual(val), having)}
-                </>
-              )}
-            </>
-          )}
-          {showFullValueMenuItem}
-        </Menu>
-      );
-    } else {
-      const ref = SqlRef.column(column.name);
-      const stringValue = stringifyValue(value);
-      const trimmedValue = trimString(stringValue, 50);
-      return (
-        <Menu>
-          <MenuItem
-            icon={IconNames.CLIPBOARD}
-            text={`Copy: ${trimmedValue}`}
-            onClick={() => copyAndAlert(stringValue, `${trimmedValue} copied to clipboard`)}
-          />
-          {!runeMode && val && (
-            <>
-              {clipboardMenuItem(ref.equal(val))}
-              {clipboardMenuItem(ref.unequal(val))}
-            </>
-          )}
-          {showFullValueMenuItem}
-        </Menu>
-      );
-    }
   }
 
   function getHeaderClassName(header: string) {
@@ -722,7 +620,9 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                       <div className="output-name">
                         {icon && <Icon className="type-icon" icon={icon} size={12} />}
                         {h}
-                        {hasFilterOnHeader(h, i) && <Icon icon={IconNames.FILTER} size={14} />}
+                        {hasFilterOnHeader(h, i) && (
+                          <Icon className="filter-icon" icon={IconNames.FILTER} size={14} />
+                        )}
                       </div>
                       {parsedQuery && (
                         <div className="formula">{getExpressionIfAlias(parsedQuery, i)}</div>

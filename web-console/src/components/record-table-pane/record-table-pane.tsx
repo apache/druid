@@ -16,18 +16,11 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Menu, MenuItem } from '@blueprintjs/core';
-import { IconName, IconNames } from '@blueprintjs/icons';
+import { Button, Icon } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
-import {
-  Column,
-  QueryResult,
-  SqlExpression,
-  SqlLiteral,
-  SqlRef,
-  trimString,
-} from 'druid-query-toolkit';
+import { Column, QueryResult } from 'druid-query-toolkit';
 import React, { useEffect, useState } from 'react';
 import ReactTable from 'react-table';
 
@@ -36,43 +29,25 @@ import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../reac
 import {
   columnToIcon,
   columnToWidth,
-  copyAndAlert,
   filterMap,
   formatNumber,
   getNumericColumnBraces,
   Pagination,
-  prettyPrintSql,
-  stringifyValue,
 } from '../../utils';
 import { BracedText } from '../braced-text/braced-text';
+import { CellFilterMenu } from '../cell-filter-menu/cell-filter-menu';
 import { Deferred } from '../deferred/deferred';
 import { TableCell } from '../table-cell/table-cell';
 
 import './record-table-pane.scss';
 
-function sqlLiteralForColumnValue(column: Column, value: unknown): SqlLiteral | undefined {
-  if (column.sqlType === 'TIMESTAMP') {
-    const asDate = new Date(value as any);
-    if (!isNaN(asDate.valueOf())) {
-      return SqlLiteral.create(asDate);
-    }
-  }
-
-  return SqlLiteral.maybe(value);
-}
-
-function isComparable(x: unknown): boolean {
-  return x !== null && x !== '';
-}
-
 export interface RecordTablePaneProps {
   queryResult: QueryResult;
   initPageSize?: number;
-  addFilter?(filter: string): void;
 }
 
 export const RecordTablePane = React.memo(function RecordTablePane(props: RecordTablePaneProps) {
-  const { queryResult, initPageSize, addFilter } = props;
+  const { queryResult, initPageSize } = props;
   const parsedQuery = queryResult.sqlQuery;
   const [pagination, setPagination] = useState<Pagination>({
     page: 0,
@@ -96,95 +71,17 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
     );
   }
 
-  function filterOnMenuItem(icon: IconName, clause: SqlExpression) {
-    if (!parsedQuery || !addFilter) return;
-
-    return (
-      <MenuItem
-        icon={icon}
-        text={`Filter on: ${prettyPrintSql(clause)}`}
-        onClick={() => {
-          addFilter(clause.toString());
-        }}
-      />
-    );
-  }
-
-  function actionMenuItem(clause: SqlExpression) {
-    if (!addFilter) return;
-    const prettyLabel = prettyPrintSql(clause);
-    return (
-      <MenuItem
-        icon={IconNames.FILTER}
-        text={`Filter: ${prettyLabel}`}
-        onClick={() => addFilter(clause.toString())}
-      />
-    );
-  }
-
   function getCellMenu(column: Column, headerIndex: number, value: unknown) {
-    const showFullValueMenuItem = (
-      <MenuItem
-        icon={IconNames.EYE_OPEN}
-        text="Show full value"
-        onClick={() => {
-          setShowValue(stringifyValue(value));
-        }}
+    return (
+      <CellFilterMenu
+        column={column}
+        value={value}
+        headerIndex={headerIndex}
+        query={parsedQuery}
+        onQueryAction={undefined}
+        onShowFullValue={setShowValue}
       />
     );
-
-    const val = sqlLiteralForColumnValue(column, value);
-
-    if (parsedQuery) {
-      let ex: SqlExpression | undefined;
-      if (parsedQuery.hasStarInSelect()) {
-        ex = SqlRef.column(column.name);
-      } else {
-        const selectValue = parsedQuery.getSelectExpressionForIndex(headerIndex);
-        if (selectValue) {
-          ex = selectValue.getUnderlyingExpression();
-        }
-      }
-
-      const jsonColumn = column.nativeType === 'COMPLEX<json>';
-      return (
-        <Menu>
-          {ex && val && !jsonColumn && (
-            <>
-              {filterOnMenuItem(IconNames.FILTER, ex.equal(val))}
-              {filterOnMenuItem(IconNames.FILTER, ex.unequal(val))}
-              {isComparable(value) && (
-                <>
-                  {filterOnMenuItem(IconNames.FILTER, ex.greaterThanOrEqual(val))}
-                  {filterOnMenuItem(IconNames.FILTER, ex.lessThanOrEqual(val))}
-                </>
-              )}
-            </>
-          )}
-          {showFullValueMenuItem}
-        </Menu>
-      );
-    } else {
-      const ref = SqlRef.column(column.name);
-      const stringValue = stringifyValue(value);
-      const trimmedValue = trimString(stringValue, 50);
-      return (
-        <Menu>
-          <MenuItem
-            icon={IconNames.CLIPBOARD}
-            text={`Copy: ${trimmedValue}`}
-            onClick={() => copyAndAlert(stringValue, `${trimmedValue} copied to clipboard`)}
-          />
-          {val && (
-            <>
-              {actionMenuItem(ref.equal(val))}
-              {actionMenuItem(ref.unequal(val))}
-            </>
-          )}
-          {showFullValueMenuItem}
-        </Menu>
-      );
-    }
   }
 
   function getHeaderClassName(header: string) {

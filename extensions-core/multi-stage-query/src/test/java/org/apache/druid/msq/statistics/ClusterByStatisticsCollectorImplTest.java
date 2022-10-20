@@ -80,7 +80,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   );
 
   // These numbers are roughly 10x lower than authentic production numbers. (See StageDefinition.)
-  private static final int MAX_KEYS = 5000;
+  private static final int MAX_BYTES = 1_000_000;
   private static final int MAX_BUCKETS = 1000;
 
   @Test
@@ -598,7 +598,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   private ClusterByStatisticsCollectorImpl makeCollector(final ClusterBy clusterBy, final boolean aggregate)
   {
     return (ClusterByStatisticsCollectorImpl)
-        ClusterByStatisticsCollectorImpl.create(clusterBy, SIGNATURE, MAX_KEYS, MAX_BUCKETS, aggregate, false);
+        ClusterByStatisticsCollectorImpl.create(clusterBy, SIGNATURE, MAX_BYTES, MAX_BUCKETS, aggregate, false);
   }
 
   private static void verifyPartitions(

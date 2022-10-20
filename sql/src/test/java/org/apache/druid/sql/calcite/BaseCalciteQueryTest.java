@@ -188,18 +188,18 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   private static final ImmutableMap.Builder<String, Object> DEFAULT_QUERY_CONTEXT_BUILDER =
       ImmutableMap.<String, Object>builder()
-                  .put(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
+                  .put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
                   .put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z")
                   .put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
                   .put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
   public static final Map<String, Object> QUERY_CONTEXT_DEFAULT = DEFAULT_QUERY_CONTEXT_BUILDER.build();
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_STRINGIFY_ARRAY =
-      DEFAULT_QUERY_CONTEXT_BUILDER.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false)
+      DEFAULT_QUERY_CONTEXT_BUILDER.put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
                                    .build();
 
   public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
-      PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
+      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       TimeseriesQuery.SKIP_EMPTY_BUCKETS, false,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
@@ -207,7 +207,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   );
 
   public static final Map<String, Object> QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
-      PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
+      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
@@ -215,7 +215,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   );
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_TOPN = ImmutableMap.of(
-      PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
+      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, "false",
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
@@ -223,7 +223,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   );
 
   public static final Map<String, Object> QUERY_CONTEXT_LOS_ANGELES = ImmutableMap.of(
-      PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
+      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
@@ -232,7 +232,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   // Matches QUERY_CONTEXT_DEFAULT
   public static final Map<String, Object> TIMESERIES_CONTEXT_BY_GRAN = ImmutableMap.of(
-      PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
+      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
@@ -292,7 +292,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   static {
-    TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID);
+    TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z");
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
@@ -602,7 +602,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
     Assert.assertEquals(
         sql,
-        StringUtils.format("Cannot build plan for query. %s", expectedError),
+        StringUtils.format("Query not supported. %s SQL was: %s", expectedError, sql),
         e.getMessage()
     );
   }
@@ -917,7 +917,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             .auth(authenticationResult)
             .build()
     );
-    Sequence<Object[]> results = stmt.execute();
+    Sequence<Object[]> results = stmt.execute().getResults();
     RelDataType rowType = stmt.prepareResult().getReturnedRowType();
     return new Pair<>(
         RowSignatures.fromRelDataType(rowType.getFieldNames(), rowType),
@@ -1275,7 +1275,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     Map<String, Object> output = new HashMap<>(input);
     output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField);
-    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, granularity);
+
+    try {
+      output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, queryJsonMapper.writeValueAsString(granularity));
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+
     output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, timestampResultFieldIndex);
     return output;
   }

@@ -43,8 +43,8 @@ import java.util.Map;
  */
 public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
 {
-  static final int INITIAL_MAX_KEYS = 2 << 15 /* 65,536 */;
-  static final int SMALLEST_MAX_KEYS = 16;
+  static final int INITIAL_MAX_BYTES = 134_217_728;
+  static final int SMALLEST_MAX_BYTES = 5000;
   private static final int MISSING_KEY_WEIGHT = 0;
 
   private final Comparator<RowKey> comparator;
@@ -71,7 +71,8 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
    * collector type, which is based on a more solid statistical foundation.
    */
   private final Object2LongSortedMap<RowKey> retainedKeys;
-  private int maxKeys;
+  private int maxBytes;
+  private int retainedBytes;
 
   /**
    * Each key is retained with probability 2^(-spaceReductionFactor). This value is incremented on calls to
@@ -92,7 +93,7 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
     this.comparator = Preconditions.checkNotNull(comparator, "comparator");
     this.retainedKeys = Preconditions.checkNotNull(retainedKeys, "retainedKeys");
     this.retainedKeys.defaultReturnValue(MISSING_KEY_WEIGHT);
-    this.maxKeys = INITIAL_MAX_KEYS;
+    this.maxBytes = INITIAL_MAX_BYTES;
     this.spaceReductionFactor = spaceReductionFactor;
     this.totalWeightUnadjusted = 0;
 
@@ -120,14 +121,16 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
       if (isNewMin && !retainedKeys.isEmpty() && !isKeySelected(retainedKeys.firstKey())) {
         // Old min should be kicked out.
         totalWeightUnadjusted -= retainedKeys.removeLong(retainedKeys.firstKey());
+        retainedBytes -= retainedKeys.firstKey().getNumberOfBytes();
       }
 
       if (retainedKeys.putIfAbsent(key, weight) == MISSING_KEY_WEIGHT) {
         // We did add this key. (Previous value was zero, meaning absent.)
         totalWeightUnadjusted += weight;
+        retainedBytes += key.getNumberOfBytes();
       }
 
-      while (retainedKeys.size() >= maxKeys) {
+      while (retainedBytes >= maxBytes) {
         increaseSpaceReductionFactorIfPossible();
       }
     }
@@ -169,6 +172,12 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
   }
 
   @Override
+  public double estimatedRetainedBytes()
+  {
+    return retainedBytes;
+  }
+
+  @Override
   public RowKey minKey()
   {
     // Throws NoSuchElementException when empty, as required by minKey contract.
@@ -182,13 +191,13 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
       return true;
     }
 
-    if (maxKeys == SMALLEST_MAX_KEYS) {
+    if (maxBytes <= SMALLEST_MAX_BYTES) {
       return false;
     }
 
-    maxKeys /= 2;
+    maxBytes /= 2;
 
-    while (retainedKeys.size() >= maxKeys) {
+    while (retainedBytes >= maxBytes) {
       if (!increaseSpaceReductionFactorIfPossible()) {
         return false;
       }
@@ -242,10 +251,10 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
     return retainedKeys;
   }
 
-  @JsonProperty("maxKeys")
-  int getMaxKeys()
+  @JsonProperty("maxBytes")
+  int getMaxBytes()
   {
-    return maxKeys;
+    return maxBytes;
   }
 
   @JsonProperty("spaceReductionFactor")
@@ -296,6 +305,7 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
 
       if (!isKeySelected(key)) {
         totalWeightUnadjusted -= entry.getLongValue();
+        retainedBytes -= entry.getKey().getNumberOfBytes();
         iterator.remove();
       }
     }

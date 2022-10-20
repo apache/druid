@@ -66,7 +66,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -315,7 +314,7 @@ public class SegmentMetadataCache
                     }
 
                     // lastFailure != 0L means exceptions happened before and there're some refresh work was not completed.
-                    // so that even ServerView is initialized, we can't let broker complete initialization.
+                    // so that even if ServerView is initialized, we can't let broker complete initialization.
                     if (isServerViewInitialized && lastFailure == 0L) {
                       // Server view is initialized, but we don't need to do a refresh. Could happen if there are
                       // no segments in the system yet. Just mark us as initialized, then.
@@ -907,7 +906,7 @@ public class SegmentMetadataCache
 
     return queryLifecycleFactory
         .factorize()
-        .runSimple(segmentMetadataQuery, escalator.createEscalatedAuthenticationResult(), Access.OK);
+        .runSimple(segmentMetadataQuery, escalator.createEscalatedAuthenticationResult(), Access.OK).getResults();
   }
 
   @VisibleForTesting

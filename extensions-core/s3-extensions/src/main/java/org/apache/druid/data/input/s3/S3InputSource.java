@@ -30,6 +30,7 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -77,7 +78,6 @@ public class S3InputSource extends CloudObjectInputSource
   private final AWSProxyConfig awsProxyConfig;
   private final AWSClientConfig awsClientConfig;
   private final AWSEndpointConfig awsEndpointConfig;
-  private final AWSCredentialsProvider awsCredentialsProvider;
   private int maxRetries;
 
   /**
@@ -104,6 +104,7 @@ public class S3InputSource extends CloudObjectInputSource
       @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
       @JacksonInject ServerSideEncryptingAmazonS3.Builder s3ClientBuilder,
       @JacksonInject S3InputDataConfig inputDataConfig,
+      @JacksonInject AWSCredentialsProvider awsCredentialsProvider,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
@@ -111,8 +112,7 @@ public class S3InputSource extends CloudObjectInputSource
       @JsonProperty("properties") @Nullable S3InputSourceConfig s3InputSourceConfig,
       @JsonProperty("proxyConfig") @Nullable AWSProxyConfig awsProxyConfig,
       @JsonProperty("endpointConfig") @Nullable AWSEndpointConfig awsEndpointConfig,
-      @JsonProperty("clientConfig") @Nullable AWSClientConfig awsClientConfig,
-      @JacksonInject AWSCredentialsProvider awsCredentialsProvider
+      @JsonProperty("clientConfig") @Nullable AWSClientConfig awsClientConfig
   )
   {
     super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, filter);
@@ -174,11 +174,10 @@ public class S3InputSource extends CloudObjectInputSource
         }
     );
     this.maxRetries = RetryUtils.DEFAULT_MAX_TRIES;
-    this.awsCredentialsProvider = awsCredentialsProvider;
   }
 
   @VisibleForTesting
-  public S3InputSource(
+  S3InputSource(
       ServerSideEncryptingAmazonS3 s3Client,
       ServerSideEncryptingAmazonS3.Builder s3ClientBuilder,
       S3InputDataConfig inputDataConfig,
@@ -192,18 +191,19 @@ public class S3InputSource extends CloudObjectInputSource
       AWSClientConfig awsClientConfig
   )
   {
-    this(s3Client,
-         s3ClientBuilder,
-         inputDataConfig,
-         uris,
-         prefixes,
-         objects,
-         filter,
-         s3InputSourceConfig,
-         awsProxyConfig,
-         awsEndpointConfig,
-         awsClientConfig,
-         null
+    this(
+        s3Client,
+        s3ClientBuilder,
+        inputDataConfig,
+        null,
+        uris,
+        prefixes,
+        objects,
+        filter,
+        s3InputSourceConfig,
+        awsProxyConfig,
+        awsEndpointConfig,
+        awsClientConfig
     );
   }
 
@@ -227,6 +227,7 @@ public class S3InputSource extends CloudObjectInputSource
         s3Client,
         s3ClientBuilder,
         inputDataConfig,
+        null,
         uris,
         prefixes,
         objects,
@@ -234,8 +235,7 @@ public class S3InputSource extends CloudObjectInputSource
         s3InputSourceConfig,
         awsProxyConfig,
         awsEndpointConfig,
-        awsClientConfig,
-        null
+        awsClientConfig
     );
     this.maxRetries = maxRetries;
   }
@@ -278,6 +278,7 @@ public class S3InputSource extends CloudObjectInputSource
 
   @Nullable
   @JsonProperty("properties")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public S3InputSourceConfig getS3InputSourceConfig()
   {
     return s3InputSourceConfig;
@@ -285,6 +286,7 @@ public class S3InputSource extends CloudObjectInputSource
 
   @Nullable
   @JsonProperty("proxyConfig")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public AWSProxyConfig getAwsProxyConfig()
   {
     return awsProxyConfig;
@@ -292,6 +294,7 @@ public class S3InputSource extends CloudObjectInputSource
 
   @Nullable
   @JsonProperty("clientConfig")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public AWSClientConfig getAwsClientConfig()
   {
     return awsClientConfig;
@@ -299,6 +302,7 @@ public class S3InputSource extends CloudObjectInputSource
 
   @Nullable
   @JsonProperty("endpointConfig")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public AWSEndpointConfig getAwsEndpointConfig()
   {
     return awsEndpointConfig;
@@ -334,13 +338,13 @@ public class S3InputSource extends CloudObjectInputSource
         inputDataConfig,
         null,
         null,
+        null,
         split.get(),
         getFilter(),
         getS3InputSourceConfig(),
         getAwsProxyConfig(),
         getAwsEndpointConfig(),
-        getAwsClientConfig(),
-        awsCredentialsProvider
+        getAwsClientConfig()
     );
   }
 

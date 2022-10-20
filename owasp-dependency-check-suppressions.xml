@@ -49,15 +49,18 @@
     <cve>CVE-2017-16613</cve>
   </suppress>
   <suppress>
-    <!-- These CVEs are for the python SDK, but Druid uses the Java SDK -->
     <notes><![CDATA[
-   file name: openstack-keystone-1.9.3.jar
+   file name: openstack-keystone-1.9.1.jar
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.jclouds\.api/openstack\-keystone@.*$</packageUrl>
+    <!-- These CVEs are for the python SDK, but Druid uses the Java SDK -->
     <cve>CVE-2015-7546</cve>
     <cve>CVE-2020-12689</cve>
     <cve>CVE-2020-12690</cve>
     <cve>CVE-2020-12691</cve>
+
+    <!-- This CVE affects the server -->
+    <cve>CVE-2021-3563</cve>
   </suppress>
   <suppress>
     <!--
@@ -213,6 +216,14 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.yaml/snakeyaml@1.6$</packageUrl>
     <cve>CVE-2017-18640</cve>
+    <cve>CVE-2022-25857</cve>
+  </suppress>
+  <suppress>
+    <!-- We need to wait for 17.0.0 of https://github.com/kubernetes-client/java/releases -->
+    <notes><![CDATA[
+    file name: snakeyaml-1.27.jar
+    ]]></notes>
+    <cve>CVE-2022-25857</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -446,6 +457,7 @@
     <!--
       1. hive-storage-api has the thrift vulnerability too
       2. CVE-2021-34538 pertains to Hive server.
+      3. CVE-2021-4125 only applies to the OpenShift Metering hive container images
      -->
     <notes><![CDATA[
      file name: hive-storage-api-2.8.1.jar
@@ -453,6 +465,7 @@
     <packageUrl regex="true">^pkg:maven/org\.apache\.hive/hive-storage-api@2.8.1$</packageUrl>
     <cve>CVE-2020-13949</cve>
     <cve>CVE-2021-34538</cve>
+    <cve>CVE-2021-4125</cve>
   </suppress>
   <suppress>
     <!--
@@ -617,6 +630,28 @@
    file name: postgresql-42.3.3.jar
    ]]></notes>
     <cve>CVE-2022-31197</cve>
+  </suppress>
+
+  <suppress>
+    <!-- avatica-server-1.17.0.jar -->
+    <notes><![CDATA[
+   file name: avatica-server-1.17.0.jar
+   ]]></notes>
+    <!--
+    We do not expose any of the SQL operators that were found vulnerable in this CVE.
+    -->
+    <cve>CVE-2022-39135</cve>
+  </suppress>
+
+  <suppress>
+    <!-- calcite-core-1.21.0.jar -->
+    <notes><![CDATA[
+   file name: calcite-core-1.21.0.jar
+   ]]></notes>
+    <!--
+    We do not expose any of the SQL operators that were found vulnerable in this CVE.
+    -->
+    <cve>CVE-2022-39135</cve>
   </suppress>
 
 </suppressions>

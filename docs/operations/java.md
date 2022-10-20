@@ -27,8 +27,8 @@ a Java runtime for Druid.
 
 ## Selecting a Java runtime
 
-Druid fully supports Java 8 and 11. The project team recommends Java 11. The project team does not recommend running
-with Java 17, because certain Druid functionality is not currently compatible with Java 17.
+Druid fully supports Java 8 and 11, and has experimental support for [Java 17](#java-17).
+The project team recommends Java 11.
 
 The project team recommends using an OpenJDK-based Java distribution. There are many free and actively-supported
 distributions available, including
@@ -70,7 +70,6 @@ Druid, because Java 8 does not recognize these parameters and fails to start up 
 To do this, add the following lines to your `jvm.config` files:
 
 ```
---add-exports=java.base/jdk.internal.perf=ALL-UNNAMED
 --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
 --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
 --add-opens=java.base/java.lang=ALL-UNNAMED
@@ -78,7 +77,6 @@ To do this, add the following lines to your `jvm.config` files:
 --add-opens=java.base/java.nio=ALL-UNNAMED
 --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
 --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
---add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
 ```
 
 Additionally, tasks run by [MiddleManagers](../design/architecture.md) execute in separate JVMs. The command line for
@@ -87,8 +85,29 @@ these JVMs is given by `druid.indexer.runner.javaOptsArray` or `druid.indexer.ru
 a line like the following:
 
 ```
-druid.indexer.runner.javaOptsArray=["-server","-Xms1g","-Xmx1g","-XX:MaxDirectMemorySize=1g","-Duser.timezone=UTC","-Dfile.encoding=UTF-8","-XX:+ExitOnOutOfMemoryError","-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager","--add-exports=java.base/jdk.internal.perf=ALL-UNNAMED","--add-exports=java.base/jdk.internal.ref=ALL-UNNAMED","--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED","--add-opens=java.base/java.lang=ALL-UNNAMED","--add-opens=java.base/java.io=ALL-UNNAMED","--add-opens=java.base/java.nio=ALL-UNNAMED","--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED","--add-opens=java.base/sun.nio.ch=ALL-UNNAMED","--add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED"]
+druid.indexer.runner.javaOptsArray=["-server","-Xms1g","-Xmx1g","-XX:MaxDirectMemorySize=1g","-Duser.timezone=UTC","-Dfile.encoding=UTF-8","-XX:+ExitOnOutOfMemoryError","-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager","--add-exports=java.base/jdk.internal.ref=ALL-UNNAMED","--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED","--add-opens=java.base/java.lang=ALL-UNNAMED","--add-opens=java.base/java.io=ALL-UNNAMED","--add-opens=java.base/java.nio=ALL-UNNAMED","--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED","--add-opens=java.base/sun.nio.ch=ALL-UNNAMED"]
 ```
 
 The `Xms`, `Xmx`, and `MaxDirectMemorySize` parameters in the line above are merely an example. You may use different
 values in your specific environment.
+
+## Java 17
+
+Druid has experimental support for Java 17.
+
+An important change in Java 17 is that [strong encapsulation](#strong-encapsulation) is enabled by default. The various
+`--add-opens` and `--add-exports` parameters listed in the [strong encapsulation](#strong-encapsulation) section are
+required in all `jvm.config` files and in `druid.indexer.runner.javaOpts` or `druid.indexer.runner.javaOptsArray` on
+MiddleManagers. Failure to include these parameters leads to failure of various operations.
+
+In addition, Druid's launch scripts detect Java 17 and log the following message rather than starting up:
+
+```
+Druid requires Java 8 or 11. Your current version is: 17.X.Y.
+```
+
+You can skip this check with an environment variable:
+
+```
+export DRUID_SKIP_JAVA_CHECK=1
+```

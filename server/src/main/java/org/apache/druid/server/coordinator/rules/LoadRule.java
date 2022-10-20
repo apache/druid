@@ -380,7 +380,10 @@ public abstract class LoadRule implements Rule
           holder.getServer().getTier(),
           getReplicationLogString()
       );
-      holder.getPeon().loadSegment(segment, () -> throttler.unregisterReplicantCreation(tier, segmentId));
+      holder.getPeon().loadSegment(
+          segment,
+          loadSuccess -> throttler.unregisterReplicantCreation(tier, segmentId)
+      );
     }
 
     return numToAssign;
