@@ -88,6 +88,17 @@
     <packageUrl regex="true">^pkg:maven/net\.minidev/accessors\-smart@.*$</packageUrl>
     <cve>CVE-2021-27568</cve>
   </suppress>
+  <suppress>
+    <!--
+      Suppressing for patch release 24.0.1
+      -->
+    <notes><![CDATA[
+   file name: jackson-databind-2.10.5.1.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@.*$</packageUrl>
+    <cve>CVE-2022-42003</cve>
+    <cve>CVE-2022-42004</cve>
+  </suppress>
 
 
   <suppress>
