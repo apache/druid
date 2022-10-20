@@ -701,6 +701,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Matcher<Throwable> expectedValidationErrorMatcher = null;
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
     protected MSQFault expectedMSQFault = null;
+    protected Class<? extends MSQFault> expectedMSQFaultClass = null;
 
     private boolean hasRun = false;
 
@@ -760,6 +761,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public Builder setExpectedMSQFault(MSQFault MSQFault)
     {
       this.expectedMSQFault = MSQFault;
+      return (Builder) this;
+    }
+
+    public Builder setExpectedMSQFaultClass(Class<? extends MSQFault> expectedMSQFaultClass)
+    {
+      this.expectedMSQFaultClass = expectedMSQFaultClass;
       return (Builder) this;
     }
 
@@ -850,19 +857,28 @@ public class MSQTestBase extends BaseCalciteQueryTest
       Preconditions.checkArgument(expectedDataSource != null, "dataSource cannot be null");
       Preconditions.checkArgument(expectedRowSignature != null, "expectedRowSignature cannot be null");
       Preconditions.checkArgument(
-          expectedResultRows != null || expectedMSQFault != null,
-          "atleast one of expectedResultRows or expectedMSQFault should be set to non null"
+          expectedResultRows != null || expectedMSQFault != null || expectedMSQFaultClass != null,
+          "atleast one of expectedResultRows, expectedMSQFault or expectedMSQFaultClass should be set to non null"
       );
       Preconditions.checkArgument(expectedShardSpec != null, "shardSpecClass cannot be null");
       readyToRun();
       try {
         String controllerId = runMultiStageQuery(sql, queryContext);
-        if (expectedMSQFault != null) {
+        if (expectedMSQFault != null || expectedMSQFaultClass != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);
-          Assert.assertEquals(
-              expectedMSQFault.getCodeWithMessage(),
-              msqErrorReport.getFault().getCodeWithMessage()
-          );
+          if (expectedMSQFault != null) {
+            Assert.assertEquals(
+                expectedMSQFault.getCodeWithMessage(),
+                msqErrorReport.getFault().getCodeWithMessage()
+            );
+          }
+          if (expectedMSQFaultClass != null) {
+            Assert.assertEquals(
+                expectedMSQFaultClass,
+                msqErrorReport.getFault().getClass()
+            );
+          }
+
           return;
         }
         getPayloadOrThrow(controllerId);
@@ -1016,12 +1032,20 @@ public class MSQTestBase extends BaseCalciteQueryTest
       try {
         String controllerId = runMultiStageQuery(sql, queryContext);
 
-        if (expectedMSQFault != null) {
+        if (expectedMSQFault != null || expectedMSQFaultClass != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);
-          Assert.assertEquals(
-              expectedMSQFault.getCodeWithMessage(),
-              msqErrorReport.getFault().getCodeWithMessage()
-          );
+          if (expectedMSQFault != null) {
+            Assert.assertEquals(
+                expectedMSQFault.getCodeWithMessage(),
+                msqErrorReport.getFault().getCodeWithMessage()
+            );
+          }
+          if (expectedMSQFaultClass != null) {
+            Assert.assertEquals(
+                expectedMSQFaultClass,
+                msqErrorReport.getFault().getClass()
+            );
+          }
           return null;
         }
 

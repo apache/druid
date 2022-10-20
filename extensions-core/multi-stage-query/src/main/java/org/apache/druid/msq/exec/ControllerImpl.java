@@ -533,15 +533,6 @@ public class ControllerImpl implements Controller
 
     log.debug("Query [%s] durable storage mode is set to %s.", queryDef.getQueryId(), isDurableStorageEnabled);
 
-    this.workerTaskLauncher = new MSQWorkerTaskLauncher(
-        id(),
-        task.getDataSource(),
-        context,
-        isDurableStorageEnabled,
-
-        // 10 minutes +- 2 minutes jitter
-        TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
-    );
 
     long maxParseExceptions = -1;
 
@@ -551,6 +542,17 @@ public class ControllerImpl implements Controller
                                    .map(DimensionHandlerUtils::convertObjectToLong)
                                    .orElse(MSQWarnings.DEFAULT_MAX_PARSE_EXCEPTIONS_ALLOWED);
     }
+
+
+    this.workerTaskLauncher = new MSQWorkerTaskLauncher(
+        id(),
+        task.getDataSource(),
+        context,
+        isDurableStorageEnabled,
+        maxParseExceptions,
+        // 10 minutes +- 2 minutes jitter
+        TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
+    );
 
     this.faultsExceededChecker = new FaultsExceededChecker(
         ImmutableMap.of(CannotParseExternalDataFault.CODE, maxParseExceptions)
@@ -644,6 +646,7 @@ public class ControllerImpl implements Controller
       // Present means the warning limit was exceeded, and warnings have therefore turned into an error.
       String errorCode = warningsExceeded.get().lhs;
       Long limit = warningsExceeded.get().rhs;
+
       workerError(MSQErrorReport.fromFault(
           id(),
           selfDruidNode.getHost(),
