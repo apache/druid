@@ -89,6 +89,58 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
     this.broadcastJoinHelper = inputChannelsAndBroadcastJoinHelper.rhs;
   }
 
+  /**
+   * Helper that enables implementations of {@link BaseLeafFrameProcessorFactory} to set up their primary and side channels.
+   */
+  private static Pair<List<ReadableFrameChannel>, BroadcastJoinHelper> makeInputChannelsAndBroadcastJoinHelper(
+      final DataSource dataSource,
+      final ReadableInput baseInput,
+      final Int2ObjectMap<ReadableInput> sideChannels,
+      final JoinableFactoryWrapper joinableFactory,
+      final long memoryReservedForBroadcastJoin
+  )
+  {
+    if (!(dataSource instanceof JoinDataSource) && !sideChannels.isEmpty()) {
+      throw new ISE("Did not expect side channels for dataSource [%s]", dataSource);
+    }
+
+    final List<ReadableFrameChannel> inputChannels = new ArrayList<>();
+    final BroadcastJoinHelper broadcastJoinHelper;
+
+    if (baseInput.hasChannel()) {
+      inputChannels.add(baseInput.getChannel());
+    }
+
+    if (dataSource instanceof JoinDataSource) {
+      final Int2IntMap inputNumberToProcessorChannelMap = new Int2IntOpenHashMap();
+      final List<FrameReader> channelReaders = new ArrayList<>();
+
+      if (baseInput.hasChannel()) {
+        // BroadcastJoinHelper doesn't need to read the base channel, so stub in a null reader.
+        channelReaders.add(null);
+      }
+
+      for (Int2ObjectMap.Entry<ReadableInput> sideChannelEntry : sideChannels.int2ObjectEntrySet()) {
+        final int inputNumber = sideChannelEntry.getIntKey();
+        inputNumberToProcessorChannelMap.put(inputNumber, inputChannels.size());
+        inputChannels.add(sideChannelEntry.getValue().getChannel());
+        channelReaders.add(sideChannelEntry.getValue().getChannelFrameReader());
+      }
+
+      broadcastJoinHelper = new BroadcastJoinHelper(
+          inputNumberToProcessorChannelMap,
+          inputChannels,
+          channelReaders,
+          joinableFactory,
+          memoryReservedForBroadcastJoin
+      );
+    } else {
+      broadcastJoinHelper = null;
+    }
+
+    return Pair.of(inputChannels, broadcastJoinHelper);
+  }
+
   @Override
   public List<ReadableFrameChannel> inputChannels()
   {
@@ -157,73 +209,9 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
       final boolean retVal = broadcastJoinHelper.buildBroadcastTablesIncrementally(readableInputs);
       DataSource inlineChannelDataSource = broadcastJoinHelper.inlineChannelData(query.getDataSource());
       if (retVal) {
-        if (inlineChannelDataSource instanceof InputNumberDataSource) {
-          InputNumberDataSource inputNumberDataSource = (InputNumberDataSource) query.getDataSource();
-          // The InputNumberDataSource requires a BroadcastJoinHelper to be able to create its
-          // segment map function.  It would be a lot better if the InputNumberDataSource actually
-          // had a way to get that injected into it on its own, but the relationship between these objects
-          // was figured out during a refactor and using a setter here seemed like the least-bad way to
-          // make progress on the refactor without breaking functionality.  Hopefully, some future
-          // developer will move this away from a setter.
-          inputNumberDataSource.setBroadcastJoinHelper(broadcastJoinHelper);
-          segmentMapFn = inputNumberDataSource.createSegmentMapFunction(query, cpuAccumulator);
-        } else {
-          segmentMapFn = inlineChannelDataSource.createSegmentMapFunction(query, cpuAccumulator);
-        }
+        segmentMapFn = inlineChannelDataSource.createSegmentMapFunction(query, cpuAccumulator);
       }
       return retVal;
     }
-  }
-
-  /**
-   * Helper that enables implementations of {@link BaseLeafFrameProcessorFactory} to set up their primary and side channels.
-   */
-  private static Pair<List<ReadableFrameChannel>, BroadcastJoinHelper> makeInputChannelsAndBroadcastJoinHelper(
-      final DataSource dataSource,
-      final ReadableInput baseInput,
-      final Int2ObjectMap<ReadableInput> sideChannels,
-      final JoinableFactoryWrapper joinableFactory,
-      final long memoryReservedForBroadcastJoin
-  )
-  {
-    if (!(dataSource instanceof JoinDataSource) && !sideChannels.isEmpty()) {
-      throw new ISE("Did not expect side channels for dataSource [%s]", dataSource);
-    }
-
-    final List<ReadableFrameChannel> inputChannels = new ArrayList<>();
-    final BroadcastJoinHelper broadcastJoinHelper;
-
-    if (baseInput.hasChannel()) {
-      inputChannels.add(baseInput.getChannel());
-    }
-
-    if (dataSource instanceof JoinDataSource) {
-      final Int2IntMap inputNumberToProcessorChannelMap = new Int2IntOpenHashMap();
-      final List<FrameReader> channelReaders = new ArrayList<>();
-
-      if (baseInput.hasChannel()) {
-        // BroadcastJoinHelper doesn't need to read the base channel, so stub in a null reader.
-        channelReaders.add(null);
-      }
-
-      for (Int2ObjectMap.Entry<ReadableInput> sideChannelEntry : sideChannels.int2ObjectEntrySet()) {
-        final int inputNumber = sideChannelEntry.getIntKey();
-        inputNumberToProcessorChannelMap.put(inputNumber, inputChannels.size());
-        inputChannels.add(sideChannelEntry.getValue().getChannel());
-        channelReaders.add(sideChannelEntry.getValue().getChannelFrameReader());
-      }
-
-      broadcastJoinHelper = new BroadcastJoinHelper(
-          inputNumberToProcessorChannelMap,
-          inputChannels,
-          channelReaders,
-          joinableFactory,
-          memoryReservedForBroadcastJoin
-      );
-    } else {
-      broadcastJoinHelper = null;
-    }
-
-    return Pair.of(inputChannels, broadcastJoinHelper);
   }
 }

@@ -28,20 +28,16 @@ import com.google.inject.Key;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  */
 public class GuiceInjectableValues extends InjectableValues
 {
   private final Injector injector;
-  private Set<Key> nullables;
 
   public GuiceInjectableValues(Injector injector)
   {
     this.injector = injector;
-    this.nullables = new HashSet<>();
   }
 
   @Override
@@ -56,19 +52,16 @@ public class GuiceInjectableValues extends InjectableValues
     //                  whatever provider needs"
     // Currently we should only be dealing with `Key` instances, and anything more advanced should be handled with
     // great care
-    if (nullables.contains((Key) valueId)) {
-      return null;
-    }
-    else if (valueId instanceof Key) {
+    if (valueId instanceof Key) {
       try {
         return injector.getInstance((Key) valueId);
       }
       catch (ConfigurationException ce) {
         // check if nullable annotation is present for this
         if (forProperty.getAnnotation(Nullable.class) != null) {
-          nullables.add((Key) valueId);
           return null;
         }
+        throw ce;
       }
     }
     throw new IAE(
