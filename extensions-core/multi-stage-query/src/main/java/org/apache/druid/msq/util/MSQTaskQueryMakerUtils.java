@@ -40,7 +40,7 @@ public class MSQTaskQueryMakerUtils
                                                                                        .map(sensitiveKey ->
                                                                                                  Pattern.compile(
                                                                                                      StringUtils.format(
-                                                                                                         "\\\\\"%s\\\\\"(\\s)*:(\\s)*(?<sensitive>\\{(\\S)+?\\})",
+                                                                                                         "\\\\\"%s\\\\\"(\\s)*:(\\s)*(?<sensitive>\\{(\\s)*(\\S)+?(\\s)*\\})",
                                                                                                          sensitiveKey
                                                                                                      ),
                                                                                                      Pattern.CASE_INSENSITIVE
@@ -66,6 +66,10 @@ public class MSQTaskQueryMakerUtils
     return maskedSqlQuery.toString();
   }
 
+  /**
+   * Validates if each element of the sort order appears in the final output and if it is not empty then it starts with the
+   * __time column
+   */
   public static void validateSegmentSortOrder(final List<String> sortOrder, final Collection<String> allOutputColumns)
   {
     final Set<String> allOutputColumnsSet = new HashSet<>(allOutputColumns);
