@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
@@ -257,10 +258,25 @@ public class DruidCoordinator
     this.compactSegments = initializeCompactSegmentsDuty();
   }
 
-  public boolean isLeader()
+  public boolean isLeaderAndInitialized()
   {
-    return coordLeaderSelector.isLeader();
+    return coordLeaderSelector.isLeader() == DruidLeaderSelector.LeaderState.INTIALIZED;
   }
+
+
+  public Optional<String> getRedirectLocation()
+  {
+    String leader = coordLeaderSelector.getCurrentLeader();
+
+    if (leader == null
+        || leader.isEmpty()
+        || coordLeaderSelector.isLeader() == DruidLeaderSelector.LeaderState.ELECTED) {
+      return Optional.absent();
+    } else {
+      return Optional.of(leader);
+    }
+  }
+
 
   public Map<String, LoadQueuePeon> getLoadManagementPeons()
   {
@@ -699,12 +715,24 @@ public class DruidCoordinator
               @Override
               public ScheduledExecutors.Signal call()
               {
-                if (coordLeaderSelector.isLeader() && startingLeaderCounter == coordLeaderSelector.localTerm()) {
-                  theRunnable.run();
-                }
-                if (coordLeaderSelector.isLeader()
-                    && startingLeaderCounter == coordLeaderSelector.localTerm()) { // (We might no longer be leader)
+                final DruidLeaderSelector.LeaderState leaderState = coordLeaderSelector.isLeader();
+                if (leaderState == DruidLeaderSelector.LeaderState.NOT_ELECTED) {
+                  return ScheduledExecutors.Signal.STOP;
+                } else if (leaderState == DruidLeaderSelector.LeaderState.ELECTED
+                           && startingLeaderCounter == coordLeaderSelector.localTerm()) {
                   return ScheduledExecutors.Signal.REPEAT;
+                } else if (leaderState == DruidLeaderSelector.LeaderState.INTIALIZED
+                           && startingLeaderCounter == coordLeaderSelector.localTerm()) {
+
+                  theRunnable.run();
+                  // as cord duties can take some time to run, we check to see if we are still the leader.
+                  DruidLeaderSelector.LeaderState stateAfterCordDutyRun = coordLeaderSelector.isLeader();
+                  if (stateAfterCordDutyRun == DruidLeaderSelector.LeaderState.INTIALIZED
+                      && startingLeaderCounter == coordLeaderSelector.localTerm()) {
+                    return ScheduledExecutors.Signal.REPEAT;
+                  } else {
+                    return ScheduledExecutors.Signal.STOP;
+                  }
                 } else {
                   return ScheduledExecutors.Signal.STOP;
                 }
@@ -731,7 +759,7 @@ public class DruidCoordinator
       lookupCoordinatorManager.stop();
       metadataRuleManager.stop();
       segmentsMetadataManager.stopPollingDatabasePeriodically();
-
+      exec.shutdownNow();
       if (balancerExec != null) {
         balancerExec.shutdownNow();
         balancerExec = null;
@@ -873,10 +901,14 @@ public class DruidCoordinator
       try {
         final long globalStart = System.nanoTime();
         synchronized (lock) {
-          if (!coordLeaderSelector.isLeader()) {
-            log.info("LEGGO MY EGGO. [%s] is leader.", coordLeaderSelector.getCurrentLeader());
+          DruidLeaderSelector.LeaderState leaderState = coordLeaderSelector.isLeader();
+          if (leaderState == DruidLeaderSelector.LeaderState.NOT_ELECTED) {
+            log.info("I am no longer the leader. Current leader is [%s].", coordLeaderSelector.getCurrentLeader());
             stopBeingLeader();
             return;
+          } else if (leaderState == DruidLeaderSelector.LeaderState.ELECTED) {
+            throw new ISE(
+                "Leader is initializing and coordinator duty run method is called. Likely hitting a race condition");
           }
         }
 
@@ -912,7 +944,7 @@ public class DruidCoordinator
 
         boolean coordinationPaused = getDynamicConfigs().getPauseCoordination();
         if (coordinationPaused
-            && coordLeaderSelector.isLeader()
+            && coordLeaderSelector.isLeader() == DruidLeaderSelector.LeaderState.INTIALIZED
             && startingLeaderCounter == coordLeaderSelector.localTerm()) {
 
           log.debug(
@@ -923,7 +955,7 @@ public class DruidCoordinator
         for (CoordinatorDuty duty : duties) {
           // Don't read state and run state in the same duty otherwise racy conditions may exist
           if (!coordinationPaused
-              && coordLeaderSelector.isLeader()
+              && coordLeaderSelector.isLeader() == DruidLeaderSelector.LeaderState.INTIALIZED
               && startingLeaderCounter == coordLeaderSelector.localTerm()) {
 
             final long start = System.nanoTime();

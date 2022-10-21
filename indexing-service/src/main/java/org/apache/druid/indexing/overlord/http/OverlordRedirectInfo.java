@@ -49,7 +49,7 @@ public class OverlordRedirectInfo implements RedirectInfo
   @Override
   public boolean doLocal(String requestURI)
   {
-    return (requestURI != null && LOCAL_PATHS.contains(requestURI)) || taskMaster.isLeader();
+    return (requestURI != null && LOCAL_PATHS.contains(requestURI)) || taskMaster.isLeaderAndIntialized();
   }
 
   @Override

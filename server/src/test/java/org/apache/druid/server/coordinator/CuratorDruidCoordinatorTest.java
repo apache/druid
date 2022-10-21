@@ -378,9 +378,9 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     }
 
     @Override
-    public boolean isLeader()
+    public LeaderState isLeader()
     {
-      return leader != null;
+      return leader != null ? LeaderState.INTIALIZED : LeaderState.NOT_ELECTED;
     }
 
     @Override

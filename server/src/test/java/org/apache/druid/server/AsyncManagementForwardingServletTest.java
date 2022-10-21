@@ -460,9 +460,9 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     }
 
     @Override
-    public boolean isLeader()
+    public LeaderState isLeader()
     {
-      return false;
+      return LeaderState.NOT_ELECTED;
     }
 
     @Override

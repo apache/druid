@@ -244,7 +244,7 @@ public class OverlordResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response isLeader()
   {
-    final boolean leading = taskMaster.isLeader();
+    final boolean leading = taskMaster.isLeaderAndIntialized();
     final Map<String, Boolean> response = ImmutableMap.of("leader", leading);
     if (leading) {
       return Response.ok(response).build();
@@ -904,7 +904,7 @@ public class OverlordResource
       throw new ForbiddenException(authResult.getMessage());
     }
 
-    if (taskMaster.isLeader()) {
+    if (taskMaster.isLeaderAndIntialized()) {
       final int numDeleted = indexerMetadataStorageAdapter.deletePendingSegments(dataSource, deleteInterval);
       return Response.ok().entity(ImmutableMap.of("numDeleted", numDeleted)).build();
     } else {

@@ -353,7 +353,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     leaderAnnouncerLatch.await();
 
     // This coordinator should be leader by now
-    Assert.assertTrue(coordinator.isLeader());
+    Assert.assertTrue(coordinator.isLeaderAndInitialized());
     Assert.assertEquals(druidNode.getHostAndPort(), coordinator.getCurrentLeader());
     pathChildrenCache.start();
 
@@ -411,7 +411,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     coordinator.stop();
     leaderUnannouncerLatch.await();
 
-    Assert.assertFalse(coordinator.isLeader());
+    Assert.assertFalse(coordinator.isLeaderAndInitialized());
     Assert.assertNull(coordinator.getCurrentLeader());
 
     EasyMock.verify(serverInventoryView);
@@ -1091,9 +1091,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
     }
 
     @Override
-    public boolean isLeader()
+    public LeaderState isLeader()
     {
-      return leader != null;
+      return leader != null ? LeaderState.INTIALIZED : LeaderState.NOT_ELECTED;
     }
 
     @Override

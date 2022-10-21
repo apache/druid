@@ -314,7 +314,7 @@ public class ServiceClientImplTest
     MatcherAssert.assertThat(
         e.getCause(),
         ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString("redirected [0] times to invalid URL [invalid-url]"))
+            CoreMatchers.containsString("redirected [0] times to URL [invalid-url]"))
     );
   }
 
@@ -338,7 +338,7 @@ public class ServiceClientImplTest
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(RpcException.class));
     MatcherAssert.assertThat(
         e.getCause(),
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("redirected [0] times to invalid URL [null]"))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("redirected [0] times to URL [null]"))
     );
   }
 

@@ -29,6 +29,9 @@ public class TestDruidLeaderSelector implements DruidLeaderSelector
   private final AtomicBoolean isLeader = new AtomicBoolean(false);
   private volatile Listener listener;
 
+  private final AtomicBoolean initialized = new AtomicBoolean(false);
+  ;
+
   public void becomeLeader()
   {
     if (isLeader.compareAndSet(false, true) && listener != null) {
@@ -39,6 +42,7 @@ public class TestDruidLeaderSelector implements DruidLeaderSelector
   public void stopBeingLeader()
   {
     if (isLeader.compareAndSet(true, false) && listener != null) {
+      initialized.compareAndSet(false, true);
       listener.stopBeingLeader();
     }
   }
@@ -51,9 +55,15 @@ public class TestDruidLeaderSelector implements DruidLeaderSelector
   }
 
   @Override
-  public boolean isLeader()
+  public LeaderState isLeader()
   {
-    return isLeader.get();
+    if (isLeader.get() && initialized.get()) {
+      return LeaderState.INTIALIZED;
+    } else if (isLeader.get()) {
+      return LeaderState.ELECTED;
+    } else {
+      return LeaderState.NOT_ELECTED;
+    }
   }
 
   @Override
@@ -66,8 +76,9 @@ public class TestDruidLeaderSelector implements DruidLeaderSelector
   public void registerListener(Listener listener)
   {
     this.listener = listener;
-    if (isLeader()) {
+    if (isLeader() != LeaderState.NOT_ELECTED) {
       listener.becomeLeader();
+      initialized.compareAndSet(false, true);
     }
   }
 
@@ -75,5 +86,6 @@ public class TestDruidLeaderSelector implements DruidLeaderSelector
   public void unregisterListener()
   {
     listener = null;
+    initialized.compareAndSet(true, false);
   }
 }

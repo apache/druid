@@ -45,7 +45,7 @@ public class OverlordRedirectInfoTest
   @Test
   public void testDoLocalWhenLeading()
   {
-    EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();
+    EasyMock.expect(taskMaster.isLeaderAndIntialized()).andReturn(true).anyTimes();
     EasyMock.replay(taskMaster);
     Assert.assertTrue(redirectInfo.doLocal(null));
     Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/leader"));
@@ -57,7 +57,7 @@ public class OverlordRedirectInfoTest
   @Test
   public void testDoLocalWhenNotLeading()
   {
-    EasyMock.expect(taskMaster.isLeader()).andReturn(false).anyTimes();
+    EasyMock.expect(taskMaster.isLeaderAndIntialized()).andReturn(false).anyTimes();
     EasyMock.replay(taskMaster);
     Assert.assertFalse(redirectInfo.doLocal(null));
     Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/leader"));

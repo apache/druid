@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.http;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
@@ -47,19 +48,19 @@ public class CoordinatorRedirectInfo implements RedirectInfo
   @Override
   public boolean doLocal(String requestURI)
   {
-    return (requestURI != null && LOCAL_PATHS.contains(requestURI)) || coordinator.isLeader();
+    return (requestURI != null && LOCAL_PATHS.contains(requestURI)) || coordinator.isLeaderAndInitialized();
   }
 
   @Override
   public URL getRedirectURL(String queryString, String requestURI)
   {
     try {
-      final String leader = coordinator.getCurrentLeader();
-      if (leader == null) {
+      final Optional<String> redirectLocation = coordinator.getRedirectLocation();
+      if (!redirectLocation.isPresent()) {
         return null;
       }
 
-      String location = StringUtils.format("%s%s", leader, requestURI);
+      String location = StringUtils.format("%s%s", redirectLocation.get(), requestURI);
 
       if (queryString != null) {
         location = StringUtils.format("%s?%s", location, queryString);

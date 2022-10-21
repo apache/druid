@@ -24,7 +24,6 @@ import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
-import org.apache.druid.discovery.DruidLeaderSelector.Listener;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -68,13 +67,6 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   private volatile TaskRunner taskRunner;
   private volatile TaskQueue taskQueue;
-
-  /**
-   * This flag indicates that all services has been started and should be true before calling
-   * {@link ServiceAnnouncer#announce}. This is set to false immediately once {@link Listener#stopBeingLeader()} is
-   * called.
-   */
-  private volatile boolean initialized;
 
   @Inject
   public TaskMaster(
@@ -144,7 +136,6 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
                 @Override
                 public void start()
                 {
-                  initialized = true;
                   serviceAnnouncer.announce(node);
                 }
 
@@ -171,7 +162,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       {
         giant.lock();
         try {
-          initialized = false;
+          //initialized = false;
           final Lifecycle leaderLifecycle = leaderLifecycleRef.getAndSet(null);
 
           if (leaderLifecycle != null) {
@@ -222,9 +213,9 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   /**
    * Returns true if it's the leader and its all services have been properly initialized.
    */
-  public boolean isLeader()
+  public boolean isLeaderAndIntialized()
   {
-    return overlordLeaderSelector.isLeader() && initialized;
+    return overlordLeaderSelector.isLeader() == DruidLeaderSelector.LeaderState.INTIALIZED;
   }
 
   public String getCurrentLeader()
@@ -235,10 +226,12 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   public Optional<String> getRedirectLocation()
   {
     String leader = overlordLeaderSelector.getCurrentLeader();
-    // do not redirect when
+    // donot redirect when
     // leader is not elected
-    // leader is the current node
-    if (leader == null || leader.isEmpty() || overlordLeaderSelector.isLeader()) {
+    // leader is the current node but not intialized.
+    if (leader == null
+        || leader.isEmpty()
+        || overlordLeaderSelector.isLeader() == DruidLeaderSelector.LeaderState.ELECTED) {
       return Optional.absent();
     } else {
       return Optional.of(leader);
@@ -247,7 +240,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<TaskRunner> getTaskRunner()
   {
-    if (isLeader()) {
+    if (isLeaderAndIntialized()) {
       return Optional.of(taskRunner);
     } else {
       return Optional.absent();
@@ -256,7 +249,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<TaskQueue> getTaskQueue()
   {
-    if (isLeader()) {
+    if (isLeaderAndIntialized()) {
       return Optional.of(taskQueue);
     } else {
       return Optional.absent();
@@ -265,7 +258,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<TaskActionClient> getTaskActionClient(Task task)
   {
-    if (isLeader()) {
+    if (isLeaderAndIntialized()) {
       return Optional.of(taskActionClientFactory.create(task));
     } else {
       return Optional.absent();
@@ -274,7 +267,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<ScalingStats> getScalingStats()
   {
-    if (isLeader()) {
+    if (isLeaderAndIntialized()) {
       return taskRunner.getScalingStats();
     } else {
       return Optional.absent();
@@ -283,7 +276,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<SupervisorManager> getSupervisorManager()
   {
-    if (isLeader()) {
+    if (isLeaderAndIntialized()) {
       return Optional.of(supervisorManager);
     } else {
       return Optional.absent();
@@ -348,7 +341,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   private void gracefulStopLeaderLifecycle()
   {
     try {
-      if (isLeader()) {
+      if (isLeaderAndIntialized()) {
         leadershipListener.stopBeingLeader();
       }
     }

@@ -37,7 +37,7 @@ import java.util.concurrent.ExecutionException;
  */
 public interface ServiceClient
 {
-  long MAX_REDIRECTS = 3;
+  long MAX_REDIRECTS = 5;
 
   /**
    * Perform a request asynchronously.

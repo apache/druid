@@ -200,8 +200,8 @@ public class OverlordResourceTest
   @Test
   public void testIsLeader()
   {
-    EasyMock.expect(taskMaster.isLeader()).andReturn(true).once();
-    EasyMock.expect(taskMaster.isLeader()).andReturn(false).once();
+    EasyMock.expect(taskMaster.isLeaderAndIntialized()).andReturn(true).once();
+    EasyMock.expect(taskMaster.isLeaderAndIntialized()).andReturn(false).once();
     EasyMock.replay(
         taskRunner,
         taskMaster,
@@ -879,7 +879,7 @@ public class OverlordResourceTest
   {
     expectAuthorizationTokenCheck();
 
-    EasyMock.expect(taskMaster.isLeader()).andReturn(true);
+    EasyMock.expect(taskMaster.isLeaderAndIntialized()).andReturn(true);
     EasyMock
         .expect(
             indexerMetadataStorageAdapter.deletePendingSegments(
@@ -1074,7 +1074,7 @@ public class OverlordResourceTest
     // This should be fixed in https://github.com/apache/druid/issues/6685.
     // expectAuthorizationTokenCheck();
     TaskQueue mockQueue = EasyMock.createMock(TaskQueue.class);
-    EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();
+    EasyMock.expect(taskMaster.isLeaderAndIntialized()).andReturn(true).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
         Optional.of(taskRunner)
     ).anyTimes();
@@ -1107,7 +1107,7 @@ public class OverlordResourceTest
     // This should be fixed in https://github.com/apache/druid/issues/6685.
     // expectAuthorizationTokenCheck();
     TaskQueue mockQueue = EasyMock.createMock(TaskQueue.class);
-    EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();
+    EasyMock.expect(taskMaster.isLeaderAndIntialized()).andReturn(true).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
         Optional.of(taskRunner)
     ).anyTimes();
@@ -1155,7 +1155,7 @@ public class OverlordResourceTest
   public void testShutdownAllTasksForNonExistingDataSource()
   {
     final TaskQueue taskQueue = EasyMock.createMock(TaskQueue.class);
-    EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();
+    EasyMock.expect(taskMaster.isLeaderAndIntialized()).andReturn(true).anyTimes();
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(EasyMock.anyString())).andReturn(Collections.emptyList());
     EasyMock.replay(

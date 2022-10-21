@@ -58,6 +58,8 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   private final AtomicReference<LeaderLatch> leaderLatch = new AtomicReference<>();
 
   private volatile boolean leader = false;
+
+  private volatile boolean initialized = false;
   private volatile int term = 0;
 
   public CuratorDruidLeaderSelector(CuratorFramework curator, @Self DruidNode self, String latchPath)
@@ -96,8 +98,10 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
               leader = true;
               term++;
               listener.becomeLeader();
+              initialized = true;
             }
             catch (Exception ex) {
+              initialized = false;
               log.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
 
               // give others a chance to become leader.
@@ -131,6 +135,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
               }
 
               leader = false;
+              initialized = false;
               listener.stopBeingLeader();
             }
             catch (Exception ex) {
@@ -164,9 +169,16 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   }
 
   @Override
-  public boolean isLeader()
+  public LeaderState isLeader()
   {
-    return leader;
+    boolean zkLeaderShip = leaderLatch.get().hasLeadership();
+    if (zkLeaderShip && initialized) {
+      return LeaderState.INTIALIZED;
+    } else if (zkLeaderShip) {
+      return LeaderState.ELECTED;
+    } else {
+      return LeaderState.NOT_ELECTED;
+    }
   }
 
   @Override

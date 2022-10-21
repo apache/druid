@@ -125,7 +125,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
       Thread.sleep(100);
     }
 
-    Assert.assertTrue(leaderSelector2.isLeader());
+    Assert.assertTrue(leaderSelector2.isLeader() == DruidLeaderSelector.LeaderState.INTIALIZED);
     Assert.assertEquals("http://h2:8080", leaderSelector1.getCurrentLeader());
     Assert.assertEquals(2, leaderSelector2.localTerm());
 
@@ -158,7 +158,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
       Thread.sleep(100);
     }
 
-    Assert.assertTrue(leaderSelector3.isLeader());
+    Assert.assertTrue(leaderSelector3.isLeader() == DruidLeaderSelector.LeaderState.INTIALIZED);
     Assert.assertEquals("http://h3:8080", leaderSelector1.getCurrentLeader());
     Assert.assertEquals(1, leaderSelector3.localTerm());
   }

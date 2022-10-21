@@ -59,8 +59,8 @@ public class CoordinatorResourceTest
   @Test
   public void testIsLeader()
   {
-    EasyMock.expect(mock.isLeader()).andReturn(true).once();
-    EasyMock.expect(mock.isLeader()).andReturn(false).once();
+    EasyMock.expect(mock.isLeaderAndInitialized()).andReturn(true).once();
+    EasyMock.expect(mock.isLeaderAndInitialized()).andReturn(false).once();
     EasyMock.replay(mock);
 
     // true

@@ -71,7 +71,7 @@ public class CoordinatorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response isLeader()
   {
-    final boolean leading = coordinator.isLeader();
+    final boolean leading = coordinator.isLeaderAndInitialized();
     final Map<String, Boolean> response = ImmutableMap.of("leader", leading);
     if (leading) {
       return Response.ok(response).build();

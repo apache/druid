@@ -45,12 +45,11 @@ public interface DruidLeaderSelector
   String getCurrentLeader();
 
   /**
-   * Returns true if this node is elected leader from underlying system's point of view. For example if curator
-   * is used to implement this then true would be returned when curator believes this node to be the leader.
+   * Returns the {@link LeaderState} of this node from the LeaderElection system's point of view.
    * Note that it is possible for leadership to change right after this call returns, so caller would get wrong
    * status.
    */
-  boolean isLeader();
+  LeaderState isLeader();
 
   /**
    * Implementation would increment it everytime it becomes leader. This allows users to start a long running
@@ -83,5 +82,26 @@ public interface DruidLeaderSelector
      * an exception, an alert should be created.
      */
     void stopBeingLeader();
+  }
+
+  /**
+   * State of this node according to the leader election system. The leader election system has only 2 states
+   * representing if this node is a leader or not but we need a 3rd state which represents an initialized leader on
+   * which extenal callers should gate on.
+   */
+  enum LeaderState
+  {
+    /**
+     * This node is not the leader
+     */
+    NOT_ELECTED,
+    /**
+     * This node is the elected leaders but still not initialzied.
+     */
+    ELECTED,
+    /**
+     * This node is the elected leaders and is initialized.
+     */
+    INTIALIZED
   }
 }

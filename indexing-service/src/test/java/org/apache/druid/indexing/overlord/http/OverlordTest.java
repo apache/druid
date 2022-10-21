@@ -198,12 +198,12 @@ public class OverlordTest
     // basic task master lifecycle test
     taskMaster.start();
     announcementLatch.await();
-    while (!taskMaster.isLeader()) {
+    while (!taskMaster.isLeaderAndIntialized()) {
       // I believe the control will never reach here and thread will never sleep but just to be on safe side
       Thread.sleep(10);
     }
     Assert.assertEquals(taskMaster.getCurrentLeader(), druidNode.getHostAndPort());
-    Assert.assertEquals(Optional.absent(), taskMaster.getRedirectLocation());
+    Assert.assertEquals(Optional.of(druidNode.getHostAndPort()), taskMaster.getRedirectLocation());
 
     final TaskStorageQueryAdapter taskStorageQueryAdapter = new TaskStorageQueryAdapter(taskStorage, taskLockbox);
     final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter = new WorkerTaskRunnerQueryAdapter(taskMaster, null);
@@ -281,7 +281,7 @@ public class OverlordTest
     response = overlordResource.getCompleteTasks(1, req);
     Assert.assertEquals(1, (((List) response.getEntity()).size()));
     taskMaster.stop();
-    Assert.assertFalse(taskMaster.isLeader());
+    Assert.assertFalse(taskMaster.isLeaderAndIntialized());
     EasyMock.verify(taskLockbox, taskActionClientFactory);
   }
 
@@ -493,9 +493,9 @@ public class OverlordTest
     }
 
     @Override
-    public boolean isLeader()
+    public LeaderState isLeader()
     {
-      return leader != null;
+      return leader != null ? LeaderState.INTIALIZED : LeaderState.NOT_ELECTED;
     }
 
     @Override

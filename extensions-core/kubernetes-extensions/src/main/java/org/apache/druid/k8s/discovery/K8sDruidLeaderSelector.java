@@ -41,6 +41,7 @@ public class K8sDruidLeaderSelector implements DruidLeaderSelector
   private final LeaderElectorAsyncWrapper leaderLatch;
 
   private volatile boolean leader = false;
+  private volatile boolean intialized = false;
 
   @SuppressFBWarnings(value = "VO_VOLATILE_INCREMENT", justification = "incremented but in single thread")
   private volatile int term = 0;
@@ -75,8 +76,10 @@ public class K8sDruidLeaderSelector implements DruidLeaderSelector
             leader = true;
             term++;
             listener.becomeLeader();
+            intialized = true;
           }
           catch (Throwable ex) {
+            intialized = false;
             LOGGER.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
             closeLeaderLatchQuietly();
             leader = false;
@@ -92,6 +95,7 @@ public class K8sDruidLeaderSelector implements DruidLeaderSelector
             }
 
             leader = false;
+            intialized = false;
             listener.stopBeingLeader();
           }
           catch (Throwable ex) {
@@ -114,9 +118,15 @@ public class K8sDruidLeaderSelector implements DruidLeaderSelector
   }
 
   @Override
-  public boolean isLeader()
+  public LeaderState isLeader()
   {
-    return leader;
+    if (intialized && leader) {
+      return LeaderState.INTIALIZED;
+    } else if (leader) {
+      return LeaderState.ELECTED;
+    } else {
+      return LeaderState.NOT_ELECTED;
+    }
   }
 
   @Override

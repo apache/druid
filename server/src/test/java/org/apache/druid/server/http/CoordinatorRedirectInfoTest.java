@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.http;
 
+import com.google.common.base.Optional;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -42,7 +43,7 @@ public class CoordinatorRedirectInfoTest
   @Test
   public void testDoLocalWhenLeading()
   {
-    EasyMock.expect(druidCoordinator.isLeader()).andReturn(true).anyTimes();
+    EasyMock.expect(druidCoordinator.isLeaderAndInitialized()).andReturn(true).anyTimes();
     EasyMock.replay(druidCoordinator);
     Assert.assertTrue(coordinatorRedirectInfo.doLocal(null));
     Assert.assertTrue(coordinatorRedirectInfo.doLocal("/druid/coordinator/v1/leader"));
@@ -54,7 +55,7 @@ public class CoordinatorRedirectInfoTest
   @Test
   public void testDoLocalWhenNotLeading()
   {
-    EasyMock.expect(druidCoordinator.isLeader()).andReturn(false).anyTimes();
+    EasyMock.expect(druidCoordinator.isLeaderAndInitialized()).andReturn(false).anyTimes();
     EasyMock.replay(druidCoordinator);
     Assert.assertFalse(coordinatorRedirectInfo.doLocal(null));
     Assert.assertTrue(coordinatorRedirectInfo.doLocal("/druid/coordinator/v1/leader"));
@@ -66,7 +67,7 @@ public class CoordinatorRedirectInfoTest
   @Test
   public void testGetRedirectURLNull()
   {
-    EasyMock.expect(druidCoordinator.getCurrentLeader()).andReturn(null).anyTimes();
+    EasyMock.expect(druidCoordinator.getRedirectLocation()).andReturn(Optional.absent()).anyTimes();
     EasyMock.replay(druidCoordinator);
     URL url = coordinatorRedirectInfo.getRedirectURL("query", "/request");
     Assert.assertNull(url);
@@ -78,7 +79,7 @@ public class CoordinatorRedirectInfoTest
   {
     String query = "foo=bar&x=y";
     String request = "/request";
-    EasyMock.expect(druidCoordinator.getCurrentLeader()).andReturn("http://localhost").anyTimes();
+    EasyMock.expect(druidCoordinator.getRedirectLocation()).andReturn(Optional.of("http://localhost"));
     EasyMock.replay(druidCoordinator);
     URL url = coordinatorRedirectInfo.getRedirectURL(query, request);
     Assert.assertEquals("http://localhost/request?foo=bar&x=y", url.toString());

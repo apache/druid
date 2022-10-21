@@ -201,7 +201,7 @@ public class ServiceClientImpl implements ServiceClient
 
                         if (redirectCount >= MAX_REDIRECTS) {
                           retVal.setException(new RpcException(
-                              "Service [%s] redirected too many times [%d] to invalid url %s",
+                              "Service [%s] redirected too many times [%d] to url %s",
                               serviceName,
                               redirectCount,
                               newUri
@@ -218,7 +218,7 @@ public class ServiceClientImpl implements ServiceClient
                           } else {
                             retVal.setException(
                                 new RpcException(
-                                    "Service [%s] redirected [%d] times to invalid URL [%s]",
+                                    "Service [%s] redirected [%d] times to URL [%s]",
                                     serviceName,
                                     redirectCount,
                                     newUri
