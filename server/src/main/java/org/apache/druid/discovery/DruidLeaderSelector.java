@@ -86,8 +86,8 @@ public interface DruidLeaderSelector
 
   /**
    * State of this node according to the leader election system. The leader election system has only 2 states
-   * representing if this node is a leader or not but we need a 3rd state which represents an initialized leader on
-   * which extenal callers should gate on.
+   * representing if this node is a leader or not, but we need a 3rd state which represents an initialized leader on
+   * which external callers should gate on.
    */
   enum LeaderState
   {

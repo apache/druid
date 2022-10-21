@@ -161,7 +161,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       {
         giant.lock();
         try {
-          //initialized = false;
+
           final Lifecycle leaderLifecycle = leaderLifecycleRef.getAndSet(null);
 
           if (leaderLifecycle != null) {
@@ -225,7 +225,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   public Optional<String> getRedirectLocation()
   {
     String leader = overlordLeaderSelector.getCurrentLeader();
-    // donot redirect when
+    // do not redirect when
     // leader is not elected
     // leader is the current node but not intialized.
     if (leader == null

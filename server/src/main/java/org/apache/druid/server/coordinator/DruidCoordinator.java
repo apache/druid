@@ -908,7 +908,7 @@ public class DruidCoordinator
             return;
           } else if (leaderState == DruidLeaderSelector.LeaderState.ELECTED) {
             throw new ISE(
-                "Leader is initializing and coordinator duty run method is called. Likely hitting a race condition");
+                "Leader is initializing while the coordinator duty run method is called. Likely hitting a race condition");
           }
         }
 
