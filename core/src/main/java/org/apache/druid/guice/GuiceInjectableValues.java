@@ -28,16 +28,23 @@ import com.google.inject.Key;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ *
  */
 public class GuiceInjectableValues extends InjectableValues
 {
   private final Injector injector;
+  private final AtomicReference<HashSet<Key>> nullables;
 
   public GuiceInjectableValues(Injector injector)
   {
     this.injector = injector;
+    HashSet<Key> initalNullables = new HashSet<>();
+    this.nullables = new AtomicReference<>();
+    this.nullables.set(initalNullables);
   }
 
   @Override
@@ -58,7 +65,12 @@ public class GuiceInjectableValues extends InjectableValues
       }
       catch (ConfigurationException ce) {
         // check if nullable annotation is present for this
-        if (forProperty.getAnnotation(Nullable.class) != null) {
+        if (nullables.get().contains((Key) valueId)) {
+          return null;
+        } else if (forProperty.getAnnotation(Nullable.class) != null) {
+          HashSet<Key> newNullables = nullables.get();
+          newNullables.add((Key) valueId);
+          nullables.set(newNullables);
           return null;
         }
         throw ce;
