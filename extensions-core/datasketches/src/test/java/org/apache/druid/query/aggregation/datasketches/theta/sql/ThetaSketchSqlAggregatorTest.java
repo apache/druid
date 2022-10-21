@@ -83,7 +83,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   private ExprMacroTable macroTable;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     macroTable = createMacroTable();
   }
