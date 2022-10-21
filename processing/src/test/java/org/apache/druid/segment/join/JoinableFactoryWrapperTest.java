@@ -947,6 +947,41 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
     );
   }
 
+  @Test
+  public void test_convertJoinsToFilters_dontConvertJoinsDependedOnByPreviousJoins()
+  {
+    // upon discovering a RIGHT/OUTER join, all conversions for subsequent joins should stop since the output of left
+    // table columns might change to NULL after the RIGHT/OUTER join.
+    final ImmutableList<JoinableClause> clauses = ImmutableList.of(
+        new JoinableClause(
+            "j.",
+            LookupJoinable.wrap(new MapLookupExtractor(TEST_LOOKUP, false)),
+            JoinType.RIGHT,
+            JoinConditionAnalysis.forExpression("x == \"j.k\"", "j.", ExprMacroTable.nil())
+        ),
+        new JoinableClause(
+            "_j.",
+            LookupJoinable.wrap(new MapLookupExtractor(TEST_LOOKUP, false)),
+            JoinType.INNER,
+            JoinConditionAnalysis.forExpression("x == \"_j.k\"", "_j.", ExprMacroTable.nil())
+        )
+    );
+
+    final Pair<List<Filter>, List<JoinableClause>> conversion = JoinableFactoryWrapper.convertJoinsToFilters(
+        clauses,
+        ImmutableSet.of("x"),
+        Integer.MAX_VALUE
+    );
+
+    Assert.assertEquals(
+        Pair.of(
+            ImmutableList.of(),
+            clauses
+        ),
+        conversion
+    );
+  }
+
   private PreJoinableClause makeGlobalPreJoinableClause(String tableName, String expression, String prefix)
   {
     return makeGlobalPreJoinableClause(tableName, expression, prefix, JoinType.LEFT);

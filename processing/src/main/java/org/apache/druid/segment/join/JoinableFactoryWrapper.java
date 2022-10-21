@@ -235,7 +235,16 @@ public class JoinableFactoryWrapper
     }
 
     Set<String> rightPrefixes = clauses.stream().map(JoinableClause::getPrefix).collect(Collectors.toSet());
+    boolean isRightyJoinSeen = false;
     for (JoinableClause clause : clauses) {
+      // Incase we find a RIGHT/OUTER join, we shouldn't convert join conditions to left column filters for any join
+      // afterwards because the values of left colmun might change to NULL after the RIGHT/OUTER join. We should only
+      // consider cases where the values of the filter columns do not change after the join.
+      isRightyJoinSeen = isRightyJoinSeen || clause.getJoinType().isRighty();
+      if (isRightyJoinSeen) {
+        clausesToUse.add(clause);
+        continue;
+      }
       // Remove this clause from columnsRequiredByJoinClauses. It's ok if it relies on itself.
       for (String column : clause.getCondition().getRequiredColumns()) {
         columnsRequiredByJoinClauses.remove(column, 1);
