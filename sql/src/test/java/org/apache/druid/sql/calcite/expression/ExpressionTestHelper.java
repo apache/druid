@@ -88,8 +88,7 @@ class ExpressionTestHelper
           )
       ),
       null /* Don't need engine */,
-      Collections.emptyMap(),
-      Collections.emptySet()
+      Collections.emptyMap()
   );
 
   private final RowSignature rowSignature;

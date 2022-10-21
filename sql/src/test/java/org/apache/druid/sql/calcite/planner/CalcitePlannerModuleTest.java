@@ -175,8 +175,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         injector.getInstance(PlannerConfig.class),
         rootSchema,
         null,
-        Collections.emptyMap(),
-        Collections.emptySet()
+        Collections.emptyMap()
     );
     boolean containsCustomRule = injector.getInstance(CalciteRulesManager.class)
                                          .druidConventionRuleSet(context)

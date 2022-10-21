@@ -111,8 +111,7 @@ public class PlannerContext
       final boolean stringifyArrays,
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
-      final Map<String, Object> queryContext,
-      final Set<String> contextKeys
+      final Map<String, Object> queryContext
   )
   {
     this.sql = sql;
@@ -142,8 +141,7 @@ public class PlannerContext
       final PlannerConfig plannerConfig,
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
-      final Map<String, Object> queryContext,
-      final Set<String> contextKeys
+      final Map<String, Object> queryContext
   )
   {
     final DateTime utcNow;
@@ -182,8 +180,7 @@ public class PlannerContext
         stringifyArrays,
         rootSchema,
         engine,
-        queryContext,
-        contextKeys
+        queryContext
     );
   }
 
