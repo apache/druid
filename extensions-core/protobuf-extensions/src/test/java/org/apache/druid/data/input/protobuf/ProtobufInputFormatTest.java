@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.common.io.Files;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
@@ -31,6 +32,7 @@ import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -42,6 +44,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.io.File;
 import java.io.IOException;
 
 public class ProtobufInputFormatTest
@@ -53,11 +56,12 @@ public class ProtobufInputFormatTest
   private DimensionsSpec dimensionsSpec;
   private JSONPathSpec flattenSpec;
   private FileBasedProtobufBytesDecoder decoder;
+  private InlineDescriptorProtobufBytesDecoder inlineSchemaDecoder;
 
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Before
-  public void setUp()
+  public void setUp() throws Exception
   {
     timestampSpec = new TimestampSpec("timestamp", "iso", null);
     dimensionsSpec = new DimensionsSpec(Lists.newArrayList(
@@ -75,6 +79,14 @@ public class ProtobufInputFormatTest
         )
     );
     decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
+
+    File descFile = new File(this.getClass()
+                                 .getClassLoader()
+                                 .getResource("prototest.desc")
+                                 .toURI());
+    String descString = StringUtils.encodeBase64String(Files.toByteArray(descFile));
+    inlineSchemaDecoder = new InlineDescriptorProtobufBytesDecoder(descString, "ProtoTestEvent");
+
     for (Module jacksonModule : new ProtobufExtensionsModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
@@ -144,5 +156,22 @@ public class ProtobufInputFormatTest
     InputRow row = protobufInputFormat.createReader(new InputRowSchema(timestampSpec, dimensionsSpec, null), entity, null).read().next();
 
     ProtobufInputRowParserTest.verifyFlatData(row, dateTime);
+  }
+
+  @Test
+  public void testParseNestedDataWithInlineSchema() throws Exception
+  {
+    //configure parser with inline schema decoder
+    ProtobufInputFormat protobufInputFormat = new ProtobufInputFormat(flattenSpec, inlineSchemaDecoder);
+
+    //create binary of proto test event
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildNestedData(dateTime);
+
+    final ByteEntity entity = new ByteEntity(ProtobufInputRowParserTest.toByteBuffer(event));
+
+    InputRow row = protobufInputFormat.createReader(new InputRowSchema(timestampSpec, dimensionsSpec, null), entity, null).read().next();
+
+    ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
   }
 }

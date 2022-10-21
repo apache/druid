@@ -26,8 +26,9 @@ import javax.annotation.Nullable;
 
 /**
  * Basic vector processor that processes 2 inputs and works for both primitive value vectors and object vectors.
- * Different from {@link BivariateFunctionVectorValueProcessor} and {@link BivariateFunctionVectorObjectProcessor} in
- * that subclasses of this class must check for and directly decide how to handle null values.
+ * Different from {@link BivariateLongFunctionVectorValueProcessor}, {@link BivariateDoubleFunctionVectorValueProcessor}
+ * and {@link BivariateFunctionVectorObjectProcessor} in that subclasses of this class must check for and directly
+ * decide how to handle null values.
  */
 public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, TOutput>
     implements ExprVectorProcessor<TOutput>
