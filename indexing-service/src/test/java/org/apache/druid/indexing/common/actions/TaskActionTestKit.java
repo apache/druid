@@ -104,8 +104,7 @@ public class TaskActionTestKit extends ExternalResource
         taskStorage,
         metadataStorageCoordinator,
         new NoopServiceEmitter(),
-        EasyMock.createMock(SupervisorManager.class),
-        null
+        EasyMock.createMock(SupervisorManager.class)
     );
     testDerbyConnector.createDataSourceTable();
     testDerbyConnector.createPendingSegmentsTable();

@@ -63,8 +63,8 @@ Additional Configuration
 |`druid.indexer.runner.taskCleanupInterval`|`Duration`|How often to check for jobs to be reaped|`PT10M`|No|
 |`druid.indexer.runner.K8sjobLaunchTimeout`|`Duration`|How long to wait to launch a K8s task before marking it as failed, on a resource constrained cluster it may take some time.|`PT1H`|No|
 |`druid.indexer.runner.javaOptsArray`|`JsonArray`|java opts for the task.|`-Xmx1g`|No|
-|`druid.indexer.runner.labels`|`JsonObject`|Addtional labels you wish to apply to peon pod|`{}`|No|
-|`druid.indexer.runner.annotations`|`JsonObject`|Addtional annotations you wish to apply to peon pod|`{}`|No|
+|`druid.indexer.runner.labels`|`JsonObject`|Additional labels you want to add to peon pod|`{}`|No|
+|`druid.indexer.runner.annotations`|`JsonObject`|Additional annotations you want to add to peon pod|`{}`|No|
 |`druid.indexer.runner.graceTerminationPeriodSeconds`|`Long`|Number of seconds you want to wait after a sigterm for container lifecycle hooks to complete.  Keep at a smaller value if you want tasks to hold locks for shorter periods.|`PT30S` (K8s default)|No|
 
 ### Gotchas

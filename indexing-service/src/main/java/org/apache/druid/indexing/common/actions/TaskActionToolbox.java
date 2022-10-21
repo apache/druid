@@ -36,7 +36,7 @@ public class TaskActionToolbox
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final ServiceEmitter emitter;
   private final SupervisorManager supervisorManager;
-  private final TaskRunnerFactory factory;
+  private Optional<TaskRunnerFactory> factory;
 
   @Inject
   public TaskActionToolbox(
@@ -44,8 +44,7 @@ public class TaskActionToolbox
       TaskStorage taskStorage,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       ServiceEmitter emitter,
-      SupervisorManager supervisorManager,
-      TaskRunnerFactory factory
+      SupervisorManager supervisorManager
   )
   {
     this.taskLockbox = taskLockbox;
@@ -53,7 +52,6 @@ public class TaskActionToolbox
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.emitter = emitter;
     this.supervisorManager = supervisorManager;
-    this.factory = factory;
   }
 
   public TaskLockbox getTaskLockbox()
@@ -81,9 +79,18 @@ public class TaskActionToolbox
     return supervisorManager;
   }
 
+  @Inject(optional = true)
+  public void setTaskRunnerFactory(TaskRunnerFactory factory)
+  {
+    this.factory = Optional.of(factory);
+  }
+
   public Optional<TaskRunner> getTaskRunner()
   {
-    return Optional.of(factory.build());
+    if (factory.isPresent()) {
+      return Optional.of(factory.get().get());
+    }
+    return Optional.absent();
   }
 
 }
