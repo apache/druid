@@ -173,7 +173,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
               new FloatSumAggregatorFactory("sum_added", "added"),
               new SketchMergeAggregatorFactory("thetaSketch", "user", 16384, true, false, null),
               new HllSketchBuildAggregatorFactory("HLLSketchBuild", "user", 12, TgtHllType.HLL_4.name(), false, false),
-              new DoublesSketchAggregatorFactory("quantilesDoublesSketch", "delta", 128, 1000000000L)
+              new DoublesSketchAggregatorFactory("quantilesDoublesSketch", "delta", 128, 1000000000L, null)
           },
           false
       );
@@ -267,7 +267,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
               new LongSumAggregatorFactory("sum_added", "added"),
               new SketchMergeAggregatorFactory("thetaSketch", "user", 16384, true, false, null),
               new HllSketchBuildAggregatorFactory("HLLSketchBuild", "user", 12, TgtHllType.HLL_4.name(), false, false),
-              new DoublesSketchAggregatorFactory("quantilesDoublesSketch", "delta", 128, 1000000000L)
+              new DoublesSketchAggregatorFactory("quantilesDoublesSketch", "delta", 128, 1000000000L, null)
           },
           false
       );
