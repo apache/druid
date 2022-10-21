@@ -34,12 +34,12 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
@@ -47,6 +47,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Test;
@@ -61,7 +62,7 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
 {
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
-          new TimestampSpec(CalciteTests.TIMESTAMP_COLUMN, "iso", null),
+          new TimestampSpec(TestDataBuilder.TIMESTAMP_COLUMN, "iso", null),
           new DimensionsSpec(
               DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "m2"))
           )
@@ -69,25 +70,20 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
   );
 
   private static final List<InputRow> ROWS1 =
-      CalciteTests.RAW_ROWS1.stream().map(m -> CalciteTests.createRow(m, PARSER)).collect(Collectors.toList());
+      TestDataBuilder.RAW_ROWS1.stream().map(m -> TestDataBuilder.createRow(m, PARSER)).collect(Collectors.toList());
 
   @Override
   public Iterable<? extends Module> getJacksonModules()
   {
     CompressedBigDecimalModule bigDecimalModule = new CompressedBigDecimalModule();
-
     return Iterables.concat(super.getJacksonModules(), bigDecimalModule.getJacksonModules());
   }
 
   @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
+  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+      QueryRunnerFactoryConglomerate conglomerate
+  ) throws IOException
   {
-    CompressedBigDecimalModule bigDecimalModule = new CompressedBigDecimalModule();
-
-    for (Module mod : bigDecimalModule.getJacksonModules()) {
-      CalciteTests.getJsonMapper().registerModule(mod);
-      TestHelper.JSON_MAPPER.registerModule(mod);
-    }
     QueryableIndex index =
         IndexBuilder.create()
                     .tmpDir(temporaryFolder.newFolder())
@@ -104,7 +100,7 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
                     .rows(ROWS1)
                     .buildMMappedIndex();
 
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
                    .interval(index.getDataInterval())
@@ -114,16 +110,13 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
                    .build(),
         index
     );
-    return walker;
   }
 
   @Override
-  public ObjectMapper createQueryJsonMapper()
+  public void configureJsonMapper(ObjectMapper objectMapper)
   {
-    ObjectMapper objectMapper = super.createQueryJsonMapper();
     objectMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
     objectMapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
-    return objectMapper;
   }
 
   @Override
