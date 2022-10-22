@@ -42,9 +42,8 @@ public class GuiceInjectableValues extends InjectableValues
   public GuiceInjectableValues(Injector injector)
   {
     this.injector = injector;
-    HashSet<Key> initalNullables = new HashSet<>();
     this.nullables = new AtomicReference<>();
-    this.nullables.set(initalNullables);
+    this.nullables.set(new HashSet<>());
   }
 
   @Override
@@ -68,9 +67,9 @@ public class GuiceInjectableValues extends InjectableValues
         if (nullables.get().contains((Key) valueId)) {
           return null;
         } else if (forProperty.getAnnotation(Nullable.class) != null) {
-          HashSet<Key> newNullables = nullables.get();
-          newNullables.add((Key) valueId);
-          nullables.set(newNullables);
+          HashSet<Key> encounteredNullables = nullables.get();
+          encounteredNullables.add((Key) valueId);
+          nullables.set(encounteredNullables);
           return null;
         }
         throw ce;
