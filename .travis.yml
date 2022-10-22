@@ -95,6 +95,7 @@ jobs:
       before_script: &setup_generate_license
         - sudo apt-get update && sudo apt-get install python3.6 python3-pip python3-setuptools -y
         - ./check_test_suite.py && travis_terminate 0 || echo 'Continuing setup'
+        - pip3 install --upgrade pip==3.6
         - pip3 install wheel  # install wheel first explicitly
         - pip3 install pyyaml==5.4.1
       script:
