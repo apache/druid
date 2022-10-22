@@ -74,7 +74,7 @@ import java.util.stream.Collectors;
 
 class ExpressionTestHelper
 {
-  private static final JoinableFactoryWrapper JOINABLE_FACTORY_WRAPPER = new JoinableFactoryWrapper(CalciteTests.createDefaultJoinableFactory());
+  private static final JoinableFactoryWrapper JOINABLE_FACTORY_WRAPPER = CalciteTests.createJoinableFactoryWrapper();
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
       "SELECT 1", // The actual query isn't important for this test
       CalciteTests.createOperatorTable(),

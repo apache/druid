@@ -730,7 +730,7 @@ public class MSQSelectTest extends MSQTestBase
   public void testExternSelect1() throws IOException
   {
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)

@@ -111,7 +111,6 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.LocalLoadSpec;
@@ -135,7 +134,9 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -158,7 +159,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -179,8 +179,8 @@ import java.util.stream.Collectors;
 
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
-import static org.apache.druid.sql.calcite.util.CalciteTests.ROWS1;
-import static org.apache.druid.sql.calcite.util.CalciteTests.ROWS2;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 
 /**
  * Base test runner for running MSQ unit tests. It sets up multi stage query execution environment
@@ -237,7 +237,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
       2
   ));
 
-
   @After
   public void tearDown2()
   {
@@ -247,6 +246,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
   @Before
   public void setUp2()
   {
+    groupByBuffers = TestGroupByBuffers.createDefault();
+
+    SqlTestFramework qf = queryFramework();
     Injector secondInjector = GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.of(
             binder -> {
@@ -256,13 +258,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
         )
     );
 
-    groupByBuffers = TestGroupByBuffers.createDefault();
-
     ObjectMapper secondMapper = setupObjectMapper(secondInjector);
     indexIO = new IndexIO(secondMapper, () -> 0);
 
     try {
-      segmentCacheManager = new SegmentCacheManagerFactory(secondMapper).manufacturate(temporaryFolder.newFolder("test"));
+      segmentCacheManager = new SegmentCacheManagerFactory(secondMapper).manufacturate(tmpFolder.newFolder("test"));
     }
     catch (IOException exception) {
       throw new ISE(exception, "Unable to create segmentCacheManager");
@@ -285,6 +285,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
 
+
           binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
           binder.bind(new TypeLiteral<Set<NodeRole>>()
           {
@@ -295,7 +296,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 .toInstance((dataSegment, channelCounters) ->
                                 new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
           binder.bind(IndexIO.class).toInstance(indexIO);
-          binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(walker);
+          binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
 
           binder.bind(GroupByStrategySelector.class)
                 .toInstance(GroupByQueryRunnerTest.makeQueryRunnerFactory(groupByQueryConfig, groupByBuffers)
@@ -312,8 +313,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
               new LocalDataSegmentPusher(config),
               segmentManager
           ));
-          binder.bind(LocalDataSegmentPuller.class).toInstance(new LocalDataSegmentPuller());
-
           binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
           binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(false);
           // Client is not used in tests
@@ -338,7 +337,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
           binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
           binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
         },
-
         binder -> {
           // Requirements of JoinableFactoryModule
           binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class));
@@ -372,10 +370,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new MSQTestTaskActionClient(objectMapper),
         workerMemoryParameters
     );
-    final InProcessViewManager viewManager = new InProcessViewManager(CalciteTests.DRUID_VIEW_MACRO_FACTORY);
-    DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
-        conglomerate,
-        walker,
+    final InProcessViewManager viewManager = new InProcessViewManager(SqlTestFramework.DRUID_VIEW_MACRO_FACTORY);
+    DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+        CalciteTests.INJECTOR,
+        qf.conglomerate(),
+        qf.walker(),
         new PlannerConfig(),
         viewManager,
         new NoopDruidSchemaManager(),
@@ -384,7 +383,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     final SqlEngine engine = new MSQTaskSqlEngine(
         indexingServiceClient,
-        queryJsonMapper.copy().registerModules(new MSQSqlModule().getJacksonModules())
+        qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules())
     );
 
     PlannerFactory plannerFactory = new PlannerFactory(
@@ -411,7 +410,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     try {
       return ImmutableMap.<String, Object>builder()
                          .putAll(DEFAULT_MSQ_CONTEXT)
-                         .put(DruidQuery.CTX_SCAN_SIGNATURE, queryJsonMapper.writeValueAsString(signature))
+                         .put(DruidQuery.CTX_SCAN_SIGNATURE, queryFramework().queryJsonMapper().writeValueAsString(signature))
                          .build();
     }
     catch (JsonProcessingException e) {
@@ -688,8 +687,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
   }
 
-
-  public abstract class MSQTester<Builder extends MSQTester>
+  public abstract class MSQTester<Builder extends MSQTester<?>>
   {
     protected String sql = null;
     protected Map<String, Object> queryContext = DEFAULT_MSQ_CONTEXT;
@@ -701,21 +699,25 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Matcher<Throwable> expectedValidationErrorMatcher = null;
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
     protected MSQFault expectedMSQFault = null;
+    protected Class<? extends MSQFault> expectedMSQFaultClass = null;
 
     private boolean hasRun = false;
 
+    @SuppressWarnings("unchecked")
     public Builder setSql(String sql)
     {
       this.sql = sql;
       return (Builder) this;
     }
 
+    @SuppressWarnings("unchecked")
     public Builder setQueryContext(Map<String, Object> queryContext)
     {
       this.queryContext = queryContext;
       return (Builder) this;
     }
 
+    @SuppressWarnings("unchecked")
     public Builder setExpectedRowSignature(RowSignature expectedRowSignature)
     {
       Preconditions.checkArgument(!expectedRowSignature.equals(RowSignature.empty()), "Row signature cannot be empty");
@@ -723,6 +725,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return (Builder) this;
     }
 
+    @SuppressWarnings("unchecked")
     public Builder setExpectedSegment(Set<SegmentId> expectedSegments)
     {
       Preconditions.checkArgument(!expectedSegments.isEmpty(), "Segments cannot be empty");
@@ -730,6 +733,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return (Builder) this;
     }
 
+    @SuppressWarnings("unchecked")
     public Builder setExpectedResultRows(List<Object[]> expectedResultRows)
     {
       Preconditions.checkArgument(expectedResultRows.size() > 0, "Results rows cannot be empty");
@@ -737,29 +741,37 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return (Builder) this;
     }
 
-
+    @SuppressWarnings("unchecked")
     public Builder setExpectedMSQSpec(MSQSpec expectedMSQSpec)
     {
       this.expectedMSQSpec = expectedMSQSpec;
       return (Builder) this;
     }
 
-
+    @SuppressWarnings("unchecked")
     public Builder setExpectedValidationErrorMatcher(Matcher<Throwable> expectedValidationErrorMatcher)
     {
       this.expectedValidationErrorMatcher = expectedValidationErrorMatcher;
       return (Builder) this;
     }
 
+    @SuppressWarnings("unchecked")
     public Builder setExpectedExecutionErrorMatcher(Matcher<Throwable> expectedExecutionErrorMatcher)
     {
       this.expectedExecutionErrorMatcher = expectedExecutionErrorMatcher;
       return (Builder) this;
     }
 
+    @SuppressWarnings("unchecked")
     public Builder setExpectedMSQFault(MSQFault MSQFault)
     {
       this.expectedMSQFault = MSQFault;
+      return (Builder) this;
+    }
+
+    public Builder setExpectedMSQFaultClass(Class<? extends MSQFault> expectedMSQFaultClass)
+    {
+      this.expectedMSQFaultClass = expectedMSQFaultClass;
       return (Builder) this;
     }
 
@@ -806,7 +818,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
       // nothing to do
     }
 
-
     public IngestTester setExpectedDataSource(String expectedDataSource)
     {
       this.expectedDataSource = expectedDataSource;
@@ -850,19 +861,28 @@ public class MSQTestBase extends BaseCalciteQueryTest
       Preconditions.checkArgument(expectedDataSource != null, "dataSource cannot be null");
       Preconditions.checkArgument(expectedRowSignature != null, "expectedRowSignature cannot be null");
       Preconditions.checkArgument(
-          expectedResultRows != null || expectedMSQFault != null,
-          "atleast one of expectedResultRows or expectedMSQFault should be set to non null"
+          expectedResultRows != null || expectedMSQFault != null || expectedMSQFaultClass != null,
+          "atleast one of expectedResultRows, expectedMSQFault or expectedMSQFaultClass should be set to non null"
       );
       Preconditions.checkArgument(expectedShardSpec != null, "shardSpecClass cannot be null");
       readyToRun();
       try {
         String controllerId = runMultiStageQuery(sql, queryContext);
-        if (expectedMSQFault != null) {
+        if (expectedMSQFault != null || expectedMSQFaultClass != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);
-          Assert.assertEquals(
-              expectedMSQFault.getCodeWithMessage(),
-              msqErrorReport.getFault().getCodeWithMessage()
-          );
+          if (expectedMSQFault != null) {
+            Assert.assertEquals(
+                expectedMSQFault.getCodeWithMessage(),
+                msqErrorReport.getFault().getCodeWithMessage()
+            );
+          }
+          if (expectedMSQFaultClass != null) {
+            Assert.assertEquals(
+                expectedMSQFaultClass,
+                msqErrorReport.getFault().getClass()
+            );
+          }
+
           return;
         }
         getPayloadOrThrow(controllerId);
@@ -1016,12 +1036,20 @@ public class MSQTestBase extends BaseCalciteQueryTest
       try {
         String controllerId = runMultiStageQuery(sql, queryContext);
 
-        if (expectedMSQFault != null) {
+        if (expectedMSQFault != null || expectedMSQFaultClass != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);
-          Assert.assertEquals(
-              expectedMSQFault.getCodeWithMessage(),
-              msqErrorReport.getFault().getCodeWithMessage()
-          );
+          if (expectedMSQFault != null) {
+            Assert.assertEquals(
+                expectedMSQFault.getCodeWithMessage(),
+                msqErrorReport.getFault().getCodeWithMessage()
+            );
+          }
+          if (expectedMSQFaultClass != null) {
+            Assert.assertEquals(
+                expectedMSQFaultClass,
+                msqErrorReport.getFault().getClass()
+            );
+          }
           return null;
         }
 

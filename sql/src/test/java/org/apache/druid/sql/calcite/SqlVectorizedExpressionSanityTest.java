@@ -141,7 +141,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(CONGLOMERATE, WALKER, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
-    final JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(CalciteTests.createDefaultJoinableFactory());
+    final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
     ENGINE = CalciteTests.createMockSqlEngine(WALKER, CONGLOMERATE);
     PLANNER_FACTORY = new PlannerFactory(
         rootSchema,

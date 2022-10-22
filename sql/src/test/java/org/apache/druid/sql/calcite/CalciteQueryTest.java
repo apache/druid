@@ -116,6 +116,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
@@ -127,7 +128,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -2306,9 +2306,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExactCountDistinctWithFilter() throws IOException
+  public void testExactCountDistinctWithFilter()
   {
-
     final String sqlQuery = "SELECT COUNT(DISTINCT foo.dim1) FILTER(WHERE foo.cnt = 1), SUM(foo.cnt) FROM druid.foo";
     // When useApproximateCountDistinct=true and useGroupingSetForExactDistinct=false, planning fails due
     // to a bug in the Calcite's rule (AggregateExpandDistinctAggregatesRule)
@@ -6495,7 +6494,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultipleExactCountDistinctWithGroupingAndOtherAggregators() throws IOException
+  public void testMultipleExactCountDistinctWithGroupingAndOtherAggregators()
   {
     requireMergeBuffers(4);
     testQuery(
@@ -6749,7 +6748,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDoubleNestedGroupBy() throws IOException
+  public void testDoubleNestedGroupBy()
   {
     requireMergeBuffers(3);
     testQuery(
@@ -8419,7 +8418,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename() throws IOException
+  public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
   {
     cannotVectorize();
     requireMergeBuffers(3);
@@ -10393,7 +10392,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupingAggregatorDifferentOrder() throws IOException
+  public void testGroupingAggregatorDifferentOrder()
   {
     requireMergeBuffers(3);
 
@@ -12584,7 +12583,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .build()),
 
         //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
-        CalciteTests.ROWS1.stream()
+        TestDataBuilder.ROWS1.stream()
                           .map(row -> new Object[]{row.getTimestampFromEpoch()})
                           .collect(Collectors.toList())
     );
@@ -12613,7 +12612,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .build()),
 
         //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
-        CalciteTests.ROWS1.stream()
+        TestDataBuilder.ROWS1.stream()
                           .map(row -> new Object[]{row.getTimestampFromEpoch()})
                           .collect(Collectors.toList())
     );
@@ -12644,7 +12643,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .build()),
 
         //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
-        CalciteTests.ROWS1.stream()
+        TestDataBuilder.ROWS1.stream()
                           .map(row -> new Object[]{row.getTimestampFromEpoch()})
                           .collect(Collectors.toList())
     );
@@ -12682,7 +12681,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .build()),
 
         // verify if query results match the given
-        CalciteTests.ROWS1.stream()
+        TestDataBuilder.ROWS1.stream()
                           .map(r -> new Object[]{periodGranularity.increment(r.getTimestamp()).getMillis()})
                           .collect(Collectors.toList())
     );
@@ -12711,7 +12710,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
         // verify if query results match the given
         // "cnt" for each row is 1
-        CalciteTests.ROWS1.stream()
+        TestDataBuilder.ROWS1.stream()
                           .map(row -> new Object[]{periodGranularity.increment(row.getTimestamp()).getMillis()})
                           .collect(Collectors.toList())
     );
@@ -13794,7 +13793,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   /**
-   * see {@link CalciteTests#RAW_ROWS1_WITH_NUMERIC_DIMS} for the input data source of this test
+   * see {@link TestDataBuilder#RAW_ROWS1_WITH_NUMERIC_DIMS}
+   * for the input data source of this test
    */
   @Test
   public void testHumanReadableFormatFunction()

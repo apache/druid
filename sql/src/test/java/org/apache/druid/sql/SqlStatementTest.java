@@ -145,7 +145,7 @@ public class SqlStatementTest
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
 
     testRequestLogger = new TestRequestLogger();
-    final JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(CalciteTests.createDefaultJoinableFactory());
+    final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,

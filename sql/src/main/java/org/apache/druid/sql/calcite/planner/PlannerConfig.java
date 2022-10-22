@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.QueryContexts;
 import org.joda.time.DateTimeZone;
-import org.joda.time.Period;
 
 import java.util.Map;
 import java.util.Objects;
@@ -40,10 +39,7 @@ public class PlannerConfig
   public static final int NUM_FILTER_NOT_USED = -1;
 
   @JsonProperty
-  private Period metadataRefreshPeriod = new Period("PT1M");
-
-  @JsonProperty
-  private int maxTopNLimit = 100000;
+  private int maxTopNLimit = 100_000;
 
   @JsonProperty
   private boolean useApproximateCountDistinct = true;
@@ -55,16 +51,7 @@ public class PlannerConfig
   private boolean requireTimeCondition = false;
 
   @JsonProperty
-  private boolean awaitInitializationOnStart = true;
-
-  @JsonProperty
   private DateTimeZone sqlTimeZone = DateTimeZone.UTC;
-
-  @JsonProperty
-  private boolean metadataSegmentCacheEnable = false;
-
-  @JsonProperty
-  private long metadataSegmentPollPeriod = 60000;
 
   @JsonProperty
   private boolean useGroupingSetForExactDistinct = false;
@@ -86,24 +73,9 @@ public class PlannerConfig
 
   private boolean serializeComplexValues = true;
 
-  public long getMetadataSegmentPollPeriod()
-  {
-    return metadataSegmentPollPeriod;
-  }
-
   public int getMaxNumericInFilters()
   {
     return maxNumericInFilters;
-  }
-
-  public boolean isMetadataSegmentCacheEnable()
-  {
-    return metadataSegmentCacheEnable;
-  }
-
-  public Period getMetadataRefreshPeriod()
-  {
-    return metadataRefreshPeriod;
   }
 
   public int getMaxTopNLimit()
@@ -134,11 +106,6 @@ public class PlannerConfig
   public DateTimeZone getSqlTimeZone()
   {
     return sqlTimeZone;
-  }
-
-  public boolean isAwaitInitializationOnStart()
-  {
-    return awaitInitializationOnStart;
   }
 
   public boolean shouldSerializeComplexValues()
@@ -194,14 +161,14 @@ public class PlannerConfig
            useApproximateCountDistinct == that.useApproximateCountDistinct &&
            useApproximateTopN == that.useApproximateTopN &&
            requireTimeCondition == that.requireTimeCondition &&
-           awaitInitializationOnStart == that.awaitInitializationOnStart &&
-           metadataSegmentCacheEnable == that.metadataSegmentCacheEnable &&
-           metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
            serializeComplexValues == that.serializeComplexValues &&
-           Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone) &&
            useNativeQueryExplain == that.useNativeQueryExplain &&
-           forceExpressionVirtualColumns == that.forceExpressionVirtualColumns;
+           forceExpressionVirtualColumns == that.forceExpressionVirtualColumns &&
+           useGroupingSetForExactDistinct == that.useGroupingSetForExactDistinct &&
+           computeInnerJoinCostAsFilter == that.computeInnerJoinCostAsFilter &&
+           authorizeSystemTablesDirectly == that.authorizeSystemTablesDirectly &&
+           maxNumericInFilters == that.maxNumericInFilters;
   }
 
   @Override
@@ -209,15 +176,11 @@ public class PlannerConfig
   {
 
     return Objects.hash(
-        metadataRefreshPeriod,
         maxTopNLimit,
         useApproximateCountDistinct,
         useApproximateTopN,
         requireTimeCondition,
-        awaitInitializationOnStart,
         sqlTimeZone,
-        metadataSegmentCacheEnable,
-        metadataSegmentPollPeriod,
         serializeComplexValues,
         useNativeQueryExplain,
         forceExpressionVirtualColumns
@@ -228,14 +191,10 @@ public class PlannerConfig
   public String toString()
   {
     return "PlannerConfig{" +
-           "metadataRefreshPeriod=" + metadataRefreshPeriod +
-           ", maxTopNLimit=" + maxTopNLimit +
+           "maxTopNLimit=" + maxTopNLimit +
            ", useApproximateCountDistinct=" + useApproximateCountDistinct +
            ", useApproximateTopN=" + useApproximateTopN +
            ", requireTimeCondition=" + requireTimeCondition +
-           ", awaitInitializationOnStart=" + awaitInitializationOnStart +
-           ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
-           ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", sqlTimeZone=" + sqlTimeZone +
            ", serializeComplexValues=" + serializeComplexValues +
            ", useNativeQueryExplain=" + useNativeQueryExplain +
@@ -260,15 +219,11 @@ public class PlannerConfig
    */
   public static class Builder
   {
-    private Period metadataRefreshPeriod;
     private int maxTopNLimit;
     private boolean useApproximateCountDistinct;
     private boolean useApproximateTopN;
     private boolean requireTimeCondition;
-    private boolean awaitInitializationOnStart;
     private DateTimeZone sqlTimeZone;
-    private boolean metadataSegmentCacheEnable;
-    private long metadataSegmentPollPeriod;
     private boolean useGroupingSetForExactDistinct;
     private boolean computeInnerJoinCostAsFilter;
     private boolean authorizeSystemTablesDirectly;
@@ -282,16 +237,12 @@ public class PlannerConfig
       // Note: use accessors, not fields, since some tests change the
       // config by defining a subclass.
 
-      metadataRefreshPeriod = base.getMetadataRefreshPeriod();
       maxTopNLimit = base.getMaxTopNLimit();
       useApproximateCountDistinct = base.isUseApproximateCountDistinct();
       useApproximateTopN = base.isUseApproximateTopN();
       requireTimeCondition = base.isRequireTimeCondition();
-      awaitInitializationOnStart = base.isAwaitInitializationOnStart();
       sqlTimeZone = base.getSqlTimeZone();
-      metadataSegmentCacheEnable = base.isMetadataSegmentCacheEnable();
       useGroupingSetForExactDistinct = base.isUseGroupingSetForExactDistinct();
-      metadataSegmentPollPeriod = base.getMetadataSegmentPollPeriod();
       computeInnerJoinCostAsFilter = base.computeInnerJoinCostAsFilter;
       authorizeSystemTablesDirectly = base.isAuthorizeSystemTablesDirectly();
       useNativeQueryExplain = base.isUseNativeQueryExplain();
@@ -366,12 +317,6 @@ public class PlannerConfig
       return this;
     }
 
-    public Builder metadataRefreshPeriod(String value)
-    {
-      this.metadataRefreshPeriod = new Period(value);
-      return this;
-    }
-
     public Builder withOverrides(final Map<String, Object> queryContext)
     {
       useApproximateCountDistinct = QueryContexts.parseBoolean(
@@ -440,15 +385,11 @@ public class PlannerConfig
     public PlannerConfig build()
     {
       PlannerConfig config = new PlannerConfig();
-      config.metadataRefreshPeriod = metadataRefreshPeriod;
       config.maxTopNLimit = maxTopNLimit;
       config.useApproximateCountDistinct = useApproximateCountDistinct;
       config.useApproximateTopN = useApproximateTopN;
       config.requireTimeCondition = requireTimeCondition;
-      config.awaitInitializationOnStart = awaitInitializationOnStart;
       config.sqlTimeZone = sqlTimeZone;
-      config.metadataSegmentCacheEnable = metadataSegmentCacheEnable;
-      config.metadataSegmentPollPeriod = metadataSegmentPollPeriod;
       config.useGroupingSetForExactDistinct = useGroupingSetForExactDistinct;
       config.computeInnerJoinCostAsFilter = computeInnerJoinCostAsFilter;
       config.authorizeSystemTablesDirectly = authorizeSystemTablesDirectly;
