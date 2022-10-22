@@ -93,10 +93,11 @@ jobs:
 
     - name: "license checks"
       before_script: &setup_generate_license
-        - sudo apt-get update && sudo apt-get install python3.6 python3-setuptools -y
+        - sudo apt-get update && sudo apt-get install python3.6 -y
+        - curl https://bootstrap.pypa.io/get-pip.py | sudo -H python3.6
         - ./check_test_suite.py && travis_terminate 0 || echo 'Continuing setup'
-        - python3.6 -m pip install wheel  # install wheel first explicitly
-        - python3.6 -m pip install pyyaml==5.4.1
+        - pip3 install wheel  # install wheel first explicitly
+        - pip3 install pyyaml==5.4.1
       script:
         - >
           ${MVN} apache-rat:check -Prat --fail-at-end
