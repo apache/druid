@@ -41,7 +41,7 @@ addons:
   apt:
     packages:
       - maven
-      - python3
+      - python3.6
 
 # Add various options to make 'mvn install' fast and skip javascript compile (-Dweb.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
