@@ -281,7 +281,7 @@ public class NativeQueryMaker implements QueryMaker
           throw new RuntimeException(e);
         }
       } else {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+        throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (value == null) {
       coercedValue = null;
@@ -295,7 +295,7 @@ public class NativeQueryMaker implements QueryMaker
       } else if (value instanceof Number) {
         coercedValue = Evals.asBoolean(((Number) value).longValue());
       } else {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+        throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (sqlType == SqlTypeName.INTEGER) {
       if (value instanceof String) {
@@ -303,28 +303,28 @@ public class NativeQueryMaker implements QueryMaker
       } else if (value instanceof Number) {
         coercedValue = ((Number) value).intValue();
       } else {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+        throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (sqlType == SqlTypeName.BIGINT) {
       try {
         coercedValue = DimensionHandlerUtils.convertObjectToLong(value);
       }
       catch (Exception e) {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+        throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (sqlType == SqlTypeName.FLOAT) {
       try {
         coercedValue = DimensionHandlerUtils.convertObjectToFloat(value);
       }
       catch (Exception e) {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+        throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (SqlTypeName.FRACTIONAL_TYPES.contains(sqlType)) {
       try {
         coercedValue = DimensionHandlerUtils.convertObjectToDouble(value);
       }
       catch (Exception e) {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+        throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (sqlType == SqlTypeName.OTHER) {
       // Complex type, try to serialize if we should, else print class name
@@ -333,7 +333,7 @@ public class NativeQueryMaker implements QueryMaker
           coercedValue = jsonMapper.writeValueAsString(value);
         }
         catch (JsonProcessingException jex) {
-          throw new ISE(jex, "Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+          throw new ISE(jex, "Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
         }
       } else {
         coercedValue = value.getClass().getName();
@@ -358,11 +358,11 @@ public class NativeQueryMaker implements QueryMaker
         // here if needed
         coercedValue = maybeCoerceArrayToList(value, true);
         if (coercedValue == null) {
-          throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+          throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
         }
       }
     } else {
-      throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+      throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
     }
 
     return coercedValue;
