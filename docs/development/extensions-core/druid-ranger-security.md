@@ -74,7 +74,7 @@ druid.escalator.authorizerName=ranger
 |--------|-----------|-------|--------|
 |`druid.auth.ranger.keytab`|Defines the keytab to be used while authenticating against Apache Ranger to obtain policies and provide auditing|null|No|
 |`druid.auth.ranger.principal`|Defines the principal to be used while authenticating against Apache Ranger to obtain policies and provide auditing|null|No|
-|`druid.auth.ranger.use_ugi`|Determines if groups that the authenticated user belongs to should be obtained from Hadoop's `UserGroupInformation`|null|No|
+|`druid.auth.ranger.use_ugi`|Determines if groups that the authenticated user belongs to should be obtained from Hadoop's `UserGroupInformation`|false|No|
 
 ### Configuring the connection to Apache Ranger
 
