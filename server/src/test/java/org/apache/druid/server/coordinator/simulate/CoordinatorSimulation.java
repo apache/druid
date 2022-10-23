@@ -88,6 +88,8 @@ public interface CoordinatorSimulation
      * Gets the load percentage of the specified datasource as seen by the coordinator.
      */
     double getLoadPercentage(String datasource);
+
+    void addServer(DruidServer server);
   }
 
   interface ClusterState
@@ -103,5 +105,6 @@ public interface CoordinatorSimulation
      * Removes the specified server from the cluster.
      */
     void removeServer(DruidServer server);
+
   }
 }

@@ -20,12 +20,15 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -35,21 +38,98 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 {
   private DruidServer historicalT11;
   private DruidServer historicalT12;
+
+  private DruidServer historicalT13;
+
+  private DruidServer historicalT14;
+
+  private DruidServer historicalT15;
   private DruidServer historicalT21;
   private DruidServer historicalT22;
 
   private final String datasource = DS.WIKI;
   private final List<DataSegment> segments = Segments.WIKI_10X1D;
 
+  private static final List<DataSegment> WIKI_HOURLY =
+      CreateDataSegments.ofDatasource("wiki_hourly")
+                        .forIntervals(3 * 24 * 365, Granularities.HOUR)
+                        .startingAt("2022-01-01")
+                        .withNumPartitions(1)
+                        .eachOfSizeInMb(1);
+
+  private static final List<DataSegment> WIKI_WEEKLY =
+      CreateDataSegments.ofDatasource("wiki_weekly")
+                        .forIntervals(3 * 52, Granularities.WEEK)
+                        .startingAt("2021-12-26")
+                        .withNumPartitions(20)
+                        .eachOfSizeInMb(10);
+
+  private static final List<DataSegment> WIKI_YEARLY =
+      CreateDataSegments.ofDatasource("wiki_yearly")
+                        .forIntervals(3, Granularities.YEAR)
+                        .startingAt("2022-01-01")
+                        .withNumPartitions(100)
+                        .eachOfSizeInMb(100);
+
+
+
   @Override
   public void setUp()
   {
     // Setup historicals for 2 tiers, size 10 GB each
-    historicalT11 = createHistorical(1, Tier.T1, 10_000);
-    historicalT12 = createHistorical(2, Tier.T1, 10_000);
+    historicalT11 = createHistorical(1, Tier.T1, 10_000_000);
+    historicalT12 = createHistorical(2, Tier.T1, 10_000_000);
+    historicalT13 = createHistorical(3, Tier.T1, 10_000_000);
+    historicalT14 = createHistorical(4, Tier.T1, 10_000_000);
+    historicalT15 = createHistorical(5, Tier.T1, 10_000_000);
 
     historicalT21 = createHistorical(1, Tier.T2, 10_000);
     historicalT22 = createHistorical(2, Tier.T2, 10_000);
+  }
+
+  @Test
+  public void testLoadAndBalanceSeveral()
+  {
+    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(100, 500, 5000);
+
+    List<DataSegment> severalSegments = new ArrayList<>();
+    severalSegments.addAll(WIKI_YEARLY);
+    severalSegments.addAll(WIKI_WEEKLY);
+    severalSegments.addAll(WIKI_HOURLY);
+
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(severalSegments)
+                             .withServers(historicalT11, historicalT12, historicalT13)
+                             .withRules("wiki_yearly", Load.on(Tier.T1, 2).forever())
+                             .withRules("wiki_weekly", Load.on(Tier.T1, 2).forever())
+                             .withRules("wiki_hourly", Load.on(Tier.T1, 2).forever())
+                             .withBalancerStrategy("sortingCost")
+                             .withDynamicConfig(dynamicConfig)
+                             .build();
+
+
+    System.out.println("Beginning simulation");
+    startSimulation(sim);
+    System.out.println("Simulator ready");
+    long startTimeMillis = System.currentTimeMillis();
+    System.out.println("Starting with 3 historicals");
+    int numCycles = 500;
+    for (int i = 0; i < 50; i++) {
+      System.out.println("Coordinator Run: " + (i + 1) + " / " + numCycles);
+      runCoordinatorCycle();
+      loadQueuedSegments();
+    }
+    sim.coordinator().addServer(historicalT14);
+    sim.coordinator().addServer(historicalT15);
+    System.out.println("Adding 2 more historicals");
+    for (int i = 50; i < numCycles; i++) {
+      System.out.println("Coordinator Run: " + (i + 1) + " / " + numCycles);
+      runCoordinatorCycle();
+      loadQueuedSegments();
+    }
+    long endTimeMillis = System.currentTimeMillis();
+    System.out.println("Total time =  " + (endTimeMillis - startTimeMillis));
   }
 
   @Test
