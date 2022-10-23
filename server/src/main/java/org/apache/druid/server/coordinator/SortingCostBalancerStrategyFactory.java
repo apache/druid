@@ -19,19 +19,25 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.client.ServerInventoryView;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = CostBalancerStrategyFactory.class)
-@JsonSubTypes(value = {
-        @JsonSubTypes.Type(name = "diskNormalized", value = DiskNormalizedCostBalancerStrategyFactory.class),
-        @JsonSubTypes.Type(name = "cost", value = CostBalancerStrategyFactory.class),
-        @JsonSubTypes.Type(name = "cachingCost", value = CachingCostBalancerStrategyFactory.class),
-        @JsonSubTypes.Type(name = "random", value = RandomBalancerStrategyFactory.class),
-        @JsonSubTypes.Type(name = "sortingCost", value = SortingCostBalancerStrategyFactory.class)
-})
-public interface BalancerStrategyFactory
+public class SortingCostBalancerStrategyFactory extends CostBalancerStrategyFactory
 {
-  BalancerStrategy createBalancerStrategy(ListeningExecutorService exec);
+  private final ServerInventoryView serverInventoryView;
+
+
+  public SortingCostBalancerStrategyFactory(
+      @JacksonInject ServerInventoryView serverInventoryView
+  )
+  {
+    this.serverInventoryView = serverInventoryView;
+  }
+
+  @Override
+  public CostBalancerStrategy createBalancerStrategy(final ListeningExecutorService exec)
+  {
+    return new SortingCostBalancerStrategy(serverInventoryView, exec);
+  }
 }
