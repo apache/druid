@@ -43,7 +43,7 @@ addons:
       - sourceline: 'ppa:jblgf0/python'
     packages:
       - maven
-      - python3.6
+      - python3.9
 
 # Add various options to make 'mvn install' fast and skip javascript compile (-Dweb.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
@@ -93,8 +93,7 @@ jobs:
 
     - name: "license checks"
       before_script: &setup_generate_license
-        - sudo apt-get update && sudo apt-get install python3.6 -y
-        - curl https://bootstrap.pypa.io/pip/3.6/get-pip.py | sudo -H python3.6
+        - curl https://bootstrap.pypa.io/get-pip.py | sudo -H python3.9
         - ./check_test_suite.py && travis_terminate 0 || echo 'Continuing setup'
         - pip3 install wheel  # install wheel first explicitly
         - pip3 install pyyaml==5.4.1
