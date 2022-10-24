@@ -19,8 +19,6 @@
 
 package org.apache.druid.data.input.impl;
 
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
