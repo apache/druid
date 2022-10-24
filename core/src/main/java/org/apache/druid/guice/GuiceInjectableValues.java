@@ -42,8 +42,7 @@ public class GuiceInjectableValues extends InjectableValues
   public GuiceInjectableValues(Injector injector)
   {
     this.injector = injector;
-    this.nullables = new AtomicReference<>();
-    this.nullables.set(new HashSet<>());
+    this.nullables = new AtomicReference<>(new HashSet<>());
   }
 
   @Override
@@ -58,16 +57,16 @@ public class GuiceInjectableValues extends InjectableValues
     //                  whatever provider needs"
     // Currently we should only be dealing with `Key` instances, and anything more advanced should be handled with
     // great care
-    if (valueId instanceof Key) {
+    if (nullables.get().contains((Key) valueId)) {
+      return null;
+    } else if (valueId instanceof Key) {
       try {
         return injector.getInstance((Key) valueId);
       }
       catch (ConfigurationException ce) {
         // check if nullable annotation is present for this
-        if (nullables.get().contains((Key) valueId)) {
-          return null;
-        } else if (forProperty.getAnnotation(Nullable.class) != null) {
-          HashSet<Key> encounteredNullables = nullables.get();
+        if (forProperty.getAnnotation(Nullable.class) != null) {
+          HashSet<Key> encounteredNullables = new HashSet<>(nullables.get());
           encounteredNullables.add((Key) valueId);
           nullables.set(encounteredNullables);
           return null;
