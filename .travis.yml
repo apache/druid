@@ -93,7 +93,7 @@ jobs:
 
     - name: "license checks"
       before_script: &setup_generate_license
-        - sudo apt-get update && sudo apt-get install python3-distutils -y
+        - sudo apt-get update && sudo apt-get install python3.9-distutils -y
         - curl https://bootstrap.pypa.io/get-pip.py | sudo -H python3.9
         - ./check_test_suite.py && travis_terminate 0 || echo 'Continuing setup'
         - pip3 install wheel  # install wheel first explicitly
