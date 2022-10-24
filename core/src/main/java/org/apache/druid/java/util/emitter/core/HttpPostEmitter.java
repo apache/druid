@@ -534,11 +534,6 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
         Object batch = concurrentBatch.get();
         if (batch instanceof Batch) {
           ((Batch) batch).sealIfFlushNeeded();
-        } else {
-          // batch == null means that HttpPostEmitter is terminated. Batch object might also be a Long object if some
-          // thread just failed with a serious error in onSealExclusive(). In this case we don't want to shutdown
-          // the emitter thread.
-          needsToShutdown = batch == null;
         }
       }
       return needsToShutdown;

@@ -56,6 +56,14 @@ public class CalciteTestInjectorBuilder extends CoreInjectorBuilder
     );
   }
 
+  public CalciteTestInjectorBuilder withDefaultMacroTable()
+  {
+    addModule(binder ->
+        binder.bind(ExprMacroTable.class).toInstance(TestExprMacroTable.INSTANCE)
+    );
+    return this;
+  }
+
   @Override
   public Injector build()
   {
@@ -85,7 +93,6 @@ public class CalciteTestInjectorBuilder extends CoreInjectorBuilder
               )
           );
 
-      binder.bind(ExprMacroTable.class).toInstance(TestExprMacroTable.INSTANCE);
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
       binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
 
