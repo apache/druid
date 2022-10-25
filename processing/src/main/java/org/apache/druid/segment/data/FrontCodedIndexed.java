@@ -85,7 +85,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     buffer.position(offsetsPosition + size);
 
     return () -> new FrontCodedIndexed(
-        orderedBuffer,
+        buffer,
         bucketSize,
         numValues,
         hasNull,
