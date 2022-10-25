@@ -86,6 +86,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
 
     return () -> new FrontCodedIndexed(
         buffer,
+        ordering,
         bucketSize,
         numValues,
         hasNull,
@@ -107,6 +108,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
 
   private FrontCodedIndexed(
       ByteBuffer buffer,
+      ByteOrder order,
       int bucketSize,
       int numValues,
       boolean hasNull,
@@ -116,7 +118,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     if (Integer.bitCount(bucketSize) != 1) {
       throw new ISE("bucketSize must be a power of two but was[%,d]", bucketSize);
     }
-    this.buffer = buffer.asReadOnlyBuffer().order(buffer.order());
+    this.buffer = buffer.asReadOnlyBuffer().order(order);
     this.bucketSize = bucketSize;
     this.hasNull = hasNull;
 
