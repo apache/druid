@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.column;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import it.unimi.dsi.fastutil.ints.IntIntImmutablePair;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
@@ -50,6 +51,7 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
       boolean hasNull
   )
   {
+    Preconditions.checkArgument(dictionary.isSorted(), "Dictionary must be sorted");
     this.bitmapFactory = bitmapFactory;
     this.dictionary = dictionary;
     this.bitmaps = bitmaps;

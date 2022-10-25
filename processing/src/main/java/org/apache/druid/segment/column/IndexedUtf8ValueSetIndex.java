@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.column;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
@@ -39,7 +40,7 @@ import java.util.SortedSet;
 public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuffer>>
     implements StringValueSetIndex, Utf8ValueSetIndex
 {
-  // This determines the cut-off point to swtich the merging algorithm from doing binary-search per element in the value
+  // This determines the cut-off point to switch the merging algorithm from doing binary-search per element in the value
   // set to doing a sorted merge algorithm between value set and dictionary. The ratio here represents the ratio b/w
   // the number of elements in value set and the number of elements in the dictionary. The number has been derived
   // using benchmark in https://github.com/apache/druid/pull/13133. If the ratio is higher than the threshold, we use
@@ -58,6 +59,7 @@ public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuff
       Indexed<ImmutableBitmap> bitmaps
   )
   {
+    Preconditions.checkArgument(dictionary.isSorted(), "Dictionary must be sorted");
     this.bitmapFactory = bitmapFactory;
     this.dictionary = dictionary;
     this.bitmaps = bitmaps;
@@ -235,9 +237,9 @@ public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuff
               next = dictionary.indexOf(nextValue);
 
               if (next == -dictionarySize - 1) {
-                // nextValue is past the end of the dictionary.
-                // Note: we can rely on indexOf returning (-(insertion point) - 1), even though Indexed doesn't
-                // guarantee it, because "dictionary" comes from GenericIndexed singleThreaded().
+                // nextValue is past the end of the dictionary so we can break early
+                // Note: we can rely on indexOf returning (-(insertion point) - 1), because of the earlier check
+                // for Indexed.isSorted(), which guarantees this behavior
                 break;
               }
             }

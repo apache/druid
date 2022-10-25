@@ -38,6 +38,24 @@ import java.util.NoSuchElementException;
  * as a pair of an integer which indicates how much of the first byte array of the bucket to use as a prefix, followed
  * by the remaining bytes after the prefix to complete the value.
  *
+ * front coded indexed layout:
+ * | version | bucket size | has null? | number of values | size of "offsets" + "buckets" | "offsets" | "buckets" |
+ * | ------- | ----------- | --------- | ---------------- | ----------------------------- | --------- | --------- |
+ * |    byte |        byte |      byte |        vbyte int |                     vbyte int |     int[] |  bucket[] |
+ *
+ * "offsets" are the ending offsets of each bucket stored in order, stored as plain integers for easy random access.
+ *
+ * bucket layout:
+ * | first value | prefix length | fragment | ... | prefix length | fragment |
+ * | ----------- | ------------- | -------- | --- | ------------- | -------- |
+ * |        blob |     vbyte int |     blob | ... |     vbyte int |     blob |
+ *
+ * blob layout:
+ * | blob length | blob bytes |
+ * | ----------- | ---------- |
+ * |   vbyte int |     byte[] |
+ *
+ *
  * Getting a value first picks the appropriate bucket, finds its offset in the underlying buffer, then scans the bucket
  * values to seek to the correct position of the value within the bucket in order to reconstruct it using the prefix
  * length.
@@ -48,6 +66,7 @@ import java.util.NoSuchElementException;
  *
  * The value iterator reads an entire bucket at a time, reconstructing the values into an array to iterate within the
  * bucket before moving onto the next bucket as the iterator is consumed.
+ *
  */
 public final class FrontCodedIndexed implements Indexed<ByteBuffer>
 {
@@ -67,20 +86,23 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
 
     final int numBuckets = (int) Math.ceil((double) numValues / (double) bucketSize);
     final int adjustIndex = hasNull ? 1 : 0;
+    final int adjustedNumValues = numValues + adjustIndex;
     final int div = Integer.numberOfTrailingZeros(bucketSize);
     final int rem = bucketSize - 1;
+    final int lastBucketNumValues = (numValues & rem) == 0 ? bucketSize : numValues & rem;
+    final int bucketsPosition = offsetsPosition + ((numBuckets - 1) * Integer.BYTES);
     return () -> new FrontCodedIndexed(
         orderedBuffer,
         bucketSize,
         numBuckets,
-        (numValues & rem) == 0 ? bucketSize : numValues & rem,
+        lastBucketNumValues,
         hasNull,
-        numValues + adjustIndex,
+        adjustedNumValues,
         adjustIndex,
         div,
         rem,
         offsetsPosition,
-        offsetsPosition + ((numBuckets - 1) * Integer.BYTES)
+        bucketsPosition
     );
   }
 
@@ -247,6 +269,13 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     buffer.position(firstOffset + firstLength);
 
     return findValueInBucket(value, bucketIndexBase, numValuesInBucket, sharedPrefix);
+  }
+
+  @Override
+  public boolean isSorted()
+  {
+    // FrontCodedIndexed only supports sorted values
+    return true;
   }
 
   @Override

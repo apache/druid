@@ -23,12 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = StringEncodingStrategy.Utf8.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
     @JsonSubTypes.Type(value = StringEncodingStrategy.Utf8.class, name = StringEncodingStrategy.UTF8),
     @JsonSubTypes.Type(value = StringEncodingStrategy.FrontCoded.class, name = StringEncodingStrategy.FRONT_CODED)
@@ -37,7 +37,7 @@ public interface StringEncodingStrategy
 {
   Utf8 DEFAULT = new Utf8();
   String UTF8 = "utf8";
-  String FRONT_CODED = "front-coded";
+  String FRONT_CODED = "frontCoded";
 
   byte UTF8_ID = 0x00;
   byte FRONT_CODED_ID = 0x01;
@@ -46,7 +46,6 @@ public interface StringEncodingStrategy
 
   byte getId();
 
-  @JsonTypeName(UTF8)
   class Utf8 implements StringEncodingStrategy
   {
     @Override
@@ -83,7 +82,6 @@ public interface StringEncodingStrategy
     }
   }
 
-  @JsonTypeName(FRONT_CODED)
   class FrontCoded implements StringEncodingStrategy
   {
     public static final int DEFAULT_BUCKET_SIZE = 4;
@@ -103,6 +101,9 @@ public interface StringEncodingStrategy
     )
     {
       this.bucketSize = bucketSize == null ? DEFAULT_BUCKET_SIZE : bucketSize;
+      if (Integer.bitCount(this.bucketSize) != 1) {
+        throw new ISE("bucketSize must be a power of two but was[%,d]", bucketSize);
+      }
     }
 
     @Override

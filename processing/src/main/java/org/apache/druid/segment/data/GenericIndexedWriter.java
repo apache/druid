@@ -45,6 +45,9 @@ import java.nio.channels.WritableByteChannel;
 
 /**
  * Streams arrays of objects out in the binary format described by {@link GenericIndexed}
+ *
+ * The version {@link EncodedStringDictionaryWriter#VERSION} is reserved and must never be specified as the
+ * {@link GenericIndexed} version byte, else it will interfere with string column deserialization.
  */
 public class GenericIndexedWriter<T> implements DictionaryWriter<T>
 {

@@ -100,7 +100,7 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
   }
 
   @Override
-  protected DictionaryWriter<String> getWriter(String fileName)
+  protected DictionaryWriter<String> makeDictionaryWriter(String fileName)
   {
     return StringEncodingStrategies.getStringDictionaryWriter(
         indexSpec.getStringDictionaryEncoding(),

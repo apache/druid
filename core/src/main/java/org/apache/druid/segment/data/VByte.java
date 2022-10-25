@@ -24,7 +24,8 @@ import java.nio.ByteBuffer;
 public class VByte
 {
   /**
-   * Read a variable byte (vbyte) encoded integer from a {@link ByteBuffer} at the current position.
+   * Read a variable byte (vbyte) encoded integer from a {@link ByteBuffer} at the current position. Moves the buffer
+   * ahead by 1 to 5 bytes depending on how many bytes was required to encode the integer value.
    *
    * vbyte encoding stores values in the last 7 bits of a byte and reserves the high bit for the 'contination'. If 0,
    * one or more aditional bytes must be read to complete the value, and a 1 indicates the terminal byte. Because of
@@ -58,7 +59,8 @@ public class VByte
   }
 
   /**
-   * Write a variable byte (vbyte) encoded integer to a {@link ByteBuffer} at the current position.
+   * Write a variable byte (vbyte) encoded integer to a {@link ByteBuffer} at the current position, advancing the buffer
+   * position by the number of bytes required to represent the integer, between 1 and 5 bytes.
    *
    * vbyte encoding stores values in the last 7 bits of a byte and reserves the high bit for the 'contination'. If 0,
    * one or more aditional bytes must be read to complete the value, and a 1 indicates the terminal byte. Because of
@@ -71,8 +73,6 @@ public class VByte
   public static int writeInt(ByteBuffer buffer, int val)
   {
     final int pos = buffer.position();
-    // based on:
-    // https://github.com/lemire/JavaFastPFOR/blob/master/src/main/java/me/lemire/integercompression/VariableByte.java
     if (val < (1 << 7)) {
       buffer.put((byte) (val | (1 << 7)));
     } else if (val < (1 << 14)) {
@@ -98,7 +98,7 @@ public class VByte
   }
 
   /**
-   * Compute size of variable byte encoded integer.
+   * Compute number of bytes required to represent variable byte encoded integer.
    *
    * vbyte encoding stores values in the last 7 bits of a byte and reserves the high bit for the 'contination'. If 0,
    * one or more aditional bytes must be read to complete the value, and a 1 indicates the terminal byte. Because of

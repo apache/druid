@@ -148,7 +148,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
       Indexed<T> dimValues = closer.register(adapters.get(i).getDimValueLookup(dimensionName));
       if (dimValues != null && !allNull(dimValues)) {
         dimHasValues = true;
-        hasNull |= dimValues.indexOf(null) >= 0;
+        hasNull = hasNull || dimValues.indexOf(null) >= 0;
         dimValueLookups[i] = dimValueLookup = dimValues;
         numMergeIndex++;
       } else {
@@ -172,7 +172,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     }
 
     String dictFilename = StringUtils.format("%s.dim_values", dimensionName);
-    dictionaryWriter = getWriter(dictFilename);
+    dictionaryWriter = makeDictionaryWriter(dictFilename);
     firstDictionaryValue = null;
     dictionarySize = 0;
     dictionaryWriter.open();
@@ -387,7 +387,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     }
   }
 
-  protected DictionaryWriter<T> getWriter(String fileName)
+  protected DictionaryWriter<T> makeDictionaryWriter(String fileName)
   {
     return new GenericIndexedWriter<>(segmentWriteOutMedium, fileName, getObjectStrategy());
   }

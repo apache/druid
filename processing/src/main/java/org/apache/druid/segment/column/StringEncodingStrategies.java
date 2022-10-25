@@ -22,6 +22,7 @@ package org.apache.druid.segment.column;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.EncodedStringDictionaryWriter;
 import org.apache.druid.segment.data.FrontCodedIndexedWriter;
@@ -32,7 +33,6 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Iterator;
 
 public class StringEncodingStrategies
@@ -55,7 +55,7 @@ public class StringEncodingStrategies
       if (StringEncodingStrategy.FRONT_CODED.equals(encodingStrategy.getType())) {
         writer = new FrontCodedIndexedWriter(
             writeoutMedium,
-            ByteOrder.nativeOrder(),
+            IndexIO.BYTE_ORDER,
             ((StringEncodingStrategy.FrontCoded) encodingStrategy).getBucketSize()
         );
       } else {
@@ -66,7 +66,7 @@ public class StringEncodingStrategies
   }
 
   /**
-   * Adapter to convert {@link Indexed<ByteBuffer>} with utf8 encoded bytes into {@link Indexed<String>} to be frinedly
+   * Adapter to convert {@link Indexed<ByteBuffer>} with utf8 encoded bytes into {@link Indexed<String>} to be friendly
    * to consumers.
    */
   public static final class Utf8ToStringIndexed implements Indexed<String>

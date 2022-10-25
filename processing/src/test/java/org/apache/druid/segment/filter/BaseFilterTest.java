@@ -361,7 +361,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
             for (boolean optimize : ImmutableList.of(false, true)) {
               for (StringEncodingStrategy encodingStrategy : stringEncoding) {
                 final String testName = StringUtils.format(
-                    "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s], encoding[%s]",
+                    "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s], stringDictionaryEncoding[%s]",
                     bitmapSerdeFactoryEntry.getKey(),
                     segmentWriteOutMediumFactoryEntry.getKey(),
                     finisherEntry.getKey(),

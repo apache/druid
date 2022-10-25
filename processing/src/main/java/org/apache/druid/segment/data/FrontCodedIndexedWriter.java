@@ -45,6 +45,8 @@ import java.nio.channels.WritableByteChannel;
  *
  * This is valid to use for any values which can be compared byte by byte with unsigned comparison. Otherwise, this
  * is not the collection for you.
+ *
+ * @see FrontCodedIndexed for additional details.
  */
 public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
 {
@@ -74,6 +76,9 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
       int bucketSize
   )
   {
+    if (Integer.bitCount(bucketSize) != 1) {
+      throw new ISE("bucketSize must be a power of two but was[%,d]", bucketSize);
+    }
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.scratch = ByteBuffer.allocate(1 << logScratchSize).order(byteOrder);
     this.bucketSize = bucketSize;
