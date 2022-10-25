@@ -216,6 +216,7 @@ aggregators
 ambari
 analytics
 arrayElement
+assumeNewlineDelimited
 assumeRoleArn
 assumeRoleExternalId
 async
@@ -489,6 +490,7 @@ unsetting
 untrusted
 useFilterCNF
 useJqSyntax
+useJsonNodeReader
 useSSL
 uptime
 uris
@@ -752,7 +754,7 @@ v9
 DskipTests
 Papache-release
 Pdist
-Ddruid.console.skip
+Dweb.console.skip
 yaml
 Phadoop3
 dist-hadoop3
@@ -1231,6 +1233,7 @@ column_1
 column_n
 com.opencsv
 ctrl
+descriptorString
 headerFormat
 headerLabelPrefix
 jsonLowercase

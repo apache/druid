@@ -82,7 +82,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.server.QueryLifecycle;
-import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -4557,8 +4556,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .setVirtualColumns(expressionVirtualColumn("v0", "'def'", ColumnType.STRING))
         .build();
 
-    QueryLifecycleFactory qlf = CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate);
-    QueryLifecycle ql = qlf.factorize();
+    QueryLifecycle ql = queryFramework().queryLifecycle();
     Sequence seq = ql.runSimple(query, CalciteTests.SUPER_USER_AUTH_RESULT, Access.OK).getResults();
     List<Object> results = seq.toList();
     Assert.assertEquals(
@@ -4915,7 +4913,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .context(queryContext)
         .build();
 
-    assert QueryContexts.getEnableJoinFilterPushDown(query); // filter pushdown must be enabled
+    assert query.context().getEnableJoinFilterPushDown(); // filter pushdown must be enabled
     // no results will be produced since the filter values aren't in the table
     testQuery(
         "SELECT f1.m1, f2.m1\n"
@@ -5034,7 +5032,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .context(queryContext)
         .build();
 
-    assert QueryContexts.getEnableJoinFilterPushDown(query); // filter pushdown must be enabled
+    assert query.context().getEnableJoinFilterPushDown(); // filter pushdown must be enabled
     // (dim1, dim2, m1) in foo look like
     // [, a, 1.0]
     // [10.1, , 2.0]

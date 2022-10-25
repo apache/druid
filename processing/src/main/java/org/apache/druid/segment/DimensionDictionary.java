@@ -23,7 +23,6 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 import javax.annotation.Nullable;
-
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,10 +33,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * Buildable dictionary for some comparable type. Values are unsorted, or rather sorted in the order which they are
  * added. A {@link SortedDimensionDictionary} can be constructed with a mapping of ids from this dictionary to the
  * sorted dictionary with the {@link #sort()} method.
- *
- * This dictionary is thread-safe.
+ * <p>
+ * Concrete implementations of this dictionary must be thread-safe.
  */
-public class DimensionDictionary<T extends Comparable<T>>
+public abstract class DimensionDictionary<T extends Comparable<T>>
 {
   public static final int ABSENT_VALUE_ID = -1;
   private final Class<T> cls;
@@ -196,7 +195,7 @@ public class DimensionDictionary<T extends Comparable<T>>
   {
     lock.readLock().lock();
     try {
-      return new SortedDimensionDictionary<T>(idToValue, idToValue.size());
+      return new SortedDimensionDictionary<>(idToValue, idToValue.size());
     }
     finally {
       lock.readLock().unlock();
@@ -204,26 +203,16 @@ public class DimensionDictionary<T extends Comparable<T>>
   }
 
   /**
-   * Estimates the size of the dimension value in bytes. This method is called
-   * only when a new dimension value is being added to the lookup.
-   *
-   * @throws UnsupportedOperationException Implementations that want to estimate
-   *                                       memory must override this method.
+   * Estimates the size of the dimension value in bytes.
+   * <p>
+   * This method is called when adding a new dimension value to the lookup only
+   * if {@link #computeOnHeapSize()} returns true.
    */
-  public long estimateSizeOfValue(T value)
-  {
-    throw new UnsupportedOperationException();
-  }
+  public abstract long estimateSizeOfValue(T value);
 
   /**
    * Whether on-heap size of this dictionary should be computed.
-   *
-   * @return false, by default. Implementations that want to estimate memory
-   * must override this method.
    */
-  public boolean computeOnHeapSize()
-  {
-    return false;
-  }
+  public abstract boolean computeOnHeapSize();
 
 }

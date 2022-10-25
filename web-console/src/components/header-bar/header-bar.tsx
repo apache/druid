@@ -65,7 +65,6 @@ export type HeaderActiveTab =
   | 'datasources'
   | 'segments'
   | 'services'
-  | 'query'
   | 'workbench'
   | 'sql-data-loader'
   | 'lookups';
@@ -191,8 +190,8 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
           {message}
           <p>
             For more info check out the{' '}
-            <ExternalLink href={`${getLink('DOCS')}/operations/management-uis.html#druid-console`}>
-              console documentation
+            <ExternalLink href={`${getLink('DOCS')}/operations/web-console.html`}>
+              web console documentation
             </ExternalLink>
             .
           </p>
@@ -388,16 +387,11 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         <AnchorButton
           className="header-entry"
           minimal
-          active={oneOf(active, 'workbench', 'query')}
+          active={active === 'workbench'}
           icon={IconNames.APPLICATION}
           text="Query"
           href="#workbench"
           disabled={!capabilities.hasQuerying()}
-          onClick={e => {
-            if (!e.altKey) return;
-            e.preventDefault();
-            location.hash = '#query';
-          }}
         />
         {showSplitDataLoaderMenu ? (
           <Popover2

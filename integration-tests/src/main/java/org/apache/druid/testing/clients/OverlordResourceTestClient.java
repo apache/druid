@@ -61,7 +61,7 @@ public class OverlordResourceTestClient
   private final String indexer;
 
   @Inject
-  OverlordResourceTestClient(
+  protected OverlordResourceTestClient(
       ObjectMapper jsonMapper,
       @TestClient HttpClient httpClient,
       IntegrationTestingConfig config
@@ -72,7 +72,7 @@ public class OverlordResourceTestClient
     this.indexer = config.getOverlordUrl();
   }
 
-  private String getIndexerURL()
+  protected String getIndexerURL()
   {
     return StringUtils.format(
         "%s/druid/indexer/v1/",
@@ -720,7 +720,7 @@ public class OverlordResourceTestClient
     }
   }
 
-  private StatusResponseHolder makeRequest(HttpMethod method, String url)
+  protected StatusResponseHolder makeRequest(HttpMethod method, String url)
   {
     try {
       StatusResponseHolder response = this.httpClient

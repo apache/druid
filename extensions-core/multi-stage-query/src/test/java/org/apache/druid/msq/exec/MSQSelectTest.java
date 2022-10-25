@@ -616,7 +616,7 @@ public class MSQSelectTest extends MSQTestBase
   public void testExternSelect1() throws IOException
   {
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -628,7 +628,7 @@ public class MSQSelectTest extends MSQTestBase
                     .setDataSource(
                         new ExternalDataSource(
                             new LocalInputSource(null, null, ImmutableList.of(toRead.getAbsoluteFile())),
-                            new JsonInputFormat(null, null, null),
+                            new JsonInputFormat(null, null, null, null, null),
                             RowSignature.builder()
                                         .add("timestamp", ColumnType.STRING)
                                         .add("page", ColumnType.STRING)

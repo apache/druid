@@ -26,6 +26,7 @@ import {
   FormJsonSelector,
   FormJsonTabs,
   JsonInput,
+  Loader,
 } from '../../components';
 import { COORDINATOR_DYNAMIC_CONFIG_FIELDS, CoordinatorDynamicConfig } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
@@ -37,7 +38,7 @@ import { SnitchDialog } from '..';
 import './coordinator-dynamic-config-dialog.scss';
 
 export interface CoordinatorDynamicConfigDialogProps {
-  onClose: () => void;
+  onClose(): void;
 }
 
 export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDynamicConfigDialog(
@@ -45,18 +46,19 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
 ) {
   const { onClose } = props;
   const [currentTab, setCurrentTab] = useState<FormJsonTabs>('form');
-  const [dynamicConfig, setDynamicConfig] = useState<CoordinatorDynamicConfig>({});
+  const [dynamicConfig, setDynamicConfig] = useState<CoordinatorDynamicConfig | undefined>();
   const [jsonError, setJsonError] = useState<Error | undefined>();
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
+    initQuery: null,
     processQuery: async () => {
       const historyResp = await Api.instance.get(`/druid/coordinator/v1/config/history?count=100`);
       return historyResp.data;
     },
-    initQuery: null,
   });
 
   useQueryManager<null, Record<string, any>>({
+    initQuery: null,
     processQuery: async () => {
       try {
         const configResp = await Api.instance.get('/druid/coordinator/v1/config');
@@ -67,12 +69,10 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
           intent: Intent.DANGER,
           message: `Could not load coordinator dynamic config: ${getDruidErrorMessage(e)}`,
         });
-        setDynamicConfig({});
         onClose();
       }
       return {};
     },
-    initQuery: null,
   });
 
   async function saveConfig(comment: string) {
@@ -107,31 +107,39 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
       title="Coordinator dynamic config"
       historyRecords={historyRecordsState.data}
     >
-      <p>
-        Edit the coordinator dynamic configuration on the fly. For more information please refer to
-        the{' '}
-        <ExternalLink href={`${getLink('DOCS')}/configuration/index.html#dynamic-configuration`}>
-          documentation
-        </ExternalLink>
-        .
-      </p>
-      <FormJsonSelector tab={currentTab} onChange={setCurrentTab} />
-      {currentTab === 'form' ? (
-        <AutoForm
-          fields={COORDINATOR_DYNAMIC_CONFIG_FIELDS}
-          model={dynamicConfig}
-          onChange={setDynamicConfig}
-        />
+      {dynamicConfig ? (
+        <>
+          <p>
+            Edit the coordinator dynamic configuration on the fly. For more information please refer
+            to the{' '}
+            <ExternalLink
+              href={`${getLink('DOCS')}/configuration/index.html#dynamic-configuration`}
+            >
+              documentation
+            </ExternalLink>
+            .
+          </p>
+          <FormJsonSelector tab={currentTab} onChange={setCurrentTab} />
+          {currentTab === 'form' ? (
+            <AutoForm
+              fields={COORDINATOR_DYNAMIC_CONFIG_FIELDS}
+              model={dynamicConfig}
+              onChange={setDynamicConfig}
+            />
+          ) : (
+            <JsonInput
+              value={dynamicConfig}
+              height="50vh"
+              onChange={v => {
+                setDynamicConfig(v);
+                setJsonError(undefined);
+              }}
+              onError={setJsonError}
+            />
+          )}
+        </>
       ) : (
-        <JsonInput
-          value={dynamicConfig}
-          height="50vh"
-          onChange={v => {
-            setDynamicConfig(v);
-            setJsonError(undefined);
-          }}
-          onError={setJsonError}
-        />
+        <Loader />
       )}
     </SnitchDialog>
   );

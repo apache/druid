@@ -45,7 +45,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.AbstractPrioritizedQueryRunnerCallable;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
@@ -134,7 +134,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
     // merge buffer, otherwise the query will allocate too many merge buffers. This is potentially sub-optimal as it
     // will involve materializing the results for each sink before starting to feed them into the outer merge buffer.
     // I'm not sure of a better way to do this without tweaking how realtime servers do queries.
-    final boolean forceChainedExecution = query.getContextBoolean(
+    final boolean forceChainedExecution = query.context().getBoolean(
         CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION,
         false
     );
@@ -144,7 +144,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
         )
         .withoutThreadUnsafeState();
 
-    if (QueryContexts.isBySegment(query) || forceChainedExecution) {
+    final QueryContext queryContext = query.context();
+    if (queryContext.isBySegment() || forceChainedExecution) {
       ChainedExecutionQueryRunner<ResultRow> runner = new ChainedExecutionQueryRunner<>(queryProcessingPool, queryWatcher, queryables);
       return runner.run(queryPlusForRunners, responseContext);
     }
@@ -156,12 +157,12 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
         StringUtils.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
-    final int priority = QueryContexts.getPriority(query);
+    final int priority = queryContext.getPriority();
 
     // Figure out timeoutAt time now, so we can apply the timeout to both the mergeBufferPool.take and the actual
     // query processing together.
-    final long queryTimeout = QueryContexts.getTimeout(query);
-    final boolean hasTimeout = QueryContexts.hasTimeout(query);
+    final long queryTimeout = queryContext.getTimeout();
+    final boolean hasTimeout = queryContext.hasTimeout();
     final long timeoutAt = System.currentTimeMillis() + queryTimeout;
 
     return new BaseSequence<>(

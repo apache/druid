@@ -110,7 +110,7 @@ public abstract class DruidCoordinatorConfig
   @Config("druid.coordinator.loadqueuepeon.type")
   public String getLoadQueuePeonType()
   {
-    return "curator";
+    return "http";
   }
 
   @Config("druid.coordinator.curator.loadqueuepeon.numCallbackThreads")

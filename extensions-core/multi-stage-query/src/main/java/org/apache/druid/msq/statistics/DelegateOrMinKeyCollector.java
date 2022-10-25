@@ -128,6 +128,16 @@ public class DelegateOrMinKeyCollector<TDelegate extends KeyCollector<TDelegate>
   }
 
   @Override
+  public double estimatedRetainedBytes()
+  {
+    if (delegate != null) {
+      return delegate.estimatedRetainedBytes();
+    } else {
+      return minKey != null ? minKey.getNumberOfBytes() : 0;
+    }
+  }
+
+  @Override
   public boolean downSample()
   {
     if (delegate != null && !delegate.downSample()) {

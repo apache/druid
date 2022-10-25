@@ -34,7 +34,7 @@ env:
     - DOCKER_IP=127.0.0.1  # for integration tests
     - MVN="mvn -B"
     - > # Various options to make execution of maven goals faster (e.g., mvn install)
-      MAVEN_SKIP="-P skip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true"
+      MAVEN_SKIP="-P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true"
     - MAVEN_SKIP_TESTS="-P skip-tests"
 
 addons:
@@ -43,7 +43,7 @@ addons:
       - maven
       - python3
 
-# Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
+# Add various options to make 'mvn install' fast and skip javascript compile (-Dweb.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
 # output.  To compensate, use travis_wait to extend the timeout.
 install: ./check_test_suite.py && travis_terminate 0  || echo 'Running Maven install...' && MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
@@ -53,10 +53,11 @@ install: ./check_test_suite.py && travis_terminate 0  || echo 'Running Maven ins
 # 2. Tests - phase 2
 # 3. cron
 #
-# The cron type only runs jobs that are marked with stage cron.
+# The cron type only runs jobs that are marked with stage cron. The cron stage also runs alongside
+# phase 1 and phase 2 for commit builds on release branches.
 # The test type is split into 2 stages. This is done so that more PRs can run their validation
 # in parallel. The first phase is meant to include sanity test jobs. The jobs in this phase are
-# meant to be fast. The second phase is meant to run all other tests.
+# meant to be fast. The second phase is meant to run all other tests. Cron stage does not run on pull requests.
 # Jobs with known flaky tests should be put in the second phase since the second phase will not
 # start if there are any failures in the second stage.
 stages:
@@ -65,7 +66,7 @@ stages:
   - name: Tests - phase 2
     if: type != cron
   - name: cron
-    if: type = cron
+    if: type = cron OR (type != pull_request AND branch != master)
 
 jobs:
   include:
@@ -179,7 +180,7 @@ jobs:
       before_script: *setup_generate_license
       script: >
         MAVEN_OPTS='-Xmx3000m' ${MVN} clean install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end
-        -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Ddruid.console.skip=false -T1C
+        -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
 
     - <<: *package
       name: "(openjdk11) packaging check"
@@ -394,21 +395,14 @@ jobs:
 
     - name: "docs"
       stage: Tests - phase 1
-      install: ./check_test_suite.py && travis_terminate 0 || (cd website && nvm install 12.22.12 && npm install)
-      script: |-
-        (cd website && npm run lint && npm run spellcheck) || { echo "
-
-        If there are spell check errors:
-
-        1) Suppressing False Positives: Edit website/.spelling to add suppressions. Instructions
-        are at the top of the file and explain how to suppress false positives either globally or
-        within a particular file.
-
-        2) Running Spell Check Locally: cd website && npm install && npm run spellcheck
-
-        For more information, refer to: https://www.npmjs.com/package/markdown-spellcheck
-
-        " && false; }
+      before_script:
+        - ./check_test_suite.py && travis_terminate 0 || echo 'Starting nvm install...'
+        - nvm install 16.17.0
+        - (cd website && npm install)
+      script:
+        - cd website
+        - npm run link-lint
+        - npm run spellcheck
 
     - name: "Build and test on ARM64 CPU architecture (1)"
       stage: Tests - phase 2
@@ -419,7 +413,7 @@ jobs:
       jdk: openjdk11
       env:
         - MAVEN_PROJECTS='core,indexing-hadoop,indexing-service,processing'
-      script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Ddruid.console.skip=true -DargLine=-Xmx3000m
+      script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Dweb.console.skip=true -DargLine=-Xmx3000m
 
     - name: "Build and test on ARM64 CPU architecture (2)"
       stage: Tests - phase 2
@@ -430,7 +424,7 @@ jobs:
       jdk: openjdk11
       env:
         - MAVEN_PROJECTS='core,sql,server,services'
-      script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Ddruid.console.skip=true -DargLine=-Xmx3000m
+      script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Dweb.console.skip=true -DargLine=-Xmx3000m
 
 
     # Integration tests Java Compile version is set by the machine environment jdk (set by the jdk key)
@@ -687,6 +681,17 @@ jobs:
       # the Druid services that did not exit normally.
       script: ./it.sh travis HighAvailability
 
+    - &integration_tests_ex
+      name: "(Compile=openjdk8, Run=openjdk8) multi stage query tests"
+      stage: Tests - phase 2
+      jdk: openjdk8
+      services: *integration_test_services
+      env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      # Uses the installation defined above. Then, builds the test tools and docker image,
+      # and runs one IT. If tests fail, echos log lines of any of
+      # the Druid services that did not exit normally.
+      script: ./it.sh travis MultiStageQuery
+
     # Disabling BatchIndex test as it is failing with due to timeout, fixing it will be taken in a separate PR.
     #- <<: *integration_tests_ex
     #  name: "(Compile=openjdk8, Run=openjdk8) batch index integration test with Indexer (new)"
@@ -699,21 +704,25 @@ jobs:
     - <<: *integration_batch_index
       name: "(Compile=openjdk8, Run=openjdk11) batch index integration test"
       jdk: openjdk8
+      stage: cron
       env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_input_format
       name: "(Compile=openjdk8, Run=openjdk11) input format integration test"
       jdk: openjdk8
+      stage: cron
       env: TESTNG_GROUPS='-Dgroups=input-format' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_input_source
       name: "(Compile=openjdk8, Run=openjdk11) input source integration test"
       jdk: openjdk8
+      stage: cron
       env: TESTNG_GROUPS='-Dgroups=input-source' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_perfect_rollup_parallel_batch_index
       name: "(Compile=openjdk8, Run=openjdk11) perfect rollup parallel batch index integration test"
       jdk: openjdk8
+      stage: cron
       env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_query
@@ -724,11 +733,13 @@ jobs:
     - <<: *integration_query_retry
       name: "(Compile=openjdk8, Run=openjdk11) query retry integration test for missing segments"
       jdk: openjdk8
+      stage: cron
       env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_query_error
       name: "(Compile=openjdk8, Run=openjdk11) query error integration test for missing segments"
       jdk: openjdk8
+      stage: cron
       env: TESTNG_GROUPS='-Dgroups=query-error' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_security
@@ -744,21 +755,25 @@ jobs:
     - <<: *integration_realtime_index
       name: "(Compile=openjdk8, Run=openjdk11) realtime index integration test"
       jdk: openjdk8
+      stage: cron
       env: TESTNG_GROUPS='-Dgroups=realtime-index' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_append_ingestion
       name: "(Compile=openjdk8, Run=openjdk11) append ingestion integration test"
       jdk: openjdk8
+      stage: cron
       env: TESTNG_GROUPS='-Dgroups=append-ingestion' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_compaction_tests
       name: "(Compile=openjdk8, Run=openjdk11) compaction integration test"
       jdk: openjdk8
+      stage: cron
       env: TESTNG_GROUPS='-Dgroups=compaction' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_tests
       name: "(Compile=openjdk8, Run=openjdk11) other integration test"
       jdk: openjdk8
+      stage: cron
       env: TESTNG_GROUPS='-DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,query-error,realtime-index,security,ldap-security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability,upgrade,shuffle-deep-store,custom-coordinator-duties' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_tests

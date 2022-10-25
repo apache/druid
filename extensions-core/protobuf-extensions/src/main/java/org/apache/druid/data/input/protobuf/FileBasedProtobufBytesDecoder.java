@@ -22,27 +22,19 @@ package org.apache.druid.data.input.protobuf;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.os72.protobuf.dynamic.DynamicSchema;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ByteString;
+import com.google.common.base.Preconditions;
 import com.google.protobuf.Descriptors;
-import com.google.protobuf.DynamicMessage;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.util.Objects;
-import java.util.Set;
 
-public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
+public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesDecoder
 {
   private final String descriptorFilePath;
-  private final String protoMessageType;
-  private Descriptors.Descriptor descriptor;
-
 
   @JsonCreator
   public FileBasedProtobufBytesDecoder(
@@ -50,44 +42,20 @@ public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
       @JsonProperty("protoMessageType") String protoMessageType
   )
   {
+    super(protoMessageType);
+    Preconditions.checkNotNull(descriptorFilePath);
     this.descriptorFilePath = descriptorFilePath;
-    this.protoMessageType = protoMessageType;
     initDescriptor();
   }
 
-  @JsonProperty
-  public String getDescriptor()
+  @JsonProperty("descriptor")
+  public String getDescriptorFilePath()
   {
     return descriptorFilePath;
   }
 
-  @JsonProperty
-  public String getProtoMessageType()
-  {
-    return protoMessageType;
-  }
-
-  @VisibleForTesting
-  void initDescriptor()
-  {
-    if (this.descriptor == null) {
-      this.descriptor = getDescriptor(descriptorFilePath);
-    }
-  }
-
   @Override
-  public DynamicMessage parse(ByteBuffer bytes)
-  {
-    try {
-      DynamicMessage message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(bytes));
-      return message;
-    }
-    catch (Exception e) {
-      throw new ParseException(null, e, "Fail to decode protobuf message!");
-    }
-  }
-
-  private Descriptors.Descriptor getDescriptor(String descriptorFilePath)
+  protected DynamicSchema generateDynamicSchema()
   {
     InputStream fin;
 
@@ -111,9 +79,9 @@ public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
         throw new ParseException(url.toString(), e, "Cannot read descriptor file: " + url);
       }
     }
-    DynamicSchema dynamicSchema;
+
     try {
-      dynamicSchema = DynamicSchema.parseFrom(fin);
+      return DynamicSchema.parseFrom(fin);
     }
     catch (Descriptors.DescriptorValidationException e) {
       throw new ParseException(null, e, "Invalid descriptor file: " + descriptorFilePath);
@@ -121,25 +89,6 @@ public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
     catch (IOException e) {
       throw new ParseException(null, e, "Cannot read descriptor file: " + descriptorFilePath);
     }
-
-    Set<String> messageTypes = dynamicSchema.getMessageTypes();
-    if (messageTypes.size() == 0) {
-      throw new ParseException(null, "No message types found in the descriptor: " + descriptorFilePath);
-    }
-
-    String messageType = protoMessageType == null ? (String) messageTypes.toArray()[0] : protoMessageType;
-    Descriptors.Descriptor desc = dynamicSchema.getMessageDescriptor(messageType);
-    if (desc == null) {
-      throw new ParseException(
-          null,
-          StringUtils.format(
-              "Protobuf message type %s not found in the specified descriptor.  Available messages types are %s",
-              protoMessageType,
-              messageTypes
-          )
-      );
-    }
-    return desc;
   }
 
   @Override
@@ -151,17 +100,16 @@ public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
+    if (!super.equals(o)) {
+      return false;
+    }
     FileBasedProtobufBytesDecoder that = (FileBasedProtobufBytesDecoder) o;
-
-    return Objects.equals(descriptorFilePath, that.descriptorFilePath) &&
-        Objects.equals(protoMessageType, that.protoMessageType);
+    return Objects.equals(descriptorFilePath, that.descriptorFilePath);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(descriptorFilePath, protoMessageType);
+    return Objects.hash(super.hashCode(), descriptorFilePath);
   }
-
 }

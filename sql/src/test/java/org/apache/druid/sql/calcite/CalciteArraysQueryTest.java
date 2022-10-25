@@ -58,7 +58,6 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -2222,7 +2221,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggGroupByArrayAggOfLongsFromSubquery() throws IOException
+  public void testArrayAggGroupByArrayAggOfLongsFromSubquery()
   {
     requireMergeBuffers(3);
     cannotVectorize();
@@ -2295,7 +2294,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggGroupByArrayAggOfStringsFromSubquery() throws IOException
+  public void testArrayAggGroupByArrayAggOfStringsFromSubquery()
   {
     requireMergeBuffers(3);
     cannotVectorize();
@@ -2361,7 +2360,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggGroupByArrayAggOfDoubleFromSubquery() throws IOException
+  public void testArrayAggGroupByArrayAggOfDoubleFromSubquery()
   {
     requireMergeBuffers(3);
     cannotVectorize();
