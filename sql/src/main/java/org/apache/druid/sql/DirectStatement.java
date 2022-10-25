@@ -302,7 +302,6 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   public void close()
   {
     if (state != State.START && state != State.CLOSED) {
-      // super.close calls closeQuietly, which removes us from the sqlLifecycleManager.
       super.close();
       state = State.CLOSED;
     }
@@ -312,8 +311,6 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   public void closeWithError(Throwable e)
   {
     if (state != State.START && state != State.CLOSED) {
-      // super.closeWithError does not call closeQuietly; we need to explicitly remove from the sqlLifecycleManager.
-      sqlToolbox.sqlLifecycleManager.remove(sqlQueryId(), this);
       super.closeWithError(e);
       state = State.CLOSED;
     }
