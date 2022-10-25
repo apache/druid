@@ -30,6 +30,7 @@ import org.apache.curator.framework.api.ACLProvider;
 import org.apache.curator.framework.imps.DefaultACLProvider;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.shaded.com.google.common.base.Strings;
+import org.apache.druid.concurrent.Threads;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.StringUtils;
@@ -40,6 +41,7 @@ import org.apache.zookeeper.data.ACL;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class CuratorModule implements Module
 {
@@ -96,7 +98,26 @@ public class CuratorModule implements Module
     final CuratorFramework framework = createCurator(config);
 
     framework.getUnhandledErrorListenable().addListener((message, e) -> {
+      final long startTime = System.currentTimeMillis();
       log.error(e, "Unhandled error in Curator, stopping server.");
+      final Thread exiter = new Thread(
+          () -> {
+            try {
+              Threads.sleepFor(30, TimeUnit.SECONDS);
+            }
+            catch (InterruptedException ignored) {
+
+            }
+            log.warn(
+                "Could not stop server within %,d millis after unhandled Curator error. Exiting immediately.",
+                System.currentTimeMillis() - startTime
+            );
+            Runtime.getRuntime().exit(1);
+          },
+          "exiter-thread"
+      );
+      exiter.setDaemon(true);
+      exiter.start();
       shutdown(lifecycle);
     });
 
