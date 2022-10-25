@@ -58,7 +58,6 @@ public class MSQTasksTest
     Assert.assertEquals(
         MSQErrorReport.fromFault(
             CONTROLLER_ID,
-            null,
             CONTROLLER_HOST,
             null,
             UnknownFault.forMessage(MSQTasks.GENERIC_QUERY_FAILED_MESSAGE)
@@ -73,7 +72,7 @@ public class MSQTasksTest
     final MSQErrorReport controllerReport = MSQTasks.makeErrorReport(
         CONTROLLER_ID,
         CONTROLLER_HOST,
-        MSQErrorReport.fromFault(CONTROLLER_ID, null, CONTROLLER_HOST, null, new TooManyColumnsFault(1, 10)),
+        MSQErrorReport.fromFault(CONTROLLER_ID, CONTROLLER_HOST, null, new TooManyColumnsFault(1, 10)),
         null
     );
 
@@ -86,7 +85,7 @@ public class MSQTasksTest
     final MSQErrorReport workerReport = MSQTasks.makeErrorReport(
         WORKER_ID,
         WORKER_HOST,
-        MSQErrorReport.fromFault(WORKER_ID, 0, WORKER_HOST, null, new TooManyColumnsFault(1, 10)),
+        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new TooManyColumnsFault(1, 10)),
         null
     );
 
@@ -99,14 +98,14 @@ public class MSQTasksTest
     final MSQErrorReport controllerReport = MSQTasks.makeErrorReport(
         WORKER_ID,
         WORKER_HOST,
-        MSQErrorReport.fromFault(WORKER_ID, 0, WORKER_HOST, null, new TooManyWorkersFault(2, 20)),
+        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new TooManyWorkersFault(2, 20)),
         null
     );
 
     final MSQErrorReport workerReport = MSQTasks.makeErrorReport(
         WORKER_ID,
         WORKER_HOST,
-        MSQErrorReport.fromFault(WORKER_ID, 0, WORKER_HOST, null, new TooManyColumnsFault(1, 10)),
+        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new TooManyColumnsFault(1, 10)),
         null
     );
 
@@ -122,14 +121,14 @@ public class MSQTasksTest
     final MSQErrorReport controllerReport = MSQTasks.makeErrorReport(
         WORKER_ID,
         WORKER_HOST,
-        MSQErrorReport.fromFault(WORKER_ID, 0, WORKER_HOST, null, new WorkerRpcFailedFault(WORKER_ID)),
+        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new WorkerRpcFailedFault(WORKER_ID)),
         null
     );
 
     final MSQErrorReport workerReport = MSQTasks.makeErrorReport(
         WORKER_ID,
         WORKER_HOST,
-        MSQErrorReport.fromFault(WORKER_ID, 0, WORKER_HOST, null, new TooManyColumnsFault(1, 10)),
+        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new TooManyColumnsFault(1, 10)),
         null
     );
 

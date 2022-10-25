@@ -206,7 +206,6 @@ public class WorkerImpl implements Worker
         maybeErrorReport = Optional.of(
             MSQErrorReport.fromException(
                 id(),
-                task().getWorkerNumber(),
                 MSQTasks.getHostFromSelfNode(selfDruidNode),
                 null,
                 e
@@ -373,7 +372,6 @@ public class WorkerImpl implements Worker
           return Optional.of(
               MSQErrorReport.fromException(
                   id(),
-                  task().getWorkerNumber(),
                   MSQTasks.getHostFromSelfNode(selfDruidNode),
                   stageDefinition.getId().getStageNumber(),
                   kernel.getException()

@@ -144,7 +144,8 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
    * Creates a file with name __success and adds the worker's id which has successfully written its outputs. While reading
    * this file can be used to find out the worker which has written its outputs completely.
    * Rename operation is not very quick in cloud storage like S3 due to which this alternative
-   * route has been taken
+   * route has been taken.
+   * If the success file is already present in the location, then this method is a noop
    */
   public void createSuccessFile(String taskId) throws IOException
   {

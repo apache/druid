@@ -36,8 +36,6 @@ public class MSQErrorReport
 {
   private final String taskId;
   @Nullable
-  private final Integer workerNumber;
-  @Nullable
   private final String host;
   @Nullable
   private final Integer stageNumber;
@@ -48,7 +46,6 @@ public class MSQErrorReport
   @JsonCreator
   MSQErrorReport(
       @JsonProperty("taskId") final String taskId,
-      @JsonProperty("workerNumber") @Nullable final Integer workerNumber,
       @JsonProperty("host") @Nullable final String host,
       @JsonProperty("stageNumber") final Integer stageNumber,
       @JsonProperty("error") final MSQFault fault,
@@ -56,7 +53,6 @@ public class MSQErrorReport
   )
   {
     this.taskId = Preconditions.checkNotNull(taskId, "taskId");
-    this.workerNumber = workerNumber;
     this.host = host;
     this.stageNumber = stageNumber;
     this.error = Preconditions.checkNotNull(fault, "error");
@@ -65,18 +61,16 @@ public class MSQErrorReport
 
   public static MSQErrorReport fromFault(
       final String taskId,
-      @Nullable final Integer workerNumber,
       @Nullable final String host,
       @Nullable final Integer stageNumber,
       final MSQFault fault
   )
   {
-    return new MSQErrorReport(taskId, workerNumber, host, stageNumber, fault, null);
+    return new MSQErrorReport(taskId, host, stageNumber, fault, null);
   }
 
   public static MSQErrorReport fromException(
       final String taskId,
-      @Nullable final Integer workerNumber,
       @Nullable final String host,
       @Nullable final Integer stageNumber,
       final Throwable e
@@ -84,7 +78,6 @@ public class MSQErrorReport
   {
     return new MSQErrorReport(
         taskId,
-        workerNumber,
         host,
         stageNumber,
         getFaultFromException(e),
@@ -96,14 +89,6 @@ public class MSQErrorReport
   public String getTaskId()
   {
     return taskId;
-  }
-
-  @Nullable
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Integer getWorkerNumber()
-  {
-    return workerNumber;
   }
 
   @Nullable
@@ -147,7 +132,6 @@ public class MSQErrorReport
     }
     MSQErrorReport that = (MSQErrorReport) o;
     return Objects.equals(taskId, that.taskId)
-           && Objects.equals(workerNumber, that.workerNumber)
            && Objects.equals(host, that.host)
            && Objects.equals(stageNumber, that.stageNumber)
            && Objects.equals(error, that.error)
@@ -165,7 +149,6 @@ public class MSQErrorReport
   {
     return "MSQErrorReport{" +
            "taskId='" + taskId + '\'' +
-           ", workerNumber='" + workerNumber + '\'' +
            ", host='" + host + '\'' +
            ", stageNumber=" + stageNumber +
            ", error=" + error +

@@ -380,7 +380,7 @@ public class ControllerImpl implements Controller
       final String selfHost = MSQTasks.getHostFromSelfNode(selfDruidNode);
       final MSQErrorReport controllerError =
           exceptionEncountered != null
-          ? MSQErrorReport.fromException(id(), null, selfHost, null, exceptionEncountered)
+          ? MSQErrorReport.fromException(id(), selfHost, null, exceptionEncountered)
           : null;
       final MSQErrorReport workerError = workerErrorRef.get();
 
@@ -644,7 +644,6 @@ public class ControllerImpl implements Controller
       Long limit = warningsExceeded.get().rhs;
       workerError(MSQErrorReport.fromFault(
           id(),
-          null,
           selfDruidNode.getHost(),
           null,
           new TooManyWarningsFault(limit.intValue(), errorCode)

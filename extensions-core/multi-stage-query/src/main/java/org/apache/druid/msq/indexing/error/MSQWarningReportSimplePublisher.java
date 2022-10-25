@@ -57,7 +57,7 @@ public class MSQWarningReportSimplePublisher implements MSQWarningReportPublishe
   @Override
   public void publishException(int stageNumber, Throwable e)
   {
-    final MSQErrorReport warningReport = MSQErrorReport.fromException(taskId, workerNumber, host, stageNumber, e);
+    final MSQErrorReport warningReport = MSQErrorReport.fromException(taskId, host, stageNumber, e);
 
     try {
       controllerClient.postWorkerWarning(ImmutableList.of(warningReport));
