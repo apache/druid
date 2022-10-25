@@ -23,7 +23,7 @@ title: "Using rules to drop and retain data"
   -->
 
 
-In Apache Druid, [Coordinator processes](../design/coordinator.md) use rules to determine what data to retain or drop from the cluster. 
+Test In Apache Druid, [Coordinator processes](../design/coordinator.md) use rules to determine what data to retain or drop from the cluster. 
 
 There are three types of rules: [load](#load-rules), [drop](#drop-rules), and [broadcast](#broadcast-rules). See the sections below for more information on each type.
 
