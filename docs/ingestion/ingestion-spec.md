@@ -469,7 +469,7 @@ is:
 |indexSpecForIntermediatePersists|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
 |Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../development/extensions-core/kafka-supervisor-reference.md#tuningconfig), [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md#tuningconfig), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
 
-#### `indexSpec`
+### `indexSpec`
 
 The `indexSpec` object can include the following properties:
 
@@ -483,20 +483,22 @@ The `indexSpec` object can include the following properties:
 |jsonCompression|Compression format to use for nested column raw data. Options are `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
 
 
-##### String Dictionary Encoding
+#### String Dictionary Encoding
 
-###### UTF8
+##### UTF8
 By default, `STRING` typed column store the values as uncompressed UTF8 encoded bytes.
 
 |Field|Description|Default|
 |-----|-----------|-------|
 |type|Must be `"utf8"` .|n/a|
 
-###### Front Coding
-`STRING` columns can be stored using a incremental encoding strategy called front coding, which in the Druid
-implementation the values are first divided into 'buckets', and within the buckets the first value is stored completely
-and the remaining values are stored with a 'prefix' length and the remaining suffix bytes so that the prefixes are not
-duplicated. The values are still utf8 encoded, but it can often result in much smaller segments at very little
+##### Front Coding
+`STRING` columns can be stored using an incremental encoding strategy called front coding.
+In the Druid implementation of front coding, the column values are first divided into buckets,
+and the first value in each bucket is stored as is. The remaining values in the bucket are stored
+using a number representing a prefix length and the remaining suffix bytes.
+This technique allows the prefix portion of the values in each bucket from being duplicated.
+The values are still UTF-8 encoded, but front coding can often result in much smaller segments at very little
 performance cost. Segments created with this encoding are not compatible with Druid versions older than 25.0.0.
 
 |Field|Description|Default|
