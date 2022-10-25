@@ -42,7 +42,7 @@ import java.util.Set;
  * via the validation, as is needed when the type is actually a map
  * which represents a Java object, or when the value is a list.
  */
-public interface Properties
+public interface ModelProperties
 {
   interface PropertyDefn<T>
   {

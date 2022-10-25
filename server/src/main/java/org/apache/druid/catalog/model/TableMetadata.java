@@ -208,7 +208,7 @@ public class TableMetadata
   @Override
   public String toString()
   {
-    return JacksonUtils.toString(this);
+    return CatalogUtils.toString(this);
   }
 
   @Override

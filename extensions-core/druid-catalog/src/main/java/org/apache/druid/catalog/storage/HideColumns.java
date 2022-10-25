@@ -32,6 +32,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Represents a request sent from a client to update just the list of hidden
+ * columns for a datasource table. Allows sending "delta encoded" changes: just
+ * the entries to add or remove. Exists as a separate operation since the
+ * generic merge can't handle removing items from a list.
+ *
+ * @see {@link org.apache.druid.catalog.http.CatalogResource#hideColumns(String, String, HideColumns, javax.servlet.http.HttpServletRequest)}
+ */
 public class HideColumns
 {
   @JsonProperty
@@ -56,6 +64,15 @@ public class HideColumns
         && (unhide == null || unhide.isEmpty());
   }
 
+  /**
+   * Given the existing list of hidden columns, perform the update action to add the
+   * requested new columns (if they don't yet exist) and remove the requested columns
+   * (if they do exist). If someone is silly enough to include the same column in
+   * both lists, the remove action takes precedence.
+   *
+   * @param hiddenColumns exiting hidden columns list
+   * @return revised hidden columns list after applying the requested changes
+   */
   public List<String> perform(List<String> hiddenColumns)
   {
     if (hiddenColumns == null) {

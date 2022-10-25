@@ -41,11 +41,6 @@ public class ClusterKeySpec
     this.desc = desc != null && desc == true;
   }
 
-  public ClusterKeySpec(String expr)
-  {
-    this(expr, false);
-  }
-
   @JsonProperty("column")
   public String expr()
   {

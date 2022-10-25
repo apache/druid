@@ -48,6 +48,12 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 
+/**
+ * Resource on the Broker to listen to catalog update events from the
+ * Coordinator. Since this is an internal API, it supports the efficient
+ * Smile encoding as well as the JSON encoding. (JSON is more convenient
+ * for debugging as it can be easily created or interpreted.)
+ */
 @Path(CatalogListenerResource.BASE_URL)
 public class CatalogListenerResource
 {
@@ -72,6 +78,10 @@ public class CatalogListenerResource
     this.jsonMapper = jsonMapper;
   }
 
+  /**
+   * Event sent from the Coordinator to indicate that a table has changed
+   * (or been deleted.)
+   */
   @POST
   @Path(SYNC_URL)
   @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})

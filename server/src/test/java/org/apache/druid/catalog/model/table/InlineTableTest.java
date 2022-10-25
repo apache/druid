@@ -78,7 +78,7 @@ public class InlineTableTest
     assertEquals(table.spec(), TableSpec.fromBytes(mapper, bytes));
 
     // Convert to an external spec
-    ExternalSpec externSpec = tableDefn.convertToExtern(table);
+    ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
 
     InlineInputSource inlineSpec = (InlineInputSource) externSpec.inputSource();
     assertEquals("a,b\nc,d\n", inlineSpec.getData());

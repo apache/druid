@@ -28,13 +28,13 @@ import org.apache.druid.segment.column.RowSignature;
  * pass along the three components needed for an external table
  * in MSQ ingest.
  */
-public class ExternalSpec
+public class ExternalTableSpec
 {
   protected final InputSource inputSource;
   protected final InputFormat inputFormat;
   protected final RowSignature signature;
 
-  public ExternalSpec(
+  public ExternalTableSpec(
       final InputSource inputSource,
       final InputFormat inputFormat,
       final RowSignature signature)

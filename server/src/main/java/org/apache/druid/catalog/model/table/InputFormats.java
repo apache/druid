@@ -21,11 +21,11 @@ package org.apache.druid.catalog.model.table;
 
 import org.apache.curator.shaded.com.google.common.collect.ImmutableList;
 import org.apache.druid.catalog.model.CatalogUtils;
-import org.apache.druid.catalog.model.Properties.BooleanPropertyDefn;
-import org.apache.druid.catalog.model.Properties.IntPropertyDefn;
-import org.apache.druid.catalog.model.Properties.PropertyDefn;
-import org.apache.druid.catalog.model.Properties.SimplePropertyDefn;
-import org.apache.druid.catalog.model.Properties.StringPropertyDefn;
+import org.apache.druid.catalog.model.ModelProperties.BooleanPropertyDefn;
+import org.apache.druid.catalog.model.ModelProperties.IntPropertyDefn;
+import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
+import org.apache.druid.catalog.model.ModelProperties.SimplePropertyDefn;
+import org.apache.druid.catalog.model.ModelProperties.StringPropertyDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CsvInputFormat;

@@ -77,7 +77,7 @@ public class LocalTableTest
     assertEquals(table.spec(), TableSpec.fromBytes(mapper, bytes));
 
     // Convert to an external spec
-    ExternalSpec externSpec = tableDefn.convertToExtern(table);
+    ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
 
     LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource();
     assertEquals("/tmp", sourceSpec.getBaseDir().toString());
@@ -106,7 +106,7 @@ public class LocalTableTest
     table.validate();
 
     // Convert to an external spec
-    ExternalSpec externSpec = tableDefn.convertToExtern(table);
+    ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
 
     LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource();
     assertEquals("/tmp", sourceSpec.getBaseDir().toString());
@@ -126,7 +126,7 @@ public class LocalTableTest
     table.validate();
 
     // Convert to an external spec
-    ExternalSpec externSpec = tableDefn.convertToExtern(table);
+    ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
 
     LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource();
     assertEquals("/tmp", sourceSpec.getBaseDir().toString());
@@ -175,7 +175,7 @@ public class LocalTableTest
     );
 
     // Convert to an external spec
-    ExternalSpec externSpec = parameterizedTable.applyParameters(table, params);
+    ExternalTableSpec externSpec = parameterizedTable.applyParameters(table, params);
 
     LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource();
     assertEquals("/tmp", sourceSpec.getBaseDir().toString());
@@ -199,7 +199,7 @@ public class LocalTableTest
     );
 
     // Convert to an external spec
-    ExternalSpec externSpec = tableDefn.applyParameters(table, params);
+    ExternalTableSpec externSpec = tableDefn.applyParameters(table, params);
 
     LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource();
     assertEquals("/tmp", sourceSpec.getBaseDir().toString());

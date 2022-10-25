@@ -19,7 +19,7 @@
 
 package org.apache.druid.catalog.model;
 
-import org.apache.druid.catalog.model.table.ExternalSpec;
+import org.apache.druid.catalog.model.table.ExternalTableSpec;
 
 import java.util.List;
 import java.util.Map;
@@ -58,5 +58,5 @@ public interface ParameterizedDefn
 
   List<ParameterDefn> parameters();
   ParameterDefn parameter(String name);
-  ExternalSpec applyParameters(ResolvedTable table, Map<String, Object> parameters);
+  ExternalTableSpec applyParameters(ResolvedTable table, Map<String, Object> parameters);
 }

@@ -19,8 +19,11 @@
 
 package org.apache.druid.catalog.model;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -107,6 +110,27 @@ public class CatalogUtils
       return "";
     }
     return String.join("\n", lines) + "\n";
+  }
+
+  /**
+   * Catalog-specific 1uick & easy implementation of {@code toString()} for objects
+   * which are primarily representations of JSON objects. Use only for cases where the
+   * {@code toString()} is for debugging: the cost of creating an object mapper
+   * every time is undesirable for production code. Also, assumes that the
+   * type can serialized using the default mapper: doesn't work for types that
+   * require custom Jackson extensions. The catalog, however, has a simple type
+   * hierarchy, which is not extended via extensions, and so the default object mapper is
+   * fine.
+   */
+  public static String toString(Object obj)
+  {
+    ObjectMapper jsonMapper = new ObjectMapper();
+    try {
+      return jsonMapper.writeValueAsString(obj);
+    }
+    catch (JsonProcessingException e) {
+      throw new ISE("Failed to serialize TableDefn");
+    }
   }
 
   public static <T> List<T> concatLists(

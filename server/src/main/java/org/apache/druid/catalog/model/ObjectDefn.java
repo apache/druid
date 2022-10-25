@@ -21,7 +21,7 @@ package org.apache.druid.catalog.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.catalog.model.Properties.PropertyDefn;
+import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 
 import java.util.HashMap;
 import java.util.List;

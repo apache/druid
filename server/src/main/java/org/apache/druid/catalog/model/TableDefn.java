@@ -22,7 +22,7 @@ package org.apache.druid.catalog.model;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.catalog.model.Properties.PropertyDefn;
+import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.java.util.common.IAE;
 
 import java.util.ArrayList;
@@ -61,7 +61,7 @@ public class TableDefn extends ObjectDefn
         typeValue,
         CatalogUtils.concatLists(
             Collections.singletonList(
-                new Properties.StringPropertyDefn(DESCRIPTION_PROPERTY)
+                new ModelProperties.StringPropertyDefn(DESCRIPTION_PROPERTY)
             ),
             properties
         )

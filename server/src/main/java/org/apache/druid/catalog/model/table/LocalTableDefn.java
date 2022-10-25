@@ -20,9 +20,9 @@
 package org.apache.druid.catalog.model.table;
 
 import org.apache.druid.catalog.model.CatalogUtils;
+import org.apache.druid.catalog.model.ModelProperties.StringListPropertyDefn;
+import org.apache.druid.catalog.model.ModelProperties.StringPropertyDefn;
 import org.apache.druid.catalog.model.ParameterizedDefn;
-import org.apache.druid.catalog.model.Properties.StringListPropertyDefn;
-import org.apache.druid.catalog.model.Properties.StringPropertyDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.table.ExternalTableDefn.FormattedExternalTableDefn;
 import org.apache.druid.data.input.InputSource;

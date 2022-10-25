@@ -122,23 +122,4 @@ public final class JacksonUtils
       throw new ISE(e, "Failed to deserialize a " + clazz.getSimpleName());
     }
   }
-
-  /**
-   * Quick & easy implementation of {@code toString()} for objects which are
-   * primarily representations of JSON objects. Use only for cases where the
-   * {@code toString()} is for debugging: the cost of creating an object mapper
-   * every time is undesirable for production code. Also, assumes that the
-   * type can serialized using the default mapper: doesn't work for types that
-   * require custom Jackson extensions.
-   */
-  public static String toString(Object obj)
-  {
-    ObjectMapper jsonMapper = new ObjectMapper();
-    try {
-      return jsonMapper.writeValueAsString(obj);
-    }
-    catch (JsonProcessingException e) {
-      throw new ISE("Failed to serialize TableDefn");
-    }
-  }
 }

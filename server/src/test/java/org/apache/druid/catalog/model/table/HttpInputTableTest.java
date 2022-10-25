@@ -87,7 +87,7 @@ public class HttpInputTableTest
     assertEquals(table.spec(), TableSpec.fromBytes(mapper, bytes));
 
     // Convert to an external spec
-    ExternalSpec externSpec = tableDefn.convertToExtern(table);
+    ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
 
     HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource();
     assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());
@@ -117,7 +117,7 @@ public class HttpInputTableTest
     table.validate();
 
     // Convert to an external spec
-    ExternalSpec externSpec = tableDefn.convertToExtern(table);
+    ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
 
     HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource();
     assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());
@@ -147,7 +147,7 @@ public class HttpInputTableTest
     );
 
     // Convert to an external spec
-    ExternalSpec externSpec = parameterizedTable.applyParameters(table, params);
+    ExternalTableSpec externSpec = parameterizedTable.applyParameters(table, params);
 
     HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource();
     assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());

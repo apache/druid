@@ -26,10 +26,10 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnDefn;
 import org.apache.druid.catalog.model.Columns;
-import org.apache.druid.catalog.model.Properties;
-import org.apache.druid.catalog.model.Properties.GranularityPropertyDefn;
-import org.apache.druid.catalog.model.Properties.PropertyDefn;
-import org.apache.druid.catalog.model.Properties.StringListPropertyDefn;
+import org.apache.druid.catalog.model.ModelProperties;
+import org.apache.druid.catalog.model.ModelProperties.GranularityPropertyDefn;
+import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
+import org.apache.druid.catalog.model.ModelProperties.StringListPropertyDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.java.util.common.IAE;
@@ -111,8 +111,8 @@ public class AbstractDatasourceDefn extends TableDefn
         CatalogUtils.concatLists(
             Arrays.asList(
                 new SegmentGranularityFieldDefn(),
-                new Properties.IntPropertyDefn(TARGET_SEGMENT_ROWS_PROPERTY),
-                new Properties.ListPropertyDefn<ClusterKeySpec>(
+                new ModelProperties.IntPropertyDefn(TARGET_SEGMENT_ROWS_PROPERTY),
+                new ModelProperties.ListPropertyDefn<ClusterKeySpec>(
                     CLUSTER_KEYS_PROPERTY,
                     "cluster keys",
                     new TypeReference<List<ClusterKeySpec>>() { }

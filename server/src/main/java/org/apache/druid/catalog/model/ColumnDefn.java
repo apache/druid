@@ -20,7 +20,7 @@
 package org.apache.druid.catalog.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.catalog.model.Properties.PropertyDefn;
+import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 

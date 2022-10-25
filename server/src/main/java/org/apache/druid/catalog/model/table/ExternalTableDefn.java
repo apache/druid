@@ -26,9 +26,9 @@ import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnDefn;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.catalog.model.ParameterizedDefn;
 import org.apache.druid.catalog.model.ParameterizedDefn.ParameterDefn;
-import org.apache.druid.catalog.model.Properties.PropertyDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.table.InputFormats.InputFormatDefn;
@@ -220,9 +220,9 @@ public abstract class ExternalTableDefn extends TableDefn
 
   public abstract ResolvedTable mergeParameters(ResolvedTable table, Map<String, Object> values);
 
-  public ExternalSpec convertToExtern(ResolvedTable table)
+  public ExternalTableSpec convertToExtern(ResolvedTable table)
   {
-    return new ExternalSpec(
+    return new ExternalTableSpec(
         convertSource(table),
         convertFormat(table),
         Columns.convertSignature(table.spec())
@@ -250,7 +250,7 @@ public abstract class ExternalTableDefn extends TableDefn
     }
   }
 
-  public ExternalSpec applyParameters(ResolvedTable table, Map<String, Object> parameters)
+  public ExternalTableSpec applyParameters(ResolvedTable table, Map<String, Object> parameters)
   {
     ResolvedTable revised = mergeParameters(table, parameters);
     return convertToExtern(revised);

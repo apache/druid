@@ -53,7 +53,7 @@ import java.io.File;
     @Type(name = LocalInputSource.TYPE_KEY, value = LocalInputSource.class),
     @Type(name = HttpInputSource.TYPE_KEY, value = HttpInputSource.class),
     @Type(name = InlineInputSource.TYPE_KEY, value = InlineInputSource.class),
-    @Type(name = "combining", value = CombiningInputSource.class)
+    @Type(name = CombiningInputSource.TYPE_KEY, value = CombiningInputSource.class)
 })
 public interface InputSource
 {
