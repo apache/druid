@@ -95,7 +95,7 @@ jobs:
         - curl https://bootstrap.pypa.io/pip/3.5/get-pip.py | sudo -H python3
         - ./check_test_suite.py && travis_terminate 0 || echo 'Continuing setup'
         - pip3 install wheel  # install wheel first explicitly
-        - pip3 install pyyaml==5.4.1
+        - pip3 install pyyaml
       script:
         - >
           ${MVN} apache-rat:check -Prat --fail-at-end
