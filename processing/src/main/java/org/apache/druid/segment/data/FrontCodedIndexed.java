@@ -84,25 +84,12 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     // move position to end of buffer
     buffer.position(offsetsPosition + size);
 
-    final int numBuckets = (int) Math.ceil((double) numValues / (double) bucketSize);
-    final int adjustIndex = hasNull ? 1 : 0;
-    final int adjustedNumValues = numValues + adjustIndex;
-    final int div = Integer.numberOfTrailingZeros(bucketSize);
-    final int rem = bucketSize - 1;
-    final int lastBucketNumValues = (numValues & rem) == 0 ? bucketSize : numValues & rem;
-    final int bucketsPosition = offsetsPosition + ((numBuckets - 1) * Integer.BYTES);
     return () -> new FrontCodedIndexed(
         orderedBuffer,
         bucketSize,
-        numBuckets,
-        lastBucketNumValues,
+        numValues,
         hasNull,
-        adjustedNumValues,
-        adjustIndex,
-        div,
-        rem,
-        offsetsPosition,
-        bucketsPosition
+        offsetsPosition
     );
   }
 
@@ -121,15 +108,9 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
   private FrontCodedIndexed(
       ByteBuffer buffer,
       int bucketSize,
-      int numBuckets,
-      int lastBucketNumValues,
+      int numValues,
       boolean hasNull,
-      int adjustedNumValues,
-      int adjustIndex,
-      int div,
-      int rem,
-      int offsetsPosition,
-      int bucketsPosition
+      int offsetsPosition
   )
   {
     if (Integer.bitCount(bucketSize) != 1) {
@@ -138,14 +119,15 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     this.buffer = buffer.asReadOnlyBuffer().order(buffer.order());
     this.bucketSize = bucketSize;
     this.hasNull = hasNull;
-    this.adjustedNumValues = adjustedNumValues;
-    this.adjustIndex = adjustIndex;
-    this.div = div;
-    this.rem = rem;
-    this.numBuckets = numBuckets;
+
+    this.numBuckets = (int) Math.ceil((double) numValues / (double) bucketSize);
+    this.adjustIndex = hasNull ? 1 : 0;
+    this.adjustedNumValues = numValues + adjustIndex;
+    this.div = Integer.numberOfTrailingZeros(bucketSize);
+    this.rem = bucketSize - 1;
+    this.lastBucketNumValues = (numValues & rem) == 0 ? bucketSize : numValues & rem;
     this.offsetsPosition = offsetsPosition;
-    this.bucketsPosition = bucketsPosition;
-    this.lastBucketNumValues = lastBucketNumValues;
+    this.bucketsPosition = offsetsPosition + ((numBuckets - 1) * Integer.BYTES);
   }
 
   @Override
