@@ -296,7 +296,6 @@ public class WorkerImpl implements Worker
     final MSQWarningReportPublisher msqWarningReportPublisher = new MSQWarningReportLimiterPublisher(
         new MSQWarningReportSimplePublisher(
             id(),
-            task().getWorkerNumber(),
             controllerClient,
             id(),
             MSQTasks.getHostFromSelfNode(selfDruidNode)
