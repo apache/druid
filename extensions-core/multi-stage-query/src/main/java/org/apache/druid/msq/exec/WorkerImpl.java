@@ -916,8 +916,13 @@ public class WorkerImpl implements Worker
               catch (IOException e) {
                 throw new ISE(
                     e,
-                    "Unable to suffix the file with %s",
-                    DurableStorageUtils.SUCCESS_MARKER_FILENAME
+                    "Unable to create the success file [%s] at the location [%s]",
+                    DurableStorageUtils.SUCCESS_MARKER_FILENAME,
+                    DurableStorageUtils.getSuccessFilePath(
+                        task.getControllerTaskId(),
+                        stageDef.getStageNumber(),
+                        task().getWorkerNumber()
+                    )
                 );
               }
             }

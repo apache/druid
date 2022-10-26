@@ -99,7 +99,8 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
       RetryUtils.retry(() -> {
         if (!storageConnector.pathExists(remotePartitionPath)) {
           throw new ISE(
-              "Could not find remote output of worker task[%d] stage[%d] partition[%d]",
+              "Could not find remote inputs at location [%s] for the worker task [%d] stage [%d] partition [%d]",
+              remotePartitionPath,
               workerNumber,
               stageId.getStageNumber(),
               partitionNumber
@@ -118,7 +119,7 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
     catch (Exception e) {
       throw new IOE(
           e,
-          "Could not find remote output of worker task[%d] stage[%d] partition[%d]",
+          "Encountered error while reading the inputs for the worker task [%d] stage [%d] partition [%d]",
           workerNumber,
           stageId.getStageNumber(),
           partitionNumber
