@@ -103,7 +103,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -186,7 +185,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         50000,
         null,
         new Period("P1Y"),
-        new File("/test"),
         null,
         null,
         null,
@@ -3949,7 +3947,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         50000,
         null,
         new Period("P1Y"),
-        new File("/test"),
         null,
         null,
         null,
@@ -5062,7 +5059,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         50000,
         null,
         new Period("P1Y"),
-        new File("/test"),
         null,
         null,
         null,
