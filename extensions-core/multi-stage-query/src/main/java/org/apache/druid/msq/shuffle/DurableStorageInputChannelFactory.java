@@ -147,7 +147,7 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
 
     if (!storageConnector.pathExists(successfulFilePath)) {
       throw new ISE(
-          "No file present at the location [%s]. Unable to read the inputs for worker: [%d], stage: [%d], partition: [%d]",
+          "No file present at the location [%s]. Unable to read the output of worker: [%d], stage: [%d], partition: [%d]",
           successfulFilePath,
           workerNo,
           stageNumber,
