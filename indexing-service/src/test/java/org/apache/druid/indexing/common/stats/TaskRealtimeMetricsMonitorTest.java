@@ -59,8 +59,9 @@ public class TaskRealtimeMetricsMonitorTest
     // No emission since the monitor has not begun
     Assert.assertFalse(monitor.monitor(emitter));
 
+    monitor.start();
     // Monitor has started and a call to fireDepartment is made
-    Assert.assertFalse(monitor.isStarted());
+    Assert.assertTrue(monitor.isStarted());
     Assert.assertTrue(monitor.monitor(emitter));
 
     // The next call triggers a fireDepartment call but the subsequent call doesn't emit metrics
