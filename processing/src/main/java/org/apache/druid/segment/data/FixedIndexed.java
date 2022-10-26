@@ -45,7 +45,7 @@ import java.util.Iterator;
  * be unexpected. {@link #hasNull} can only be set if also {@link #isSorted} is set, since the null value is not
  * actually stored in the values section.
  *
- * This class is not thread-safe.
+ * This class is thread-safe if and only if {@link TypeStrategy#read(ByteBuffer, int)} is thread-safe.
  */
 public class FixedIndexed<T> implements Indexed<T>
 {
