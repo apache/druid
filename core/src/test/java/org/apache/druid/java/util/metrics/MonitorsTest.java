@@ -69,7 +69,7 @@ public class MonitorsTest
     StubServiceEmitter emitter = new StubServiceEmitter("dev/monitor-test", "localhost:0000");
     Monitor m = Monitors.createCompoundJvmMonitor(ImmutableMap.of());
     m.start();
-    m.stopAfterLastRoundOfMetricsEmission(emitter);
+    m.monitorAndStop(emitter);
     checkEvents(emitter.getEvents(), "metrics");
   }
 

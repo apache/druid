@@ -36,7 +36,7 @@ public interface Monitor
    *
    * @param emitter to use
    */
-  void stopAfterLastRoundOfMetricsEmission(ServiceEmitter emitter);
+  void monitorAndStop(ServiceEmitter emitter);
 
   /**
    * Emit metrics using the given emitter.

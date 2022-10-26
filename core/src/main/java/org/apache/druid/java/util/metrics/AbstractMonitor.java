@@ -42,7 +42,7 @@ public abstract class AbstractMonitor implements Monitor
   }
 
   @Override
-  public void stopAfterLastRoundOfMetricsEmission(ServiceEmitter emitter)
+  public void monitorAndStop(ServiceEmitter emitter)
   {
     monitor(emitter);
     stop();

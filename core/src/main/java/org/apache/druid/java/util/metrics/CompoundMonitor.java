@@ -56,10 +56,10 @@ public abstract class CompoundMonitor implements Monitor
   }
 
   @Override
-  public void stopAfterLastRoundOfMetricsEmission(ServiceEmitter emitter)
+  public void monitorAndStop(ServiceEmitter emitter)
   {
     for (Monitor monitor : monitors) {
-      monitor.stopAfterLastRoundOfMetricsEmission(emitter);
+      monitor.monitorAndStop(emitter);
     }
   }
 
