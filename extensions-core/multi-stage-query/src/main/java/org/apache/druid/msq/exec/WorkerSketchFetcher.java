@@ -92,7 +92,7 @@ public class WorkerSketchFetcher
     CompletableFuture<Either<Long, ClusterByPartitions>> partitionFuture = new CompletableFuture<>();
 
     final ClusterByStatisticsCollector mergedStatisticsCollector = stageDefinition.createResultKeyStatisticsCollector();
-    final int workerCount = stageDefinition.getMaxWorkerCount();
+    final int workerCount = workerTaskIds.size();
     final Set<Integer> finishedWorkers = new HashSet<>();
 
     for (int i = 0; i < workerCount; i++) {
