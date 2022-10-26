@@ -21,6 +21,7 @@ package org.apache.druid.java.util.common.parsers;
 
 import com.google.common.collect.Iterables;
 import com.jayway.jsonpath.spi.json.JsonProvider;
+import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
 
@@ -212,6 +213,7 @@ public class ObjectFlatteners
     };
   }
 
+  @ExtensionPoint
   public interface FlattenerMaker<T>
   {
     JsonProvider getJsonProvider();
@@ -238,7 +240,10 @@ public class ObjectFlatteners
     /**
      * Create a "field" extractor for nested json expressions
      */
-    Function<T, Object> makeJsonTreeExtractor(List<String> nodes);
+    default Function<T, Object> makeJsonTreeExtractor(List<String> nodes)
+    {
+      throw new UOE("makeJsonTreeExtractor has not been implemented.");
+    }
 
     /**
      * Convert object to Java {@link Map} using {@link #getJsonProvider()} and {@link #finalizeConversionForMap} to
