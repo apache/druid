@@ -100,11 +100,29 @@ public class StringUtils
   }
 
   /**
-   * Decodes a UTF-8 string from the remaining bytes of a buffer.
+   * Decodes a UTF-8 string from the remaining bytes of a non-null buffer.
    * Advances the position of the buffer by {@link ByteBuffer#remaining()}.
+   *
+   * Use {@link #fromUtf8Nullable(ByteBuffer)} if the buffer might be null.
    */
   public static String fromUtf8(final ByteBuffer buffer)
   {
+    return StringUtils.fromUtf8(buffer, buffer.remaining());
+  }
+
+  /**
+   * If buffer is Decodes a UTF-8 string from the remaining bytes of a buffer.
+   * Advances the position of the buffer by {@link ByteBuffer#remaining()}.
+   *
+   * If the value is null, this method returns null. If the buffer will never be null, use {@link #fromUtf8(ByteBuffer)}
+   * instead.
+   */
+  @Nullable
+  public static String fromUtf8Nullable(@Nullable final ByteBuffer buffer)
+  {
+    if (buffer == null) {
+      return null;
+    }
     return StringUtils.fromUtf8(buffer, buffer.remaining());
   }
 

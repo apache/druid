@@ -150,6 +150,12 @@ public class FixedIndexed<T> implements Indexed<T>
   }
 
   @Override
+  public boolean isSorted()
+  {
+    return isSorted;
+  }
+
+  @Override
   public Iterator<T> iterator()
   {
     return IndexedIterable.create(this).iterator();
