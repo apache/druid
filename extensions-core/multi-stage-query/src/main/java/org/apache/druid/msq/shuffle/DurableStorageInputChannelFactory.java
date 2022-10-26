@@ -163,8 +163,8 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
     if (successfulTaskId == null) {
       throw new ISE("Unable to read the task id from the file: [%s]", successfulFilePath);
     }
-    LOG.info(
-        "Successful task id for stage [%d] and partition [%d]: [%s]",
+    LOG.debug(
+        "Reading output of stage [%d] and partition [%d] from task id [%s]", 
         stageNumber,
         partitionNumber,
         successfulTaskId
