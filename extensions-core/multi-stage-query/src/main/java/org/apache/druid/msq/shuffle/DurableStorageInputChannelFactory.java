@@ -90,20 +90,20 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
           partitionNumber
       );
       LOG.debug(
-          "Reading input for worker [%d], stage [%d], partition [%d] from the file at path [%s]",
-          workerNumber,
+          "Reading output of stage [%d], partition [%d] for worker [%d] from the file at path [%s]",
           stageId.getStageNumber(),
           partitionNumber,
+          workerNumber,
           remotePartitionPath
       );
       RetryUtils.retry(() -> {
         if (!storageConnector.pathExists(remotePartitionPath)) {
           throw new ISE(
-              "Could not find remote inputs at location [%s] for the worker task [%d] stage [%d] partition [%d]",
-              remotePartitionPath,
-              workerNumber,
+              "Could not find remote outputs of stage [%d] partition [%d] for worker [%d] at the path [%s]",
               stageId.getStageNumber(),
-              partitionNumber
+              partitionNumber,
+              workerNumber,
+              remotePartitionPath
           );
         }
         return Boolean.TRUE;
@@ -119,10 +119,10 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
     catch (Exception e) {
       throw new IOE(
           e,
-          "Encountered error while reading the inputs for the worker task [%d] stage [%d] partition [%d]",
-          workerNumber,
+          "Encountered error while reading the output of stage [%d], partition [%d] for worker [%d]",
           stageId.getStageNumber(),
-          partitionNumber
+          partitionNumber,
+          workerNumber
       );
     }
   }
@@ -148,11 +148,11 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
 
     if (!storageConnector.pathExists(successfulFilePath)) {
       throw new ISE(
-          "No file present at the location [%s]. Unable to read the output of worker: [%d], stage: [%d], partition: [%d]",
+          "No file present at the location [%s]. Unable to read the outputs of stage [%d], partition [%d] for the worker [%d]",
           successfulFilePath,
-          workerNo,
           stageNumber,
-          partitionNumber
+          partitionNumber,
+          workerNo
       );
     }
 
@@ -165,7 +165,7 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
       throw new ISE("Unable to read the task id from the file: [%s]", successfulFilePath);
     }
     LOG.debug(
-        "Reading output of stage [%d] and partition [%d] from task id [%s]", 
+        "Reading output of stage [%d], partition [%d] from task id [%s]",
         stageNumber,
         partitionNumber,
         successfulTaskId

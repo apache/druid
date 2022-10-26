@@ -132,10 +132,10 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
     catch (IOException e) {
       throw new ISE(
           e,
-          "Unable to create empty remote output of workerTask[%s] stage[%d] partition[%d]",
-          workerNumber,
+          "Unable to create empty remote output of stage [%d], partition [%d] for worker [%d]",
           stageNumber,
-          partitionNumber
+          partitionNumber,
+          workerNumber
       );
     }
   }
