@@ -55,6 +55,7 @@ import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.SqlRowTransformer;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -174,8 +175,12 @@ public class SqlResource
                     throw new RuntimeException(ex);
                   }
                   finally {
-                    yielder.close();
-                    endLifecycle(stmt, e, os.getCount());
+                    final Exception finalE = e;
+
+                    CloseableUtils.closeAll(
+                        yielder,
+                        () -> endLifecycle(stmt, finalE, os.getCount())
+                    );
                   }
                 }
               }
@@ -245,7 +250,6 @@ public class SqlResource
       HttpStatement stmt
   )
   {
-    sqlLifecycleManager.remove(stmt.sqlQueryId(), stmt);
     stmt.closeQuietly();
   }
 
@@ -261,7 +265,6 @@ public class SqlResource
     } else {
       reporter.failed(e);
     }
-    sqlLifecycleManager.remove(stmt.sqlQueryId(), stmt);
     stmt.close();
   }
 

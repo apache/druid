@@ -722,7 +722,7 @@ name: Apache Commons Text
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.9
+version: 1.10.0
 libraries:
   - org.apache.commons: commons-text
 notices:

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -200,7 +201,7 @@ public class NestedDataColumnMerger implements DimensionMergerV9
   )
   {
     @SuppressWarnings("unchecked")
-    CompressedNestedDataComplexColumn column = (CompressedNestedDataComplexColumn) col;
+    CompressedNestedDataComplexColumn<?> column = (CompressedNestedDataComplexColumn) col;
     closer.register(column);
     for (int i = 0; i < column.getFields().size(); i++) {
       String fieldPath = column.getFields().get(i);
@@ -213,7 +214,7 @@ public class NestedDataColumnMerger implements DimensionMergerV9
       });
     }
     return new GlobalDictionarySortedCollector(
-        column.getStringDictionary(),
+        new StringEncodingStrategies.Utf8ToStringIndexed(column.getStringDictionary()),
         column.getLongDictionary(),
         column.getDoubleDictionary()
     );

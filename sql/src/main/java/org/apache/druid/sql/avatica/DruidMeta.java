@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -295,13 +296,24 @@ public class DruidMeta extends MetaImpl
   private AuthenticationResult doAuthenticate(final DruidConnection druidConnection)
   {
     final AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
-    if (authenticationResult == null) {
-      throw logFailure(
-          new ForbiddenException("Authentication failed."),
-          "Authentication failed for prepare"
-      );
+    if (authenticationResult != null) {
+      return authenticationResult;
     }
-    return authenticationResult;
+
+    // Throw an error. Use the same text that will appear if the user is denied
+    // access to any resource within the query. See mapException(). This consistency
+    // is helpful for users, essential for the ITs, which don't know about the two
+    // separate paths. Throw an Avatica error so Avatica can map the error to the
+    // proper JDBC error code. The error is also logged for use in debugging.
+    throw logFailure(
+        new AvaticaRuntimeException(
+          Access.DEFAULT_ERROR_MESSAGE,
+          ErrorResponse.UNAUTHORIZED_ERROR_CODE,
+          ErrorResponse.UNAUTHORIZED_SQL_STATE,
+          AvaticaSeverity.ERROR
+        ),
+        "Authentication failed for prepare"
+    );
   }
 
   @Deprecated
