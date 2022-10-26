@@ -42,6 +42,7 @@ import org.apache.druid.segment.data.ColumnarIntsSerializer;
 import org.apache.druid.segment.data.ColumnarMultiIntsSerializer;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
@@ -91,8 +92,10 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   protected DictionaryMergingIterator<T> dictionaryMergeIterator;
   @Nullable
   protected ColumnarIntsSerializer encodedValueSerializer;
+
   @Nullable
-  protected GenericIndexedWriter<T> dictionaryWriter;
+  protected DictionaryWriter<T> dictionaryWriter;
+
   @Nullable
   protected T firstDictionaryValue;
 
@@ -145,7 +148,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
       Indexed<T> dimValues = closer.register(adapters.get(i).getDimValueLookup(dimensionName));
       if (dimValues != null && !allNull(dimValues)) {
         dimHasValues = true;
-        hasNull |= dimValues.indexOf(null) >= 0;
+        hasNull = hasNull || dimValues.indexOf(null) >= 0;
         dimValueLookups[i] = dimValueLookup = dimValues;
         numMergeIndex++;
       } else {
@@ -169,7 +172,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     }
 
     String dictFilename = StringUtils.format("%s.dim_values", dimensionName);
-    dictionaryWriter = new GenericIndexedWriter<>(segmentWriteOutMedium, dictFilename, getObjectStrategy());
+    dictionaryWriter = makeDictionaryWriter(dictFilename);
     firstDictionaryValue = null;
     dictionarySize = 0;
     dictionaryWriter.open();
@@ -384,7 +387,10 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     }
   }
 
-
+  protected DictionaryWriter<T> makeDictionaryWriter(String fileName)
+  {
+    return new GenericIndexedWriter<>(segmentWriteOutMedium, fileName, getObjectStrategy());
+  }
 
   @Nullable
   protected ExtendedIndexesMerger getExtendedIndexesMerger()
