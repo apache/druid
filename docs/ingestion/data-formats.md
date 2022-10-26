@@ -231,7 +231,7 @@ Configure the ORC `inputFormat` to load ORC data as follows:
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | Set value to `orc`. | yes |
-| flattenSpec | JSON Object | Specifies flattening configuration for nested ORC data. See [`flattenSpec`](#flattenspec) for more info. | no |
+| flattenSpec | JSON Object | Specifies flattening configuration for nested ORC data. Only 'path' expressions are supported ('jq' and 'tree' are unavailable). See [`flattenSpec`](#flattenspec) for more info. | no |
 | binaryAsString | Boolean | Specifies if the binary orc column which is not logically marked as a string should be treated as a UTF-8 encoded string. | no (default = false) |
 
 For example:
