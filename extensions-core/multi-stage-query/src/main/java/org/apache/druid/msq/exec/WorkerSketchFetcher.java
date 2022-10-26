@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.Either;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
-import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
+import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -63,7 +63,7 @@ public class WorkerSketchFetcher
    * decides based on the report if it should fetch sketches one by one or together.
    */
   public CompletableFuture<Either<Long, ClusterByPartitions>> submitFetcherTask(
-      ClusterByStatisticsWorkerReport workerReport,
+      WorkerAggregatedKeyStatistics aggregatedKeyStatistics,
       List<String> workerTaskIds,
       StageDefinition stageDefinition
   )
@@ -72,10 +72,10 @@ public class WorkerSketchFetcher
 
     if (forceNonSequentialMerging || clusterBy.getBucketByCount() == 0) {
       return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
-    } else if (stageDefinition.getMaxWorkerCount() > WORKER_THRESHOLD || workerReport.getBytesRetained() > BYTES_THRESHOLD) {
-      return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
+    } else if (stageDefinition.getMaxWorkerCount() > WORKER_THRESHOLD || aggregatedKeyStatistics.getBytesRetained() > BYTES_THRESHOLD) {
+      return sequentialTimeChunkMerging(aggregatedKeyStatistics, stageDefinition, workerTaskIds);
     } else {
-      return sequentialTimeChunkMerging(workerReport, stageDefinition, workerTaskIds);
+      return sequentialTimeChunkMerging(aggregatedKeyStatistics, stageDefinition, workerTaskIds);
     }
   }
 
@@ -133,7 +133,7 @@ public class WorkerSketchFetcher
    * downsampling on the controller.
    */
   private CompletableFuture<Either<Long, ClusterByPartitions>> sequentialTimeChunkMerging(
-      ClusterByStatisticsWorkerReport workerReport,
+      WorkerAggregatedKeyStatistics workerReport,
       StageDefinition stageDefinition,
       List<String> workerTaskIds
   )

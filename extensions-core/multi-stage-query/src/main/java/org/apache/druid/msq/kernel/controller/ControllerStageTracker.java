@@ -38,7 +38,7 @@ import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
-import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
+import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -63,7 +63,7 @@ class ControllerStageTracker
   private ControllerStagePhase phase = ControllerStagePhase.NEW;
 
   @Nullable
-  public final ClusterByStatisticsWorkerReport clusterByStatisticsWorkerReport;
+  public final WorkerAggregatedKeyStatistics aggregatedKeyStatistics;
 
   // Result partitions and where they can be read from.
   @Nullable
@@ -89,9 +89,9 @@ class ControllerStageTracker
     this.workerInputs = workerInputs;
 
     if (stageDef.mustGatherResultKeyStatistics()) {
-      this.clusterByStatisticsWorkerReport = new ClusterByStatisticsWorkerReport(new TreeMap<>(), false, 0);
+      this.aggregatedKeyStatistics = new WorkerAggregatedKeyStatistics(new TreeMap<>(), false, 0);
     } else {
-      this.clusterByStatisticsWorkerReport = null;
+      this.aggregatedKeyStatistics = null;
       generateResultPartitionsAndBoundariesWithoutKeyStatistics();
     }
   }
@@ -172,12 +172,12 @@ class ControllerStageTracker
    */
   boolean collectorEncounteredAnyMultiValueField()
   {
-    if (clusterByStatisticsWorkerReport == null) {
+    if (aggregatedKeyStatistics == null) {
       throw new ISE("Stage does not gather result key statistics");
     } else if (workersWithFinishedReport.size() != workerCount) {
       throw new ISE("Result key statistics are not ready");
     } else {
-      return clusterByStatisticsWorkerReport.isHasMultipleValues();
+      return aggregatedKeyStatistics.isHasMultipleValues();
     }
   }
 
@@ -225,9 +225,9 @@ class ControllerStageTracker
    * Returns the merged worker report.
    */
   @Nullable
-  public ClusterByStatisticsWorkerReport getClusterByStatisticsWorkerReport()
+  public WorkerAggregatedKeyStatistics getAggregatedKeyStatistics()
   {
-    return clusterByStatisticsWorkerReport;
+    return aggregatedKeyStatistics;
   }
 
   /**
@@ -239,10 +239,10 @@ class ControllerStageTracker
    */
   ControllerStagePhase addStatisticsReportForWorker(
       final int workerNumber,
-      final ClusterByStatisticsWorkerReport workerReport
+      final WorkerAggregatedKeyStatistics workerReport
   )
   {
-    if (clusterByStatisticsWorkerReport == null) {
+    if (aggregatedKeyStatistics == null) {
       throw new ISE("Stage does not gather result key statistics");
     }
 
@@ -256,7 +256,7 @@ class ControllerStageTracker
 
     try {
       if (workersWithFinishedReport.add(workerNumber)) {
-        clusterByStatisticsWorkerReport.addAll(workerReport);
+        aggregatedKeyStatistics.addAll(workerReport);
 
         if (workersWithFinishedReport.size() == workerCount) {
           // All workers have sent the report.

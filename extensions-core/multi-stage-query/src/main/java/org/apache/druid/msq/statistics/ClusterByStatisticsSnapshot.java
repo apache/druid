@@ -74,7 +74,7 @@ public class ClusterByStatisticsSnapshot
     return hasMultipleValues;
   }
 
-  public ClusterByStatisticsWorkerReport workerReport(int workerNumber)
+  public WorkerAggregatedKeyStatistics aggregatedKeyStatistics(int workerNumber)
   {
     SortedMap<Long, Set<Integer>> rowKeyIntSetTreeSet = new TreeMap<>();
     double bytesRetained = 0;
@@ -84,7 +84,7 @@ public class ClusterByStatisticsSnapshot
       bytesRetained += buckets.get(bucketKey).bytesRetained;
     }
 
-    return new ClusterByStatisticsWorkerReport(rowKeyIntSetTreeSet, !getHasMultipleValues().isEmpty(), bytesRetained);
+    return new WorkerAggregatedKeyStatistics(rowKeyIntSetTreeSet, !getHasMultipleValues().isEmpty(), bytesRetained);
   }
 
   @Override

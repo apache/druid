@@ -29,7 +29,7 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
+import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
@@ -62,7 +62,7 @@ public class IndexerControllerClient implements ControllerClient
   public void postWorkerReport(
       StageId stageId,
       int workerNumber,
-      ClusterByStatisticsWorkerReport workerReport
+      WorkerAggregatedKeyStatistics aggregatedKeyStatistics
   ) throws IOException
   {
     final String path = StringUtils.format(
@@ -74,7 +74,7 @@ public class IndexerControllerClient implements ControllerClient
 
     doRequest(
         new RequestBuilder(HttpMethod.POST, path)
-            .jsonContent(jsonMapper, workerReport),
+            .jsonContent(jsonMapper, aggregatedKeyStatistics),
         IgnoreHttpResponseHandler.INSTANCE
     );
   }

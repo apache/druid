@@ -70,6 +70,17 @@ public interface Worker
   void postWorkOrder(WorkOrder workOrder);
 
   /**
+   * Returns the statistics snapshot for the given stageId
+   */
+  ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId) throws ExecutionException, InterruptedException;
+
+  /**
+   * Returns the statistics snapshot for the given stageId which contains only the sketch for the specified timeChunk
+   */
+  ClusterByStatisticsSnapshot fetchSingletonStatisticsSnapshot(StageId stageId, long timeChunk)
+      throws ExecutionException, InterruptedException;
+
+  /**
    * Called when the worker chat handler recieves the result partition boundaries for a particular stageNumber
    * and queryId
    */
@@ -107,15 +118,4 @@ public interface Worker
    * Called when the work required for the query has been finished
    */
   void postFinish();
-
-  /**
-   * Returns the statistics snapshot for the given stageId
-   */
-  ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId) throws ExecutionException, InterruptedException;
-
-  /**
-   * Returns the statistics snapshot for the given stageId which contains only the sketch for the specified timeChunk
-   */
-  ClusterByStatisticsSnapshot fetchSingletonStatisticsSnapshot(StageId stageId, long timeChunk)
-      throws ExecutionException, InterruptedException;
 }

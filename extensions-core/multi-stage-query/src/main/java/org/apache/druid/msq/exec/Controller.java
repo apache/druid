@@ -27,7 +27,7 @@ import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
-import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
+import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -81,9 +81,11 @@ public interface Controller
   // Worker-to-controller messages
 
   /**
-   * Accepts a {@link ClusterByStatisticsWorkerReport} for generating fetching sketches.
+   * Accepts a {@link WorkerAggregatedKeyStatistics} and updates the controller aggregated key statistics. If all key
+   * statistics have been gathered, enqueues the task with the {@link WorkerSketchFetcher} to generate key statistics.
+   * This is intended to be called by the {@link org.apache.druid.msq.indexing.ControllerChatHandler}.
    */
-  void updateWorkerReportStatus(int stageNumber, int workerNumber, Object workerReport);
+  void updateWorkerReportStatus(int stageNumber, int workerNumber, Object workerStatisticsReport);
 
   /**
    * System error reported by a subtask. Note that the errors are organized by

@@ -102,7 +102,7 @@ import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
-import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
+import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
 import org.apache.druid.msq.util.DecoratedExecutorService;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.PrioritizedCallable;
@@ -332,14 +332,14 @@ public class WorkerImpl implements Worker
 
         if (kernel.getPhase() == WorkerStagePhase.READING_INPUT && kernel.hasResultKeyStatisticsSnapshot()) {
           if (controllerAlive) {
-            ClusterByStatisticsWorkerReport workerReport =
+            WorkerAggregatedKeyStatistics aggregatedKeyStatistics =
                 kernel.getResultKeyStatisticsSnapshot()
-                      .workerReport(task().getWorkerNumber());
+                      .aggregatedKeyStatistics(task().getWorkerNumber());
 
             controllerClient.postWorkerReport(
                 stageDefinition.getId(),
                 kernel.getWorkOrder().getWorkerNumber(),
-                workerReport
+                aggregatedKeyStatistics
             );
           }
           kernel.startPreshuffleWaitingForResultPartitionBoundaries();

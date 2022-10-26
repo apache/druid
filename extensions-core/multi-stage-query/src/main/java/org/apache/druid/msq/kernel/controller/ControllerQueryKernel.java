@@ -41,7 +41,7 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
-import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
+import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
@@ -334,9 +334,9 @@ public class ControllerQueryKernel
   /**
    * Delegates call to {@link ControllerStageTracker#getResultPartitionBoundaries()}
    */
-  public ClusterByStatisticsWorkerReport getClusterByStatisticsWorkerReport(final StageId stageId)
+  public WorkerAggregatedKeyStatistics getClusterByStatisticsWorkerReport(final StageId stageId)
   {
-    return getStageKernelOrThrow(stageId).getClusterByStatisticsWorkerReport();
+    return getStageKernelOrThrow(stageId).getAggregatedKeyStatistics();
   }
 
   /**
@@ -409,7 +409,7 @@ public class ControllerQueryKernel
   public void addResultStatisticsReportForStageAndWorker(
       final StageId stageId,
       final int workerNumber,
-      final ClusterByStatisticsWorkerReport workerReport
+      final WorkerAggregatedKeyStatistics workerReport
   )
   {
     ControllerStageTracker stageKernel = getStageKernelOrThrow(stageId);

@@ -27,7 +27,7 @@ import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
+import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
@@ -59,9 +59,9 @@ public class ControllerChatHandler implements ChatHandler
   }
 
   /**
-   * Used by subtasks to post {@link ClusterByStatisticsWorkerReport} for shuffling stages.
+   * Used by subtasks to post {@link WorkerAggregatedKeyStatistics} for shuffling stages.
    *
-   * See {@link ControllerClient#postWorkerReport(StageId, int, ClusterByStatisticsWorkerReport)}
+   * See {@link ControllerClient#postWorkerReport(StageId, int, WorkerAggregatedKeyStatistics)}
    * for the client-side code that calls this API.
    */
   @POST

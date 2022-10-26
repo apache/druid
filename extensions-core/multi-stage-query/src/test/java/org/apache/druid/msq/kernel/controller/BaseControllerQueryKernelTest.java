@@ -126,7 +126,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
               controllerQueryKernel.addResultStatisticsReportForStageAndWorker(
                   new StageId(queryDefinition.getQueryId(), stageNumber),
                   i,
-                  ClusterByStatisticsSnapshot.empty().workerReport(i)
+                  ClusterByStatisticsSnapshot.empty().aggregatedKeyStatistics(i)
               );
             }
           } else {
@@ -265,7 +265,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       controllerQueryKernel.addResultStatisticsReportForStageAndWorker(
           new StageId(queryDefinition.getQueryId(), stageNumber),
           workerNumber,
-          keyStatsCollector.snapshot().workerReport(workerNumber)
+          keyStatsCollector.snapshot().aggregatedKeyStatistics(workerNumber)
       );
       return keyStatsCollector;
     }

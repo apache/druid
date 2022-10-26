@@ -22,7 +22,7 @@ package org.apache.druid.msq.exec;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
+import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -40,7 +40,7 @@ public interface ControllerClient extends AutoCloseable
   void postWorkerReport(
       StageId stageId,
       int workerNumber,
-      ClusterByStatisticsWorkerReport workerReport
+      WorkerAggregatedKeyStatistics workerReport
   ) throws IOException;
 
   /**

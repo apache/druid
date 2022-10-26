@@ -29,16 +29,16 @@ import java.util.SortedMap;
 /**
  * Class sent by worker to controller after reading input to generate partition boundries.
  */
-public class ClusterByStatisticsWorkerReport
+public class WorkerAggregatedKeyStatistics
 {
   private final SortedMap<Long, Set<Integer>> timeSegmentVsWorkerIdMap;
 
-  private Boolean hasMultipleValues;
+  private boolean hasMultipleValues;
 
   private double bytesRetained;
 
   @JsonCreator
-  public ClusterByStatisticsWorkerReport(
+  public WorkerAggregatedKeyStatistics(
       @JsonProperty("timeSegmentVsWorkerIdMap") final SortedMap<Long, Set<Integer>> timeChunks,
       @JsonProperty("hasMultipleValues") boolean hasMultipleValues,
       @JsonProperty("bytesRetained") double bytesRetained
@@ -49,7 +49,7 @@ public class ClusterByStatisticsWorkerReport
     this.bytesRetained = bytesRetained;
   }
 
-  public void addAll(ClusterByStatisticsWorkerReport other)
+  public void addAll(WorkerAggregatedKeyStatistics other)
   {
     for (Long timeChunk : other.timeSegmentVsWorkerIdMap.keySet()) {
       this.timeSegmentVsWorkerIdMap

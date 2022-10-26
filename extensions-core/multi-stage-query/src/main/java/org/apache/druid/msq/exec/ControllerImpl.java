@@ -149,7 +149,7 @@ import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
-import org.apache.druid.msq.statistics.ClusterByStatisticsWorkerReport;
+import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
@@ -567,10 +567,10 @@ public class ControllerImpl implements Controller
   }
 
   /**
-   * Provide a {@link ClusterByStatisticsWorkerReport} for shuffling stages.
+   * Provide a {@link WorkerAggregatedKeyStatistics} for shuffling stages.
    */
   @Override
-  public void updateWorkerReportStatus(int stageNumber, int workerNumber, Object workerReportObject)
+  public void updateWorkerReportStatus(int stageNumber, int workerNumber, Object workerStatisticsReport)
   {
     addToKernelManipulationQueue(
         queryKernel -> {
@@ -584,9 +584,9 @@ public class ControllerImpl implements Controller
               stageDef.getShuffleSpec().get().doesAggregateByClusterKey()
           );
 
-          final ClusterByStatisticsWorkerReport workerReport;
+          final WorkerAggregatedKeyStatistics workerReport;
           try {
-            workerReport = mapper.convertValue(workerReportObject, ClusterByStatisticsWorkerReport.class);
+            workerReport = mapper.convertValue(workerStatisticsReport, WorkerAggregatedKeyStatistics.class);
           }
           catch (IllegalArgumentException e) {
             throw new IAE(
@@ -601,12 +601,12 @@ public class ControllerImpl implements Controller
 
           if (queryKernel.getStagePhase(stageId).equals(ControllerStagePhase.MERGING_STATISTICS)) {
             List<String> workerTaskIds = workerTaskLauncher.getTaskList();
-            ClusterByStatisticsWorkerReport finalWorkerReport = queryKernel.getClusterByStatisticsWorkerReport(stageId);
+            WorkerAggregatedKeyStatistics aggregatedKeyStatistics = queryKernel.getClusterByStatisticsWorkerReport(stageId);
 
             // Queue the sketch fetching task into the worker sketch fetcher.
             CompletableFuture<Either<Long, ClusterByPartitions>> clusterByPartitionsCompletableFuture =
                 workerSketchFetcher.submitFetcherTask(
-                    finalWorkerReport,
+                    aggregatedKeyStatistics,
                     workerTaskIds,
                     stageDef
                 );

@@ -47,19 +47,19 @@ public class ClusterByStatisticsWorkerReportSerdeTest
   @Test
   public void testSerde() throws JsonProcessingException
   {
-    ClusterByStatisticsWorkerReport workerReport = new ClusterByStatisticsWorkerReport(
+    WorkerAggregatedKeyStatistics workerReport = new WorkerAggregatedKeyStatistics(
         new TreeMap<>(ImmutableMap.of(2L, ImmutableSet.of(2, 3))),
         false,
         0.0
     );
 
     final String json = objectMapper.writeValueAsString(workerReport);
-    final ClusterByStatisticsWorkerReport deserializedWorkerReport = objectMapper.readValue(
+    final WorkerAggregatedKeyStatistics deserializedKeyStatistics = objectMapper.readValue(
         json,
-        ClusterByStatisticsWorkerReport.class
+        WorkerAggregatedKeyStatistics.class
     );
-    Assert.assertEquals(json, workerReport.getTimeSegmentVsWorkerIdMap(), deserializedWorkerReport.getTimeSegmentVsWorkerIdMap());
-    Assert.assertEquals(json, workerReport.isHasMultipleValues(), deserializedWorkerReport.isHasMultipleValues());
-    Assert.assertEquals(json, workerReport.getBytesRetained(), deserializedWorkerReport.getBytesRetained(), 0);
+    Assert.assertEquals(json, workerReport.getTimeSegmentVsWorkerIdMap(), deserializedKeyStatistics.getTimeSegmentVsWorkerIdMap());
+    Assert.assertEquals(json, workerReport.isHasMultipleValues(), deserializedKeyStatistics.isHasMultipleValues());
+    Assert.assertEquals(json, workerReport.getBytesRetained(), deserializedKeyStatistics.getBytesRetained(), 0);
   }
 }

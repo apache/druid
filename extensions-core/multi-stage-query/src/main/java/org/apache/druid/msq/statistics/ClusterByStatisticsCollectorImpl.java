@@ -324,6 +324,8 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
       final KeyCollectorSnapshot keyCollectorSnapshot =
           ((KeyCollectorFactory) keyCollectorFactory).toSnapshot(bucketEntry.getValue().keyCollector);
       Long bucketKey = Long.MIN_VALUE;
+
+      // If there is a clustering on time, read the first field from each bucket and add it to the snapshots.
       if (clusterBy.getBucketByCount() == 1) {
         bucketKey = (Long) trimmedRowReader.read(bucketEntry.getKey(), 0);
       }
