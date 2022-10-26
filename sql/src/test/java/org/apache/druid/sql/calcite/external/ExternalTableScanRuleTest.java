@@ -64,7 +64,8 @@ public class ExternalTableScanRuleTest
         ),
         engine,
         Collections.emptyMap(),
-        Collections.emptySet()
+        Collections.emptySet(),
+        CalciteTests.createJoinableFactoryWrapper()
     );
     plannerContext.setQueryMaker(
         engine.buildQueryMakerForSelect(EasyMock.createMock(RelRoot.class), plannerContext)

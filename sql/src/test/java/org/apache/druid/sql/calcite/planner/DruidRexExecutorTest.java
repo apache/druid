@@ -97,7 +97,8 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       ),
       null /* Don't need an engine */,
       Collections.emptyMap(),
-      Collections.emptySet()
+      Collections.emptySet(),
+      CalciteTests.createJoinableFactoryWrapper()
   );
 
   private final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
