@@ -447,7 +447,8 @@ public class ControllerImpl implements Controller
               errorForReport,
               workerWarnings,
               queryStartTime,
-              new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis()
+              new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis(),
+              workerTaskLauncher
           ),
           stagesReport,
           countersSnapshot,
@@ -716,7 +717,8 @@ public class ControllerImpl implements Controller
                     null,
                     workerWarnings,
                     queryStartTime,
-                    queryStartTime == null ? -1L : new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis()
+                    queryStartTime == null ? -1L : new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis(),
+                    workerTaskLauncher
                 ),
                 makeStageReport(
                     queryDef,
@@ -1807,10 +1809,26 @@ public class ControllerImpl implements Controller
       @Nullable final MSQErrorReport errorReport,
       final Queue<MSQErrorReport> errorReports,
       @Nullable final DateTime queryStartTime,
-      final long queryDuration
+      final long queryDuration,
+      MSQWorkerTaskLauncher taskLauncher
   )
   {
-    return new MSQStatusReport(taskState, errorReport, errorReports, queryStartTime, queryDuration);
+    int pendingTasks = 0;
+    int runningTasks = 1;
+
+    if (taskLauncher != null) {
+      pendingTasks = taskLauncher.getPendingWorkerTasks();
+      runningTasks = taskLauncher.getRunningWorkerTasks() + 1; // To account for controller.
+    }
+    return new MSQStatusReport(
+        taskState,
+        errorReport,
+        errorReports,
+        queryStartTime,
+        queryDuration,
+        pendingTasks,
+        runningTasks
+    );
   }
 
   private static InputSpecSlicerFactory makeInputSpecSlicerFactory(final DataSegmentTimelineView timelineView)
