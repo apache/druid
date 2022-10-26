@@ -44,7 +44,6 @@ import java.io.IOException;
 import java.nio.IntBuffer;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -163,13 +162,8 @@ public class NestedDataColumnMerger implements DimensionMergerV9
       return null;
     }
     final NestedDataColumnIndexer indexer = (NestedDataColumnIndexer) dim.getIndexer();
-    for (Map.Entry<String, NestedDataColumnIndexer.LiteralFieldIndexer> entry : indexer.fieldIndexers.entrySet()) {
-      // skip adding the field if no types are in the set, meaning only null values have been processed
-      if (!entry.getValue().getTypes().isEmpty()) {
-        mergedFields.put(entry.getKey(), entry.getValue().getTypes());
-      }
-    }
-    return indexer.globalDictionary.getSortedCollector();
+    indexer.mergeFields(mergedFields);
+    return indexer.getSortedCollector();
   }
 
   @Nullable
