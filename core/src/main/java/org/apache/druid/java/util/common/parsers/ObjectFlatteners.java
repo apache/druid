@@ -58,7 +58,7 @@ public class ObjectFlatteners
 
       switch (fieldSpec.getType()) {
         case ROOT:
-          extractor = flattenerMaker.makeJsonTreeExtractor(Collections.singletonList(fieldSpec.getExpr()));
+          extractor = obj -> flattenerMaker.getRootField(obj, fieldSpec.getExpr());
           break;
         case PATH:
           extractor = flattenerMaker.makeJsonPathExtractor(fieldSpec.getExpr());
