@@ -19,8 +19,9 @@
 
 package org.apache.druid.indexing.common.stats;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
@@ -53,7 +54,9 @@ public class TaskRealtimeMetricsMonitorTest
     EasyMock.expectLastCall().times(2);
     EasyMock.replay(fireDepartment);
 
-    TaskRealtimeMetricsMonitor monitor = new TaskRealtimeMetricsMonitor(ImmutableList.of(fireDepartment), null, null);
+    TaskRealtimeMetricsMonitor monitor = new TaskRealtimeMetricsMonitor(
+        fireDepartment, new NoopRowIngestionMeters(), ImmutableMap.of()
+    );
 
     // No emission since the monitor has not begun
     Assert.assertFalse(monitor.monitor(emitter));
