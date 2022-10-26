@@ -21,20 +21,16 @@ package org.apache.druid.catalog.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.sync.CatalogUpdateNotifier;
 import org.apache.druid.catalog.sync.MetadataCatalog.CatalogListener;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
@@ -59,6 +55,8 @@ public class CatalogListenerResource
 {
   public static final String BASE_URL = "/druid/broker/v1/catalog";
   public static final String SYNC_URL = "/sync";
+  private static final Logger log = new Logger(CatalogListenerResource.class);
+
 
   private final CatalogListener listener;
   private final AuthorizerMapper authorizerMapper;
@@ -70,7 +68,8 @@ public class CatalogListenerResource
       final CatalogListener listener,
       @Smile final ObjectMapper smileMapper,
       @Json final ObjectMapper jsonMapper,
-      final AuthorizerMapper authorizerMapper)
+      final AuthorizerMapper authorizerMapper
+  )
   {
     this.listener = listener;
     this.authorizerMapper = authorizerMapper;
@@ -85,14 +84,12 @@ public class CatalogListenerResource
   @POST
   @Path(SYNC_URL)
   @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  @ResourceFilters(ConfigResourceFilter.class)
   public Response syncTable(
       final InputStream inputStream,
-      @Context final HttpServletRequest req)
+      @Context final HttpServletRequest req
+  )
   {
-    Response resp = checkAuth(req);
-    if (resp != null) {
-      return resp;
-    }
     final String reqContentType = req.getContentType();
     final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType);
     final ObjectMapper mapper = isSmile ? smileMapper : jsonMapper;
@@ -101,7 +98,8 @@ public class CatalogListenerResource
       tableSpec = mapper.readValue(inputStream, TableMetadata.class);
     }
     catch (IOException e) {
-      return Response.serverError().entity(e.getMessage()).build();
+      log.error(e, "Bad catalog sync request received!");
+      return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
     }
     TableSpec spec = tableSpec.spec();
     if (CatalogUpdateNotifier.TOMBSTONE_TABLE_TYPE.equals(spec.type())) {
@@ -110,27 +108,5 @@ public class CatalogListenerResource
       listener.updated(tableSpec);
     }
     return Response.status(Response.Status.ACCEPTED).build();
-  }
-
-  private Response checkAuth(final HttpServletRequest request)
-  {
-    final ResourceAction resourceAction = new ResourceAction(
-        new Resource("CONFIG", ResourceType.CONFIG),
-        Action.WRITE
-    );
-
-    final Access authResult = AuthorizationUtils.authorizeResourceAction(
-        request,
-        resourceAction,
-        authorizerMapper
-    );
-
-    if (authResult.isAllowed()) {
-      return null;
-    }
-    return Response.status(Response.Status.FORBIDDEN)
-                  .type(MediaType.TEXT_PLAIN)
-                  .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
-                  .build();
   }
 }

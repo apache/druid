@@ -160,7 +160,7 @@ public class CatalogMetadataTest
   private void doTestRemote(boolean useSmile) throws DuplicateKeyException, OutOfDateException, NotFoundException
   {
     populateCatalog();
-    MockCatalogSync sync = new MockCatalogSync(storage, jsonMapper, smileMapper, useSmile);
+    MockCatalogSync sync = new MockCatalogSync(storage, CatalogTests.AUTH_MAPPER, jsonMapper, smileMapper, useSmile);
     MetadataCatalog catalog = sync.catalog();
     storage.register(sync);
     verifyInitial(catalog);

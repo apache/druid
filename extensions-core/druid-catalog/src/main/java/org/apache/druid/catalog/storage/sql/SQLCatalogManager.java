@@ -27,7 +27,7 @@ import com.google.inject.Inject;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
-import org.apache.druid.catalog.storage.MetastoreManager;
+import org.apache.druid.catalog.storage.MetadataStorageManager;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -115,7 +115,7 @@ public class SQLCatalogManager implements CatalogManager
       "DELETE FROM %s\n" +
       WHERE_TABLE_ID;
 
-  private final MetastoreManager metastoreManager;
+  private final MetadataStorageManager metastoreManager;
   private final SQLMetadataConnector connector;
   private final ObjectMapper jsonMapper;
   private final IDBI dbi;
@@ -123,7 +123,7 @@ public class SQLCatalogManager implements CatalogManager
   private final Deque<Listener> listeners = new ConcurrentLinkedDeque<>();
 
   @Inject
-  public SQLCatalogManager(MetastoreManager metastoreManager)
+  public SQLCatalogManager(MetadataStorageManager metastoreManager)
   {
     if (!metastoreManager.isSql()) {
       throw new ISE("SQLCatalogManager only works with SQL based metadata store at this time");
@@ -142,11 +142,6 @@ public class SQLCatalogManager implements CatalogManager
     createTableDefnTable();
   }
 
-  @Override
-  public void stop()
-  {
-  }
-
   // Mimics what MetadataStorageTablesConfig should do.
   public String getTableDefnTable()
   {
@@ -159,10 +154,9 @@ public class SQLCatalogManager implements CatalogManager
   }
 
   // TODO: Move to SqlMetadataConnector
-  @Override
   public void createTableDefnTable()
   {
-    if (!metastoreManager.createTables()) {
+    if (!metastoreManager.config().isCreateTables()) {
       return;
     }
     connector.createTable(
@@ -179,7 +173,10 @@ public class SQLCatalogManager implements CatalogManager
                 + "  PRIMARY KEY(schemaName, name)\n"
                 + ")",
                 tableName,
-                connector.getPayloadType())));
+                connector.getPayloadType()
+            )
+        )
+    );
   }
 
   @Override

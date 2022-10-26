@@ -42,8 +42,17 @@ import java.util.Set;
  */
 public class HideColumns
 {
+  /**
+   * The list of columns to hide. That is, the list of columns to add to the
+   * table's hidden column list.
+   */
   @JsonProperty
   public final List<String> hide;
+
+  /**
+   * The list of columns to no longer hide. That is, the list of columns to
+   * remove from the table's hidden column list.
+   */
   @JsonProperty
   public final List<String> unhide;
 

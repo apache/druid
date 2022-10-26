@@ -46,7 +46,7 @@ public class CatalogTests
   public static final String WRITER_USER = "writer";
   public static final String DENY_USER = "denyAll";
 
-  protected static final AuthorizerMapper AUTH_MAPPER = new AuthorizerMapper(
+  public static final AuthorizerMapper AUTH_MAPPER = new AuthorizerMapper(
       ImmutableMap.of(TEST_AUTHORITY, new TestAuthorizer()));
 
   private static class TestAuthorizer implements Authorizer
@@ -94,7 +94,7 @@ public class CatalogTests
 
     public DbFixture(DerbyConnectorRule derbyConnectorRule)
     {
-      MetastoreManager metastoreMgr = new MetastoreManagerImpl(
+      MetadataStorageManager metastoreMgr = new MetadataStorageManager(
           JSON_MAPPER,
           derbyConnectorRule.getConnector(),
           () -> derbyConnectorRule.getMetadataConnectorConfig(),
@@ -102,17 +102,12 @@ public class CatalogTests
       );
       manager = new SQLCatalogManager(metastoreMgr);
       manager.start();
-      storage = new CatalogStorage(
-          manager,
-          AUTH_MAPPER,
-          JSON_MAPPER
-      );
+      storage = new CatalogStorage(manager, JSON_MAPPER);
     }
 
     public void tearDown()
     {
       if (manager != null) {
-        manager.stop();
         manager = null;
       }
     }

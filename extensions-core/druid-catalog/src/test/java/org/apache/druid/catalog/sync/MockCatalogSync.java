@@ -29,6 +29,7 @@ import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.CatalogTests;
 import org.apache.druid.catalog.sync.MetadataCatalog.CatalogListener;
 import org.apache.druid.server.http.catalog.DummyRequest;
+import org.apache.druid.server.security.AuthorizerMapper;
 
 import javax.ws.rs.core.MediaType;
 
@@ -46,10 +47,11 @@ public class MockCatalogSync implements CatalogListener
   private final ObjectMapper jsonMapper;
 
   public MockCatalogSync(
-      CatalogStorage storage,
+      final CatalogStorage storage,
+      final AuthorizerMapper authorizerMapper,
       final ObjectMapper smileMapper,
       final ObjectMapper jsonMapper,
-      boolean useSmile
+      final boolean useSmile
   )
   {
     this.catalog = new CachedMetadataCatalog(storage, storage.schemaRegistry(), jsonMapper);
@@ -57,7 +59,7 @@ public class MockCatalogSync implements CatalogListener
         catalog,
         smileMapper,
         jsonMapper,
-        storage.authorizer().mapper()
+        authorizerMapper
     );
     this.useSmile = useSmile;
     this.smileMapper = smileMapper;

@@ -20,7 +20,6 @@
 package org.apache.druid.catalog.storage;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.server.security.ForbiddenException;
 
 import javax.ws.rs.core.Response;
 
@@ -72,25 +71,6 @@ public class Actions
   public static Response ok()
   {
     return Response.ok().build();
-  }
-
-  public static Response forbidden()
-  {
-    return forbidden("Unauthorized");
-  }
-
-  public static Response forbidden(ForbiddenException e)
-  {
-    return forbidden(e.getMessage());
-  }
-
-  public static Response forbidden(String msg)
-  {
-    // Like ForbiddenExceptionMapper, but in the standard error
-    // format. Used instead of throwing ForbiddenException
-    return Response.status(Response.Status.FORBIDDEN)
-        .entity(error(FORBIDDEN, msg))
-        .build();
   }
 
   public static Response okWithVersion(long version)

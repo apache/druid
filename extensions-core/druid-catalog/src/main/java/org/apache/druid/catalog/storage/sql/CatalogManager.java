@@ -31,8 +31,7 @@ import java.util.function.Function;
 /**
  * Manages catalog data. Used in Coordinator, which will be in either
  * an leader or standby state. The Coordinator calls the {@link #start()}
- * method when it becomes the leader, and calls {@link #stop()} when
- * it loses leadership, or shuts down.
+ * method when it becomes the leader.
  *
  * Performs detailed CRUD operations on the catalog tables table.
  * Higher-level operations appear elsewhere.
@@ -52,6 +51,10 @@ public interface CatalogManager
     }
   }
 
+  /**
+   * Thrown when a record does not exist in the database. Allows
+   * the caller to check for this specific case in a generic way.
+   */
   class NotFoundException extends Exception
   {
     public NotFoundException(String msg)
@@ -74,18 +77,40 @@ public interface CatalogManager
     }
   }
 
+  /**
+   * Generic interface for changes to the catalog at the storage level.
+   * Implemented by the catalog sync mechanism to send update events
+   * to the Broker. Note that these events are about the <i>catalog</li>,
+   * not about the physical storage of tables (i.e. datasources.)
+   */
   interface Listener
   {
+    /**
+     * A new catalog table entry was added.
+     */
     void added(TableMetadata table);
+
+    /**
+     * An existing catalog table entry was updated.
+     */
     void updated(TableMetadata table);
+
+    /**
+     * An existing catalog table entry was deleted.
+     */
     void deleted(TableId id);
   }
 
+  /**
+   * Start the catalog manager within a Druid run. Called from lifecycle
+   * management and when a coordinator becomes the leader node.
+   */
   void start();
 
-
+  /**
+   * Register a listener for catalog events.
+   */
   void register(Listener listener);
-  void createTableDefnTable();
 
   /**
    * Create a table entry.
@@ -159,9 +184,19 @@ public interface CatalogManager
    */
   boolean delete(TableId id);
 
+  /**
+   * Returns a list of the ids (schema, name) of all tables in the catalog.
+   */
   List<TableId> list();
-  List<String> list(String dbSchema);
-  List<TableMetadata> listDetails(String dbSchema);
 
-  void stop();
+  /**
+   * Returns a list of the names of all tables within the given schema.
+   */
+  List<String> list(String dbSchema);
+
+  /**
+   * Returns a list of the table metadata for all tables within the given
+   * schema.
+   */
+  List<TableMetadata> listDetails(String dbSchema);
 }

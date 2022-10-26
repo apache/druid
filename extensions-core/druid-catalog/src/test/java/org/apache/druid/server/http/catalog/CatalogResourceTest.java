@@ -67,7 +67,7 @@ public class CatalogResourceTest
   public void setUp()
   {
     dbFixture = new CatalogTests.DbFixture(derbyConnectorRule);
-    resource = new CatalogResource(dbFixture.storage);
+    resource = new CatalogResource(dbFixture.storage, CatalogTests.AUTH_MAPPER);
   }
 
   @After
@@ -271,22 +271,22 @@ public class CatalogResourceTest
   public void testList()
   {
     // No entries
-    Response resp = resource.listTables(getBy(CatalogTests.READER_USER));
+    Response resp = resource.listTableNames(getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     List<TableId> tableIds = getTableIdList(resp);
     assertTrue(tableIds.isEmpty());
 
-    resp = resource.listTables(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
+    resp = resource.listTableNamesForSchema(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     List<String> tables = getTableList(resp);
     assertTrue(tables.isEmpty());
 
     // Missing schema
-    resp = resource.listTables(null, getBy(CatalogTests.READER_USER));
+    resp = resource.listTableNamesForSchema(null, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // Invalid schema
-    resp = resource.listTables("bogus", getBy(CatalogTests.READER_USER));
+    resp = resource.listTableNamesForSchema("bogus", getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
 
     // Create a table
@@ -296,28 +296,28 @@ public class CatalogResourceTest
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
     // No read access
-    resp = resource.listTables(getBy(CatalogTests.DENY_USER));
+    resp = resource.listTableNames(getBy(CatalogTests.DENY_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     tableIds = getTableIdList(resp);
     assertTrue(tableIds.isEmpty());
 
-    resp = resource.listTables(TableId.DRUID_SCHEMA, getBy(CatalogTests.DENY_USER));
+    resp = resource.listTableNamesForSchema(TableId.DRUID_SCHEMA, getBy(CatalogTests.DENY_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     tables = getTableList(resp);
     assertTrue(tables.isEmpty());
 
     // Read access
-    resp = resource.listTables(getBy(CatalogTests.READER_USER));
+    resp = resource.listTableNames(getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     tableIds = getTableIdList(resp);
     assertEquals(1, tableIds.size());
 
-    resp = resource.listTables(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
+    resp = resource.listTableNamesForSchema(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     tables = getTableList(resp);
     assertEquals(1, tables.size());
 
-    resp = resource.listTables(TableId.SYSTEM_SCHEMA, getBy(CatalogTests.READER_USER));
+    resp = resource.listTableNamesForSchema(TableId.SYSTEM_SCHEMA, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     tables = getTableList(resp);
     assertTrue(tables.isEmpty());
@@ -400,13 +400,13 @@ public class CatalogResourceTest
     assertEquals(dsSpec, read1.spec());
 
     // list
-    resp = resource.listTables(getBy(CatalogTests.READER_USER));
+    resp = resource.listTableNames(getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     List<TableId> tableIds = getTableIdList(resp);
     assertEquals(1, tableIds.size());
     assertEquals(id1, tableIds.get(0));
 
-    resp = resource.listTables(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
+    resp = resource.listTableNamesForSchema(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     List<String> tables = getTableList(resp);
     assertEquals(1, tables.size());
@@ -434,14 +434,14 @@ public class CatalogResourceTest
     TableId id2 = TableId.of(TableId.DRUID_SCHEMA, table2Name);
 
     // verify lists
-    resp = resource.listTables(getBy(CatalogTests.READER_USER));
+    resp = resource.listTableNames(getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     tableIds = getTableIdList(resp);
     assertEquals(2, tableIds.size());
     assertEquals(id1, tableIds.get(0));
     assertEquals(id2, tableIds.get(1));
 
-    resp = resource.listTables(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
+    resp = resource.listTableNamesForSchema(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     tables = getTableList(resp);
     assertEquals(2, tables.size());
@@ -452,7 +452,7 @@ public class CatalogResourceTest
     resp = resource.deleteTable(TableId.DRUID_SCHEMA, table1Name, false, deleteBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
-    resp = resource.listTables(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
+    resp = resource.listTableNamesForSchema(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     tables = getTableList(resp);
     assertEquals(1, tables.size());
@@ -460,7 +460,7 @@ public class CatalogResourceTest
     resp = resource.deleteTable(TableId.DRUID_SCHEMA, table2Name, false, deleteBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
-    resp = resource.listTables(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
+    resp = resource.listTableNamesForSchema(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     tables = getTableList(resp);
     assertEquals(0, tables.size());

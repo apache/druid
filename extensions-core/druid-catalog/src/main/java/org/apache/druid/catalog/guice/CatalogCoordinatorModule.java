@@ -25,8 +25,7 @@ import org.apache.druid.catalog.http.CatalogResource;
 import org.apache.druid.catalog.model.SchemaRegistry;
 import org.apache.druid.catalog.model.SchemaRegistryImpl;
 import org.apache.druid.catalog.storage.CatalogStorage;
-import org.apache.druid.catalog.storage.MetastoreManager;
-import org.apache.druid.catalog.storage.MetastoreManagerImpl;
+import org.apache.druid.catalog.storage.MetadataStorageManager;
 import org.apache.druid.catalog.storage.sql.CatalogManager;
 import org.apache.druid.catalog.storage.sql.SQLCatalogManager;
 import org.apache.druid.catalog.sync.CatalogUpdateNotifier;
@@ -64,8 +63,7 @@ public class CatalogCoordinatorModule implements DruidModule
         .bind(CatalogStorage.class)
         .in(LazySingleton.class);
     binder
-        .bind(MetastoreManager.class)
-        .to(MetastoreManagerImpl.class)
+        .bind(MetadataStorageManager.class)
         .in(LazySingleton.class);
 
     // At present, the set of schemas is fixed.

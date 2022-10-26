@@ -32,15 +32,23 @@ import org.apache.druid.catalog.sync.MetadataCatalog.CatalogListener;
 import org.apache.druid.catalog.sync.MetadataCatalog.CatalogSource;
 import org.apache.druid.catalog.sync.MetadataCatalog.CatalogUpdateProvider;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.server.security.AuthorizerMapper;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import java.util.List;
 
 /**
  * Facade over the three internal components used to manage the metadata
- * catalog from the REST API.
+ * catalog from the REST API:
+ * <ul>
+ * <li>Schema registry: the hard-coded set of schemas which Druid supports.
+ * (User does not support user-defined schemas.)</li>
+ * <li>Table definition registry: the set of table types which Druid
+ * supports: datasources, external tables, etc.</li>
+ * <li>Catalog manager: database storage for the user's table specifications
+ * within the catalog.</li>
+ * </ul>
  */
 public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
 {
@@ -75,24 +83,16 @@ public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
   protected final SchemaRegistry schemaRegistry;
   protected final TableDefnRegistry tableRegistry;
   protected final CatalogManager catalogMgr;
-  protected final CatalogAuthorizer authorizer;
 
   @Inject
   public CatalogStorage(
-      CatalogManager catalogMgr,
-      AuthorizerMapper authorizerMapper,
-      @Json ObjectMapper jsonMapper
+      final CatalogManager catalogMgr,
+      @Json final ObjectMapper jsonMapper
   )
   {
     this.schemaRegistry = new SchemaRegistryImpl();
     this.tableRegistry = new TableDefnRegistry(jsonMapper);
     this.catalogMgr = catalogMgr;
-    this.authorizer = new CatalogAuthorizer(authorizerMapper);
-  }
-
-  public CatalogAuthorizer authorizer()
-  {
-    return authorizer;
   }
 
   public CatalogManager tables()
@@ -140,7 +140,7 @@ public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
   }
 
   @Override
-  public ResolvedTable resolveTable(TableId id)
+  public @Nullable ResolvedTable resolveTable(TableId id)
   {
     TableMetadata table = table(id);
     return table == null ? null : tableRegistry.resolve(table.spec());

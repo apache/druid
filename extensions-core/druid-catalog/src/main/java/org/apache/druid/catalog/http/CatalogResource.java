@@ -40,9 +40,13 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.inject.Inject;
@@ -80,17 +84,22 @@ public class CatalogResource
   public static final String ROOT_PATH = "/druid/coordinator/v1/catalog";
 
   private final CatalogStorage catalog;
+  private final AuthorizerMapper authorizerMapper;
 
   @Inject
-  public CatalogResource(final CatalogStorage catalog)
+  public CatalogResource(
+      final CatalogStorage catalog,
+      final AuthorizerMapper authorizerMapper
+  )
   {
     this.catalog = catalog;
+    this.authorizerMapper = authorizerMapper;
   }
 
   private enum PostAction
   {
     NEW,
-    IFNEW,
+    IF_NEW,
     REPLACE,
     FORCE;
   }
@@ -128,8 +137,10 @@ public class CatalogResource
     if (actionParam == null) {
       action = PostAction.NEW;
     } else {
-      action = PostAction.valueOf(StringUtils.toUpperCase(actionParam));
-      if (action == null) {
+      try {
+        action = PostAction.valueOf(StringUtils.toUpperCase(actionParam));
+      }
+      catch (IllegalArgumentException e) {
         return Actions.badRequest(
             Actions.INVALID,
             StringUtils.format(
@@ -140,7 +151,7 @@ public class CatalogResource
       }
     }
     TableId tableId = TableId.of(dbSchema, name);
-    Response response = authorizeTable(tableId, spec, req);
+    Response response = validateTable(tableId, spec, req);
     if (response != null) {
       return response;
     }
@@ -155,7 +166,7 @@ public class CatalogResource
     switch (action) {
       case NEW:
         return insertTableSpec(table, false);
-      case IFNEW:
+      case IF_NEW:
         return insertTableSpec(table, true);
       case REPLACE:
         return updateTableSpec(table, version);
@@ -166,7 +177,7 @@ public class CatalogResource
     }
   }
 
-  private Response authorizeTable(TableId tableId, TableSpec spec, final HttpServletRequest req)
+  private Response validateTable(TableId tableId, TableSpec spec, final HttpServletRequest req)
   {
     // Druid has a fixed set of schemas. Ensure the one provided is valid.
     Pair<Response, SchemaSpec> result = validateSchema(tableId.schema());
@@ -183,7 +194,7 @@ public class CatalogResource
       );
     }
 
-    // Table name can't be blank or have spaces
+    // Table name can't be blank or have leading/trailing spaces
     if (Strings.isNullOrEmpty(tableId.name())) {
       return Actions.badRequest(Actions.INVALID, "Table name is required");
     }
@@ -191,20 +202,19 @@ public class CatalogResource
       return Actions.badRequest(Actions.INVALID, "Table name cannot start or end with spaces");
     }
 
-    // The user has to have permission to modify the table.
-    try {
-      catalog.authorizer().authorizeTable(schema, tableId.name(), Action.WRITE, req);
-    }
-    catch (ForbiddenException e) {
-      return Actions.forbidden(e);
-    }
+    // The user has to have permission to modify the table. Throws an exception
+    // if not.
+    authorizeTable(schema, tableId.name(), Action.WRITE, req);
 
     // Validate the spec, if provided.
     if (spec != null) {
 
       // The given table spec has to be valid for the given schema.
-      if (Strings.isNullOrEmpty(spec.type())) {
-        return Actions.badRequest(Actions.INVALID, "Table type is required");
+      try {
+        spec.validate();
+      }
+      catch (IAE e) {
+        return Actions.badRequest(Actions.INVALID, e.getMessage());
       }
 
       if (!schema.accepts(spec.type())) {
@@ -335,7 +345,7 @@ public class CatalogResource
       Function<TableSpec, TableSpec> action
   )
   {
-    Response response = authorizeTable(tableId, newSpec, req);
+    Response response = validateTable(tableId, newSpec, req);
     if (response != null) {
       return response;
     }
@@ -352,7 +362,7 @@ public class CatalogResource
   }
 
   /**
-   * Move a single column to the start end of the column list, or before or after
+   * Move a single column to the start or end of the column list, or before or after
    * another column. Both columns must exist. Returns the version of the table
    * after the update.
    * <p>
@@ -499,12 +509,7 @@ public class CatalogResource
     if (Strings.isNullOrEmpty(name)) {
       return Actions.badRequest(Actions.INVALID, "Table name is required");
     }
-    try {
-      catalog.authorizer().authorizeTable(result.rhs, name, Action.READ, req);
-    }
-    catch (ForbiddenException e) {
-      return Actions.forbidden(e);
-    }
+    authorizeTable(result.rhs, name, Action.READ, req);
     try {
       TableId tableId = new TableId(dbSchema, name);
       TableMetadata table = catalog.tables().read(tableId);
@@ -530,7 +535,7 @@ public class CatalogResource
   )
   {
     // No good resource to use: we really need finer-grain control.
-    catalog.authorizer().authorizeAccess(ResourceType.STATE, "schemas", Action.READ, req);
+    authorizeAccess(ResourceType.STATE, "schemas", Action.READ, req);
     return Response.ok().entity(catalog.schemaRegistry().names()).build();
   }
 
@@ -541,7 +546,7 @@ public class CatalogResource
   @GET
   @Path("/list/tables/names")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response listTables(
+  public Response listTableNames(
       @Context final HttpServletRequest req
   )
   {
@@ -556,9 +561,10 @@ public class CatalogResource
             return null;
           }
           return Collections.singletonList(
-              catalog.authorizer().resourceAction(schema, tableId.name(), Action.READ));
+              resourceAction(schema, tableId.name(), Action.READ));
         },
-        catalog.authorizer().mapper());
+        authorizerMapper
+    );
     return Response.ok().entity(Lists.newArrayList(filtered)).build();
   }
 
@@ -573,7 +579,7 @@ public class CatalogResource
   @GET
   @Path("/schemas/{dbSchema}/names")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response listTables(
+  public Response listTableNamesForSchema(
       @PathParam("dbSchema") String dbSchema,
       @Context final HttpServletRequest req
   )
@@ -589,8 +595,9 @@ public class CatalogResource
         tables,
         name ->
           Collections.singletonList(
-              catalog.authorizer().resourceAction(schema, name, Action.READ)),
-        catalog.authorizer().mapper());
+              resourceAction(schema, name, Action.READ)),
+          authorizerMapper
+    );
     return Response.ok().entity(Lists.newArrayList(filtered)).build();
   }
 
@@ -601,7 +608,7 @@ public class CatalogResource
   @GET
   @Path("/schemas/{dbSchema}/tables")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response listTableDetails(
+  public Response listTableMetadataForSchema(
       @PathParam("dbSchema") String dbSchema,
       @Context final HttpServletRequest req
   )
@@ -618,9 +625,10 @@ public class CatalogResource
         table -> {
           TableId tableId = table.id();
           return Collections.singletonList(
-              catalog.authorizer().resourceAction(schema, tableId.name(), Action.READ));
+              resourceAction(schema, tableId.name(), Action.READ));
         },
-        catalog.authorizer().mapper());
+        authorizerMapper
+    );
 
     return Response.ok().entity(Lists.newArrayList(filtered)).build();
   }
@@ -648,6 +656,9 @@ public class CatalogResource
   )
   {
     TableId tableId = new TableId(dbSchema, name);
+
+    // Validate the schema. Returns either an error response (lhs) or the
+    // validated schema (rhs).
     Pair<Response, SchemaSpec> result = validateSchema(tableId.schema());
     if (result.lhs != null) {
       return result.lhs;
@@ -661,12 +672,7 @@ public class CatalogResource
     if (Strings.isNullOrEmpty(name)) {
       return Actions.badRequest(Actions.INVALID, "Table name is required");
     }
-    try {
-      catalog.authorizer().authorizeTable(schema, tableId.name(), Action.WRITE, req);
-    }
-    catch (ForbiddenException e) {
-      return Actions.forbidden(e);
-    }
+    authorizeTable(schema, tableId.name(), Action.WRITE, req);
     try {
       if (!catalog.tables().delete(tableId) && !ifExists) {
         return Actions.notFound(tableId.sqlName());
@@ -699,7 +705,7 @@ public class CatalogResource
   {
     // Same as the user-command for now. This endpoint reserves the right to change
     // over time as needed, while the user endpoint cannot easily change.
-    return listTableDetails(dbSchema, req);
+    return listTableMetadataForSchema(dbSchema, req);
   }
 
   public static final String TABLE_SYNC = "/tables/{dbSchema}/{name}/sync";
@@ -721,16 +727,6 @@ public class CatalogResource
     return getTable(dbSchema, name, req);
   }
 
-  @POST
-  @Path("/flush")
-  public Response flush(
-      @Context final HttpServletRequest req
-  )
-  {
-    // Nothing to do yet.
-    return Actions.ok();
-  }
-
   private Pair<Response, SchemaSpec> validateSchema(String dbSchema)
   {
     if (Strings.isNullOrEmpty(dbSchema)) {
@@ -743,5 +739,36 @@ public class CatalogResource
           null);
     }
     return Pair.of(null, schema);
+  }
+
+  private static ResourceAction resourceAction(SchemaSpec schema, String name, Action action)
+  {
+    return new ResourceAction(new Resource(name, schema.securityResource()), action);
+  }
+
+  private void authorizeTable(SchemaSpec schema, String name, Action action, HttpServletRequest request)
+  {
+    if (action == Action.WRITE && !schema.writable()) {
+      throw new ForbiddenException(
+          "Cannot create table definitions in schema: " + schema.name());
+    }
+    authorize(schema.securityResource(), name, action, request);
+  }
+
+  private void authorize(String resource, String key, Action action, HttpServletRequest request)
+  {
+    final Access authResult = authorizeAccess(resource, key, action, request);
+    if (!authResult.isAllowed()) {
+      throw new ForbiddenException(authResult.toString());
+    }
+  }
+
+  private Access authorizeAccess(String resource, String key, Action action, HttpServletRequest request)
+  {
+    return AuthorizationUtils.authorizeResourceAction(
+        request,
+        new ResourceAction(new Resource(key, resource), action),
+        authorizerMapper
+    );
   }
 }

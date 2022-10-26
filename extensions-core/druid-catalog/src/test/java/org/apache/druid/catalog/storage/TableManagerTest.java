@@ -63,7 +63,7 @@ public class TableManagerTest
   @Before
   public void setUp()
   {
-    MetastoreManager metastoreMgr = new MetastoreManagerImpl(
+    MetadataStorageManager metastoreMgr = new MetadataStorageManager(
         JSON_MAPPER,
         derbyConnectorRule.getConnector(),
         () -> derbyConnectorRule.getMetadataConnectorConfig(),
@@ -77,7 +77,6 @@ public class TableManagerTest
   public void tearDown()
   {
     if (manager != null) {
-      manager.stop();
       manager = null;
     }
   }
