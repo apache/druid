@@ -85,7 +85,7 @@ public interface Controller
    * statistics have been gathered, enqueues the task with the {@link WorkerSketchFetcher} to generate key statistics.
    * This is intended to be called by the {@link org.apache.druid.msq.indexing.ControllerChatHandler}.
    */
-  void updateWorkerReportStatus(int stageNumber, int workerNumber, Object workerStatisticsReport);
+  void updateAggregatedKeyStatistics(int stageNumber, int workerNumber, Object aggregatedKeyStatisticsObject);
 
   /**
    * System error reported by a subtask. Note that the errors are organized by

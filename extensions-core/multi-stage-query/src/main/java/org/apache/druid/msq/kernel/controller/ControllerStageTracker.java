@@ -222,7 +222,7 @@ class ControllerStageTracker
   }
 
   /**
-   * Returns the merged worker report.
+   * Returns the merged key statistics.
    */
   @Nullable
   public WorkerAggregatedKeyStatistics getAggregatedKeyStatistics()
@@ -235,11 +235,11 @@ class ControllerStageTracker
    * then this call ignores the new ones and does nothing.
    *
    * @param workerNumber the worker
-   * @param workerReport worker report
+   * @param aggregatedKeyStatistics aggregated key statistics
    */
-  ControllerStagePhase addStatisticsReportForWorker(
+  ControllerStagePhase addAggregatedStatisticsForWorker(
       final int workerNumber,
-      final WorkerAggregatedKeyStatistics workerReport
+      final WorkerAggregatedKeyStatistics aggregatedKeyStatistics
   )
   {
     if (aggregatedKeyStatistics == null) {
@@ -256,7 +256,7 @@ class ControllerStageTracker
 
     try {
       if (workersWithFinishedReport.add(workerNumber)) {
-        aggregatedKeyStatistics.addAll(workerReport);
+        aggregatedKeyStatistics.addAll(aggregatedKeyStatistics);
 
         if (workersWithFinishedReport.size() == workerCount) {
           // All workers have sent the report.

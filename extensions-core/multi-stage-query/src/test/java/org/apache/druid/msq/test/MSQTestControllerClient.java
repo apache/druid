@@ -40,17 +40,17 @@ public class MSQTestControllerClient implements ControllerClient
   }
 
   @Override
-  public void postWorkerReport(
+  public void postAggregatedKeyStatistics(
       StageId stageId,
       int workerNumber,
       WorkerAggregatedKeyStatistics aggregatedKeyStatistics
   )
   {
     try {
-      controller.updateWorkerReportStatus(stageId.getStageNumber(), workerNumber, aggregatedKeyStatistics);
+      controller.updateAggregatedKeyStatistics(stageId.getStageNumber(), workerNumber, aggregatedKeyStatistics);
     }
     catch (Exception e) {
-      throw new ISE(e, "unable to post worker report");
+      throw new ISE(e, "unable to post aggregated key statistics");
     }
   }
 

@@ -47,20 +47,20 @@ public class WorkerSketchFetcher
   private static final long BYTES_THRESHOLD = 1_000_000_000L;
   private static final long WORKER_THRESHOLD = 100;
 
-  private final boolean forceNonSequentialMerging;
+  private final ClusterStatisticsMergeMode clusterStatisticsMergeMode;
   private final WorkerClient workerClient;
   private final ExecutorService executorService;
 
-  public WorkerSketchFetcher(WorkerClient workerClient, boolean forceNonSequentialMerging)
+  public WorkerSketchFetcher(WorkerClient workerClient, ClusterStatisticsMergeMode clusterStatisticsMergeMode)
   {
     this.workerClient = workerClient;
-    this.forceNonSequentialMerging = forceNonSequentialMerging;
+    this.clusterStatisticsMergeMode = clusterStatisticsMergeMode;
     this.executorService = Executors.newFixedThreadPool(DEFAULT_THREAD_COUNT);
   }
 
   /**
-   * Submits a request to fetch and generate partitions for the given worker report and returns a future for it. It
-   * decides based on the report if it should fetch sketches one by one or together.
+   * Submits a request to fetch and generate partitions for the given worker statistics and returns a future for it. It
+   * decides based on the statistics if it should fetch sketches one by one or together.
    */
   public CompletableFuture<Either<Long, ClusterByPartitions>> submitFetcherTask(
       WorkerAggregatedKeyStatistics aggregatedKeyStatistics,
@@ -70,12 +70,22 @@ public class WorkerSketchFetcher
   {
     ClusterBy clusterBy = stageDefinition.getClusterBy();
 
-    if (forceNonSequentialMerging || clusterBy.getBucketByCount() == 0) {
-      return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
-    } else if (stageDefinition.getMaxWorkerCount() > WORKER_THRESHOLD || aggregatedKeyStatistics.getBytesRetained() > BYTES_THRESHOLD) {
-      return sequentialTimeChunkMerging(aggregatedKeyStatistics, stageDefinition, workerTaskIds);
-    } else {
-      return sequentialTimeChunkMerging(aggregatedKeyStatistics, stageDefinition, workerTaskIds);
+    switch (clusterStatisticsMergeMode) {
+      case SEQUENTIAL:
+        return sequentialTimeChunkMerging(aggregatedKeyStatistics, stageDefinition, workerTaskIds);
+      case PARALLEL:
+        return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
+      case AUTO:
+        if (clusterBy.getBucketByCount() == 0) {
+          // If there is no time cluserting, there is no scope for sequential merge
+          return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
+        } else if (stageDefinition.getMaxWorkerCount() > WORKER_THRESHOLD || aggregatedKeyStatistics.getBytesRetained() > BYTES_THRESHOLD) {
+          return sequentialTimeChunkMerging(aggregatedKeyStatistics, stageDefinition, workerTaskIds);
+        } else {
+          return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
+        }
+      default:
+        throw new IllegalStateException("No fetching strategy found for mode: " + clusterStatisticsMergeMode);
     }
   }
 
@@ -133,7 +143,7 @@ public class WorkerSketchFetcher
    * downsampling on the controller.
    */
   private CompletableFuture<Either<Long, ClusterByPartitions>> sequentialTimeChunkMerging(
-      WorkerAggregatedKeyStatistics workerReport,
+      WorkerAggregatedKeyStatistics aggregatedKeyStatistics,
       StageDefinition stageDefinition,
       List<String> workerTaskIds
   )
@@ -141,7 +151,7 @@ public class WorkerSketchFetcher
     SequentialFetchStage sequentialFetchStage = new SequentialFetchStage(
         stageDefinition,
         workerTaskIds,
-        workerReport.getTimeSegmentVsWorkerIdMap().entrySet().iterator()
+        aggregatedKeyStatistics.getTimeSegmentVsWorkerIdMap().entrySet().iterator()
     );
     sequentialFetchStage.submitFetchingTasksForNextTimeChunk();
     return sequentialFetchStage.getPartitionFuture();

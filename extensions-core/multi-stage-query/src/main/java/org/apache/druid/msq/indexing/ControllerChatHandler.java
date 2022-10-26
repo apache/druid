@@ -61,15 +61,15 @@ public class ControllerChatHandler implements ChatHandler
   /**
    * Used by subtasks to post {@link WorkerAggregatedKeyStatistics} for shuffling stages.
    *
-   * See {@link ControllerClient#postWorkerReport(StageId, int, WorkerAggregatedKeyStatistics)}
+   * See {@link ControllerClient#postAggregatedKeyStatistics(StageId, int, WorkerAggregatedKeyStatistics)}
    * for the client-side code that calls this API.
    */
   @POST
-  @Path("/statisticsWorkerReport/{queryId}/{stageNumber}/{workerNumber}")
+  @Path("/aggregatedKeyStatistics/{queryId}/{stageNumber}/{workerNumber}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response httpPostStatisticsWorkerReport(
-      final Object workerReport,
+  public Response httpPostAggregatedKeyStatistics(
+      final Object aggregatedKeyStatisticsObject,
       @PathParam("queryId") final String queryId,
       @PathParam("stageNumber") final int stageNumber,
       @PathParam("workerNumber") final int workerNumber,
@@ -77,7 +77,7 @@ public class ControllerChatHandler implements ChatHandler
   )
   {
     ChatHandlers.authorizationCheck(req, Action.WRITE, task.getDataSource(), toolbox.getAuthorizerMapper());
-    controller.updateWorkerReportStatus(stageNumber, workerNumber, workerReport);
+    controller.updateAggregatedKeyStatistics(stageNumber, workerNumber, aggregatedKeyStatisticsObject);
     return Response.status(Response.Status.ACCEPTED).build();
   }
 

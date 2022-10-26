@@ -34,13 +34,13 @@ import java.util.List;
 public interface ControllerClient extends AutoCloseable
 {
   /**
-   * Client side method to update the controller with worker reports for a particular stage and worker.
-   * Controller's implementation collates all the reports for a stage to fetch cluster by statistics from workers.
+   * Client side method to update the controller with aggregated key statistics for a particular stage and worker.
+   * Controller's implementation collates all the aggregations for a stage to fetch cluster by statistics from workers.
    */
-  void postWorkerReport(
+  void postAggregatedKeyStatistics(
       StageId stageId,
       int workerNumber,
-      WorkerAggregatedKeyStatistics workerReport
+      WorkerAggregatedKeyStatistics aggregatedKeyStatistics
   ) throws IOException;
 
   /**

@@ -59,14 +59,14 @@ public class IndexerControllerClient implements ControllerClient
   }
 
   @Override
-  public void postWorkerReport(
+  public void postAggregatedKeyStatistics(
       StageId stageId,
       int workerNumber,
       WorkerAggregatedKeyStatistics aggregatedKeyStatistics
   ) throws IOException
   {
     final String path = StringUtils.format(
-        "/statisticsWorkerReport/%s/%d/%d",
+        "/aggregatedKeyStatistics/%s/%d/%d",
         StringUtils.urlEncode(stageId.getQueryId()),
         stageId.getStageNumber(),
         workerNumber

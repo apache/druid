@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
@@ -59,7 +60,8 @@ public class MultiStageQueryContext
   private static final boolean DEFAULT_FINALIZE_AGGREGATIONS = true;
 
   public static final String CTX_ENABLE_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
-  public static final String CTX_FORCE_NON_SEQUENTIAL_MERGE = "forceNonSequentialMerging";
+  public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
+  public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.AUTO.toString();
   private static final boolean DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE = false;
 
   public static final String CTX_DESTINATION = "destination";
@@ -94,15 +96,15 @@ public class MultiStageQueryContext
     );
   }
 
-  public static boolean isForceSequentialMerge(Map<String, Object> propertyMap)
+  public static ClusterStatisticsMergeMode getClusterStatisticsMergeMode(Map<String, Object> propertyMap)
   {
-    return Boolean.parseBoolean(
+    return ClusterStatisticsMergeMode.valueOf(
         String.valueOf(
             getValueFromPropertyMap(
                 propertyMap,
-                CTX_FORCE_NON_SEQUENTIAL_MERGE,
+                CTX_CLUSTER_STATISTICS_MERGE_MODE,
                 null,
-                false
+                DEFAULT_CLUSTER_STATISTICS_MERGE_MODE
             )
         )
     );

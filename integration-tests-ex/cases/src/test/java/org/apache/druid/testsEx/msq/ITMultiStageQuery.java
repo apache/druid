@@ -23,7 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.sql.SqlTaskStatus;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
@@ -126,7 +128,7 @@ public class ITMultiStageQuery
   }
 
   @Test
-  public void testMsqIngestionWithoutSequentialMerging() throws Exception
+  public void testMsqIngestionParallelMerging() throws Exception
   {
     String datasource = "dst";
 
@@ -173,8 +175,83 @@ public class ITMultiStageQuery
             datasource
         );
 
+    ImmutableMap<String, Object> context = ImmutableMap.of(
+        MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
+        ClusterStatisticsMergeMode.PARALLEL
+    );
+
     // Submit the task and wait for the datasource to get loaded
-    SqlQuery sqlQuery = new SqlQuery(queryLocal, null, false, false, false, ImmutableMap.of("msqForceNonSequentialMerging", true), null);
+    SqlQuery sqlQuery = new SqlQuery(queryLocal, null, false, false, false, context, null);
+    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(sqlQuery);
+
+    if (sqlTaskStatus.getState().isFailure()) {
+      Assert.fail(StringUtils.format(
+          "Unable to start the task successfully.\nPossible exception: %s",
+          sqlTaskStatus.getError()
+      ));
+    }
+
+    msqHelper.pollTaskIdForCompletion(sqlTaskStatus.getTaskId());
+    dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
+
+    msqHelper.testQueriesFromFile(QUERY_FILE, datasource);
+  }
+
+  @Test
+  public void testMsqIngestionSequentialMerging() throws Exception
+  {
+    String datasource = "dst";
+
+    // Clear up the datasource from the previous runs
+    coordinatorClient.unloadSegmentsForDataSource(datasource);
+
+    String queryLocal =
+        StringUtils.format(
+            "INSERT INTO %s\n"
+            + "SELECT\n"
+            + "  TIME_PARSE(\"timestamp\") AS __time,\n"
+            + "  isRobot,\n"
+            + "  diffUrl,\n"
+            + "  added,\n"
+            + "  countryIsoCode,\n"
+            + "  regionName,\n"
+            + "  channel,\n"
+            + "  flags,\n"
+            + "  delta,\n"
+            + "  isUnpatrolled,\n"
+            + "  isNew,\n"
+            + "  deltaBucket,\n"
+            + "  isMinor,\n"
+            + "  isAnonymous,\n"
+            + "  deleted,\n"
+            + "  cityName,\n"
+            + "  metroCode,\n"
+            + "  namespace,\n"
+            + "  comment,\n"
+            + "  page,\n"
+            + "  commentLength,\n"
+            + "  countryName,\n"
+            + "  user,\n"
+            + "  regionIsoCode\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
+            + "    '{\"type\":\"json\"}',\n"
+            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
+            + "  )\n"
+            + ")\n"
+            + "PARTITIONED BY DAY\n"
+            + "CLUSTERED BY \"__time\"",
+            datasource
+        );
+
+    ImmutableMap<String, Object> context = ImmutableMap.of(
+        MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
+        ClusterStatisticsMergeMode.SEQUENTIAL
+    );
+
+    // Submit the task and wait for the datasource to get loaded
+    SqlQuery sqlQuery = new SqlQuery(queryLocal, null, false, false, false, context, null);
     SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(sqlQuery);
 
     if (sqlTaskStatus.getState().isFailure()) {

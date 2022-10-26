@@ -204,6 +204,7 @@ The following table lists the context parameters for the MSQ task engine:
 | rowsPerSegment | INSERT or REPLACE<br /><br />The number of rows per segment to target. The actual number of rows per segment may be somewhat higher or lower than this number. In most cases, use the default. For general information about sizing rows per segment, see [Segment Size Optimization](../operations/segment-optimization.md). | 3,000,000 |
 | sqlTimeZone | Sets the time zone for this connection, which affects how time functions and timestamp literals behave. Use a time zone name like "America/Los_Angeles" or offset like "-08:00".| `druid.sql.planner.sqlTimeZone` on the Broker (default: UTC)|
 | useApproximateCountDistinct | Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.| `druid.sql.planner.useApproximateCountDistinct` on the Broker (default: true)|
+| clusterStatisticsMergeMode | Whether to parallel or sequential merging of worker sketches. Can be `PARALLEL`, `SEQUENTIAL` or `AUTO`. On `AUTO` tries to find the best approach based on number of workers and size of input rows. | `AUTO` |
 
 ## Limits
 

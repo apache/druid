@@ -336,7 +336,7 @@ public class WorkerImpl implements Worker
                 kernel.getResultKeyStatisticsSnapshot()
                       .aggregatedKeyStatistics(task().getWorkerNumber());
 
-            controllerClient.postWorkerReport(
+            controllerClient.postAggregatedKeyStatistics(
                 stageDefinition.getId(),
                 kernel.getWorkOrder().getWorkerNumber(),
                 aggregatedKeyStatistics

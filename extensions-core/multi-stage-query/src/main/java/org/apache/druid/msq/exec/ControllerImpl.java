@@ -520,8 +520,8 @@ public class ControllerImpl implements Controller
     context.registerController(this, closer);
 
     this.netClient = new ExceptionWrappingWorkerClient(context.taskClientFor(this));
-    boolean forceNonSequentialMerging = MultiStageQueryContext.isForceSequentialMerge(task.getSqlQueryContext());
-    this.workerSketchFetcher = new WorkerSketchFetcher(netClient, forceNonSequentialMerging);
+    ClusterStatisticsMergeMode clusterStatisticsMergeMode = MultiStageQueryContext.getClusterStatisticsMergeMode(task.getSqlQueryContext());
+    this.workerSketchFetcher = new WorkerSketchFetcher(netClient, clusterStatisticsMergeMode);
 
     closer.register(netClient::close);
 
@@ -567,10 +567,12 @@ public class ControllerImpl implements Controller
   }
 
   /**
-   * Provide a {@link WorkerAggregatedKeyStatistics} for shuffling stages.
+   * Accepts a {@link WorkerAggregatedKeyStatistics} and updates the controller aggregated key statistics. If all key
+   * statistics have been gathered, enqueues the task with the {@link WorkerSketchFetcher} to generate key statistics.
+   * This is intended to be called by the {@link org.apache.druid.msq.indexing.ControllerChatHandler}.
    */
   @Override
-  public void updateWorkerReportStatus(int stageNumber, int workerNumber, Object workerStatisticsReport)
+  public void updateAggregatedKeyStatistics(int stageNumber, int workerNumber, Object aggregatedKeyStatisticsObject)
   {
     addToKernelManipulationQueue(
         queryKernel -> {
@@ -584,9 +586,9 @@ public class ControllerImpl implements Controller
               stageDef.getShuffleSpec().get().doesAggregateByClusterKey()
           );
 
-          final WorkerAggregatedKeyStatistics workerReport;
+          final WorkerAggregatedKeyStatistics aggregatedKeyStatistics;
           try {
-            workerReport = mapper.convertValue(workerStatisticsReport, WorkerAggregatedKeyStatistics.class);
+            aggregatedKeyStatistics = mapper.convertValue(aggregatedKeyStatisticsObject, WorkerAggregatedKeyStatistics.class);
           }
           catch (IllegalArgumentException e) {
             throw new IAE(
@@ -597,16 +599,16 @@ public class ControllerImpl implements Controller
             );
           }
 
-          queryKernel.addResultStatisticsReportForStageAndWorker(stageId, workerNumber, workerReport);
+          queryKernel.addResultStatisticsReportForStageAndWorker(stageId, workerNumber, aggregatedKeyStatistics);
 
           if (queryKernel.getStagePhase(stageId).equals(ControllerStagePhase.MERGING_STATISTICS)) {
             List<String> workerTaskIds = workerTaskLauncher.getTaskList();
-            WorkerAggregatedKeyStatistics aggregatedKeyStatistics = queryKernel.getClusterByStatisticsWorkerReport(stageId);
+            WorkerAggregatedKeyStatistics mergedKeyStatistics = queryKernel.getAggregatedKeyStatistics(stageId);
 
             // Queue the sketch fetching task into the worker sketch fetcher.
             CompletableFuture<Either<Long, ClusterByPartitions>> clusterByPartitionsCompletableFuture =
                 workerSketchFetcher.submitFetcherTask(
-                    aggregatedKeyStatistics,
+                    mergedKeyStatistics,
                     workerTaskIds,
                     stageDef
                 );

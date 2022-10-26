@@ -332,9 +332,9 @@ public class ControllerQueryKernel
   }
 
   /**
-   * Delegates call to {@link ControllerStageTracker#getResultPartitionBoundaries()}
+   * Delegates call to {@link ControllerStageTracker#getAggregatedKeyStatistics()}
    */
-  public WorkerAggregatedKeyStatistics getClusterByStatisticsWorkerReport(final StageId stageId)
+  public WorkerAggregatedKeyStatistics getAggregatedKeyStatistics(final StageId stageId)
   {
     return getStageKernelOrThrow(stageId).getAggregatedKeyStatistics();
   }
@@ -403,19 +403,19 @@ public class ControllerQueryKernel
   }
 
   /**
-   * Delegates call to {@link ControllerStageTracker#addStatisticsReportForWorker}.
+   * Delegates call to {@link ControllerStageTracker#addAggregatedStatisticsForWorker}.
    * If calling this causes transition for the stage kernel, then this gets registered in this query kernel
    */
   public void addResultStatisticsReportForStageAndWorker(
       final StageId stageId,
       final int workerNumber,
-      final WorkerAggregatedKeyStatistics workerReport
+      final WorkerAggregatedKeyStatistics aggregatedKeyStatistics
   )
   {
     ControllerStageTracker stageKernel = getStageKernelOrThrow(stageId);
-    ControllerStagePhase newPhase = stageKernel.addStatisticsReportForWorker(
+    ControllerStagePhase newPhase = stageKernel.addAggregatedStatisticsForWorker(
         workerNumber,
-        workerReport
+        aggregatedKeyStatistics
     );
 
     // If the kernel phase has transitioned, we need to account for that.
