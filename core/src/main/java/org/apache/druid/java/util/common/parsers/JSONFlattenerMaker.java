@@ -123,7 +123,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
         }
         targetNode = targetNode.get(keyName);
       }
-      return valueConversionFunction(targetNode);
+      return finalizeConversionForMap(targetNode);
     };
   }
 
