@@ -24,7 +24,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
-import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -54,7 +53,7 @@ public class TaskRealtimeMetricsMonitorTest
     EasyMock.expectLastCall().times(2);
     EasyMock.replay(fireDepartment);
 
-    RealtimeMetricsMonitor monitor = new RealtimeMetricsMonitor(ImmutableList.of(fireDepartment));
+    TaskRealtimeMetricsMonitor monitor = new TaskRealtimeMetricsMonitor(ImmutableList.of(fireDepartment), null, null);
 
     // No emission since the monitor has not begun
     Assert.assertFalse(monitor.monitor(emitter));
@@ -70,6 +69,5 @@ public class TaskRealtimeMetricsMonitorTest
 
     EasyMock.verify(fireDepartment);
   }
-
 }
 
