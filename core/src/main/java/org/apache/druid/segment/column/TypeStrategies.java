@@ -304,6 +304,12 @@ public class TypeStrategies
     }
 
     @Override
+    public Float read(ByteBuffer buffer, int offset)
+    {
+      return buffer.getFloat(offset);
+    }
+
+    @Override
     public boolean readRetainsBufferReference()
     {
       return false;
