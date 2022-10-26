@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.serde;
 
+import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
@@ -36,73 +37,80 @@ import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.column.SpatialIndex;
+import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringValueSetIndex;
-import org.apache.druid.segment.column.Utf8ValueSetIndex;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 
-public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
+public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
 {
   private final BitmapFactory bitmapFactory;
-  private final GenericIndexed<String> dictionary;
-  private final GenericIndexed<ByteBuffer> dictionaryUtf8;
+  private final Supplier<StringEncodingStrategies.Utf8ToStringIndexed> dictionary;
+  private final Supplier<FrontCodedIndexed> utf8Dictionary;
+
   @Nullable
   private final GenericIndexed<ImmutableBitmap> bitmaps;
+
   @Nullable
   private final ImmutableRTree indexedTree;
 
-  public DictionaryEncodedStringIndexSupplier(
+  public StringFrontCodedColumnIndexSupplier(
       BitmapFactory bitmapFactory,
-      GenericIndexed<String> dictionary,
-      GenericIndexed<ByteBuffer> dictionaryUtf8,
+      Supplier<FrontCodedIndexed> utf8Dictionary,
       @Nullable GenericIndexed<ImmutableBitmap> bitmaps,
       @Nullable ImmutableRTree indexedTree
   )
   {
     this.bitmapFactory = bitmapFactory;
-    this.dictionary = dictionary;
-    this.dictionaryUtf8 = dictionaryUtf8;
     this.bitmaps = bitmaps;
+    this.utf8Dictionary = utf8Dictionary;
+    this.dictionary = () -> new StringEncodingStrategies.Utf8ToStringIndexed(this.utf8Dictionary.get());
     this.indexedTree = indexedTree;
   }
 
   @Nullable
   @Override
-  @SuppressWarnings("unchecked")
   public <T> T as(Class<T> clazz)
   {
     if (bitmaps != null) {
-      final Indexed<String> singleThreadedStrings = dictionary.singleThreaded();
-      final Indexed<ByteBuffer> singleThreadedUtf8 = dictionaryUtf8.singleThreaded();
       final Indexed<ImmutableBitmap> singleThreadedBitmaps = bitmaps.singleThreaded();
       if (clazz.equals(NullValueIndex.class)) {
         final BitmapColumnIndex nullIndex;
-        if (NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+        final StringEncodingStrategies.Utf8ToStringIndexed stringDictionary = dictionary.get();
+        if (NullHandling.isNullOrEquivalent(stringDictionary.get(0))) {
           nullIndex = new SimpleImmutableBitmapIndex(bitmaps.get(0));
         } else {
           nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
         }
         return (T) (NullValueIndex) () -> nullIndex;
       } else if (clazz.equals(StringValueSetIndex.class)) {
-        return (T) new IndexedUtf8ValueSetIndex<>(bitmapFactory, singleThreadedUtf8, singleThreadedBitmaps);
-      } else if (clazz.equals(Utf8ValueSetIndex.class)) {
-        return (T) new IndexedUtf8ValueSetIndex<>(bitmapFactory, singleThreadedUtf8, singleThreadedBitmaps);
+        return (T) new IndexedUtf8ValueSetIndex<>(
+            bitmapFactory,
+            utf8Dictionary.get(),
+            singleThreadedBitmaps
+        );
       } else if (clazz.equals(DruidPredicateIndex.class)) {
-        return (T) new IndexedStringDruidPredicateIndex<>(bitmapFactory, singleThreadedStrings, singleThreadedBitmaps);
+        return (T) new IndexedStringDruidPredicateIndex<>(
+            bitmapFactory,
+            dictionary.get(),
+            singleThreadedBitmaps
+        );
       } else if (clazz.equals(LexicographicalRangeIndex.class)) {
+        final FrontCodedIndexed dict = utf8Dictionary.get();
         return (T) new IndexedUtf8LexicographicalRangeIndex<>(
             bitmapFactory,
-            singleThreadedUtf8,
+            dict,
             singleThreadedBitmaps,
-            NullHandling.isNullOrEquivalent(dictionary.get(0))
+            dict.get(0) == null
         );
-      } else if (clazz.equals(DictionaryEncodedStringValueIndex.class) || clazz.equals(DictionaryEncodedValueIndex.class)) {
+      } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
+                 || clazz.equals(DictionaryEncodedValueIndex.class)) {
         return (T) new IndexedStringDictionaryEncodedStringValueIndex<>(
             bitmapFactory,
-            singleThreadedStrings,
+            dictionary.get(),
             bitmaps
         );
       }

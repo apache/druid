@@ -27,6 +27,7 @@ import com.google.common.primitives.Floats;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -45,7 +46,7 @@ import org.apache.druid.segment.data.ColumnarDoubles;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarLongs;
 import org.apache.druid.segment.data.FixedIndexed;
-import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.SingleIndexedInt;
@@ -65,9 +66,11 @@ import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.BitSet;
 
-public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
+public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends Indexed<ByteBuffer>>
+    implements DictionaryEncodedColumn<String>
 {
   private final NestedLiteralTypeInfo.TypeSet types;
   @Nullable
@@ -75,7 +78,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
   private final ColumnarLongs longsColumn;
   private final ColumnarDoubles doublesColumn;
   private final ColumnarInts column;
-  private final GenericIndexed<String> globalDictionary;
+  private final TStringDictionary globalDictionary;
   private final FixedIndexed<Long> globalLongDictionary;
   private final FixedIndexed<Double> globalDoubleDictionary;
   private final FixedIndexed<Integer> dictionary;
@@ -89,7 +92,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
       ColumnarLongs longsColumn,
       ColumnarDoubles doublesColumn,
       ColumnarInts column,
-      GenericIndexed<String> globalDictionary,
+      TStringDictionary globalDictionary,
       FixedIndexed<Long> globalLongDictionary,
       FixedIndexed<Double> globalDoubleDictionary,
       FixedIndexed<Integer> dictionary,
@@ -140,7 +143,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
   {
     final int globalId = dictionary.get(id);
     if (globalId < globalDictionary.size()) {
-      return globalDictionary.get(globalId);
+      return StringUtils.fromUtf8Nullable(globalDictionary.get(globalId));
     } else if (globalId < adjustLongId + globalLongDictionary.size()) {
       return String.valueOf(globalLongDictionary.get(globalId - adjustLongId));
     } else {
@@ -173,10 +176,10 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
         case DOUBLE:
           return globalDoubleDictionary.indexOf(Doubles.tryParse(val));
         default:
-          return globalDictionary.indexOf(val);
+          return globalDictionary.indexOf(StringUtils.toUtf8ByteBuffer(val));
       }
     } else {
-      int candidate = globalDictionary.indexOf(val);
+      int candidate = globalDictionary.indexOf(StringUtils.toUtf8ByteBuffer(val));
       if (candidate < 0) {
         candidate = globalLongDictionary.indexOf(GuavaUtils.tryParseLong(val));
       }
@@ -222,7 +225,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
           return 0f;
         } else if (globalId < adjustLongId) {
           // try to convert string to float
-          Float f = Floats.tryParse(globalDictionary.get(globalId));
+          Float f = Floats.tryParse(StringUtils.fromUtf8(globalDictionary.get(globalId)));
           return f == null ? 0f : f;
         } else if (globalId < adjustDoubleId) {
           return globalLongDictionary.get(globalId - adjustLongId).floatValue();
@@ -242,7 +245,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
           return 0.0;
         } else if (globalId < adjustLongId) {
           // try to convert string to double
-          Double d = Doubles.tryParse(globalDictionary.get(globalId));
+          Double d = Doubles.tryParse(StringUtils.fromUtf8(globalDictionary.get(globalId)));
           return d == null ? 0.0 : d;
         } else if (globalId < adjustDoubleId) {
           return globalLongDictionary.get(globalId - adjustLongId).doubleValue();
@@ -262,7 +265,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
           return 0L;
         } else if (globalId < adjustLongId) {
           // try to convert string to long
-          Long l = GuavaUtils.tryParseLong(globalDictionary.get(globalId));
+          Long l = GuavaUtils.tryParseLong(StringUtils.fromUtf8(globalDictionary.get(globalId)));
           return l == null ? 0L : l;
         } else if (globalId < adjustDoubleId) {
           return globalLongDictionary.get(globalId - adjustLongId);
