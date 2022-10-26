@@ -50,6 +50,10 @@ public class MSQTaskQueryMakerUtils
   /**
    * This method masks the sensitive json keys that might be present in the SQL query matching the regex
    * {@code key(\s)+:(\s)+{sensitive_data}}
+   * The regex pattern matches a json entry of form "key":{value} and replaces it with "key":\<masked\>
+   * It checks the sensitive keys for the match, greedily matches the first occuring brace pair ("{" and "}")
+   * into a regex group named "sensitive" and performs a string replace on the group. The whitespaces are accounted
+   * for in the regex.
    */
   public static String maskSensitiveJsonKeys(String sqlQuery)
   {
