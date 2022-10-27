@@ -138,7 +138,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     );
     Preconditions.checkArgument(
         taskQueueConfig.getMaxSize() < Integer.MAX_VALUE,
-        "The task queue bounds how many concurrent k8s tasks you can have, set it to a resonable value"
+        "The task queue bounds how many concurrent k8s tasks you can have"
     );
   }
 
@@ -146,11 +146,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Optional<InputStream> streamTaskLog(String taskid, long offset)
   {
-    Optional<InputStream> peonLogs = client.getPeonLogs(new K8sTaskId(taskid));
-    if (!peonLogs.isPresent()) {
-      return Optional.absent();
-    }
-    return Optional.of(peonLogs.get());
+    return client.getPeonLogs(new K8sTaskId(taskid));
   }
 
   @Override

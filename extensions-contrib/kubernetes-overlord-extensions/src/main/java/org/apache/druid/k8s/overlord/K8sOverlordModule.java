@@ -19,7 +19,6 @@
 
 package org.apache.druid.k8s.overlord;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.multibindings.MapBinder;
@@ -37,9 +36,6 @@ import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogKiller;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogs;
-
-import java.util.Collections;
-import java.util.List;
 
 public class K8sOverlordModule implements DruidModule
 {
@@ -83,9 +79,4 @@ public class K8sOverlordModule implements DruidModule
     binder.bind(TaskLogKiller.class).to(TaskLogs.class);
   }
 
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.emptyList();
-  }
 }
