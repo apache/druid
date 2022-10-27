@@ -28,6 +28,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 
@@ -123,6 +124,11 @@ public class DataSourceAnalysis
 
       baseQuery = subQuery;
       current = subQuery.getDataSource();
+    }
+
+    while (current instanceof UnnestDataSource) {
+      final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
+      current = unnestDataSource.getBase();
     }
 
     if (current instanceof JoinDataSource) {
