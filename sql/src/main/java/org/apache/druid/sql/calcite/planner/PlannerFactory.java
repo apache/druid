@@ -115,7 +115,7 @@ public class PlannerFactory
         plannerConfig,
         rootSchema,
         engine,
-        queryContext
+        queryContext,
         joinableFactoryWrapper
     );
 

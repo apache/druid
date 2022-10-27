@@ -88,8 +88,8 @@ class ExpressionTestHelper
               NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
           )
       ),
-      null /* Don't need engine */,
-      Collections.emptyMap()
+      null, /* Don't need engine */
+      Collections.emptyMap(),
       JOINABLE_FACTORY_WRAPPER
   );
 

@@ -95,8 +95,8 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
               NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
           )
       ),
-      null /* Don't need an engine */,
-      Collections.emptyMap()
+      null, /* Don't need an engine */
+      Collections.emptyMap(),
       CalciteTests.createJoinableFactoryWrapper()
   );
 

@@ -112,7 +112,7 @@ public class PlannerContext
       final boolean stringifyArrays,
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
-      final Map<String, Object> queryContext
+      final Map<String, Object> queryContext,
       final JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
@@ -144,13 +144,8 @@ public class PlannerContext
       final PlannerConfig plannerConfig,
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
-<<<<<<< HEAD
-      final Map<String, Object> queryContext
-=======
       final Map<String, Object> queryContext,
-      final Set<String> contextKeys,
       final JoinableFactoryWrapper joinableFactoryWrapper
->>>>>>> master
   )
   {
     final DateTime utcNow;
@@ -189,13 +184,8 @@ public class PlannerContext
         stringifyArrays,
         rootSchema,
         engine,
-<<<<<<< HEAD
-        queryContext
-=======
         queryContext,
-        contextKeys,
         joinableFactoryWrapper
->>>>>>> master
     );
   }
 
