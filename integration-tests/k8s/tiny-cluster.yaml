@@ -205,7 +205,7 @@ spec:
         # k8s options
         druid.indexer.runner.type=${TASK_MODE}
         druid.indexer.runner.namespace=${NAMESPACE}
-        druid.indexer.task.enableTaskLevelLogPush=true
+        druid.indexer.task.encapsulatedTask=true
         druid.indexer.runner.javaOptsArray=["-server -Xms128m -Xmx128m -XX:MaxDirectMemorySize=256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Djava.io.tmpdir=/druid/data/tmp -XX:+ExitOnOutOfMemoryError -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"]
         druid.indexer.task.baseTaskDir=/druid/data/baseTaskDir
         druid.indexer.fork.property.druid.processing.buffer.sizeBytes=25000000
