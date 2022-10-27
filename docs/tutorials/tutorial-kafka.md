@@ -256,15 +256,22 @@ To submit a supervisor spec using the Druid console:
 
 You can also use the Druid API to submit a supervisor spec:
 
-1. Run the following command from your Druid root directory to submit the spec in the `kttm-kafka-supervisor.json` file:
+1. Run the following command from your Druid root directory to download the sample data file:
+
+   ```bash
+   curl -O https://druid.apache.org/data/kttm-kafka-supervisor.json.gz
+   tar -xzf kttm-kafka-supervisor.json.gz
+   ```
+
+2. Run the following command to submit the spec in the `kttm-kafka-supervisor.json` file:
 
     ```bash
-    curl -XPOST -H 'Content-Type: application/json' -d @quickstart/tutorial/kttm-kafka-supervisor.json http://localhost:8081/druid/indexer/v1/supervisor
+    curl -XPOST -H 'Content-Type: application/json' kttm-kafka-supervisor.json http://localhost:8081/druid/indexer/v1/supervisor
     ```
 
     After Druid successfully creates the supervisor, you get a response containing the supervisor ID: `{"id":"kttm-kafka-supervisor-api"}`.
 
-2. Click **Tasks** on the console home page to monitor the status of the job. This spec writes the data in the `kttm` topic to a datasource named `kttm-kafka-supervisor-api`.
+3. Click **Tasks** on the console home page to monitor the status of the job. This spec writes the data in the `kttm` topic to a datasource named `kttm-kafka-supervisor-api`.
 
 ## Query your data
 
