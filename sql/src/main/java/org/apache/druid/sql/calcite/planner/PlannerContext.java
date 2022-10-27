@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
@@ -48,7 +49,6 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +78,7 @@ public class PlannerContext
   private final String sql;
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final ObjectMapper jsonMapper;
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
@@ -112,6 +113,7 @@ public class PlannerContext
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
       final Map<String, Object> queryContext
+      final JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
     this.sql = sql;
@@ -124,6 +126,7 @@ public class PlannerContext
     this.queryContext = queryContext;
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
+    this.joinableFactoryWrapper = joinableFactoryWrapper;
 
     String sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
@@ -141,7 +144,13 @@ public class PlannerContext
       final PlannerConfig plannerConfig,
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
+<<<<<<< HEAD
       final Map<String, Object> queryContext
+=======
+      final Map<String, Object> queryContext,
+      final Set<String> contextKeys,
+      final JoinableFactoryWrapper joinableFactoryWrapper
+>>>>>>> master
   )
   {
     final DateTime utcNow;
@@ -180,7 +189,13 @@ public class PlannerContext
         stringifyArrays,
         rootSchema,
         engine,
+<<<<<<< HEAD
         queryContext
+=======
+        queryContext,
+        contextKeys,
+        joinableFactoryWrapper
+>>>>>>> master
     );
   }
 
@@ -212,6 +227,11 @@ public class PlannerContext
   public DateTimeZone getTimeZone()
   {
     return localNow.getZone();
+  }
+
+  public JoinableFactoryWrapper getJoinableFactoryWrapper()
+  {
+    return joinableFactoryWrapper;
   }
 
   @Nullable

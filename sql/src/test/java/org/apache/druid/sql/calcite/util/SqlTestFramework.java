@@ -373,7 +373,8 @@ public class SqlTestFramework
         authorizerMapper,
         queryJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        CalciteTests.createJoinableFactoryWrapper()
     );
     final SqlStatementFactory sqlStatementFactory = QueryFrameworkUtils.createSqlStatementFactory(
         engine,
