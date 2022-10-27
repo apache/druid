@@ -76,7 +76,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         null,
         null,
         null,
-        null,
         null
     );
   }
