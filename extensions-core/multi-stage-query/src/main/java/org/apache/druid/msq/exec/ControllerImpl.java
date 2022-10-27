@@ -1813,12 +1813,13 @@ public class ControllerImpl implements Controller
       MSQWorkerTaskLauncher taskLauncher
   )
   {
-    int pendingTasks = 0;
+    int pendingTasks = -1;
     int runningTasks = 1;
 
     if (taskLauncher != null) {
-      pendingTasks = taskLauncher.getPendingWorkerTasks();
-      runningTasks = taskLauncher.getRunningWorkerTasks() + 1; // To account for controller.
+      Pair<Integer, Integer> workerTaskStatus = taskLauncher.getWorkerTaskStatus();
+      pendingTasks = workerTaskStatus.lhs;
+      runningTasks = workerTaskStatus.rhs + 1; // To account for controller.
     }
     return new MSQStatusReport(
         taskState,

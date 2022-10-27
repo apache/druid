@@ -30,6 +30,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -346,22 +347,15 @@ public class MSQWorkerTaskLauncher
   }
 
   /**
-   * Returns the number of worker tasks that are not yet fully started.
+   * Returns a pair which contains the number of currently running worker tasks and the number of worker tasks that are
+   * not yet fully started as left and right respectively.
    */
-  public int getPendingWorkerTasks()
+  public Pair<Integer, Integer> getWorkerTaskStatus()
   {
     synchronized (taskIds) {
-      return desiredTaskCount - getRunningWorkerTasks();
-    }
-  }
-
-  /**
-   * Returns the number of fully started worker tasks.
-   */
-  public int getRunningWorkerTasks()
-  {
-    synchronized (taskIds) {
-      return fullyStartedTasks.size();
+      int runningTasks = fullyStartedTasks.size();
+      int pendingTasks = desiredTaskCount - runningTasks;
+      return Pair.of(runningTasks, pendingTasks);
     }
   }
 
