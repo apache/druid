@@ -20,6 +20,8 @@
 package org.apache.druid.server.http.catalog;
 
 import org.apache.druid.catalog.http.CatalogResource;
+import org.apache.druid.catalog.http.HideColumns;
+import org.apache.druid.catalog.http.MoveColumn;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableId;
@@ -30,8 +32,6 @@ import org.apache.druid.catalog.model.table.InlineTableDefn;
 import org.apache.druid.catalog.model.table.InputFormats;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.CatalogTests;
-import org.apache.druid.catalog.storage.HideColumns;
-import org.apache.druid.catalog.storage.MoveColumn;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.junit.After;
 import org.junit.Before;

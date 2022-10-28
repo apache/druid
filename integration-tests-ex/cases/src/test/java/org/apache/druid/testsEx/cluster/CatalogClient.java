@@ -23,11 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.catalog.http.CatalogResource;
+import org.apache.druid.catalog.http.HideColumns;
+import org.apache.druid.catalog.http.MoveColumn;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
-import org.apache.druid.catalog.storage.HideColumns;
-import org.apache.druid.catalog.storage.MoveColumn;
 import org.apache.druid.java.util.common.StringUtils;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 

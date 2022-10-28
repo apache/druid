@@ -8,11 +8,9 @@ import org.apache.druid.catalog.model.SchemaRegistry.SchemaSpec;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
-import org.apache.druid.catalog.storage.Actions;
 import org.apache.druid.catalog.storage.CatalogStorage;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -99,7 +97,9 @@ public class CatalogResource2
   {
     try {
       final SchemaSpec schema = validateSchema(dbSchema, true);
-      validateTable(schema, name, spec, req);
+      validateTableName(name);
+      authorizeTable(schema, name, Action.WRITE, req);
+      validateTableSpec(schema, name, spec);
       final TableMetadata table = TableMetadata.newTable(TableId.of(dbSchema, name), spec);
       try {
         catalog.validate(table);
@@ -201,42 +201,65 @@ public class CatalogResource2
   }
 
   // ---------------------------------------------------------------------
+  // Modify a table within the catalog
+
+  @POST
+  @Path("/edit/tables/{dbSchema}/{name}")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response editTable(
+      @PathParam("dbSchema") String dbSchema,
+      @PathParam("name") String name,
+      TableEditRequest editRequest,
+      @Context final HttpServletRequest req
+  )
+  {
+    try {
+      final SchemaSpec schema = validateSchema(dbSchema, true);
+      authorizeTable(schema, name, Action.WRITE, req);
+      final long newVersion = new TableEditor(catalog, TableId.of(dbSchema, name), editRequest).go();
+      return okWithVersion(newVersion);
+    }
+    catch (CatalogException e)
+    {
+      return e.toResponse();
+    }
+  }
+
+
+  // ---------------------------------------------------------------------
   // Helper methods
 
-  private void validateTable(SchemaSpec schema, String name, TableSpec spec, final HttpServletRequest req) throws CatalogException
+  private void validateTableName(String name) throws CatalogException
   {
-    // Table name can't be blank or have leading/trailing spaces
-    if (Strings.isNullOrEmpty(name)) {
-      throw CatalogException.badRequest("Table name is required");
+    try {
+      IdUtils.validateId("table", name);
+    }
+    catch (Exception e) {
+      throw CatalogException.badRequest(e.getMessage());
     }
     if (!name.equals(name.trim())) {
       throw CatalogException.badRequest("Table name cannot start or end with spaces");
     }
+  }
 
-    // The user has to have permission to modify the table.
-    authorizeTable(schema, name, Action.WRITE, req);
-
-    // Validate the spec, if provided.
-    if (spec != null) {
-
-      // The given table spec has to be valid for the given schema.
-      try {
-        spec.validate();
-      }
-      catch (IAE e) {
-        throw CatalogException.badRequest(e.getMessage());
-      }
-
-      if (!schema.accepts(spec.type())) {
-        throw CatalogException.badRequest(
-            "Cannot create tables of type %s in schema %s",
-            spec.type(),
-            schema.name()
-        );
-      }
+  private void validateTableSpec(SchemaSpec schema, String name, TableSpec spec) throws CatalogException
+  {
+    // The given table spec has to be valid for the given schema.
+    try {
+      spec.validate();
+    }
+    catch (IAE e) {
+      throw CatalogException.badRequest(e.getMessage());
     }
 
-    // Everything checks out, let the request proceed.
+    if (!schema.accepts(spec.type())) {
+      throw CatalogException.badRequest(
+          "Cannot create tables of type %s in schema %s",
+          spec.type(),
+          schema.name()
+      );
+    }
   }
 
   private SchemaSpec validateSchema(String dbSchema, boolean forWrite) throws CatalogException

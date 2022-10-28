@@ -97,7 +97,7 @@ public class ObjectDefn
    * This method does not validate the properties, except as needed to do a
    * merge. A separate validation step is done on the final, merged object.
    */
-  protected Map<String, Object> mergeProperties(
+  public Map<String, Object> mergeProperties(
       final Map<String, Object> source,
       final Map<String, Object> update
   )

@@ -17,23 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.catalog.storage;
+package org.apache.druid.catalog.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.catalog.model.ColumnSpec;
-import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 /**
  * JSON payload for the reorder column API.
  */
-public class MoveColumn
+public class MoveColumn extends TableEditRequest
 {
   public enum Position
   {
@@ -62,55 +58,6 @@ public class MoveColumn
     this.where = where;
     this.anchor = anchor;
   }
-
-  public List<ColumnSpec> perform(List<ColumnSpec> columns)
-  {
-    List<ColumnSpec> revised = new ArrayList<>(columns);
-    final int colPosn = findColumn(columns, column);
-    if (colPosn == -1) {
-      throw new ISE("Column [%s] is not defined", column);
-    }
-    int anchorPosn;
-    if (where == Position.BEFORE || where == Position.AFTER) {
-      anchorPosn = findColumn(columns, anchor);
-      if (anchorPosn == -1) {
-        throw new ISE("Anchor [%s] is not defined", column);
-      }
-      if (anchorPosn > colPosn) {
-        anchorPosn--;
-      }
-    } else {
-      anchorPosn = -1;
-    }
-
-    ColumnSpec col = revised.remove(colPosn);
-    switch (where) {
-      case FIRST:
-        revised.add(0, col);
-        break;
-      case LAST:
-        revised.add(col);
-        break;
-      case BEFORE:
-        revised.add(anchorPosn, col);
-        break;
-      case AFTER:
-        revised.add(anchorPosn + 1, col);
-        break;
-    }
-    return revised;
-  }
-
-  private static int findColumn(List<ColumnSpec> columns, String colName)
-  {
-    for (int i = 0; i < columns.size(); i++) {
-      if (columns.get(i).name().equals(colName)) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
 
   @Override
   public boolean equals(Object o)

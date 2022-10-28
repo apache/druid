@@ -20,12 +20,10 @@
 package org.apache.druid.catalog.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 
 import java.util.Objects;
 
@@ -89,7 +87,7 @@ public class TableMetadata
 
   public static TableMetadata newTable(
       TableId id,
-      TableSpec defn
+      TableSpec spec
   )
   {
     return new TableMetadata(
@@ -97,7 +95,7 @@ public class TableMetadata
         0,
         0,
         TableState.ACTIVE,
-        defn
+        spec
     );
   }
 
@@ -109,6 +107,31 @@ public class TableMetadata
     return newTable(
         TableId.datasource(name),
         defn);
+  }
+
+  public static TableMetadata of(
+      TableId id,
+      TableSpec spec
+  )
+  {
+    return new TableMetadata(
+        id,
+        0,
+        0,
+        TableState.ACTIVE,
+        spec
+    );
+  }
+
+  public static TableMetadata forUpdate(TableId id, long updateTime, TableSpec spec)
+  {
+    return new TableMetadata(
+        id,
+        0,
+        updateTime,
+        TableState.ACTIVE,
+        spec
+    );
   }
 
   public TableMetadata fromInsert(long updateTime)

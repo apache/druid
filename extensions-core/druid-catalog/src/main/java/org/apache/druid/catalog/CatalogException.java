@@ -11,6 +11,7 @@ public class CatalogException extends Exception
   public static final String FAILED_ERROR = "Failed";
   public static final String INVALID_ERROR = "Invalid";
   public static final String NOT_FOUND_ERROR = "Not found";
+  public static final String BAD_STATE = "Invalid table spec";
 
   public static final String ERROR_KEY = "error";
   public static final String ERR_MSG_KEY = "errorMessage";

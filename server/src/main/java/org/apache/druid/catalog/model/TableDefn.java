@@ -139,7 +139,7 @@ public class TableDefn extends ObjectDefn
    * the column does not exist, then the new column is appended to the existing
    * list. This merge operation cannot remove columns or change order.
    */
-  private List<ColumnSpec> mergeColumns(List<ColumnSpec> columns, List<ColumnSpec> update)
+  public List<ColumnSpec> mergeColumns(List<ColumnSpec> columns, List<ColumnSpec> update)
   {
     if (update == null || update.isEmpty()) {
       return columns;

@@ -26,6 +26,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
 import org.apache.druid.catalog.model.ColumnSpec;
@@ -33,6 +34,7 @@ import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.storage.MetadataStorageManager;
+import org.apache.druid.catalog.storage.sql.UpdateEvent.EventType;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -47,14 +49,11 @@ import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.function.Function;
 
 @ManageLifecycle
 public class SQLCatalogManager implements CatalogManager
@@ -237,11 +236,11 @@ public class SQLCatalogManager implements CatalogManager
   public long replace(TableMetadata table) throws NotFoundException
   {
     try {
-      return dbi.withHandle(
-          new HandleCallback<Long>()
+      final TableMetadata revised = dbi.withHandle(
+          new HandleCallback<TableMetadata>()
           {
             @Override
-            public Long withHandle(Handle handle) throws NotFoundException
+            public TableMetadata withHandle(Handle handle) throws NotFoundException
             {
               final TableId id = table.id();
               final TableSpec spec = table.spec();
@@ -258,11 +257,12 @@ public class SQLCatalogManager implements CatalogManager
               if (updateCount == 0) {
                 throw tableNotFound(id);
               }
-              sendUpdate(id);
-              return updateTime;
+              return table.fromInsert(updateTime);
             }
           }
       );
+      sendUpdate(EventType.UPDATE, revised);
+      return table.updateTime();
     }
     catch (CallbackFailedException e) {
       if (e.getCause() instanceof NotFoundException) {
@@ -280,11 +280,11 @@ public class SQLCatalogManager implements CatalogManager
   public long update(TableMetadata table, long oldVersion) throws NotFoundException
   {
     try {
-      return dbi.withHandle(
-          new HandleCallback<Long>()
+      final TableMetadata revised = dbi.withHandle(
+          new HandleCallback<TableMetadata>()
           {
             @Override
-            public Long withHandle(Handle handle) throws NotFoundException
+            public TableMetadata withHandle(Handle handle) throws NotFoundException
             {
               final TableId id = table.id();
               final TableSpec spec = table.spec();
@@ -305,11 +305,12 @@ public class SQLCatalogManager implements CatalogManager
                     id.sqlName()
                 );
               }
-              sendUpdate(id);
-              return updateTime;
+              return table.asUpdate(updateTime);
             }
           }
       );
+      sendUpdate(EventType.UPDATE, revised);
+      return table.updateTime();
     }
     catch (CallbackFailedException e) {
       if (e.getCause() instanceof NotFoundException) {
@@ -320,7 +321,7 @@ public class SQLCatalogManager implements CatalogManager
   }
 
   private static final String SELECT_TABLE_PROPERTIES_STMT =
-      "SELECT properties\n" +
+      "SELECT tableType, properties\n" +
       "FROM %s\n" +
       "WHERE schemaName = :schemaName\n" +
       "  AND name = :name\n" +
@@ -335,15 +336,15 @@ public class SQLCatalogManager implements CatalogManager
   @Override
   public long updateProperties(
       final TableId id,
-      final Function<Map<String, Object>, Map<String, Object>> transform
-  ) throws NotFoundException
+      final TableTransform transform
+  ) throws CatalogException
   {
     try {
-      return dbi.withHandle(
-          new HandleCallback<Long>()
+      final TableMetadata result = dbi.withHandle(
+          new HandleCallback<TableMetadata>()
           {
             @Override
-            public Long withHandle(Handle handle) throws NotFoundException
+            public TableMetadata withHandle(Handle handle) throws CatalogException
             {
               handle.begin();
               try {
@@ -353,17 +354,28 @@ public class SQLCatalogManager implements CatalogManager
                     .bind("schemaName", id.schema())
                     .bind("name", id.name());
 
-                final ResultIterator<Map<String, Object>> resultIterator = query
-                      .map((index, r, ctx) -> propertiesFromBytes(jsonMapper, r.getBytes(1)))
+                final ResultIterator<TableSpec> resultIterator = query
+                      .map((index, r, ctx) ->
+                          tableSpecFromBytes(
+                              jsonMapper,
+                              r.getString(1),
+                              r.getBytes(2),
+                              null
+                          )
+                       )
                       .iterator();
-                final Map<String, Object> properites;
+                final TableSpec tableSpec;
                 if (resultIterator.hasNext()) {
-                  properites = resultIterator.next();
+                  tableSpec = resultIterator.next();
                 } else {
                   handle.rollback();
                   throw tableNotFound(id);
                 }
-                final Map<String, Object> revised = transform.apply(properites);
+                final TableSpec revised = transform.apply(TableMetadata.of(id, tableSpec));
+                if (revised == null) {
+                  handle.rollback();
+                  return null;
+                }
                 final long updateTime = System.currentTimeMillis();
                 final int updateCount = handle
                     .createStatement(statement(UPDATE_TABLE_PROPERTIES_STMT))
@@ -377,8 +389,7 @@ public class SQLCatalogManager implements CatalogManager
                   throw new ISE("Table %s: not found", id.sqlName());
                 }
                 handle.commit();
-                sendUpdate(id);
-                return updateTime;
+                return TableMetadata.forUpdate(id, updateTime, revised);
               }
               catch (RuntimeException e) {
                 handle.rollback();
@@ -387,6 +398,11 @@ public class SQLCatalogManager implements CatalogManager
             }
           }
       );
+      if (result == null) {
+        return 0;
+      }
+      sendUpdate(EventType.PROPERTY_UPDATE, result);
+      return result.updateTime();
     }
     catch (CallbackFailedException e) {
       if (e.getCause() instanceof NotFoundException) {
@@ -397,7 +413,7 @@ public class SQLCatalogManager implements CatalogManager
   }
 
   private static final String SELECT_COLUMNS_STMT =
-      "SELECT columns\n" +
+      "SELECT tableType, columns\n" +
       "FROM %s\n" +
       "WHERE schemaName = :schemaName\n" +
       "  AND name = :name\n" +
@@ -412,15 +428,15 @@ public class SQLCatalogManager implements CatalogManager
   @Override
   public long updateColumns(
       final TableId id,
-      final Function<List<ColumnSpec>, List<ColumnSpec>> transform
+      final TableTransform transform
   ) throws NotFoundException
   {
     try {
-      return dbi.withHandle(
-          new HandleCallback<Long>()
+      final TableMetadata result = dbi.withHandle(
+          new HandleCallback<TableMetadata>()
           {
             @Override
-            public Long withHandle(Handle handle) throws NotFoundException
+            public TableMetadata withHandle(Handle handle) throws CatalogException
             {
               handle.begin();
               try {
@@ -430,17 +446,28 @@ public class SQLCatalogManager implements CatalogManager
                     .bind("schemaName", id.schema())
                     .bind("name", id.name());
 
-                final ResultIterator<List<ColumnSpec>> resultIterator = query
-                      .map((index, r, ctx) -> columnsFromBytes(jsonMapper, r.getBytes(1)))
+                final ResultIterator<TableSpec> resultIterator = query
+                      .map((index, r, ctx) ->
+                          tableSpecFromBytes(
+                              jsonMapper,
+                              r.getString(1),
+                              null,
+                              r.getBytes(2)
+                          )
+                       )
                       .iterator();
-                final List<ColumnSpec> columns;
+                final TableSpec tableSpec;
                 if (resultIterator.hasNext()) {
-                  columns = resultIterator.next();
+                  tableSpec = resultIterator.next();
                 } else {
                   handle.rollback();
                   throw tableNotFound(id);
                 }
-                final List<ColumnSpec>  revised = transform.apply(columns);
+                final TableSpec revised = transform.apply(TableMetadata.of(id, tableSpec));
+                if (revised == null) {
+                  handle.rollback();
+                  return null;
+                }
                 final long updateTime = System.currentTimeMillis();
                 final int updateCount = handle
                     .createStatement(statement(UPDATE_COLUMNS_STMT))
@@ -454,8 +481,7 @@ public class SQLCatalogManager implements CatalogManager
                   throw new ISE("Table %s: not found", id.sqlName());
                 }
                 handle.commit();
-                sendUpdate(id);
-                return updateTime;
+                return TableMetadata.forUpdate(id, updateTime, revised);
               }
               catch (RuntimeException e) {
                 handle.rollback();
@@ -464,6 +490,11 @@ public class SQLCatalogManager implements CatalogManager
             }
           }
       );
+      if (result == null) {
+        return 0;
+      }
+      sendUpdate(EventType.COLUMNS_UPDATE, result);
+      return result.updateTime();
     }
     catch (CallbackFailedException e) {
       if (e.getCause() instanceof NotFoundException) {
@@ -645,27 +676,26 @@ public class SQLCatalogManager implements CatalogManager
     if (listeners.isEmpty()) {
       return;
     }
-    TableMetadata newTable = table.fromInsert(updateTime);
-    for (Listener listener : listeners) {
-      listener.added(newTable);
-    }
+    sendEvent(new UpdateEvent(EventType.CREATE, table.fromInsert(updateTime)));
   }
 
-  protected synchronized void sendUpdate(TableId id)
+  protected synchronized void sendUpdate(EventType eventType, TableMetadata table)
   {
     if (listeners.isEmpty()) {
       return;
     }
-    TableMetadata updatedTable = read(id);
-    for (Listener listener : listeners) {
-      listener.updated(updatedTable);
-    }
+    sendEvent(new UpdateEvent(eventType, table));
   }
 
-  protected synchronized void sendDeletion(TableId id)
+  protected void sendDeletion(TableId id)
+  {
+    sendEvent(new UpdateEvent(EventType.DELETE, id));
+  }
+
+  protected synchronized void sendEvent(UpdateEvent event)
   {
     for (Listener listener : listeners) {
-      listener.deleted(id);
+      listener.delta(event);
     }
   }
 
@@ -730,8 +760,8 @@ public class SQLCatalogManager implements CatalogManager
   {
     return new TableSpec(
         type,
-        propertiesFromBytes(jsonMapper, properties),
-        columnsFromBytes(jsonMapper, columns)
+        properties == null ? null : propertiesFromBytes(jsonMapper, properties),
+        columns == null ? null : columnsFromBytes(jsonMapper, columns)
     );
   }
 

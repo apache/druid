@@ -20,14 +20,14 @@
 package org.apache.druid.testsEx.catalog;
 
 import com.google.inject.Inject;
+import org.apache.druid.catalog.http.HideColumns;
+import org.apache.druid.catalog.http.MoveColumn;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
-import org.apache.druid.catalog.storage.HideColumns;
-import org.apache.druid.catalog.storage.MoveColumn;
 import org.apache.druid.testsEx.categories.Catalog;
 import org.apache.druid.testsEx.cluster.CatalogClient;
 import org.apache.druid.testsEx.cluster.DruidClusterClient;

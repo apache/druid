@@ -19,13 +19,13 @@
 
 package org.apache.druid.catalog.storage.sql;
 
+import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
-
-import javax.annotation.Nullable;
+import org.apache.druid.catalog.model.TableSpec;
 
 import java.util.List;
 import java.util.Map;
@@ -49,20 +49,12 @@ public interface CatalogManager
    */
   interface Listener
   {
-    /**
-     * A new catalog table entry was added.
-     */
-    void added(TableMetadata table);
+    void delta(UpdateEvent event);
+  }
 
-    /**
-     * An existing catalog table entry was updated.
-     */
-    void updated(TableMetadata table);
-
-    /**
-     * An existing catalog table entry was deleted.
-     */
-    void deleted(TableId id);
+  public interface TableTransform
+  {
+    TableSpec apply(TableMetadata spec) throws CatalogException;
   }
 
   /**
@@ -120,8 +112,8 @@ public interface CatalogManager
    * @param transform the transform to apply to the table properties
    * @return          the update timestamp (version) of the updated record
    */
-  long updateProperties(TableId id, Function<Map<String, Object>, Map<String, Object>> transform) throws NotFoundException;
-  long updateColumns(TableId id, Function<List<ColumnSpec>, List<ColumnSpec>> transform) throws NotFoundException;
+  long updateProperties(TableId id, TableTransform transform) throws CatalogException;
+  long updateColumns(TableId id, TableTransform transform) throws CatalogException;
 
   /**
    * Move the table to the deleting state. No version check: fine

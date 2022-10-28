@@ -20,12 +20,12 @@
 package org.apache.druid.server.http.catalog;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.catalog.http.HideColumns;
+import org.apache.druid.catalog.http.MoveColumn;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.table.TableBuilder;
-import org.apache.druid.catalog.storage.HideColumns;
-import org.apache.druid.catalog.storage.MoveColumn;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.junit.Test;
 
