@@ -33,25 +33,21 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-
 public class UnnestDataSource implements DataSource
 {
   private final DataSource base;
   private final String column;
-  private final boolean dedup;
   private final String outputName;
 
 
   private UnnestDataSource(
       DataSource dataSource,
       String columnName,
-      String outputName,
-      boolean dedup
+      String outputName
   )
   {
     this.base = dataSource;
     this.column = columnName;
-    this.dedup = dedup;
     this.outputName = outputName;
   }
 
@@ -62,11 +58,10 @@ public class UnnestDataSource implements DataSource
   public static UnnestDataSource create(
       @JsonProperty("base") DataSource base,
       @JsonProperty("column") String columnName,
-      @JsonProperty("dedup") boolean dedup,
       @JsonProperty("outputName") String outputName
   )
   {
-    return new UnnestDataSource(base, columnName, outputName, dedup);
+    return new UnnestDataSource(base, columnName, outputName);
   }
 
   @JsonProperty("base")
@@ -79,12 +74,6 @@ public class UnnestDataSource implements DataSource
   public String getColumn()
   {
     return column;
-  }
-
-  @JsonProperty("dedup")
-  public boolean getDedup()
-  {
-    return dedup;
   }
 
   @JsonProperty("outputName")
@@ -111,7 +100,7 @@ public class UnnestDataSource implements DataSource
     if (children.size() != 1) {
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
-    return new UnnestDataSource(children.get(0), column, outputName, dedup);
+    return new UnnestDataSource(children.get(0), column, outputName);
   }
 
   @Override
@@ -150,8 +139,7 @@ public class UnnestDataSource implements DataSource
                 new UnnestSegmentReference(
                     baseSegment,
                     column,
-                    outputName,
-                    dedup
+                    outputName
                 );
           }
         }
@@ -183,14 +171,13 @@ public class UnnestDataSource implements DataSource
     UnnestDataSource that = (UnnestDataSource) o;
     return column.equals(that.column)
            && outputName.equals(that.outputName)
-           && dedup == that.dedup
            && base.equals(that.base);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(base, column, dedup, outputName);
+    return Objects.hash(base, column, outputName);
   }
 }
 

@@ -50,7 +50,6 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   private static List<StorageAdapter> ADAPTERS;
   private static String COLUMNNAME = "multi-string1";
   private static String OUTPUT_COLUMN_NAME = "unnested-multi-string1";
-  private static boolean DEDUP = false;
 
   @BeforeClass
   public static void setup()
@@ -75,8 +74,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     UNNEST_STORAGE_ADAPTER = new UnnestStorageAdapter(
         INCREMENTAL_INDEX_STORAGE_ADAPTER,
         COLUMNNAME,
-        OUTPUT_COLUMN_NAME,
-        DEDUP
+        OUTPUT_COLUMN_NAME
     );
     ADAPTERS = ImmutableList.of(UNNEST_STORAGE_ADAPTER);
   }

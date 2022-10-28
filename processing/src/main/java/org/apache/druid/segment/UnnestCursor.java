@@ -42,14 +42,13 @@ public class UnnestCursor implements Cursor
   private final ColumnValueSelector columnValueSelector;
   private final String columnName;
   private final String outputName;
-  private final boolean dedup;
   private int index;
   private Object currentVal;
   private IndexedInts pos;
   private List<Object> unnestList;
   private boolean needInitialization;
 
-  public UnnestCursor(Cursor cursor, String columnName, String outputColumnName, boolean dedup)
+  public UnnestCursor(Cursor cursor, String columnName, String outputColumnName)
   {
     this.baseCursor = cursor;
     this.baseColumSelectorFactory = cursor.getColumnSelectorFactory();
@@ -58,7 +57,6 @@ public class UnnestCursor implements Cursor
     this.columnName = columnName;
     this.index = 0;
     this.outputName = outputColumnName;
-    this.dedup = dedup;
     this.needInitialization = true;
   }
 
@@ -70,7 +68,7 @@ public class UnnestCursor implements Cursor
       @Override
       public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
       {
-         if (!outputName.equals(dimensionSpec.getDimension())) {
+        if (!outputName.equals(dimensionSpec.getDimension())) {
           return baseColumSelectorFactory.makeDimensionSelector(dimensionSpec);
         }
 
@@ -262,17 +260,19 @@ public class UnnestCursor implements Cursor
       index = 0;
       baseCursor.advance();
       // get the next row
-      if(!baseCursor.isDone()) {
+      if (!baseCursor.isDone()) {
         currentVal = columnValueSelector.getObject();
-        if (currentVal instanceof List) {
-          //convert array into array list
-          unnestList = (List<Object>) currentVal;
-        } else if (currentVal instanceof String) {
-          unnestList = new ArrayList<>();
-          unnestList.add(currentVal);
-        } else if (currentVal == null) {
+        if (currentVal == null) {
           unnestList = new ArrayList<>();
           unnestList.add(null);
+        } else {
+          if (currentVal instanceof List) {
+            //convert array into array list
+            unnestList = (List<Object>) currentVal;
+          } else if (currentVal instanceof String) {
+            unnestList = new ArrayList<>();
+            unnestList.add(currentVal);
+          }
         }
       }
     } else {
@@ -283,14 +283,13 @@ public class UnnestCursor implements Cursor
   private boolean checkIfDimensionSelectorAndAdvance()
   {
     if (this.dimSelector != null && pos != null) {
-      if (index >= pos.size()-1){
-        if(!baseCursor.isDone()) {
+      if (index >= pos.size() - 1) {
+        if (!baseCursor.isDone()) {
           baseCursor.advanceUninterruptibly();
           pos = dimSelector.getRow();
         }
         index = 0;
-      }
-      else{
+      } else {
         ++index;
       }
       return true;
@@ -308,10 +307,15 @@ public class UnnestCursor implements Cursor
     if (columnValueSelector != null) {
       this.currentVal = this.columnValueSelector.getObject();
       this.unnestList = new ArrayList<>();
-      if (currentVal instanceof List) {
-        unnestList = (List<Object>) currentVal;
-      } else if (currentVal.getClass().equals(String.class)) {
-        unnestList.add(currentVal);
+      if (currentVal == null) {
+        unnestList = new ArrayList<>();
+        unnestList.add(null);
+      } else {
+        if (currentVal instanceof List) {
+          unnestList = (List<Object>) currentVal;
+        } else if (currentVal.getClass().equals(String.class)) {
+          unnestList.add(currentVal);
+        }
       }
     }
     needInitialization = false;
@@ -336,6 +340,7 @@ public class UnnestCursor implements Cursor
   public void reset()
   {
     index = 0;
+    needInitialization = true;
     baseCursor.reset();
   }
 

@@ -36,14 +36,12 @@ public class UnnestSegmentReference implements SegmentReference
 
   private final SegmentReference baseSegment;
   private final String dimension;
-  private final boolean dedup;
   private final String renamedOutputDimension;
 
-  public UnnestSegmentReference(SegmentReference baseSegment, String dimension, String outputName, boolean dedup)
+  public UnnestSegmentReference(SegmentReference baseSegment, String dimension, String outputName)
   {
     this.baseSegment = baseSegment;
     this.dimension = dimension;
-    this.dedup = dedup;
     this.renamedOutputDimension = outputName;
   }
 
@@ -97,8 +95,7 @@ public class UnnestSegmentReference implements SegmentReference
     return new UnnestStorageAdapter(
         baseSegment.asStorageAdapter(),
         dimension,
-        renamedOutputDimension,
-        dedup
+        renamedOutputDimension
     );
   }
 

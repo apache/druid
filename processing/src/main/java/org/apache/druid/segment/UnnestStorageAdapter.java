@@ -39,20 +39,17 @@ public class UnnestStorageAdapter implements StorageAdapter
 {
   private final StorageAdapter baseAdapter;
   private final String dimensionToUnnest;
-  private final boolean dedup;
   private final String outputColumnName;
 
   public UnnestStorageAdapter(
       final StorageAdapter baseAdapter,
       final String dimension,
-      final String outputColumnName,
-      final boolean dedup
+      final String outputColumnName
   )
   {
     this.baseAdapter = baseAdapter;
     this.dimensionToUnnest = dimension;
     this.outputColumnName = outputColumnName;
-    this.dedup = dedup;
   }
 
   @Override
@@ -78,7 +75,7 @@ public class UnnestStorageAdapter implements StorageAdapter
         cursor -> {
           assert cursor != null;
           Cursor retVal = cursor;
-          retVal = new UnnestCursor(retVal, dimensionToUnnest, outputColumnName, dedup);
+          retVal = new UnnestCursor(retVal, dimensionToUnnest, outputColumnName);
           return retVal;
         }
     );
