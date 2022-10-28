@@ -67,6 +67,7 @@ import java.util.NoSuchElementException;
  * The value iterator reads an entire bucket at a time, reconstructing the values into an array to iterate within the
  * bucket before moving onto the next bucket as the iterator is consumed.
  *
+ * This class is not thread-safe since during operation modifies positions of a shared buffer.
  */
 public final class FrontCodedIndexed implements Indexed<ByteBuffer>
 {
