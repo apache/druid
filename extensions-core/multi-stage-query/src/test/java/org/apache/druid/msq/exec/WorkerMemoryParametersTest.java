@@ -31,11 +31,11 @@ public class WorkerMemoryParametersTest
   @Test
   public void test_oneWorkerInJvm_alone()
   {
-    Assert.assertEquals(parameters(1, 45, 373_000_000), compute(1_000_000_000, 1, 1, 1));
-    Assert.assertEquals(parameters(2, 14, 248_000_000), compute(1_000_000_000, 1, 2, 1));
-    Assert.assertEquals(parameters(4, 3, 148_000_000), compute(1_000_000_000, 1, 4, 1));
-    Assert.assertEquals(parameters(3, 2, 81_333_333), compute(1_000_000_000, 1, 8, 1));
-    Assert.assertEquals(parameters(1, 4, 42_117_647), compute(1_000_000_000, 1, 16, 1));
+    Assert.assertEquals(parameters(1, 27, 149_410_000, 66_900_000), compute(1_000_000_000, 1, 1, 1));
+    Assert.assertEquals(parameters(2, 8, 99_160_000, 44_400_000), compute(1_000_000_000, 1, 2, 1));
+    Assert.assertEquals(parameters(3, 2, 58_960_000, 26_400_000), compute(1_000_000_000, 1, 4, 1));
+    Assert.assertEquals(parameters(2, 2, 32_160_000, 14_400_000), compute(1_000_000_000, 1, 8, 1));
+    Assert.assertEquals(parameters(1, 3, 21_852_307, 9_784_615), compute(1_000_000_000, 1, 12, 1));
 
     final MSQException e = Assert.assertThrows(
         MSQException.class,
@@ -48,35 +48,46 @@ public class WorkerMemoryParametersTest
   @Test
   public void test_oneWorkerInJvm_twoHundredWorkersInCluster()
   {
-    Assert.assertEquals(parameters(1, 45, 174_000_000), compute(1_000_000_000, 1, 1, 200));
-    Assert.assertEquals(parameters(2, 14, 49_000_000), compute(1_000_000_000, 1, 2, 200));
+    Assert.assertEquals(parameters(1, 74, 267_330_000, 119_700_000), compute(2_000_000_000, 1, 1, 200));
+    Assert.assertEquals(parameters(2, 24, 133_330_000, 59_700_000), compute(2_000_000_000, 1, 2, 200));
 
     final MSQException e = Assert.assertThrows(
         MSQException.class,
         () -> compute(1_000_000_000, 1, 4, 200)
     );
 
-    Assert.assertEquals(new TooManyWorkersFault(200, 124), e.getFault());
+    Assert.assertEquals(new TooManyWorkersFault(200, 64), e.getFault());
   }
 
   @Test
   public void test_fourWorkersInJvm_twoHundredWorkersInCluster()
   {
-    Assert.assertEquals(parameters(1, 149, 999_000_000), compute(8_000_000_000L, 4, 1, 200));
-    Assert.assertEquals(parameters(2, 61, 799_000_000), compute(8_000_000_000L, 4, 2, 200));
-    Assert.assertEquals(parameters(4, 22, 549_000_000), compute(8_000_000_000L, 4, 4, 200));
-    Assert.assertEquals(parameters(4, 14, 299_000_000), compute(8_000_000_000L, 4, 8, 200));
-    Assert.assertEquals(parameters(4, 8, 99_000_000), compute(8_000_000_000L, 4, 16, 200));
+    Assert.assertEquals(parameters(1, 137, 609_030_000, 272_700_000), compute(9_000_000_000L, 4, 1, 200));
+    Assert.assertEquals(parameters(2, 56, 485_080_000, 217_200_000), compute(9_000_000_000L, 4, 2, 200));
+    Assert.assertEquals(parameters(4, 20, 330_142_500, 147_825_000), compute(9_000_000_000L, 4, 4, 200));
+    Assert.assertEquals(parameters(4, 13, 175_205_000, 78_450_000), compute(9_000_000_000L, 4, 8, 200));
+    Assert.assertEquals(parameters(4, 7, 51_255_000, 22_950_000), compute(9_000_000_000L, 4, 16, 200));
 
     final MSQException e = Assert.assertThrows(
         MSQException.class,
         () -> compute(8_000_000_000L, 4, 32, 200)
     );
 
-    Assert.assertEquals(new TooManyWorkersFault(200, 140), e.getFault());
+    Assert.assertEquals(new TooManyWorkersFault(200, 107), e.getFault());
 
-    // Make sure 140 actually works. (Verify the error message above.)
-    Assert.assertEquals(parameters(4, 4, 25_666_666), compute(8_000_000_000L, 4, 32, 140));
+    // Make sure 107 actually works. (Verify the error message above.)
+    Assert.assertEquals(parameters(4, 3, 16_973_333, 7_599_999), compute(8_000_000_000L, 4, 32, 107));
+  }
+
+  @Test
+  public void test_oneWorkerInJvm_negativeMemory()
+  {
+    final MSQException e = Assert.assertThrows(
+        MSQException.class,
+        () -> compute(-100, 1, 32, 1)
+    );
+
+    Assert.assertEquals(new NotEnoughMemoryFault(-100, 1, 32), e.getFault());
   }
 
   @Test
@@ -88,14 +99,15 @@ public class WorkerMemoryParametersTest
   private static WorkerMemoryParameters parameters(
       final int superSorterMaxActiveProcessors,
       final int superSorterMaxChannelsPerProcessor,
-      final long bundleMemory
+      final long appenderatorMemory,
+      final long broadcastJoinMemory
   )
   {
     return new WorkerMemoryParameters(
         superSorterMaxActiveProcessors,
         superSorterMaxChannelsPerProcessor,
-        (long) (bundleMemory * WorkerMemoryParameters.APPENDERATOR_MEMORY_FRACTION),
-        (long) (bundleMemory * WorkerMemoryParameters.BROADCAST_JOIN_MEMORY_FRACTION)
+        appenderatorMemory,
+        broadcastJoinMemory
     );
   }
 

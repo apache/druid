@@ -74,7 +74,8 @@ import java.util.function.Supplier;
  */
 public class StageDefinition
 {
-  private static final int PARTITION_STATS_MAX_BYTES = 300_000_000; // Avoid immediate downsample of single-bucket collectors
+  public static final int PARTITION_STATS_MAX_BYTES = 300_000_000;
+
   private static final int PARTITION_STATS_MAX_BUCKETS = 5_000; // Limit for TooManyBuckets
   private static final int MAX_PARTITIONS = 25_000; // Limit for TooManyPartitions
 

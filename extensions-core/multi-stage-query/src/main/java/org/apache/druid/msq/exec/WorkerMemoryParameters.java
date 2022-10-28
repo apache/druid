@@ -23,6 +23,7 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
+import org.apache.druid.msq.kernel.StageDefinition;
 
 import java.util.Objects;
 
@@ -272,7 +273,7 @@ public class WorkerMemoryParameters
     final long bundleMemory = memoryPerBundle(maxMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
 
     // Inverse of memoryNeededForInputChannels.
-    return Ints.checkedCast((bundleMemory - PROCESSING_MINIMUM_BYTES) / STANDARD_FRAME_SIZE - 1);
+    return Math.max(0, Ints.checkedCast((bundleMemory - PROCESSING_MINIMUM_BYTES) / STANDARD_FRAME_SIZE - 1));
   }
 
   private static long memoryPerBundle(
@@ -282,13 +283,19 @@ public class WorkerMemoryParameters
   )
   {
     final int bundleCount = numWorkersInJvm + numProcessingThreadsInJvm;
-    return (long) (maxMemoryInJvm * USABLE_MEMORY_FRACTION) / bundleCount;
+
+    // Need to subtract memoryForStatisticsTracking off the top, since this is reserved for statistics collection.
+    final long memoryForStatisticsTracking = (long) numWorkersInJvm * StageDefinition.PARTITION_STATS_MAX_BYTES;
+    final long memoryForBundles = (long) (maxMemoryInJvm * USABLE_MEMORY_FRACTION - memoryForStatisticsTracking);
+
+    // Divide up the usable memory per bundle.
+    return memoryForBundles / bundleCount;
   }
 
   private static long memoryNeededForInputChannels(final int numInputWorkers)
   {
-    // Regular processors require input-channel-merging for their inputs. Calculate how much that is.
-    // Requirement: inputChannelsPerProcessor number of input frames, one output frame.
+    // Workers that read sorted inputs must open all channels at once to do an N-way merge. Calculate memory needs.
+    // Requirement: one input frame per worker, one buffered output frame.
     return (long) STANDARD_FRAME_SIZE * (numInputWorkers + 1);
   }
 }
