@@ -204,6 +204,12 @@ public class MSQControllerTask extends AbstractTask
     }
   }
 
+  @Override
+  public int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
+  }
+
   private static String getDataSourceForTaskMetadata(final MSQSpec querySpec)
   {
     final MSQDestination destination = querySpec.getDestination();
