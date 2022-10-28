@@ -19,7 +19,6 @@
 
 package org.apache.druid.catalog.sync;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.catalog.http.CatalogListenerResource;
 import org.apache.druid.catalog.storage.CatalogStorage;
@@ -29,7 +28,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -100,11 +99,6 @@ public class CatalogUpdateNotifier implements CatalogUpdateListener
   @Override
   public void updated(UpdateEvent event)
   {
-    try {
-      notifier.send(smileMapper.writeValueAsBytes(event));
-    }
-    catch (JsonProcessingException e) {
-      throw new ISE("Failed to serialize " + event.getClass().getSimpleName());
-    }
+    notifier.send(JacksonUtils.toBytes(smileMapper, event));
   }
 }

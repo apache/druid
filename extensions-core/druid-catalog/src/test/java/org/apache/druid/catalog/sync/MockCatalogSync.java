@@ -20,79 +20,35 @@
 package org.apache.druid.catalog.sync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import org.apache.druid.catalog.http.CatalogListenerResource;
-import org.apache.druid.catalog.model.TableId;
-import org.apache.druid.catalog.model.TableMetadata;
-import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.storage.CatalogStorage;
-import org.apache.druid.catalog.storage.CatalogTests;
-import org.apache.druid.catalog.sync.MetadataCatalog.CatalogListener;
-import org.apache.druid.server.http.catalog.DummyRequest;
-import org.apache.druid.server.security.AuthorizerMapper;
-
-import javax.ws.rs.core.MediaType;
-
-import java.io.ByteArrayInputStream;
 
 /**
  * Simulates a network sync from catalog (Coordinator) to consumer (Broker).
  */
-public class MockCatalogSync implements CatalogListener
+public class MockCatalogSync implements CatalogUpdateListener
 {
   private final CatalogListenerResource listenerResource;
   private final CachedMetadataCatalog catalog;
-  private final boolean useSmile;
-  private final ObjectMapper smileMapper;
-  private final ObjectMapper jsonMapper;
 
   public MockCatalogSync(
       final CatalogStorage storage,
-      final AuthorizerMapper authorizerMapper,
-      final ObjectMapper smileMapper,
-      final ObjectMapper jsonMapper,
-      final boolean useSmile
+      final ObjectMapper jsonMapper
   )
   {
     this.catalog = new CachedMetadataCatalog(storage, storage.schemaRegistry(), jsonMapper);
-    this.listenerResource = new CatalogListenerResource(
-        catalog,
-        smileMapper,
-        jsonMapper,
-        authorizerMapper
-    );
-    this.useSmile = useSmile;
-    this.smileMapper = smileMapper;
-    this.jsonMapper = jsonMapper;
+    this.listenerResource = new CatalogListenerResource(catalog);
   }
 
   @Override
-  public void updated(TableMetadata update)
+  public void updated(UpdateEvent update)
   {
     doSync(update);
   }
 
-  private void doSync(TableMetadata update)
+  private void doSync(UpdateEvent event)
   {
-    byte[] encoded = update.toBytes(useSmile ? smileMapper : jsonMapper);
-    listenerResource.syncTable(
-        new ByteArrayInputStream(encoded),
-        new DummyRequest(
-            DummyRequest.POST,
-            CatalogTests.SUPER_USER,
-            useSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-        )
-    );
-  }
-
-  @Override
-  public void deleted(TableId tableId)
-  {
-    TableMetadata spec = TableMetadata.newTable(
-        tableId,
-        new TableSpec(CatalogUpdateNotifier.TOMBSTONE_TABLE_TYPE, null, null)
-    );
-    doSync(spec);
+    listenerResource.syncTable(event);
   }
 
   public MetadataCatalog catalog()

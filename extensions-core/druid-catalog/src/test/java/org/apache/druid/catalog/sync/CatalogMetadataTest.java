@@ -20,7 +20,6 @@
 package org.apache.druid.catalog.sync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
 import org.apache.druid.catalog.model.ColumnSpec;
@@ -52,6 +51,11 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+/**
+ * Test the catalog synchronization mechanisms: direct (reads from the DB),
+ * cached (holds a copy of the DB, based on update events) and remote
+ * (like cached, but receives events over HTTP.)
+ */
 public class CatalogMetadataTest
 {
   @Rule
@@ -60,7 +64,6 @@ public class CatalogMetadataTest
   private CatalogTests.DbFixture dbFixture;
   private CatalogStorage storage;
   private ObjectMapper jsonMapper;
-  private ObjectMapper smileMapper;
 
   @Before
   public void setUp()
@@ -68,7 +71,6 @@ public class CatalogMetadataTest
     dbFixture = new CatalogTests.DbFixture(derbyConnectorRule);
     storage = dbFixture.storage;
     jsonMapper = new ObjectMapper();
-    smileMapper = new ObjectMapper(new SmileFactory());
   }
 
   @After
@@ -136,7 +138,7 @@ public class CatalogMetadataTest
     // Also test the deletion case
     TableId table2 = TableId.datasource("table2");
     storage.tables().delete(table2);
-    assertNull(storage.tables().read(table2));
+    assertThrows(NotFoundException.class, () ->  storage.tables().read(table2));
 
     List<TableMetadata> tables = catalog.tables(TableId.DRUID_SCHEMA);
     assertEquals(2, tables.size());
@@ -147,19 +149,8 @@ public class CatalogMetadataTest
   @Test
   public void testRemoteWithJson() throws DuplicateKeyException, NotFoundException
   {
-    doTestRemote(false);
-  }
-
-  @Test
-  public void testRemoteWithSmile() throws DuplicateKeyException, NotFoundException
-  {
-    doTestRemote(true);
-  }
-
-  private void doTestRemote(boolean useSmile) throws DuplicateKeyException, NotFoundException
-  {
     populateCatalog();
-    MockCatalogSync sync = new MockCatalogSync(storage, CatalogTests.AUTH_MAPPER, jsonMapper, smileMapper, useSmile);
+    MockCatalogSync sync = new MockCatalogSync(storage, jsonMapper);
     MetadataCatalog catalog = sync.catalog();
     storage.register(sync);
     verifyInitial(catalog);
@@ -169,7 +160,7 @@ public class CatalogMetadataTest
     // Also test the deletion case
     TableId table2 = TableId.datasource("table2");
     storage.tables().delete(table2);
-    assertNull(storage.tables().read(table2));
+    assertThrows(NotFoundException.class, () ->  storage.tables().read(table2));
 
     List<TableMetadata> tables = catalog.tables(TableId.DRUID_SCHEMA);
     assertEquals(2, tables.size());

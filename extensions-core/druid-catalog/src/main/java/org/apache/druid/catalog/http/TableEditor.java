@@ -21,6 +21,7 @@ import javax.ws.rs.core.Response;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -118,59 +119,58 @@ public class TableEditor
    * @return revised properties with the revised hidden columns list after applying
    * the requested changes
    */
-  private TableMetadata applyUnhideColumns(TableMetadata table, List<String> columns) throws CatalogException
+  private TableSpec applyUnhideColumns(TableMetadata table, List<String> columns) throws CatalogException
   {
-    if (!AbstractDatasourceDefn.isDatasource(type)) {
+    final TableSpec existingSpec = table.spec();
+    if (!AbstractDatasourceDefn.isDatasource(existingSpec.type())) {
       throw CatalogException.badRequest("hideColumns is supported only for data source specs");
     }
+
+    final Map<String, Object> props = existingSpec.properties();
+    final Map<String, Object> revised = new HashMap<>(props);
     @SuppressWarnings("unchecked")
-    List<String> hiddenColumns = (List<String>) props.get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
+    List<String> hiddenColumns = (List<String>) revised.get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
     if (CollectionUtils.isNullOrEmpty(hiddenColumns) || columns.isEmpty()) {
-      return props;
+      return null;
     }
     Set<String> removals = new HashSet<>(columns);
-    List<String> revised = new ArrayList<>();
+    List<String> revisedHiddenCols = new ArrayList<>();
     for (String col : hiddenColumns) {
       if (!removals.contains(col)) {
-        revised.add(col);
+        revisedHiddenCols.add(col);
       }
     }
     if (revised.isEmpty()) {
-      props.remove(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
+      revised.remove(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
     } else {
-      props.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, revised);
+      revised.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, revised);
     }
-    return props;
+    return existingSpec.withProperties(revised);
   }
-
 
   private long dropColumns(List<String> columnsToDrop) throws CatalogException
   {
     return catalog.tables().updateColumns(
         id,
-        (type, cols) -> {
-          return applyDropColumns(type, cols, columnsToDrop);
-        }
+        table -> applyDropColumns(table, columnsToDrop)
     );
   }
 
-  private List<ColumnSpec> applyDropColumns(
-      final String tableType,
-      final List<ColumnSpec> columns,
-      final List<String> toDrop
-  )
+  private TableSpec applyDropColumns(final TableMetadata table, final List<String> toDrop)
   {
-    if (toDrop.isEmpty() || columns.isEmpty()) {
-      return columns;
+    final TableSpec existingSpec = table.spec();
+    List<ColumnSpec> existingColumns = existingSpec.columns();
+    if (toDrop.isEmpty() || existingColumns.isEmpty()) {
+      return existingSpec;
     }
     Set<String> drop = new HashSet<String>(toDrop);
     List<ColumnSpec> revised = new ArrayList<>();
-    for (ColumnSpec col : columns) {
+    for (ColumnSpec col : existingColumns) {
       if (!drop.contains(col.name())) {
         revised.add(col);
       }
     }
-    return revised;
+    return existingSpec.withColumns(revised);
   }
 
 
@@ -178,50 +178,55 @@ public class TableEditor
   {
     return catalog.tables().updateProperties(
         id,
-        (type, props) -> {
-          return applyUpdateProperties(type, props, updates);
-        }
+        table -> applyUpdateProperties(table, updates)
     );
   }
 
-  private Map<String, Object> applyUpdateProperties(String type, Map<String, Object> props, Map<String, Object> updates) throws CatalogException
+  private TableSpec applyUpdateProperties(
+      final TableMetadata table,
+      final Map<String, Object> updates
+  ) throws CatalogException
   {
-    TableDefn defn = catalog.tableRegistry().defnFor(type);
+    final TableSpec existingSpec = table.spec();
+    final TableDefn defn = resolveDefn(existingSpec.type());
+    return existingSpec.withProperties(
+        defn.mergeProperties(existingSpec.properties(), updates)
+    );
+  }
+
+  private TableDefn resolveDefn(String tableType) throws CatalogException
+  {
+    TableDefn defn = catalog.tableRegistry().defnFor(tableType);
     if (defn == null) {
       throw new CatalogException(
           CatalogException.BAD_STATE,
           Response.Status.INTERNAL_SERVER_ERROR,
           "Table %s has an invalid type [%s]",
           id.sqlName(),
-          type
+          tableType
       );
     }
-    return defn.mergeProperties(props, updates);
+    return defn;
   }
 
-  private long updateColumns(List<ColumnSpec> updates) throws CatalogException
+  private long updateColumns(final List<ColumnSpec> updates) throws CatalogException
   {
     return catalog.tables().updateColumns(
         id,
-        (type, cols) -> {
-          return applyUpdateColumns(type, cols, updates);
-        }
+        table -> applyUpdateColumns(table, updates)
     );
   }
 
-  private List<ColumnSpec> applyUpdateColumns(String type, List<ColumnSpec> cols, List<ColumnSpec> updates) throws CatalogException
+  private TableSpec applyUpdateColumns(
+      final TableMetadata table,
+      final List<ColumnSpec> updates
+  ) throws CatalogException
   {
-    TableDefn defn = catalog.tableRegistry().defnFor(type);
-    if (defn == null) {
-      throw new CatalogException(
-          CatalogException.BAD_STATE,
-          Response.Status.INTERNAL_SERVER_ERROR,
-          "Table %s has an invalid type [%s]",
-          id.sqlName(),
-          type
-      );
-    }
-    return defn.mergeColumns(cols, updates);
+    final TableSpec existingSpec = table.spec();
+    final TableDefn defn = resolveDefn(existingSpec.type());
+    return existingSpec.withColumns(
+        defn.mergeColumns(existingSpec.columns(), updates)
+    );
   }
 
   private long moveColumn(MoveColumn moveColumn) throws CatalogException
@@ -237,22 +242,25 @@ public class TableEditor
     }
     return catalog.tables().updateColumns(
         id,
-        (type, cols) -> {
-          return applyMoveColumn(cols, moveColumn);
-        }
+        table -> applyMoveColumn(table, moveColumn)
     );
   }
 
-  public List<ColumnSpec> applyMoveColumn(List<ColumnSpec> columns, MoveColumn moveColumn) throws CatalogException
+  private TableSpec applyMoveColumn(
+      final TableMetadata table,
+      final MoveColumn moveColumn
+  ) throws CatalogException
   {
-    List<ColumnSpec> revised = new ArrayList<>(columns);
-    final int colPosn = findColumn(columns, moveColumn.column);
+    final TableSpec existingSpec = table.spec();
+    final List<ColumnSpec> existingCols = existingSpec.columns();
+    final List<ColumnSpec> revised = new ArrayList<>(existingCols);
+    final int colPosn = findColumn(existingCols, moveColumn.column);
     if (colPosn == -1) {
       throw CatalogException.badRequest("Column [%s] is not defined", moveColumn.column);
     }
     int anchorPosn;
     if (moveColumn.where == Position.BEFORE || moveColumn.where == Position.AFTER) {
-      anchorPosn = findColumn(columns, moveColumn.anchor);
+      anchorPosn = findColumn(existingCols, moveColumn.anchor);
       if (anchorPosn == -1) {
         throw CatalogException.badRequest("Anchor [%s] is not defined", moveColumn.column);
       }
@@ -278,7 +286,8 @@ public class TableEditor
         revised.add(anchorPosn + 1, col);
         break;
     }
-    return revised;
+
+    return existingSpec.withColumns(revised);
   }
 
   private static int findColumn(List<ColumnSpec> columns, String colName)

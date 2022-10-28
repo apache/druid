@@ -21,14 +21,18 @@ package org.apache.druid.catalog.storage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
 import org.apache.druid.catalog.CatalogTest;
+import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
+import org.apache.druid.catalog.model.table.DatasourceDefn.DatasourceColumnDefn;
 import org.apache.druid.catalog.storage.sql.CatalogManager;
 import org.apache.druid.catalog.storage.sql.SQLCatalogManager;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -39,13 +43,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -81,7 +85,7 @@ public class TableManagerTest
   }
 
   @Test
-  public void testCreate() throws DuplicateKeyException
+  public void testCreate() throws DuplicateKeyException, NotFoundException
   {
     Map<String, Object> props = ImmutableMap.of(
         AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
@@ -90,8 +94,8 @@ public class TableManagerTest
     TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     TableMetadata table = TableMetadata.newTable(TableId.datasource("table1"), spec);
 
-    // Table does not exist, read returns nothing.
-    assertNull(manager.read(table.id()));
+    // Table does not exist, read throws an exception.
+    assertThrows(NotFoundException.class, () -> manager.read(table.id()));
 
     // Create the table
     long version = manager.create(table);
@@ -154,7 +158,101 @@ public class TableManagerTest
   }
 
   @Test
-  public void testDelete() throws DuplicateKeyException
+  public void testUpdateProperties() throws CatalogException
+  {
+    Map<String, Object> props = ImmutableMap.of(
+        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
+        AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+    );
+    TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
+    TableMetadata table = TableMetadata.newTable(TableId.datasource("table1"), spec);
+    final long version1 = manager.create(table);
+
+    // Transform properties by adding a new one
+    final long version2 = manager.updateProperties(table.id(), t -> {
+      TableSpec target = table.spec();
+      Map<String, Object> updated = new HashMap<>(target.properties());
+      updated.put("foo", "bar");
+      return target.withProperties(updated);
+    });
+    assertTrue(version2 > version1);
+
+    TableMetadata read = manager.read(table.id());
+    assertEquals(version2, read.updateTime());
+    Map<String, Object> expected = new HashMap<>(props);
+    expected.put("foo", "bar");
+    assertEquals(expected, read.spec().properties());
+
+    // Not found
+    assertThrows(
+        NotFoundException.class,
+        () -> manager.updateProperties(TableId.datasource("bogus"), t -> t.spec())
+    );
+
+    // No update
+    final long version3 = manager.updateProperties(table.id(), t -> null);
+    assertEquals(0, version3);
+
+    // Update fails if table is in the Deleting state
+    manager.markDeleting(table.id());
+    assertThrows(
+        NotFoundException.class,
+        () -> manager.updateProperties(table.id(), t -> t.spec())
+    );
+  }
+
+  @Test
+  public void testUpdateColumns() throws CatalogException
+  {
+    Map<String, Object> props = ImmutableMap.of(
+        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
+        AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+    );
+    List<ColumnSpec> cols = Arrays.asList(
+        new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, "a", Columns.VARCHAR, null),
+        new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, "b", Columns.BIGINT, null)
+    );
+    ColumnSpec colC = new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, "c", Columns.DOUBLE, null);
+
+    TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, cols);
+    TableMetadata table = TableMetadata.newTable(TableId.datasource("table1"), spec);
+    final long version1 = manager.create(table);
+
+    // Transform columns by adding a new one
+    final long version2 = manager.updateColumns(table.id(), t -> {
+      TableSpec target = table.spec();
+      List<ColumnSpec> updated = new ArrayList<>(target.columns());
+      updated.add(colC);
+      return target.withColumns(updated);
+    });
+    assertTrue(version2 > version1);
+
+    TableMetadata read = manager.read(table.id());
+    assertEquals(version2, read.updateTime());
+    List<ColumnSpec> expected = new ArrayList<>(cols);
+    expected.add(colC);
+    assertEquals(expected, read.spec().columns());
+
+    // Not found
+    assertThrows(
+        NotFoundException.class,
+        () -> manager.updateColumns(TableId.datasource("bogus"), t -> t.spec())
+    );
+
+    // No update
+    final long version3 = manager.updateColumns(table.id(), t -> null);
+    assertEquals(0, version3);
+
+    // Update fails if table is in the Deleting state
+    manager.markDeleting(table.id());
+    assertThrows(
+        NotFoundException.class,
+        () -> manager.updateColumns(table.id(), t -> t.spec())
+    );
+  }
+
+  @Test
+  public void testDelete() throws DuplicateKeyException, NotFoundException
   {
     Map<String, Object> props = ImmutableMap.of(
         AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
@@ -163,10 +261,10 @@ public class TableManagerTest
     TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     TableMetadata table = TableMetadata.newTable(TableId.datasource("table1"), spec);
 
-    assertFalse(manager.delete(table.id()));
+    assertThrows(NotFoundException.class, () -> manager.delete(table.id()));
     manager.create(table);
-    assertTrue(manager.delete(table.id()));
-    assertFalse(manager.delete(table.id()));
+    manager.delete(table.id());
+    assertThrows(NotFoundException.class, () -> manager.delete(table.id()));
   }
 
   @Test

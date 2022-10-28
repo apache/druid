@@ -19,7 +19,6 @@
 
 package org.apache.druid.catalog.storage.sql;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
@@ -40,6 +39,7 @@ import org.apache.druid.catalog.sync.UpdateEvent.EventType;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.skife.jdbi.v2.Handle;
@@ -90,17 +90,17 @@ public class SQLCatalogManager implements CatalogManager
   }
 
   public static final String CREATE_TABLE =
-      "CREATE TABLE %s (\n"
-      + "  schemaName VARCHAR(255) NOT NULL,\n"
-      + "  name VARCHAR(255) NOT NULL,\n"
-      + "  creationTime BIGINT NOT NULL,\n"
-      + "  updateTime BIGINT NOT NULL,\n"
-      + "  state CHAR(1) NOT NULL,\n"
-      + "  tableType VARCHAR(20) NOT NULL,\n"
-      + "  properties %s,\n"
-      + "  columns %s,\n"
-      + "  PRIMARY KEY(schemaName, name)\n"
-      + ")";
+      "CREATE TABLE %s (\n" +
+      "  schemaName VARCHAR(255) NOT NULL,\n" +
+      "  name VARCHAR(255) NOT NULL,\n" +
+      "  creationTime BIGINT NOT NULL,\n" +
+      "  updateTime BIGINT NOT NULL,\n" +
+      "  state CHAR(1) NOT NULL,\n" +
+      "  tableType VARCHAR(20) NOT NULL,\n" +
+      "  properties %s,\n" +
+      "  columns %s,\n" +
+      "  PRIMARY KEY(schemaName, name)\n" +
+      ")";
 
   // TODO: Move to SqlMetadataConnector
   public void createTableDefnTable()
@@ -148,8 +148,8 @@ public class SQLCatalogManager implements CatalogManager
                   .bind("updateTime", updateTime)
                   .bind("state", TableMetadata.TableState.ACTIVE.code())
                   .bind("tableType", spec.type())
-                  .bind("properties", toBytes(jsonMapper, spec.properties()))
-                  .bind("columns", toBytes(jsonMapper, spec.columns()));
+                  .bind("properties", JacksonUtils.toBytes(jsonMapper, spec.properties()))
+                  .bind("columns", JacksonUtils.toBytes(jsonMapper, spec.columns()));
               try {
                 stmt.execute();
               }
@@ -252,8 +252,8 @@ public class SQLCatalogManager implements CatalogManager
                   .bind("schemaName", id.schema())
                   .bind("name", id.name())
                   .bind("tableType", spec.type())
-                  .bind("properties", toBytes(jsonMapper, spec.properties()))
-                  .bind("columns", toBytes(jsonMapper, spec.columns()))
+                  .bind("properties", JacksonUtils.toBytes(jsonMapper, spec.properties()))
+                  .bind("columns", JacksonUtils.toBytes(jsonMapper, spec.columns()))
                   .bind("updateTime", updateTime)
                   .execute();
               if (updateCount == 0) {
@@ -264,7 +264,7 @@ public class SQLCatalogManager implements CatalogManager
           }
       );
       sendUpdate(EventType.UPDATE, revised);
-      return table.updateTime();
+      return revised.updateTime();
     }
     catch (CallbackFailedException e) {
       if (e.getCause() instanceof NotFoundException) {
@@ -296,8 +296,8 @@ public class SQLCatalogManager implements CatalogManager
                   .bind("schemaName", id.schema())
                   .bind("name", id.name())
                   .bind("tableType", spec.type())
-                  .bind("properties", toBytes(jsonMapper, spec.properties()))
-                  .bind("columns", toBytes(jsonMapper, spec.columns()))
+                  .bind("properties", JacksonUtils.toBytes(jsonMapper, spec.properties()))
+                  .bind("columns", JacksonUtils.toBytes(jsonMapper, spec.columns()))
                   .bind("updateTime", updateTime)
                   .bind("oldVersion", oldVersion)
                   .execute();
@@ -312,7 +312,7 @@ public class SQLCatalogManager implements CatalogManager
           }
       );
       sendUpdate(EventType.UPDATE, revised);
-      return table.updateTime();
+      return revised.updateTime();
     }
     catch (CallbackFailedException e) {
       if (e.getCause() instanceof NotFoundException) {
@@ -322,16 +322,17 @@ public class SQLCatalogManager implements CatalogManager
     }
   }
 
-  private static final String SELECT_TABLE_PROPERTIES_STMT =
+  private static final String SELECT_PROPERTIES_STMT =
       "SELECT tableType, properties\n" +
       "FROM %s\n" +
       "WHERE schemaName = :schemaName\n" +
       "  AND name = :name\n" +
       "  AND state = 'A'";
 
-  private static final String UPDATE_TABLE_PROPERTIES_STMT =
+  private static final String UPDATE_PROPERTIES_STMT =
       "UPDATE %s\n SET\n" +
-      "  properties = :properties\n" +
+      "  properties = :properties,\n" +
+      "  updateTime = :updateTime\n" +
       "WHERE schemaName = :schemaName\n" +
       "  AND name = :name\n";
 
@@ -351,7 +352,7 @@ public class SQLCatalogManager implements CatalogManager
               handle.begin();
               try {
                 final Query<Map<String, Object>> query = handle
-                    .createQuery(statement(SELECT_TABLE_PROPERTIES_STMT))
+                    .createQuery(statement(SELECT_PROPERTIES_STMT))
                     .setFetchSize(connector.getStreamingFetchSize())
                     .bind("schemaName", id.schema())
                     .bind("name", id.name());
@@ -380,10 +381,10 @@ public class SQLCatalogManager implements CatalogManager
                 }
                 final long updateTime = System.currentTimeMillis();
                 final int updateCount = handle
-                    .createStatement(statement(UPDATE_TABLE_PROPERTIES_STMT))
+                    .createStatement(statement(UPDATE_PROPERTIES_STMT))
                     .bind("schemaName", id.schema())
                     .bind("name", id.name())
-                    .bind("properties", toBytes(jsonMapper, revised))
+                    .bind("properties", JacksonUtils.toBytes(jsonMapper, revised.properties()))
                     .bind("updateTime", updateTime)
                     .execute();
                 if (updateCount == 0) {
@@ -423,7 +424,8 @@ public class SQLCatalogManager implements CatalogManager
 
   private static final String UPDATE_COLUMNS_STMT =
       "UPDATE %s\n SET\n" +
-      "  columns = :columns\n" +
+      "  columns = :columns,\n" +
+      "  updateTime = :updateTime\n" +
       "WHERE schemaName = :schemaName\n" +
       "  AND name = :name\n";
 
@@ -475,7 +477,7 @@ public class SQLCatalogManager implements CatalogManager
                     .createStatement(statement(UPDATE_COLUMNS_STMT))
                     .bind("schemaName", id.schema())
                     .bind("name", id.name())
-                    .bind("properties", toBytes(jsonMapper, revised))
+                    .bind("columns", JacksonUtils.toBytes(jsonMapper, revised.columns()))
                     .bind("updateTime", updateTime)
                     .execute();
                 if (updateCount == 0) {
@@ -723,20 +725,6 @@ public class SQLCatalogManager implements CatalogManager
         "Table %s: not found",
         id.sqlName()
     );
-  }
-
-  /**
-   * Convert the given object to an array of bytes. Use when the object is
-   * known serializable so that the Jackson exception can be suppressed.
-   */
-  private static byte[] toBytes(ObjectMapper jsonMapper, Object obj)
-  {
-    try {
-      return jsonMapper.writeValueAsBytes(obj);
-    }
-    catch (JsonProcessingException e) {
-      throw new ISE("Failed to serialize " + obj.getClass().getSimpleName());
-    }
   }
 
   /**
