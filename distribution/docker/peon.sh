@@ -38,6 +38,8 @@
 # - DRUID_CONFIG_COMMON -- full path to a file for druid 'common' properties
 # - DRUID_CONFIG_${service} -- full path to a file for druid 'service' properties
 
+# This script is very similar to druid.sh, used exclusively for the kubernetes-overlord-extension.
+
 set -e
 SERVICE="overlord"
 
