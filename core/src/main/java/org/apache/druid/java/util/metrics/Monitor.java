@@ -30,14 +30,6 @@ public interface Monitor
 
   void stop();
 
-
-  /**
-   * Useful to push a last round of metrics before stopping the monitor
-   *
-   * @param emitter to use
-   */
-  void monitorAndStop(ServiceEmitter emitter);
-
   /**
    * Emit metrics using the given emitter.
    *

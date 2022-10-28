@@ -66,13 +66,6 @@ public class ParametrizedUriEmitterMonitor extends FeedDefiningMonitor
   }
 
   @Override
-  public void monitorAndStop(ServiceEmitter emitter)
-  {
-    monitors.values().forEach(monitor -> monitor.monitorAndStop(emitter));
-    super.stop();
-  }
-
-  @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
     updateMonitors();

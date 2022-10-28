@@ -87,7 +87,8 @@ public abstract class MonitorScheduler
     synchronized (lock) {
       monitors.remove(monitor);
       // Stop the monitor only after emitting the last round of metrics
-      monitor.monitorAndStop(emitter);
+      monitor.monitor(emitter);
+      monitor.stop();
     }
   }
 
