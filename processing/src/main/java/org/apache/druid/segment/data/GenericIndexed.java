@@ -469,7 +469,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
   /**
    * Single-threaded view.
    */
-  abstract class BufferIndexed implements Indexed<T>
+  public abstract class BufferIndexed implements Indexed<T>
   {
     int lastReadSize;
 

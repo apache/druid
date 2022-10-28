@@ -91,7 +91,7 @@ public class MSQTaskReportTest
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0),
+            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, 1, 2),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),
@@ -119,6 +119,8 @@ public class MSQTaskReportTest
     Assert.assertEquals(TASK_ID, report2.getTaskId());
     Assert.assertEquals(report.getPayload().getStatus().getStatus(), report2.getPayload().getStatus().getStatus());
     Assert.assertNull(report2.getPayload().getStatus().getErrorReport());
+    Assert.assertEquals(report.getPayload().getStatus().getRunningTasks(), report2.getPayload().getStatus().getRunningTasks());
+    Assert.assertEquals(report.getPayload().getStatus().getPendingTasks(), report2.getPayload().getStatus().getPendingTasks());
     Assert.assertEquals(report.getPayload().getStages(), report2.getPayload().getStages());
 
     Yielder<Object[]> yielder = report2.getPayload().getResults().getResultYielder();
@@ -142,7 +144,7 @@ public class MSQTaskReportTest
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.FAILED, errorReport, new ArrayDeque<>(), null, 0),
+            new MSQStatusReport(TaskState.FAILED, errorReport, new ArrayDeque<>(), null, 0, 1, 2),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),
@@ -179,7 +181,7 @@ public class MSQTaskReportTest
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0),
+            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, 1, 2),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),

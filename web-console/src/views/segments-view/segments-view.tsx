@@ -294,7 +294,7 @@ END AS "time_span"`,
               }
             } else if (f.id.startsWith('is_')) {
               if (f.value === 'all') return;
-              return SqlRef.columnWithQuotes(f.id).equal(f.value === 'true' ? 1 : 0);
+              return SqlRef.column(f.id).equal(f.value === 'true' ? 1 : 0);
             } else {
               return sqlQueryCustomTableFilter(f);
             }

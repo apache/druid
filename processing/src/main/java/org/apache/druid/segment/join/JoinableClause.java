@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
  * clause is "t1 JOIN t2 ON t1.x = t2.x" then this class represents "JOIN t2 ON x = t2.x" -- it does not include
  * references to the left-hand "t1".
  * <p>
- * Created from {@link org.apache.druid.query.planning.PreJoinableClause} by {@link JoinableFactoryWrapper#createSegmentMapFn}.
+ * Created from {@link org.apache.druid.query.planning.PreJoinableClause}.
  */
 public class JoinableClause implements ReferenceCountedObject
 {
