@@ -250,7 +250,7 @@ Set the following property:
 
 ## Broadcast rules
 
-Druid extensions use broadcast rules to load a datasources onto all brokers in the cluster. Apply broadcast rules in a test environment, not in production.
+Druid extensions use broadcast rules to load segment data onto all brokers in the cluster. Apply broadcast rules in a test environment, not in production.
 
 ### Forever broadcast rule
 
