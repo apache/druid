@@ -51,7 +51,6 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 
 public class PlannerFactory
 {
@@ -105,8 +104,7 @@ public class PlannerFactory
   public DruidPlanner createPlanner(
       final SqlEngine engine,
       final String sql,
-      final Map<String, Object> queryContext,
-      Set<String> contextKeys
+      final Map<String, Object> queryContext
   )
   {
     final PlannerContext context = PlannerContext.create(
@@ -118,7 +116,6 @@ public class PlannerFactory
         rootSchema,
         engine,
         queryContext,
-        contextKeys,
         joinableFactoryWrapper
     );
 
@@ -132,7 +129,7 @@ public class PlannerFactory
   @VisibleForTesting
   public DruidPlanner createPlannerForTesting(final SqlEngine engine, final String sql, final Map<String, Object> queryContext)
   {
-    final DruidPlanner thePlanner = createPlanner(engine, sql, queryContext, queryContext.keySet());
+    final DruidPlanner thePlanner = createPlanner(engine, sql, queryContext);
     thePlanner.getPlannerContext()
               .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
     try {
