@@ -80,6 +80,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -1775,7 +1776,7 @@ public class CompactionTaskTest
   {
     SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
     for (Granularity current : granularities) {
-      queryGranularity.set(CompactionTask.compareWithCurrent(queryGranularity.get(), current));
+      queryGranularity.set(CompactionTask.ExistingSegmentAnalyzer.compareWithCurrent(queryGranularity.get(), current));
     }
     return queryGranularity.get();
   }
@@ -2005,7 +2006,7 @@ public class CompactionTaskTest
       @Override
       public void cleanup(DataSegment segment)
       {
-        throw new UnsupportedOperationException();
+        // Do nothing.
       }
 
       @Override
@@ -2268,7 +2269,14 @@ public class CompactionTaskTest
         @JacksonInject AppenderatorsManager appenderatorsManager
     )
     {
-      super(getOrMakeId(id, "compact", dataSource), null, taskResource, dataSource, context, IngestionMode.REPLACE_LEGACY);
+      super(
+          getOrMakeId(id, "compact", dataSource),
+          null,
+          taskResource,
+          dataSource,
+          context,
+          IngestionMode.REPLACE_LEGACY
+      );
       this.interval = interval;
       this.segments = segments;
       this.dimensionsSpec = dimensionsSpec;

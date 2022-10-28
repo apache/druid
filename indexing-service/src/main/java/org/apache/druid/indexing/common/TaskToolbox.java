@@ -314,15 +314,9 @@ public class TaskToolbox
     return jsonMapper;
   }
 
-  public Map<DataSegment, File> fetchSegments(List<DataSegment> segments)
-      throws SegmentLoadingException
+  public SegmentCacheManager getSegmentCacheManager()
   {
-    Map<DataSegment, File> retVal = Maps.newLinkedHashMap();
-    for (DataSegment segment : segments) {
-      retVal.put(segment, segmentCacheManager.getSegmentFiles(segment));
-    }
-
-    return retVal;
+    return segmentCacheManager;
   }
 
   public void publishSegments(Iterable<DataSegment> segments) throws IOException
@@ -503,6 +497,47 @@ public class TaskToolbox
 
     public Builder()
     {
+    }
+
+    public Builder(TaskToolbox other)
+    {
+      this.config = other.config;
+      this.taskExecutorNode = other.taskExecutorNode;
+      this.taskActionClient = other.taskActionClient;
+      this.emitter = other.emitter;
+      this.segmentPusher = other.segmentPusher;
+      this.dataSegmentKiller = other.dataSegmentKiller;
+      this.dataSegmentMover = other.dataSegmentMover;
+      this.dataSegmentArchiver = other.dataSegmentArchiver;
+      this.segmentAnnouncer = other.segmentAnnouncer;
+      this.serverAnnouncer = other.serverAnnouncer;
+      this.handoffNotifierFactory = other.handoffNotifierFactory;
+      this.queryRunnerFactoryConglomerateProvider = other.queryRunnerFactoryConglomerateProvider;
+      this.queryProcessingPool = other.queryProcessingPool;
+      this.joinableFactory = other.joinableFactory;
+      this.monitorSchedulerProvider = other.monitorSchedulerProvider;
+      this.segmentCacheManager = other.segmentCacheManager;
+      this.jsonMapper = other.jsonMapper;
+      this.taskWorkDir = other.taskWorkDir;
+      this.indexIO = other.indexIO;
+      this.cache = other.cache;
+      this.cacheConfig = other.cacheConfig;
+      this.cachePopulatorStats = other.cachePopulatorStats;
+      this.indexMergerV9 = other.indexMergerV9;
+      this.druidNodeAnnouncer = other.druidNodeAnnouncer;
+      this.druidNode = other.druidNode;
+      this.lookupNodeService = other.lookupNodeService;
+      this.dataNodeService = other.dataNodeService;
+      this.taskReportFileWriter = other.taskReportFileWriter;
+      this.authorizerMapper = other.authorizerMapper;
+      this.chatHandlerProvider = other.chatHandlerProvider;
+      this.rowIngestionMetersFactory = other.rowIngestionMetersFactory;
+      this.appenderatorsManager = other.appenderatorsManager;
+      this.overlordClient = other.overlordClient;
+      this.coordinatorClient = other.coordinatorClient;
+      this.intermediaryDataManager = other.intermediaryDataManager;
+      this.supervisorTaskClientProvider = other.supervisorTaskClientProvider;
+      this.shuffleClient = other.shuffleClient;
     }
 
     public Builder config(final TaskConfig config)

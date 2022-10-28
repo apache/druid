@@ -197,25 +197,6 @@ public class TaskToolboxTest
   }
 
   @Test
-  public void testFetchSegments() throws SegmentLoadingException, IOException
-  {
-    File expectedFile = temporaryFolder.newFile();
-    EasyMock
-        .expect(mockSegmentCacheManagerFactory.manufacturate(EasyMock.anyObject()))
-        .andReturn(mockSegmentLoaderLocalCacheManager).anyTimes();
-    EasyMock
-        .expect(mockSegmentLoaderLocalCacheManager.getSegmentFiles(EasyMock.anyObject()))
-        .andReturn(expectedFile).anyTimes();
-    EasyMock.replay(mockSegmentCacheManagerFactory, mockSegmentLoaderLocalCacheManager);
-    DataSegment dataSegment = DataSegment.builder().dataSource("source").interval(Intervals.of("2012-01-01/P1D")).version("1").size(1).build();
-    List<DataSegment> segments = ImmutableList.of
-        (
-            dataSegment
-        );
-    Map actualFetchedSegment = taskToolbox.build(task).fetchSegments(segments);
-    Assert.assertEquals(expectedFile, actualFetchedSegment.get(dataSegment));
-  }
-  @Test
   public void testGetEmitter()
   {
     Assert.assertEquals(mockEmitter, taskToolbox.build(task).getEmitter());
