@@ -112,7 +112,7 @@ If you have a single tier, Druid automatically names the tier `_default` and loa
 
 ### Forever load rule
 
-The forever load rule assigns segment data to specified tiers. It is the default rule Druid applies to datasources. Forever load rules have type `loadForever`. 
+The forever load rule assigns all datasource segments to specified tiers. It is the default rule Druid applies to datasources. Forever load rules have type `loadForever`. 
 
 The following example places one replica of each segment on a custom tier named `hot`, and another single replica on the default tier.
 
