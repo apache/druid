@@ -20,6 +20,7 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.TypeStrategy;
@@ -43,12 +44,14 @@ import java.util.Iterator;
  * If {@link #hasNull} is set, id 0 is ALWAYS null, so the comparator should be 'nulls first' or else behavior will
  * be unexpected. {@link #hasNull} can only be set if also {@link #isSorted} is set, since the null value is not
  * actually stored in the values section.
+ *
+ * This class is thread-safe if and only if {@link TypeStrategy#read(ByteBuffer, int)} is thread-safe.
  */
 public class FixedIndexed<T> implements Indexed<T>
 {
   public static final byte IS_SORTED_MASK = 0x02;
 
-  public static <T> FixedIndexed<T> read(ByteBuffer bb, TypeStrategy<T> strategy, ByteOrder byteOrder, int width)
+  public static <T> Supplier<FixedIndexed<T>> read(ByteBuffer bb, TypeStrategy<T> strategy, ByteOrder byteOrder, int width)
   {
     final ByteBuffer buffer = bb.asReadOnlyBuffer().order(byteOrder);
     final byte version = buffer.get();
@@ -59,8 +62,9 @@ public class FixedIndexed<T> implements Indexed<T>
     Preconditions.checkState(!(hasNull && !isSorted), "cannot have null values if not sorted");
     final int size = buffer.getInt() + (hasNull ? 1 : 0);
     final int valuesOffset = buffer.position();
-    final FixedIndexed<T> fixedIndexed = new FixedIndexed<>(
-        buffer,
+    final Supplier<FixedIndexed<T>> fixedIndexed = () -> new FixedIndexed<>(
+        bb,
+        byteOrder,
         strategy,
         hasNull,
         isSorted,
@@ -68,6 +72,7 @@ public class FixedIndexed<T> implements Indexed<T>
         size,
         valuesOffset
     );
+
     bb.position(buffer.position() + (width * size));
     return fixedIndexed;
   }
@@ -83,6 +88,7 @@ public class FixedIndexed<T> implements Indexed<T>
 
   private FixedIndexed(
       ByteBuffer buffer,
+      ByteOrder byteOrder,
       TypeStrategy<T> typeStrategy,
       boolean hasNull,
       boolean isSorted,
@@ -91,7 +97,7 @@ public class FixedIndexed<T> implements Indexed<T>
       int valuesOffset
   )
   {
-    this.buffer = buffer;
+    this.buffer = buffer.asReadOnlyBuffer().order(byteOrder);
     this.typeStrategy = typeStrategy;
     Preconditions.checkArgument(width > 0, "FixedIndexed requires a fixed width value type");
     this.width = width;
@@ -147,6 +153,12 @@ public class FixedIndexed<T> implements Indexed<T>
     }
 
     return -(minIndex + 1);
+  }
+
+  @Override
+  public boolean isSorted()
+  {
+    return isSorted;
   }
 
   @Override
