@@ -19,25 +19,48 @@
 
 package org.apache.druid.msq.indexing;
 
+import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import org.apache.druid.indexing.overlord.TaskRunner;
+import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.helpers.OverlordHelper;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
+import org.apache.druid.storage.StorageConnector;
+import org.joda.time.Duration;
 
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.stream.Collectors;
 
+/**
+ * This method polls the durable storage for any stray directories, i.e. the ones that donot have a controller task
+ * associated with it and cleans them periodically.
+ * This ensures that the tasks which that have exited abruptly or have failed to clean up the durable storage themselves
+ * donot pollute it with worker outputs and temporary files. See {@link DurableStorageCleanerConfig} for the configs.
+ */
 public class DurableStorageCleaner implements OverlordHelper
 {
 
   private static final Logger LOG = new Logger(DurableStorageCleaner.class);
 
   private final DurableStorageCleanerConfig config;
+  private final StorageConnector storageConnector;
+  private final TaskRunner taskRunner;
 
   @Inject
   public DurableStorageCleaner(
-      final DurableStorageCleanerConfig config
+      final DurableStorageCleanerConfig config,
+      final StorageConnector storageConnector,
+      final TaskRunner taskRunner
   )
   {
     this.config = config;
+    this.storageConnector = storageConnector;
+    this.taskRunner = taskRunner;
   }
 
   @Override
@@ -49,8 +72,35 @@ public class DurableStorageCleaner implements OverlordHelper
   @Override
   public void schedule(ScheduledExecutorService exec)
   {
-    LOG.info("Starting the DurableStorageCleaner with the config [%s]", );
+    LOG.info("Starting the DurableStorageCleaner with the config [%s]", config);
 
-    
+    ScheduledExecutors.scheduleWithFixedDelay(
+        exec,
+        Duration.standardSeconds(config.getInitialDelaySeconds()),
+        Duration.standardSeconds(config.getDelaySeconds()),
+        () -> {
+          try {
+            Set<String> allDirectories = new HashSet<>(storageConnector.ls(""));
+            Set<String> runningTaskIds = taskRunner.getRunningTasks()
+                                                   .stream()
+                                                   .map(TaskRunnerWorkItem::getTaskId)
+                                                   .map(DurableStorageOutputChannelFactory::getControllerDirectory)
+                                                   .collect(Collectors.toSet());
+            Set<String> unknownDirectories = Sets.difference(allDirectories, runningTaskIds);
+            LOG.info(
+                "Following directories donot have a corresponding MSQ task associated with it:\n%s\nThese will get cleaned up.",
+                unknownDirectories
+            );
+            for (String unknownDirectory : unknownDirectories) {
+              LOG.info("");
+              storageConnector.deleteRecursively(unknownDirectory);
+            }
+          }
+          catch (IOException e) {
+            throw new RuntimeException("Error while running the scheduled durable storage cleanup helper", e);
+          }
+        }
+    );
+
   }
 }

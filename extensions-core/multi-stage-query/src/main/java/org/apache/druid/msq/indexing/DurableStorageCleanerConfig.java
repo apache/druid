@@ -29,12 +29,21 @@ public class DurableStorageCleanerConfig
   private static final long DEFAULT_INITIAL_DELAY_SECONDS = 86400L;
   private static final long DEFAULT_DELAY_SECONDS = 86400L;
 
+  /**
+   * Whether the {@link DurableStorageCleaner} helper should be enabled or not
+   */
   @JsonProperty
   private final boolean enabled;
 
+  /**
+   * Initial delay in seconds post which the durable storage cleaner should run
+   */
   @JsonProperty
   private final long initialDelaySeconds;
 
+  /**
+   * The delay (in seconds) after the last run post which the durable storage cleaner would clean the outputs
+   */
   @JsonProperty
   private final long delaySeconds;
 

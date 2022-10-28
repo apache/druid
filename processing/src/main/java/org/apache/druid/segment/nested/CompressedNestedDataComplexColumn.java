@@ -51,6 +51,7 @@ import org.apache.druid.segment.data.CompressedVariableSizedBlobColumn;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.VSizeColumnarInts;
@@ -74,7 +75,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Implementation of {@link NestedDataComplexColumn} which uses a {@link CompressedVariableSizedBlobColumn} for the
  * 'raw' {@link StructuredData} values and provides selectors for nested 'literal' field columns.
  */
-public final class CompressedNestedDataComplexColumn extends NestedDataComplexColumn
+public final class CompressedNestedDataComplexColumn<TStringDictionary extends Indexed<ByteBuffer>>
+    extends NestedDataComplexColumn
 {
   private final NestedDataColumnMetadata metadata;
   private final Closer closer;
@@ -85,7 +87,7 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
   private final GenericIndexed<String> fields;
   private final NestedLiteralTypeInfo fieldInfo;
 
-  private final GenericIndexed<String> stringDictionary;
+  private final TStringDictionary stringDictionary;
   private final FixedIndexed<Long> longDictionary;
   private final FixedIndexed<Double> doubleDictionary;
   private final SmooshedFileMapper fileMapper;
@@ -101,7 +103,7 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
       ImmutableBitmap nullValues,
       GenericIndexed<String> fields,
       NestedLiteralTypeInfo fieldInfo,
-      GenericIndexed<String> stringDictionary,
+      TStringDictionary stringDictionary,
       FixedIndexed<Long> longDictionary,
       FixedIndexed<Double> doubleDictionary,
       SmooshedFileMapper fileMapper
@@ -129,7 +131,7 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
     return fieldInfo;
   }
 
-  public GenericIndexed<String> getStringDictionary()
+  public TStringDictionary getStringDictionary()
   {
     return stringDictionary;
   }

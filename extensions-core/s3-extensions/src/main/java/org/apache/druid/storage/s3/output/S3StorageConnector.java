@@ -127,6 +127,18 @@ public class S3StorageConnector implements StorageConnector
     }
   }
 
+  @Override
+  public List<String> ls(String dirName) throws IOException
+  {
+    ListObjectsV2Request listObjectsRequest = new ListObjectsV2Request()
+        .withBucketName(config.getBucket())
+        .withPrefix(objectPath(dirName))
+        .withDelimiter("/");
+
+    ListObjectsV2Result objectListing = s3Client.listObjectsV2(listObjectsRequest);
+
+  }
+
   @Nonnull
   private String objectPath(String path)
   {
