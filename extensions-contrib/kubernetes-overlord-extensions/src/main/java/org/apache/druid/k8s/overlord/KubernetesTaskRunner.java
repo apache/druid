@@ -285,7 +285,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public void start()
   {
-    log.info("Starting cleanup executor for jobs older than 1 day....");
     cleanupExecutor.scheduleAtFixedRate(
         () ->
             client.cleanCompletedJobsOlderThan(
@@ -296,16 +295,16 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         KubernetesTaskRunnerConfig.toMilliseconds(k8sConfig.taskCleanupInterval),
         TimeUnit.MILLISECONDS
     );
-    log.debug("Started cleanup executor for jobs older than 1 day....");
+    log.debug("Started cleanup executor for jobs older than %s....", k8sConfig.taskCleanupDelay);
   }
 
 
   @Override
   public void stop()
   {
-    log.info("Stopping...");
+    log.info("Stopping KubernetesTaskRunner");
     cleanupExecutor.shutdownNow();
-    log.info("Stopped...");
+    log.info("Stopped KubernetesTaskRunner");
   }
 
   @Override
@@ -345,8 +344,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private List<String> generateCommand(Task task)
   {
     final List<String> command = new ArrayList<>();
-    // must use deep storage shuffle now with k8s peon tasks.
-
     command.add("/peon.sh");
     command.add(taskConfig.getTaskDir(task.getId()).toString());
     command.add("1"); // the attemptId is always 1, we never run the task twice on the same pod.

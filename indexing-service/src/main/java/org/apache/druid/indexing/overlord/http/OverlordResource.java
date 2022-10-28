@@ -933,6 +933,7 @@ public class OverlordResource
             if (taskRunner instanceof WorkerTaskRunner) {
               return Response.ok(((WorkerTaskRunner) taskRunner).getWorkers()).build();
             } else if (taskRunner.isK8sTaskRunner()) {
+              // required because kubernetes task runner has no concept of a worker, so returning a dummy worker.
               return Response.ok(ImmutableList.of(
                   new IndexingWorkerInfo(
                       new IndexingWorker(

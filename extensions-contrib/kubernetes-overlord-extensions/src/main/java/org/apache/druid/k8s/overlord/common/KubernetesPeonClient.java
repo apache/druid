@@ -28,6 +28,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * A Kubernetes client wrapper to assist with peon task managment.
+ * It provides a high level api to retreive jobs, launch jobs, delete jobs and various other
+ * tasks like getting task logs, listing all active tasks.
+ */
 public interface KubernetesPeonClient
 {
 

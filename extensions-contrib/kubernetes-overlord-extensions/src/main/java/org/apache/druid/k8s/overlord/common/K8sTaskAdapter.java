@@ -138,6 +138,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter<Pod, Job>
     return Optional.ofNullable(result);
   }
 
+  // sizes the container memory to [1.2 * (direct buffer size + Xmx)]
   @VisibleForTesting
   static long getContainerMemory(PeonCommandContext context)
   {

@@ -95,7 +95,6 @@ public abstract class AbstractTask implements Task
 
   private final Map<String, Object> context;
   private File reportsFile;
-  private File logFile;
 
   private final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
 

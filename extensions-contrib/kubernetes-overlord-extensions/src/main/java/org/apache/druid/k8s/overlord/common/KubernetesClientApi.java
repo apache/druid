@@ -19,6 +19,7 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+// Wraps all kubernetes api calls, to ensure you open and close connections properly
 public interface KubernetesClientApi
 {
   <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException;
