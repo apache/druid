@@ -177,13 +177,13 @@ Set the following properties:
 
 ## Drop rules
 
-Drop rules define when Druid drops segments from the cluster.
+Drop rules define when Druid drops segments from the cluster. Druid keeps dropped data in deep storage. Note that if you enable segment autokill, or you run a kill task, Druid deletes the data from deep storage. See [Data deletion](../data-management/delete.md) for more information on deleting data.
 
 If you want to use a [load rule](#load-rules) to retain only data from a defined period of time, you must also define a drop rule. If you don't define a drop rule, Druid retains data that doesn't lie within your defined period according to the default rule, `loadForever`.
 
 ### Forever drop rule
 
-The forever drop rule drops all segment data from the cluster.
+The forever drop rule drops all segment data from the cluster. If you configure a set of rules with a forever drop rule as the last rule, Druid drops any segment data that remains after it evaluates the higher priority rules.
 
 Forever drop rules have type `dropForever`:
 
@@ -209,7 +209,10 @@ Period drop rules have type `dropByPeriod` and the following JSON structure:
 
 Set the following properties:
 - `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the future or to the current time, depending on the `includeFuture` flag.
-- `includeFuture`: a boolean flag to indicate whether the drop period includes the future. Defaults to `true`.
+- `includeFuture`: a boolean flag to instruct Druid to match a segment if:
+<br>- the segment interval overlaps the rule interval, or
+<br>- the segment interval starts any time after the rule interval starts.
+<br>You can use this property to drop segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
 
 ### Period drop before rule
 
@@ -247,13 +250,11 @@ Set the following property:
 
 ## Broadcast rules
 
-Broadcast rules instruct Druid to load segments of a datasource in all brokers, historicals, tasks, and indexers in the cluster. Apply broadcast rules to a specific datasource, not to the default set of rules for all datasources.
-
-A broadcast rule defines a broadcast table, typically to assist with broadcast [joins](../querying/datasource.md#join). A broadcast join allows you to lookup, or join, values in the broadcast. The index table feature uses broadcast tables.
+Druid extensions use broadcast rules to load a datasources onto all brokers in the cluster. Apply broadcast rules in a test environment, not in production.
 
 ### Forever broadcast rule
 
-The forever broadcast rule loads all segment data in all brokers, historicals, tasks, and indexers in the cluster. 
+The forever broadcast rule loads all segment data in your datasources onto all brokers in the cluster. 
 
 Forever broadcast rules have type `broadcastForever`:
 
@@ -265,7 +266,7 @@ Forever broadcast rules have type `broadcastForever`:
 
 ### Period broadcast rule
 
-Druid compares a segment's interval to the period you specify in the rule and broadcasts the matching data. The rule matches if the period overlaps the segment interval.
+Druid compares a segment's interval to the period you specify in the rule and loads the matching data onto the brokers in the cluster.
 
 Period broadcast rules have type `broadcastByPeriod` and the following JSON structure:
 
@@ -280,11 +281,14 @@ Period broadcast rules have type `broadcastByPeriod` and the following JSON stru
 Set the following properties:
 
 - `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the future or to the current time, depending on the `includeFuture` flag.
-- `includeFuture`: a boolean flag to indicate whether the broadcast period includes the future. Defaults to `true`.
+- `includeFuture`: a boolean flag to instruct Druid to match a segment if:
+<br>- the segment interval overlaps the rule interval, or
+<br>- the segment interval starts any time after the rule interval starts.
+<br>You can use this property to broadcast segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
 
 ### Interval broadcast rule
 
-Druid broadcasts all segments that match the defined interval.
+An interval broadcast rule loads a specific range of data onto the brokers in the cluster.
 
 Interval broadcast rules have type `broadcastByInterval` and the following JSON structure:
 
