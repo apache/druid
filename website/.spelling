@@ -632,6 +632,8 @@ multiStageQuery.payload.status
 multiStageQuery.payload.status.status
 multiStageQuery.payload.status.startTime 
 multiStageQuery.payload.status.durationMs
+multiStageQuery.payload.status.pendingTasks
+multiStageQuery.payload.status.runningTasks
 multiStageQuery.payload.status.errorReport
 multiStageQuery.payload.status.errorReport.taskId
 multiStageQuery.payload.status.errorReport.host
