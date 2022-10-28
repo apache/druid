@@ -111,7 +111,7 @@ jobs:
     - <<: *license_checks
       name: "license checks with Hadoop3"
       env:
-        -HADOOP_PROFILE='-Phadoop3'
+        - HADOOP_PROFILE='-Phadoop3'
 
     - name: "script checks"
       install: skip
