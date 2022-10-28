@@ -171,6 +171,7 @@ public class IndexSpec
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   @Nullable
   public SegmentizerFactory getSegmentLoader()
   {
