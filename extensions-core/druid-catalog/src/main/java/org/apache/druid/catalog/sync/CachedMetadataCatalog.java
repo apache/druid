@@ -26,8 +26,8 @@ import org.apache.druid.catalog.model.SchemaRegistry.SchemaSpec;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
-import org.apache.druid.catalog.sync.MetadataCatalog.CatalogListener;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.inject.Inject;
 
@@ -58,23 +58,25 @@ import java.util.concurrent.ConcurrentHashMap;
  * populates the cache with updates. For a local cache, the DB layer
  * provides the updates. For a remote cache, the DB host pushes updates.
  */
-public class CachedMetadataCatalog implements MetadataCatalog, CatalogListener
+public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateListener
 {
+  private static final Logger LOG = new Logger(CachedMetadataCatalog.class);
+
   public static final int NOT_FETCHED = -1;
   public static final int UNDEFINED = 0;
 
+  /**
+   * Cache entry. Normally wraps a catalog table entry. Can also wrap a null
+   * entry which says that we tried to resolve the table, but there is no such
+   * entry, and there is no need to check again.
+   */
   private static class TableEntry
   {
     private final TableMetadata table;
 
-    protected TableEntry(SchemaSpec schema, TableMetadata table)
+    protected TableEntry(TableMetadata table)
     {
       this.table = table;
-    }
-
-    protected long version()
-    {
-      return table == null ? UNDEFINED : table.updateTime();
     }
   }
 
@@ -93,7 +95,7 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogListener
     {
       TableEntry entry = cache.computeIfAbsent(
           tableId.name(),
-          key -> new TableEntry(schema, base.table(tableId))
+          key -> new TableEntry(base.table(tableId))
           );
       return entry.table;
     }
@@ -106,7 +108,7 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogListener
       if (version == NOT_FETCHED) {
         List<TableMetadata> catalogTables = base.tablesForSchema(schema.name());
         for (TableMetadata table : catalogTables) {
-          update(table);
+          cache.put(table.id().name(), new TableEntry(table));
         }
       }
       List<TableMetadata> orderedTables = new ArrayList<>();
@@ -121,20 +123,129 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogListener
       return orderedTables;
     }
 
-    public synchronized void update(TableMetadata table)
+    public synchronized void update(UpdateEvent event)
     {
-      cache.compute(
-          table.id().name(),
-          (k, v) -> v == null || v.version() < table.updateTime()
-                ? new TableEntry(schema, table)
-                : v
-      );
+      TableMetadata table = event.table;
+      final String name = table.id().name();
+      switch (event.type) {
+        case CREATE:
+          cache.compute(
+              name,
+              (k, v) -> computeCreate(v, table)
+          );
+          break;
+        case UPDATE:
+          cache.compute(
+              name,
+              (k, v) -> computeUpdate(v, table)
+          );
+          break;
+        case DELETE:
+          cache.remove(name);
+          break;
+        case COLUMNS_UPDATE:
+          cache.compute(
+              name,
+              (k, v) -> computeColumnsUpdate(v, table)
+          );
+          break;
+        case PROPERTY_UPDATE:
+          cache.compute(
+              name,
+              (k, v) -> computePropertiesUpdate(v, table)
+          );
+          break;
+        default:
+          // Don't know what to do
+          return;
+      }
       version = Math.max(version, table.updateTime());
     }
 
-    public void remove(String name)
+    protected TableEntry computeCreate(TableEntry entry, TableMetadata update)
     {
-      cache.remove(name);
+      if (entry != null && entry.table != null) {
+        LOG.warn("Received creation event for existing entry: %s", update.id().sqlName());
+        return computeUpdate(entry, update);
+      }
+      return new TableEntry(update);
+    }
+
+    private TableEntry computeUpdate(TableEntry entry, TableMetadata update)
+    {
+      if (!checkExists(entry, update)) {
+        return new TableEntry(update);
+      }
+      if (!checkVersion(entry, update)) {
+        return entry;
+      }
+      return new TableEntry(update) ;
+    }
+
+    private boolean checkExists(TableEntry entry, TableMetadata update)
+    {
+      if (entry == null || entry.table == null) {
+        LOG.error("Reveived update for missing cache entry: %s", update.id().sqlName());
+        // TODO: force resync
+        return false;
+      }
+      return true;
+    }
+
+    private TableEntry computeColumnsUpdate(TableEntry entry, TableMetadata update)
+    {
+      if (!checkExists(entry, update)) {
+        return new TableEntry(null);
+      }
+      if (!checkResolved(entry, update, "columns")) {
+        return entry;
+      }
+      if (!checkVersion(entry, update)) {
+        return entry;
+      }
+      return new TableEntry(entry.table.withColumns(update));
+    }
+
+    private TableEntry computePropertiesUpdate(TableEntry entry, TableMetadata update)
+    {
+      if (!checkExists(entry, update)) {
+        return new TableEntry(null);
+      }
+      if (!checkResolved(entry, update, "properties")) {
+        return entry;
+      }
+      if (!checkVersion(entry, update)) {
+        return entry;
+      }
+      return new TableEntry(entry.table.withProperties(update));
+    }
+
+    private boolean checkResolved(TableEntry entry, TableMetadata update, String action)
+    {
+      if (entry.table == null) {
+        LOG.error("Received %s update for unresolved table: %s",
+            action,
+            update.id().sqlName()
+        );
+        // TODO: force resync
+        return false;
+      }
+      return true;
+    }
+
+    private boolean checkVersion(TableEntry entry, TableMetadata update)
+    {
+      if (entry.table.updateTime() > update.updateTime()) {
+        LOG.warn(
+            "Received out-of-order update for table: %s. Cache: %d, update:%d",
+            update.id().sqlName(),
+            entry.table.updateTime(),
+            update.updateTime()
+        );
+        // TODO: force resync
+        return false;
+      }
+      return true;
     }
 
     public Set<String> tableNames()
@@ -188,20 +299,11 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogListener
   }
 
   @Override
-  public void updated(TableMetadata table)
+  public void updated(UpdateEvent event)
   {
-    SchemaEntry schemaEntry = entryFor(table.id().schema());
+    SchemaEntry schemaEntry = entryFor(event.table.id().schema());
     if (schemaEntry != null) {
-      schemaEntry.update(table);
-    }
-  }
-
-  @Override
-  public void deleted(TableId tableId)
-  {
-    SchemaEntry schemaEntry = entryFor(tableId.schema());
-    if (schemaEntry != null) {
-      schemaEntry.remove(tableId.name());
+      schemaEntry.update(event);
     }
   }
 

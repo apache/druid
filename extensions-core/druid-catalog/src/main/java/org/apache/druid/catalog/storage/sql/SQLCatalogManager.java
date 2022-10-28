@@ -34,7 +34,9 @@ import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.storage.MetadataStorageManager;
-import org.apache.druid.catalog.storage.sql.UpdateEvent.EventType;
+import org.apache.druid.catalog.sync.CatalogUpdateListener;
+import org.apache.druid.catalog.sync.UpdateEvent;
+import org.apache.druid.catalog.sync.UpdateEvent.EventType;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -65,7 +67,7 @@ public class SQLCatalogManager implements CatalogManager
   private final ObjectMapper jsonMapper;
   private final IDBI dbi;
   private final String tableName;
-  private final Deque<Listener> listeners = new ConcurrentLinkedDeque<>();
+  private final Deque<CatalogUpdateListener> listeners = new ConcurrentLinkedDeque<>();
 
   @Inject
   public SQLCatalogManager(MetadataStorageManager metastoreManager)
@@ -666,7 +668,7 @@ public class SQLCatalogManager implements CatalogManager
   }
 
   @Override
-  public synchronized void register(Listener listener)
+  public synchronized void register(CatalogUpdateListener listener)
   {
     listeners.add(listener);
   }
@@ -689,13 +691,13 @@ public class SQLCatalogManager implements CatalogManager
 
   protected void sendDeletion(TableId id)
   {
-    sendEvent(new UpdateEvent(EventType.DELETE, id));
+    sendEvent(new UpdateEvent(EventType.DELETE, TableMetadata.empty(id)));
   }
 
   protected synchronized void sendEvent(UpdateEvent event)
   {
-    for (Listener listener : listeners) {
-      listener.delta(event);
+    for (CatalogUpdateListener listener : listeners) {
+      listener.updated(event);
     }
   }
 

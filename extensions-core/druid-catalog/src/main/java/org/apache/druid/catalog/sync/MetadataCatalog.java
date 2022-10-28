@@ -23,6 +23,8 @@ import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 
+import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Set;
 
@@ -44,15 +46,9 @@ public interface MetadataCatalog
     ResolvedTable resolveTable(TableId id);
   }
 
-  interface CatalogListener
-  {
-    void updated(TableMetadata update);
-    void deleted(TableId tableId);
-  }
-
   interface CatalogUpdateProvider
   {
-    void register(CatalogListener listener);
+    void register(CatalogUpdateListener listener);
   }
 
   /**
@@ -64,8 +60,8 @@ public interface MetadataCatalog
    * metadata. Views and input sources exist <i>only</i> if their
    * metadata exists. System tables never have metadata.
    */
-  TableMetadata getTable(TableId tableId);
-  ResolvedTable resolveTable(TableId tableId);
+  @Nullable TableMetadata getTable(TableId tableId);
+  @Nullable ResolvedTable resolveTable(TableId tableId);
 
   /**
    * List of tables defined within the given schema. Does not filter the

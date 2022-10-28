@@ -134,6 +134,17 @@ public class TableMetadata
     );
   }
 
+  public static TableMetadata empty(TableId id)
+  {
+    return new TableMetadata(
+        id,
+        0,
+        0,
+        null,
+        null
+    );
+  }
+
   public TableMetadata fromInsert(long updateTime)
   {
     return new TableMetadata(
@@ -163,6 +174,28 @@ public class TableMetadata
         updateTime,
         state,
         spec
+    );
+  }
+
+  public TableMetadata withColumns(TableMetadata update)
+  {
+    return new TableMetadata(
+        id,
+        creationTime,
+        update.updateTime(),
+        state,
+        spec.withColumns(update.spec().columns())
+    );
+  }
+
+  public TableMetadata withProperties(TableMetadata update)
+  {
+    return new TableMetadata(
+        id,
+        creationTime,
+        update.updateTime(),
+        state,
+        spec.withProperties(update.spec().properties())
     );
   }
 

@@ -20,6 +20,7 @@
 package org.apache.druid.catalog.storage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.catalog.CatalogException.NotFoundException;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.SchemaRegistry;
 import org.apache.druid.catalog.model.SchemaRegistry.SchemaSpec;
@@ -28,7 +29,7 @@ import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.storage.sql.CatalogManager;
-import org.apache.druid.catalog.sync.MetadataCatalog.CatalogListener;
+import org.apache.druid.catalog.sync.CatalogUpdateListener;
 import org.apache.druid.catalog.sync.MetadataCatalog.CatalogSource;
 import org.apache.druid.catalog.sync.MetadataCatalog.CatalogUpdateProvider;
 import org.apache.druid.guice.annotations.Json;
@@ -52,34 +53,6 @@ import java.util.List;
  */
 public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
 {
-  public static class ListenerAdapter implements CatalogManager.Listener
-  {
-    private final CatalogListener dest;
-
-    public ListenerAdapter(CatalogListener dest)
-    {
-      this.dest = dest;
-    }
-
-    @Override
-    public void added(TableMetadata table)
-    {
-      dest.updated(table);
-    }
-
-    @Override
-    public void updated(TableMetadata table)
-    {
-      dest.updated(table);
-    }
-
-    @Override
-    public void deleted(TableId id)
-    {
-      dest.deleted(id);
-    }
-  }
-
   protected final SchemaRegistry schemaRegistry;
   protected final TableDefnRegistry tableRegistry;
   protected final CatalogManager catalogMgr;
@@ -111,9 +84,9 @@ public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
   }
 
   @Override
-  public void register(CatalogListener listener)
+  public void register(CatalogUpdateListener listener)
   {
-    tables().register(new ListenerAdapter(listener));
+    tables().register(listener);
   }
 
   @Override
@@ -123,9 +96,13 @@ public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
   }
 
   @Override
-  public TableMetadata table(TableId id)
+  public @Nullable TableMetadata table(TableId id)
   {
-    return tables().read(id);
+    try {
+      return tables().read(id);
+    } catch (NotFoundException e) {
+      return null;
+    }
   }
 
   public void validate(TableMetadata table)

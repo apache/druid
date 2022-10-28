@@ -22,14 +22,12 @@ package org.apache.druid.catalog.storage.sql;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
-import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
+import org.apache.druid.catalog.sync.CatalogUpdateListener;
 
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
 
 /**
  * Manages catalog data. Used in Coordinator, which will be in either
@@ -41,17 +39,6 @@ import java.util.function.Function;
  */
 public interface CatalogManager
 {
-  /**
-   * Generic interface for changes to the catalog at the storage level.
-   * Implemented by the catalog sync mechanism to send update events
-   * to the Broker. Note that these events are about the <i>catalog</li>,
-   * not about the physical storage of tables (i.e. datasources.)
-   */
-  interface Listener
-  {
-    void delta(UpdateEvent event);
-  }
-
   public interface TableTransform
   {
     TableSpec apply(TableMetadata spec) throws CatalogException;
@@ -66,7 +53,7 @@ public interface CatalogManager
   /**
    * Register a listener for catalog events.
    */
-  void register(Listener listener);
+  void register(CatalogUpdateListener listener);
 
   /**
    * Create a table entry.

@@ -19,19 +19,17 @@
 
 package org.apache.druid.catalog.sync;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.catalog.http.CatalogListenerResource;
-import org.apache.druid.catalog.model.TableId;
-import org.apache.druid.catalog.model.TableMetadata;
-import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.storage.CatalogStorage;
-import org.apache.druid.catalog.sync.MetadataCatalog.CatalogListener;
 import org.apache.druid.catalog.sync.RestUpdateSender.RestSender;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -53,17 +51,10 @@ import java.util.function.Supplier;
  * a wrapper class to handle deletes.
  */
 @ManageLifecycle
-public class CatalogUpdateNotifier implements CatalogListener
+public class CatalogUpdateNotifier implements CatalogUpdateListener
 {
   private static final String CALLER_NAME = "Catalog Sync";
   private static final long TIMEOUT_MS = 5000;
-
-  /**
-   * Internal table type used in updates to notify listeners that a table has
-   * been deleted. Avoids the need for a special "table deleted" message.
-   */
-  public static final String TOMBSTONE_TABLE_TYPE = "tombstone";
-  private static final TableSpec TABLE_TOMBSTONE = new TableSpec(TOMBSTONE_TABLE_TYPE, null, null);
 
   private final CacheNotifier notifier;
   private final ObjectMapper smileMapper;
@@ -107,15 +98,13 @@ public class CatalogUpdateNotifier implements CatalogListener
   }
 
   @Override
-  public void updated(TableMetadata update)
+  public void updated(UpdateEvent event)
   {
-    notifier.send(update.toBytes(smileMapper));
-  }
-
-  @Override
-  public void deleted(TableId tableId)
-  {
-    TableMetadata spec = TableMetadata.newTable(tableId, TABLE_TOMBSTONE);
-    notifier.send(spec.toBytes(smileMapper));
+    try {
+      notifier.send(smileMapper.writeValueAsBytes(event));
+    }
+    catch (JsonProcessingException e) {
+      throw new ISE("Failed to serialize " + event.getClass().getSimpleName());
+    }
   }
 }

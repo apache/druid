@@ -23,11 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 
 import javax.annotation.Nullable;
 
