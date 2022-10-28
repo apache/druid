@@ -195,16 +195,6 @@ public class TableMetadata
     }
   }
 
-  public byte[] toBytes(ObjectMapper jsonMapper)
-  {
-    return JacksonUtils.toBytes(jsonMapper, this);
-  }
-
-  public static TableMetadata fromBytes(ObjectMapper jsonMapper, byte[] bytes)
-  {
-    return JacksonUtils.fromBytes(jsonMapper, bytes, TableMetadata.class);
-  }
-
   @Override
   public String toString()
   {

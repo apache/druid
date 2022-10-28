@@ -132,19 +132,11 @@ public class DatasourceTableTest
     {
       TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
       expectValidationSucceeds(spec);
-
-      // Check serialization
-      byte[] bytes = spec.toBytes(mapper);
-      assertEquals(spec, TableSpec.fromBytes(mapper, bytes));
     }
 
     {
       TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
       expectValidationSucceeds(spec);
-
-      // Check serialization
-      byte[] bytes = spec.toBytes(mapper);
-      assertEquals(spec, TableSpec.fromBytes(mapper, bytes));
     }
   }
 
@@ -339,19 +331,6 @@ public class DatasourceTableTest
     // Sanity check
     expectValidationSucceeds(spec);
     return spec;
-  }
-
-  @Test
-  public void testSerialization()
-  {
-    TableSpec spec = exampleSpec();
-
-    // Round-trip
-    TableSpec spec2 = TableSpec.fromBytes(mapper, spec.toBytes(mapper));
-    assertEquals(spec, spec2);
-
-    // Sanity check of toString, which uses JSON
-    assertNotNull(spec.toString());
   }
 
   private TableSpec mergeTables(TableSpec spec, TableSpec update)

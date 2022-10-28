@@ -20,15 +20,14 @@
 package org.apache.druid.java.util.common.jackson;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Map;
 
@@ -92,34 +91,6 @@ public final class JacksonUtils
     } else {
       final JsonSerializer<Object> serializer = getSerializer(serializers, o.getClass());
       serializer.serialize(o, jsonGenerator, serializers);
-    }
-  }
-
-  /**
-   * Convert the given object to an array of bytes. Use when the object is
-   * known serializable so that the Jackson exception can be suppressed.
-   */
-  public static byte[] toBytes(ObjectMapper jsonMapper, Object obj)
-  {
-    try {
-      return jsonMapper.writeValueAsBytes(obj);
-    }
-    catch (JsonProcessingException e) {
-      throw new ISE("Failed to serialize " + obj.getClass().getSimpleName());
-    }
-  }
-
-  /**
-   * Deserialize an object from an array of bytes. Use when the object is
-   * known deserializable so that the Jackson exception can be suppressed.
-   */
-  public static <T> T fromBytes(ObjectMapper jsonMapper, byte[] bytes, Class<T> clazz)
-  {
-    try {
-      return jsonMapper.readValue(bytes, clazz);
-    }
-    catch (IOException e) {
-      throw new ISE(e, "Failed to deserialize a " + clazz.getSimpleName());
     }
   }
 }

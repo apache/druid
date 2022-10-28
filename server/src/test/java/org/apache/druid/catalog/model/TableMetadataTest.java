@@ -56,10 +56,6 @@ public class TableMetadataTest
     TableId id2 = TableId.datasource("ds");
     assertEquals(TableId.DRUID_SCHEMA, id2.schema());
     assertEquals("ds", id2.name());
-
-    byte[] bytes = JacksonUtils.toBytes(mapper, id1);
-    TableId id3 = JacksonUtils.fromBytes(mapper, bytes, TableId.class);
-    assertEquals(id1, id3);
   }
 
   @Test
@@ -92,10 +88,6 @@ public class TableMetadataTest
       assertEquals(20, table.updateTime());
       assertEquals(TableState.ACTIVE, table.state());
       assertNotNull(table.spec());
-
-      byte[] bytes = JacksonUtils.toBytes(mapper, table);
-      TableMetadata table2 = JacksonUtils.fromBytes(mapper, bytes, TableMetadata.class);
-      assertEquals(table, table2);
     }
 
     {

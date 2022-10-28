@@ -21,6 +21,8 @@ package org.apache.druid.catalog.sync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
+import org.apache.druid.catalog.CatalogException.NotFoundException;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableId;
@@ -35,9 +37,6 @@ import org.apache.druid.catalog.model.table.InputFormats;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.CatalogTests;
-import org.apache.druid.catalog.storage.sql.CatalogManager.DuplicateKeyException;
-import org.apache.druid.catalog.storage.sql.CatalogManager.NotFoundException;
-import org.apache.druid.catalog.storage.sql.CatalogManager.OutOfDateException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.junit.After;
@@ -115,7 +114,7 @@ public class CatalogMetadataTest
   }
 
   @Test
-  public void testDirect() throws DuplicateKeyException, OutOfDateException, NotFoundException
+  public void testDirect() throws DuplicateKeyException, NotFoundException
   {
     populateCatalog();
     MetadataCatalog catalog = new LocalMetadataCatalog(storage, storage.schemaRegistry());
@@ -125,7 +124,7 @@ public class CatalogMetadataTest
   }
 
   @Test
-  public void testCached() throws DuplicateKeyException, OutOfDateException, NotFoundException
+  public void testCached() throws DuplicateKeyException, NotFoundException
   {
     populateCatalog();
     CachedMetadataCatalog catalog = new CachedMetadataCatalog(storage, storage.schemaRegistry(), jsonMapper);
@@ -146,18 +145,18 @@ public class CatalogMetadataTest
   }
 
   @Test
-  public void testRemoteWithJson() throws DuplicateKeyException, OutOfDateException, NotFoundException
+  public void testRemoteWithJson() throws DuplicateKeyException, NotFoundException
   {
     doTestRemote(false);
   }
 
   @Test
-  public void testRemoteWithSmile() throws DuplicateKeyException, OutOfDateException, NotFoundException
+  public void testRemoteWithSmile() throws DuplicateKeyException, NotFoundException
   {
     doTestRemote(true);
   }
 
-  private void doTestRemote(boolean useSmile) throws DuplicateKeyException, OutOfDateException, NotFoundException
+  private void doTestRemote(boolean useSmile) throws DuplicateKeyException, NotFoundException
   {
     populateCatalog();
     MockCatalogSync sync = new MockCatalogSync(storage, CatalogTests.AUTH_MAPPER, jsonMapper, smileMapper, useSmile);
@@ -284,7 +283,7 @@ public class CatalogMetadataTest
     assertEquals("table3", tables.get(0).id().name());
   }
 
-  private void alterCatalog() throws DuplicateKeyException, OutOfDateException, NotFoundException
+  private void alterCatalog() throws DuplicateKeyException, NotFoundException
   {
     // Add a column to table 1
     TableId id1 = TableId.datasource("table1");

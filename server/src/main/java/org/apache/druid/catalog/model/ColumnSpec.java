@@ -97,16 +97,6 @@ public class ColumnSpec
     }
   }
 
-  public byte[] toBytes(ObjectMapper jsonMapper)
-  {
-    return JacksonUtils.toBytes(jsonMapper, this);
-  }
-
-  public static ColumnSpec fromBytes(ObjectMapper jsonMapper, byte[] bytes)
-  {
-    return JacksonUtils.fromBytes(jsonMapper, bytes, ColumnSpec.class);
-  }
-
   @Override
   public String toString()
   {

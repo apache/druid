@@ -119,7 +119,7 @@ public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
   @Override
   public List<TableMetadata> tablesForSchema(String dbSchema)
   {
-    return tables().listDetails(dbSchema);
+    return tables().tablesInSchema(dbSchema);
   }
 
   @Override

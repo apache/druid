@@ -73,10 +73,6 @@ public class InlineTableTest
     TableDefnRegistry registry = new TableDefnRegistry(mapper);
     assertNotNull(registry.resolve(table.spec()));
 
-    // Check serialization
-    byte[] bytes = table.spec().toBytes(mapper);
-    assertEquals(table.spec(), TableSpec.fromBytes(mapper, bytes));
-
     // Convert to an external spec
     ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
 

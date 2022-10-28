@@ -21,6 +21,8 @@ package org.apache.druid.catalog.storage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
+import org.apache.druid.catalog.CatalogException.NotFoundException;
 import org.apache.druid.catalog.CatalogTest;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
@@ -28,9 +30,6 @@ import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.storage.sql.CatalogManager;
-import org.apache.druid.catalog.storage.sql.CatalogManager.DuplicateKeyException;
-import org.apache.druid.catalog.storage.sql.CatalogManager.NotFoundException;
-import org.apache.druid.catalog.storage.sql.CatalogManager.OutOfDateException;
 import org.apache.druid.catalog.storage.sql.SQLCatalogManager;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.metadata.TestDerbyConnector;
@@ -107,7 +106,7 @@ public class TableManagerTest
   }
 
   @Test
-  public void testUpdate() throws DuplicateKeyException, OutOfDateException, NotFoundException
+  public void testUpdate() throws DuplicateKeyException, NotFoundException
   {
     Map<String, Object> props = ImmutableMap.of(
         AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
@@ -115,7 +114,7 @@ public class TableManagerTest
     );
     TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     TableMetadata table = TableMetadata.newTable(TableId.datasource("table1"), spec);
-    long version = manager.create(table);
+    final long version1 = manager.create(table);
 
     // Change the definition
     props = ImmutableMap.of(
@@ -124,25 +123,34 @@ public class TableManagerTest
     );
     TableSpec spec2 = spec.withProperties(props);
     TableMetadata table2 = table.withSpec(spec2);
-    assertThrows(OutOfDateException.class, () -> manager.update(table2, 3));
+    assertThrows(NotFoundException.class, () -> manager.update(table2, 3));
 
-    assertEquals(version, manager.read(table.id()).updateTime());
-    long newVersion = manager.update(table2, version);
-    TableMetadata table3 = manager.read(table.id());
-    assertEquals(spec2, table3.spec());
-    assertEquals(newVersion, table3.updateTime());
+    assertEquals(version1, manager.read(table.id()).updateTime());
+    final long version2 = manager.update(table2, version1);
+    TableMetadata read = manager.read(table.id());
+    assertEquals(spec2, read.spec());
+    assertEquals(version2, read.updateTime());
+
+    // Replace
+    TableMetadata table3 = table.withSpec(spec2);
+    final long version3 = manager.replace(table3);
+    assertTrue(version3 > version2);
+    read = manager.read(table.id());
+    assertEquals(spec2, read.spec());
+    assertEquals(version3, read.updateTime());
 
     // Changing the state requires no version check
-    assertEquals(TableMetadata.TableState.ACTIVE, table3.state());
-    newVersion = manager.markDeleting(table.id());
-    TableMetadata table4 = manager.read(table.id());
-    assertEquals(TableMetadata.TableState.DELETING, table4.state());
-    assertEquals(newVersion, table4.updateTime());
+    assertEquals(TableMetadata.TableState.ACTIVE, read.state());
+    long version4 = manager.markDeleting(table.id());
+    read = manager.read(table.id());
+    assertEquals(TableMetadata.TableState.DELETING, read.state());
+    assertEquals(version4, read.updateTime());
 
-    // Update: no version check)
-    TableMetadata table5 = table.withSpec(spec2);
-    long newerVersion = manager.update(table5, 0);
-    assertTrue(newerVersion > newVersion);
+    // Can't update when deleting
+    assertThrows(NotFoundException.class, () -> manager.update(table3, version4));
+
+    // Can't replace when deleting
+    assertThrows(NotFoundException.class, () -> manager.replace(table3));
   }
 
   @Test
@@ -164,7 +172,7 @@ public class TableManagerTest
   @Test
   public void testList() throws DuplicateKeyException
   {
-    List<TableId> list = manager.list();
+    List<TableId> list = manager.allTablePaths();
     assertTrue(list.isEmpty());
 
     Map<String, Object> props = ImmutableMap.of(
@@ -181,7 +189,7 @@ public class TableManagerTest
     version = manager.create(table1);
     table1 = table1.fromInsert(version);
 
-    list = manager.list();
+    list = manager.allTablePaths();
     assertEquals(2, list.size());
     TableId id = list.get(0);
     assertEquals(TableId.DRUID_SCHEMA, id.schema());
@@ -190,13 +198,13 @@ public class TableManagerTest
     assertEquals(TableId.DRUID_SCHEMA, id.schema());
     assertEquals("table2", id.name());
 
-    List<String> names = manager.list(TableId.DRUID_SCHEMA);
+    List<String> names = manager.tableNamesInSchema(TableId.DRUID_SCHEMA);
     assertEquals(2, names.size());
 
-    names = manager.list(TableId.SYSTEM_SCHEMA);
+    names = manager.tableNamesInSchema(TableId.SYSTEM_SCHEMA);
     assertEquals(0, names.size());
 
-    List<TableMetadata> details = manager.listDetails(TableId.DRUID_SCHEMA);
+    List<TableMetadata> details = manager.tablesInSchema(TableId.DRUID_SCHEMA);
     assertEquals(Arrays.asList(table1, table2), details);
   }
 }

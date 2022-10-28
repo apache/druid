@@ -112,16 +112,6 @@ public class TableSpec
     }
   }
 
-  public byte[] toBytes(ObjectMapper jsonMapper)
-  {
-    return JacksonUtils.toBytes(jsonMapper, this);
-  }
-
-  public static TableSpec fromBytes(ObjectMapper jsonMapper, byte[] bytes)
-  {
-    return JacksonUtils.fromBytes(jsonMapper, bytes, TableSpec.class);
-  }
-
   @Override
   public String toString()
   {

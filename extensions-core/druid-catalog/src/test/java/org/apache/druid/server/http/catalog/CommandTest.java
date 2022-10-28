@@ -96,10 +96,6 @@ public class CommandTest
         Arrays.asList("b", "a", "c"),
         CatalogUtils.columnNames(revised)
     );
-
-    byte[] bytes = JacksonUtils.toBytes(mapper, cmd);
-    MoveColumn cmd2 = JacksonUtils.fromBytes(mapper, bytes, MoveColumn.class);
-    assertEquals(cmd, cmd2);
   }
 
   @Test
@@ -149,9 +145,5 @@ public class CommandTest
     cmd = new HideColumns(Arrays.asList("b", "d", "e"), Arrays.asList("c", "d"));
     revised = cmd.perform(Arrays.asList("a", "b", "c"));
     assertEquals(Arrays.asList("a", "b", "d", "e"), revised);
-
-    byte[] bytes = JacksonUtils.toBytes(mapper, cmd);
-    HideColumns cmd2 = JacksonUtils.fromBytes(mapper, bytes, HideColumns.class);
-    assertEquals(cmd, cmd2);
   }
 }

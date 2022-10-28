@@ -21,6 +21,8 @@ package org.apache.druid.catalog.http;
 
 import com.google.common.base.Strings;
 import org.apache.curator.shaded.com.google.common.collect.Lists;
+import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
+import org.apache.druid.catalog.CatalogException.NotFoundException;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.SchemaRegistry.SchemaSpec;
 import org.apache.druid.catalog.model.TableDefnRegistry;
@@ -33,9 +35,6 @@ import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.HideColumns;
 import org.apache.druid.catalog.storage.MoveColumn;
 import org.apache.druid.catalog.storage.MoveColumn.Position;
-import org.apache.druid.catalog.storage.sql.CatalogManager.DuplicateKeyException;
-import org.apache.druid.catalog.storage.sql.CatalogManager.NotFoundException;
-import org.apache.druid.catalog.storage.sql.CatalogManager.OutOfDateException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -264,9 +263,6 @@ public class CatalogResource
       return Actions.okWithVersion(newVersion);
     }
     catch (NotFoundException e) {
-      return Response.status(Response.Status.NOT_FOUND).build();
-    }
-    catch (OutOfDateException e) {
       return Response
           .status(Response.Status.BAD_REQUEST)
           .entity(
@@ -338,7 +334,7 @@ public class CatalogResource
     );
   }
 
-  private Response incrementalUpdate(
+  private Response incrementalPropertiesUpdate(
       TableId tableId,
       TableSpec newSpec,
       @Context final HttpServletRequest req,
@@ -350,7 +346,30 @@ public class CatalogResource
       return response;
     }
     try {
-      long newVersion = catalog.tables().updatePayload(tableId, action);
+      long newVersion = catalog.tables().updateTableSpec(tableId, action);
+      return Actions.okWithVersion(newVersion);
+    }
+    catch (NotFoundException e) {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    }
+    catch (Exception e) {
+      return Actions.exception(e);
+    }
+  }
+
+  private Response incrementalColumnsUpdate(
+      TableId tableId,
+      TableSpec newSpec,
+      @Context final HttpServletRequest req,
+      Function<TableSpec, TableSpec> action
+  )
+  {
+    Response response = validateTable(tableId, newSpec, req);
+    if (response != null) {
+      return response;
+    }
+    try {
+      long newVersion = catalog.tables().updateTableSpec(tableId, action);
       return Actions.okWithVersion(newVersion);
     }
     catch (NotFoundException e) {
@@ -550,7 +569,7 @@ public class CatalogResource
       @Context final HttpServletRequest req
   )
   {
-    List<TableId> tables = catalog.tables().list();
+    List<TableId> tables = catalog.tables().allTablePaths();
     Iterable<TableId> filtered = AuthorizationUtils.filterAuthorizedResources(
         req,
         tables,
@@ -589,7 +608,7 @@ public class CatalogResource
       return result.lhs;
     }
     SchemaSpec schema = result.rhs;
-    List<String> tables = catalog.tables().list(dbSchema);
+    List<String> tables = catalog.tables().tableNamesInSchema(dbSchema);
     Iterable<String> filtered = AuthorizationUtils.filterAuthorizedResources(
         req,
         tables,
@@ -618,7 +637,7 @@ public class CatalogResource
       return result.lhs;
     }
     SchemaSpec schema = result.rhs;
-    List<TableMetadata> tables = catalog.tables().listDetails(schema.name());
+    List<TableMetadata> tables = catalog.tables().tablesInSchema(schema.name());
     Iterable<TableMetadata> filtered = AuthorizationUtils.filterAuthorizedResources(
         req,
         tables,

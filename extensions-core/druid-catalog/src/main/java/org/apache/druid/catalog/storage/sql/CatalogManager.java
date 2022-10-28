@@ -19,13 +19,16 @@
 
 package org.apache.druid.catalog.storage.sql;
 
+import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
+import org.apache.druid.catalog.CatalogException.NotFoundException;
+import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
-import org.apache.druid.catalog.model.TableSpec;
 
 import javax.annotation.Nullable;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 /**
@@ -38,45 +41,6 @@ import java.util.function.Function;
  */
 public interface CatalogManager
 {
-  /**
-   * Thrown with an "optimistic lock" fails: the version of a
-   * catalog object being updated is not the same as that of
-   * the expected version.
-   */
-  class OutOfDateException extends Exception
-  {
-    public OutOfDateException(String msg)
-    {
-      super(msg);
-    }
-  }
-
-  /**
-   * Thrown when a record does not exist in the database. Allows
-   * the caller to check for this specific case in a generic way.
-   */
-  class NotFoundException extends Exception
-  {
-    public NotFoundException(String msg)
-    {
-      super(msg);
-    }
-  }
-
-  /**
-   * Indicates an attempt to insert a duplicate key into a table.
-   * This could indicate a logic error, or a race condition. It is
-   * generally not retryable: it us unrealistic to expect the other
-   * thread to helpfully delete the record it just added.
-   */
-  class DuplicateKeyException extends Exception
-  {
-    public DuplicateKeyException(String msg, Exception e)
-    {
-      super(msg, e);
-    }
-  }
-
   /**
    * Generic interface for changes to the catalog at the storage level.
    * Implemented by the catalog sync mechanism to send update events
@@ -130,26 +94,34 @@ public interface CatalogManager
   /**
    * Update a table definition.
    * <p>
-   * If {@code oldVersion == 0}, overwrites any current content.
-   * This is a potential race conditions if this is a partial update
-   * because of the possibility of another user doing an update since the
-   * read. Fine when the goal is to replace the entire definition.
-   * Else, only does the update is at the given version.
-   * <p>
-   * Retryable only if the version is given, and an
-   * {@code OutOfDateException} is thrown.
+   * The table must be at the {@code oldVersion}. Use this for optimistic-locking
+   * style updates.
+   *
+   * @throws NotFoundException if either the table does not exist, the table is
+   * not in the active state, or the version does not match. If the exception
+   * is thrown, the application should re-request the data, which will reveal
+   * the actual state at that moment
    */
-  long update(TableMetadata table, long oldVersion) throws OutOfDateException, NotFoundException;
+  long update(TableMetadata table, long oldVersion) throws NotFoundException;
 
   /**
-   * Update the table spec incrementally using the transform provided. Performs the update
+   * Replace a table definition.
+   * <p>
+   * Use this when the desire to replace whatever exists with the new information,
+   * such as configuration-as-code style updates.
+   */
+  long replace(TableMetadata table) throws NotFoundException;
+
+  /**
+   * Update the table properties incrementally using the transform provided. Performs the update
    * in a transaction to ensure the read and write are atomic.
    *
    * @param id        the table to update
-   * @param transform the transform to apply to the table spec
+   * @param transform the transform to apply to the table properties
    * @return          the update timestamp (version) of the updated record
    */
-  long updatePayload(TableId id, Function<TableSpec, TableSpec> transform) throws NotFoundException;
+  long updateProperties(TableId id, Function<Map<String, Object>, Map<String, Object>> transform) throws NotFoundException;
+  long updateColumns(TableId id, Function<List<ColumnSpec>, List<ColumnSpec>> transform) throws NotFoundException;
 
   /**
    * Move the table to the deleting state. No version check: fine
@@ -167,7 +139,7 @@ public interface CatalogManager
    * @return the table record, or {@code null} if the entry is not
    * found in the DB.
    */
-  @Nullable TableMetadata read(TableId id);
+  TableMetadata read(TableId id) throws NotFoundException;
 
   /**
    * Delete the table record for the given ID. Essentially does a
@@ -182,21 +154,21 @@ public interface CatalogManager
    * @return {@code true} if the table exists and was deleted,
    * {@code false} if the table did not exist.
    */
-  boolean delete(TableId id);
+  void delete(TableId id) throws NotFoundException;
 
   /**
    * Returns a list of the ids (schema, name) of all tables in the catalog.
    */
-  List<TableId> list();
+  List<TableId> allTablePaths();
 
   /**
    * Returns a list of the names of all tables within the given schema.
    */
-  List<String> list(String dbSchema);
+  List<String> tableNamesInSchema(String dbSchema);
 
   /**
    * Returns a list of the table metadata for all tables within the given
    * schema.
    */
-  List<TableMetadata> listDetails(String dbSchema);
+  List<TableMetadata> tablesInSchema(String dbSchema);
 }
