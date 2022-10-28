@@ -70,9 +70,9 @@ public class UnnestCursor implements Cursor
       @Override
       public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
       {
-        /*if (! outputName.equals(dimensionSpec.getDimension())) {
+         if (!outputName.equals(dimensionSpec.getDimension())) {
           return baseColumSelectorFactory.makeDimensionSelector(dimensionSpec);
-        }*/
+        }
 
         final DimensionSpec actualDimensionSpec = dimensionSpec.withDimension(columnName);
         return new DimensionSelector()
@@ -164,9 +164,9 @@ public class UnnestCursor implements Cursor
       @Override
       public ColumnValueSelector makeColumnValueSelector(String columnName)
       {
-        /*if (!outputName.equals(columnName)) {
+        if (!outputName.equals(columnName)) {
           return baseColumSelectorFactory.makeColumnValueSelector(columnName);
-        }*/
+        }
 
         return new ColumnValueSelector()
         {
@@ -205,8 +205,12 @@ public class UnnestCursor implements Cursor
           @Override
           public Object getObject()
           {
-            if (!unnestList.isEmpty()) {
-              return unnestList.get(index);
+            if (pos != null) {
+              return dimSelector.lookupName(pos.get(index));
+            } else {
+              if (!unnestList.isEmpty()) {
+                return unnestList.get(index);
+              }
             }
             return null;
           }
@@ -256,18 +260,20 @@ public class UnnestCursor implements Cursor
   {
     if (unnestList.isEmpty() || index >= unnestList.size() - 1) {
       index = 0;
-      baseCursor.advanceUninterruptibly();
+      baseCursor.advance();
       // get the next row
-      currentVal = columnValueSelector.getObject();
-      if (currentVal instanceof List) {
-        //convert array into array list
-        unnestList = (List<Object>) currentVal;
-      } else if (currentVal instanceof String) {
-        unnestList = new ArrayList<>();
-        unnestList.add(currentVal);
-      } else if (currentVal == null) {
-        unnestList = new ArrayList<>();
-        unnestList.add(null);
+      if(!baseCursor.isDone()) {
+        currentVal = columnValueSelector.getObject();
+        if (currentVal instanceof List) {
+          //convert array into array list
+          unnestList = (List<Object>) currentVal;
+        } else if (currentVal instanceof String) {
+          unnestList = new ArrayList<>();
+          unnestList.add(currentVal);
+        } else if (currentVal == null) {
+          unnestList = new ArrayList<>();
+          unnestList.add(null);
+        }
       }
     } else {
       index++;
@@ -277,15 +283,15 @@ public class UnnestCursor implements Cursor
   private boolean checkIfDimensionSelectorAndAdvance()
   {
     if (this.dimSelector != null && pos != null) {
-      if (index >= pos.size() - 1) {
-        if (!baseCursor.isDone()) {
+      if (index >= pos.size()-1){
+        if(!baseCursor.isDone()) {
           baseCursor.advanceUninterruptibly();
-          // get the next row
           pos = dimSelector.getRow();
-          index = 0;
         }
-      } else {
-        index++;
+        index = 0;
+      }
+      else{
+        ++index;
       }
       return true;
     }
