@@ -41,6 +41,9 @@ import java.util.stream.Collectors;
 @JsonTypeName("map")
 public class MapLookupExtractor extends LookupExtractor
 {
+  // Each String object has ~40 bytes of overhead, and x 2 for key and value strings
+  private static final long HEAP_ENTRY_OVERHEAD = 80;
+
   private final Map<String, String> map;
 
   private final boolean isOneToOne;
@@ -53,6 +56,31 @@ public class MapLookupExtractor extends LookupExtractor
   {
     this.map = Preconditions.checkNotNull(map, "map");
     this.isOneToOne = isOneToOne;
+  }
+
+  public static long estimateHeapFootprint(@Nullable final Map<String, String> map)
+  {
+    if (map == null) {
+      return 0;
+    }
+
+    final int numEntries = map.size();
+    long numChars = 0;
+
+    for (Map.Entry<String, String> sEntry : map.entrySet()) {
+      final String key = sEntry.getKey();
+      final String value = sEntry.getValue();
+
+      if (key != null) {
+        numChars += key.length();
+      }
+
+      if (value != null) {
+        numChars += value.length();
+      }
+    }
+
+    return HEAP_ENTRY_OVERHEAD * numEntries + numChars * Character.BYTES;
   }
 
   @JsonProperty
@@ -145,6 +173,12 @@ public class MapLookupExtractor extends LookupExtractor
   public Set<String> keySet()
   {
     return Collections.unmodifiableSet(map.keySet());
+  }
+
+  @Override
+  public long estimateHeapFootprint()
+  {
+    return estimateHeapFootprint(map);
   }
 
   @Override

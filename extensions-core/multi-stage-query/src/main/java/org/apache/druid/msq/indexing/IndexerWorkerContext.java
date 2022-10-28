@@ -44,6 +44,9 @@ import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.rpc.CoordinatorServiceClient;
+import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
+import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocations;
 import org.apache.druid.rpc.ServiceLocator;
@@ -227,17 +230,6 @@ public class IndexerWorkerContext implements WorkerContext
   @Override
   public FrameContext frameContext(QueryDefinition queryDef, int stageNumber)
   {
-    final int numWorkersInJvm;
-
-    // Determine the max number of workers in JVM for memory allocations.
-    if (toolbox.getAppenderatorsManager() instanceof UnifiedIndexerAppenderatorsManager) {
-      // CliIndexer
-      numWorkersInJvm = injector.getInstance(WorkerConfig.class).getCapacity();
-    } else {
-      // CliPeon
-      numWorkersInJvm = 1;
-    }
-
     final IntSet inputStageNumbers =
         InputSpecs.getStageNumbers(queryDef.getStageDefinition(stageNumber).getInputSpecs());
     final int numInputWorkers =
@@ -250,8 +242,8 @@ public class IndexerWorkerContext implements WorkerContext
         indexIO,
         dataSegmentProvider,
         WorkerMemoryParameters.compute(
-            Runtime.getRuntime().maxMemory(),
-            numWorkersInJvm,
+            computeAvailableHeapMemory(),
+            computeNumWorkersInJvm(),
             processorBouncer().getMaxCount(),
             numInputWorkers
         )
@@ -274,6 +266,62 @@ public class IndexerWorkerContext implements WorkerContext
   public Bouncer processorBouncer()
   {
     return injector.getInstance(Bouncer.class);
+  }
+
+  /**
+   * Number of workers that may run in the current JVM, including the current worker.
+   */
+  private int computeNumWorkersInJvm()
+  {
+    if (toolbox.getAppenderatorsManager() instanceof UnifiedIndexerAppenderatorsManager) {
+      // CliIndexer
+      return injector.getInstance(WorkerConfig.class).getCapacity();
+    } else {
+      // CliPeon
+      return 1;
+    }
+  }
+
+  /**
+   * Amount of memory available for our usage.
+   */
+  private long computeAvailableHeapMemory()
+  {
+    return Runtime.getRuntime().maxMemory() - computeTotalLookupFootprint();
+  }
+
+  /**
+   * Total estimated lookup footprint. Obtained by calling {@link LookupExtractor#estimateHeapFootprint()} on
+   * all available lookups.
+   */
+  private long computeTotalLookupFootprint()
+  {
+    // Subtract memory taken up by lookups. Correctness of this operation depends on lookups being loaded *before*
+    // we create this instance. Luckily, this is the typical mode of operation, since by default
+    // druid.lookup.enableLookupSyncOnStartup = true.
+    final LookupReferencesManager lookupManager = injector.getInstance(LookupReferencesManager.class);
+
+    int lookupCount = 0;
+    long lookupFootprint = 0;
+
+    for (final String lookupName : lookupManager.getAllLookupNames()) {
+      final LookupExtractorFactoryContainer container = lookupManager.get(lookupName).orElse(null);
+
+      if (container != null) {
+        try {
+          final LookupExtractor extractor = container.getLookupExtractorFactory().get();
+          lookupFootprint += extractor.estimateHeapFootprint();
+          lookupCount++;
+        }
+        catch (Exception e) {
+          log.noStackTrace().warn(e, "Failed to load lookup [%s] for size estimation. Skipping.", lookupName);
+        }
+      }
+    }
+
+    log.debug("Lookup footprint: %d lookups with %,d total bytes.", lookupCount, lookupFootprint);
+
+    return lookupFootprint;
   }
 
   private synchronized OverlordClient makeOverlordClient()
