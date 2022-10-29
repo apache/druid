@@ -49,6 +49,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
@@ -558,8 +559,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private int doMarkAsUsedNonOvershadowedSegments(String dataSourceName, @Nullable Interval interval)
   {
     final List<DataSegment> unusedSegments = new ArrayList<>();
-    final VersionedIntervalTimeline<String, DataSegment> timeline =
-        VersionedIntervalTimeline.forSegments(Collections.emptyList());
+    final SegmentTimeline timeline =
+        SegmentTimeline.forSegments(Collections.emptyIterator());
 
     connector.inReadOnlyTransaction(
         (handle, status) -> {
@@ -798,12 +799,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   public Collection<ImmutableDruidDataSource> getImmutableDataSourcesWithAllUsedSegments()
   {
     return getSnapshotOfDataSourcesWithAllUsedSegments().getDataSourcesWithAllUsedSegments();
-  }
-
-  @Override
-  public Set<SegmentId> getOvershadowedSegments()
-  {
-    return getSnapshotOfDataSourcesWithAllUsedSegments().getOvershadowedSegments();
   }
 
   @Override
