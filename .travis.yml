@@ -97,7 +97,7 @@ jobs:
         - ./check_test_suite.py && travis_terminate 0 || echo 'Continuing setup'
         - pip3 install wheel  # install wheel first explicitly
         - pip3 install --upgrade pyyaml
-      script: &generate_license
+      script:
         - >
           ${MVN} apache-rat:check -Prat --fail-at-end
           -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
@@ -112,8 +112,6 @@ jobs:
       name: "license checks with Hadoop3"
       env:
         - HADOOP_PROFILE='-Phadoop3'
-      before_script: *setup_generate_license
-      script: *generate_license
 
     - name: "script checks"
       install: skip
@@ -131,7 +129,7 @@ jobs:
 
     - &analyze_dependencies
       name: "analyze dependencies"
-      script: &analyze_dependencies_script |-
+      script: |-
         MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true
         -DignoreNonCompile=true -DfailOnWarning=true ${HADOOP_PROFILE} || { echo "
 
@@ -157,7 +155,6 @@ jobs:
       name: "analyze hadoop 3 dependencies"
       env:
         - HADOOP_PROFILE='-Phadoop3'
-      script: *analyze_dependencies_script
 
     - name: "intellij inspections"
       script: >
