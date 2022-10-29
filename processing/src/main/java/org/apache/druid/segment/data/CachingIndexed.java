@@ -89,6 +89,12 @@ public class CachingIndexed<T> implements CloseableIndexed<T>
   }
 
   @Override
+  public boolean isSorted()
+  {
+    return delegate.isSorted();
+  }
+
+  @Override
   public Iterator<T> iterator()
   {
     return delegate.iterator();

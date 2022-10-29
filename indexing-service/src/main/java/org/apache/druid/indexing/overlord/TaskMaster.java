@@ -113,7 +113,6 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
         log.info("By the power of Grayskull, I have the power!");
 
         try {
-          taskLockbox.syncFromStorage();
           taskRunner = runnerFactory.build();
           taskQueue = new TaskQueue(
               taskLockConfig,

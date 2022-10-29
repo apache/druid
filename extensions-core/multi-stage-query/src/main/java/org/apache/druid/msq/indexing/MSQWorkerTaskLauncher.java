@@ -30,6 +30,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -37,11 +38,13 @@ import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.WorkerManagerClient;
 import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 
+import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -83,6 +86,9 @@ public class MSQWorkerTaskLauncher
   private final long maxTaskStartDelayMillis;
   private final boolean durableStageStorageEnabled;
 
+  @Nullable
+  private final Long maxParseExceptions;
+
   // Mutable state meant to be accessible by threads outside the main loop.
   private final SettableFuture<?> stopFuture = SettableFuture.create();
   private final AtomicReference<State> state = new AtomicReference<>(State.NEW);
@@ -111,6 +117,7 @@ public class MSQWorkerTaskLauncher
       final String dataSource,
       final ControllerContext context,
       final boolean durableStageStorageEnabled,
+      @Nullable final Long maxParseExceptions,
       final long maxTaskStartDelayMillis
   )
   {
@@ -121,6 +128,7 @@ public class MSQWorkerTaskLauncher
         "multi-stage-query-task-launcher[" + StringUtils.encodeForFormat(controllerTaskId) + "]-%s"
     );
     this.durableStageStorageEnabled = durableStageStorageEnabled;
+    this.maxParseExceptions = maxParseExceptions;
     this.maxTaskStartDelayMillis = maxTaskStartDelayMillis;
   }
 
@@ -308,6 +316,10 @@ public class MSQWorkerTaskLauncher
       taskContext.put(MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, true);
     }
 
+    if (maxParseExceptions != null) {
+      taskContext.put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions);
+    }
+
     final int firstTask;
     final int taskCount;
 
@@ -331,6 +343,19 @@ public class MSQWorkerTaskLauncher
         taskIds.add(task.getId());
         taskIds.notifyAll();
       }
+    }
+  }
+
+  /**
+   * Returns a pair which contains the number of currently running worker tasks and the number of worker tasks that are
+   * not yet fully started as left and right respectively.
+   */
+  public Pair<Integer, Integer> getWorkerTaskStatus()
+  {
+    synchronized (taskIds) {
+      int runningTasks = fullyStartedTasks.size();
+      int pendingTasks = desiredTaskCount - runningTasks;
+      return Pair.of(runningTasks, pendingTasks);
     }
   }
 

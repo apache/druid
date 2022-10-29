@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.guice.annotations.PublicApi;
@@ -29,13 +30,13 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -189,40 +190,7 @@ public class Queries
    */
   public static <T> Query<T> withBaseDataSource(final Query<T> query, final DataSource newBaseDataSource)
   {
-    final Query<T> retVal;
-
-    if (query.getDataSource() instanceof QueryDataSource) {
-      final Query<?> subQuery = ((QueryDataSource) query.getDataSource()).getQuery();
-      retVal = query.withDataSource(new QueryDataSource(withBaseDataSource(subQuery, newBaseDataSource)));
-    } else {
-      final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-
-      DataSource current = newBaseDataSource;
-      DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
-
-      for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
-        current = JoinDataSource.create(
-            current,
-            clause.getDataSource(),
-            clause.getPrefix(),
-            clause.getCondition(),
-            clause.getJoinType(),
-            joinBaseFilter
-        );
-        joinBaseFilter = null;
-      }
-
-      retVal = query.withDataSource(current);
-    }
-
-    // Verify postconditions, just in case.
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(retVal.getDataSource());
-
-    if (!newBaseDataSource.equals(analysis.getBaseDataSource())) {
-      throw new ISE("Unable to replace base dataSource");
-    }
-
-    return retVal;
+    return query.withDataSource(query.getDataSource().withUpdatedDataSource(newBaseDataSource));
   }
 
   /**
@@ -292,5 +260,25 @@ public class Queries
     }
 
     return requiredColumns;
+  }
+
+  public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
+  {
+    QueryContext context = query.context();
+    if (!context.containsKey(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY)) {
+      return query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, maxScatterGatherBytesLimit));
+    }
+    context.verifyMaxScatterGatherBytes(maxScatterGatherBytesLimit);
+    return query;
+  }
+
+  public static <T> Query<T> withTimeout(Query<T> query, long timeout)
+  {
+    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, timeout));
+  }
+
+  public static <T> Query<T> withDefaultTimeout(Query<T> query, long defaultTimeout)
+  {
+    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.DEFAULT_TIMEOUT_KEY, defaultTimeout));
   }
 }
