@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -57,7 +58,7 @@ public class PrometheusEmitter implements Emitter
 
   private HTTPServer server;
   private PushGateway pushGateway;
-  private String identifier;
+  private volatile String identifier;
   private ScheduledExecutorService exec;
 
   static PrometheusEmitter of(PrometheusEmitterConfig config)
@@ -170,6 +171,9 @@ public class PrometheusEmitter implements Emitter
 
   private void pushMetric()
   {
+    if (Objects.isNull(identifier)) {
+      return;
+    }
     Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
     CollectorRegistry metrics = new CollectorRegistry();
     if (config.getNamespace() != null) {
