@@ -172,7 +172,7 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
   }
 
   @Override
-  public double estimatedRetainedBytes()
+  public long estimatedRetainedBytes()
   {
     return retainedBytes;
   }

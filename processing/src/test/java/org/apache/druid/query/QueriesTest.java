@@ -425,7 +425,8 @@ public class QueriesTest
                                                   "\"foo.x\" == \"bar.x\"",
                                                   JoinType.INNER,
                                                   null,
-                                                  ExprMacroTable.nil()
+                                                  ExprMacroTable.nil(),
+                                                  null
                                               )
                                           )
                                           .intervals("2000/3000")
@@ -462,7 +463,8 @@ public class QueriesTest
                                                       "\"foo.x\" == \"bar.x\"",
                                                       JoinType.INNER,
                                                       null,
-                                                      ExprMacroTable.nil()
+                                                      ExprMacroTable.nil(),
+                                                      null
                                                   )
                                               )
                                               .intervals("2000/3000")
@@ -500,14 +502,16 @@ public class QueriesTest
                                         "\"foo.x\" == \"bar.x\"",
                                         JoinType.INNER,
                                         TrueDimFilter.instance(),
-                                        ExprMacroTable.nil()
+                                        ExprMacroTable.nil(),
+                                        null
                                     ),
                                     new TableDataSource("foo_outer"),
                                     "j0.",
                                     "\"foo_outer.x\" == \"bar.x\"",
                                     JoinType.INNER,
                                     null,
-                                    ExprMacroTable.nil()
+                                    ExprMacroTable.nil(),
+                                    null
                                 )
 
                             )
@@ -533,14 +537,16 @@ public class QueriesTest
                                             "\"foo.x\" == \"bar.x\"",
                                             JoinType.INNER,
                                             TrueDimFilter.instance(),
-                                            ExprMacroTable.nil()
+                                            ExprMacroTable.nil(),
+                                            null
                                         ),
                                         new TableDataSource("foo_outer"),
                                         "j0.",
                                         "\"foo_outer.x\" == \"bar.x\"",
                                         JoinType.INNER,
                                         null,
-                                        ExprMacroTable.nil()
+                                        ExprMacroTable.nil(),
+                                        null
                                     )
 
                                 )
