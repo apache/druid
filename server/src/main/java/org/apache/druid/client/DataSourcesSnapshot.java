@@ -150,7 +150,7 @@ public class DataSourcesSnapshot
    * This method should be deduplicated with {@link VersionedIntervalTimeline#findFullyOvershadowed()}: see
    * https://github.com/apache/druid/issues/8070.
    *
-   * @return overshadowed segment Ids list
+   * @return List of overshadowed segments
    */
   private List<DataSegment> determineOvershadowedSegments()
   {
