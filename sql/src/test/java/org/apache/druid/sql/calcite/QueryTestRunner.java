@@ -177,11 +177,8 @@ public class QueryTestRunner
           .sqlParameters(builder.parameters)
           .auth(builder.authenticationResult)
           .build();
-      final SqlStatementFactory sqlStatementFactory = builder.config.statementFactory(
-          builder.plannerConfig,
-          builder.authConfig
-      );
-      PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlQuery);
+      final SqlStatementFactory sqlStatementFactory = builder.plannerFixture().statementFactory();
+      final PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlQuery);
       stmt.prepare();
       resourceActions = stmt.allResources();
     }
@@ -212,10 +209,7 @@ public class QueryTestRunner
 
       BaseCalciteQueryTest.log.info("SQL: %s", builder.sql);
 
-      final SqlStatementFactory sqlStatementFactory = builder.config.statementFactory(
-          builder.plannerConfig,
-          builder.authConfig
-      );
+      final SqlStatementFactory sqlStatementFactory = builder.plannerFixture().statementFactory();
       final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
           .sqlParameters(builder.parameters)
           .auth(builder.authenticationResult)
@@ -227,7 +221,7 @@ public class QueryTestRunner
         vectorizeValues.add("force");
       }
 
-      QueryLogHook queryLogHook = builder.config.queryLogHook();
+      final QueryLogHook queryLogHook = builder.config.queryLogHook();
       for (final String vectorize : vectorizeValues) {
         queryLogHook.clearRecordedQueries();
 
@@ -484,5 +478,12 @@ public class QueryTestRunner
     for (QueryTestRunner.QueryVerifyStep verifyStep : verifySteps) {
       verifyStep.verify();
     }
+  }
+
+  public QueryResults resultsOnly()
+  {
+    ExecuteQuery execStep = (ExecuteQuery) runSteps.get(0);
+    execStep.run();
+    return execStep.results().get(0);
   }
 }

@@ -25,12 +25,13 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest.ResultsVerifier;
+import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.rules.ExpectedException;
 
@@ -70,7 +71,7 @@ public class QueryTestBuilder
     QueryLogHook queryLogHook();
     ExpectedException expectedException();
     ObjectMapper jsonMapper();
-    SqlStatementFactory statementFactory(PlannerConfig plannerConfig, AuthConfig authConfig);
+    PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig);
   }
 
   protected final QueryTestConfig config;
@@ -88,6 +89,7 @@ public class QueryTestBuilder
   protected boolean skipVectorize;
   protected boolean queryCannotVectorize;
   protected AuthConfig authConfig = new AuthConfig();
+  protected PlannerFixture plannerFixture;
 
   public QueryTestBuilder(final QueryTestConfig config)
   {
@@ -200,13 +202,46 @@ public class QueryTestBuilder
     return this;
   }
 
+  /**
+   * By default, every test case creates its own planner based on the planner
+   * and auth config provided. If, however, a test wants to control setup, and
+   * run multiple test queries against the same setup, use this method to pass
+   * in the pre-built planner to use. If not set, the standard one is created
+   * per test.
+   */
+  public QueryTestBuilder plannerFixture(PlannerFixture plannerFixture)
+  {
+    this.plannerFixture = plannerFixture;
+    return this;
+  }
+
   public QueryTestRunner build()
   {
     return config.analyze(this);
   }
 
+  /**
+   * Internal method to return the cached planner config, or create a new one
+   * based on the configs provided. Note: does not cache the newly created
+   * config: doing so would confuse the "please use mine" vs. "create a new
+   * one each time" semantics.
+   */
+  protected PlannerFixture plannerFixture()
+  {
+    if (plannerFixture != null) {
+      return plannerFixture;
+    } else {
+      return config.plannerFixture(plannerConfig, authConfig);
+    }
+  }
+
   public void run()
   {
     build().run();
+  }
+
+  public QueryResults results()
+  {
+    return build().resultsOnly();
   }
 }

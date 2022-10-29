@@ -45,12 +45,15 @@ import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
+import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
@@ -59,6 +62,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Builds the infrastructure needed to run Calcite tests. Building splits into
@@ -84,11 +88,17 @@ import java.util.Map;
  * extending {@link SqlTestFramework.StandardComponentSupplier StandardComponentSupplier}.
  * <p>
  * The framework should be built once per test class (not once per test method.)
- * Then, per method, call {@link #statementFactory(PlannerConfig, AuthConfig)} to
+ * Then, for each planner setup, call {@link #plannerFixture(PlannerConfig, AuthConfig)}
+ * to get a {@link PlannerFixture} with a view manager and planner factory. Call
+ * {@link PlannerFixture#statementFactory()} to
  * obtain a the test-specific planner and wrapper classes for that test. After
  * that, tests use the various SQL statement classes to run tests. For tests
  * based on {@code BaseCalciteQueryTest}, the statements are wrapped by the
  * various {@code testQuery()} methods.
+ * <p>
+ * For tests that use non-standard views, first create the {@code PlannerFixture},
+ * populate the views, then use the {@code QueryTestBuilder} directly, passing in
+ * the {@code PlannerFixture} with views populated.
  * <p>
  * The framework holds on to the framework components. You can obtain the injector,
  * object mapper and other items by calling the various methods. The objects
@@ -107,6 +117,11 @@ public class SqlTestFramework
    */
   public interface QueryComponentSupplier
   {
+    QueryRunnerFactoryConglomerate createCongolmerate(
+        Builder builder,
+        Closer closer
+    );
+
     SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
         QueryRunnerFactoryConglomerate conglomerate
     ) throws IOException;
@@ -127,6 +142,14 @@ public class SqlTestFramework
     void configureJsonMapper(ObjectMapper mapper);
 
     void configureGuice(DruidInjectorBuilder builder);
+
+    Set<ExtensionCalciteRuleProvider> calciteRules();
+
+    ViewManager createViewManager();
+
+    void populateViews(ViewManager viewManager, PlannerFactory plannerFactory);
+
+    DruidSchemaManager createSchemaManager();
   }
 
   /**
@@ -147,6 +170,25 @@ public class SqlTestFramework
     {
       this.injector = injector;
       this.temporaryFolder = temporaryFolder;
+    }
+
+    @Override
+    public QueryRunnerFactoryConglomerate createCongolmerate(
+        Builder builder,
+        Closer resourceCloser
+    )
+    {
+      if (builder.mergeBufferCount == 0) {
+        return QueryStackTests.createQueryRunnerFactoryConglomerate(
+            resourceCloser,
+            () -> builder.minTopNThreshold
+        );
+      } else {
+        return QueryStackTests.createQueryRunnerFactoryConglomerate(
+            resourceCloser,
+            QueryStackTests.getProcessingConfig(true, builder.mergeBufferCount)
+        );
+      }
     }
 
     @Override
@@ -205,6 +247,72 @@ public class SqlTestFramework
     public void configureGuice(DruidInjectorBuilder builder)
     {
     }
+
+    @Override
+    public Set<ExtensionCalciteRuleProvider> calciteRules()
+    {
+      return ImmutableSet.of();
+    }
+
+    @Override
+    public ViewManager createViewManager()
+    {
+      return new InProcessViewManager(DRUID_VIEW_MACRO_FACTORY);
+    }
+
+    @Override
+    public void populateViews(ViewManager viewManager, PlannerFactory plannerFactory)
+    {
+      viewManager.createView(
+          plannerFactory,
+          "aview",
+          "SELECT SUBSTRING(dim1, 1, 1) AS dim1_firstchar FROM foo WHERE dim2 = 'a'"
+      );
+
+      viewManager.createView(
+          plannerFactory,
+          "bview",
+          "SELECT COUNT(*) FROM druid.foo\n"
+          + "WHERE __time >= CURRENT_TIMESTAMP + INTERVAL '1' DAY AND __time < TIMESTAMP '2002-01-01 00:00:00'"
+      );
+
+      viewManager.createView(
+          plannerFactory,
+          "cview",
+          "SELECT SUBSTRING(bar.dim1, 1, 1) AS dim1_firstchar, bar.dim2 as dim2, dnf.l2 as l2\n"
+          + "FROM (SELECT * from foo WHERE dim2 = 'a') as bar INNER JOIN druid.numfoo dnf ON bar.dim2 = dnf.dim2"
+      );
+
+      viewManager.createView(
+          plannerFactory,
+          "dview",
+          "SELECT SUBSTRING(dim1, 1, 1) AS numfoo FROM foo WHERE dim2 = 'a'"
+      );
+
+      viewManager.createView(
+          plannerFactory,
+          "forbiddenView",
+          "SELECT __time, SUBSTRING(dim1, 1, 1) AS dim1_firstchar, dim2 FROM foo WHERE dim2 = 'a'"
+      );
+
+      viewManager.createView(
+          plannerFactory,
+          "restrictedView",
+          "SELECT __time, dim1, dim2, m1 FROM druid.forbiddenDatasource WHERE dim2 = 'a'"
+      );
+
+      viewManager.createView(
+          plannerFactory,
+          "invalidView",
+          "SELECT __time, dim1, dim2, m1 FROM druid.invalidDatasource WHERE dim2 = 'a'"
+      );
+    }
+
+    @Override
+    public DruidSchemaManager createSchemaManager()
+    {
+      return new NoopDruidSchemaManager();
+    }
   }
 
   /**
@@ -240,8 +348,74 @@ public class SqlTestFramework
     }
   }
 
+  /**
+   * Builds the statement factory, which also builds all the infrastructure
+   * behind the factory by calling methods on this test class. As a result, each
+   * factory is specific to one test and one planner config. This method can be
+   * overridden to control the objects passed to the factory.
+   */
+  public static class PlannerFixture
+  {
+    private final ViewManager viewManager;
+    private final PlannerFactory plannerFactory;
+    private final SqlStatementFactory statementFactory;
+
+    public PlannerFixture(
+        final SqlTestFramework framework,
+        final PlannerConfig plannerConfig,
+        final AuthConfig authConfig
+    )
+    {
+      final QueryComponentSupplier componentSupplier = framework.componentSupplier;
+      this.viewManager = componentSupplier.createViewManager();
+      final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+          framework.injector,
+          framework.conglomerate(),
+          framework.walker(),
+          plannerConfig,
+          viewManager,
+          componentSupplier.createSchemaManager(),
+          framework.authorizerMapper
+      );
+
+      this.plannerFactory = new PlannerFactory(
+          rootSchema,
+          framework.operatorTable(),
+          framework.macroTable(),
+          plannerConfig,
+          framework.authorizerMapper,
+          framework.queryJsonMapper(),
+          CalciteTests.DRUID_SCHEMA_NAME,
+          new CalciteRulesManager(componentSupplier.calciteRules()),
+          CalciteTests.createJoinableFactoryWrapper()
+      );
+      this.statementFactory = QueryFrameworkUtils.createSqlStatementFactory(
+          framework.engine,
+          plannerFactory,
+          authConfig
+      );
+      componentSupplier.populateViews(viewManager, plannerFactory);
+    }
+
+    public ViewManager viewManager()
+    {
+      return viewManager;
+    }
+
+    public PlannerFactory plannerFactory()
+    {
+      return plannerFactory;
+    }
+
+    public SqlStatementFactory statementFactory()
+    {
+      return statementFactory;
+    }
+  }
+
   public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
 
+  private final QueryComponentSupplier componentSupplier;
   private final Closer resourceCloser = Closer.create();
   private final Injector injector;
   private final AuthorizerMapper authorizerMapper = CalciteTests.TEST_AUTHORIZER_MAPPER;
@@ -249,41 +423,32 @@ public class SqlTestFramework
 
   private SqlTestFramework(Builder builder)
   {
-    this.injector = buildInjector(builder, resourceCloser);
+    this.componentSupplier = builder.componentSupplier;
+    this.injector = buildInjector(builder);
     this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper());
-    builder.componentSupplier.configureJsonMapper(queryJsonMapper());
+    componentSupplier.configureJsonMapper(queryJsonMapper());
   }
 
-  public Injector buildInjector(Builder builder, Closer resourceCloser)
+  public Injector buildInjector(Builder builder)
   {
     CalciteTestInjectorBuilder injectorBuilder = new CalciteTestInjectorBuilder();
 
-    final QueryRunnerFactoryConglomerate conglomerate;
-    if (builder.mergeBufferCount == 0) {
-      conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
-          resourceCloser,
-          () -> builder.minTopNThreshold
-      );
-    } else {
-      conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
-          resourceCloser,
-          QueryStackTests.getProcessingConfig(true, builder.mergeBufferCount)
-      );
-    }
+    final QueryRunnerFactoryConglomerate conglomerate =
+        componentSupplier.createCongolmerate(builder, resourceCloser);
 
     final SpecificSegmentsQuerySegmentWalker walker;
     try {
-      walker = builder.componentSupplier.createQuerySegmentWalker(conglomerate);
+      walker = componentSupplier.createQuerySegmentWalker(conglomerate);
     }
     catch (IOException e) {
       throw new RE(e);
     }
-    this.resourceCloser.register(walker);
+    resourceCloser.register(walker);
 
     final QueryLifecycleFactory qlf = QueryFrameworkUtils.createMockQueryLifecycleFactory(walker, conglomerate);
 
-    final DruidOperatorTable operatorTable = builder.componentSupplier.createOperatorTable();
-    final ExprMacroTable macroTable = builder.componentSupplier.createMacroTable();
+    final DruidOperatorTable operatorTable = componentSupplier.createOperatorTable();
+    final ExprMacroTable macroTable = componentSupplier.createMacroTable();
 
     injectorBuilder.addModule(new DruidModule()
     {
@@ -301,7 +466,7 @@ public class SqlTestFramework
       @Override
       public List<? extends Module> getJacksonModules()
       {
-        return Lists.newArrayList(builder.componentSupplier.getJacksonModules());
+        return Lists.newArrayList(componentSupplier.getJacksonModules());
       }
     });
 
@@ -349,83 +514,12 @@ public class SqlTestFramework
    * factory is specific to one test and one planner config. This method can be
    * overridden to control the objects passed to the factory.
    */
-  public SqlStatementFactory statementFactory(
+  public PlannerFixture plannerFixture(
       PlannerConfig plannerConfig,
       AuthConfig authConfig
   )
   {
-    final InProcessViewManager viewManager = new InProcessViewManager(DRUID_VIEW_MACRO_FACTORY);
-    DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
-        injector,
-        conglomerate(),
-        walker(),
-        plannerConfig,
-        viewManager,
-        new NoopDruidSchemaManager(),
-        authorizerMapper
-    );
-
-    final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
-        operatorTable(),
-        macroTable(),
-        plannerConfig,
-        authorizerMapper,
-        queryJsonMapper(),
-        CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of()),
-        CalciteTests.createJoinableFactoryWrapper()
-    );
-    final SqlStatementFactory sqlStatementFactory = QueryFrameworkUtils.createSqlStatementFactory(
-        engine,
-        plannerFactory,
-        authConfig
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "aview",
-        "SELECT SUBSTRING(dim1, 1, 1) AS dim1_firstchar FROM foo WHERE dim2 = 'a'"
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "bview",
-        "SELECT COUNT(*) FROM druid.foo\n"
-        + "WHERE __time >= CURRENT_TIMESTAMP + INTERVAL '1' DAY AND __time < TIMESTAMP '2002-01-01 00:00:00'"
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "cview",
-        "SELECT SUBSTRING(bar.dim1, 1, 1) AS dim1_firstchar, bar.dim2 as dim2, dnf.l2 as l2\n"
-        + "FROM (SELECT * from foo WHERE dim2 = 'a') as bar INNER JOIN druid.numfoo dnf ON bar.dim2 = dnf.dim2"
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "dview",
-        "SELECT SUBSTRING(dim1, 1, 1) AS numfoo FROM foo WHERE dim2 = 'a'"
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "forbiddenView",
-        "SELECT __time, SUBSTRING(dim1, 1, 1) AS dim1_firstchar, dim2 FROM foo WHERE dim2 = 'a'"
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "restrictedView",
-        "SELECT __time, dim1, dim2, m1 FROM druid.forbiddenDatasource WHERE dim2 = 'a'"
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "invalidView",
-        "SELECT __time, dim1, dim2, m1 FROM druid.invalidDatasource WHERE dim2 = 'a'"
-    );
-    return sqlStatementFactory;
+    return new PlannerFixture(this, plannerConfig, authConfig);
   }
 
   public void close()
