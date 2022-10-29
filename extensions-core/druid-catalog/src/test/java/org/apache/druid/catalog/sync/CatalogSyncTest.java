@@ -20,10 +20,12 @@
 package org.apache.druid.catalog.sync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
@@ -43,7 +45,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -56,7 +61,7 @@ import static org.junit.Assert.assertTrue;
  * cached (holds a copy of the DB, based on update events) and remote
  * (like cached, but receives events over HTTP.)
  */
-public class CatalogMetadataTest
+public class CatalogSyncTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
@@ -126,7 +131,7 @@ public class CatalogMetadataTest
   }
 
   @Test
-  public void testCached() throws DuplicateKeyException, NotFoundException
+  public void testCached() throws CatalogException
   {
     populateCatalog();
     CachedMetadataCatalog catalog = new CachedMetadataCatalog(storage, storage.schemaRegistry(), jsonMapper);
@@ -134,6 +139,8 @@ public class CatalogMetadataTest
     verifyInitial(catalog);
     alterCatalog();
     verifyAltered(catalog);
+    editCatalogTable();
+    verifyEdited(catalog);
 
     // Also test the deletion case
     TableId table2 = TableId.datasource("table2");
@@ -147,7 +154,7 @@ public class CatalogMetadataTest
   }
 
   @Test
-  public void testRemoteWithJson() throws DuplicateKeyException, NotFoundException
+  public void testRemoteWithJson() throws CatalogException
   {
     populateCatalog();
     MockCatalogSync sync = new MockCatalogSync(storage, jsonMapper);
@@ -156,6 +163,8 @@ public class CatalogMetadataTest
     verifyInitial(catalog);
     alterCatalog();
     verifyAltered(catalog);
+    editCatalogTable();
+    verifyEdited(catalog);
 
     // Also test the deletion case
     TableId table2 = TableId.datasource("table2");
@@ -325,5 +334,43 @@ public class CatalogMetadataTest
     assertEquals("table1", tables.get(0).id().name());
     assertEquals("table2", tables.get(1).id().name());
     assertEquals("table3", tables.get(2).id().name());
+  }
+
+  private void editCatalogTable() throws CatalogException
+  {
+    // Edit table1: add a property
+    TableId id = TableId.datasource("table1");
+    storage.tables().updateProperties(id, t -> {
+      TableSpec target = t.spec();
+      Map<String, Object> updated = new HashMap<>(target.properties());
+      updated.put("foo", "bar");
+      return target.withProperties(updated);
+    });
+
+    // Edit table3: add a column
+    id = TableId.datasource("table3");
+    storage.tables().updateColumns(id, t -> {
+      TableSpec target = t.spec();
+      List<ColumnSpec> updated = new ArrayList<>(target.columns());
+      ColumnSpec colC = new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, "c", Columns.DOUBLE, null);
+      updated.add(colC);
+      return target.withColumns(updated);
+    });
+  }
+
+  private void verifyEdited(MetadataCatalog catalog)
+  {
+    {
+      TableId id = TableId.datasource("table1");
+      DatasourceFacade ds = new DatasourceFacade(catalog.resolveTable(id));
+      assertEquals("P1D", ds.segmentGranularityString());
+      assertEquals("bar", ds.stringProperty("foo"));
+    }
+    {
+      TableId id = TableId.datasource("table3");
+      ResolvedTable table = catalog.resolveTable(id);
+      assertEquals(3, table.spec().columns().size());
+      assertEquals("c", table.spec().columns().get(2).name());
+    }
   }
 }

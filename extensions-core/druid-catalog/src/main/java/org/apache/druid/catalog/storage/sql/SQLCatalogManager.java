@@ -371,7 +371,6 @@ public class SQLCatalogManager implements CatalogManager
                 if (resultIterator.hasNext()) {
                   tableSpec = resultIterator.next();
                 } else {
-                  handle.rollback();
                   throw tableNotFound(id);
                 }
                 final TableSpec revised = transform.apply(TableMetadata.of(id, tableSpec));
@@ -394,7 +393,7 @@ public class SQLCatalogManager implements CatalogManager
                 handle.commit();
                 return TableMetadata.forUpdate(id, updateTime, revised);
               }
-              catch (RuntimeException e) {
+              catch (Exception e) {
                 handle.rollback();
                 throw e;
               }
@@ -464,7 +463,6 @@ public class SQLCatalogManager implements CatalogManager
                 if (resultIterator.hasNext()) {
                   tableSpec = resultIterator.next();
                 } else {
-                  handle.rollback();
                   throw tableNotFound(id);
                 }
                 final TableSpec revised = transform.apply(TableMetadata.of(id, tableSpec));
@@ -487,7 +485,7 @@ public class SQLCatalogManager implements CatalogManager
                 handle.commit();
                 return TableMetadata.forUpdate(id, updateTime, revised);
               }
-              catch (RuntimeException e) {
+              catch (Exception e) {
                 handle.rollback();
                 throw e;
               }

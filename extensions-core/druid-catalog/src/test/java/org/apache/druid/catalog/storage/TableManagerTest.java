@@ -170,7 +170,7 @@ public class TableManagerTest
 
     // Transform properties by adding a new one
     final long version2 = manager.updateProperties(table.id(), t -> {
-      TableSpec target = table.spec();
+      TableSpec target = t.spec();
       Map<String, Object> updated = new HashMap<>(target.properties());
       updated.put("foo", "bar");
       return target.withProperties(updated);
@@ -220,7 +220,7 @@ public class TableManagerTest
 
     // Transform columns by adding a new one
     final long version2 = manager.updateColumns(table.id(), t -> {
-      TableSpec target = table.spec();
+      TableSpec target = t.spec();
       List<ColumnSpec> updated = new ArrayList<>(target.columns());
       updated.add(colC);
       return target.withColumns(updated);

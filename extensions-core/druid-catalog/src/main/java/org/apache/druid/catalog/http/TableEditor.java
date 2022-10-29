@@ -66,6 +66,9 @@ public class TableEditor
 
   private long hideColumns(List<String> columns) throws CatalogException
   {
+    if (columns == null) {
+      return 0;
+    }
     return catalog.tables().updateProperties(
         id,
         table -> applyHiddenColumns(table, columns)
@@ -97,15 +100,20 @@ public class TableEditor
     Set<String> existing = new HashSet<>(hiddenColumns);
     List<String> revised = new ArrayList<>(hiddenColumns);
     for (String col : columns) {
-      if (existing.contains(col)) {
+      if (!existing.contains(col)) {
         revised.add(col);
       }
     }
-    return spec;
+    Map<String, Object> revisedProps = new HashMap<>(props);
+    revisedProps.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, revised);
+    return spec.withProperties(revisedProps);
   }
 
   private long unHideColumns(List<String> columns) throws CatalogException
   {
+    if (columns == null) {
+      return 0;
+    }
     return catalog.tables().updateProperties(
         id,
         table -> applyUnhideColumns(table, columns)
@@ -127,9 +135,8 @@ public class TableEditor
     }
 
     final Map<String, Object> props = existingSpec.properties();
-    final Map<String, Object> revised = new HashMap<>(props);
     @SuppressWarnings("unchecked")
-    List<String> hiddenColumns = (List<String>) revised.get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
+    List<String> hiddenColumns = (List<String>) props.get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
     if (CollectionUtils.isNullOrEmpty(hiddenColumns) || columns.isEmpty()) {
       return null;
     }
@@ -140,16 +147,20 @@ public class TableEditor
         revisedHiddenCols.add(col);
       }
     }
-    if (revised.isEmpty()) {
-      revised.remove(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
+    final Map<String, Object> revisedProps = new HashMap<>(props);
+    if (revisedHiddenCols.isEmpty()) {
+      revisedProps.remove(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
     } else {
-      revised.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, revised);
+      revisedProps.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, revisedHiddenCols);
     }
-    return existingSpec.withProperties(revised);
+    return existingSpec.withProperties(revisedProps);
   }
 
   private long dropColumns(List<String> columnsToDrop) throws CatalogException
   {
+    if (columnsToDrop == null) {
+      return 0;
+    }
     return catalog.tables().updateColumns(
         id,
         table -> applyDropColumns(table, columnsToDrop)
@@ -176,6 +187,9 @@ public class TableEditor
 
   private long updateProperties(Map<String, Object> updates) throws CatalogException
   {
+    if (updates == null) {
+      return 0;
+    }
     return catalog.tables().updateProperties(
         id,
         table -> applyUpdateProperties(table, updates)
@@ -211,6 +225,9 @@ public class TableEditor
 
   private long updateColumns(final List<ColumnSpec> updates) throws CatalogException
   {
+    if (updates == null) {
+      return 0;
+    }
     return catalog.tables().updateColumns(
         id,
         table -> applyUpdateColumns(table, updates)
