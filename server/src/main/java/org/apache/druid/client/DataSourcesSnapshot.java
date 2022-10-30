@@ -82,7 +82,7 @@ public class DataSourcesSnapshot
         dataSourcesWithAllUsedSegments,
         CollectionUtils.mapValues(
             dataSourcesWithAllUsedSegments,
-            dataSource -> SegmentTimeline.forSegments(dataSource.getSegments().iterator())
+            dataSource -> SegmentTimeline.forSegments(dataSource.getSegments())
         )
     );
   }

@@ -27,6 +27,11 @@ import java.util.Iterator;
  */
 public class SegmentTimeline extends VersionedIntervalTimeline<String, DataSegment>
 {
+  public static SegmentTimeline forSegments(Iterable<DataSegment> segments)
+  {
+    return forSegments(segments.iterator());
+  }
+
   public static SegmentTimeline forSegments(Iterator<DataSegment> segments)
   {
     final SegmentTimeline timeline = new SegmentTimeline();

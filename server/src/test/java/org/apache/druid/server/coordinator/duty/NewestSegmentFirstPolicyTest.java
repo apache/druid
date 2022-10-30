@@ -1669,7 +1669,7 @@ public class NewestSegmentFirstPolicyTest
       }
     }
 
-    return SegmentTimeline.forSegments(segments.iterator());
+    return SegmentTimeline.forSegments(segments);
   }
 
   private DataSourceCompactionConfig createCompactionConfig(
