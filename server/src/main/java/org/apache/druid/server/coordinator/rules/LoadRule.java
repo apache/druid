@@ -57,7 +57,7 @@ public abstract class LoadRule implements Rule
   )
   {
     getTieredReplicants().forEach((final String tier, final Integer ruleReplicants) -> {
-      int currentReplicants = segmentReplicantLookup.getLoadedReplicants(segment.getId(), tier);
+      int currentReplicants = segmentReplicantLookup.getLoadedReplicas(segment.getId(), tier);
       Object2LongMap<String> underReplicationPerDataSource = underReplicatedPerTier.computeIfAbsent(
           tier,
           ignored -> new Object2LongOpenHashMap<>()
@@ -78,7 +78,7 @@ public abstract class LoadRule implements Rule
   )
   {
     getTieredReplicants().forEach((final String tier, final Integer ruleReplicants) -> {
-      int currentReplicants = segmentReplicantLookup.getLoadedReplicants(segment.getId(), tier);
+      int currentReplicants = segmentReplicantLookup.getLoadedReplicas(segment.getId(), tier);
       Object2LongMap<String> underReplicationPerDataSource = underReplicatedPerTier.computeIfAbsent(
           tier,
           ignored -> new Object2LongOpenHashMap<>()

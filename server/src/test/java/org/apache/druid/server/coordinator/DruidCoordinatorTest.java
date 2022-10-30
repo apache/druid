@@ -788,14 +788,14 @@ public class DruidCoordinatorTest extends CuratorTestBase
             EasyMock.anyObject(Class.class),
             EasyMock.anyObject()
         )
-    ).andReturn(new AtomicReference(CoordinatorDynamicConfig.builder().build())).anyTimes();
+    ).andReturn(new AtomicReference<>(CoordinatorDynamicConfig.builder().build())).anyTimes();
     EasyMock.expect(
         configManager.watch(
             EasyMock.eq(CoordinatorCompactionConfig.CONFIG_KEY),
             EasyMock.anyObject(Class.class),
             EasyMock.anyObject()
         )
-    ).andReturn(new AtomicReference(CoordinatorCompactionConfig.empty())).anyTimes();
+    ).andReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty())).anyTimes();
     EasyMock.replay(configManager);
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
     DruidDataSource dataSource = new DruidDataSource("dataSource1", Collections.emptyMap());
@@ -824,26 +824,26 @@ public class DruidCoordinatorTest extends CuratorTestBase
     // Create CoordinatorCustomDutyGroups
     // We will have two groups and each group has one duty
     CountDownLatch latch1 = new CountDownLatch(1);
-    CoordinatorCustomDuty duty1 = new CoordinatorCustomDuty() {
-      @Override
-      public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
-      {
-        latch1.countDown();
-        return params;
-      }
+    CoordinatorCustomDuty duty1 = params -> {
+      latch1.countDown();
+      return params;
     };
-    CoordinatorCustomDutyGroup group1 = new CoordinatorCustomDutyGroup("group1", Duration.standardSeconds(1), ImmutableList.of(duty1));
+    CoordinatorCustomDutyGroup group1 = new CoordinatorCustomDutyGroup(
+        "group1",
+        Duration.standardSeconds(1),
+        ImmutableList.of(duty1)
+    );
 
     CountDownLatch latch2 = new CountDownLatch(1);
-    CoordinatorCustomDuty duty2 = new CoordinatorCustomDuty() {
-      @Override
-      public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
-      {
-        latch2.countDown();
-        return params;
-      }
+    CoordinatorCustomDuty duty2 = params -> {
+      latch2.countDown();
+      return params;
     };
-    CoordinatorCustomDutyGroup group2 = new CoordinatorCustomDutyGroup("group2", Duration.standardSeconds(1), ImmutableList.of(duty2));
+    CoordinatorCustomDutyGroup group2 = new CoordinatorCustomDutyGroup(
+        "group2",
+        Duration.standardSeconds(1),
+        ImmutableList.of(duty2)
+    );
     CoordinatorCustomDutyGroups groups = new CoordinatorCustomDutyGroups(ImmutableSet.of(group1, group2));
 
     coordinator = new DruidCoordinator(

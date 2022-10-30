@@ -23,6 +23,7 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -177,6 +178,14 @@ public class ServerHolder implements Comparable<ServerHolder>
     }
 
     return isServingSegment(segment) ? SegmentState.LOADED : SegmentState.NONE;
+  }
+
+  /**
+   * Segments queued for load, drop or move on this server.
+   */
+  public Map<SegmentId, SegmentState> getQueuedSegments()
+  {
+    return Collections.unmodifiableMap(queuedSegments);
   }
 
   public boolean isServingSegment(DataSegment segment)

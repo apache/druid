@@ -23,13 +23,10 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.SortedSet;
 
 /**
  * A lookup for the number of replicants of a given segment for a certain tier.
@@ -38,106 +35,114 @@ public class SegmentReplicantLookup
 {
   public static SegmentReplicantLookup make(DruidCluster cluster, boolean replicateAfterLoadTimeout)
   {
-    final Table<SegmentId, String, Integer> segmentsInCluster = HashBasedTable.create();
+    final Table<SegmentId, String, ReplicaCount> replicaCounts = HashBasedTable.create();
+    cluster.getHistoricals().forEach(
+        (tier, historicals) -> historicals.forEach(
+            serverHolder -> {
+              // Add segments already loaded on this server
+              for (DataSegment segment : serverHolder.getServer().iterateAllSegments()) {
+                computeIfAbsent(replicaCounts, segment.getId(), tier).addLoaded();
+              }
 
-    /**
-     * For each tier, this stores the number of replicants for all the segments presently queued to load in {@link cluster}.
-     * Segments that have failed to load due to the load timeout may not be present in this table if {@link replicateAfterLoadTimeout} is true.
-     * This is to enable additional replication of the timed out segments for improved availability.
-     */
-    final Table<SegmentId, String, Integer> loadingSegments = HashBasedTable.create();
+              // Add segments queued for load, drop or move on this server
+              serverHolder.getQueuedSegments().forEach(
+                  (segmentId, state) ->
+                      computeIfAbsent(replicaCounts, segmentId, tier).addQueued(state)
+              );
+            }
+        )
+    );
 
-    for (SortedSet<ServerHolder> serversByType : cluster.getSortedHistoricalsByTier()) {
-      for (ServerHolder serverHolder : serversByType) {
-        ImmutableDruidServer server = serverHolder.getServer();
-
-        for (DataSegment segment : server.iterateAllSegments()) {
-          Integer numReplicants = segmentsInCluster.get(segment.getId(), server.getTier());
-          if (numReplicants == null) {
-            numReplicants = 0;
-          }
-          segmentsInCluster.put(segment.getId(), server.getTier(), numReplicants + 1);
-        }
-
-        // Also account for queued segments
-        for (DataSegment segment : serverHolder.getPeon().getSegmentsToLoad()) {
-          Integer numReplicants = loadingSegments.get(segment.getId(), server.getTier());
-          if (numReplicants == null) {
-            numReplicants = 0;
-          }
-          // Timed out segments need to be replicated in another server for faster availability.
-          // Therefore we skip incrementing numReplicants for timed out segments if replicateAfterLoadTimeout is enabled.
-          if (!replicateAfterLoadTimeout || !serverHolder.getPeon().getTimedOutSegments().contains(segment)) {
-            loadingSegments.put(segment.getId(), server.getTier(), numReplicants + 1);
-          }
-        }
-      }
-    }
-
-    return new SegmentReplicantLookup(segmentsInCluster, loadingSegments, cluster);
+    return new SegmentReplicantLookup(replicaCounts, cluster);
   }
 
-  private final Table<SegmentId, String, Integer> segmentsInCluster;
-  private final Table<SegmentId, String, Integer> loadingSegments;
+  private static ReplicaCount computeIfAbsent(
+      Table<SegmentId, String, ReplicaCount> replicaCounts,
+      SegmentId segmentId,
+      String tier
+  )
+  {
+    ReplicaCount count = replicaCounts.get(segmentId, tier);
+    if (count == null) {
+      count = new ReplicaCount();
+      replicaCounts.put(segmentId, tier, count);
+    }
+    return count;
+  }
+
+  private final Table<SegmentId, String, ReplicaCount> replicaCounts;
   private final DruidCluster cluster;
 
   private SegmentReplicantLookup(
-      Table<SegmentId, String, Integer> segmentsInCluster,
-      Table<SegmentId, String, Integer> loadingSegments,
+      Table<SegmentId, String, ReplicaCount> replicaCounts,
       DruidCluster cluster
   )
   {
-    this.segmentsInCluster = segmentsInCluster;
-    this.loadingSegments = loadingSegments;
+    this.replicaCounts = replicaCounts;
     this.cluster = cluster;
   }
 
-  public Map<String, Integer> getClusterTiers(SegmentId segmentId)
+  /**
+   * Total number of replicas of the segment expected to be present on the given
+   * tier once all the operations in progress have completed.
+   * <p>
+   * Includes replicas with state LOADING and LOADED.
+   * Does not include replicas with state DROPPING or MOVING_TO.
+   */
+  public int getProjectedReplicas(SegmentId segmentId, String tier)
   {
-    Map<String, Integer> retVal = segmentsInCluster.row(segmentId);
-    return (retVal == null) ? new HashMap<>() : retVal;
+    ReplicaCount count = replicaCounts.get(segmentId, tier);
+    return count == null ? 0 : count.projected();
   }
 
-  int getLoadedReplicants(SegmentId segmentId)
+  /**
+   * Total number of replicas of the segment expected to be present across all
+   * tiers once all the operations in progress have completed.
+   * <p>
+   * Includes replicas with state LOADING and LOADED.
+   * Does not include replicas with state DROPPING or MOVING_TO.
+   */
+  public int getTotalProjectedReplicas(SegmentId segmentId)
   {
-    Map<String, Integer> allTiers = segmentsInCluster.row(segmentId);
-    int retVal = 0;
-    for (Integer replicants : allTiers.values()) {
-      retVal += replicants;
+    final Map<String, ReplicaCount> allTiers = replicaCounts.row(segmentId);
+    int totalLoaded = 0;
+    for (ReplicaCount count : allTiers.values()) {
+      totalLoaded += count.projected();
     }
-    return retVal;
+    return totalLoaded;
   }
 
-  public int getLoadedReplicants(SegmentId segmentId, String tier)
+  /**
+   * Number of replicas of the segment currently being moved in the given tier.
+   */
+  public int getMovingReplicas(SegmentId segmentId, String tier)
   {
-    Integer retVal = segmentsInCluster.get(segmentId, tier);
-    return (retVal == null) ? 0 : retVal;
+    ReplicaCount count = replicaCounts.get(segmentId, tier);
+    return (count == null) ? 0 : count.moving;
   }
 
-  private int getLoadingReplicants(SegmentId segmentId, String tier)
+  /**
+   * Number of replicas of the segment which are safely loaded on the given tier
+   * and are not being dropped.
+   */
+  public int getLoadedReplicas(SegmentId segmentId, String tier)
   {
-    Integer retVal = loadingSegments.get(segmentId, tier);
-    return (retVal == null) ? 0 : retVal;
+    ReplicaCount count = replicaCounts.get(segmentId, tier);
+    return (count == null) ? 0 : count.safelyLoaded();
   }
 
-  private int getLoadingReplicants(SegmentId segmentId)
+  /**
+   * Number of replicas of the segment which are safely loaded on the cluster
+   * and are not being dropped.
+   */
+  public int getTotalLoadedReplicas(SegmentId segmentId)
   {
-    Map<String, Integer> allTiers = loadingSegments.row(segmentId);
-    int retVal = 0;
-    for (Integer replicants : allTiers.values()) {
-      retVal += replicants;
+    final Map<String, ReplicaCount> allTiers = replicaCounts.row(segmentId);
+    int totalLoaded = 0;
+    for (ReplicaCount count : allTiers.values()) {
+      totalLoaded += count.safelyLoaded();
     }
-    return retVal;
-  }
-
-  public int getTotalReplicants(SegmentId segmentId)
-  {
-    return getLoadedReplicants(segmentId) + getLoadingReplicants(segmentId);
-  }
-
-  public int getTotalReplicants(SegmentId segmentId, String tier)
-  {
-    return getLoadedReplicants(segmentId, tier) + getLoadingReplicants(segmentId, tier);
+    return totalLoaded;
   }
 
   public Object2LongMap<String> getBroadcastUnderReplication(SegmentId segmentId)
@@ -155,5 +160,46 @@ public class SegmentReplicantLookup
       }
     }
     return perTier;
+  }
+
+  /**
+   * Counts of replicas of a segment in different states.
+   */
+  private static class ReplicaCount
+  {
+    int loaded;
+    int loading;
+    int dropping;
+    int moving;
+
+    void addLoaded()
+    {
+      ++loaded;
+    }
+
+    void addQueued(SegmentState state)
+    {
+      switch (state) {
+        case LOADING:
+          ++loading;
+          break;
+        case MOVING_TO:
+          ++moving;
+          break;
+        case DROPPING:
+          ++dropping;
+          break;
+      }
+    }
+
+    int projected()
+    {
+      return loaded + loading - dropping;
+    }
+
+    int safelyLoaded()
+    {
+      return loaded - dropping;
+    }
   }
 }
