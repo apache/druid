@@ -30,7 +30,6 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -350,12 +349,12 @@ public class MSQWorkerTaskLauncher
    * Returns a pair which contains the number of currently running worker tasks and the number of worker tasks that are
    * not yet fully started as left and right respectively.
    */
-  public Pair<Integer, Integer> getWorkerTaskStatus()
+  public WorkerStatus getWorkerTaskStatus()
   {
     synchronized (taskIds) {
       int runningTasks = fullyStartedTasks.size();
       int pendingTasks = desiredTaskCount - runningTasks;
-      return Pair.of(runningTasks, pendingTasks);
+      return new WorkerStatus(runningTasks, pendingTasks);
     }
   }
 
@@ -469,6 +468,32 @@ public class MSQWorkerTaskLauncher
       if (Thread.interrupted()) {
         throw new InterruptedException();
       }
+    }
+  }
+
+  /**
+   * Information about current status of running tasks
+   */
+  public static class WorkerStatus
+  {
+    private final int runningWorkerCount;
+
+    private final int pendingWorkerCount;
+
+    public WorkerStatus(int runningWorkerCount, int pendingWorkerCount)
+    {
+      this.runningWorkerCount = runningWorkerCount;
+      this.pendingWorkerCount = pendingWorkerCount;
+    }
+
+    public int getRunningWorkerCount()
+    {
+      return runningWorkerCount;
+    }
+
+    public int getPendingWorkerCount()
+    {
+      return pendingWorkerCount;
     }
   }
 

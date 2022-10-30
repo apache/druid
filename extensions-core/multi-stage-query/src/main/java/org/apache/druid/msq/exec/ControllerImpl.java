@@ -1817,9 +1817,9 @@ public class ControllerImpl implements Controller
     int runningTasks = 1;
 
     if (taskLauncher != null) {
-      Pair<Integer, Integer> workerTaskStatus = taskLauncher.getWorkerTaskStatus();
-      pendingTasks = workerTaskStatus.lhs;
-      runningTasks = workerTaskStatus.rhs + 1; // To account for controller.
+      MSQWorkerTaskLauncher.WorkerStatus workerTaskStatus = taskLauncher.getWorkerTaskStatus();
+      pendingTasks = workerTaskStatus.getPendingWorkerCount();
+      runningTasks = workerTaskStatus.getRunningWorkerCount() + 1; // To account for controller.
     }
     return new MSQStatusReport(
         taskState,
