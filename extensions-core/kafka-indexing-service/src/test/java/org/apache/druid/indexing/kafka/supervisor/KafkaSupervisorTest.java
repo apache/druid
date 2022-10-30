@@ -2015,6 +2015,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
             .anyTimes();
+    taskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
             null
@@ -2048,7 +2050,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 25L, 2, 45L)));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 45L)));
-
+    taskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.replay(taskClient);
 
     Thread.sleep(100);
@@ -2060,7 +2063,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 25L, 2, 45L)));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 45L)));
-
+    taskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.replay(taskClient);
 
     Thread.sleep(100);
@@ -2074,7 +2078,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 101L, 2, 101L)));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 101L)));
-
+    taskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.replay(taskClient);
 
     Thread.sleep(100);
@@ -2086,7 +2091,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 101L, 2, 101L)));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 101L)));
-
+    taskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.replay(taskClient);
 
     Thread.sleep(100);
@@ -2121,6 +2127,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         )
     ).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+    taskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     replayAll();
 
@@ -2168,6 +2176,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             new SeekableStreamEndSequenceNumbers<Integer, Long>(topic, ImmutableMap.of(0, 2L, 1, 2L, 2, 2L))
         )
     ).anyTimes();
+    taskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     replayAll();
 
@@ -2269,6 +2279,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
             .anyTimes();
+    taskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
             null
@@ -2302,6 +2314,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 25L, 2, 45L)));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 45L)));
+    taskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     EasyMock.replay(taskClient);
 
@@ -2314,7 +2328,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 101L, 2, 101L)));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 101L)));
-
+    taskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.replay(taskClient);
 
     Thread.sleep(100);
@@ -2326,7 +2341,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 101L, 2, 101L)));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 101L)));
-
+    taskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.replay(taskClient);
 
     Thread.sleep(100);
@@ -2345,7 +2361,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 101L, 2, 101L)));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 101L)));
-
+    taskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().andVoid().anyTimes();
     EasyMock.replay(taskClient);
 
     Thread.sleep(100);
