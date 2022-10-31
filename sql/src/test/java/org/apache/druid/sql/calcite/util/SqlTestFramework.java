@@ -32,8 +32,10 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
@@ -142,7 +144,10 @@ public class SqlTestFramework
     void configureJsonMapper(ObjectMapper mapper);
 
     void configureGuice(DruidInjectorBuilder builder);
+  }
 
+  public interface PlannerComponentSupplier
+  {
     Set<ExtensionCalciteRuleProvider> extensionCalciteRules();
 
     ViewManager createViewManager();
@@ -150,6 +155,10 @@ public class SqlTestFramework
     void populateViews(ViewManager viewManager, PlannerFactory plannerFactory);
 
     DruidSchemaManager createSchemaManager();
+
+    JoinableFactoryWrapper createJoinableFactoryWrapper(Injector injector);
+
+    void finalizePlanner(PlannerFixture plannerFixture);
   }
 
   /**
@@ -247,7 +256,10 @@ public class SqlTestFramework
     public void configureGuice(DruidInjectorBuilder builder)
     {
     }
+  }
 
+  public static class StandardPlannerComponentSupplier implements PlannerComponentSupplier
+  {
     @Override
     public Set<ExtensionCalciteRuleProvider> extensionCalciteRules()
     {
@@ -313,6 +325,21 @@ public class SqlTestFramework
     {
       return new NoopDruidSchemaManager();
     }
+
+    @Override
+    public JoinableFactoryWrapper createJoinableFactoryWrapper(Injector injector)
+    {
+      return new JoinableFactoryWrapper(
+          QueryStackTests.makeJoinableFactoryForLookup(
+              injector.getInstance(LookupExtractorFactoryContainerProvider.class)
+          )
+      );
+    }
+
+    @Override
+    public void finalizePlanner(PlannerFixture plannerFixture)
+    {
+    }
   }
 
   /**
@@ -362,11 +389,11 @@ public class SqlTestFramework
 
     public PlannerFixture(
         final SqlTestFramework framework,
+        final PlannerComponentSupplier componentSupplier,
         final PlannerConfig plannerConfig,
         final AuthConfig authConfig
     )
     {
-      final QueryComponentSupplier componentSupplier = framework.componentSupplier;
       this.viewManager = componentSupplier.createViewManager();
       final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
           framework.injector,
@@ -387,8 +414,9 @@ public class SqlTestFramework
           framework.queryJsonMapper(),
           CalciteTests.DRUID_SCHEMA_NAME,
           new CalciteRulesManager(componentSupplier.extensionCalciteRules()),
-          CalciteTests.createJoinableFactoryWrapper()
+          componentSupplier.createJoinableFactoryWrapper(framework.injector)
       );
+      componentSupplier.finalizePlanner(this);
       this.statementFactory = QueryFrameworkUtils.createSqlStatementFactory(
           framework.engine,
           plannerFactory,
@@ -518,11 +546,12 @@ public class SqlTestFramework
    * planner fixture is specific to one test and one planner config.
    */
   public PlannerFixture plannerFixture(
+      PlannerComponentSupplier componentSupplier,
       PlannerConfig plannerConfig,
       AuthConfig authConfig
   )
   {
-    return new PlannerFixture(this, plannerConfig, authConfig);
+    return new PlannerFixture(this, componentSupplier, plannerConfig, authConfig);
   }
 
   public void close()
