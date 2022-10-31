@@ -28,7 +28,7 @@ public class ExtractTransformTest
   private static final MapInputRowParser PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
           new TimestampSpec("t", "auto", DateTimes.of("2020-01-01")),
-          new DimensionsSpec( DimensionsSpec.getDefaultSchemas(ImmutableList.of("topic", "tenant")))
+          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("topic", "tenant")))
       )
   );
 
