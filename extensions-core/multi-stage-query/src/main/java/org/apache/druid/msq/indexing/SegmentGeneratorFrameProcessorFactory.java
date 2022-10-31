@@ -291,7 +291,7 @@ public class SegmentGeneratorFrameProcessorFactory
       @Override
       public IndexSpec getIndexSpec()
       {
-        return new IndexSpec();
+        return tuningConfig.getIndexSpec();
       }
 
       @Override

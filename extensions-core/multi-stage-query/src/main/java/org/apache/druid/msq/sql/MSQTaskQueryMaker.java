@@ -48,6 +48,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -149,6 +150,8 @@ public class MSQTaskQueryMaker implements QueryMaker
         DEFAULT_ROWS_IN_MEMORY
     );
 
+    final IndexSpec indexSpec = MultiStageQueryContext.getIndexSpec(queryContext, jsonMapper);
+
     final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(queryContext);
 
     final List<Interval> replaceTimeChunks =
@@ -213,9 +216,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         throw new ISE("Unable to convert %s to a segment granularity", segmentGranularity);
       }
 
-      final List<String> segmentSortOrder = MultiStageQueryContext.decodeSortOrder(
-          MultiStageQueryContext.getSortOrder(queryContext)
-      );
+      final List<String> segmentSortOrder = MultiStageQueryContext.getSortOrder(queryContext);
 
       MSQTaskQueryMakerUtils.validateSegmentSortOrder(
           segmentSortOrder,
@@ -247,7 +248,7 @@ public class MSQTaskQueryMaker implements QueryMaker
                .columnMappings(new ColumnMappings(columnMappings))
                .destination(destination)
                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(queryContext))
-               .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment))
+               .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, indexSpec))
                .build();
 
     final MSQControllerTask controllerTask = new MSQControllerTask(

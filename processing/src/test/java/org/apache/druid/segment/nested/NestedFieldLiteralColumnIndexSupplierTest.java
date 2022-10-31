@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
@@ -63,9 +64,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   BitmapResultFactory<ImmutableBitmap> bitmapResultFactory = new DefaultBitmapResultFactory(
       roaringFactory.getBitmapFactory()
   );
-  Indexed<ByteBuffer> globalStrings;
-  FixedIndexed<Long> globalLongs;
-  FixedIndexed<Double> globalDoubles;
+  Supplier<Indexed<ByteBuffer>> globalStrings;
+  Supplier<FixedIndexed<Long>> globalLongs;
+  Supplier<FixedIndexed<Double>> globalDoubles;
 
   @Before
   public void setup() throws IOException
@@ -124,7 +125,8 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     doubleWriter.write(9.9);
     writeToBuffer(doubleBuffer, doubleWriter);
 
-    globalStrings = GenericIndexed.read(stringBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY);
+    GenericIndexed<ByteBuffer> strings = GenericIndexed.read(stringBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY);
+    globalStrings = () -> strings.singleThreaded();
     globalLongs = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES);
     globalDoubles = FixedIndexed.read(doubleBuffer, TypeStrategies.DOUBLE, ByteOrder.nativeOrder(), Double.BYTES);
   }
@@ -1021,7 +1023,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    FixedIndexed<Integer> dictionary = FixedIndexed.read(
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         NestedDataColumnSerializer.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1036,7 +1038,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
-        dictionary,
+        dictionarySupplier,
         globalStrings,
         globalLongs,
         globalDoubles
@@ -1095,7 +1097,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    FixedIndexed<Integer> dictionary = FixedIndexed.read(
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         NestedDataColumnSerializer.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1110,7 +1112,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
-        dictionary,
+        dictionarySupplier,
         globalStrings,
         globalLongs,
         globalDoubles
@@ -1166,7 +1168,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    FixedIndexed<Integer> dictionary = FixedIndexed.read(
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         NestedDataColumnSerializer.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1181,7 +1183,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
-        dictionary,
+        dictionarySupplier,
         globalStrings,
         globalLongs,
         globalDoubles
@@ -1241,7 +1243,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    FixedIndexed<Integer> dictionary = FixedIndexed.read(
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         NestedDataColumnSerializer.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1256,7 +1258,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
-        dictionary,
+        dictionarySupplier,
         globalStrings,
         globalLongs,
         globalDoubles
@@ -1312,7 +1314,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    FixedIndexed<Integer> dictionary = FixedIndexed.read(
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         NestedDataColumnSerializer.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1327,7 +1329,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
-        dictionary,
+        dictionarySupplier,
         globalStrings,
         globalLongs,
         globalDoubles
@@ -1387,7 +1389,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    FixedIndexed<Integer> dictionary = FixedIndexed.read(
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         NestedDataColumnSerializer.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1402,7 +1404,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
-        dictionary,
+        dictionarySupplier,
         globalStrings,
         globalLongs,
         globalDoubles
@@ -1470,7 +1472,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    FixedIndexed<Integer> dictionary = FixedIndexed.read(
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         NestedDataColumnSerializer.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1488,7 +1490,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
-        dictionary,
+        dictionarySupplier,
         globalStrings,
         globalLongs,
         globalDoubles

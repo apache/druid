@@ -54,6 +54,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
@@ -289,6 +290,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             binder.install(new SqlModule.SqlStatementFactoryModule());
             binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
             binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
+            binder.bind(JoinableFactoryWrapper.class).toInstance(CalciteTests.createJoinableFactoryWrapper());
           }
          )
         .build();
@@ -984,7 +986,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             CalciteTests.getJsonMapper(),
             CalciteTests.DRUID_SCHEMA_NAME,
-            new CalciteRulesManager(ImmutableSet.of())
+            new CalciteRulesManager(ImmutableSet.of()),
+            CalciteTests.createJoinableFactoryWrapper()
         )
     );
   }
@@ -999,6 +1002,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     final List<Meta.Frame> frames = new ArrayList<>();
     final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testMaxRowsPerFrame");
+
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         makeStatementFactory(),
         config,
@@ -1058,6 +1062,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     final List<Meta.Frame> frames = new ArrayList<>();
     final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testMaxRowsPerFrame");
+
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         makeStatementFactory(),
         config,

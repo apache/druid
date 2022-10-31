@@ -106,7 +106,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -420,7 +419,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
         condition,
         joinType,
         filter,
-        CalciteTests.createExprMacroTable()
+        CalciteTests.createExprMacroTable(),
+        CalciteTests.createJoinableFactoryWrapper()
     );
   }
 
