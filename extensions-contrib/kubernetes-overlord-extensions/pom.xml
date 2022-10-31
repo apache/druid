@@ -200,11 +200,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>nl.jqno.equalsverifier</groupId>
-      <artifactId>equalsverifier</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-indexing-service</artifactId>
       <version>${project.parent.version}</version>
@@ -235,6 +230,7 @@
     <dependency>
       <groupId>nl.jqno.equalsverifier</groupId>
       <artifactId>equalsverifier</artifactId>
+      <scope>test</scope>
     </dependency>
 
   </dependencies>
