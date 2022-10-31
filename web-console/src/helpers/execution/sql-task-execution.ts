@@ -28,7 +28,7 @@ import {
   queryDruidSql,
   QueryManager,
 } from '../../utils';
-import { getClusterCapacity } from '../capacity';
+import { maybeGetClusterCapacity } from '../capacity';
 
 const WAIT_FOR_SEGMENTS_TIMEOUT = 180000; // 3 minutes to wait until segments appear
 
@@ -193,8 +193,8 @@ export async function getTaskExecution(
     }
 
     if (execution) {
-      if (execution.hasPotentiallyStuckStage()) {
-        const capacityInfo = await getClusterCapacity();
+      if (execution?.hasPotentiallyStuckStage()) {
+        const capacityInfo = await maybeGetClusterCapacity();
         if (capacityInfo) {
           execution = execution.changeCapacityInfo(capacityInfo);
         }

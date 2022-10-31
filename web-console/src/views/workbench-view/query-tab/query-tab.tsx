@@ -34,7 +34,7 @@ import {
 } from '../../../druid-models';
 import {
   executionBackgroundStatusCheck,
-  getClusterCapacity,
+  maybeGetClusterCapacity,
   reattachTaskExecution,
   submitTaskQuery,
 } from '../../../helpers';
@@ -274,7 +274,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
 
     const effectiveQuery = preview ? query.makePreview() : query;
 
-    const capacityInfo = await getClusterCapacity();
+    const capacityInfo = await maybeGetClusterCapacity();
 
     const effectiveMaxNumTasks = effectiveQuery.queryContext.maxNumTasks ?? 2;
     if (

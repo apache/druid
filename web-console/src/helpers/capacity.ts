@@ -21,22 +21,26 @@ import { sum } from 'd3-array';
 import { CapacityInfo } from '../druid-models';
 import { Api } from '../singletons';
 
-export async function getClusterCapacity(): Promise<CapacityInfo | undefined> {
+export async function getClusterCapacity(): Promise<CapacityInfo> {
+  const workersResponse = await Api.instance.get('/druid/indexer/v1/workers', {
+    timeout: 500,
+  });
+
+  const usedTaskSlots = sum(
+    workersResponse.data,
+    (workerInfo: any) => Number(workerInfo.currCapacityUsed) || 0,
+  );
+
+  const totalTaskSlots = sum(workersResponse.data, (workerInfo: any) =>
+    Number(workerInfo.worker.capacity),
+  );
+
+  return { usedTaskSlots, totalTaskSlots };
+}
+
+export async function maybeGetClusterCapacity(): Promise<CapacityInfo | undefined> {
   try {
-    const workersResponse = await Api.instance.get('/druid/indexer/v1/workers', {
-      timeout: 500,
-    });
-
-    const usedTaskSlots = sum(
-      workersResponse.data,
-      (workerInfo: any) => Number(workerInfo.currCapacityUsed) || 0,
-    );
-
-    const totalTaskSlots = sum(workersResponse.data, (workerInfo: any) =>
-      Number(workerInfo.worker.capacity),
-    );
-
-    return { usedTaskSlots, totalTaskSlots };
+    return await getClusterCapacity();
   } catch {
     return;
   }
