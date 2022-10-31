@@ -25,6 +25,7 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -196,6 +197,17 @@ public class TableMetadata
         update.updateTime(),
         state,
         spec.withProperties(update.spec().properties())
+    );
+  }
+
+  public TableMetadata withProperties(Map<String, Object> props)
+  {
+    return new TableMetadata(
+        id,
+        creationTime,
+        updateTime,
+        state,
+        spec.withProperties(props)
     );
   }
 
