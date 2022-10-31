@@ -4181,6 +4181,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     EasyMock.expect(taskClient.getStartTimeAsync(failsToResumePausedTask.getId())).andReturn(Futures.immediateFuture(startTime));
     EasyMock.expect(taskClient.resumeAsync(failsToResumePausedTask.getId())).andReturn(Futures.immediateFuture(false));
+    taskClient.cancelTaskPauseRequests();
+    EasyMock.expectLastCall().andVoid().anyTimes();
 
     Capture<String> shutdownTaskId = EasyMock.newCapture();
     // The task which failed to resume is shutdown forcibly.
