@@ -34,7 +34,6 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -197,7 +196,7 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
   public List<Pod> listPeonPods(Set<PeonPhase> phases)
   {
     return listPeonPods().stream()
-                  .filter(x -> phases.contains(PeonPhase.getPhaseFor(x.getStatus().getPhase())))
+                  .filter(x -> phases.contains(PeonPhase.getPhaseFor(x)))
                   .collect(Collectors.toList());
   }
 
@@ -247,22 +246,6 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
       }
     });
     return toDelete;
-  }
-
-  private Pod waitForPhase(KubernetesClient client, K8sTaskId taskId, long howLong, TimeUnit unit, PeonPhase... phase)
-  {
-    Pod mainPod = getMainJobPod(client, taskId);
-    client.pods().inNamespace(namespace).withName(mainPod.getMetadata().getName())
-          .waitUntilCondition(pod -> {
-            if (pod == null) {
-              return false;
-            }
-            PeonPhase match = Arrays.stream(phase)
-                                    .filter(x -> x.equals(PeonPhase.getPhaseFor(pod.getStatus().getPhase())))
-                                    .findAny().orElse(null);
-            return match != null;
-          }, howLong, unit);
-    return mainPod;
   }
 
   Pod getMainJobPod(KubernetesClient client, K8sTaskId taskId)

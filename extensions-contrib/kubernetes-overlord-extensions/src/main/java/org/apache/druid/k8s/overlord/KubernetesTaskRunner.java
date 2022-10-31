@@ -489,7 +489,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         case RUNNING:
           return RunnerTaskState.RUNNING;
         default:
-          return RunnerTaskState.NONE;
+          return RunnerTaskState.WAITING;
       }
     }
   }

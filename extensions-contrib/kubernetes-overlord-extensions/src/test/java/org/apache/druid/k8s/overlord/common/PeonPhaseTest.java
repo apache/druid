@@ -19,27 +19,25 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Test;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodStatus;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-public class K8sTaskIdTest
+public class PeonPhaseTest
 {
-  @Test
-  public void testModifyingTaskIDToBeK8sCompliant()
-  {
-    String original = "coordinator-issued_compact_k8smetrics_aeifmefd_2022-08-18T15:33:26.094Z";
-    String result = new K8sTaskId(original).getK8sTaskId();
-    assertEquals("coordinatorissuedcompactk8smetricsaeifmefd20220818t153326094z", result);
-  }
 
   @Test
-  public void testEquals()
+  void testGetPhaseForToMakeCoverageHappy()
   {
-    EqualsVerifier.forClass(K8sTaskId.class)
-                  .withNonnullFields("k8sTaskId", "originalTaskId")
-                  .usingGetClass()
-                  .verify();
+    Pod pod = mock(Pod.class);
+    PodStatus status = mock(PodStatus.class);
+    when(status.getPhase()).thenReturn("Succeeded");
+    when(pod.getStatus()).thenReturn(status);
+    assertEquals(PeonPhase.UNKNOWN, PeonPhase.getPhaseFor(null));
+    assertEquals(PeonPhase.SUCCEEDED, PeonPhase.getPhaseFor(pod));
   }
 }

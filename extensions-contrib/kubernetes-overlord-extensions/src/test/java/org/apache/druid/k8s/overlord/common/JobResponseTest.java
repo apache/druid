@@ -62,4 +62,17 @@ class JobResponseTest
     Optional<Long> duration = response.getJobDuration();
     Assertions.assertFalse(duration.isPresent());
   }
+
+  @Test
+  void testMakingCodeCoverageHappy()
+  {
+    Job job = mock(Job.class);
+    ObjectMeta metadata = mock(ObjectMeta.class);
+    when(metadata.getName()).thenReturn("job");
+    when(job.getMetadata()).thenReturn(metadata);
+    when(job.getStatus()).thenReturn(null);
+    JobResponse response = new JobResponse(job, PeonPhase.SUCCEEDED);
+    Optional<Long> duration = response.getJobDuration();
+    Assertions.assertFalse(duration.isPresent());
+  }
 }

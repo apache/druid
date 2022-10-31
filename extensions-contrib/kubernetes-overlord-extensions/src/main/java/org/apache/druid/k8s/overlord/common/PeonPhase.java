@@ -51,11 +51,6 @@ public enum PeonPhase
     return phase;
   }
 
-  public static PeonPhase getPhaseFor(String k8sPhase)
-  {
-    return PHASE_MAP.getOrDefault(k8sPhase, UNKNOWN);
-  }
-
   public static PeonPhase getPhaseFor(Pod pod)
   {
     if (pod == null) {

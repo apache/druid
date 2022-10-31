@@ -34,6 +34,7 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobStatus;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.guice.FirehoseModule;
+import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TestUtils;
@@ -45,6 +46,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningC
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.JobResponse;
@@ -56,7 +58,6 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.joda.time.Period;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -65,6 +66,9 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.eq;
@@ -289,7 +293,7 @@ class KubernetesTaskRunnerTest
     );
     KubernetesTaskRunner spyRunner = spy(taskRunner);
     Collection<? extends TaskRunnerWorkItem> workItems = spyRunner.getKnownTasks();
-    Assertions.assertEquals(1, workItems.size());
+    assertEquals(1, workItems.size());
     TaskRunnerWorkItem item = Iterables.getOnlyElement(workItems);
     item.getResult().get();
 
@@ -350,7 +354,7 @@ class KubernetesTaskRunnerTest
     );
     KubernetesTaskRunner spyRunner = spy(taskRunner);
     Collection<? extends TaskRunnerWorkItem> workItems = spyRunner.getKnownTasks();
-    Assertions.assertEquals(1, workItems.size());
+    assertEquals(1, workItems.size());
     TaskRunnerWorkItem item = Iterables.getOnlyElement(workItems);
     item.getResult().get();
 
@@ -370,6 +374,58 @@ class KubernetesTaskRunnerTest
     verify(spyRunner, times(1)).run(eq(task));
   }
 
+  @Test
+  void testMakingCodeCoverageHappy()
+  {
+    // have to test multiple branches of code for code-coverage, avoiding doing a lot of repetetive setup.
+    DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
+    Pod pod = mock(Pod.class);
+    PodStatus status = mock(PodStatus.class);
+    when(status.getPhase()).thenReturn(PeonPhase.PENDING.getPhase()).thenReturn(PeonPhase.FAILED.getPhase());
+    when(pod.getStatus()).thenReturn(status);
+    when(peonClient.getMainJobPod(any())).thenReturn(null).thenReturn(pod);
+
+    KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
+        taskConfig,
+        startupLoggingConfig,
+        mock(K8sTaskAdapter.class),
+        kubernetesTaskRunnerConfig,
+        taskQueueConfig,
+        taskLogPusher,
+        peonClient,
+        node
+    );
+
+    RunnerTaskState state = taskRunner.getRunnerTaskState("foo");
+    assertNull(state);
+    assertEquals(RunnerTaskState.PENDING, taskRunner.getRunnerTaskState("bar"));
+    assertEquals(RunnerTaskState.WAITING, taskRunner.getRunnerTaskState("baz"));
+
+    assertThrows(ISE.class, () -> {
+      taskRunner.monitorJob(null, new K8sTaskId("foo"));
+    });
+  }
+
+  @Test
+  void testMaxQueueSizeIsEnforced()
+  {
+    TaskQueueConfig taskQueueConfig = new TaskQueueConfig(
+        Integer.MAX_VALUE,
+        Period.millis(1),
+        Period.millis(1),
+        Period.millis(1)
+    );
+    assertThrows(IllegalArgumentException.class, () -> new KubernetesTaskRunner(
+        taskConfig,
+        startupLoggingConfig,
+        mock(K8sTaskAdapter.class),
+        kubernetesTaskRunnerConfig,
+        taskQueueConfig,
+        taskLogPusher,
+        mock(DruidKubernetesPeonClient.class),
+        node
+    ));
+  }
 
   private Task makeTask()
   {
