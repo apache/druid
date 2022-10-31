@@ -307,7 +307,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
-        "objectGlob": "*.json",
+        "objectGlob": "**.json",
         "uris": ["azure://container/prefix1/file.json", "azure://container/prefix2/file2.json"]
       },
       "inputFormat": {
@@ -773,7 +773,7 @@ The following is an example of a Combining input source spec:
         "delegates" : [
          {
           "type": "local",
-          "objectGlob" : "**.csv",
+          "filter" : "*.csv",
           "baseDir": "/data/directory",
           "files": ["/bar/foo", "/foo/bar"]
          },
