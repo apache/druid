@@ -106,5 +106,12 @@ public interface StorageConnector
    */
   void deleteRecursively(String path) throws IOException;
 
-  List<String> ls(String dirName) throws IOException;
+  /**
+   * Returns a list containing all the files present in the path. The returned filenames should be such that joining
+   * the dirName and the file name form the full path that can be used as the arguments for other methods of the storage
+   * connector.
+   * For example, for a S3 path such as s3://bucket/parent1/parent2/child, the filename returned for the path
+   * "parent1/parent2" should be "child" and for "parent1" should be "parent2"
+   */
+  List<String> listDir(String dirName) throws IOException;
 }

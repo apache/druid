@@ -116,7 +116,7 @@ public class LocalFileStorageConnector implements StorageConnector
   }
 
   @Override
-  public List<String> ls(String dirName) throws IOException
+  public List<String> listDir(String dirName) throws IOException
   {
     File directory = fileWithBasePath(dirName);
     if (!directory.exists()) {

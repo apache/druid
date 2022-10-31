@@ -80,7 +80,7 @@ public class DurableStorageCleaner implements OverlordHelper
         Duration.standardSeconds(config.getDelaySeconds()),
         () -> {
           try {
-            Set<String> allDirectories = new HashSet<>(storageConnector.ls(""));
+            Set<String> allDirectories = new HashSet<>(storageConnector.listDir(""));
             Set<String> runningTaskIds = taskRunner.getRunningTasks()
                                                    .stream()
                                                    .map(TaskRunnerWorkItem::getTaskId)
@@ -92,7 +92,6 @@ public class DurableStorageCleaner implements OverlordHelper
                 unknownDirectories
             );
             for (String unknownDirectory : unknownDirectories) {
-              LOG.info("");
               storageConnector.deleteRecursively(unknownDirectory);
             }
           }

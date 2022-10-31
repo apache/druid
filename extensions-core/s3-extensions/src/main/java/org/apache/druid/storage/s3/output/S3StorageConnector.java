@@ -27,7 +27,6 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Joiner;
 import org.apache.druid.data.input.impl.RetryingInputStream;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -42,8 +41,6 @@ import java.util.stream.Collectors;
 
 public class S3StorageConnector implements StorageConnector
 {
-
-  private static final Logger LOG = new Logger(S3StorageConnector.class);
 
   private final S3OutputConfig config;
   private final ServerSideEncryptingAmazonS3 s3Client;
@@ -133,7 +130,7 @@ public class S3StorageConnector implements StorageConnector
   }
 
   @Override
-  public List<String> ls(String dirName)
+  public List<String> listDir(String dirName)
   {
     ListObjectsV2Request listObjectsRequest = new ListObjectsV2Request()
         .withBucketName(config.getBucket())
@@ -171,5 +168,4 @@ public class S3StorageConnector implements StorageConnector
   {
     return JOINER.join(config.getPrefix(), path);
   }
-
 }
