@@ -213,7 +213,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
     for (final DataSegment segment : segmentToLoad) {
       loadQueuePeon.loadSegment(
           segment,
-          SegmentAction.PRIORITY_LOAD,
+          SegmentAction.LOAD,
           success -> segmentLoadedSignals.get(segment.getId()).countDown()
       );
     }
@@ -293,7 +293,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     loadQueuePeon.loadSegment(
         segment,
-        SegmentAction.PRIORITY_LOAD,
+        SegmentAction.LOAD,
         success -> segmentLoadedSignal.countDown()
     );
 
@@ -354,7 +354,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     loadQueuePeon.loadSegment(
         segment,
-        SegmentAction.PRIORITY_LOAD,
+        SegmentAction.LOAD,
         success -> {
           segmentLoadedSignal.countDown();
           delayedSegmentLoadedSignal.countDown();

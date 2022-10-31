@@ -91,7 +91,7 @@ public class SegmentStateManager
         callback = success -> replicatingInTier.markCompleted(segment.getId());
       }
 
-      SegmentAction loadType = isFirstLoad ? SegmentAction.PRIORITY_LOAD : SegmentAction.LOAD;
+      SegmentAction loadType = isFirstLoad ? SegmentAction.LOAD : SegmentAction.REPLICATE;
       server.getPeon().loadSegment(segment, loadType, callback);
       return true;
     }

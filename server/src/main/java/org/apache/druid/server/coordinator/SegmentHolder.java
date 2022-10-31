@@ -48,7 +48,7 @@ public class SegmentHolder implements Comparable<SegmentHolder>
    * </ul>
    */
   public static final Comparator<SegmentHolder> COMPARE_ACTION_THEN_INTERVAL =
-      Ordering.explicit(SegmentAction.DROP, SegmentAction.PRIORITY_LOAD, SegmentAction.LOAD, SegmentAction.MOVE_TO)
+      Ordering.explicit(SegmentAction.DROP, SegmentAction.LOAD, SegmentAction.REPLICATE, SegmentAction.MOVE_TO)
               .onResultOf(SegmentHolder::getAction)
               .compound(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST.onResultOf(SegmentHolder::getSegment));
 

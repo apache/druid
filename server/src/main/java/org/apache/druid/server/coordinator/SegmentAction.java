@@ -27,7 +27,7 @@ package org.apache.druid.server.coordinator;
 public enum SegmentAction
 {
   DROP,
-  PRIORITY_LOAD,
   LOAD,
+  REPLICATE,
   MOVE_TO,
 }
