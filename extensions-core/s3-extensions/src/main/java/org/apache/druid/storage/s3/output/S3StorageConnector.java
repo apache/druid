@@ -27,6 +27,7 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Joiner;
 import org.apache.druid.data.input.impl.RetryingInputStream;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -35,11 +36,15 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class S3StorageConnector implements StorageConnector
 {
+
+  private static final Logger LOG = new Logger(S3StorageConnector.class);
+
   private final S3OutputConfig config;
   private final ServerSideEncryptingAmazonS3 s3Client;
 
@@ -128,15 +133,37 @@ public class S3StorageConnector implements StorageConnector
   }
 
   @Override
-  public List<String> ls(String dirName) throws IOException
+  public List<String> ls(String dirName)
   {
     ListObjectsV2Request listObjectsRequest = new ListObjectsV2Request()
         .withBucketName(config.getBucket())
         .withPrefix(objectPath(dirName))
-        .withDelimiter("/");
+        .withDelimiter(DELIM);
+
+    List<String> lsResult = new ArrayList<>();
 
     ListObjectsV2Result objectListing = s3Client.listObjectsV2(listObjectsRequest);
 
+    while (objectListing.getObjectSummaries().size() > 0) {
+      objectListing.getObjectSummaries()
+                   .stream().map(S3ObjectSummary::getKey)
+                   .map(
+                       key -> {
+                         int index = key.lastIndexOf(DELIM);
+                         return key.substring(index + 1);
+                       }
+                   )
+                   .filter(keyPart -> !keyPart.isEmpty())
+                   .forEach(lsResult::add);
+
+      if (objectListing.isTruncated()) {
+        listObjectsRequest.withContinuationToken(objectListing.getContinuationToken());
+        objectListing = s3Client.listObjectsV2(listObjectsRequest);
+      } else {
+        break;
+      }
+    }
+    return lsResult;
   }
 
   @Nonnull

@@ -49,12 +49,12 @@ public class DurableStorageCleanerConfig
 
   @JsonCreator
   public DurableStorageCleanerConfig(
-      @JsonProperty("enabled") final boolean enabled,
+      @JsonProperty("enabled") final Boolean enabled,
       @JsonProperty("initialDelay") final Long initialDelaySeconds,
       @JsonProperty("delay") final Long delaySeconds
   )
   {
-    this.enabled = enabled;
+    this.enabled = enabled != null && enabled;
     this.initialDelaySeconds = initialDelaySeconds != null ? initialDelaySeconds : DEFAULT_INITIAL_DELAY_SECONDS;
     this.delaySeconds = delaySeconds != null ? delaySeconds : DEFAULT_DELAY_SECONDS;
 

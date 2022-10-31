@@ -205,6 +205,16 @@ The following table lists the context parameters for the MSQ task engine:
 | sqlTimeZone | Sets the time zone for this connection, which affects how time functions and timestamp literals behave. Use a time zone name like "America/Los_Angeles" or offset like "-08:00".| `druid.sql.planner.sqlTimeZone` on the Broker (default: UTC)|
 | useApproximateCountDistinct | Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.| `druid.sql.planner.useApproximateCountDistinct` on the Broker (default: true)|
 
+## Durable Storage
+This section enumates the advantages and performance implications of enabling durable storage while executing MSQ tasks.
+
+|Parameter          |Default                                 | Description          |
+|-------------------|----------------------------------------|----------------------|
+|`druid.msq.intermediate.storage.enable` | false | Whether or not to enable durable storage for the cluster |
+|`druid.msq.intermediate.storage.cleaner.enabled`| false | Whether durable storage cleaner should be enabled for the cluster|
+|`druid.msq.intermediate.storage.cleaner.initialDelaySeconds`| 86400 | Initial delay in seconds post which the durable storage cleaner should run |
+|`druid.msq.intermediate.storage.cleaner.delaySeconds`| 86400 | The delay (in seconds) after the last run post which the durable storage cleaner would clean the outputs |
+
 ## Limits
 
 Knowing the limits for the MSQ task engine can help you troubleshoot any [errors](#error-codes) that you encounter. Many of the errors occur as a result of reaching a limit.
