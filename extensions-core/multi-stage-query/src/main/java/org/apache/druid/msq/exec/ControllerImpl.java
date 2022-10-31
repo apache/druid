@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.exec;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -446,7 +447,8 @@ public class ControllerImpl implements Controller
               errorForReport,
               workerWarnings,
               queryStartTime,
-              new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis()
+              new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis(),
+              workerTaskLauncher
           ),
           stagesReport,
           countersSnapshot,
@@ -518,12 +520,13 @@ public class ControllerImpl implements Controller
     closer.register(netClient::close);
 
     final boolean isDurableStorageEnabled =
-        MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().getContext());
+        MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().context());
 
     final QueryDefinition queryDef = makeQueryDefinition(
         id(),
         makeQueryControllerToolKit(),
-        task.getQuerySpec()
+        task.getQuerySpec(),
+        context.jsonMapper()
     );
 
     QueryValidator.validateQueryDef(queryDef);
@@ -531,15 +534,6 @@ public class ControllerImpl implements Controller
 
     log.debug("Query [%s] durable storage mode is set to %s.", queryDef.getQueryId(), isDurableStorageEnabled);
 
-    this.workerTaskLauncher = new MSQWorkerTaskLauncher(
-        id(),
-        task.getDataSource(),
-        context,
-        isDurableStorageEnabled,
-
-        // 10 minutes +- 2 minutes jitter
-        TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
-    );
 
     long maxParseExceptions = -1;
 
@@ -549,6 +543,17 @@ public class ControllerImpl implements Controller
                                    .map(DimensionHandlerUtils::convertObjectToLong)
                                    .orElse(MSQWarnings.DEFAULT_MAX_PARSE_EXCEPTIONS_ALLOWED);
     }
+
+
+    this.workerTaskLauncher = new MSQWorkerTaskLauncher(
+        id(),
+        task.getDataSource(),
+        context,
+        isDurableStorageEnabled,
+        maxParseExceptions,
+        // 10 minutes +- 2 minutes jitter
+        TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
+    );
 
     this.faultsExceededChecker = new FaultsExceededChecker(
         ImmutableMap.of(CannotParseExternalDataFault.CODE, maxParseExceptions)
@@ -642,6 +647,7 @@ public class ControllerImpl implements Controller
       // Present means the warning limit was exceeded, and warnings have therefore turned into an error.
       String errorCode = warningsExceeded.get().lhs;
       Long limit = warningsExceeded.get().rhs;
+
       workerError(MSQErrorReport.fromFault(
           id(),
           selfDruidNode.getHost(),
@@ -711,7 +717,8 @@ public class ControllerImpl implements Controller
                     null,
                     workerWarnings,
                     queryStartTime,
-                    queryStartTime == null ? -1L : new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis()
+                    queryStartTime == null ? -1L : new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis(),
+                    workerTaskLauncher
                 ),
                 makeStageReport(
                     queryDef,
@@ -1191,7 +1198,7 @@ public class ControllerImpl implements Controller
 
       final InputChannelFactory inputChannelFactory;
 
-      if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().getContext())) {
+      if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().context())) {
         inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
             id(),
             () -> taskIds,
@@ -1294,7 +1301,7 @@ public class ControllerImpl implements Controller
    */
   private void cleanUpDurableStorageIfNeeded()
   {
-    if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().getContext())) {
+    if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().context())) {
       final String controllerDirName = DurableStorageOutputChannelFactory.getControllerDirectory(task.getId());
       try {
         // Delete all temporary files as a failsafe
@@ -1311,7 +1318,8 @@ public class ControllerImpl implements Controller
   private static QueryDefinition makeQueryDefinition(
       final String queryId,
       @SuppressWarnings("rawtypes") final QueryKit toolKit,
-      final MSQSpec querySpec
+      final MSQSpec querySpec,
+      final ObjectMapper jsonMapper
   )
   {
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
@@ -1395,7 +1403,9 @@ public class ControllerImpl implements Controller
       }
 
       // Then, add a segment-generation stage.
-      final DataSchema dataSchema = generateDataSchema(querySpec, querySignature, queryClusterBy, columnMappings);
+      final DataSchema dataSchema =
+          generateDataSchema(querySpec, querySignature, queryClusterBy, columnMappings, jsonMapper);
+
       builder.add(
           StageDefinition.builder(queryDef.getNextStageNumber())
                          .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
@@ -1421,7 +1431,8 @@ public class ControllerImpl implements Controller
       MSQSpec querySpec,
       RowSignature querySignature,
       ClusterBy queryClusterBy,
-      ColumnMappings columnMappings
+      ColumnMappings columnMappings,
+      ObjectMapper jsonMapper
   )
   {
     final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
@@ -1442,7 +1453,7 @@ public class ControllerImpl implements Controller
         new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
         new DimensionsSpec(dimensionsAndAggregators.lhs),
         dimensionsAndAggregators.rhs.toArray(new AggregatorFactory[0]),
-        makeGranularitySpecForIngestion(querySpec.getQuery(), querySpec.getColumnMappings(), isRollupQuery),
+        makeGranularitySpecForIngestion(querySpec.getQuery(), querySpec.getColumnMappings(), isRollupQuery, jsonMapper),
         new TransformSpec(null, Collections.emptyList())
     );
   }
@@ -1450,18 +1461,25 @@ public class ControllerImpl implements Controller
   private static GranularitySpec makeGranularitySpecForIngestion(
       final Query<?> query,
       final ColumnMappings columnMappings,
-      final boolean isRollupQuery
+      final boolean isRollupQuery,
+      final ObjectMapper jsonMapper
   )
   {
     if (isRollupQuery) {
-      final String queryGranularity = query.getQueryContext().getAsString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, "");
+      final String queryGranularityString =
+          query.context().getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, "");
 
-      if (timeIsGroupByDimension((GroupByQuery) query, columnMappings) && !queryGranularity.isEmpty()) {
-        return new ArbitraryGranularitySpec(
-            Granularity.fromString(queryGranularity),
-            true,
-            Intervals.ONLY_ETERNITY
-        );
+      if (timeIsGroupByDimension((GroupByQuery) query, columnMappings) && !queryGranularityString.isEmpty()) {
+        final Granularity queryGranularity;
+
+        try {
+          queryGranularity = jsonMapper.readValue(queryGranularityString, Granularity.class);
+        }
+        catch (JsonProcessingException e) {
+          throw new RuntimeException(e);
+        }
+
+        return new ArbitraryGranularitySpec(queryGranularity, true, Intervals.ONLY_ETERNITY);
       }
       return new ArbitraryGranularitySpec(Granularities.NONE, true, Intervals.ONLY_ETERNITY);
     } else {
@@ -1483,7 +1501,7 @@ public class ControllerImpl implements Controller
   {
     if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME)) {
       final String queryTimeColumn = columnMappings.getQueryColumnForOutputColumn(ColumnHolder.TIME_COLUMN_NAME);
-      return queryTimeColumn.equals(groupByQuery.getQueryContext().getAsString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD));
+      return queryTimeColumn.equals(groupByQuery.context().getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD));
     } else {
       return false;
     }
@@ -1505,8 +1523,8 @@ public class ControllerImpl implements Controller
   private static boolean isRollupQuery(Query<?> query)
   {
     return query instanceof GroupByQuery
-           && !MultiStageQueryContext.isFinalizeAggregations(query.getQueryContext())
-           && !query.getContextBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
+           && !MultiStageQueryContext.isFinalizeAggregations(query.context())
+           && !query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
   }
 
   private static boolean isInlineResults(final MSQSpec querySpec)
@@ -1791,10 +1809,27 @@ public class ControllerImpl implements Controller
       @Nullable final MSQErrorReport errorReport,
       final Queue<MSQErrorReport> errorReports,
       @Nullable final DateTime queryStartTime,
-      final long queryDuration
+      final long queryDuration,
+      MSQWorkerTaskLauncher taskLauncher
   )
   {
-    return new MSQStatusReport(taskState, errorReport, errorReports, queryStartTime, queryDuration);
+    int pendingTasks = -1;
+    int runningTasks = 1;
+
+    if (taskLauncher != null) {
+      Pair<Integer, Integer> workerTaskStatus = taskLauncher.getWorkerTaskStatus();
+      pendingTasks = workerTaskStatus.lhs;
+      runningTasks = workerTaskStatus.rhs + 1; // To account for controller.
+    }
+    return new MSQStatusReport(
+        taskState,
+        errorReport,
+        errorReports,
+        queryStartTime,
+        queryDuration,
+        pendingTasks,
+        runningTasks
+    );
   }
 
   private static InputSpecSlicerFactory makeInputSpecSlicerFactory(final DataSegmentTimelineView timelineView)

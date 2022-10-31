@@ -19,14 +19,15 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -36,7 +37,6 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -81,10 +81,13 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
   }
 
   @Override
-  public SqlEngine createEngine() throws IOException
+  public SqlEngine createEngine(
+      QueryLifecycleFactory qlf,
+      ObjectMapper queryJsonMapper
+  )
   {
     // Create an engine that says yes to EngineFeature.SCAN_NEEDS_SIGNATURE.
-    return new ScanSignatureTestSqlEngine(super.createEngine());
+    return new ScanSignatureTestSqlEngine(super.createEngine(qlf, queryJsonMapper));
   }
 
   private static class ScanSignatureTestSqlEngine implements SqlEngine
@@ -109,7 +112,7 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public void validateContext(QueryContext queryContext)
+    public void validateContext(Map<String, Object> queryContext)
     {
       // No validation.
     }

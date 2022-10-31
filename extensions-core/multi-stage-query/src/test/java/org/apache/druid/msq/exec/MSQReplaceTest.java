@@ -110,7 +110,7 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("cnt", ColumnType.LONG).build();
 
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadFileNameAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     testIngestQuery().setSql(" REPLACE INTO foo1 OVERWRITE ALL SELECT "
                              + "  floor(TIME_PARSE(\"timestamp\") to hour) AS __time, "
@@ -148,7 +148,7 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("user", ColumnType.STRING).build();
 
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadFileNameAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     testIngestQuery().setSql(" REPLACE INTO foo1 OVERWRITE WHERE __time >= TIMESTAMP '2016-06-27 01:00:00.00' AND __time < TIMESTAMP '2016-06-27 02:00:00.00' "
                              + " SELECT "

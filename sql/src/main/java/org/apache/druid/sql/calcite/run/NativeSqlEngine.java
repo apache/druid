@@ -28,8 +28,6 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -38,6 +36,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 
+import java.util.Map;
 import java.util.Set;
 
 @LazySingleton
@@ -76,7 +75,7 @@ public class NativeSqlEngine implements SqlEngine
   }
 
   @Override
-  public void validateContext(QueryContext queryContext) throws ValidationException
+  public void validateContext(Map<String, Object> queryContext) throws ValidationException
   {
     SqlEngines.validateNoSpecialContextKeys(queryContext, SYSTEM_CONTEXT_PARAMETERS);
   }
@@ -103,7 +102,7 @@ public class NativeSqlEngine implements SqlEngine
       case TOPN_QUERY:
         return true;
       case TIME_BOUNDARY_QUERY:
-        return QueryContexts.isTimeBoundaryPlanningEnabled(plannerContext.getQueryContext().getMergedParams());
+        return plannerContext.queryContext().isTimeBoundaryPlanningEnabled();
       case CAN_INSERT:
       case CAN_REPLACE:
       case READ_EXTERNAL_DATA:
