@@ -36,7 +36,7 @@ public class TaskActionToolbox
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final ServiceEmitter emitter;
   private final SupervisorManager supervisorManager;
-  private Optional<TaskRunnerFactory> factory;
+  private Optional<TaskRunnerFactory> factory = Optional.absent();
 
   @Inject
   public TaskActionToolbox(

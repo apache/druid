@@ -29,8 +29,10 @@ import org.junit.Test;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,4 +54,18 @@ public class UpdateLocationActionTest
     verify(runner, times(1)).updateLocation(eq(task), eq(myLocation));
   }
 
+  @Test
+  public void testWithNoTaskRunner() throws UnknownHostException
+  {
+    // get my task location
+    InetAddress hostName = InetAddress.getLocalHost();
+    TaskLocation myLocation = TaskLocation.create(hostName.getHostAddress(), 1, 2);
+    UpdateLocationAction action = new UpdateLocationAction(myLocation);
+    Task task = NoopTask.create();
+    TaskActionToolbox toolbox = mock(TaskActionToolbox.class);
+    TaskRunner runner = mock(TaskRunner.class);
+    when(toolbox.getTaskRunner()).thenReturn(Optional.absent());
+    action.perform(task, toolbox);
+    verify(runner, never()).updateStatus(any(), any());
+  }
 }

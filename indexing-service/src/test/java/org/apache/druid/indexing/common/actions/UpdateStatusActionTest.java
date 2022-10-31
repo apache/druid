@@ -27,8 +27,10 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.junit.Test;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -46,5 +48,29 @@ public class UpdateStatusActionTest
     when(toolbox.getTaskRunner()).thenReturn(Optional.of(runner));
     action.perform(task, toolbox);
     verify(runner, times(1)).updateStatus(eq(task), eq(TaskStatus.success(task.getId())));
+  }
+
+  @Test
+  public void testFailureScenario()
+  {
+    UpdateStatusAction action = new UpdateStatusAction("failure");
+    Task task = NoopTask.create();
+    TaskActionToolbox toolbox = mock(TaskActionToolbox.class);
+    TaskRunner runner = mock(TaskRunner.class);
+    when(toolbox.getTaskRunner()).thenReturn(Optional.of(runner));
+    action.perform(task, toolbox);
+    verify(runner, times(1)).updateStatus(eq(task), eq(TaskStatus.failure(task.getId(), "Error with task")));
+  }
+
+  @Test
+  public void testNoTaskRunner()
+  {
+    UpdateStatusAction action = new UpdateStatusAction("successful");
+    Task task = NoopTask.create();
+    TaskActionToolbox toolbox = mock(TaskActionToolbox.class);
+    TaskRunner runner = mock(TaskRunner.class);
+    when(toolbox.getTaskRunner()).thenReturn(Optional.absent());
+    action.perform(task, toolbox);
+    verify(runner, never()).updateStatus(any(), any());
   }
 }
