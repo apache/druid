@@ -143,7 +143,7 @@ public class SqlTestFramework
 
     void configureGuice(DruidInjectorBuilder builder);
 
-    Set<ExtensionCalciteRuleProvider> calciteRules();
+    Set<ExtensionCalciteRuleProvider> extensionCalciteRules();
 
     ViewManager createViewManager();
 
@@ -249,7 +249,7 @@ public class SqlTestFramework
     }
 
     @Override
-    public Set<ExtensionCalciteRuleProvider> calciteRules()
+    public Set<ExtensionCalciteRuleProvider> extensionCalciteRules()
     {
       return ImmutableSet.of();
     }
@@ -386,7 +386,7 @@ public class SqlTestFramework
           framework.authorizerMapper,
           framework.queryJsonMapper(),
           CalciteTests.DRUID_SCHEMA_NAME,
-          new CalciteRulesManager(componentSupplier.calciteRules()),
+          new CalciteRulesManager(componentSupplier.extensionCalciteRules()),
           CalciteTests.createJoinableFactoryWrapper()
       );
       this.statementFactory = QueryFrameworkUtils.createSqlStatementFactory(
@@ -509,10 +509,13 @@ public class SqlTestFramework
   }
 
   /**
-   * Build the statement factory, which also builds all the infrastructure
-   * behind the factory by calling methods on this test class. As a result, each
-   * factory is specific to one test and one planner config. This method can be
-   * overridden to control the objects passed to the factory.
+   * Creates an object (a "fixture") to hold the planner factory, view manager
+   * and related items. Most tests need just the statement factory. View-related
+   * tests also use the view manager. The fixture builds the infrastructure
+   * behind the factory by calling methods on the {@link QueryComponentSupplier}
+   * interface. That Calcite tests that interface, so the components can be customized
+   * by overriding methods in a particular tests. As a result, each
+   * planner fixture is specific to one test and one planner config.
    */
   public PlannerFixture plannerFixture(
       PlannerConfig plannerConfig,
