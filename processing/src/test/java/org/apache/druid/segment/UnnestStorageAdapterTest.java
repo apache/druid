@@ -74,7 +74,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     UNNEST_STORAGE_ADAPTER = new UnnestStorageAdapter(
         INCREMENTAL_INDEX_STORAGE_ADAPTER,
         COLUMNNAME,
-        OUTPUT_COLUMN_NAME
+        OUTPUT_COLUMN_NAME,
+        null
     );
     ADAPTERS = ImmutableList.of(UNNEST_STORAGE_ADAPTER);
   }

@@ -34,22 +34,26 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class UnnestStorageAdapter implements StorageAdapter
 {
   private final StorageAdapter baseAdapter;
   private final String dimensionToUnnest;
   private final String outputColumnName;
+  private final Set<String> allowSet;
 
   public UnnestStorageAdapter(
       final StorageAdapter baseAdapter,
       final String dimension,
-      final String outputColumnName
+      final String outputColumnName,
+      final Set<String> allowSet
   )
   {
     this.baseAdapter = baseAdapter;
     this.dimensionToUnnest = dimension;
     this.outputColumnName = outputColumnName;
+    this.allowSet = allowSet;
   }
 
   @Override
@@ -75,7 +79,7 @@ public class UnnestStorageAdapter implements StorageAdapter
         cursor -> {
           assert cursor != null;
           Cursor retVal = cursor;
-          retVal = new UnnestCursor(retVal, dimensionToUnnest, outputColumnName);
+          retVal = new UnnestCursor(retVal, dimensionToUnnest, outputColumnName, allowSet);
           return retVal;
         }
     );

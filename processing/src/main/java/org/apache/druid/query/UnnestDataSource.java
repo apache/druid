@@ -27,6 +27,7 @@ import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.UnnestSegmentReference;
 import org.apache.druid.utils.JvmUtils;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -38,17 +39,20 @@ public class UnnestDataSource implements DataSource
   private final DataSource base;
   private final String column;
   private final String outputName;
+  private final List<String> allowList;
 
 
   private UnnestDataSource(
       DataSource dataSource,
       String columnName,
-      String outputName
+      String outputName,
+      List<String> allowList
   )
   {
     this.base = dataSource;
     this.column = columnName;
     this.outputName = outputName;
+    this.allowList = allowList;
   }
 
   /**
@@ -58,10 +62,11 @@ public class UnnestDataSource implements DataSource
   public static UnnestDataSource create(
       @JsonProperty("base") DataSource base,
       @JsonProperty("column") String columnName,
-      @JsonProperty("outputName") String outputName
+      @JsonProperty("outputName") String outputName,
+      @Nullable @JsonProperty("allowList") List<String> allowList
   )
   {
-    return new UnnestDataSource(base, columnName, outputName);
+    return new UnnestDataSource(base, columnName, outputName, allowList);
   }
 
   @JsonProperty("base")
@@ -82,6 +87,12 @@ public class UnnestDataSource implements DataSource
     return outputName;
   }
 
+  @JsonProperty("allowList")
+  public List<String> getAllowList()
+  {
+    return allowList;
+  }
+
   @Override
   public Set<String> getTableNames()
   {
@@ -100,7 +111,7 @@ public class UnnestDataSource implements DataSource
     if (children.size() != 1) {
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
-    return new UnnestDataSource(children.get(0), column, outputName);
+    return new UnnestDataSource(children.get(0), column, outputName, allowList);
   }
 
   @Override
@@ -139,7 +150,8 @@ public class UnnestDataSource implements DataSource
                 new UnnestSegmentReference(
                     baseSegment,
                     column,
-                    outputName
+                    outputName,
+                    allowList
                 );
           }
         }

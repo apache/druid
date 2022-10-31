@@ -31,7 +31,9 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 
 public class UnnestCursor implements Cursor
@@ -47,8 +49,10 @@ public class UnnestCursor implements Cursor
   private IndexedInts pos;
   private List<Object> unnestList;
   private boolean needInitialization;
+  private final Set<String> allowSet;
+  private final Set<Integer> allowSetInts;
 
-  public UnnestCursor(Cursor cursor, String columnName, String outputColumnName)
+  public UnnestCursor(Cursor cursor, String columnName, String outputColumnName, Set<String> allowSet)
   {
     this.baseCursor = cursor;
     this.baseColumSelectorFactory = cursor.getColumnSelectorFactory();
@@ -58,6 +62,8 @@ public class UnnestCursor implements Cursor
     this.index = 0;
     this.outputName = outputColumnName;
     this.needInitialization = true;
+    this.allowSet = allowSet;
+    this.allowSetInts = new HashSet<>();
   }
 
   @Override
@@ -71,7 +77,12 @@ public class UnnestCursor implements Cursor
         if (!outputName.equals(dimensionSpec.getDimension())) {
           return baseColumSelectorFactory.makeDimensionSelector(dimensionSpec);
         }
-
+        IdLookup idLookup = dimSelector.idLookup();
+        if(allowSet != null) {
+          for(String s: allowSet){
+            allowSetInts.add(idLookup.lookupId(s));
+          }
+        }
         final DimensionSpec actualDimensionSpec = dimensionSpec.withDimension(columnName);
         return new DimensionSelector()
         {
@@ -119,10 +130,12 @@ public class UnnestCursor implements Cursor
           public Object getObject()
           {
             if (pos != null) {
-              return lookupName(pos.get(index));
+              if(allowSetInts.contains(pos.get(index)))
+                return lookupName(pos.get(index));
             } else {
               return null;
             }
+            return null;
           }
 
           @Override
@@ -204,10 +217,12 @@ public class UnnestCursor implements Cursor
           public Object getObject()
           {
             if (pos != null) {
-              return dimSelector.lookupName(pos.get(index));
+              if(allowSetInts.contains(pos.get(index)))
+                return dimSelector.lookupName(pos.get(index));
             } else {
               if (!unnestList.isEmpty()) {
-                return unnestList.get(index);
+                if(allowSet.contains((String) unnestList.get(index)))
+                  return unnestList.get(index);
               }
             }
             return null;
