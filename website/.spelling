@@ -693,13 +693,13 @@ NotEnoughMemory
 WorkerFailed
 WorkerRpcFailed
 # MSQ context parameters
-maxNumTasks 
-taskAssignment 
+maxNumTasks
+taskAssignment
 finalizeAggregations
 indexSpec
-rowsInMemory 
-segmentSortOrder 
-rowsPerSegment 
+rowsInMemory
+segmentSortOrder
+rowsPerSegment
 durableShuffleStorage
 # Aggregations
 groupByEnableMultiValueUnnesting
@@ -2033,6 +2033,7 @@ durationToRetain
 ec2
 equalDistribution
 extractionFn
+filename
 file.encoding
 fillCapacity
 first_location
