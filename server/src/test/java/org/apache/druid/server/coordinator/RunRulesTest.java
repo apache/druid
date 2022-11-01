@@ -151,6 +151,7 @@ public class RunRulesTest
 
     // There are 24 under-replicated segments, but only 10 replicas are assigned
     Assert.assertEquals(10L, stats.getTieredStat("assignedCount", "normal"));
+    Assert.assertEquals(24L, stats.getDataSourceStat("underReplicatedCount", "test"));
 
     exec.shutdown();
     EasyMock.verify(mockPeon);

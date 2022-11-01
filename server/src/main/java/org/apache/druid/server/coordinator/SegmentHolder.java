@@ -130,13 +130,9 @@ public class SegmentHolder implements Comparable<SegmentHolder>
     return firstRequestMillis.get() > 0;
   }
 
-  public long getMillisSinceFirstRequestToServer()
+  public long getFirstRequestMillis()
   {
-    if (firstRequestMillis.get() == 0) {
-      return 0;
-    } else {
-      return System.currentTimeMillis() - firstRequestMillis.get();
-    }
+    return firstRequestMillis.get();
   }
 
   @Override

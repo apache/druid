@@ -33,6 +33,7 @@ import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -82,12 +83,11 @@ public class BalancerStrategyTest
     final ServerHolder serverHolder = new ServerHolder(
         new DruidServer("server1", "host1", null, 10L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).addDataSegment(proposedDataSegment).toImmutableDruidServer(),
         new LoadQueuePeonTester());
-    serverHolders = new ArrayList<>();
-    serverHolders.add(serverHolder);
-    // since there is not enough space on server having available size 10L to host a segment of size 11L, it should be null
     Assert.assertFalse(
-        balancerStrategy.findNewSegmentHomeReplicator(proposedDataSegment, serverHolders)
-                        .hasNext()
+        balancerStrategy.findNewSegmentHomeReplicator(
+            proposedDataSegment,
+            Collections.singletonList(serverHolder)
+        ).hasNext()
     );
   }
 

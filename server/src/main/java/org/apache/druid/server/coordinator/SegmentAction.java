@@ -26,8 +26,35 @@ package org.apache.druid.server.coordinator;
  */
 public enum SegmentAction
 {
+  /**
+   * Drop a segment from a server.
+   */
   DROP,
+
+  /**
+   * Load a segment on a server. This should be used when trying to load a segment
+   * on a tier where it is currently unavailable (i.e. no replicas loaded).
+   * This action cannot be throttled by the {@code replicationThrottleLimit}.
+   */
   LOAD,
+
+  /**
+   * Load a replica of a segment on a server. This should be used when trying to
+   * load more replicas of a segment on a tier where it is already available
+   * (i.e. atleast one loaded replica).
+   * <p>
+   * This is different from LOAD in two ways:
+   * <ul>
+   *   <li>this action can be throttled by the {@code replicationThrottleLimit}</li>
+   *   <li>it is given lower priority than LOAD on the load queue peon</li>
+   * </ul>
+   * For all other purposes, REPLICATE is treated the same as LOAD.
+   */
   REPLICATE,
+
+  /**
+   * Move a segment to this server. This does not have a corresponding MOVE_FROM
+   * action as that just gets queued as a DROP once the MOVE_TO action is complete.
+   */
   MOVE_TO,
 }

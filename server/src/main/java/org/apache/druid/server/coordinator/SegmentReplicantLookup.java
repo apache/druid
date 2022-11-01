@@ -96,23 +96,6 @@ public class SegmentReplicantLookup
   }
 
   /**
-   * Total number of replicas of the segment expected to be present across all
-   * tiers once all the operations in progress have completed.
-   * <p>
-   * Includes replicas with state LOADING and LOADED.
-   * Does not include replicas with state DROPPING or MOVING_TO.
-   */
-  public int getTotalProjectedReplicas(SegmentId segmentId)
-  {
-    final Map<String, ReplicaCount> allTiers = replicaCounts.row(segmentId);
-    int totalLoaded = 0;
-    for (ReplicaCount count : allTiers.values()) {
-      totalLoaded += count.projected();
-    }
-    return totalLoaded;
-  }
-
-  /**
    * Number of replicas of the segment currently being moved in the given tier.
    */
   public int getMovingReplicas(SegmentId segmentId, String tier)
@@ -125,24 +108,24 @@ public class SegmentReplicantLookup
    * Number of replicas of the segment which are safely loaded on the given tier
    * and are not being dropped.
    */
-  public int getLoadedReplicas(SegmentId segmentId, String tier)
+  public int getServedReplicas(SegmentId segmentId, String tier)
   {
     ReplicaCount count = replicaCounts.get(segmentId, tier);
-    return (count == null) ? 0 : count.safelyLoaded();
+    return (count == null) ? 0 : count.served();
   }
 
   /**
    * Number of replicas of the segment which are safely loaded on the cluster
    * and are not being dropped.
    */
-  public int getTotalLoadedReplicas(SegmentId segmentId)
+  public int getTotalServedReplicas(SegmentId segmentId)
   {
     final Map<String, ReplicaCount> allTiers = replicaCounts.row(segmentId);
-    int totalLoaded = 0;
+    int totalServed = 0;
     for (ReplicaCount count : allTiers.values()) {
-      totalLoaded += count.safelyLoaded();
+      totalServed += count.served();
     }
-    return totalLoaded;
+    return totalServed;
   }
 
   public Object2LongMap<String> getBroadcastUnderReplication(SegmentId segmentId)
@@ -152,10 +135,10 @@ public class SegmentReplicantLookup
       // Only record tier entry for server that is segment broadcast target
       if (holder.getServer().getType().isSegmentBroadcastTarget()) {
         // Every broadcast target server should be serving 1 replica of the segment
-        if (!holder.isServingSegment(segmentId)) {
-          perTier.addTo(holder.getServer().getTier(), 1L);
-        } else {
+        if (holder.hasSegmentLoaded(segmentId)) {
           perTier.putIfAbsent(holder.getServer().getTier(), 0);
+        } else {
+          perTier.addTo(holder.getServer().getTier(), 1L);
         }
       }
     }
@@ -177,16 +160,17 @@ public class SegmentReplicantLookup
       ++loaded;
     }
 
-    void addQueued(SegmentState state)
+    void addQueued(SegmentAction action)
     {
-      switch (state) {
-        case LOADING:
+      switch (action) {
+        case REPLICATE:
+        case LOAD:
           ++loading;
           break;
-        case MOVING_TO:
+        case MOVE_TO:
           ++moving;
           break;
-        case DROPPING:
+        case DROP:
           ++dropping;
           break;
       }
@@ -197,7 +181,7 @@ public class SegmentReplicantLookup
       return loaded + loading - dropping;
     }
 
-    int safelyLoaded()
+    int served()
     {
       return loaded - dropping;
     }

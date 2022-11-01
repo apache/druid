@@ -33,23 +33,44 @@ import java.util.NavigableSet;
  */
 public class SegmentTierStatus
 {
-  private final Map<SegmentState, List<ServerHolder>> segmentStateToServers = new HashMap<>();
+  private final DataSegment segment;
+
+  private final List<ServerHolder> eligibleLoadServers = new ArrayList<>();
+  private final List<ServerHolder> eligibleDropServers = new ArrayList<>();
+
+  private final Map<SegmentAction, List<ServerHolder>> serversWithQueuedActions = new HashMap<>();
 
   public SegmentTierStatus(DataSegment segment, NavigableSet<ServerHolder> historicals)
   {
-    historicals.forEach(server -> {
-      SegmentState stateOnServer = server.getSegmentState(segment);
-      segmentStateToServers.computeIfAbsent(stateOnServer, s -> new ArrayList<>()).add(server);
-    });
+    this.segment = segment;
+    historicals.forEach(this::handleServer);
   }
 
-  /**
-   * Gets the servers on this tier which have the specified state for this
-   * segment.
-   */
-  public List<ServerHolder> getServers(SegmentState state)
+  public List<ServerHolder> getServersEligibleToLoad()
   {
-    return segmentStateToServers.getOrDefault(state, Collections.emptyList());
+    return eligibleLoadServers;
+  }
+
+  public List<ServerHolder> getServersEligibleToDrop()
+  {
+    return eligibleDropServers;
+  }
+
+  public List<ServerHolder> getServersPerforming(SegmentAction action)
+  {
+    return serversWithQueuedActions.getOrDefault(action, Collections.emptyList());
+  }
+
+  private void handleServer(ServerHolder server)
+  {
+    final SegmentAction action = server.getActionOnSegment(segment);
+    if (server.isServingSegment(segment)) {
+      eligibleDropServers.add(server);
+    } else if (server.canLoadSegment(segment)) {
+      eligibleLoadServers.add(server);
+    } else if (action != null) {
+      serversWithQueuedActions.computeIfAbsent(action, a -> new ArrayList<>()).add(server);
+    }
   }
 
 }

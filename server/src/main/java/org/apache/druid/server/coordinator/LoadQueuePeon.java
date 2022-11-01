@@ -59,8 +59,13 @@ public interface LoadQueuePeon
 
   int getNumberOfSegmentsInQueue();
 
-  boolean cancelLoad(DataSegment segment);
-
-  boolean cancelDrop(DataSegment segment);
+  /**
+   * Tries to cancel the current operation queued for the given segment on this
+   * server, if any. A request that has already been sent to the server cannot
+   * be cancelled.
+   *
+   * @return true if the operation was successfully cancelled
+   */
+  boolean cancelOperation(DataSegment segment);
 
 }

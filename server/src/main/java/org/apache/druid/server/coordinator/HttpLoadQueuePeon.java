@@ -169,9 +169,10 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     synchronized (lock) {
       final Iterator<SegmentHolder> iter = queuedSegments.iterator();
 
+      final long currentTimeMillis = System.currentTimeMillis();
       while (newRequests.size() < batchSize && iter.hasNext()) {
         SegmentHolder holder = iter.next();
-        if (hasRequestTimedOut(holder)) {
+        if (hasRequestTimedOut(holder, currentTimeMillis)) {
           onRequestFailed(holder, "timed out");
           iter.remove();
           if (holder.isLoad()) {
@@ -515,10 +516,10 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
    *
    * @see DruidCoordinatorConfig#getLoadTimeoutDelay()
    */
-  private boolean hasRequestTimedOut(SegmentHolder holder)
+  private boolean hasRequestTimedOut(SegmentHolder holder, long currentTimeMillis)
   {
     return holder.isRequestSentToServer()
-           && holder.getMillisSinceFirstRequestToServer()
+           && currentTimeMillis - holder.getFirstRequestMillis()
               > config.getLoadTimeoutDelay().getMillis();
   }
 
@@ -571,31 +572,22 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     });
   }
 
-  @Override
-  public boolean cancelDrop(DataSegment segment)
-  {
-    return cancelOperation(segment, false);
-  }
-
-  @Override
-  public boolean cancelLoad(DataSegment segment)
-  {
-    return cancelOperation(segment, true);
-  }
-
   /**
    * Tries to cancel a load/drop operation. An load/drop request can be cancelled
    * only if it has not already been sent to the corresponding server.
    */
-  private boolean cancelOperation(DataSegment segment, boolean isLoad)
+  @Override
+  public boolean cancelOperation(DataSegment segment)
   {
     synchronized (lock) {
       if (activeRequestSegments.contains(segment)) {
         return false;
       }
 
-      final SegmentHolder holder = isLoad ? segmentsToLoad.remove(segment)
-                                          : segmentsToDrop.remove(segment);
+      // Find the action on this segment, if any
+      final SegmentHolder holder = segmentsToLoad.containsKey(segment)
+                                   ? segmentsToLoad.remove(segment)
+                                   : segmentsToDrop.remove(segment);
       if (holder == null) {
         return false;
       }

@@ -415,13 +415,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public boolean cancelDrop(DataSegment segment)
-  {
-    return false;
-  }
-
-  @Override
-  public boolean cancelLoad(DataSegment segment)
+  public boolean cancelOperation(DataSegment segment)
   {
     return false;
   }

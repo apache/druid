@@ -37,23 +37,18 @@ public class CoordinatorStats
   // List of stat names
   public static final String CANCELLED_MOVES = "cancelMoveCount";
   public static final String CANCELLED_LOADS = "cancelLoadCount";
+  public static final String CANCELLED_DROPS = "cancelDropCount";
 
   public static final String ASSIGNED_COUNT = "assignedCount";
   public static final String DROPPED_COUNT = "droppedCount";
   public static final String DELETED_COUNT = "deletedCount";
 
+  public static final String UNDER_REPLICATED_COUNT = "underReplicatedCount";
   public static final String ASSIGN_SKIP_COUNT = "assignSkip";
   public static final String DROP_SKIP_COUNT = "dropSkip";
 
   public static final String MOVED_COUNT = "movedCount";
   public static final String UNMOVED_COUNT = "unmovedCount";
-
-  public static final String LOAD_SUCCESS_COUNT = "loadSuccess";
-  public static final String LOAD_FAIL_COUNT = "loadFail";
-  public static final String DROP_SUCCESS_COUNT = "dropSuccess";
-  public static final String DROP_FAIL_COUNT = "dropFail";
-  public static final String MOVE_SUCCESS_COUNT = "moveSuccess";
-  public static final String MOVE_FAIL_COUNT = "moveFail";
 
   public static final String BROADCAST_LOADS = "broadcastLoad";
   public static final String BROADCAST_DROPS = "broadcastDrop";

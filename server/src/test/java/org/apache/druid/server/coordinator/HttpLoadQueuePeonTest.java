@@ -223,7 +223,7 @@ public class HttpLoadQueuePeonTest
     httpLoadQueuePeon.loadSegment(segment, SegmentAction.REPLICATE, markSegmentProcessed(segment));
     Assert.assertEquals(1, httpLoadQueuePeon.getNumberOfSegmentsInQueue());
 
-    boolean cancelled = httpLoadQueuePeon.cancelLoad(segment);
+    boolean cancelled = httpLoadQueuePeon.cancelOperation(segment);
     Assert.assertTrue(cancelled);
     Assert.assertEquals(0, httpLoadQueuePeon.getNumberOfSegmentsInQueue());
 
@@ -237,7 +237,7 @@ public class HttpLoadQueuePeonTest
     httpLoadQueuePeon.dropSegment(segment, markSegmentProcessed(segment));
     Assert.assertEquals(1, httpLoadQueuePeon.getSegmentsToDrop().size());
 
-    boolean cancelled = httpLoadQueuePeon.cancelDrop(segment);
+    boolean cancelled = httpLoadQueuePeon.cancelOperation(segment);
     Assert.assertTrue(cancelled);
     Assert.assertTrue(httpLoadQueuePeon.getSegmentsToDrop().isEmpty());
 
@@ -257,7 +257,7 @@ public class HttpLoadQueuePeonTest
 
     // Segment is still in queue but operation cannot be cancelled
     Assert.assertTrue(httpLoadQueuePeon.getSegmentsToLoad().contains(segment));
-    boolean cancelled = httpLoadQueuePeon.cancelLoad(segment);
+    boolean cancelled = httpLoadQueuePeon.cancelOperation(segment);
     Assert.assertFalse(cancelled);
 
     // Handle response from server
@@ -265,7 +265,7 @@ public class HttpLoadQueuePeonTest
 
     // Segment has been removed from queue
     Assert.assertTrue(httpLoadQueuePeon.getSegmentsToLoad().isEmpty());
-    cancelled = httpLoadQueuePeon.cancelLoad(segment);
+    cancelled = httpLoadQueuePeon.cancelOperation(segment);
     Assert.assertFalse(cancelled);
 
     // Execute callbacks and verify segment is fully processed
@@ -274,14 +274,14 @@ public class HttpLoadQueuePeonTest
   }
 
   @Test
-  public void testCannotCancelDropOfLoadingSegment()
+  public void testCannotCancelOperationMultipleTimes()
   {
     final DataSegment segment = segments.get(0);
     httpLoadQueuePeon.loadSegment(segment, SegmentAction.REPLICATE, markSegmentProcessed(segment));
     Assert.assertTrue(httpLoadQueuePeon.getSegmentsToLoad().contains(segment));
 
-    // Try to cancel drop of segment, even though it is actually loading
-    Assert.assertFalse(httpLoadQueuePeon.cancelDrop(segment));
+    Assert.assertTrue(httpLoadQueuePeon.cancelOperation(segment));
+    Assert.assertFalse(httpLoadQueuePeon.cancelOperation(segment));
   }
 
   private LoadPeonCallback markSegmentProcessed(DataSegment segment)
