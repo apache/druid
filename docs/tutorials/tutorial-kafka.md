@@ -256,10 +256,10 @@ To submit a supervisor spec using the Druid console:
 
 You can also use the Druid API to submit a supervisor spec:
 
-1. Run the following command from your Druid root directory to download the sample data file:
+1. Run the following commands from your Druid root directory to download and extract the sample spec:
 
    ```bash
-   curl -O https://druid.apache.org/docs/latest/assets/files/kttm-replace.json.tar.gz
+   curl -O https://druid.apache.org/docs/latest/assets/files/kttm-kafka-supervisor.json.gz
    tar -xzf kttm-kafka-supervisor.json.gz
    ```
 
