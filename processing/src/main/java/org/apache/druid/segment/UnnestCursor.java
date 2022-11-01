@@ -31,10 +31,9 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.BitSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 
 public class UnnestCursor implements Cursor
@@ -46,7 +45,7 @@ public class UnnestCursor implements Cursor
   private final String columnName;
   private final String outputName;
   private final LinkedHashSet<String> allowSet;
-  private final Set<Integer> allowSetInts;
+  private final BitSet allowedBitSet;
   private int index;
   private Object currentVal;
   private IndexedInts pos;
@@ -64,7 +63,7 @@ public class UnnestCursor implements Cursor
     this.outputName = outputColumnName;
     this.needInitialization = true;
     this.allowSet = allowSet;
-    this.allowSetInts = new HashSet<>();
+    allowedBitSet = new BitSet();
   }
 
   @Override
@@ -126,9 +125,11 @@ public class UnnestCursor implements Cursor
           public Object getObject()
           {
             if (pos != null) {
-              if (allowSetInts.isEmpty()) {
-                return lookupName(pos.get(index));
-              } else if (allowSetInts.contains(pos.get(index))) {
+              if (allowedBitSet.isEmpty()) {
+                if (allowSet == null) {
+                  return lookupName(pos.get(index));
+                }
+              } else if (allowedBitSet.get(pos.get(index))) {
                 return lookupName(pos.get(index));
               }
             } else {
@@ -216,10 +217,12 @@ public class UnnestCursor implements Cursor
           public Object getObject()
           {
             if (pos != null) {
-              if (allowSetInts == null || allowSetInts.isEmpty()) {
-                return dimSelector.lookupName(pos.get(index));
+              if (allowedBitSet.isEmpty()) {
+                if (allowSet == null) {
+                  return dimSelector.lookupName(pos.get(index));
+                }
               } else {
-                if (allowSetInts.contains(pos.get(index))) {
+                if (allowedBitSet.get(pos.get(index))) {
                   return dimSelector.lookupName(pos.get(index));
                 }
               }
@@ -327,7 +330,9 @@ public class UnnestCursor implements Cursor
       IdLookup idLookup = dimSelector.idLookup();
       if (allowSet != null && idLookup != null) {
         for (String s : allowSet) {
-          allowSetInts.add(idLookup.lookupId(s));
+          if (idLookup.lookupId(s) >= 0) {
+            allowedBitSet.set(idLookup.lookupId(s));
+          }
         }
       }
       if (dimSelector.getObject() instanceof List) {

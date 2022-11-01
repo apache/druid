@@ -65,6 +65,13 @@ public class UnnestStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
+    /*Filter updatedFilter;
+    InDimFilter allowListFilters = new InDimFilter(dimensionToUnnest, allowSet);
+    if (filter != null) {
+      updatedFilter = new AndFilter(Arrays.asList(filter, allowListFilters));
+    } else {
+      updatedFilter = new AndFilter(Collections.singletonList(allowListFilters));
+    }*/
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
         filter,
         interval,
