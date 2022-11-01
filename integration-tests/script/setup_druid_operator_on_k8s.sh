@@ -26,13 +26,13 @@ git clone https://github.com/druid-io/druid-operator.git
 cd druid-operator
 git checkout -b druid-operator-$DRUID_OPERATOR_VERSION druid-operator-$DRUID_OPERATOR_VERSION
 cd ..
-export REPLACE_ME="druidio/druid-operator:$DRUID_OPERATOR_VERSION"
+sed -i "s|REPLACE_IMAGE|druidio/druid-operator:$DRUID_OPERATOR_VERSION|g" druid-operator/deploy/operator.yaml
 
 # Deploy Druid Operator and Druid CR spec
-$KUBECTL apply -f druid-operator/deploy/service_account.yaml
-$KUBECTL apply -f druid-operator/deploy/role.yaml
-$KUBECTL apply -f druid-operator/deploy/role_binding.yaml
-$KUBECTL apply -f druid-operator/deploy/crds/druid.apache.org_druids_crd.yaml
-envsubst < druid-operator/deploy/operator.yaml | $KUBECTL apply -f -
+$KUBECTL create -f druid-operator/deploy/service_account.yaml
+$KUBECTL create -f druid-operator/deploy/role.yaml
+$KUBECTL create -f druid-operator/deploy/role_binding.yaml
+$KUBECTL create -f druid-operator/deploy/crds/druid.apache.org_druids_crd.yaml
+$KUBECTL create -f druid-operator/deploy/operator.yaml
 
 echo "Setup Druid Operator on K8S Done!"
