@@ -259,7 +259,7 @@ You can also use the Druid API to submit a supervisor spec:
 1. Run the following command from your Druid root directory to download the sample data file:
 
    ```bash
-   curl -O https://druid.apache.org/data/kttm-kafka-supervisor.json.gz
+   curl -O https://druid.apache.org/docs/latest/assets/files/kttm-replace.json.tar.gz
    tar -xzf kttm-kafka-supervisor.json.gz
    ```
 
