@@ -113,6 +113,9 @@ public class CacheNotifier
 
   public void stop()
   {
+    if (!updates.isEmpty()) {
+      LOG.warn("Shutting down Catalog sync with %d unsent notifications", updates.size());
+    }
     exec.shutdownNow();
   }
 }
