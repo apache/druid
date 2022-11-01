@@ -51,6 +51,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
+import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -469,6 +470,37 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     Assert.assertTrue(virtualColumns.exists("v0"));
     Assert.assertTrue(virtualColumns.exists("v1"));
     Assert.assertTrue(virtualColumns.exists("v2"));
+  }
+
+  @Test
+  public void testCompositeVirtualColumnsCapabilitiesHasAccessToOtherVirtualColumns()
+  {
+    final ColumnInspector baseInspector = new ColumnInspector()
+    {
+      @Nullable
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String column)
+      {
+        if ("x".equals(column)) {
+          return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
+        }
+        if ("n".equals(column)) {
+          return ColumnCapabilitiesImpl.createDefault().setType(NestedDataComplexTypeSerde.TYPE);
+        }
+        return null;
+      }
+    };
+    final NestedFieldVirtualColumn v0 = new NestedFieldVirtualColumn("n", "$.x", "v0", ColumnType.STRING);
+    final NestedFieldVirtualColumn v1 = new NestedFieldVirtualColumn("n", "$.y", "v1", ColumnType.LONG);
+    final ExpressionVirtualColumn expr1 = new ExpressionVirtualColumn("v2", "v0 * v1", null, TestExprMacroTable.INSTANCE);
+    final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn("v3", "v0 * x", null, TestExprMacroTable.INSTANCE);
+    final VirtualColumns virtualColumns = VirtualColumns.create(ImmutableList.of(v0, v1, expr1, expr2));
+
+    Assert.assertEquals(ColumnType.STRING, virtualColumns.getColumnCapabilities(baseInspector, "v0").toColumnType());
+    Assert.assertEquals(ColumnType.LONG, virtualColumns.getColumnCapabilities(baseInspector, "v1").toColumnType());
+    Assert.assertEquals(ColumnType.DOUBLE, virtualColumns.getColumnCapabilities(baseInspector, "v2").toColumnType());
+    Assert.assertEquals(ColumnType.DOUBLE, virtualColumns.getColumnCapabilities(baseInspector, "v3").toColumnType());
+    Assert.assertTrue(virtualColumns.canVectorize(baseInspector));
   }
 
   private VirtualColumns makeVirtualColumns()

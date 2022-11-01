@@ -23,57 +23,51 @@ import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 
-public abstract class LongOutStringsInFunctionVectorProcessor extends BivariateFunctionVectorObjectProcessor<String[], String[], long[]>
+public abstract class ObjectOutObjectsInFunctionVectorProcessor
+    extends BivariateFunctionVectorObjectProcessor<Object[], Object[], Object[]>
 {
-  private final boolean[] outNulls;
+  final ExpressionType expressionType;
 
-  protected LongOutStringsInFunctionVectorProcessor(
-      ExprVectorProcessor<String[]> left,
-      ExprVectorProcessor<String[]> right,
-      int maxVectorSize
+  protected ObjectOutObjectsInFunctionVectorProcessor(
+      ExprVectorProcessor<Object[]> left,
+      ExprVectorProcessor<Object[]> right,
+      int maxVectorSize,
+      ExpressionType expressionType
   )
   {
     super(
-        CastToTypeVectorProcessor.cast(left, ExpressionType.STRING),
-        CastToTypeVectorProcessor.cast(right, ExpressionType.STRING),
+        CastToTypeVectorProcessor.cast(left, expressionType),
+        CastToTypeVectorProcessor.cast(right, expressionType),
         maxVectorSize,
-        new long[maxVectorSize]
+        new Object[maxVectorSize]
     );
-    this.outNulls = new boolean[maxVectorSize];
+    this.expressionType = expressionType;
   }
 
   @Nullable
-  abstract Long processValue(@Nullable String leftVal, @Nullable String rightVal);
+  protected abstract Object processValue(@Nullable Object leftVal, @Nullable Object rightVal);
 
   @Override
-  void processIndex(String[] strings, String[] strings2, int i)
+  void processIndex(Object[] in1, Object[] in2, int i)
   {
-    final Long outVal = processValue(strings[i], strings2[i]);
-    if (outVal == null) {
-      outValues[i] = 0L;
-      outNulls[i] = true;
-    } else {
-      outValues[i] = outVal;
-      outNulls[i] = false;
-    }
+    outValues[i] = processValue(in1[i], in2[i]);
   }
 
   @Override
   void processNull(int i)
   {
-    outValues[i] = 0L;
-    outNulls[i] = true;
+    outValues[i] = null;
   }
 
   @Override
-  ExprEvalVector<long[]> asEval()
+  ExprEvalVector<Object[]> asEval()
   {
-    return new ExprEvalLongVector(outValues, outNulls);
+    return new ExprEvalObjectVector(outValues);
   }
 
   @Override
   public ExpressionType getOutputType()
   {
-    return ExpressionType.LONG;
+    return expressionType;
   }
 }
