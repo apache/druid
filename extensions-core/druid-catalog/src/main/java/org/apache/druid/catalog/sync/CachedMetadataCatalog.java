@@ -179,7 +179,7 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
       if (!checkVersion(entry, update)) {
         return entry;
       }
-      return new TableEntry(update) ;
+      return new TableEntry(update);
     }
 
     private boolean checkExists(TableEntry entry, TableMetadata update)

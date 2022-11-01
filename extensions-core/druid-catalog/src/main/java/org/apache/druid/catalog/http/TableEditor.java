@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.catalog.http;
 
 import com.google.common.base.Strings;
@@ -15,6 +34,7 @@ import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.storage.CatalogStorage;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.ws.rs.core.Response;
@@ -33,7 +53,11 @@ public class TableEditor
   private final TableId id;
   private final TableEditRequest editRequest;
 
-  public TableEditor(CatalogStorage catalog, TableId id, TableEditRequest editRequest)
+  public TableEditor(
+      final CatalogStorage catalog,
+      final TableId id,
+      final TableEditRequest editRequest
+  )
   {
     this.catalog = catalog;
     this.id = id;
@@ -66,7 +90,7 @@ public class TableEditor
 
   private long hideColumns(List<String> columns) throws CatalogException
   {
-    if (columns == null) {
+    if (CollectionUtils.isNullOrEmpty(columns)) {
       return 0;
     }
     return catalog.tables().updateProperties(
@@ -102,7 +126,12 @@ public class TableEditor
     for (String col : columns) {
       if (!existing.contains(col)) {
         revised.add(col);
+        existing.add(col);
       }
+    }
+    if (revised.size() == hiddenColumns.size()) {
+      // Nothing changed
+      return null;
     }
     Map<String, Object> revisedProps = new HashMap<>(props);
     revisedProps.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, revised);
@@ -111,7 +140,7 @@ public class TableEditor
 
   private long unHideColumns(List<String> columns) throws CatalogException
   {
-    if (columns == null) {
+    if (CollectionUtils.isNullOrEmpty(columns)) {
       return 0;
     }
     return catalog.tables().updateProperties(
@@ -137,7 +166,7 @@ public class TableEditor
     final Map<String, Object> props = existingSpec.properties();
     @SuppressWarnings("unchecked")
     List<String> hiddenColumns = (List<String>) props.get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
-    if (CollectionUtils.isNullOrEmpty(hiddenColumns) || columns.isEmpty()) {
+    if (hiddenColumns == null || columns.isEmpty()) {
       return null;
     }
     Set<String> removals = new HashSet<>(columns);
@@ -146,6 +175,10 @@ public class TableEditor
       if (!removals.contains(col)) {
         revisedHiddenCols.add(col);
       }
+    }
+    if (revisedHiddenCols.size() == hiddenColumns.size() && !hiddenColumns.isEmpty()) {
+      // Nothing changed
+      return null;
     }
     final Map<String, Object> revisedProps = new HashMap<>(props);
     if (revisedHiddenCols.isEmpty()) {
@@ -158,7 +191,7 @@ public class TableEditor
 
   private long dropColumns(List<String> columnsToDrop) throws CatalogException
   {
-    if (columnsToDrop == null) {
+    if (CollectionUtils.isNullOrEmpty(columnsToDrop)) {
       return 0;
     }
     return catalog.tables().updateColumns(
@@ -171,8 +204,8 @@ public class TableEditor
   {
     final TableSpec existingSpec = table.spec();
     List<ColumnSpec> existingColumns = existingSpec.columns();
-    if (toDrop.isEmpty() || existingColumns.isEmpty()) {
-      return existingSpec;
+    if (CollectionUtils.isNullOrEmpty(existingColumns)) {
+      return null;
     }
     Set<String> drop = new HashSet<String>(toDrop);
     List<ColumnSpec> revised = new ArrayList<>();
@@ -181,13 +214,17 @@ public class TableEditor
         revised.add(col);
       }
     }
+    if (revised.size() == existingColumns.size()) {
+      // Nothing changed
+      return null;
+    }
     return existingSpec.withColumns(revised);
   }
 
 
   private long updateProperties(Map<String, Object> updates) throws CatalogException
   {
-    if (updates == null) {
+    if (updates == null || updates.isEmpty()) {
       return 0;
     }
     return catalog.tables().updateProperties(
@@ -203,9 +240,17 @@ public class TableEditor
   {
     final TableSpec existingSpec = table.spec();
     final TableDefn defn = resolveDefn(existingSpec.type());
-    return existingSpec.withProperties(
-        defn.mergeProperties(existingSpec.properties(), updates)
+    final Map<String, Object> revised = defn.mergeProperties(
+        existingSpec.properties(),
+        updates
     );
+    try {
+      defn.validate(revised, catalog.jsonMapper());
+    }
+    catch (IAE e) {
+      throw CatalogException.badRequest(e.getMessage());
+    }
+    return existingSpec.withProperties(revised);
   }
 
   private TableDefn resolveDefn(String tableType) throws CatalogException
@@ -225,7 +270,7 @@ public class TableEditor
 
   private long updateColumns(final List<ColumnSpec> updates) throws CatalogException
   {
-    if (updates == null) {
+    if (CollectionUtils.isNullOrEmpty(updates)) {
       return 0;
     }
     return catalog.tables().updateColumns(
@@ -241,9 +286,14 @@ public class TableEditor
   {
     final TableSpec existingSpec = table.spec();
     final TableDefn defn = resolveDefn(existingSpec.type());
-    return existingSpec.withColumns(
-        defn.mergeColumns(existingSpec.columns(), updates)
-    );
+    final List<ColumnSpec> revised = defn.mergeColumns(existingSpec.columns(), updates);
+    try {
+      defn.validateColumns(revised, catalog.jsonMapper());
+    }
+    catch (IAE e) {
+      throw CatalogException.badRequest(e.getMessage());
+    }
+    return existingSpec.withColumns(revised);
   }
 
   private long moveColumn(MoveColumn moveColumn) throws CatalogException

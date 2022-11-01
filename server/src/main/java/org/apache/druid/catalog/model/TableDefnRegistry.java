@@ -67,6 +67,11 @@ public class TableDefnRegistry
     return defns.get(type);
   }
 
+  public ObjectMapper jsonMapper()
+  {
+    return jsonMapper;
+  }
+
   public ResolvedTable resolve(TableSpec spec)
   {
     String type = spec.type();

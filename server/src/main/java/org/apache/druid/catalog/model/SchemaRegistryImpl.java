@@ -19,11 +19,14 @@
 
 package org.apache.druid.catalog.model;
 
+import com.google.common.collect.Lists;
 import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.ExternalTableDefn;
 import org.apache.druid.server.security.ResourceType;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -136,5 +139,15 @@ public class SchemaRegistryImpl implements SchemaRegistry
   public Set<String> names()
   {
     return new TreeSet<String>(builtIns.keySet());
+  }
+
+  @Override
+  public List<SchemaSpec> schemas()
+  {
+    // No real need to sort every time. However, this is used infrequently,
+    // so OK for now.
+    List<SchemaSpec> schemas = Lists.newArrayList(builtIns.values());
+    Collections.sort(schemas, (s1, s2) -> s1.name().compareTo(s2.name()));
+    return schemas;
   }
 }

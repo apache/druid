@@ -93,7 +93,7 @@ public class CatalogSyncTest
   {
     // Valid definition
     {
-      TableMetadata table = TableBuilder.externalTable(InlineTableDefn.TABLE_TYPE, "externTable")
+      TableMetadata table = TableBuilder.external(InlineTableDefn.TABLE_TYPE, "externTable")
           .format(InputFormats.CSV_FORMAT_TYPE)
           .data("a", "c")
           .column("a", Columns.VARCHAR)
@@ -103,7 +103,7 @@ public class CatalogSyncTest
 
     // No columns
     {
-      TableMetadata table = TableBuilder.externalTable(InlineTableDefn.TABLE_TYPE, "externTable")
+      TableMetadata table = TableBuilder.external(InlineTableDefn.TABLE_TYPE, "externTable")
           .format(InputFormats.CSV_FORMAT_TYPE)
           .data("a", "c")
           .build();
@@ -112,7 +112,7 @@ public class CatalogSyncTest
 
     // No format
     {
-      TableMetadata table = TableBuilder.externalTable(InlineTableDefn.TABLE_TYPE, "externTable")
+      TableMetadata table = TableBuilder.external(InlineTableDefn.TABLE_TYPE, "externTable")
           .data("a", "c")
           .column("a", Columns.VARCHAR)
           .build();
@@ -145,7 +145,7 @@ public class CatalogSyncTest
     // Also test the deletion case
     TableId table2 = TableId.datasource("table2");
     storage.tables().delete(table2);
-    assertThrows(NotFoundException.class, () ->  storage.tables().read(table2));
+    assertThrows(NotFoundException.class, () -> storage.tables().read(table2));
 
     List<TableMetadata> tables = catalog.tables(TableId.DRUID_SCHEMA);
     assertEquals(2, tables.size());
@@ -169,7 +169,7 @@ public class CatalogSyncTest
     // Also test the deletion case
     TableId table2 = TableId.datasource("table2");
     storage.tables().delete(table2);
-    assertThrows(NotFoundException.class, () ->  storage.tables().read(table2));
+    assertThrows(NotFoundException.class, () -> storage.tables().read(table2));
 
     List<TableMetadata> tables = catalog.tables(TableId.DRUID_SCHEMA);
     assertEquals(2, tables.size());
@@ -198,7 +198,7 @@ public class CatalogSyncTest
     storage.validate(table2);
     storage.tables().create(table2);
 
-    TableMetadata table3 = TableBuilder.externalTable(InlineTableDefn.TABLE_TYPE, "table3")
+    TableMetadata table3 = TableBuilder.external(InlineTableDefn.TABLE_TYPE, "table3")
         .format(InputFormats.CSV_FORMAT_TYPE)
         .data("a", "c")
         .column("a", Columns.VARCHAR)

@@ -31,6 +31,7 @@ import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
+import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.InlineTableDefn;
 import org.apache.druid.catalog.model.table.InputFormats;
 import org.apache.druid.catalog.model.table.TableBuilder;
@@ -48,6 +49,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.apache.druid.server.http.catalog.DummyRequest.deleteBy;
 import static org.apache.druid.server.http.catalog.DummyRequest.getBy;
@@ -140,7 +142,7 @@ public class CatalogResourceTest
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // Inline input source
-    TableSpec inputSpec = TableBuilder.externalTable(InlineTableDefn.TABLE_TYPE, "inline")
+    TableSpec inputSpec = TableBuilder.external(InlineTableDefn.TABLE_TYPE, "inline")
         .format(InputFormats.CSV_FORMAT_TYPE)
         .data("a,b,1", "c,d,2")
         .column("a", Columns.VARCHAR)
@@ -241,6 +243,12 @@ public class CatalogResourceTest
   }
 
   @SuppressWarnings("unchecked")
+  private Set<String> getSchemaSet(Response resp)
+  {
+    return (Set<String>) resp.getEntity();
+  }
+
+  @SuppressWarnings("unchecked")
   private List<TableId> getTableIdList(Response resp)
   {
     return (List<TableId>) resp.getEntity();
@@ -259,25 +267,81 @@ public class CatalogResourceTest
   }
 
   @Test
-  public void testList()
+  public void testGetSchemas()
+  {
+    // Invalid format
+    Response resp = resource.getSchemas("bogus", getBy(CatalogTests.READER_USER));
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
+
+    // Schema names (default)
+    resp = resource.getSchemas(null, getBy(CatalogTests.READER_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+    assertTrue(getSchemaSet(resp).contains("druid"));
+
+    resp = resource.getSchemas("", getBy(CatalogTests.READER_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+    assertTrue(getSchemaSet(resp).contains("druid"));
+
+    // Schema names
+    resp = resource.getSchemas(CatalogResource.NAME_FORMAT, getBy(CatalogTests.READER_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+    assertTrue(getSchemaSet(resp).contains("druid"));
+
+    // Table paths - no entries
+    resp = resource.getSchemas(CatalogResource.PATH_FORMAT, getBy(CatalogTests.READER_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+    assertTrue(getTableIdList(resp).isEmpty());
+
+    // Table metadata - no entries
+    resp = resource.getSchemas(CatalogResource.METADATA_FORMAT, getBy(CatalogTests.READER_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+    assertTrue(getTableIdList(resp).isEmpty());
+
+    // Create a table
+    final String tableName = "list";
+    TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
+    resp = resource.postTable(TableId.DRUID_SCHEMA, "list", dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+
+    // Table paths - no read access
+    resp = resource.getSchemas(CatalogResource.PATH_FORMAT, getBy(CatalogTests.DENY_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+    assertTrue(getTableIdList(resp).isEmpty());
+
+    // Table metadata - no read access
+    resp = resource.getSchemas(CatalogResource.METADATA_FORMAT, getBy(CatalogTests.DENY_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+    assertTrue(getDetailsList(resp).isEmpty());
+
+    // Table paths - read access
+    resp = resource.getSchemas(CatalogResource.PATH_FORMAT, getBy(CatalogTests.READER_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+    assertEquals(1, getTableIdList(resp).size());
+    assertEquals(tableName, getTableIdList(resp).get(0).name());
+
+    // Table metadata - read access
+    resp = resource.getSchemas(CatalogResource.METADATA_FORMAT, getBy(CatalogTests.READER_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+    List<TableMetadata> tables = getDetailsList(resp);
+    assertEquals(1, tables.size());
+    assertEquals(tableName, tables.get(0).id().name());
+    assertEquals(1, tables.get(0).spec().properties().size());
+  }
+
+  @Test
+  public void testGetSchemaTables()
   {
     // No entries
-    Response resp = resource.listTableNames(getBy(CatalogTests.READER_USER));
+    Response resp = resource.getSchemaTables(TableId.DRUID_SCHEMA, CatalogResource.NAME_FORMAT, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
-    List<TableId> tableIds = getTableIdList(resp);
-    assertTrue(tableIds.isEmpty());
-
-    resp = resource.listTableNamesForSchema(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
-    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
-    List<String> tables = getTableList(resp);
-    assertTrue(tables.isEmpty());
+    assertTrue(getTableList(resp).isEmpty());
 
     // Missing schema
-    resp = resource.listTableNamesForSchema(null, getBy(CatalogTests.READER_USER));
+    resp = resource.getSchemaTables(null, CatalogResource.NAME_FORMAT, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // Invalid schema
-    resp = resource.listTableNamesForSchema("bogus", getBy(CatalogTests.READER_USER));
+    resp = resource.getSchemaTables("bogus", CatalogResource.NAME_FORMAT, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
 
     // Create a table
@@ -286,32 +350,51 @@ public class CatalogResourceTest
     resp = resource.postTable(TableId.DRUID_SCHEMA, "list", dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
-    // No read access
-    resp = resource.listTableNames(getBy(CatalogTests.DENY_USER));
+    // No read access - name
+    resp = resource.getSchemaTables(TableId.DRUID_SCHEMA, CatalogResource.NAME_FORMAT, getBy(CatalogTests.DENY_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
-    tableIds = getTableIdList(resp);
-    assertTrue(tableIds.isEmpty());
+    assertTrue(getTableIdList(resp).isEmpty());
 
-    resp = resource.listTableNamesForSchema(TableId.DRUID_SCHEMA, getBy(CatalogTests.DENY_USER));
+    // No read access - metadata
+    resp = resource.getSchemaTables(TableId.DRUID_SCHEMA, CatalogResource.METADATA_FORMAT, getBy(CatalogTests.DENY_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
-    tables = getTableList(resp);
-    assertTrue(tables.isEmpty());
+    assertTrue(getDetailsList(resp).isEmpty());
 
-    // Read access
-    resp = resource.listTableNames(getBy(CatalogTests.READER_USER));
+    // No read access - status
+    resp = resource.getSchemaTables(TableId.DRUID_SCHEMA, CatalogResource.STATUS_FORMAT, getBy(CatalogTests.DENY_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
-    tableIds = getTableIdList(resp);
-    assertEquals(1, tableIds.size());
+    assertTrue(getDetailsList(resp).isEmpty());
 
-    resp = resource.listTableNamesForSchema(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
+    // Read access - name
+    resp = resource.getSchemaTables(TableId.DRUID_SCHEMA, CatalogResource.NAME_FORMAT, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
-    tables = getTableList(resp);
-    assertEquals(1, tables.size());
+    assertEquals(Collections.singletonList(tableName), getTableList(resp));
 
-    resp = resource.listTableNamesForSchema(TableId.SYSTEM_SCHEMA, getBy(CatalogTests.READER_USER));
+    // Read access - metadata
+    resp = resource.getSchemaTables(TableId.DRUID_SCHEMA, CatalogResource.METADATA_FORMAT, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
-    tables = getTableList(resp);
-    assertTrue(tables.isEmpty());
+    assertEquals(1, getDetailsList(resp).size());
+    TableMetadata table = getDetailsList(resp).get(0);
+    assertEquals(TableId.datasource(tableName), table.id());
+    assertEquals(1, table.spec().properties().size());
+
+    // Read access - status
+    resp = resource.getSchemaTables(TableId.DRUID_SCHEMA, CatalogResource.STATUS_FORMAT, getBy(CatalogTests.READER_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+    assertEquals(1, getDetailsList(resp).size());
+    table = getDetailsList(resp).get(0);
+    assertEquals(TableId.datasource(tableName), table.id());
+    assertEquals(DatasourceDefn.TABLE_TYPE, table.spec().type());
+    assertTrue(table.spec().properties().isEmpty());
+  }
+
+  @Test
+  public void testSync()
+  {
+    final String tableName = "sync";
+    TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
+    Response resp = resource.postTable(TableId.DRUID_SCHEMA, "list", dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
     // Internal sync schema API
     resp = resource.syncSchema(TableId.SYSTEM_SCHEMA, getBy(CatalogTests.SUPER_USER));
@@ -387,13 +470,13 @@ public class CatalogResourceTest
     assertEquals(dsSpec, read1.spec());
 
     // list
-    resp = resource.listTableNames(getBy(CatalogTests.READER_USER));
+    resp = resource.getSchemas(CatalogResource.PATH_FORMAT, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     List<TableId> tableIds = getTableIdList(resp);
     assertEquals(1, tableIds.size());
     assertEquals(id1, tableIds.get(0));
 
-    resp = resource.listTableNamesForSchema(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
+    resp = resource.getSchemaTables(TableId.DRUID_SCHEMA, CatalogResource.NAME_FORMAT, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     List<String> tables = getTableList(resp);
     assertEquals(1, tables.size());
@@ -421,14 +504,14 @@ public class CatalogResourceTest
     TableId id2 = TableId.of(TableId.DRUID_SCHEMA, table2Name);
 
     // verify lists
-    resp = resource.listTableNames(getBy(CatalogTests.READER_USER));
+    resp = resource.getSchemas(CatalogResource.PATH_FORMAT, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     tableIds = getTableIdList(resp);
     assertEquals(2, tableIds.size());
     assertEquals(id1, tableIds.get(0));
     assertEquals(id2, tableIds.get(1));
 
-    resp = resource.listTableNamesForSchema(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
+    resp = resource.getSchemaTables(TableId.DRUID_SCHEMA, CatalogResource.NAME_FORMAT, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     tables = getTableList(resp);
     assertEquals(2, tables.size());
@@ -439,7 +522,7 @@ public class CatalogResourceTest
     resp = resource.deleteTable(TableId.DRUID_SCHEMA, table1Name, deleteBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
-    resp = resource.listTableNamesForSchema(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
+    resp = resource.getSchemaTables(TableId.DRUID_SCHEMA, CatalogResource.NAME_FORMAT, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     tables = getTableList(resp);
     assertEquals(1, tables.size());
@@ -447,7 +530,7 @@ public class CatalogResourceTest
     resp = resource.deleteTable(TableId.DRUID_SCHEMA, table2Name, deleteBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
-    resp = resource.listTableNamesForSchema(TableId.DRUID_SCHEMA, getBy(CatalogTests.READER_USER));
+    resp = resource.getSchemaTables(TableId.DRUID_SCHEMA, CatalogResource.NAME_FORMAT, getBy(CatalogTests.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     tables = getTableList(resp);
     assertEquals(0, tables.size());
@@ -576,11 +659,10 @@ public class CatalogResourceTest
     resp = resource.editTable("bogus", tableName, cmd, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
 
-    // Bad table
-    resp = resource.editTable(TableId.DRUID_SCHEMA, "bogus", cmd, postBy(CatalogTests.WRITER_USER));
-    assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
-
     // Nothing to do
+    resp = resource.editTable(TableId.DRUID_SCHEMA, "bogus", cmd, postBy(CatalogTests.WRITER_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+
     resp = resource.editTable(TableId.DRUID_SCHEMA, tableName, cmd, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
@@ -595,8 +677,12 @@ public class CatalogResourceTest
         CatalogUtils.columnNames(read.spec().columns())
     );
 
-    // Drop
+    // Bad table
     cmd = new DropColumns(Arrays.asList("a", "c"));
+    resp = resource.editTable(TableId.DRUID_SCHEMA, "bogus", cmd, postBy(CatalogTests.WRITER_USER));
+    assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
+
+    // Drop
     resp = resource.editTable(TableId.DRUID_SCHEMA, tableName, cmd, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 

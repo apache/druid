@@ -61,7 +61,7 @@ public class TableBuilder
         .segmentGranularity(granularity);
   }
 
-  public static TableBuilder externalTable(String type, String name)
+  public static TableBuilder external(String type, String name)
   {
     return new TableBuilder()
         .external(name)

@@ -19,6 +19,7 @@
 
 package org.apache.druid.catalog.model;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -39,4 +40,5 @@ public interface SchemaRegistry
 
   SchemaSpec schema(String name);
   Set<String> names();
+  List<SchemaSpec> schemas();
 }

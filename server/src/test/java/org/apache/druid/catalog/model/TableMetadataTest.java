@@ -19,7 +19,6 @@
 
 package org.apache.druid.catalog.model;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.catalog.CatalogTest;
@@ -27,7 +26,6 @@ import org.apache.druid.catalog.model.TableMetadata.TableState;
 import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -41,8 +39,6 @@ import static org.junit.Assert.assertThrows;
 @Category(CatalogTest.class)
 public class TableMetadataTest
 {
-  private ObjectMapper mapper = new ObjectMapper();
-
   @Test
   public void testId()
   {

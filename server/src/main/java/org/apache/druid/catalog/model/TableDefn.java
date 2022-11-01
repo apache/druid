@@ -86,16 +86,21 @@ public class TableDefn extends ObjectDefn
   public void validate(ResolvedTable table)
   {
     validate(table.properties(), table.jsonMapper());
-    if (table.spec().columns() == null) {
+    validateColumns(table.spec().columns(), table.jsonMapper());
+  }
+
+  public void validateColumns(List<ColumnSpec> columns, ObjectMapper jsonMapper)
+  {
+    if (columns == null) {
       return;
     }
     Set<String> names = new HashSet<>();
-    for (ColumnSpec colSpec : table.spec().columns()) {
+    for (ColumnSpec colSpec : columns) {
       if (!names.add(colSpec.name())) {
         throw new IAE("Duplicate column name: " + colSpec.name());
       }
       ColumnDefn.ResolvedColumn resolvedCol = resolveColumn(colSpec);
-      resolvedCol.validate(table.jsonMapper());
+      resolvedCol.validate(jsonMapper);
     }
   }
 

@@ -23,8 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.catalog.http.CatalogResource;
-import org.apache.druid.catalog.http.HideColumns;
-import org.apache.druid.catalog.http.MoveColumn;
+import org.apache.druid.catalog.http.TableEditRequest;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
@@ -55,23 +54,18 @@ public class CatalogClient
     this.clusterClient = clusterClient;
   }
 
-  public long createTable(TableMetadata table)
-  {
-    return createTable(table, null);
-  }
-
-  public long createTable(TableMetadata table, String action)
+  public long createTable(TableMetadata table, boolean overwrite)
   {
     // Use action=
     String url = StringUtils.format(
-        "%s%s/tables/%s/%s",
+        "%s%s/schemas/%s/tables/%s",
         clusterClient.leadCoordinatorUrl(),
         CatalogResource.ROOT_PATH,
         table.id().schema(),
         table.id().name()
     );
-    if (action != null) {
-      url += "?action=" + action;
+    if (overwrite) {
+      url += "?overwrite=true";
     }
     VersionResponse response = clusterClient.post(url, table.spec(), VersionResponse.class);
     return response.version;
@@ -80,7 +74,7 @@ public class CatalogClient
   public long updateTable(TableId tableId, TableSpec tableSpec, long version)
   {
     String url = StringUtils.format(
-        "%s%s/tables/%s/%s",
+        "%s%s/schemas/%s/tables/%s",
         clusterClient.leadCoordinatorUrl(),
         CatalogResource.ROOT_PATH,
         tableId.schema(),
@@ -89,14 +83,14 @@ public class CatalogClient
     if (version > 0) {
       url += "?version=" + version;
     }
-    VersionResponse response = clusterClient.put(url, tableSpec, VersionResponse.class);
+    VersionResponse response = clusterClient.post(url, tableSpec, VersionResponse.class);
     return response.version;
   }
 
   public TableMetadata readTable(TableId tableId)
   {
     String url = StringUtils.format(
-        "%s%s/tables/%s/%s",
+        "%s%s/schemas/%s/tables/%s",
         clusterClient.leadCoordinatorUrl(),
         CatalogResource.ROOT_PATH,
         tableId.schema(),
@@ -108,7 +102,7 @@ public class CatalogClient
   public void dropTable(TableId tableId)
   {
     String url = StringUtils.format(
-        "%s%s/tables/%s/%s",
+        "%s%s/schemas/%s/tables/%s",
         clusterClient.leadCoordinatorUrl(),
         CatalogResource.ROOT_PATH,
         tableId.schema(),
@@ -117,49 +111,23 @@ public class CatalogClient
     clusterClient.send(HttpMethod.DELETE, url);
   }
 
-  public long moveColumn(TableId tableId, MoveColumn cmd)
+  public long editTable(TableId tableId, TableEditRequest cmd)
   {
     String url = StringUtils.format(
-        "%s%s/tables/%s/%s/moveColumn",
+        "%s%s/schemas/%s/tables/%s/edit",
         clusterClient.leadCoordinatorUrl(),
         CatalogResource.ROOT_PATH,
         tableId.schema(),
         tableId.name()
     );
     VersionResponse response = clusterClient.post(url, cmd, VersionResponse.class);
-    return response.version;
-  }
-
-  public long hideColumns(TableId tableId, HideColumns cmd)
-  {
-    String url = StringUtils.format(
-        "%s%s/tables/%s/%s/hideColumns",
-        clusterClient.leadCoordinatorUrl(),
-        CatalogResource.ROOT_PATH,
-        tableId.schema(),
-        tableId.name()
-    );
-    VersionResponse response = clusterClient.post(url, cmd, VersionResponse.class);
-    return response.version;
-  }
-
-  public long dropColumns(TableId tableId, List<String> columns)
-  {
-    String url = StringUtils.format(
-        "%s%s/tables/%s/%s/dropColumns",
-        clusterClient.leadCoordinatorUrl(),
-        CatalogResource.ROOT_PATH,
-        tableId.schema(),
-        tableId.name()
-    );
-    VersionResponse response = clusterClient.post(url, columns, VersionResponse.class);
     return response.version;
   }
 
   public List<String> listSchemas()
   {
     String url = StringUtils.format(
-        "%s%s/list/schemas/names",
+        "%s%s/schemas?format=name",
         clusterClient.leadCoordinatorUrl(),
         CatalogResource.ROOT_PATH
     );
@@ -169,7 +137,7 @@ public class CatalogClient
   public List<TableId> listTables()
   {
     String url = StringUtils.format(
-        "%s%s/list/tables/names",
+        "%s%s/schemas?format=path",
         clusterClient.leadCoordinatorUrl(),
         CatalogResource.ROOT_PATH
     );
@@ -179,7 +147,7 @@ public class CatalogClient
   public List<String> listTableNamesInSchema(String schemaName)
   {
     String url = StringUtils.format(
-        "%s%s/schemas/%s/names",
+        "%s%s/schemas/%s/tables?format=name",
         clusterClient.leadCoordinatorUrl(),
         CatalogResource.ROOT_PATH,
         schemaName
@@ -190,7 +158,7 @@ public class CatalogClient
   public List<TableMetadata> listTablesInSchema(String schemaName)
   {
     String url = StringUtils.format(
-        "%s%s/schemas/%s/tables",
+        "%s%s/schemas/%s/tables?format=metadata",
         clusterClient.leadCoordinatorUrl(),
         CatalogResource.ROOT_PATH,
         schemaName

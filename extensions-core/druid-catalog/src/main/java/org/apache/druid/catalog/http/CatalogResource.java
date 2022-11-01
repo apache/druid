@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.catalog.http;
 
 import com.google.common.base.Strings;
@@ -13,6 +32,8 @@ import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -36,8 +57,10 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * REST endpoint for user and internal catalog actions. Catalog actions
@@ -51,6 +74,11 @@ import java.util.List;
 public class CatalogResource
 {
   public static final String ROOT_PATH = "/druid/coordinator/v1/catalog";
+
+  public static final String NAME_FORMAT = "name";
+  public static final String PATH_FORMAT = "path";
+  public static final String METADATA_FORMAT = "metadata";
+  public static final String STATUS_FORMAT = "status";
 
   private final CatalogStorage catalog;
   private final AuthorizerMapper authorizerMapper;
@@ -90,7 +118,7 @@ public class CatalogResource
    * @param req the HTTP request used for authorization.
     */
   @POST
-  @Path("/schemas/{schema}/{name}")
+  @Path("/schemas/{schema}/tables/{name}")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   public Response postTable(
@@ -136,8 +164,7 @@ public class CatalogResource
       }
       return okWithVersion(newVersion);
     }
-    catch (CatalogException e)
-    {
+    catch (CatalogException e) {
       return e.toResponse();
     }
   }
@@ -158,7 +185,7 @@ public class CatalogResource
    * @return the definition for the table, if any.
    */
   @GET
-  @Path("/schemas/{schema}/{name}")
+  @Path("/schemas/{schema}/tables/{name}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getTable(
       @PathParam("schema") String dbSchema,
@@ -172,8 +199,7 @@ public class CatalogResource
       final TableMetadata table = catalog.tables().read(new TableId(dbSchema, name));
       return Response.ok().entity(table).build();
     }
-    catch (CatalogException e)
-    {
+    catch (CatalogException e) {
       return e.toResponse();
     }
   }
@@ -187,7 +213,7 @@ public class CatalogResource
    *             write access.
    */
   @DELETE
-  @Path("/schemas/{schema}/{name}")
+  @Path("/schemas/{schema}/tables/{name}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response deleteTable(
       @PathParam("schema") String dbSchema,
@@ -201,8 +227,7 @@ public class CatalogResource
       catalog.tables().delete(new TableId(dbSchema, name));
       return ok();
     }
-    catch (CatalogException e)
-    {
+    catch (CatalogException e) {
       return e.toResponse();
     }
   }
@@ -211,7 +236,7 @@ public class CatalogResource
   // Modify a table within the catalog
 
   @POST
-  @Path("/schemas/{schema}/{name}/edit")
+  @Path("/schemas/{schema}/tables/{name}/edit")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   public Response editTable(
@@ -227,59 +252,44 @@ public class CatalogResource
       final long newVersion = new TableEditor(catalog, TableId.of(dbSchema, name), editRequest).go();
       return okWithVersion(newVersion);
     }
-    catch (CatalogException e)
-    {
+    catch (CatalogException e) {
       return e.toResponse();
     }
   }
 
   // ---------------------------------------------------------------------
-  // Query names and table specs
+  // Retrieval
 
   /**
-   * Retrieves the list of all Druid schema names. At present, Druid does
-   * not impose security on schemas, only tables within schemas.
+   * Retrieves the list of all Druid schema names, all table names, or
+   * all table metadata.
    */
   @GET
-  @Path("/names/schemas")
+  @Path("/schemas")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response listSchemas(
+  public Response getSchemas(
+      @QueryParam("format") String format,
       @Context final HttpServletRequest req
   )
   {
-    // No good resource to use: we really need finer-grain control.
-    authorizeAccess(ResourceType.STATE, "schemas", Action.READ, req);
-    return Response.ok().entity(catalog.schemaRegistry().names()).build();
-  }
-
-
-  /**
-   * Retrieves the list of all Druid table names for which the user has at
-   * least read access.
-   */
-  @GET
-  @Path("/names/tables")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response listTableNames(
-      @Context final HttpServletRequest req
-  )
-  {
-    List<TableId> tables = catalog.tables().allTablePaths();
-    Iterable<TableId> filtered = AuthorizationUtils.filterAuthorizedResources(
-        req,
-        tables,
-        tableId -> {
-          SchemaSpec schema = catalog.resolveSchema(tableId.schema());
-          if (schema == null) {
-            // Should never occur.
-            return null;
-          }
-          return Collections.singletonList(
-              resourceAction(schema, tableId.name(), Action.READ));
-        },
-        authorizerMapper
-    );
-    return Response.ok().entity(Lists.newArrayList(filtered)).build();
+    try {
+      format = Strings.isNullOrEmpty(format) ? NAME_FORMAT : StringUtils.toLowerCase(format);
+      switch (format) {
+        case NAME_FORMAT:
+          // No good resource to use: we really need finer-grain control.
+          authorizeAccess(ResourceType.STATE, "schemas", Action.READ, req);
+          return Response.ok().entity(catalog.schemaRegistry().names()).build();
+        case PATH_FORMAT:
+          return listTablePaths(req);
+        case METADATA_FORMAT:
+          return listAllTableMetadata(req);
+        default:
+          throw CatalogException.badRequest("Unknown format: [%s]", format);
+      }
+    }
+    catch (CatalogException e) {
+      return e.toResponse();
+    }
   }
 
   /**
@@ -291,62 +301,29 @@ public class CatalogResource
    * @param dbSchema The Druid schema to query. The user must have read access.
    */
   @GET
-  @Path("/names/schemas/{schema}")
+  @Path("/schemas/{schema}/tables")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response listTableNamesForSchema(
+  public Response getSchemaTables(
       @PathParam("schema") String dbSchema,
+      @QueryParam("format") String format,
       @Context final HttpServletRequest req
   )
   {
     try {
       SchemaSpec schema = validateSchema(dbSchema, false);
-      List<String> tables = catalog.tables().tableNamesInSchema(dbSchema);
-      Iterable<String> filtered = AuthorizationUtils.filterAuthorizedResources(
-          req,
-          tables,
-          name ->
-            Collections.singletonList(
-                resourceAction(schema, name, Action.READ)),
-            authorizerMapper
-      );
-      return Response.ok().entity(Lists.newArrayList(filtered)).build();
+      format = Strings.isNullOrEmpty(format) ? NAME_FORMAT : StringUtils.toLowerCase(format);
+      switch (format) {
+        case NAME_FORMAT:
+          return tableNamesInSchema(schema, req);
+        case METADATA_FORMAT:
+          return Response.ok().entity(getTableMetadataForSchema(schema, req)).build();
+        case STATUS_FORMAT:
+          return Response.ok().entity(getTableStatusForSchema(schema, req)).build();
+        default:
+          throw CatalogException.badRequest("Unknown format: [%s]", format);
+      }
     }
-    catch (CatalogException e)
-    {
-      return e.toResponse();
-    }
-  }
-
-  /**
-   * Retrieves the list of all Druid table metadata for which the user has at
-   * least read access.
-   */
-  @GET
-  @Path("/schemas/{dbSchema}")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response listTableMetadataForSchema(
-      @PathParam("dbSchema") String dbSchema,
-      @Context final HttpServletRequest req
-  )
-  {
-    try {
-      SchemaSpec schema = validateSchema(dbSchema, false);
-      List<TableMetadata> tables = catalog.tables().tablesInSchema(schema.name());
-      Iterable<TableMetadata> filtered = AuthorizationUtils.filterAuthorizedResources(
-          req,
-          tables,
-          table -> {
-            TableId tableId = table.id();
-            return Collections.singletonList(
-                resourceAction(schema, tableId.name(), Action.READ));
-          },
-          authorizerMapper
-      );
-
-      return Response.ok().entity(Lists.newArrayList(filtered)).build();
-    }
-    catch (CatalogException e)
-    {
+    catch (CatalogException e) {
       return e.toResponse();
     }
   }
@@ -373,9 +350,15 @@ public class CatalogResource
       @Context final HttpServletRequest req
   )
   {
-    // Same as the user-command for now. This endpoint reserves the right to change
+    // Same as the list schemas endpoint for now. This endpoint reserves the right to change
     // over time as needed, while the user endpoint cannot easily change.
-    return listTableMetadataForSchema(dbSchema, req);
+    try {
+      SchemaSpec schema = validateSchema(dbSchema, false);
+      return Response.ok().entity(getTableMetadataForSchema(schema, req)).build();
+    }
+    catch (CatalogException e) {
+      return e.toResponse();
+    }
   }
 
   public static final String TABLE_SYNC = "/sync/schemas/{schema}/{name}";
@@ -399,6 +382,108 @@ public class CatalogResource
 
   // ---------------------------------------------------------------------
   // Helper methods
+
+
+  /**
+   * Retrieves the list of all Druid table names for which the user has at
+   * least read access.
+   */
+  private Response listTablePaths(final HttpServletRequest req)
+  {
+    List<TableId> tables = catalog.tables().allTablePaths();
+    Iterable<TableId> filtered = AuthorizationUtils.filterAuthorizedResources(
+        req,
+        tables,
+        tableId -> {
+          SchemaSpec schema = catalog.resolveSchema(tableId.schema());
+          if (schema == null) {
+            // Should never occur.
+            return null;
+          }
+          return Collections.singletonList(
+              resourceAction(schema, tableId.name(), Action.READ));
+        },
+        authorizerMapper
+    );
+    return Response.ok().entity(Lists.newArrayList(filtered)).build();
+  }
+
+  private List<TableMetadata> getTableMetadataForSchema(
+      final SchemaSpec schema,
+      final HttpServletRequest req
+  ) throws CatalogException
+  {
+    List<TableMetadata> tables = catalog.tables().tablesInSchema(schema.name());
+    Iterable<TableMetadata> filtered = AuthorizationUtils.filterAuthorizedResources(
+        req,
+        tables,
+        table -> {
+          TableId tableId = table.id();
+          return Collections.singletonList(
+              resourceAction(schema, tableId.name(), Action.READ));
+        },
+        authorizerMapper
+    );
+
+    return Lists.newArrayList(filtered);
+  }
+
+  private List<TableMetadata> getTableStatusForSchema(
+      final SchemaSpec schema,
+      final HttpServletRequest req
+  ) throws CatalogException
+  {
+    // Crude but effective, assuming low volume: get all the data, and throw away
+    // the columns and properties.
+    return getTableMetadataForSchema(schema, req)
+        .stream()
+        .map(table -> table.withSpec(new TableSpec(table.spec().type(), null, null)))
+        .collect(Collectors.toList());
+  }
+
+  private Response listAllTableMetadata(final HttpServletRequest req) throws CatalogException
+  {
+    List<Pair<SchemaSpec, TableMetadata>> tables = new ArrayList<>();
+    for (SchemaSpec schema : catalog.schemaRegistry().schemas()) {
+      tables.addAll(catalog.tables().tablesInSchema(schema.name())
+          .stream()
+          .map(table -> Pair.of(schema, table))
+          .collect(Collectors.toList()));
+
+    }
+    Iterable<Pair<SchemaSpec, TableMetadata>> filtered = AuthorizationUtils.filterAuthorizedResources(
+        req,
+        tables,
+        entry -> {
+          return Collections.singletonList(
+              resourceAction(entry.lhs, entry.rhs.id().name(), Action.READ));
+        },
+        authorizerMapper
+    );
+
+    List<TableMetadata> metadata = Lists.newArrayList(filtered)
+        .stream()
+        .map(pair -> pair.rhs)
+        .collect(Collectors.toList());
+    return Response.ok().entity(metadata).build();
+  }
+
+  private Response tableNamesInSchema(
+      final SchemaSpec schema,
+      final HttpServletRequest req
+  )
+  {
+    List<String> tables = catalog.tables().tableNamesInSchema(schema.name());
+    Iterable<String> filtered = AuthorizationUtils.filterAuthorizedResources(
+        req,
+        tables,
+        name ->
+          Collections.singletonList(
+              resourceAction(schema, name, Action.READ)),
+          authorizerMapper
+    );
+    return Response.ok().entity(Lists.newArrayList(filtered)).build();
+  }
 
   private void validateTableName(String name) throws CatalogException
   {

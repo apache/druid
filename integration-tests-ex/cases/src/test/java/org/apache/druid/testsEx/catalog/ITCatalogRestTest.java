@@ -20,14 +20,17 @@
 package org.apache.druid.testsEx.catalog;
 
 import com.google.inject.Inject;
-import org.apache.druid.catalog.http.HideColumns;
 import org.apache.druid.catalog.http.MoveColumn;
+import org.apache.druid.catalog.http.TableEditRequest.DropColumns;
+import org.apache.druid.catalog.http.TableEditRequest.HideColumns;
+import org.apache.druid.catalog.http.TableEditRequest.UnhideColumns;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.testsEx.categories.Catalog;
 import org.apache.druid.testsEx.cluster.CatalogClient;
 import org.apache.druid.testsEx.cluster.DruidClusterClient;
@@ -74,7 +77,7 @@ public class ITCatalogRestTest
 
       assertThrows(
           Exception.class,
-          () -> client.createTable(table)
+          () -> client.createTable(table, false)
       );
     }
 
@@ -86,7 +89,7 @@ public class ITCatalogRestTest
           .build();
       assertThrows(
           Exception.class,
-          () -> client.createTable(table)
+          () -> client.createTable(table, false)
       );
     }
 
@@ -96,7 +99,7 @@ public class ITCatalogRestTest
           .build();
       assertThrows(
           Exception.class,
-          () -> client.createTable(table)
+          () -> client.createTable(table, false)
       );
     }
   }
@@ -119,7 +122,7 @@ public class ITCatalogRestTest
 
     // Use force action so test is reentrant if it fails part way through
     // when debugging.
-    long version = client.createTable(table, "force");
+    long version = client.createTable(table, true);
 
     // Update the datasource
     TableSpec dsSpec2 = TableBuilder.copyOf(table)
@@ -128,7 +131,7 @@ public class ITCatalogRestTest
         .buildSpec();
 
     // First, optimistic locking, wrong version
-    client.updateTable(table.id(), dsSpec2, 1);
+    assertThrows(ISE.class, () -> client.updateTable(table.id(), dsSpec2, 1));
 
     // Optimistic locking, correct version
     long newVersion = client.updateTable(table.id(), dsSpec2, version);
@@ -140,19 +143,19 @@ public class ITCatalogRestTest
 
     // Move a column
     MoveColumn moveCmd = new MoveColumn("d", MoveColumn.Position.BEFORE, "a");
-    client.moveColumn(table.id(), moveCmd);
+    client.editTable(table.id(), moveCmd);
 
     // Drop a column
-    client.dropColumns(table.id(), Collections.singletonList("b"));
+    DropColumns dropCmd = new DropColumns(Collections.singletonList("b"));
+    client.editTable(table.id(), dropCmd);
     read = client.readTable(table.id());
     assertEquals(Arrays.asList("d", "a", "c"), CatalogUtils.columnNames(read.spec().columns()));
 
     // Hide columns
     HideColumns hideCmd = new HideColumns(
-        Arrays.asList("e", "f"),
-        Collections.singletonList("g")
+        Arrays.asList("e", "f")
     );
-    client.hideColumns(table.id(), hideCmd);
+    client.editTable(table.id(), hideCmd);
     read = client.readTable(table.id());
     assertEquals(
           Arrays.asList("e", "f"),
@@ -160,11 +163,10 @@ public class ITCatalogRestTest
     );
 
     // Unhide
-    hideCmd = new HideColumns(
-        null,
+    UnhideColumns unhideCmd = new UnhideColumns(
         Collections.singletonList("e")
     );
-    client.hideColumns(table.id(), hideCmd);
+    client.editTable(table.id(), unhideCmd);
     read = client.readTable(table.id());
     assertEquals(
           Collections.singletonList("f"),

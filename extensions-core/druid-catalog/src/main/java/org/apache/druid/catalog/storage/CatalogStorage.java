@@ -78,6 +78,11 @@ public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
     return schemaRegistry;
   }
 
+  public ObjectMapper jsonMapper()
+  {
+    return tableRegistry.jsonMapper();
+  }
+
   public SchemaSpec resolveSchema(String dbSchema)
   {
     return schemaRegistry.schema(dbSchema);
@@ -100,7 +105,8 @@ public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
   {
     try {
       return tables().read(id);
-    } catch (NotFoundException e) {
+    }
+    catch (NotFoundException e) {
       return null;
     }
   }

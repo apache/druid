@@ -407,8 +407,8 @@ public class SQLCatalogManager implements CatalogManager
       return result.updateTime();
     }
     catch (CallbackFailedException e) {
-      if (e.getCause() instanceof NotFoundException) {
-        throw (NotFoundException) e.getCause();
+      if (e.getCause() instanceof CatalogException) {
+        throw (CatalogException) e.getCause();
       }
       throw e;
     }
@@ -432,7 +432,7 @@ public class SQLCatalogManager implements CatalogManager
   public long updateColumns(
       final TableId id,
       final TableTransform transform
-  ) throws NotFoundException
+  ) throws CatalogException
   {
     try {
       final TableMetadata result = dbi.withHandle(
@@ -499,8 +499,8 @@ public class SQLCatalogManager implements CatalogManager
       return result.updateTime();
     }
     catch (CallbackFailedException e) {
-      if (e.getCause() instanceof NotFoundException) {
-        throw (NotFoundException) e.getCause();
+      if (e.getCause() instanceof CatalogException) {
+        throw (CatalogException) e.getCause();
       }
       throw e;
     }
