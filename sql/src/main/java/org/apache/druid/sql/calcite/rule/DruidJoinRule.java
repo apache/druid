@@ -73,7 +73,7 @@ public class DruidJoinRule extends RelOptRule
             operand(DruidRel.class, any())
         )
     );
-    this.enableLeftScanDirect = plannerContext.getQueryContext().isEnableJoinLeftScanDirect();
+    this.enableLeftScanDirect = plannerContext.queryContext().getEnableJoinLeftScanDirect();
     this.plannerContext = plannerContext;
   }
 

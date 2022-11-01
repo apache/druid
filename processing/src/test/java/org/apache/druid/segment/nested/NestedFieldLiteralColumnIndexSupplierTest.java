@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
@@ -41,6 +42,7 @@ import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FixedIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
@@ -62,9 +64,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   BitmapResultFactory<ImmutableBitmap> bitmapResultFactory = new DefaultBitmapResultFactory(
       roaringFactory.getBitmapFactory()
   );
-  GenericIndexed<String> globalStrings;
-  FixedIndexed<Long> globalLongs;
-  FixedIndexed<Double> globalDoubles;
+  Supplier<Indexed<ByteBuffer>> globalStrings;
+  Supplier<FixedIndexed<Long>> globalLongs;
+  Supplier<FixedIndexed<Double>> globalDoubles;
 
   @Before
   public void setup() throws IOException
@@ -123,16 +125,35 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     doubleWriter.write(9.9);
     writeToBuffer(doubleBuffer, doubleWriter);
 
-    globalStrings = GenericIndexed.read(stringBuffer, GenericIndexed.STRING_STRATEGY);
+    GenericIndexed<ByteBuffer> strings = GenericIndexed.read(stringBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY);
+    globalStrings = () -> strings.singleThreaded();
     globalLongs = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES);
     globalDoubles = FixedIndexed.read(doubleBuffer, TypeStrategies.DOUBLE, ByteOrder.nativeOrder(), Double.BYTES);
   }
 
+  @Test
+  public void testSingleTypeStringColumnValueIndex() throws IOException
+  {
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeStringSupplier();
+
+    NullValueIndex nullIndex = indexSupplier.as(NullValueIndex.class);
+    Assert.assertNotNull(nullIndex);
+
+    // 10 rows
+    // local: [b, foo, fooo, z]
+    // column: [foo, b, fooo, b, z, fooo, z, b, b, foo]
+
+    BitmapColumnIndex columnIndex = nullIndex.forNull();
+    Assert.assertNotNull(columnIndex);
+    Assert.assertEquals(0.0, columnIndex.estimateSelectivity(10), 0.0);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    Assert.assertEquals(0, bitmap.size());
+  }
 
   @Test
   public void testSingleTypeStringColumnValueSetIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeStringSupplier();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeStringSupplier();
 
     StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
     Assert.assertNotNull(valueSetIndex);
@@ -165,7 +186,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeStringColumnRangeIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeStringSupplier();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeStringSupplier();
 
     LexicographicalRangeIndex rangeIndex = indexSupplier.as(LexicographicalRangeIndex.class);
     Assert.assertNotNull(rangeIndex);
@@ -236,7 +257,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeStringColumnRangeIndexWithPredicate() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeStringSupplier();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeStringSupplier();
 
     LexicographicalRangeIndex rangeIndex = indexSupplier.as(LexicographicalRangeIndex.class);
     Assert.assertNotNull(rangeIndex);
@@ -304,7 +325,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeStringColumnPredicateIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeStringSupplier();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeStringSupplier();
 
     DruidPredicateIndex predicateIndex = indexSupplier.as(DruidPredicateIndex.class);
     Assert.assertNotNull(predicateIndex);
@@ -327,7 +348,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeStringColumnWithNullValueIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeStringWithNullsSupplier();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeStringWithNullsSupplier();
 
     NullValueIndex nullIndex = indexSupplier.as(NullValueIndex.class);
     Assert.assertNotNull(nullIndex);
@@ -346,7 +367,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeStringColumnWithNullValueSetIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeStringWithNullsSupplier();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeStringWithNullsSupplier();
 
     StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
     Assert.assertNotNull(valueSetIndex);
@@ -379,7 +400,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleValueStringWithNullRangeIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeStringWithNullsSupplier();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeStringWithNullsSupplier();
 
     LexicographicalRangeIndex rangeIndex = indexSupplier.as(LexicographicalRangeIndex.class);
     Assert.assertNotNull(rangeIndex);
@@ -451,7 +472,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleValueStringWithNullPredicateIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeStringWithNullsSupplier();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeStringWithNullsSupplier();
 
     DruidPredicateIndex predicateIndex = indexSupplier.as(DruidPredicateIndex.class);
     Assert.assertNotNull(predicateIndex);
@@ -474,7 +495,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeLongColumnValueSetIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeLongSupplier();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeLongSupplier();
 
     StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
     Assert.assertNotNull(valueSetIndex);
@@ -500,7 +521,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeLongColumnRangeIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeLongSupplier();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeLongSupplier();
 
     NumericRangeIndex rangeIndex = indexSupplier.as(NumericRangeIndex.class);
     Assert.assertNotNull(rangeIndex);
@@ -530,7 +551,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeLongColumnPredicateIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeLongSupplier();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeLongSupplier();
 
     DruidPredicateIndex predicateIndex = indexSupplier.as(DruidPredicateIndex.class);
     Assert.assertNotNull(predicateIndex);
@@ -553,7 +574,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeLongColumnWithNullValueIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeLongSupplierWithNull();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeLongSupplierWithNull();
 
     NullValueIndex nullIndex = indexSupplier.as(NullValueIndex.class);
     Assert.assertNotNull(nullIndex);
@@ -572,7 +593,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeLongColumnWithNullValueSetIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeLongSupplierWithNull();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeLongSupplierWithNull();
 
     StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
     Assert.assertNotNull(valueSetIndex);
@@ -598,7 +619,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleValueLongWithNullRangeIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeLongSupplierWithNull();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeLongSupplierWithNull();
 
     NumericRangeIndex rangeIndex = indexSupplier.as(NumericRangeIndex.class);
     Assert.assertNotNull(rangeIndex);
@@ -628,7 +649,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleValueLongWithNullPredicateIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeLongSupplierWithNull();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeLongSupplierWithNull();
 
     DruidPredicateIndex predicateIndex = indexSupplier.as(DruidPredicateIndex.class);
     Assert.assertNotNull(predicateIndex);
@@ -651,7 +672,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeDoubleColumnValueSetIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeDoubleSupplier();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeDoubleSupplier();
 
     StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
     Assert.assertNotNull(valueSetIndex);
@@ -677,7 +698,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeDoubleColumnRangeIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeDoubleSupplier();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeDoubleSupplier();
 
     NumericRangeIndex rangeIndex = indexSupplier.as(NumericRangeIndex.class);
     Assert.assertNotNull(rangeIndex);
@@ -721,7 +742,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeDoubleColumnPredicateIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeDoubleSupplier();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeDoubleSupplier();
 
     DruidPredicateIndex predicateIndex = indexSupplier.as(DruidPredicateIndex.class);
     Assert.assertNotNull(predicateIndex);
@@ -744,7 +765,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeDoubleColumnWithNullValueIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeDoubleSupplierWithNull();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeDoubleSupplierWithNull();
 
     NullValueIndex nullIndex = indexSupplier.as(NullValueIndex.class);
     Assert.assertNotNull(nullIndex);
@@ -763,7 +784,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleTypeDoubleColumnWithNullValueSetIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeDoubleSupplierWithNull();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeDoubleSupplierWithNull();
 
     StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
     Assert.assertNotNull(valueSetIndex);
@@ -789,7 +810,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleValueDoubleWithNullRangeIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeDoubleSupplierWithNull();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeDoubleSupplierWithNull();
 
     NumericRangeIndex rangeIndex = indexSupplier.as(NumericRangeIndex.class);
     Assert.assertNotNull(rangeIndex);
@@ -819,7 +840,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testSingleValueDoubleWithNullPredicateIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeSingleTypeDoubleSupplierWithNull();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeSingleTypeDoubleSupplierWithNull();
 
     DruidPredicateIndex predicateIndex = indexSupplier.as(DruidPredicateIndex.class);
     Assert.assertNotNull(predicateIndex);
@@ -842,7 +863,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testVariantNullValueIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeVariantSupplierWithNull();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeVariantSupplierWithNull();
 
     NullValueIndex nullIndex = indexSupplier.as(NullValueIndex.class);
     Assert.assertNotNull(nullIndex);
@@ -861,7 +882,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testVariantValueSetIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeVariantSupplierWithNull();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeVariantSupplierWithNull();
 
     StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
     Assert.assertNotNull(valueSetIndex);
@@ -899,7 +920,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testVariantRangeIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeVariantSupplierWithNull();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeVariantSupplierWithNull();
 
     LexicographicalRangeIndex rangeIndex = indexSupplier.as(LexicographicalRangeIndex.class);
     Assert.assertNull(rangeIndex);
@@ -911,7 +932,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testVariantPredicateIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeVariantSupplierWithNull();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeVariantSupplierWithNull();
 
     DruidPredicateIndex predicateIndex = indexSupplier.as(DruidPredicateIndex.class);
     Assert.assertNotNull(predicateIndex);
@@ -934,7 +955,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
   @Test
   public void testDictionaryEncodedStringValueIndex() throws IOException
   {
-    NestedFieldLiteralColumnIndexSupplier indexSupplier = makeVariantSupplierWithNull();
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = makeVariantSupplierWithNull();
 
     DictionaryEncodedStringValueIndex lowLevelIndex = indexSupplier.as(DictionaryEncodedStringValueIndex.class);
     Assert.assertNotNull(lowLevelIndex);
@@ -953,7 +974,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     Assert.assertEquals("9.9", lowLevelIndex.getValue(6));
   }
 
-  private NestedFieldLiteralColumnIndexSupplier makeSingleTypeStringSupplier() throws IOException
+  private NestedFieldLiteralColumnIndexSupplier<?> makeSingleTypeStringSupplier() throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 12);
@@ -1002,7 +1023,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    FixedIndexed<Integer> dictionary = FixedIndexed.read(
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         NestedDataColumnSerializer.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1011,20 +1032,20 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
 
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
-    return new NestedFieldLiteralColumnIndexSupplier(
+    return new NestedFieldLiteralColumnIndexSupplier<>(
         new NestedLiteralTypeInfo.TypeSet(
             new NestedLiteralTypeInfo.MutableTypeSet().add(ColumnType.STRING).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
-        dictionary,
+        dictionarySupplier,
         globalStrings,
         globalLongs,
         globalDoubles
     );
   }
 
-  private NestedFieldLiteralColumnIndexSupplier makeSingleTypeStringWithNullsSupplier() throws IOException
+  private NestedFieldLiteralColumnIndexSupplier<?> makeSingleTypeStringWithNullsSupplier() throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 12);
@@ -1076,7 +1097,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    FixedIndexed<Integer> dictionary = FixedIndexed.read(
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         NestedDataColumnSerializer.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1085,20 +1106,20 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
 
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
-    return new NestedFieldLiteralColumnIndexSupplier(
+    return new NestedFieldLiteralColumnIndexSupplier<>(
         new NestedLiteralTypeInfo.TypeSet(
             new NestedLiteralTypeInfo.MutableTypeSet().add(ColumnType.STRING).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
-        dictionary,
+        dictionarySupplier,
         globalStrings,
         globalLongs,
         globalDoubles
     );
   }
 
-  private NestedFieldLiteralColumnIndexSupplier makeSingleTypeLongSupplier() throws IOException
+  private NestedFieldLiteralColumnIndexSupplier<?> makeSingleTypeLongSupplier() throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 12);
@@ -1147,7 +1168,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    FixedIndexed<Integer> dictionary = FixedIndexed.read(
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         NestedDataColumnSerializer.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1156,20 +1177,20 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
 
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
-    return new NestedFieldLiteralColumnIndexSupplier(
+    return new NestedFieldLiteralColumnIndexSupplier<>(
         new NestedLiteralTypeInfo.TypeSet(
             new NestedLiteralTypeInfo.MutableTypeSet().add(ColumnType.LONG).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
-        dictionary,
+        dictionarySupplier,
         globalStrings,
         globalLongs,
         globalDoubles
     );
   }
 
-  private NestedFieldLiteralColumnIndexSupplier makeSingleTypeLongSupplierWithNull() throws IOException
+  private NestedFieldLiteralColumnIndexSupplier<?> makeSingleTypeLongSupplierWithNull() throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 12);
@@ -1222,7 +1243,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    FixedIndexed<Integer> dictionary = FixedIndexed.read(
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         NestedDataColumnSerializer.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1231,20 +1252,20 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
 
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
-    return new NestedFieldLiteralColumnIndexSupplier(
+    return new NestedFieldLiteralColumnIndexSupplier<>(
         new NestedLiteralTypeInfo.TypeSet(
             new NestedLiteralTypeInfo.MutableTypeSet().add(ColumnType.LONG).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
-        dictionary,
+        dictionarySupplier,
         globalStrings,
         globalLongs,
         globalDoubles
     );
   }
 
-  private NestedFieldLiteralColumnIndexSupplier makeSingleTypeDoubleSupplier() throws IOException
+  private NestedFieldLiteralColumnIndexSupplier<?> makeSingleTypeDoubleSupplier() throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 12);
@@ -1293,7 +1314,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    FixedIndexed<Integer> dictionary = FixedIndexed.read(
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         NestedDataColumnSerializer.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1302,20 +1323,20 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
 
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
-    return new NestedFieldLiteralColumnIndexSupplier(
+    return new NestedFieldLiteralColumnIndexSupplier<>(
         new NestedLiteralTypeInfo.TypeSet(
             new NestedLiteralTypeInfo.MutableTypeSet().add(ColumnType.DOUBLE).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
-        dictionary,
+        dictionarySupplier,
         globalStrings,
         globalLongs,
         globalDoubles
     );
   }
 
-  private NestedFieldLiteralColumnIndexSupplier makeSingleTypeDoubleSupplierWithNull() throws IOException
+  private NestedFieldLiteralColumnIndexSupplier<?> makeSingleTypeDoubleSupplierWithNull() throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 12);
@@ -1368,7 +1389,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    FixedIndexed<Integer> dictionary = FixedIndexed.read(
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         NestedDataColumnSerializer.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1377,20 +1398,20 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
 
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
-    return new NestedFieldLiteralColumnIndexSupplier(
+    return new NestedFieldLiteralColumnIndexSupplier<>(
         new NestedLiteralTypeInfo.TypeSet(
             new NestedLiteralTypeInfo.MutableTypeSet().add(ColumnType.DOUBLE).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
-        dictionary,
+        dictionarySupplier,
         globalStrings,
         globalLongs,
         globalDoubles
     );
   }
 
-  private NestedFieldLiteralColumnIndexSupplier makeVariantSupplierWithNull() throws IOException
+  private NestedFieldLiteralColumnIndexSupplier<?> makeVariantSupplierWithNull() throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 12);
@@ -1451,7 +1472,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    FixedIndexed<Integer> dictionary = FixedIndexed.read(
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         NestedDataColumnSerializer.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1460,7 +1481,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
 
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
-    return new NestedFieldLiteralColumnIndexSupplier(
+    return new NestedFieldLiteralColumnIndexSupplier<>(
         new NestedLiteralTypeInfo.TypeSet(
             new NestedLiteralTypeInfo.MutableTypeSet().add(ColumnType.STRING)
                                                       .add(ColumnType.LONG)
@@ -1469,7 +1490,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
-        dictionary,
+        dictionarySupplier,
         globalStrings,
         globalLongs,
         globalDoubles

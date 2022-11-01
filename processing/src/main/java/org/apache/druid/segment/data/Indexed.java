@@ -36,27 +36,35 @@ import javax.annotation.Nullable;
 public interface Indexed<T> extends Iterable<T>, HotLoopCallee
 {
 
+  /**
+   * Number of elements in the value set
+   */
   int size();
 
+  /**
+   * Get the value at specified position
+   */
   @CalledFromHotLoop
   @Nullable
   T get(int index);
 
   /**
    * Returns the index of "value" in this Indexed object, or a negative number if the value is not present.
-   * The negative number is not guaranteed to be any particular number. Subclasses may tighten this contract
-   * (GenericIndexed does this).
+   * The negative number is not guaranteed to be any particular number unless {@link #isSorted()} returns true, in
+   * which case it will be a negative number equal to (-(insertion point) - 1), in the manner of Arrays.binarySearch.
    *
    * @param value value to search for
    *
-   * @return index of value, or a negative number
+   * @return index of value, or a negative number (equal to (-(insertion point) - 1) if {@link #isSorted()})
    */
   int indexOf(@Nullable T value);
 
-  @FunctionalInterface
-  interface IndexedGetter<T>
+  /**
+   * Indicates if this value set is sorted, the implication being that the contract of {@link #indexOf} is strenthened
+   * to return a negative number equal to (-(insertion point) - 1) when the value is not present in the set.
+   */
+  default boolean isSorted()
   {
-    @Nullable
-    T get(int id);
+    return false;
   }
 }

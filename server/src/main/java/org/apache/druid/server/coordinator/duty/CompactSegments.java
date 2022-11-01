@@ -45,7 +45,7 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -127,7 +127,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     final CoordinatorStats stats = new CoordinatorStats();
     List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
     if (dynamicConfig.getMaxCompactionTaskSlots() > 0) {
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources =
+      Map<String, SegmentTimeline> dataSources =
           params.getUsedSegmentsTimelinesPerDataSource();
       if (compactionConfigList != null && !compactionConfigList.isEmpty()) {
         Map<String, DataSourceCompactionConfig> compactionConfigs = compactionConfigList

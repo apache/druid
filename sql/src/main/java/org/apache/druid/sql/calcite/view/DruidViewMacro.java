@@ -28,11 +28,11 @@ import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.ViewTable;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 
+import java.util.Collections;
 import java.util.List;
 
 public class DruidViewMacro implements TableMacro
@@ -58,7 +58,10 @@ public class DruidViewMacro implements TableMacro
   {
     final RelDataType rowType;
     try (final DruidPlanner planner =
-             plannerFactory.createPlanner(ViewSqlEngine.INSTANCE, viewSql, new QueryContext())) {
+             plannerFactory.createPlanner(
+                 ViewSqlEngine.INSTANCE,
+                 viewSql,
+                 Collections.emptyMap())) {
       planner.validate();
       rowType = planner.prepare().getValidatedRowType();
     }
