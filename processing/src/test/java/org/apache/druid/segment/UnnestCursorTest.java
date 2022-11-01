@@ -26,14 +26,14 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 public class UnnestCursorTest extends InitializedNullHandlingTest
 {
   private static String OUTPUT_NAME = "unnested-column";
-  private static Set<String> IGNORE_SET = new HashSet<>(Arrays.asList("a", "b"));
+  private static LinkedHashSet<String> IGNORE_SET = null; //new LinkedHashSet<>(Arrays.asList("a", "b"));
+
 
   @Test
   public void test_list_unnest_cursors()

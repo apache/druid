@@ -28,6 +28,7 @@ import org.apache.druid.segment.UnnestSegmentReference;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -39,14 +40,14 @@ public class UnnestDataSource implements DataSource
   private final DataSource base;
   private final String column;
   private final String outputName;
-  private final List<String> allowList;
+  private final LinkedHashSet<String> allowList;
 
 
   private UnnestDataSource(
       DataSource dataSource,
       String columnName,
       String outputName,
-      List<String> allowList
+      LinkedHashSet<String> allowList
   )
   {
     this.base = dataSource;
@@ -63,7 +64,7 @@ public class UnnestDataSource implements DataSource
       @JsonProperty("base") DataSource base,
       @JsonProperty("column") String columnName,
       @JsonProperty("outputName") String outputName,
-      @Nullable @JsonProperty("allowList") List<String> allowList
+      @Nullable @JsonProperty("allowList") LinkedHashSet<String> allowList
   )
   {
     return new UnnestDataSource(base, columnName, outputName, allowList);
@@ -88,7 +89,7 @@ public class UnnestDataSource implements DataSource
   }
 
   @JsonProperty("allowList")
-  public List<String> getAllowList()
+  public LinkedHashSet<String> getAllowList()
   {
     return allowList;
   }

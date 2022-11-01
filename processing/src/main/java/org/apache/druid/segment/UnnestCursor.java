@@ -32,6 +32,7 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -44,15 +45,15 @@ public class UnnestCursor implements Cursor
   private final ColumnValueSelector columnValueSelector;
   private final String columnName;
   private final String outputName;
+  private final LinkedHashSet<String> allowSet;
+  private final Set<Integer> allowSetInts;
   private int index;
   private Object currentVal;
   private IndexedInts pos;
   private List<Object> unnestList;
   private boolean needInitialization;
-  private final Set<String> allowSet;
-  private final Set<Integer> allowSetInts;
 
-  public UnnestCursor(Cursor cursor, String columnName, String outputColumnName, Set<String> allowSet)
+  public UnnestCursor(Cursor cursor, String columnName, String outputColumnName, LinkedHashSet<String> allowSet)
   {
     this.baseCursor = cursor;
     this.baseColumSelectorFactory = cursor.getColumnSelectorFactory();
@@ -77,12 +78,7 @@ public class UnnestCursor implements Cursor
         if (!outputName.equals(dimensionSpec.getDimension())) {
           return baseColumSelectorFactory.makeDimensionSelector(dimensionSpec);
         }
-        IdLookup idLookup = dimSelector.idLookup();
-        if(allowSet != null) {
-          for(String s: allowSet){
-            allowSetInts.add(idLookup.lookupId(s));
-          }
-        }
+
         final DimensionSpec actualDimensionSpec = dimensionSpec.withDimension(columnName);
         return new DimensionSelector()
         {
@@ -130,8 +126,11 @@ public class UnnestCursor implements Cursor
           public Object getObject()
           {
             if (pos != null) {
-              if(allowSetInts.contains(pos.get(index)))
+              if (allowSetInts.isEmpty()) {
                 return lookupName(pos.get(index));
+              } else if (allowSetInts.contains(pos.get(index))) {
+                return lookupName(pos.get(index));
+              }
             } else {
               return null;
             }
@@ -217,12 +216,20 @@ public class UnnestCursor implements Cursor
           public Object getObject()
           {
             if (pos != null) {
-              if(allowSetInts.contains(pos.get(index)))
+              if (allowSetInts == null || allowSetInts.isEmpty()) {
                 return dimSelector.lookupName(pos.get(index));
+              } else {
+                if (allowSetInts.contains(pos.get(index))) {
+                  return dimSelector.lookupName(pos.get(index));
+                }
+              }
             } else {
               if (!unnestList.isEmpty()) {
-                if(allowSet.contains((String) unnestList.get(index)))
+                if (allowSet == null || allowSet.isEmpty()) {
                   return unnestList.get(index);
+                } else if (allowSet.contains((String) unnestList.get(index))) {
+                  return unnestList.get(index);
+                }
               }
             }
             return null;
@@ -301,6 +308,8 @@ public class UnnestCursor implements Cursor
       if (index >= pos.size() - 1) {
         if (!baseCursor.isDone()) {
           baseCursor.advanceUninterruptibly();
+        }
+        if (!baseCursor.isDone()) {
           pos = dimSelector.getRow();
         }
         index = 0;
@@ -315,6 +324,12 @@ public class UnnestCursor implements Cursor
   private void initialize()
   {
     if (dimSelector != null) {
+      IdLookup idLookup = dimSelector.idLookup();
+      if (allowSet != null && idLookup != null) {
+        for (String s : allowSet) {
+          allowSetInts.add(idLookup.lookupId(s));
+        }
+      }
       if (dimSelector.getObject() instanceof List) {
         this.pos = dimSelector.getRow();
       }
