@@ -249,8 +249,9 @@ Increasing the amount of available memory can improve performance in certain cas
 
 Worker tasks use both JVM heap memory and off-heap ("direct") memory.
 
-On Peons launched by Middle Managers, the bulk of the JVM heap (75%) is split up into two bundles of equal size: one
-processor bundle and one worker bundle. Each one comprises 37.5% of the available JVM heap.
+On Peons launched by Middle Managers, the bulk of the JVM heap (75%, less any space used by
+[lookups](../querying/lookups.md)) is split up into two bundles of equal size: one processor bundle and one worker
+bundle. Each one comprises 37.5% of the available JVM heap, less any space used by [lookups](../querying/lookups.md).
 
 Depending on the type of query, each worker and controller task can use a sketch for generating partition boundaries.
 Each sketch uses at most approximately 300 MB.

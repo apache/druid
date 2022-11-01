@@ -58,7 +58,13 @@ public class MapLookupExtractor extends LookupExtractor
     this.isOneToOne = isOneToOne;
   }
 
-  public static long estimateHeapFootprint(@Nullable final Map<String, String> map)
+  /**
+   * Estimate the heap footprint of a Map.
+   *
+   * Important note: the implementation accepts any kind of Map, but estimates zero footprint for keys and values of
+   * types other than String.
+   */
+  public static <K, V> long estimateHeapFootprint(@Nullable final Map<K, V> map)
   {
     if (map == null) {
       return 0;
@@ -67,16 +73,16 @@ public class MapLookupExtractor extends LookupExtractor
     final int numEntries = map.size();
     long numChars = 0;
 
-    for (Map.Entry<String, String> sEntry : map.entrySet()) {
-      final String key = sEntry.getKey();
-      final String value = sEntry.getValue();
+    for (Map.Entry<K, V> sEntry : map.entrySet()) {
+      final K key = sEntry.getKey();
+      final V value = sEntry.getValue();
 
-      if (key != null) {
-        numChars += key.length();
+      if (key instanceof String) {
+        numChars += ((String) key).length();
       }
 
-      if (value != null) {
-        numChars += value.length();
+      if (value instanceof String) {
+        numChars += ((String) value).length();
       }
     }
 

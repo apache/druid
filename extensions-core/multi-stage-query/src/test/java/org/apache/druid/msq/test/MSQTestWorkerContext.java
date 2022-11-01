@@ -155,7 +155,8 @@ public class MSQTestWorkerContext implements WorkerContext
             injector,
             indexIO,
             null,
-            null
+            null,
+            Runtime.getRuntime().maxMemory()
         ),
         indexIO,
         injector.getInstance(DataSegmentProvider.class),

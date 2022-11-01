@@ -74,6 +74,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final IndexIO indexIO;
   private final TaskDataSegmentProvider dataSegmentProvider;
   private final ServiceClientFactory clientFactory;
+  private final long availableHeapMemory;
 
   @GuardedBy("this")
   private OverlordClient overlordClient;
@@ -86,7 +87,8 @@ public class IndexerWorkerContext implements WorkerContext
       final Injector injector,
       final IndexIO indexIO,
       final TaskDataSegmentProvider dataSegmentProvider,
-      final ServiceClientFactory clientFactory
+      final ServiceClientFactory clientFactory,
+      final long availableHeapMemory
   )
   {
     this.toolbox = toolbox;
@@ -94,6 +96,7 @@ public class IndexerWorkerContext implements WorkerContext
     this.indexIO = indexIO;
     this.dataSegmentProvider = dataSegmentProvider;
     this.clientFactory = clientFactory;
+    this.availableHeapMemory = availableHeapMemory;
   }
 
   public static IndexerWorkerContext createProductionInstance(final TaskToolbox toolbox, final Injector injector)
@@ -112,7 +115,8 @@ public class IndexerWorkerContext implements WorkerContext
         injector,
         indexIO,
         new TaskDataSegmentProvider(coordinatorServiceClient, segmentCacheManager, indexIO),
-        serviceClientFactory
+        serviceClientFactory,
+        computeAvailableHeapMemory(injector)
     );
   }
 
@@ -242,7 +246,7 @@ public class IndexerWorkerContext implements WorkerContext
         indexIO,
         dataSegmentProvider,
         WorkerMemoryParameters.compute(
-            computeAvailableHeapMemory(),
+            availableHeapMemory,
             computeNumWorkersInJvm(),
             processorBouncer().getMaxCount(),
             numInputWorkers
@@ -282,19 +286,37 @@ public class IndexerWorkerContext implements WorkerContext
     }
   }
 
+  private synchronized OverlordClient makeOverlordClient()
+  {
+    if (overlordClient == null) {
+      overlordClient = injector.getInstance(OverlordClient.class)
+                               .withRetryPolicy(StandardRetryPolicy.unlimited());
+    }
+    return overlordClient;
+  }
+
+  private synchronized ServiceLocator makeControllerLocator(final String controllerId)
+  {
+    if (controllerLocator == null) {
+      controllerLocator = new SpecificTaskServiceLocator(controllerId, makeOverlordClient());
+    }
+
+    return controllerLocator;
+  }
+
   /**
    * Amount of memory available for our usage.
    */
-  private long computeAvailableHeapMemory()
+  private static long computeAvailableHeapMemory(final Injector injector)
   {
-    return Runtime.getRuntime().maxMemory() - computeTotalLookupFootprint();
+    return Runtime.getRuntime().maxMemory() - computeTotalLookupFootprint(injector);
   }
 
   /**
    * Total estimated lookup footprint. Obtained by calling {@link LookupExtractor#estimateHeapFootprint()} on
    * all available lookups.
    */
-  private long computeTotalLookupFootprint()
+  private static long computeTotalLookupFootprint(final Injector injector)
   {
     // Subtract memory taken up by lookups. Correctness of this operation depends on lookups being loaded *before*
     // we create this instance. Luckily, this is the typical mode of operation, since by default
@@ -322,23 +344,5 @@ public class IndexerWorkerContext implements WorkerContext
     log.debug("Lookup footprint: %d lookups with %,d total bytes.", lookupCount, lookupFootprint);
 
     return lookupFootprint;
-  }
-
-  private synchronized OverlordClient makeOverlordClient()
-  {
-    if (overlordClient == null) {
-      overlordClient = injector.getInstance(OverlordClient.class)
-                               .withRetryPolicy(StandardRetryPolicy.unlimited());
-    }
-    return overlordClient;
-  }
-
-  private synchronized ServiceLocator makeControllerLocator(final String controllerId)
-  {
-    if (controllerLocator == null) {
-      controllerLocator = new SpecificTaskServiceLocator(controllerId, makeOverlordClient());
-    }
-
-    return controllerLocator;
   }
 }
