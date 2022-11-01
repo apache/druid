@@ -74,7 +74,7 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.DateTime;
@@ -483,7 +483,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       } else {
         // Use segment lock
         // Create a timeline to find latest segments only
-        final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
+        final SegmentTimeline timeline = SegmentTimeline.forSegments(
             segments
         );
 

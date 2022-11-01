@@ -23,7 +23,7 @@ exports[`IngestSuccessPane matches snapshot 1`] = `
       className="action"
       onClick={[Function]}
     >
-      SELECT * FROM kttm_simple
+      SELECT * FROM "kttm_simple"
     </span>
   </p>
 </div>

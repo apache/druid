@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
+import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -305,6 +306,7 @@ public class KafkaSupervisorIOConfigTest
         null,
         null,
         null,
+        null,
         null
     );
     String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
@@ -317,5 +319,41 @@ public class KafkaSupervisorIOConfigTest
         1200000,
         kafkaSupervisorIOConfig1.getAutoScalerConfig().getMinTriggerScaleActionFrequencyMillis()
     );
+  }
+
+  @Test
+  public void testIdleConfigSerde() throws JsonProcessingException
+  {
+    HashMap<String, Object> idleConfig = new HashMap<>();
+    idleConfig.put("enabled", true);
+
+    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
+    consumerProperties.put("bootstrap.servers", "localhost:8082");
+
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
+        "test",
+        null,
+        1,
+        1,
+        new Period("PT1H"),
+        consumerProperties,
+        null,
+        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+        new Period("P1D"),
+        new Period("PT30S"),
+        true,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        mapper.convertValue(idleConfig, IdleConfig.class)
+    );
+    String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig1 = mapper.readValue(ioConfig, KafkaSupervisorIOConfig.class);
+
+    Assert.assertNotNull(kafkaSupervisorIOConfig1.getIdleConfig());
+    Assert.assertTrue(kafkaSupervisorIOConfig1.getIdleConfig().isEnabled());
+    Assert.assertEquals(600000L, kafkaSupervisorIOConfig1.getIdleConfig().getInactiveAfterMillis());
   }
 }

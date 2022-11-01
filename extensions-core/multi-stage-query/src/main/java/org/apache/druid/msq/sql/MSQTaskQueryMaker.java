@@ -42,10 +42,12 @@ import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.TaskReportMSQDestination;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
@@ -59,6 +61,7 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -109,17 +112,18 @@ public class MSQTaskQueryMaker implements QueryMaker
   {
     String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
 
-    String msqMode = MultiStageQueryContext.getMSQMode(plannerContext.getQueryContext());
+    QueryContext queryContext = plannerContext.queryContext();
+    String msqMode = MultiStageQueryContext.getMSQMode(queryContext);
     if (msqMode != null) {
-      MSQMode.populateDefaultQueryContext(msqMode, plannerContext.getQueryContext());
+      MSQMode.populateDefaultQueryContext(msqMode, plannerContext.queryContextMap());
     }
 
     final String ctxDestination =
-        DimensionHandlerUtils.convertObjectToString(MultiStageQueryContext.getDestination(plannerContext.getQueryContext()));
+        DimensionHandlerUtils.convertObjectToString(MultiStageQueryContext.getDestination(queryContext));
 
     Object segmentGranularity;
     try {
-      segmentGranularity = Optional.ofNullable(plannerContext.getQueryContext()
+      segmentGranularity = Optional.ofNullable(plannerContext.queryContext()
                                                              .get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY))
                                    .orElse(jsonMapper.writeValueAsString(DEFAULT_SEGMENT_GRANULARITY));
     }
@@ -128,7 +132,7 @@ public class MSQTaskQueryMaker implements QueryMaker
                     + "segment graularity");
     }
 
-    final int maxNumTasks = MultiStageQueryContext.getMaxNumTasks(plannerContext.getQueryContext());
+    final int maxNumTasks = MultiStageQueryContext.getMaxNumTasks(queryContext);
 
     if (maxNumTasks < 2) {
       throw new IAE(MultiStageQueryContext.CTX_MAX_NUM_TASKS
@@ -139,19 +143,21 @@ public class MSQTaskQueryMaker implements QueryMaker
     final int maxNumWorkers = maxNumTasks - 1;
 
     final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(
-        plannerContext.getQueryContext(),
+        queryContext,
         DEFAULT_ROWS_PER_SEGMENT
     );
 
     final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(
-        plannerContext.getQueryContext(),
+        queryContext,
         DEFAULT_ROWS_IN_MEMORY
     );
 
-    final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(plannerContext.getQueryContext());
+    final IndexSpec indexSpec = MultiStageQueryContext.getIndexSpec(queryContext, jsonMapper);
+
+    final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(queryContext);
 
     final List<Interval> replaceTimeChunks =
-        Optional.ofNullable(plannerContext.getQueryContext().get(DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS))
+        Optional.ofNullable(plannerContext.queryContext().get(DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS))
                 .map(
                     s -> {
                       if (s instanceof String && "all".equals(StringUtils.toLowerCase((String) s))) {
@@ -212,9 +218,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         throw new ISE("Unable to convert %s to a segment granularity", segmentGranularity);
       }
 
-      final List<String> segmentSortOrder = MultiStageQueryContext.decodeSortOrder(
-          MultiStageQueryContext.getSortOrder(plannerContext.getQueryContext())
-      );
+      final List<String> segmentSortOrder = MultiStageQueryContext.getSortOrder(queryContext);
 
       validateSegmentSortOrder(
           segmentSortOrder,
@@ -245,15 +249,15 @@ public class MSQTaskQueryMaker implements QueryMaker
                .query(druidQuery.getQuery().withOverriddenContext(nativeQueryContextOverrides))
                .columnMappings(new ColumnMappings(columnMappings))
                .destination(destination)
-               .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(plannerContext.getQueryContext()))
-               .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment))
+               .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(queryContext))
+               .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, indexSpec))
                .build();
 
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
         querySpec,
         plannerContext.getSql(),
-        plannerContext.getQueryContext().getMergedParams(),
+        plannerContext.queryContextMap(),
         sqlTypeNames,
         null
     );

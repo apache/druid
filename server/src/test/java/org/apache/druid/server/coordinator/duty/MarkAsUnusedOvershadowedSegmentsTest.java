@@ -118,8 +118,7 @@ public class MarkAsUnusedOvershadowedSegmentsTest
             .andReturn(ImmutableSet.of(segmentV1, segmentV2))
             .anyTimes();
     EasyMock.expect(druidDataSource.getName()).andReturn("test").anyTimes();
-    coordinator.markSegmentAsUnused(segmentV1);
-    coordinator.markSegmentAsUnused(segmentV0);
+    coordinator.markSegmentsAsUnused("test", ImmutableSet.of(segmentV1.getId(), segmentV0.getId()));
     EasyMock.expectLastCall();
     EasyMock.replay(mockPeon, coordinator, druidServer, druidDataSource);
 

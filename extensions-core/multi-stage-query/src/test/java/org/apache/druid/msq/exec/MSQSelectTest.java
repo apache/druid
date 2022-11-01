@@ -34,6 +34,7 @@ import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -439,6 +440,122 @@ public class MSQSelectTest extends MSQTestBase
   }
 
   @Test
+  public void testBroadcastJoin()
+  {
+    final RowSignature resultSignature = RowSignature.builder()
+                                                     .add("dim2", ColumnType.STRING)
+                                                     .add("EXPR$1", ColumnType.DOUBLE)
+                                                     .build();
+
+    final ImmutableList<Object[]> expectedResults;
+
+    if (NullHandling.sqlCompatible()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{null, 4.0},
+          new Object[]{"", 3.0},
+          new Object[]{"a", 2.5},
+          new Object[]{"abc", 5.0}
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{null, 3.6666666666666665},
+          new Object[]{"a", 2.5},
+          new Object[]{"abc", 5.0}
+      );
+    }
+
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource(
+                        join(
+                            new TableDataSource(CalciteTests.DATASOURCE1),
+                            new QueryDataSource(
+                                newScanQueryBuilder()
+                                    .dataSource(CalciteTests.DATASOURCE1)
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .columns("dim2", "m1", "m2")
+                                    .context(
+                                        defaultScanQueryContext(
+                                            RowSignature.builder()
+                                                        .add("dim2", ColumnType.STRING)
+                                                        .add("m1", ColumnType.FLOAT)
+                                                        .add("m2", ColumnType.DOUBLE)
+                                                        .build()
+                                        )
+                                    )
+                                    .limit(10)
+                                    .build()
+                            ),
+                            "j0.",
+                            equalsCondition(
+                                DruidExpression.ofColumn(ColumnType.FLOAT, "m1"),
+                                DruidExpression.ofColumn(ColumnType.FLOAT, "j0.m1")
+                            ),
+                            JoinType.INNER
+                        )
+                    )
+                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                    .setDimensions(new DefaultDimensionSpec("j0.dim2", "d0", ColumnType.STRING))
+                    .setGranularity(Granularities.ALL)
+                    .setAggregatorSpecs(
+                        useDefault
+                        ? aggregators(
+                            new DoubleSumAggregatorFactory("a0:sum", "j0.m2"),
+                            new CountAggregatorFactory("a0:count")
+                        )
+                        : aggregators(
+                            new DoubleSumAggregatorFactory("a0:sum", "j0.m2"),
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("a0:count"),
+                                not(selector("j0.m2", null, null)),
+
+                                // Not sure why the name is only set in SQL-compatible null mode. Seems strange.
+                                // May be due to JSON serialization: name is set on the serialized aggregator even
+                                // if it was originally created with no name.
+                                NullHandling.sqlCompatible() ? "a0:count" : null
+                            )
+                        )
+                    )
+                    .setPostAggregatorSpecs(
+                        ImmutableList.of(
+                            new ArithmeticPostAggregator(
+                                "a0",
+                                "quotient",
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator(null, "a0:sum"),
+                                    new FieldAccessPostAggregator(null, "a0:count")
+                                )
+                            )
+
+                        )
+                    )
+                    .setContext(DEFAULT_MSQ_CONTEXT)
+                    .build();
+
+    testSelectQuery()
+        .setSql(
+            "SELECT t1.dim2, AVG(t1.m2) FROM "
+            + "foo "
+            + "INNER JOIN (SELECT * FROM foo LIMIT 10) AS t1 "
+            + "ON t1.m1 = foo.m1 "
+            + "GROUP BY t1.dim2"
+        )
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(query)
+                   .columnMappings(new ColumnMappings(ImmutableList.of(
+                       new ColumnMapping("d0", "dim2"),
+                       new ColumnMapping("a0", "EXPR$1")
+                   )))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build()
+        )
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(expectedResults)
+        .verifyResults();
+  }
+
+  @Test
   public void testGroupByOrderByAggregation()
   {
     RowSignature rowSignature = RowSignature.builder()
@@ -613,7 +730,7 @@ public class MSQSelectTest extends MSQTestBase
   public void testExternSelect1() throws IOException
   {
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)

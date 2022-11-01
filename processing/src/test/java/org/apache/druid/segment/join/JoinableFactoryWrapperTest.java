@@ -22,34 +22,17 @@ package org.apache.druid.segment.join;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.DataSource;
-import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.LookupDataSource;
-import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.TestQuery;
 import org.apache.druid.query.extraction.MapLookupExtractor;
-import org.apache.druid.query.filter.FalseDimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
-import org.apache.druid.query.filter.TrueDimFilter;
-import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.planning.PreJoinableClause;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.FalseFilter;
@@ -57,24 +40,17 @@ import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.join.table.RowBasedIndexedTable;
-import org.apache.druid.timeline.SegmentId;
-import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class JoinableFactoryWrapperTest extends NullHandlingTest
@@ -85,12 +61,12 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
 
   private static final Map<String, String> TEST_LOOKUP =
       ImmutableMap.<String, String>builder()
-          .put("MX", "Mexico")
-          .put("NO", "Norway")
-          .put("SV", "El Salvador")
-          .put("US", "United States")
-          .put("", "Empty key")
-          .build();
+                  .put("MX", "Mexico")
+                  .put("NO", "Norway")
+                  .put("SV", "El Salvador")
+                  .put("US", "United States")
+                  .put("", "Empty key")
+                  .build();
 
   private static final Set<String> TEST_LOOKUP_KEYS =
       NullHandling.sqlCompatible()
@@ -136,340 +112,6 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
-
-  @Test
-  public void test_createSegmentMapFn_noClauses()
-  {
-    final Function<SegmentReference, SegmentReference> segmentMapFn = NOOP_JOINABLE_FACTORY_WRAPPER.createSegmentMapFn(
-        null,
-        ImmutableList.of(),
-        new AtomicLong(),
-        null
-    );
-
-    Assert.assertSame(Function.identity(), segmentMapFn);
-  }
-
-  @Test
-  public void test_createSegmentMapFn_unusableClause()
-  {
-    final PreJoinableClause clause = makePreJoinableClause(
-        INDEXED_TABLE_DS,
-        "country == \"j.country\"",
-        "j.",
-        JoinType.LEFT
-    );
-
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("dataSource is not joinable");
-
-    final Function<SegmentReference, SegmentReference> ignored = NOOP_JOINABLE_FACTORY_WRAPPER.createSegmentMapFn(
-        null,
-        ImmutableList.of(clause),
-        new AtomicLong(),
-        null
-    );
-  }
-
-  @Test
-  public void test_createSegmentMapFn_usableClause()
-  {
-    final PreJoinableClause clause = makePreJoinableClause(
-        INDEXED_TABLE_DS,
-        "country == \"j.country\"",
-        "j.",
-        JoinType.LEFT
-    );
-
-    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new InlineJoinableFactory());
-    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
-        null,
-        ImmutableList.of(clause),
-        new AtomicLong(),
-        new TestQuery(
-            new TableDataSource("test"),
-            new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-            false,
-            new HashMap<>()
-        )
-    );
-
-    Assert.assertNotSame(Function.identity(), segmentMapFn);
-  }
-
-  @Test
-  public void test_createSegmentMapFn_usableClause_joinToFilterEnabled() throws IOException
-  {
-    final PreJoinableClause clause = makePreJoinableClause(
-        INDEXED_TABLE_DS,
-        "country == \"j.country\"",
-        "j.",
-        JoinType.INNER
-    );
-    // required columns are necessary for the rewrite
-    final TestQuery queryWithRequiredColumnsAndJoinFilterRewrite = (TestQuery) new TestQuery(
-        new TableDataSource("test"),
-        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        false,
-        new HashMap<>()
-    ).withOverriddenContext(ImmutableMap.of(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, "true"));
-    queryWithRequiredColumnsAndJoinFilterRewrite.setRequiredColumns(ImmutableSet.of("country"));
-
-    final JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new InlineJoinableFactory());
-    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
-        null,
-        ImmutableList.of(clause),
-        new AtomicLong(),
-        queryWithRequiredColumnsAndJoinFilterRewrite
-    );
-
-    // dummy segment
-    final SegmentReference baseSegmentReference = ReferenceCountingSegment.wrapRootGenerationSegment(
-        new QueryableIndexSegment(
-            JoinTestHelper.createFactIndexBuilder(temporaryFolder.newFolder()).buildMMappedIndex(),
-            SegmentId.dummy("facts")
-        )
-    );
-
-    // check the output contains the conversion filter
-    Assert.assertNotSame(Function.identity(), segmentMapFn);
-    final SegmentReference joinSegmentReference = segmentMapFn.apply(baseSegmentReference);
-    Assert.assertTrue(joinSegmentReference instanceof HashJoinSegment);
-    HashJoinSegment hashJoinSegment = (HashJoinSegment) joinSegmentReference;
-    Assert.assertEquals(
-        hashJoinSegment.getBaseFilter(),
-        new InDimFilter(
-            "country",
-            INDEXED_TABLE_DS.getRowsAsList().stream().map(row -> row[0].toString()).collect(Collectors.toSet())
-        )
-    );
-    // the returned clause list is not comparable with an expected clause list since the Joinable
-    // class member in JoinableClause doesn't implement equals method in its implementations
-    Assert.assertEquals(hashJoinSegment.getClauses().size(), 1);
-  }
-
-  @Test
-  public void test_computeJoinDataSourceCacheKey_noClauses()
-  {
-    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    DataSource dataSource = new NoopDataSource();
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.emptyList());
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.empty());
-    EasyMock.expect(analysis.getDataSource()).andReturn(dataSource);
-    EasyMock.replay(analysis);
-    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
-
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage(StringUtils.format(
-        "No join clauses to build the cache key for data source [%s]",
-        dataSource
-    ));
-    joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-  }
-
-  @Test
-  public void test_computeJoinDataSourceCacheKey_noHashJoin()
-  {
-    PreJoinableClause clause1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
-    PreJoinableClause clause2 = makeGlobalPreJoinableClause("dataSource_2", "x != \"h.x\"", "h.");
-    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Arrays.asList(clause1, clause2)).anyTimes();
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.of(TrueDimFilter.instance())).anyTimes();
-    EasyMock.replay(analysis);
-    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
-    Optional<byte[]> cacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-
-    Assert.assertFalse(cacheKey.isPresent());
-  }
-
-  @Test
-  public void test_computeJoinDataSourceCacheKey_cachingUnsupported()
-  {
-    PreJoinableClause clause1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
-    DataSource dataSource = new LookupDataSource("lookup");
-    PreJoinableClause clause2 = makePreJoinableClause(dataSource, "x == \"h.x\"", "h.", JoinType.LEFT);
-    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Arrays.asList(clause1, clause2)).anyTimes();
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.of(TrueDimFilter.instance())).anyTimes();
-    EasyMock.replay(analysis);
-    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
-    Optional<byte[]> cacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-
-    Assert.assertFalse(cacheKey.isPresent());
-  }
-
-  @Test
-  public void test_computeJoinDataSourceCacheKey_usableClauses()
-  {
-
-    PreJoinableClause clause1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
-    PreJoinableClause clause2 = makeGlobalPreJoinableClause("dataSource_2", "x == \"h.x\"", "h.");
-    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Arrays.asList(clause1, clause2)).anyTimes();
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.empty()).anyTimes();
-    EasyMock.replay(analysis);
-    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
-    Optional<byte[]> cacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-
-    Assert.assertTrue(cacheKey.isPresent());
-  }
-
-  @Test
-  public void test_computeJoinDataSourceCacheKey_keyChangesWithExpression()
-  {
-    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.empty()).anyTimes();
-    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
-
-    PreJoinableClause clause1 = makeGlobalPreJoinableClause("dataSource_1", "y == \"j.y\"", "j.");
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause1)).anyTimes();
-    EasyMock.replay(analysis);
-
-    Optional<byte[]> cacheKey1 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-    Assert.assertTrue(cacheKey1.isPresent());
-    Assert.assertNotEquals(0, cacheKey1.get().length);
-
-    PreJoinableClause clause2 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
-    EasyMock.reset(analysis);
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause2)).anyTimes();
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.empty()).anyTimes();
-    EasyMock.replay(analysis);
-    Optional<byte[]> cacheKey2 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-    Assert.assertTrue(cacheKey2.isPresent());
-
-    Assert.assertFalse(Arrays.equals(cacheKey1.get(), cacheKey2.get()));
-  }
-
-  @Test
-  public void test_computeJoinDataSourceCacheKey_keyChangesWithJoinType()
-  {
-    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.empty()).anyTimes();
-    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
-
-    PreJoinableClause clause1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.", JoinType.LEFT);
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause1)).anyTimes();
-    EasyMock.replay(analysis);
-
-    Optional<byte[]> cacheKey1 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-    Assert.assertTrue(cacheKey1.isPresent());
-    Assert.assertNotEquals(0, cacheKey1.get().length);
-
-    PreJoinableClause clause2 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.", JoinType.INNER);
-    EasyMock.reset(analysis);
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause2)).anyTimes();
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.empty()).anyTimes();
-    EasyMock.replay(analysis);
-    Optional<byte[]> cacheKey2 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-    Assert.assertTrue(cacheKey2.isPresent());
-
-    Assert.assertFalse(Arrays.equals(cacheKey1.get(), cacheKey2.get()));
-  }
-
-  @Test
-  public void test_computeJoinDataSourceCacheKey_keyChangesWithPrefix()
-  {
-    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.empty()).anyTimes();
-    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
-
-    PreJoinableClause clause1 = makeGlobalPreJoinableClause("dataSource_1", "abc == xyz", "ab");
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause1)).anyTimes();
-    EasyMock.replay(analysis);
-
-    Optional<byte[]> cacheKey1 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-    Assert.assertTrue(cacheKey1.isPresent());
-    Assert.assertNotEquals(0, cacheKey1.get().length);
-
-    PreJoinableClause clause2 = makeGlobalPreJoinableClause("dataSource_1", "abc == xyz", "xy");
-    EasyMock.reset(analysis);
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause2)).anyTimes();
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.empty()).anyTimes();
-    EasyMock.replay(analysis);
-    Optional<byte[]> cacheKey2 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-    Assert.assertTrue(cacheKey2.isPresent());
-
-    Assert.assertFalse(Arrays.equals(cacheKey1.get(), cacheKey2.get()));
-  }
-
-  @Test
-  public void test_computeJoinDataSourceCacheKey_keyChangesWithBaseFilter()
-  {
-    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.of(TrueDimFilter.instance())).anyTimes();
-    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
-
-    PreJoinableClause clause1 = makeGlobalPreJoinableClause("dataSource_1", "abc == xyz", "ab");
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause1)).anyTimes();
-    EasyMock.replay(analysis);
-
-    Optional<byte[]> cacheKey1 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-    Assert.assertTrue(cacheKey1.isPresent());
-    Assert.assertNotEquals(0, cacheKey1.get().length);
-
-    PreJoinableClause clause2 = makeGlobalPreJoinableClause("dataSource_1", "abc == xyz", "ab");
-    EasyMock.reset(analysis);
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause2)).anyTimes();
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.of(FalseDimFilter.instance())).anyTimes();
-    EasyMock.replay(analysis);
-    Optional<byte[]> cacheKey2 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-    Assert.assertTrue(cacheKey2.isPresent());
-
-    Assert.assertFalse(Arrays.equals(cacheKey1.get(), cacheKey2.get()));
-  }
-
-  @Test
-  public void test_computeJoinDataSourceCacheKey_keyChangesWithJoinable()
-  {
-    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.empty()).anyTimes();
-    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
-
-    PreJoinableClause clause1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause1)).anyTimes();
-    EasyMock.replay(analysis);
-
-    Optional<byte[]> cacheKey1 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-    Assert.assertTrue(cacheKey1.isPresent());
-    Assert.assertNotEquals(0, cacheKey1.get().length);
-
-    PreJoinableClause clause2 = makeGlobalPreJoinableClause("dataSource_2", "x == \"j.x\"", "j.");
-    EasyMock.reset(analysis);
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause2)).anyTimes();
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.empty()).anyTimes();
-
-    EasyMock.replay(analysis);
-    Optional<byte[]> cacheKey2 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-    Assert.assertTrue(cacheKey2.isPresent());
-
-    Assert.assertFalse(Arrays.equals(cacheKey1.get(), cacheKey2.get()));
-  }
-
-  @Test
-  public void test_computeJoinDataSourceCacheKey_sameKeyForSameJoin()
-  {
-    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
-
-    PreJoinableClause clause1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause1)).anyTimes();
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.empty()).anyTimes();
-    EasyMock.replay(analysis);
-
-    Optional<byte[]> cacheKey1 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-    Assert.assertTrue(cacheKey1.isPresent());
-    Assert.assertNotEquals(0, cacheKey1.get().length);
-
-    PreJoinableClause clause2 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
-    EasyMock.reset(analysis);
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause2)).anyTimes();
-    EasyMock.expect(analysis.getJoinBaseTableFilter()).andReturn(Optional.empty()).anyTimes();
-    EasyMock.replay(analysis);
-    Optional<byte[]> cacheKey2 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
-    Assert.assertTrue(cacheKey2.isPresent());
-
-    Assert.assertArrayEquals(cacheKey1.get(), cacheKey2.get());
-  }
 
   @Test
   public void test_checkClausePrefixesForDuplicatesAndShadowing_noConflicts()
@@ -563,10 +205,12 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
     Assert.assertEquals(
         Pair.of(
             ImmutableList.of(new InDimFilter(
-                "x",
-                INDEXED_TABLE_DS.getRowsAsList().stream().map(row -> row[0].toString()).collect(Collectors.toSet()))
+                                 "x",
+                                 INDEXED_TABLE_DS.getRowsAsList().stream().map(row -> row[0].toString()).collect(Collectors.toSet())
+                             )
             ),
-            ImmutableList.of(joinableClause) // the joinable clause remains intact since we've duplicates in country column
+            ImmutableList.of(joinableClause)
+            // the joinable clause remains intact since we've duplicates in country column
         ),
         conversion
     );
@@ -945,54 +589,5 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
         ),
         conversion
     );
-  }
-
-  private PreJoinableClause makeGlobalPreJoinableClause(String tableName, String expression, String prefix)
-  {
-    return makeGlobalPreJoinableClause(tableName, expression, prefix, JoinType.LEFT);
-  }
-
-  private PreJoinableClause makeGlobalPreJoinableClause(
-      String tableName,
-      String expression,
-      String prefix,
-      JoinType joinType
-  )
-  {
-    GlobalTableDataSource dataSource = new GlobalTableDataSource(tableName);
-    return makePreJoinableClause(dataSource, expression, prefix, joinType);
-  }
-
-  private PreJoinableClause makePreJoinableClause(
-      DataSource dataSource,
-      String expression,
-      String prefix,
-      JoinType joinType
-  )
-  {
-    JoinConditionAnalysis conditionAnalysis = JoinConditionAnalysis.forExpression(
-        expression,
-        prefix,
-        ExprMacroTable.nil()
-    );
-    return new PreJoinableClause(
-        prefix,
-        dataSource,
-        joinType,
-        conditionAnalysis
-    );
-  }
-
-  private static class JoinableFactoryWithCacheKey extends NoopJoinableFactory
-  {
-    @Override
-    public Optional<byte[]> computeJoinCacheKey(DataSource dataSource, JoinConditionAnalysis condition)
-    {
-      if (dataSource.isCacheable(false) && condition.canHashJoin()) {
-        String tableName = Iterators.getOnlyElement(dataSource.getTableNames().iterator());
-        return Optional.of(StringUtils.toUtf8(tableName));
-      }
-      return Optional.empty();
-    }
   }
 }

@@ -68,7 +68,7 @@ public class PreparedStatement extends AbstractStatement
     try (DruidPlanner planner = sqlToolbox.plannerFactory.createPlanner(
         sqlToolbox.engine,
         queryPlus.sql(),
-        queryPlus.context())) {
+        queryContext)) {
       validate(planner);
       authorize(planner, authorizer());
 

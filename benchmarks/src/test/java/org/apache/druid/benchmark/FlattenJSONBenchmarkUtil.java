@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.Parser;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -198,6 +199,69 @@ public class FlattenJSONBenchmarkUtil
     fields.add(JSONPathFieldSpec.createJqField("e4.e4.m4", ".e4.e4.m4"));
 
     JSONPathSpec flattenSpec = new JSONPathSpec(true, fields);
+    JSONParseSpec spec = new JSONParseSpec(
+        new TimestampSpec("ts", "iso", null),
+        DimensionsSpec.EMPTY,
+        flattenSpec,
+        null,
+        null
+    );
+
+    return spec.makeParser();
+  }
+
+  public Parser getTreeJqParser()
+  {
+    List<JSONPathFieldSpec> fields = new ArrayList<>();
+    fields.add(JSONPathFieldSpec.createRootField("ts"));
+
+    fields.add(JSONPathFieldSpec.createRootField("d1"));
+    fields.add(JSONPathFieldSpec.createJqField("e1.d1", ".e1.d1"));
+    fields.add(JSONPathFieldSpec.createJqField("e1.d2", ".e1.d2"));
+    fields.add(JSONPathFieldSpec.createJqField("e2.d3", ".e2.d3"));
+    fields.add(JSONPathFieldSpec.createJqField("e2.d4", ".e2.d4"));
+    fields.add(JSONPathFieldSpec.createJqField("e2.d5", ".e2.d5"));
+    fields.add(JSONPathFieldSpec.createJqField("e2.d6", ".e2.d6"));
+
+    fields.add(JSONPathFieldSpec.createRootField("m3"));
+    fields.add(JSONPathFieldSpec.createJqField("e3.m1", ".e3.m1"));
+    fields.add(JSONPathFieldSpec.createJqField("e3.m2", ".e3.m2"));
+    fields.add(JSONPathFieldSpec.createJqField("e3.m3", ".e3.m3"));
+    fields.add(JSONPathFieldSpec.createJqField("e3.m4", ".e3.m4"));
+
+    JSONPathSpec flattenSpec = new JSONPathSpec(false, fields);
+    JSONParseSpec spec = new JSONParseSpec(
+        new TimestampSpec("ts", "iso", null),
+        DimensionsSpec.EMPTY,
+        flattenSpec,
+        null,
+        null
+    );
+
+    return spec.makeParser();
+  }
+
+
+  public Parser getTreeTreeParser()
+  {
+    List<JSONPathFieldSpec> fields = new ArrayList<>();
+    fields.add(JSONPathFieldSpec.createRootField("ts"));
+
+    fields.add(JSONPathFieldSpec.createRootField("d1"));
+    fields.add(JSONPathFieldSpec.createTreeField("e1.d1", Arrays.asList("e1", "d1")));
+    fields.add(JSONPathFieldSpec.createTreeField("e1.d2", Arrays.asList("e1", "d2")));
+    fields.add(JSONPathFieldSpec.createTreeField("e2.d3", Arrays.asList("e2", "d3")));
+    fields.add(JSONPathFieldSpec.createTreeField("e2.d4", Arrays.asList("e2", "d4")));
+    fields.add(JSONPathFieldSpec.createTreeField("e2.d5", Arrays.asList("e2", "d5")));
+    fields.add(JSONPathFieldSpec.createTreeField("e2.d6", Arrays.asList("e2", "d6")));
+
+    fields.add(JSONPathFieldSpec.createRootField("m3"));
+    fields.add(JSONPathFieldSpec.createTreeField("e3.m1", Arrays.asList("e3", "m1")));
+    fields.add(JSONPathFieldSpec.createTreeField("e3.m2", Arrays.asList("e3", "m2")));
+    fields.add(JSONPathFieldSpec.createTreeField("e3.m3", Arrays.asList("e3", "m3")));
+    fields.add(JSONPathFieldSpec.createTreeField("e3.m4", Arrays.asList("e3", "m4")));
+
+    JSONPathSpec flattenSpec = new JSONPathSpec(false, fields);
     JSONParseSpec spec = new JSONParseSpec(
         new TimestampSpec("ts", "iso", null),
         DimensionsSpec.EMPTY,
