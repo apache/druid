@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
@@ -61,6 +60,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -526,16 +526,17 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      QueryRunnerFactoryConglomerate conglomerate
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final JoinableFactoryWrapper joinableFactory
   ) throws IOException
   {
-    return baseComponentSupplier.createQuerySegmentWalker(conglomerate);
+    return baseComponentSupplier.createQuerySegmentWalker(conglomerate, joinableFactory);
   }
 
   @Override
   public SqlEngine createEngine(
-      QueryLifecycleFactory qlf,
-      ObjectMapper queryJsonMapper
+      final QueryLifecycleFactory qlf,
+      final ObjectMapper queryJsonMapper
   )
   {
     if (engine0 == null) {
@@ -582,6 +583,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   @Override
+  public JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider)
+  {
+    return baseComponentSupplier.createJoinableFactoryWrapper(lookupProvider);
+  }
+
+  @Override
   public Set<ExtensionCalciteRuleProvider> extensionCalciteRules()
   {
     return basePlannerComponentSupplier.extensionCalciteRules();
@@ -603,12 +610,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public DruidSchemaManager createSchemaManager()
   {
     return basePlannerComponentSupplier.createSchemaManager();
-  }
-
-  @Override
-  public JoinableFactoryWrapper createJoinableFactoryWrapper(Injector injector)
-  {
-    return basePlannerComponentSupplier.createJoinableFactoryWrapper(injector);
   }
 
   @Override
