@@ -76,6 +76,7 @@ import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
