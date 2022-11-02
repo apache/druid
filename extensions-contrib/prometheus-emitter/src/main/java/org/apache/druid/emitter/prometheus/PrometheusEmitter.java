@@ -175,16 +175,14 @@ public class PrometheusEmitter implements Emitter
     }
     Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
     CollectorRegistry metrics = new CollectorRegistry();
-    if (config.getNamespace() != null) {
-      try {
-        for (DimensionsAndCollector collector : map.values()) {
-          metrics.register(collector.getCollector());
-        }
-        pushGateway.push(metrics, config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
+    try {
+      for (DimensionsAndCollector collector : map.values()) {
+        metrics.register(collector.getCollector());
       }
-      catch (IOException e) {
-        log.error(e, "Unable to push prometheus metrics to pushGateway");
-      }
+      pushGateway.push(metrics, config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
+    }
+    catch (IOException e) {
+      log.error(e, "Unable to push prometheus metrics to pushGateway");
     }
   }
 
