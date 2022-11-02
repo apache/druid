@@ -191,6 +191,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
   {
     int globalStartIndex, globalEndIndex;
     int localStartIndex, localEndIndex;
+    // start with standard range finding in global value dictionary
     if (startValue == null) {
       globalStartIndex = adjust == 0 ? 1 : adjust; // global index 0 is always the null value
     } else {
@@ -200,16 +201,6 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
       } else {
         globalStartIndex = adjust + (-(found + 1));
       }
-    }
-
-    // with starting global index settled, now lets find starting local index
-    int localFound = localDictionary.indexOf(globalStartIndex);
-    if (localFound < 0) {
-      // the first valid global index is not within the local dictionary, so the insertion point is where we begin
-      localStartIndex = -(localFound + 1);
-    } else {
-      // valid global index in local dictionary, start here
-      localStartIndex = localFound;
     }
 
     if (endValue == null) {
@@ -223,16 +214,41 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
       }
     }
     globalEndIndex = Math.max(globalStartIndex, globalEndIndex);
-    // end index is not inclusive, so we find the last value in the local dictionary that falls within the range
+
+    // with global dictionary id range settled, now lets map that onto a local dictionary id range
+    int localFound = localDictionary.indexOf(globalStartIndex);
+    if (localFound < 0) {
+      // the first valid global index is not within the local dictionary, so the insertion point is where we begin
+      localStartIndex = -(localFound + 1);
+      // if the computed local start index violates the global range, shift up by 1
+      int actualGlobalStartIndex = localDictionary.get(localStartIndex);
+      if (actualGlobalStartIndex < globalStartIndex) {
+        localStartIndex++;
+      } else if (actualGlobalStartIndex > globalEndIndex) {
+        // global range is not present in local dictionary, short circuit
+        return new IntIntImmutablePair(0, 0);
+      }
+    } else {
+      // valid global index in local dictionary, start here
+      localStartIndex = localFound;
+    }
     int localEndFound = localDictionary.indexOf(globalEndIndex - 1);
     if (localEndFound < 0) {
       localEndIndex = -localEndFound;
+      // if the computed local ending index violates the global range, shift down by 1
+      int actualGlobalEndIndex = localDictionary.get(localEndIndex);
+      if (actualGlobalEndIndex > globalEndIndex) {
+        localEndIndex--;
+      }
     } else {
       // add 1 because the last valid global end value is in the local dictionary, and end index is exclusive
       localEndIndex = localEndFound + 1;
     }
 
-    return new IntIntImmutablePair(localStartIndex, Math.min(localDictionary.size(), localEndIndex));
+    localStartIndex = Math.min(localStartIndex, localDictionary.size());
+    localEndIndex = Math.max(localStartIndex, Math.min(localDictionary.size(), localEndIndex));
+
+    return new IntIntImmutablePair(localStartIndex, localEndIndex);
   }
 
 
