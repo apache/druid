@@ -51,19 +51,23 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
   private final String topic;
   private final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
   private final boolean useEarliestOffset;
-  private final int samplerConfigTimeoutMs;
+
+  /**
+   * Maximum amount of time in which the entity iterator will return results. If null, no timeout is applied.
+   */
+  private final Integer iteratorTimeoutMs;
 
   public RecordSupplierInputSource(
       String topic,
       RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier,
       boolean useEarliestOffset,
-      int samplerConfigTimeoutMs
+      Integer iteratorTimeoutMs
   )
   {
     this.topic = topic;
     this.recordSupplier = recordSupplier;
     this.useEarliestOffset = useEarliestOffset;
-    this.samplerConfigTimeoutMs = samplerConfigTimeoutMs;
+    this.iteratorTimeoutMs = iteratorTimeoutMs;
     try {
       assignAndSeek(recordSupplier);
     }
@@ -130,7 +134,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
       private Iterator<? extends ByteEntity> bytesIterator;
       private volatile boolean closed;
       private final long createTime = System.currentTimeMillis();
-      private final Long terminationTime = samplerConfigTimeoutMs > 0 ? createTime + samplerConfigTimeoutMs : null;
+      private final Long terminationTime = iteratorTimeoutMs != null ? createTime + iteratorTimeoutMs : null;
 
       private void waitNextIteratorIfNecessary()
       {
@@ -139,7 +143,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
             if (terminationTime != null && System.currentTimeMillis() > terminationTime) {
               LOG.info(
                   "Configured sampler timeout [%s] has been exceeded, returning without a bytesIterator.",
-                  samplerConfigTimeoutMs
+                  iteratorTimeoutMs
               );
               bytesIterator = null;
               return;
