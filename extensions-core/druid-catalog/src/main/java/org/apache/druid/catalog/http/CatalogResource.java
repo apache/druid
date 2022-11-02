@@ -411,7 +411,7 @@ public class CatalogResource
   private List<TableMetadata> getTableMetadataForSchema(
       final SchemaSpec schema,
       final HttpServletRequest req
-  ) throws CatalogException
+  )
   {
     List<TableMetadata> tables = catalog.tables().tablesInSchema(schema.name());
     Iterable<TableMetadata> filtered = AuthorizationUtils.filterAuthorizedResources(
@@ -441,7 +441,7 @@ public class CatalogResource
         .collect(Collectors.toList());
   }
 
-  private Response listAllTableMetadata(final HttpServletRequest req) throws CatalogException
+  private Response listAllTableMetadata(final HttpServletRequest req)
   {
     List<Pair<SchemaSpec, TableMetadata>> tables = new ArrayList<>();
     for (SchemaSpec schema : catalog.schemaRegistry().schemas()) {

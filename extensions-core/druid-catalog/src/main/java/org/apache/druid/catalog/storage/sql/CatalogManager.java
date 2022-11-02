@@ -39,7 +39,7 @@ import java.util.List;
  */
 public interface CatalogManager
 {
-  public interface TableTransform
+  interface TableTransform
   {
     TableSpec apply(TableMetadata spec) throws CatalogException;
   }

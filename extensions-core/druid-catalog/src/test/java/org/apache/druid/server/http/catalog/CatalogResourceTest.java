@@ -634,7 +634,7 @@ public class CatalogResourceTest
     resp = resource.getTable(TableId.DRUID_SCHEMA, tableName, postBy(CatalogTests.READER_USER));
     read = (TableMetadata) resp.getEntity();
     assertEquals(
-        Arrays.asList("b"),
+        Collections.singletonList("b"),
         read.spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
     assertTrue(read.updateTime() > version);
