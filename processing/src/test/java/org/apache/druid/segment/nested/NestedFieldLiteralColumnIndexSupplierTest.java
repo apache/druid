@@ -803,6 +803,13 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     bitmap = forRange.computeBitmapResult(bitmapResultFactory);
     checkBitmap(bitmap);
 
+    forRange = rangeIndex.forRange(8.99, true, 10.10, true);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.0, forRange.estimateSelectivity(10), 0.0);
+
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap);
+
     forRange = rangeIndex.forRange(10.00, true, 10.10, true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(10), 0.0);
@@ -1086,6 +1093,11 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     Assert.assertEquals("300", lowLevelIndex.getValue(4));
     Assert.assertEquals("1.1", lowLevelIndex.getValue(5));
     Assert.assertEquals("9.9", lowLevelIndex.getValue(6));
+
+    Assert.assertEquals(7, lowLevelIndex.getCardinality());
+    checkBitmap(lowLevelIndex.getBitmap(0), 2, 7);
+    checkBitmap(lowLevelIndex.getBitmap(1), 1, 9);
+    checkBitmap(lowLevelIndex.getBitmap(-1));
   }
 
   private NestedFieldLiteralColumnIndexSupplier<?> makeSingleTypeStringSupplier() throws IOException

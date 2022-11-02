@@ -215,34 +215,25 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
     }
     globalEndIndex = Math.max(globalStartIndex, globalEndIndex);
 
+    if (globalStartIndex == globalEndIndex) {
+      return new IntIntImmutablePair(0, 0);
+    }
+
     // with global dictionary id range settled, now lets map that onto a local dictionary id range
     int localFound = localDictionary.indexOf(globalStartIndex);
     if (localFound < 0) {
       // the first valid global index is not within the local dictionary, so the insertion point is where we begin
       localStartIndex = -(localFound + 1);
-      // if the computed local start index violates the global range, shift up by 1
-      int actualGlobalStartIndex = localDictionary.get(localStartIndex);
-      if (actualGlobalStartIndex < globalStartIndex) {
-        localStartIndex++;
-      } else if (actualGlobalStartIndex > globalEndIndex) {
-        // global range is not present in local dictionary, short circuit
-        return new IntIntImmutablePair(0, 0);
-      }
     } else {
       // valid global index in local dictionary, start here
       localStartIndex = localFound;
     }
-    int localEndFound = localDictionary.indexOf(globalEndIndex - 1);
+    // global end index is exclusive already, so we don't adjust local end index even for missing values
+    int localEndFound = localDictionary.indexOf(globalEndIndex);
     if (localEndFound < 0) {
       localEndIndex = -localEndFound;
-      // if the computed local ending index violates the global range, shift down by 1
-      int actualGlobalEndIndex = localDictionary.get(localEndIndex);
-      if (actualGlobalEndIndex > globalEndIndex) {
-        localEndIndex--;
-      }
     } else {
-      // add 1 because the last valid global end value is in the local dictionary, and end index is exclusive
-      localEndIndex = localEndFound + 1;
+      localEndIndex = localEndFound;
     }
 
     localStartIndex = Math.min(localStartIndex, localDictionary.size());
