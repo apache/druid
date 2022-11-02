@@ -19,12 +19,13 @@
 
 package org.apache.druid.emitter.kafka;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.Timestamp;
+import com.google.protobuf.util.Timestamps;
 import org.apache.druid.emitter.kafka.KafkaEmitterConfig.EventType;
 import org.apache.druid.emitter.kafka.MemoryBoundLinkedBlockingQueue.ObjectContainer;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.emitter.proto.DruidSegmentEvent;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
@@ -39,6 +40,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.Properties;
@@ -112,7 +114,7 @@ public class KafkaEmitter implements Emitter
       Properties props = new Properties();
       props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
       props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-      props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+      props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
       props.put(ProducerConfig.RETRIES_CONFIG, DEFAULT_RETRIES);
       props.putAll(config.getKafkaProducerConfig());
 
@@ -140,7 +142,7 @@ public class KafkaEmitter implements Emitter
       scheduler.schedule(this::sendSegmentMetadataToKafka, sendInterval, TimeUnit.SECONDS);
     }
     scheduler.scheduleWithFixedDelay(() -> {
-      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], segmentMetadataLost=[%d], invalidLost=[%d]",
+      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], invalidLost=[%d] segmentMetadataLost=[%d]",
           metricLost.get(),
           alertLost.get(),
           requestLost.get(),
@@ -193,15 +195,14 @@ public class KafkaEmitter implements Emitter
         EventMap map = event.toMap();
         if (config.getClusterName() != null) {
           map = map.asBuilder()
-                   .put("clusterName", config.getClusterName())
-                   .build();
+              .put("clusterName", config.getClusterName())
+              .build();
         }
 
-        String resultJson = jsonMapper.writeValueAsString(map);
-
-        ObjectContainer<String> objectContainer = new ObjectContainer<>(
-            resultJson,
-            StringUtils.toUtf8(resultJson).length
+        byte[] resultBytes = jsonMapper.writeValueAsBytes(map);
+        ObjectContainer<byte[]> objectContainer = new ObjectContainer<>(
+            resultBytes,
+            resultBytes.length
         );
 
         Set<EventType> eventTypes = config.getEventTypes();
@@ -220,15 +221,59 @@ public class KafkaEmitter implements Emitter
         } else if (event instanceof SegmentMetadataEvent) {
           if (!eventTypes.contains(EventType.SEGMENT_METADATA) || !segmentMetadataQueue.offer(objectContainer)) {
             segmentMetadataLost.incrementAndGet();
+          } else {
+            switch (config.getSegmentMetadataTopicFormat()) {
+              case PROTOBUF:
+                resultBytes = convertMetadataEventToProto((SegmentMetadataEvent) event, segmentMetadataLost);
+                objectContainer = new ObjectContainer<>(
+                    resultBytes,
+                    resultBytes.length
+                );
+                break;
+              case JSON:
+                // Do Nothing. We already have the JSON object stored in objectContainer
+                break;
+              default:
+                throw new UnsupportedOperationException("segmentMetadata.topic.format has an invalid value " + config.getSegmentMetadataTopicFormat().toString());
+            }
+            if (!segmentMetadataQueue.offer(objectContainer)) {
+              segmentMetadataLost.incrementAndGet();
+            }
           }
         } else {
           invalidLost.incrementAndGet();
         }
       }
-      catch (JsonProcessingException e) {
+      catch (Exception e) {
         invalidLost.incrementAndGet();
         log.warn(e, "Exception while serializing event");
       }
+    }
+  }
+
+  private byte[] convertMetadataEventToProto(SegmentMetadataEvent event, AtomicLong segmentMetadataLost)
+  {
+    try {
+      Timestamp createdTimeTs = Timestamps.fromMillis(event.getCreatedTime().getMillis());
+      Timestamp startTimeTs = Timestamps.fromMillis(event.getStartTime().getMillis());
+      Timestamp endTimeTs = Timestamps.fromMillis(event.getEndTime().getMillis());
+
+      DruidSegmentEvent.Builder druidSegmentEventBuilder = DruidSegmentEvent.newBuilder()
+          .setDataSource(event.getDataSource())
+          .setCreatedTime(createdTimeTs)
+          .setStartTime(startTimeTs)
+          .setEndTime(endTimeTs)
+          .setVersion(event.getVersion())
+          .setIsCompacted(event.isCompacted());
+      if (config.getClusterName() != null) {
+        druidSegmentEventBuilder.setClusterName(config.getClusterName());
+      }
+      DruidSegmentEvent druidSegmentEvent = druidSegmentEventBuilder.build();
+      return druidSegmentEvent.toByteArray();
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception while serializing SegmentMetadataEvent");
+      throw e;
     }
   }
 

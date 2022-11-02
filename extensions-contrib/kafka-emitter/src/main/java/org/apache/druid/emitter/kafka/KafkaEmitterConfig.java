@@ -40,7 +40,13 @@ public class KafkaEmitterConfig
     METRICS,
     ALERTS,
     REQUESTS,
-    SEGMENT_METADATA;
+    SEGMENT_METADATA {
+      @Override
+      public String toString()
+      {
+        return "segmentMetadata";
+      }
+    };
 
     @JsonValue
     @Override
@@ -57,6 +63,25 @@ public class KafkaEmitterConfig
   }
 
   public static final Set<EventType> DEFAULT_EVENT_TYPES = ImmutableSet.of(EventType.ALERTS, EventType.METRICS);
+
+  public enum SegmentMetadataTopicFormat
+  {
+    JSON,
+    PROTOBUF;
+
+    @JsonValue
+    @Override
+    public String toString()
+    {
+      return StringUtils.toLowerCase(this.name());
+    }
+
+    @JsonCreator
+    public static SegmentMetadataTopicFormat fromString(String name)
+    {
+      return valueOf(StringUtils.toUpperCase(name));
+    }
+  }
   @JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG)
   private final String bootstrapServers;
   @Nullable @JsonProperty("event.types")
@@ -69,6 +94,8 @@ public class KafkaEmitterConfig
   private final String requestTopic;
   @Nullable @JsonProperty("segmentMetadata.topic")
   private final String segmentMetadataTopic;
+  @Nullable @JsonProperty("segmentMetadata.topic.format")
+  private final SegmentMetadataTopicFormat segmentMetadataTopicFormat;
   @JsonProperty
   private final String clusterName;
   @JsonProperty("producer.config")
@@ -82,6 +109,7 @@ public class KafkaEmitterConfig
       @Nullable @JsonProperty("alert.topic") String alertTopic,
       @Nullable @JsonProperty("request.topic") String requestTopic,
       @Nullable @JsonProperty("segmentMetadata.topic") String segmentMetadataTopic,
+      @Nullable @JsonProperty("segmentMetadata.topic.format") SegmentMetadataTopicFormat segmentMetadataTopicFormat,
       @JsonProperty("clusterName") String clusterName,
       @JsonProperty("producer.config") @Nullable Map<String, String> kafkaProducerConfig
   )
@@ -92,6 +120,7 @@ public class KafkaEmitterConfig
     this.alertTopic = this.eventTypes.contains(EventType.ALERTS) ? Preconditions.checkNotNull(alertTopic, "druid.emitter.kafka.alert.topic can not be null") : null;
     this.requestTopic = this.eventTypes.contains(EventType.REQUESTS) ? Preconditions.checkNotNull(requestTopic, "druid.emitter.kafka.request.topic can not be null") : null;
     this.segmentMetadataTopic = this.eventTypes.contains(EventType.SEGMENT_METADATA) ? Preconditions.checkNotNull(segmentMetadataTopic, "druid.emitter.kafka.segmentMetadata.topic can not be null") : null;
+    this.segmentMetadataTopicFormat = segmentMetadataTopicFormat == null ? SegmentMetadataTopicFormat.JSON : segmentMetadataTopicFormat;
     this.clusterName = clusterName;
     this.kafkaProducerConfig = kafkaProducerConfig == null ? ImmutableMap.of() : kafkaProducerConfig;
   }
@@ -154,6 +183,12 @@ public class KafkaEmitterConfig
   }
 
   @JsonProperty
+  public SegmentMetadataTopicFormat getSegmentMetadataTopicFormat()
+  {
+    return segmentMetadataTopicFormat;
+  }
+
+  @JsonProperty
   public Map<String, String> getKafkaProducerConfig()
   {
     return kafkaProducerConfig;
@@ -183,6 +218,7 @@ public class KafkaEmitterConfig
       return false;
     }
 
+
     if (getAlertTopic() != null ? !getAlertTopic().equals(that.getAlertTopic()) : that.getAlertTopic() != null) {
       return false;
     }
@@ -192,6 +228,10 @@ public class KafkaEmitterConfig
     }
 
     if (getSegmentMetadataTopic() != null ? !getSegmentMetadataTopic().equals(that.getSegmentMetadataTopic()) : that.getSegmentMetadataTopic() != null) {
+      return false;
+    }
+
+    if (getSegmentMetadataTopicFormat() != null ? !getSegmentMetadataTopicFormat().equals(that.getSegmentMetadataTopicFormat()) : that.getSegmentMetadataTopicFormat() != null) {
       return false;
     }
 
@@ -210,6 +250,7 @@ public class KafkaEmitterConfig
     result = 31 * result + (getAlertTopic() != null ? getAlertTopic().hashCode() : 0);
     result = 31 * result + (getRequestTopic() != null ? getRequestTopic().hashCode() : 0);
     result = 31 * result + (getSegmentMetadataTopic() != null ? getSegmentMetadataTopic().hashCode() : 0);
+    result = 31 * result + (getSegmentMetadataTopicFormat() != null ? getSegmentMetadataTopicFormat().hashCode() : 0);
     result = 31 * result + (getClusterName() != null ? getClusterName().hashCode() : 0);
     result = 31 * result + getKafkaProducerConfig().hashCode();
     return result;
@@ -220,11 +261,12 @@ public class KafkaEmitterConfig
   {
     return "KafkaEmitterConfig{" +
            "bootstrap.servers='" + bootstrapServers + '\'' +
-           ", event.types='" + eventTypes + '\'' +
+           ", event.types='" + eventTypes.toString() + '\'' +
            ", metric.topic='" + metricTopic + '\'' +
            ", alert.topic='" + alertTopic + '\'' +
            ", request.topic='" + requestTopic + '\'' +
            ", segmentMetadata.topic='" + segmentMetadataTopic + '\'' +
+           ", segmentMetadata.topic.format='" + segmentMetadataTopicFormat + '\'' +
            ", clusterName='" + clusterName + '\'' +
            ", Producer.config=" + kafkaProducerConfig +
            '}';
