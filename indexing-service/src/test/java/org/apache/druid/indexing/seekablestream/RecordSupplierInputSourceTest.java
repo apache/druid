@@ -72,7 +72,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
   public void testRead() throws IOException
   {
     final RandomCsvSupplier supplier = new RandomCsvSupplier();
-    final InputSource inputSource = new RecordSupplierInputSource<>("topic", supplier, false);
+    final InputSource inputSource = new RecordSupplierInputSource<>("topic", supplier, false, 0);
     final List<String> colNames = IntStream.range(0, NUM_COLS)
                                            .mapToObj(i -> StringUtils.format("col_%d", i))
                                            .collect(Collectors.toList());
