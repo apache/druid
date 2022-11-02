@@ -157,7 +157,7 @@ describe('WorkbenchQuery', () => {
             '[{"name":"timestamp","type":"string"}]'
           )
         )
-        ORDER BY FLOOR(__time TO HOUR), browser, session
+        ORDER BY FLOOR("__time" TO HOUR), browser, session
       `);
     });
   });

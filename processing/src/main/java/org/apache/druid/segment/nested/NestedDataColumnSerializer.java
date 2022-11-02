@@ -382,6 +382,12 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     }
 
     @Override
+    public Integer read(ByteBuffer buffer, int offset)
+    {
+      return buffer.getInt(offset);
+    }
+
+    @Override
     public boolean readRetainsBufferReference()
     {
       return false;
