@@ -32,7 +32,7 @@ import java.util.List;
 public class UnnestCursorTest extends InitializedNullHandlingTest
 {
   private static String OUTPUT_NAME = "unnested-column";
-  private static LinkedHashSet<String> IGNORE_SET = null; //new LinkedHashSet<>(Arrays.asList("a", "b"));
+  private static LinkedHashSet<String> IGNORE_SET = new LinkedHashSet<>(Arrays.asList("a", "b"));
 
 
   @Test

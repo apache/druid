@@ -26,13 +26,16 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.filter.AndFilter;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 
 public class UnnestStorageAdapter implements StorageAdapter
@@ -65,21 +68,27 @@ public class UnnestStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    /*Filter updatedFilter;
-    InDimFilter allowListFilters = new InDimFilter(dimensionToUnnest, allowSet);
-    if (filter != null) {
-      updatedFilter = new AndFilter(Arrays.asList(filter, allowListFilters));
+    Filter updatedFilter;
+    final InDimFilter allowListFilters;
+    if (allowSet != null && !allowSet.isEmpty()) {
+      allowListFilters = new InDimFilter(dimensionToUnnest, allowSet);
+      if (filter != null) {
+        updatedFilter = new AndFilter(Arrays.asList(filter, allowListFilters));
+      } else {
+        updatedFilter = allowListFilters;
+      }
     } else {
-      updatedFilter = new AndFilter(Collections.singletonList(allowListFilters));
-    }*/
+      updatedFilter = filter;
+    }
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
-        filter,
+        updatedFilter,
         interval,
         virtualColumns,
         gran,
         descending,
         queryMetrics
     );
+
     return Sequences.map(
         baseCursorSequence,
         cursor -> {

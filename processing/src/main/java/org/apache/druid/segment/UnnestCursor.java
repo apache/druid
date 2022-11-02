@@ -126,7 +126,7 @@ public class UnnestCursor implements Cursor
           {
             if (pos != null) {
               if (allowedBitSet.isEmpty()) {
-                if (allowSet == null) {
+                if (allowSet == null || allowSet.isEmpty()) {
                   return lookupName(pos.get(index));
                 }
               } else if (allowedBitSet.get(pos.get(index))) {
@@ -218,7 +218,10 @@ public class UnnestCursor implements Cursor
           {
             if (pos != null) {
               if (allowedBitSet.isEmpty()) {
-                if (allowSet == null) {
+                // when bitset is empty for a segment
+                // but the allowSet is non-empty
+                // the entire segment can be skipped
+                if (allowSet == null || allowSet.isEmpty()) {
                   return dimSelector.lookupName(pos.get(index));
                 }
               } else {
@@ -303,6 +306,9 @@ public class UnnestCursor implements Cursor
     } else {
       index++;
     }
+    //index has been decided before this point
+    //decide whether to stay at it or increase it
+
   }
 
   private boolean checkIfDimensionSelectorAndAdvance()
@@ -328,7 +334,7 @@ public class UnnestCursor implements Cursor
   {
     if (dimSelector != null) {
       IdLookup idLookup = dimSelector.idLookup();
-      if (allowSet != null && idLookup != null) {
+      if (allowSet != null && !allowSet.isEmpty() && idLookup != null) {
         for (String s : allowSet) {
           if (idLookup.lookupId(s) >= 0) {
             allowedBitSet.set(idLookup.lookupId(s));
@@ -359,7 +365,7 @@ public class UnnestCursor implements Cursor
   @Override
   public boolean isDone()
   {
-    if (needInitialization) {
+    if (needInitialization && baseCursor.isDone() == false) {
       initialize();
     }
     return baseCursor.isDone();
