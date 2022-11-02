@@ -19,8 +19,8 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import com.google.api.client.util.Base64;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -38,12 +38,12 @@ public class Base64Compression
       zos.write(srcTxt.getBytes(StandardCharsets.UTF_8));
     }
     byte[] bytes = rstBao.toByteArray();
-    return Base64.encodeBase64String(bytes);
+    return StringUtils.encodeBase64String(bytes);
   }
 
   public static String decompressBase64(String zippedBase64Str) throws IOException
   {
-    byte[] bytes = Base64.decodeBase64(zippedBase64Str);
+    byte[] bytes = StringUtils.decodeBase64String(zippedBase64Str);
     try (GZIPInputStream zi = new GZIPInputStream(new ByteArrayInputStream(bytes))) {
       return IOUtils.toString(zi, StandardCharsets.UTF_8);
     }
