@@ -362,4 +362,41 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
     Assert.assertEquals(NESTED_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
+
+  @Test
+  public void testFlattenNullableListNullableElements() throws IOException
+  {
+    final String file = "example/flattening/nullable_list.snappy.parquet";
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("timestamp", "auto", null),
+        new DimensionsSpec(
+            ImmutableList.of()
+        ),
+        ColumnsFilter.all()
+    );
+
+    List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "a1_b1_c1", "$.a1.b1.c1"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "a1_b1_c2", "$.a1.b1.c2"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "a2_0_b1", "$.a2[0].b1"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "a2_0_b2", "$.a2[0].b2"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "a2_1_b1", "$.a2[1].b1"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "a2_1_b2", "$.a2[1].b2")
+    );
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
+    InputEntityReader reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRow> rows = readAllRows(reader);
+
+    Assert.assertEquals("2022-02-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assert.assertEquals(1L, rows.get(0).getRaw("a1_b1_c1"));
+    Assert.assertEquals(2L, rows.get(0).getRaw("a1_b1_c2"));
+    Assert.assertEquals(1L, rows.get(0).getRaw("a2_0_b1"));
+    Assert.assertEquals(2L, rows.get(0).getRaw("a2_0_b2"));
+    Assert.assertEquals(1L, rows.get(0).getRaw("a2_1_b1"));
+    Assert.assertEquals(2L, rows.get(0).getRaw("a2_1_b2"));
+  }
 }
