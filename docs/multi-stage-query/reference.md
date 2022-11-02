@@ -52,9 +52,9 @@ FROM TABLE(
 
 EXTERN consists of the following parts:
 
-1.  Any [Druid input source](../ingestion/native-batch-input-source.md) as a JSON-encoded string.
-2.  Any [Druid input format](../ingestion/data-formats.md) as a JSON-encoded string.
-3.  A row signature, as a JSON-encoded array of column descriptors. Each column descriptor must have a `name` and a `type`. The type can be `string`, `long`, `double`, or `float`. This row signature is used to map the external data into the SQL layer.
+1. Any [Druid input source](../ingestion/native-batch-input-source.md) as a JSON-encoded string.
+2. Any [Druid input format](../ingestion/data-formats.md) as a JSON-encoded string.
+3. A row signature, as a JSON-encoded array of column descriptors. Each column descriptor must have a `name` and a `type`. The type can be `string`, `long`, `double`, or `float`. This row signature is used to map the external data into the SQL layer.
 
 For more information, see [Read external data with EXTERN](concepts.md#extern).
 
@@ -122,10 +122,10 @@ REPLACE consists of the following parts:
 1. Optional [context parameters](./reference.md#context-parameters).
 2. A `REPLACE INTO <dataSource>` clause at the start of your query, such as `REPLACE INTO "your-table".`
 3. An OVERWRITE clause after the datasource, either OVERWRITE ALL or OVERWRITE WHERE:
-  - OVERWRITE ALL replaces the entire existing datasource with the results of the query.
-  - OVERWRITE WHERE drops the time segments that match the condition you set. Conditions are based on the `__time`
-    column and use the format `__time [< > = <= >=] TIMESTAMP`. Use them with AND, OR, and NOT between them, inclusive
-    of the timestamps specified. No other expressions or functions are valid in OVERWRITE.
+    - OVERWRITE ALL replaces the entire existing datasource with the results of the query.
+    - OVERWRITE WHERE drops the time segments that match the condition you set. Conditions are based on the `__time`
+        column and use the format `__time [< > = <= >=] TIMESTAMP`. Use them with AND, OR, and NOT between them, inclusive
+        of the timestamps specified. No other expressions or functions are valid in OVERWRITE.
 4. A clause for the actual data you want to use for the replacement.
 5. A [PARTITIONED BY](#partitioned-by) clause, such as `PARTITIONED BY DAY`.
 6. An optional [CLUSTERED BY](#clustered-by) clause.
@@ -175,7 +175,7 @@ For more information about clustering, see [Clustering](concepts.md#clustering).
 
 ## Context parameters
 
-In addition to the Druid SQL [context parameters](../querying/sql-query-context.md), the multi-stage query task engine accepts certain context parameters that are specific to it. 
+In addition to the Druid SQL [context parameters](../querying/sql-query-context.md), the multi-stage query task engine accepts certain context parameters that are specific to it.
 
 Use context parameters alongside your queries to customize the behavior of the query. If you're using the API, include the context parameters in the query context when you submit a query:
 
@@ -237,7 +237,7 @@ The following table describes error codes you may encounter in the `multiStageQu
 |  InsertCannotAllocateSegment |  The controller task could not allocate a new segment ID due to conflict with existing segments or pending segments. Common reasons for such conflicts:<br /> <br /><ul><li>Attempting to mix different granularities in the same intervals of the same datasource.</li><li>Prior ingestions that used non-extendable shard specs.</li></ul>| `dataSource`<br /> <br />`interval`: The interval for the attempted new segment allocation.  |
 |  InsertCannotBeEmpty |  An INSERT or REPLACE query did not generate any output rows in a situation where output rows are required for success. This can happen for INSERT or REPLACE queries with `PARTITIONED BY` set to something other than `ALL` or `ALL TIME`.  |  `dataSource`  |
 |  InsertCannotOrderByDescending  |  An INSERT query contained a `CLUSTERED BY` expression in descending order. Druid's segment generation code only supports ascending order.  |   `columnName` |
-|  InsertCannotReplaceExistingSegment |  A REPLACE query cannot proceed because an existing segment partially overlaps those bounds, and the portion within the bounds is not fully overshadowed by query results. <br /> <br />There are two ways to address this without modifying your query:<ul><li>Shrink the OVERLAP filter to match the query results.</li><li>Expand the OVERLAP filter to fully contain the existing segment.</li></ul>| `segmentId`: The existing segment <br /> 
+|  InsertCannotReplaceExistingSegment |  A REPLACE query cannot proceed because an existing segment partially overlaps those bounds, and the portion within the bounds is not fully overshadowed by query results. <br /> <br />There are two ways to address this without modifying your query:<ul><li>Shrink the OVERLAP filter to match the query results.</li><li>Expand the OVERLAP filter to fully contain the existing segment.</li></ul>| `segmentId`: The existing segment <br />
 |  InsertLockPreempted  | An INSERT or REPLACE query was canceled by a higher-priority ingestion job, such as a real-time ingestion task.  | |
 |  InsertTimeNull  | An INSERT or REPLACE query encountered a null timestamp in the `__time` field.<br /><br />This can happen due to using an expression like `TIME_PARSE(timestamp) AS __time` with a timestamp that cannot be parsed. (TIME_PARSE returns null when it cannot parse a timestamp.) In this case, try parsing your timestamps using a different function or pattern.<br /><br />If your timestamps may genuinely be null, consider using COALESCE to provide a default value. One option is CURRENT_TIMESTAMP, which represents the start time of the job. |
 | InsertTimeOutOfBounds  |  A REPLACE query generated a timestamp outside the bounds of the TIMESTAMP parameter for your OVERWRITE WHERE clause.<br /> <br />To avoid this error, verify that the   you specified is valid.  |  `interval`: time chunk interval corresponding to the out-of-bounds timestamp  |
