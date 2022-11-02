@@ -33,7 +33,9 @@ Before you start to configure LDAP for Druid, test your LDAP connection and perf
 
 ### Check your LDAP connection
 
-Verify that your LDAP connection is working by testing it with user credentials. For example, the following command tests the connection for the user `myuser@example.com`. Insert your LDAP server IP address and substitute `389` for the port number of your LDAP instance, if different.
+Verify that your LDAP connection is working by testing it with user credentials. Later in the process you [configure Druid for LDAP authentication](#configure-druid-for-ldap-authentication) with this user as the `bindUser`.
+
+The following example command tests the connection for the user `myuser@example.com`. Insert your LDAP server IP address. Modify the port number of your LDAP instance if it listens on a port other than `389`.
 
 ```bash
 ldapwhoami -vv -H ldap://ip_address:389  -D "myuser@example.com" -W
@@ -47,27 +49,27 @@ Enter the password for the user when prompted and verify that the command succee
 
 ### Test your LDAP search
 
-Once your LDAP connection is working, search for a user. For example, the following command searches for the user myuser in an Active Directory system. The `sAMAccountName` attribute is specific to Active Directory and contains the authenticated user identity:
+Once your LDAP connection is working, search for a user. For example, the following command searches for the user `myuser` in an Active Directory system. The `sAMAccountName` attribute is specific to Active Directory and contains the authenticated user identity:
 
 ```bash
 ldapsearch -x -W -H ldap://ip_address:389  -D "cn=admin,dc=example,dc=com" -b "dc=example,dc=com" "(sAMAccountName=myuser)" +
 ```
 
-The `memberOf` attribute in the results shows the groups the user belongs to. For example, the following response shows that the user is a member of the `group1` group:
+The `memberOf` attribute in the results shows the groups the user belongs to. For example, the following response shows that the user is a member of the `mygroup` group:
 
 ```bash
-memberOf: cn=group1,ou=groups,dc=example,dc=com
+memberOf: cn=mygroup,ou=groups,dc=example,dc=com
 ```
 
 You use this information to map the LDAP group to Druid roles in a later step. 
 
-> Druid uses the `memberOf` attribute to determine a group's membership using LDAP. If your LDAP server implementation doesn't include this attribute, you must complete some additional steps when you [map LDAP groups to Druid roles]().
+> Druid uses the `memberOf` attribute to determine a group's membership using LDAP. If your LDAP server implementation doesn't include this attribute, you must complete some additional steps when you [map LDAP groups to Druid roles](#map-ldap-groups-to-druid-roles).
 
 ## Configure Druid for LDAP authentication
 
 To configure Druid to use LDAP authentication, follow these steps. See [Configuration reference](../configuration/index.md) for the location of the configuration files. 
 
-1. Create a user in your LDAP system that you'll use for internal communication with Druid. See [Security overview](./security-overview.md) for more information.
+1. Create a user in your LDAP system that you'll use both for internal communication with Druid and as the LDAP initial admin user. See [Security overview](./security-overview.md) for more information.
 In the example below, the LDAP user is `internal@example.com`.
 
 2. Enable the `druid-basic-security` extension in the `common.runtime.properties` file.
@@ -98,7 +100,7 @@ In the example below, the LDAP user is `internal@example.com`.
    ```
    Note the following:
 
-   - `bindUser`: A user for connecting to LDAP.
+   - `bindUser`: A user for connecting to LDAP. This should be the same user you used to [test your LDAP search](#test-your-ldap-search).
    - `userSearch`: Your LDAP search syntax.
    - `userAttribute`: The user search attribute.
    - `internal@example.com` is the LDAP user you created in step 1. In the example it serves as both the internal client user and the initial admin user.
@@ -109,19 +111,19 @@ In the example below, the LDAP user is `internal@example.com`.
    
    ```
    {
-      "name": "group1map",
-      "groupPattern": "CN=group1,CN=Users,DC=example,DC=com",
+      "name": "mygroupmap",
+      "groupPattern": "CN=mygroup,CN=Users,DC=example,DC=com",
       "roles": [
          "readRole"
       ]
    }
    ```
-   In the example, the LDAP group `group1` maps to Druid role `readRole` and the name of the mapping is `group1map`.
+   In the example, the LDAP group `mygroup` maps to Druid role `readRole` and the name of the mapping is `mygroupmap`.
 
-5. Use the Druid API to create the group mapping and allocate initial roles according to your JSON file. The following example uses curl to create the mapping defined in `groupmap.json` for the LDAP group `group1`:
+5. Use the Druid API to create the group mapping and allocate initial roles according to your JSON file. The following example uses curl to create the mapping defined in `groupmap.json` for the LDAP group `mygroup`:
    
    ```
-   curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d @groupmap.json http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
+   curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d @groupmap.json http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/mygroupmap
    ```
 6. Check that the group mapping was created successfully. The following example request lists all group mappings:
 
@@ -133,9 +135,9 @@ In the example below, the LDAP user is `internal@example.com`.
 
 Once you've completed the initial setup and mapping, you can map more LDAP groups to Druid roles. Members of an LDAP group get access to the permissions of the corresponding Druid role.
 
-### Step 1: Create a Druid role
+### Create a Druid role
 
-To create a Druid role, you submit a POST request to the Coordinator process using the Druid REST API.
+To create a Druid role, you can submit a POST request to the Coordinator process using the Druid REST API or you can use the Druid console.
 
 The examples below use `localhost` as the Coordinator host and `8081` as the port. Amend these properties according to the details of your deployment. 
 
@@ -145,13 +147,13 @@ Example request to create a role named `readRole`:
 curl -i -v  -H "Content-Type: application/json" -u internal -X POST  http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/roles/readRole 
 ```
 
-Check that the role was created successfully. The following example request lists all roles:
+Check that Druid created the role successfully. The following example request lists all roles:
 
 ```
 curl -i -v  -H "Content-Type: application/json" -u internal -X GET  http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/roles
 ```
 
-### Step 2: Add permissions to the Druid role
+### Add permissions to the Druid role
 
 Once you have a Druid role you can add permissions to it. The following example adds read-only access to a `wikipedia` data source.
 
@@ -175,14 +177,14 @@ Druid users need the `STATE` and `CONFIG` permissions to view the data source in
 
 You can also provide the data source name in the form of a regular expression. For example, to give access to all data sources starting with `wiki`, you would specify the data source name as `{ "name": "wiki.*" }` .
 
-### Step 3: Create the group mapping
+### Create the group mapping
 
-You can now map an LDAP group to the Druid role. The following example request creates a mapping with name `group1map`. It assumes that a group named `group1` exists in the directory.
+You can now map an LDAP group to the Druid role. The following example request creates a mapping with name `mygroupmap`. It assumes that a group named `mygroup` exists in the directory.
 
 ```
 {
-    "name": "group1map",
-    "groupPattern": "CN=group1,CN=Users,DC=example,DC=com",
+    "name": "mygroupmap",
+    "groupPattern": "CN=mygroup,CN=Users,DC=example,DC=com",
     "roles": [
         "readRole"
     ]
@@ -192,7 +194,7 @@ You can now map an LDAP group to the Druid role. The following example request c
 The following example request configures the mapping&mdash;the role mapping is in the file `groupmap.json`. See [Configure Druid for LDAP authentication](#configure-druid-for-ldap-authentication) for the contents of an example file.
 
 ```
-curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d @groupmap.json http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
+curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d @groupmap.json http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/mygroupmap
 ```
 
 To check whether the group mapping was created successfully, the following request lists all group mappings:
@@ -201,19 +203,19 @@ To check whether the group mapping was created successfully, the following reque
 curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings
 ```
 
-The following example request returns the details of the `group1map` group:
+The following example request returns the details of the `mygroupmap` group:
 
 ```
-curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
+curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/mygroupmap
 ```
 
-The following example request adds the role `queryRole` to the `group1map` mapping:
+The following example request adds the role `queryRole` to the `mygroupmap` mapping:
 
 ```
-curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1/roles/queryrole
+curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/mygroup/roles/queryrole
 ```
 
-### Step 4: Add an LDAP user to Druid and assign a role
+### Add an LDAP user to Druid and assign a role
 
 You only need to complete this step if:
 - Your LDAP server doesn't support the `memberOf` attribute, or
@@ -235,51 +237,54 @@ curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://local
 
 Once you've configured LDAP authentication in Druid, you can optionally make LDAP traffic confidential and secure by using Transport Layer Security (TLS)&mdash;previously Secure Socket Layer(SSL)&mdash;technology. 
 
+Configuring LDAPS establishes trust between Druid and the LDAP server.
+
 ## Prerequisites
 
-Before you start to set up LDAPS in Druid:
+Before you start to set up LDAPS in Druid, you must [configure Druid for LDAP authentication](#configure-druid-for-ldap-authentication). You also need:
 
-- You must [configure Druid for LDAP authentication](#configure-druid-for-ldap-authentication).
-- You need a CA certificate for your LDAP server.
-- You need a self-signed certificate, or an Active Directory(AD) certificate if you configured LDAP using AD.
+- A certificate issued by a public certificate authority (CA) or a self-signed certificate by an internal CA.
+- The root certificate for the CA that signed the certificate for the LDAP server. If you're using a common public CA, the certificate may already be in the Java truststore. Otherwise you need to import the certificate for the CA.
 
 ## Configure Druid for LDAPS
 
-Complete the following steps to set up LDAP for Druid. See [Configuration reference](../configuration/index.md) for the location of the configuration files. 
+Complete the following steps to set up LDAPS for Druid. See [Configuration reference](../configuration/index.md) for the location of the configuration files. 
 
-1. Import the CA certificate for your LDAP server into the location saved as your `druid.client.https.trustStorePath` in your `common.runtime.properties` file.
+1. Import the CA certificate for your LDAP server or a self-signed certificate into the truststore location saved as `druid.client.https.trustStorePath` in your `common.runtime.properties` file.
 
    ```
    keytool -import -trustcacerts -keystore path/to/cacerts -storepass truststorepassword -alias aliasName -file path/to/certificate.cer
    ```
 
-   Replace `path/to/cacerts` with the path to your trust store, `truststorepassword` with your trust store password, `aliasName` with an alias name for the keystore, and `path/to/certificate.cer` with the location and name of your certificate. For example:
+   Replace `path/to/cacerts` with the path to your truststore, `truststorepassword` with your truststore password, `aliasName` with an alias name for the keystore, and `path/to/certificate.cer` with the location and name of your certificate. For example:
 
    ```
    keytool -import -trustcacerts -keystore /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/lib/security/cacerts -storepass mypassword -alias myAlias -file /etc/ssl/certs/my-certificate.cer
    ```
 
-2. Import your self-signed certificate or Active Directory certificate:
+2. If the root certificate for the CA isn't already in the Java truststore, import it:
 
    ```
    keytool -importcert -keystore path/to/cacerts -storepass truststorepassword -alias aliasName -file path/to/certificate.cer
    ```
 
-   Replace `path/to/cacerts` with the path to your trust store, `truststorepassword` with your trust store password, `aliasName` with an alias name for the keystore, and `path/to/certificate.cer` with the location and name of your certificate. For example:
+   Replace `path/to/cacerts` with the path to your truststore, `truststorepassword` with your truststore password, `aliasName` with an alias name for the keystore, and `path/to/certificate.cer` with the location and name of your certificate. For example:
 	
    ```
    keytool -importcert -keystore /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/lib/security/cacerts -storepass mypassword -alias myAlias -file /etc/ssl/certs/my-certificate.cer
    ```
 
-3. In your `common.runtime.properties` file, add the following lines to the LDAP configuration section, substituting your own trust store path and password:
+3. In your `common.runtime.properties` file, add the following lines to the LDAP configuration section, substituting your own truststore path and password:
 
    ```
    druid.auth.basic.ssl.trustStorePath=/Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/lib/security/cacerts
    druid.auth.basic.ssl.protocol=TLS
-   druid.auth.basic.ssl.trustStorePassword=truststorepassword
+   druid.auth.basic.ssl.trustStorePassword=xxxxxx
    ```
 
-4. You can optionally configure additional LDAPS properties in the `common.runtime.properties` file. See [Druid basic security](../development/extensions-core/druid-basic-security.md#properties-for-ldaps) for details about these properties.
+   See [Druid basic security](../development/extensions-core/druid-basic-security.md#properties-for-ldaps) for details about these properties.
+
+4. You can optionally configure additional LDAPS properties in the `common.runtime.properties` file. See [Druid basic security](../development/extensions-core/druid-basic-security.md#properties-for-ldaps) for more information.
 
 5. Restart Druid.
 
