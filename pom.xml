@@ -747,6 +747,11 @@
                 <version>${protobuf.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java-util</artifactId>
+                <version>${protobuf.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.tesla.aether</groupId>
                 <artifactId>tesla-aether</artifactId>
                 <version>0.0.5</version>

@@ -33,10 +33,13 @@ import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.emitter.service.SegmentMetadataEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -257,9 +260,25 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
           segment.getShardSpec() == null ? null : segment.getShardSpec().getType()
       );
       toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
+      // Emit the segment related metadata using the configured emitters
+      this.emitSegmentMetadata(segment, toolbox);
     }
 
     return retVal;
+  }
+
+  private void emitSegmentMetadata(DataSegment segment, TaskActionToolbox toolbox)
+  {
+    SegmentMetadataEvent event = new SegmentMetadataEvent(
+        segment.getDataSource(),
+        DateTime.now(DateTimeZone.UTC),
+        segment.getInterval().getStart(),
+        segment.getInterval().getEnd(),
+        segment.getVersion(),
+        segment.getLastCompactionState() != null
+    );
+
+    toolbox.getEmitter().emit(event);
   }
 
   private void checkWithSegmentLock()

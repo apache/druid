@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
+import org.apache.druid.java.util.emitter.service.SegmentMetadataEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
@@ -37,7 +38,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -47,15 +51,18 @@ import static org.mockito.Mockito.when;
 @RunWith(Parameterized.class)
 public class KafkaEmitterTest
 {
-  @Parameterized.Parameter
+  @Parameterized.Parameter(0)
+  public Set<KafkaEmitterConfig.EventType> eventsType;
+
+  @Parameterized.Parameter(1)
   public String requestTopic;
 
-  @Parameterized.Parameters(name = "{index}: requestTopic - {0}")
+  @Parameterized.Parameters(name = "{index}: eventTypes - {0}, requestTopic - {1}")
   public static Object[] data()
   {
-    return new Object[] {
-        "requests",
-        null
+    return new Object[][] {
+        {new HashSet<>(Arrays.asList(KafkaEmitterConfig.EventType.METRICS, KafkaEmitterConfig.EventType.REQUESTS, KafkaEmitterConfig.EventType.ALERTS, KafkaEmitterConfig.EventType.SEGMENTMETADATA)), "requests"},
+        {new HashSet<>(Arrays.asList(KafkaEmitterConfig.EventType.METRICS, KafkaEmitterConfig.EventType.ALERTS, KafkaEmitterConfig.EventType.SEGMENTMETADATA)), null}
     };
   }
 
@@ -77,19 +84,31 @@ public class KafkaEmitterTest
         ).build("service", "host")
     );
 
-    int totalEvents = serviceMetricEvents.size() + alertEvents.size() + requestLogEvents.size();
+    final List<SegmentMetadataEvent> segmentMetadataEvents = ImmutableList.of(
+        new SegmentMetadataEvent(
+            "dummy_datasource",
+            DateTimes.of("2001-01-01T00:00:00.000Z"),
+            DateTimes.of("2001-01-02T00:00:00.000Z"),
+            DateTimes.of("2001-01-03T00:00:00.000Z"),
+            "dummy_version",
+            true
+        )
+    );
+
+    int totalEvents = serviceMetricEvents.size() + alertEvents.size() + requestLogEvents.size() + segmentMetadataEvents.size();
     int totalEventsExcludingRequestLogEvents = totalEvents - requestLogEvents.size();
 
     final CountDownLatch countDownSentEvents = new CountDownLatch(
         requestTopic == null ? totalEventsExcludingRequestLogEvents : totalEvents);
-    final KafkaProducer<String, String> producer = mock(KafkaProducer.class);
+
+    final KafkaProducer<String, byte[]> producer = mock(KafkaProducer.class);
     final KafkaEmitter kafkaEmitter = new KafkaEmitter(
-        new KafkaEmitterConfig("", "metrics", "alerts", requestTopic, "test-cluster", null),
+        new KafkaEmitterConfig("", eventsType, "metrics", "alerts", requestTopic, "metadata", null, "test-cluster", null),
         new ObjectMapper()
     )
     {
       @Override
-      protected Producer<String, String> setKafkaProducer()
+      protected Producer<String, byte[]> setKafkaProducer()
       {
         // override send interval to 1 second
         sendInterval = 1;
@@ -113,10 +132,14 @@ public class KafkaEmitterTest
     for (Event event : requestLogEvents) {
       kafkaEmitter.emit(event);
     }
+    for (Event event : segmentMetadataEvents) {
+      kafkaEmitter.emit(event);
+    }
     countDownSentEvents.await();
 
     Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
     Assert.assertEquals(requestTopic == null ? requestLogEvents.size() : 0, kafkaEmitter.getRequestLostCount());
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
