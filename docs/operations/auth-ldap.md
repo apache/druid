@@ -218,7 +218,7 @@ curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://local
 ### Add an LDAP user to Druid and assign a role
 
 You only need to complete this step if:
-- Your LDAP server doesn't support the `memberOf` attribute, or
+- Your LDAP user doesn't belong to any of your LDAP groups, or
 - You want to configure a user with additional Druid roles that are not mapped to the LDAP groups that the user belongs to.
 
 Example request to add the LDAP user `myuser` to Druid:
