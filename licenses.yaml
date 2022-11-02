@@ -1669,7 +1669,7 @@ name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.3.0
+version: 5.4.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
