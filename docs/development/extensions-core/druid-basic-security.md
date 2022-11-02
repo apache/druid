@@ -442,9 +442,9 @@ Algorithm used by the trust manager to validate certificate chains.<br>
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: N/A
 
-**`druid.auth.basic.ssl.trustStorePasswordProvider`**
+**`druid.auth.basic.ssl.trustStorePassword`**
 
-[Password provider](./operations/password-provider.md) that enables access to the trust store.<br>
+Password details that enable access to the truststore.<br>
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: N/A
 
@@ -456,8 +456,8 @@ druid.auth.basic.ssl.trustStorePath=/usr/local/druid-path/certs/truststore.jks
 druid.auth.basic.ssl.trustStorePassword=xxxxx
 druid.auth.basic.ssl.trustStoreType=jks
 druid.auth.basic.ssl.trustStoreAlgorithm=PKIX
-druid.auth.basic.ssl.trustStorePasswordProvider=myPasswordProvider
 ```
+You can configure `druid.auth.basic.ssl.trustStorePassword` to be a plain text password or you can set the password as an environment variable. See [Password providers](../../operations/password-provider.md) for more information.
 
 ## Usage
 
