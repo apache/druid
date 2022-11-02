@@ -1,0 +1,112 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.java.util.emitter.service;
+
+import com.fasterxml.jackson.annotation.JsonValue;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.EventMap;
+import org.joda.time.DateTime;
+
+public class SegmentMetadataEvent implements Event
+{
+  public static final String FEED = "feed";
+  public static final String DATASOURCE = "dataSource";
+  public static final String CREATED_TIME = "createdTime";
+  public static final String START_TIME = "startTime";
+  public static final String END_TIME = "endTime";
+  public static final String VERSION = "version";
+  public static final String IS_COMPACTED = "isCompacted";
+
+  private final DateTime createdTime;
+  private final String dataSource;
+  private final DateTime startTime;
+  private final DateTime endTime;
+  private final String version;
+  private final boolean isCompacted;
+
+  public SegmentMetadataEvent(
+      String dataSource,
+      DateTime createdTime,
+      DateTime startTime,
+      DateTime endTime,
+      String version,
+      boolean isCompacted
+  )
+  {
+    this.dataSource = dataSource;
+    this.createdTime = createdTime;
+    this.startTime = startTime;
+    this.endTime = endTime;
+    this.version = version;
+    this.isCompacted = isCompacted;
+  }
+
+  @Override
+  public String getFeed()
+  {
+    return "segment_metadata";
+  }
+
+  public DateTime getCreatedTime()
+  {
+    return createdTime;
+  }
+
+  public DateTime getStartTime()
+  {
+    return startTime;
+  }
+
+  public DateTime getEndTime()
+  {
+    return endTime;
+  }
+
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
+  public String getVersion()
+  {
+    return version;
+  }
+
+  public boolean isCompacted()
+  {
+    return isCompacted;
+  }
+
+  @Override
+  @JsonValue
+  public EventMap toMap()
+  {
+
+    return EventMap.builder()
+        .put(FEED, getFeed())
+        .put(DATASOURCE, dataSource)
+        .put(CREATED_TIME, createdTime)
+        .put(START_TIME, startTime)
+        .put(END_TIME, endTime)
+        .put(VERSION, version)
+        .put(IS_COMPACTED, isCompacted)
+        .build();
+  }
+}
