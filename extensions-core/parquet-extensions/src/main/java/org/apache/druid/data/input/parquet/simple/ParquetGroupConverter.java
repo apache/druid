@@ -205,7 +205,7 @@ class ParquetGroupConverter
         listItem.getType().getFieldCount() == 1 &&
         listItem.getType().getName().equalsIgnoreCase("list") &&
         listItem.getType().getFieldName(0).equalsIgnoreCase("element") &&
-        listItem.getGroup(0,0).getType().isRepetition(Type.Repetition.OPTIONAL)
+        listItem.getGroup(0, 0).getType().isRepetition(Type.Repetition.OPTIONAL)
     ) {
       // nullable list elements can be represented as a repeated wrapping an optional
       return listItem.getGroup(0, 0);
