@@ -1856,7 +1856,7 @@ public class ControllerImpl implements Controller
    *
    * Throws {@link MSQException} with {@link InsertLockPreemptedFault} if the action fails due to lock preemption.
    */
-  private static void performSegmentPublish(
+  static void performSegmentPublish(
       final TaskActionClient client,
       final SegmentTransactionalInsertAction action
   ) throws IOException
