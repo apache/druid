@@ -210,8 +210,8 @@ Knowing the limits for the MSQ task engine can help you troubleshoot any [errors
 
 The following table lists query limits:
 
-|Limit|Value|Error if exceeded|
-|-----|-----|-----------------|
+| Limit | Value | Error if exceeded |
+|---|---|---|
 | Size of an individual row written to a frame. Row size when written to a frame may differ from the original row size. | 1 MB | `RowTooLarge` |
 | Number of segment-granular time chunks encountered during ingestion. | 5,000 | `TooManyBuckets` |
 | Number of input files/segments per worker. | 10,000 | `TooManyInputFiles` |

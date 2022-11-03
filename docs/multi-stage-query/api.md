@@ -110,7 +110,6 @@ print(response.text)
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-
 #### Response
 
 ```json
@@ -129,7 +128,7 @@ print(response.text)
 
 ## Get the status for a query task
 
-You can retrieve status of a query to see if it is still running, completed successfully, failed, or got canceled. 
+You can retrieve status of a query to see if it is still running, completed successfully, failed, or got canceled.
 
 #### Request
 
@@ -236,7 +235,6 @@ headers = {}
 response = requests.request("GET", url, headers=headers)
 print(response.text)
 ```
-
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -511,7 +509,7 @@ The response shows an example report for a query.
                 "0": 1,
                 "1": 1,
                 "2": 1
-              },
+              }, 
               "totalMergersForUltimateLevel": 1,
               "progressDigest": 1
             }
